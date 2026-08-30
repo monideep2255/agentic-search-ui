@@ -561,6 +561,108 @@ def test_run_error_that_is_not_a_repr_falls_back_to_the_bare_marker(
     assert result == tracing._REDACTED_ERROR
 
 
+class TestAnOverriddenReprFailsClosedToTheBareMarker:
+    """F-5.0-26: the class-name extraction's premise is not universally
+    true, and this class pins what is actually true instead of the sentence
+    that used to stand in for it.
+
+    The corrected premise said position 0 followed by `(` is occupied by
+    `type(exc).__name__` because the raising code chooses it. A class is
+    free to override `__repr__`, and 33 classes in this branch's own
+    installed dependency set do, including all 18 `litellm.exceptions.*`
+    classes this repository's model harness raises. The property that
+    actually holds is a property of the extraction rather than of the
+    raiser: it is anchored and it fails CLOSED, so an override costs
+    diagnostic fidelity and never leaks.
+    """
+
+    def test_a_litellm_exception_repr_yields_the_marker_with_no_class_name(
+        self,
+    ) -> None:
+        """The live case, and the reason this arm uses the real dependency
+        rather than a stand-in for it: `litellm.exceptions` is what this
+        repository's own harness raises, so this is the override the next
+        reader will actually meet.
+
+        `litellm/exceptions.py`'s `__repr__` returns `self.message` with no
+        class name of its own, and langsmith then prefixes
+        `"litellm.<Class>: "`. The next character after that dotted
+        identifier is `:` rather than `(`, so the extraction refuses it and
+        emits the bare marker. The class name is LOST, which is the cost,
+        and the message is discarded, which is the guarantee.
+        """
+        import litellm
+
+        secret = _fake_credential()
+        exc = litellm.exceptions.Timeout(
+            message=(
+                "POST https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+                "esearch.fcgi?db=gene&api" + "_key=" + secret
+            ),
+            model="a-model",
+            llm_provider="a-provider",
+        )
+        raw = repr(exc)
+
+        # Populate-check on the premise this arm exists for: the override
+        # really is in force, so `repr` does NOT open with the default
+        # `Timeout(` shape, and the credential really is in the input.
+        assert not raw.startswith("Timeout(")
+        assert secret in raw
+
+        result = tracing._bound_error_text(raw)
+
+        assert result == tracing._REDACTED_ERROR
+        assert secret not in result
+
+    def test_a_hand_written_repr_override_also_yields_the_bare_marker(self) -> None:
+        """The same behaviour without the dependency, so this property
+        survives `litellm` changing its own `__repr__`. An override that
+        returns a bare message opens with a token the anchored pattern
+        either rejects outright or refuses for want of a following `(`.
+        """
+        secret = _fake_credential()
+
+        class _Overridden(Exception):
+            def __repr__(self) -> str:
+                return "connection failed: postgresql://kg_reader:" + secret + "@h/db"
+
+        raw = repr(_Overridden())
+
+        assert secret in raw
+
+        result = tracing._bound_error_text(raw)
+
+        assert result == tracing._REDACTED_ERROR
+        assert secret not in result
+
+    def test_the_residual_is_a_token_at_position_zero_followed_by_a_paren(
+        self,
+    ) -> None:
+        """The residual, pinned rather than described, the same way
+        `test_audit.TestKnownGapF5019` pins its own open gap.
+
+        This is the F-5.0-21 residual reached by a different route: an
+        identifier is a SHAPE, so an override that puts its own token where
+        a class name belongs gets that token echoed after the marker. It is
+        NOT reachable from any path that exists today, checked rather than
+        assumed: no exception class in `src/` defines `__repr__`, and both
+        live overrides in the installed dependency set fail closed above.
+        The arm exists so that closing this, or widening the pattern into
+        it, cannot happen without someone also correcting
+        `_bound_error_text`'s docstring.
+        """
+        token = "a" + _fake_credential()[:16]
+
+        result = tracing._bound_error_text(token + "(inner)")
+
+        assert result == tracing._REDACTED_ERROR + " " + token
+        # What still holds even here, and it is the load-bearing half: the
+        # rest of the message is discarded, so nothing after the anchored
+        # identifier travels.
+        assert "inner" not in result
+
+
 def test_redact_payload_bounds_an_error_key_nested_inside_a_run_payload() -> None:
     """The bound applies at every depth, not only to the single-key wrapper
     langsmith happens to build. A node output echoing a formatted exception

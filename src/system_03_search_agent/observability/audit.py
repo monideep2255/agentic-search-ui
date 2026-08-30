@@ -911,6 +911,22 @@ def _bounded_line(entry: dict[str, Any]) -> str:
     `error_code`, `error_class`, `latency_ms` and the timestamp are each
     bounded by their own cap already, so the reduced line is bounded by
     construction rather than by a second measurement.
+
+    THIS FUNCTION'S OWN WARNING WAS THEN VIOLATED BY THIS FUNCTION'S OWN
+    TESTS, and it is recorded here rather than tidied away because it is
+    the cleanest instance of the thing the warning is about. `_MAX_LINE_BYTES`
+    exists as a whole-line bound rather than "arithmetic over the per-field
+    caps, because a sum stated in a comment is a sentence about the code".
+    Two test docstrings and a tracker entry then stated exactly such a sum,
+    claiming no call through `record_tool_call` could reach the reduction
+    branch, and the sum was wrong: 4096 + 2048 + four fields at 256 + 128,
+    plus keys and fixed fields, is roughly 7500 against a 7168 cap, and one
+    ordinary call reaching the branch refuted it (F-5.0-27). Writing the
+    warning did not stop the author of the warning from doing the thing it
+    warns against, which is why the bound is a check rather than a
+    sentence, and why the reachability is now pinned by an executable arm,
+    `test_audit.TestSinkFieldsAreBoundedAndRedacted.
+    test_the_reduction_branch_is_reachable_through_record_tool_call`.
     """
     try:
         line = json.dumps(entry, default=str)

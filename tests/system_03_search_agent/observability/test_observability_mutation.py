@@ -165,10 +165,12 @@ phase's own tracker had flagged as unproven:
     exactly what the pre-fix code was.
 18. The SINK's own field bounds removed (A-5.0-03, A-5.0-04, A-5.0-19),
     one case per bound: `_bounded_text`, `_bounded_record_ids` and
-    `_bounded_line`. The third targets a DIRECT arm rather than one
-    writing through `record_tool_call`, because today's per-field caps
-    make the whole-line branch unreachable from there, measured rather
-    than assumed and recorded in that arm's own docstring.
+    `_bounded_line`. The third targets the arm that drives
+    `record_tool_call` with every field sitting just under its own
+    per-field cap, which is how the whole-line branch is actually
+    reached. It used to target a direct arm instead, on a claim that the
+    branch was unreachable through `record_tool_call`; that claim was
+    refuted (F-5.0-27).
 19. The audit redactor's SUBCLASS FLATTENING removed (A-5.0-01), mutated
     once per delegating rule: breaks `test_audit.
     TestSubclassKeysAndValuesCannotDefeatRedaction.
@@ -1321,25 +1323,33 @@ def test_line_bound_removed_turns_the_atomic_append_arm_red(
     append-only file. This case is what stops that guarantee decaying back
     into arithmetic stated in a comment.
 
-    It targets the DIRECT arm rather than the one that writes through
-    `record_tool_call`, and the reason is a measurement rather than a
-    preference: with today's per-field caps in place no call through
-    `record_tool_call` can produce a line over the budget at all, so
-    neutering `_bounded_line` left that arm GREEN. That is recorded in the
-    direct arm's own docstring as the belt's coverage statement.
+    It targets the arm that drives `record_tool_call` for real, which is
+    the stronger case: it proves the belt fires on the public entry point
+    rather than only on a hand-built entry. This case previously targeted
+    the direct arm instead, on the strength of a claim that the reduction
+    branch was unreachable through `record_tool_call`. That claim was
+    false (F-5.0-27): it is reached by sitting JUST UNDER every per-field
+    cap at once, and the earlier probe missed it because it drove every
+    field far OVER its cap, where each field is replaced by a short
+    disclosure marker and the line comes out small.
     """
     original = audit._bounded_line
 
     control_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
-    control_arm.test_bounded_line_reduces_an_oversized_entry_and_discloses_it()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_the_reduction_branch_is_reachable_through_record_tool_call(
+            tmp_path / "control", arm_mp
+        )
 
     monkeypatch.setattr(
         audit, "_bounded_line", lambda entry: json.dumps(entry, default=str)
     )
 
     mutated_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
-    with pytest.raises(_ARM_WENT_RED):
-        mutated_arm.test_bounded_line_reduces_an_oversized_entry_and_discloses_it()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_the_reduction_branch_is_reachable_through_record_tool_call(
+            tmp_path / "mutated", arm_mp
+        )
 
     monkeypatch.undo()
     assert audit._bounded_line is original

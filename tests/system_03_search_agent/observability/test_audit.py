@@ -95,6 +95,7 @@ from __future__ import annotations
 import ast
 import inspect
 import json
+import re
 import threading
 import uuid
 from pathlib import Path
@@ -1772,23 +1773,18 @@ class TestSinkFieldsAreBoundedAndRedacted:
             assert field in entry
 
     def test_bounded_line_reduces_an_oversized_entry_and_discloses_it(self):
-        """The whole-line belt, exercised DIRECTLY, and here is why it has
-        to be.
+        """The whole-line belt, exercised DIRECTLY on a hand-built entry.
 
-        WHAT THIS ARM MEASURED AND THE ARM ABOVE COULD NOT: with today's
-        per-field caps in place, no call through `record_tool_call` can
-        produce a line over `_MAX_LINE_BYTES` at all, so `_bounded_line`'s
-        reduction branch is UNREACHABLE from there. Neutering it left the
-        arm above green, which is how this was found rather than assumed.
+        A direct arm alongside the end-to-end one below, not instead of it.
+        It reaches the reduction branch with one oversized field rather
+        than with every field just under its own cap, so the two arms fail
+        for different reasons and neither subsumes the other.
 
-        That is not a reason to delete the belt, it is the reason it
-        exists. The per-field caps happen to sum to something under the
-        budget today; that sum is a sentence about the code, and this
-        repository shipped four defects in build phase 4.15 that were
-        exactly a sentence describing a check that was not there. The belt
-        is what still holds after a field is added, widened, or its cap is
-        changed, and this arm is what keeps the belt from rotting into
-        dead code nobody notices is gone.
+        The belt is what still holds after a field is added, widened, or
+        its cap is changed, which is why it is a whole-line bound rather
+        than arithmetic over the per-field caps. See
+        `test_the_reduction_branch_is_reachable_through_record_tool_call`
+        for what a wrong version of that arithmetic cost (F-5.0-27).
         """
         entry = {
             "trace_id": "t",
@@ -1818,6 +1814,75 @@ class TestSinkFieldsAreBoundedAndRedacted:
         assert reduced["tool"] == "probe"
         assert reduced["endpoint"] == "/x"
         assert reduced["latency_ms"] == 1.0
+
+    def test_the_reduction_branch_is_reachable_through_record_tool_call(
+        self, tmp_path, monkeypatch
+    ):
+        """F-5.0-27: the reduction branch IS reachable through the public
+        entry point, and this arm is what stops the claim that it is not
+        from coming back.
+
+        Two places used to state that no call through `record_tool_call`
+        could produce a line over `_MAX_LINE_BYTES`, and mutation case 18's
+        third case pointed at the direct arm above on the strength of it.
+        The claim was false and the arithmetic was always against it:
+        4096 + 2048 + four fields at 256 + 128, plus the keys and the
+        fixed fields, is roughly 7500 against a 7168 cap.
+
+        WHY THE ORIGINAL MEASUREMENT MISSED IT, which is the half worth
+        carrying to the next probe: the arm above this one drives every
+        variable field far OVER its per-field cap, so `_bounded` and
+        `_bounded_record_ids` each replace their value with a short
+        disclosure marker and the line comes out small. The whole-line cap
+        is reached by sitting JUST UNDER every per-field cap at once, never
+        by blowing past them, so a probe built from oversized inputs
+        structurally cannot find it.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        # Every field sized to sit just UNDER its own cap, which is the
+        # shape the whole-line bound exists for.
+        params = {"p": "x" * (audit._MAX_PARAMS_BYTES - 32)}
+        record_ids = ["r" * (audit._MAX_RECORD_IDS_BYTES - 16)]
+        text_field = "e" * (audit._MAX_TEXT_FIELD_BYTES - 6)
+
+        # Populate-check one: no per-field cap fires on this input, so a
+        # reduction below cannot be a per-field drop wearing another name.
+        assert audit._bounded(audit.redact_params(params)) == params
+        assert audit._bounded_record_ids(record_ids) == record_ids
+        assert "dropped" not in audit._bounded_text(text_field, field_name="endpoint")
+
+        with audit.trace_id_scope(text_field):
+            audit.record_tool_call(
+                tool=text_field,
+                layer=2,
+                endpoint=text_field,
+                latency_ms=1.0,
+                authorization=text_field,
+                params=params,
+                record_ids=record_ids,
+                error_class="E" * (audit._MAX_ERROR_CLASS_CHARS - 8),
+            )
+
+        lines = _read_lines(log_path)
+        assert len(lines) == 1
+        assert len(lines[0].encode("utf-8")) <= audit._MAX_LINE_BYTES
+
+        entry = json.loads(lines[0])
+        assert "reduced" in entry["_audit_note"]
+        # Populate-check two: the disclosed pre-reduction size is really
+        # over the cap, so this arm cannot pass on a line that was never
+        # oversized in the first place.
+        disclosed = int(re.search(r"line was (\d+) bytes", entry["_audit_note"]).group(1))
+        assert disclosed > audit._MAX_LINE_BYTES
+        # The two variable fields are what was given up, and Section 20.3's
+        # required fields survive.
+        assert "atomic" in str(entry["params"])
+        assert "atomic" in str(entry["record_ids"])
+        assert entry["latency_ms"] == 1.0
+        assert entry["layer"] == 2
 
 
 class TestAnUnserializableValueDegradesRatherThanDeletingTheLine:

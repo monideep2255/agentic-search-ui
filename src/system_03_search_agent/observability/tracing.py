@@ -95,9 +95,27 @@ _REDACTED_ERROR = "[redacted error]"
 #:
 #: What a trace actually needs from a failure is which run failed, already
 #: carried by the run record and by `trace_id`, and what KIND of failure it
-#: was. A class name answers the second. Build phase 5.1's eval graders need
-#: a run's inputs, outputs, citations and tool results, none of which travel
-#: under any key named below, so bounding this field costs them nothing.
+#: was. A class name answers the second.
+#:
+#: WHAT THIS BOUND ACTUALLY COSTS (F-5.0-25). An earlier version of this
+#: paragraph said it costs build phase 5.1's eval graders nothing, because
+#: no tool result travels under a key named below. That was FALSE.
+#: `core/graph.py:2851` and `core/graph.py:3008` both put a tool result's
+#: diagnostic under the key `"error"`, so a genuinely useful and
+#: non-sensitive message such as "graph query exceeded 30s, retry with a
+#: narrower query_intent" is discarded to `_REDACTED_ERROR` before it
+#: reaches LangSmith.
+#:
+#: The bound is still correct and is deliberately NOT widened to let those
+#: through: a tool result's error text is exactly the kind of free text
+#: that can carry a URL, and admitting it would reopen the scanner problem
+#: three rounds of this phase failed to solve. What is true, and it is a
+#: stronger statement than the false one it replaces, is that the
+#: diagnostic is lost from THIS RECORD rather than from the SYSTEM. The
+#: audit log carries `error_code`, `error_class` and `http_status` for the
+#: same call, and Section 20 defines three records precisely so no single
+#: one has to carry everything. A build phase 5.1 grader wanting
+#: tool-failure detail reads the audit log, not the trace.
 _ERROR_TEXT_KEYS: frozenset[str] = frozenset(
     {"error", "errors", "exception", "traceback", "stacktrace"}
 )
@@ -289,10 +307,37 @@ def _bound_error_text(value: str) -> str:
     `audit._safe_error_class` documents under F-5.0-21: an identifier is a
     SHAPE, and a bare alphanumeric token is a legal identifier, so this
     bound would not by itself exclude an opaque API key sitting where a
-    class name belongs. What keeps that from happening is position, not the
-    character class: position 0 followed by `(` is occupied by
-    `type(exc).__name__`, which the raising code chooses, and a message
-    cannot move itself in front of it.
+    class name belongs.
+
+    WHAT ACTUALLY HOLDS, corrected under F-5.0-26. An earlier version of
+    this paragraph said position 0 followed by `(` is occupied by
+    `type(exc).__name__` and that a message cannot move itself in front of
+    it. That is true only for the DEFAULT `BaseException.__repr__`, and a
+    class is free to override `__repr__` and put anything it likes at
+    position 0. 33 exception classes in this branch's own installed
+    dependency set do exactly that, including every one of the 18
+    `litellm.exceptions.*` classes this repository's own model harness
+    raises, plus `pydantic_core.ValidationError`.
+
+    The real property is narrower and is a property of THIS function
+    rather than of the raising code: extraction is ANCHORED at position 0
+    and requires the very next character to be `(`, so anything that does
+    not open with that exact shape yields the bare marker and nothing is
+    read out of the input at all. An overridden `__repr__` therefore costs
+    DIAGNOSTIC FIDELITY and never leaks. Both live overrides were measured
+    on this branch and both fail closed: `litellm` prefixes
+    `"litellm.<Class>: "`, whose next character is `:` rather than `(`,
+    and `pydantic_core.ValidationError` opens with a digit, which the
+    pattern's `[A-Za-z_]` first character rejects. No exception class in
+    `src/` defines `__repr__` at all.
+
+    A hostile `__repr__` opening with `<token>(` would put its own token
+    where a class name belongs, which is the F-5.0-21 residual above
+    reached by a different route rather than a new hole. It is not
+    reachable from any path that exists today, and the behaviour, marker
+    only for an override, is pinned by
+    `test_tracing.TestAnOverriddenReprFailsClosedToTheBareMarker` rather
+    than by this paragraph.
     """
     match = _ERROR_CLASS_PATTERN.match(value)
     if match is None or match.end() >= len(value) or value[match.end()] != "(":
