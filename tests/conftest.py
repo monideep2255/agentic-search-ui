@@ -78,6 +78,7 @@ import os
 
 import httpx
 import pytest
+import requests
 
 # Mirrors test_ncbi_efetch_premise.py's own `_OPT_IN_VAR` exactly. Not
 # imported from that module: this file must stand up before any test
@@ -121,6 +122,40 @@ def _blocked_sync_handle_request(self: httpx.HTTPTransport, request: httpx.Reque
     )
 
 
+def _blocked_requests_send(self: requests.adapters.HTTPAdapter, request, **kwargs):
+    """Block a live call made through `requests`, which httpx patching cannot see.
+
+    F-5.0-07, build phase 5.0. The two httpx blockers above were written
+    when `ncbi_transport.execute_get` was genuinely the only place in this
+    codebase that opened a real outbound connection, and they are patched
+    at the transport classes that perform DNS and socket I/O precisely so
+    in-process ASGI test clients are unaffected. That reasoning is right
+    and is reused verbatim here.
+
+    What changed is the premise. The installed langsmith drives its HTTP
+    through `requests`, not httpx (38 references in its `client.py`), so
+    once build phase 5.0 wires tracing there is a second library that can
+    reach the network and nothing above can see it. Until a LANGSMITH_API_
+    KEY existed this was latent, because `tracing_enabled()` requires both
+    the flag and a key. A key now exists, which turns a dormant gap into a
+    live one: without this blocker a plain `pytest` run would ship real
+    traces of test data, including whatever a fixture used as a question,
+    to a real LangSmith project.
+
+    Patched at `HTTPAdapter.send` for the same reason the httpx blockers
+    sit at the transport: it is the layer that actually performs I/O, so a
+    library that mounts its own adapter or a test that injects a fake
+    session is left alone.
+    """
+    url = getattr(request, "url", "<unknown>")
+    raise LiveHttpCallInUnitSuiteError(
+        f"Unit suite attempted a live `requests` HTTP call to {str(url)!r}. "
+        "This is most likely LangSmith tracing: set LANGSMITH_API_KEY empty "
+        "for the suite, or disable tracing in the test. See tests/conftest.py's "
+        "LiveHttpCallInUnitSuiteError docstring."
+    )
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _forbid_live_http_in_the_unit_suite():
     """The durable fix Finding 4 asked for, not merely the one-file stub.
@@ -139,10 +174,13 @@ def _forbid_live_http_in_the_unit_suite():
 
     original_async_handler = httpx.AsyncHTTPTransport.handle_async_request
     original_sync_handler = httpx.HTTPTransport.handle_request
+    original_requests_send = requests.adapters.HTTPAdapter.send
     httpx.AsyncHTTPTransport.handle_async_request = _blocked_async_handle_request
     httpx.HTTPTransport.handle_request = _blocked_sync_handle_request
+    requests.adapters.HTTPAdapter.send = _blocked_requests_send
     try:
         yield
     finally:
         httpx.AsyncHTTPTransport.handle_async_request = original_async_handler
         httpx.HTTPTransport.handle_request = original_sync_handler
+        requests.adapters.HTTPAdapter.send = original_requests_send

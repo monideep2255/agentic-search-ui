@@ -278,6 +278,11 @@ from xml.etree import ElementTree
 
 import httpx
 
+from system_03_search_agent.observability.audit import (
+    UNEXPECTED_ERROR_CODE,
+    record_tool_call,
+)
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -329,6 +334,21 @@ RateLimitFamily = Literal[
 RATE_LIMIT_FAMILIES: Final[tuple[RateLimitFamily, ...]] = (
     "eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2", "clinicaltrials",
 )
+
+# T-5.0-05: which Section 20.3 data-access layer each family belongs to
+# (system-design-patterns.md pattern 3). "eutils", "datasets", "pubchem"
+# and "variation" are NCBI's own on-demand APIs (Layer 2); "pubtator",
+# "litvar2" and "clinicaltrials" are the non-NCBI-or-enrichment services
+# named Layer 3 in the three-layer architecture doc.
+_LAYER_BY_FAMILY: Final[dict[str, int]] = {
+    "eutils": 2,
+    "datasets": 2,
+    "pubchem": 2,
+    "variation": 2,
+    "pubtator": 3,
+    "litvar2": 3,
+    "clinicaltrials": 3,
+}
 
 _ENV_NCBI_API_KEY: Final[str] = "NCBI_API_KEY"
 
@@ -389,6 +409,47 @@ class TransportRateLimitedError(TransportError):
         super().__init__(message)
         self.family = family
         self.retry_after = retry_after
+
+
+#: Maps this module's typed TransportError family onto
+#: `audit.AUDIT_ERROR_CODES`. Every member of the family is defined in this
+#: file, so unlike `graph_connection`'s equivalent this one binds class
+#: OBJECTS: there is no circular import to route around, and a class object
+#: cannot be defeated by a rename the way a name string can.
+#:
+#: The base `TransportError` maps to `unexpected` on purpose. It is the
+#: catch-all, so a NEW direct subclass added without a row here inherits
+#: `unexpected` by MRO rather than leaking anything, and `test_audit.py`'s
+#: enumerating arm turns red because it asserts every direct subclass maps
+#: to something other than the catch-all.
+_AUDIT_ERROR_CODE_BY_CLASS: dict[type[BaseException], str] = {
+    TransportTimeoutError: "timeout",
+    TransportConnectionError: "connection",
+    TransportRateLimitedError: "rate_limited",
+    TransportError: UNEXPECTED_ERROR_CODE,
+}
+
+
+def audit_error_code(exc: BaseException) -> str:
+    """Classify one exception into the audit log's closed vocabulary.
+
+    Walks the MRO so a subclass of an already-mapped error inherits its
+    parent's code rather than falling to the catch-all.
+
+    Anything that is not a `TransportError`, an `httpx` exception that
+    escaped `_execute_with_retry`'s own classification, or a failure while
+    building the client, returns `unexpected`. That fail-closed branch is
+    why `execute_get`'s `except Exception` needs no provenance argument:
+    whatever arrives, the audit line records a code chosen here rather
+    than anything derived from the exception's message, which for this
+    module is the one place a URL carrying `_append_api_key`'s appended
+    credential could otherwise have appeared.
+    """
+    for klass in type(exc).__mro__:
+        code = _AUDIT_ERROR_CODE_BY_CLASS.get(klass)
+        if code is not None:
+            return code
+    return UNEXPECTED_ERROR_CODE
 
 
 @dataclass(frozen=True)
@@ -1131,6 +1192,20 @@ def _host_of(url: str) -> str:
     return urllib.parse.urlparse(url).hostname or "unknown-host"
 
 
+def _endpoint_for_audit(url: str) -> str:
+    """Host plus path for an audit line, per F-5.0-08. Never the query string.
+
+    `_host_of` alone drops the path, and the path is useful diagnostic
+    context that carries no secret of its own; only the query string can
+    carry `_append_api_key`'s appended credential, so this stops at the
+    path and goes no further. `redact_params` in `observability/audit.py`
+    is a second, independent layer against the same leak; this is the
+    first and the one this ticket is directly responsible for.
+    """
+    parsed = urllib.parse.urlparse(url)
+    return (parsed.hostname or "unknown-host") + (parsed.path or "")
+
+
 async def execute_get(
     base_url: str,
     params: Mapping[str, Any],
@@ -1204,23 +1279,71 @@ async def execute_get(
     limiter = get_rate_limiter(family)
     effective_ceiling = wait_ceiling_s if wait_ceiling_s is not None else timeout_s
 
-    if client is not None:
-        return await _execute_with_retry(
-            client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
-            sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
-            time_fn=time_fn,
+    # T-5.0-05: this is one of the three transport chokepoints (audit.py's
+    # module docstring, tracker/phase_5.0.md finding one), so it and not
+    # `act_node` is where every Layer 2/Layer 3 HTTPS access, including the
+    # five call sites that bypass `act_node` entirely, gets its one audit
+    # line. Timed around the actual await only, per this ticket's
+    # instruction, never around URL/query-string assembly above.
+    audit_started = time_fn()
+    try:
+        if client is not None:
+            response = await _execute_with_retry(
+                client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
+                sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
+                time_fn=time_fn,
+            )
+        else:
+            # No caller-supplied client: build one scoped to exactly this
+            # call, bound to whichever event loop is running THIS await, and
+            # close it before returning. Never stored at module level, so no
+            # later call from a different loop can ever inherit it.
+            async with httpx.AsyncClient() as fresh_client:
+                response = await _execute_with_retry(
+                    fresh_client, url, family=family, timeout_s=timeout_s,
+                    backoff_s=backoff_s, sleep_fn=sleep_fn, limiter=limiter,
+                    wait_budget_s=effective_ceiling, time_fn=time_fn,
+                )
+    except Exception as exc:
+        # `record_tool_call` never raises (best-effort by its own contract),
+        # so this is not wrapped in a second try/except here; the audit line
+        # is written and then the real failure propagates unchanged.
+        record_tool_call(
+            tool="ncbi_transport:" + family,
+            layer=_LAYER_BY_FAMILY.get(family, 2),
+            endpoint=_endpoint_for_audit(url),
+            latency_ms=(time_fn() - audit_started) * 1000,
+            authorization="ncbi_api_key" if include_api_key else "none",
+            # `params` is the caller-supplied dict, never the built query
+            # string, so it never carries the api_key `_append_api_key`
+            # appends separately from `params`. `redact_params` still
+            # applies its own key-name and value-scanning rules on top.
+            params=dict(params),
+            http_status=None,
+            # Classified, never stringified. `str(exc)` used to go here.
+            # `_host_of` keeps this module's OWN diagnostics free of the
+            # api_key `_append_api_key` appends, but an exception raised
+            # by httpx or by any future caller is not bound by that
+            # convention, and `except Exception` is bounded by nothing. A
+            # code from a closed vocabulary plus a class name are both
+            # chosen by this repository's own code, so neither can carry
+            # a URL, a query string, or a response body at all.
+            error_code=audit_error_code(exc),
+            error_class=type(exc).__name__,
         )
-
-    # No caller-supplied client: build one scoped to exactly this call,
-    # bound to whichever event loop is running THIS await, and close it
-    # before returning. Never stored at module level, so no later call
-    # from a different loop can ever inherit it.
-    async with httpx.AsyncClient() as fresh_client:
-        return await _execute_with_retry(
-            fresh_client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
-            sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
-            time_fn=time_fn,
-        )
+        raise
+    record_tool_call(
+        tool="ncbi_transport:" + family,
+        layer=_LAYER_BY_FAMILY.get(family, 2),
+        endpoint=_endpoint_for_audit(url),
+        latency_ms=(time_fn() - audit_started) * 1000,
+        authorization="ncbi_api_key" if include_api_key else "none",
+        params=dict(params),
+        http_status=response.status_code,
+        error_code=None,
+        error_class=None,
+    )
+    return response
 
 
 async def _execute_with_retry(

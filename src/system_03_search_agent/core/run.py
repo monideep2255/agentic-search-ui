@@ -71,22 +71,45 @@ instead of restarting the sequence at 0, which `run()`'s own call site
 does not need since a crash there means `ainvoke` never returned
 anything, so no real event was ever yielded before the synthetic pair.
 
-Tracing scope note: LangSmith tracing is a phase 5.0/5.1 deliverable
-(CLAUDE.md's priority table: "System 3: eval and tracing -- PLANNED"),
-not built yet. LangGraph auto-attaches a LangSmith tracer to every
-`ainvoke()` call whenever `LANGCHAIN_TRACING_V2`/`LANGSMITH_TRACING` is
-truthy in the environment, which this repo's local `.env` sets to `true`
-(with no `LANGSMITH_API_KEY`) ahead of the real tracing integration. Left
-alone, running this graph would make a real, unreviewed outbound HTTPS
-call to `api.smith.langchain.com` on every single query, purely as a side
-effect of `.env`'s pre-existing tracing flag, with no actual tracing
-project, sampling, or redaction configured on this end yet. `run()` wraps
-its one `ainvoke()` call in `langsmith.run_helpers.tracing_context
-(enabled=False)`, which forces tracing off for this call only (no process-
-wide env mutation, so it does not disturb `.env`'s setting for whatever
-component phase 5.0/5.1 eventually wires up for real). Logged in
-DECISIONS.md (T-2.0-07): remove this wrapper only when a phase 5.0/5.1
-ticket replaces it with an intentionally configured tracer.
+Tracing scope note, REWRITTEN by T-5.0-05: the hardcoded
+`tracing_context(enabled=False)` this note used to describe is gone from
+both call sites below. Tracing is now genuinely configured, through
+`observability.tracing.traced_graph_run`, and it is that module's own
+`config.tracing_enabled()`, not this one, that decides whether a given
+run actually transmits: BOTH the `LANGCHAIN_TRACING_V2`/`LANGSMITH_TRACING`
+flag AND a provisioned `LANGSMITH_API_KEY` are required (see
+`observability/config.py`'s docstring for why the flag alone, already
+`true` in this repo's `.env` ahead of this phase, was never sufficient
+consent on its own). With no key configured, `traced_graph_run` never even
+constructs a `langsmith.Client`, so a run today still makes zero outbound
+calls to `api.smith.langchain.com`, the same guarantee the old hardcoded
+override gave, now arrived at through the credential rather than through a
+literal `enabled=False`. The moment an operator provisions a key, the same
+code path starts transmitting through a redaction-wired client
+(`tracing.redact_payload`) that strips `Query.owner_id`, `Query.user_id`
+and `RequestContext.session_memory` before anything leaves this process
+(Section 20.1; F-5.0-03, `tracker/phase_5.0.md`). Both `run()` and
+`run_streaming()` are wrapped, not only `run()`: `run_streaming()` is the
+entry point a real SSE surface actually calls, so tracing only the
+buffered path would leave production traffic untraced while looking done.
+Each call also passes `build_runnable_config(trace_id=..., run_name=...)`
+as `config=`, which is what attaches `trace_id` as LangSmith's own join
+key alongside the audit log and the interactions table (Section 20.1).
+
+T-5.0-05, same ticket: a `trace_id_scope` (`observability.audit`) is
+entered at the top of both functions' bodies, binding
+`observability.audit`'s trace_id ContextVar to `query.trace_id` for the
+duration of the run and resetting it on exit via the scope helper, never a
+bare set with no matching reset. This is what lets the three transport
+chokepoints (`ncbi_transport.execute_get`, `graph_connection.execute_cypher`,
+`pathogen_ftp_transport`) stamp every Layer 1/2/3 access with the run's
+trace_id with no argument threaded through any of the seven tools'
+signatures: a ContextVar set in an enclosing scope is inherited by any task
+or coroutine started inside it, which is exactly the reach `act_node`'s own
+tool dispatch needs. A caller with no run in scope at all, such as
+`s3-kgx-export`'s direct `execute_cypher` calls, never enters this scope,
+so its audit lines carry a genuine null `trace_id` rather than a
+fabricated one, deliberately.
 
 T-4.6-07, build phase 4.6: `capture_run` (stage 1 of the feedback loop,
 `feedback/capture.py` and `feedback/writer.py`) is dispatched from the
@@ -101,8 +124,6 @@ import time
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
-from langsmith.run_helpers import tracing_context
-
 from system_03_search_agent.contracts.events import (
     CostPayload,
     DonePayload,
@@ -113,6 +134,15 @@ from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.graph import compiled_graph
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.harness.harness import Harness
+from system_03_search_agent.observability.audit import (
+    reset_trace_id,
+    set_trace_id,
+    trace_id_scope,
+)
+from system_03_search_agent.observability.tracing import (
+    build_runnable_config,
+    traced_graph_run,
+)
 
 
 def _crash_fallback_events(trace_id: str, elapsed_ms: int, start_seq: int = 0) -> list[Event]:
@@ -281,6 +311,55 @@ async def _capture_interaction(query: Query, events: list[Event]) -> None:
     except Exception:
         logger.warning(
             "interaction capture failed for trace_id=%s", query.trace_id, exc_info=True
+        )
+
+    # T-5.0-05: Section 20.2's "query volume" signal, dispatched beside
+    # `capture_run` above rather than folded into it, on its own
+    # best-effort try/except so a failure in either can never affect the
+    # other or the caller who already has their answer streamed to them.
+    # `assemble_interaction` is the same pure, no-I/O function
+    # `feedback.capture_run` calls internally to build the row it writes;
+    # calling it a second time here costs one extra pure computation, never
+    # a second write, and is what supplies query_class/trust_signal/
+    # rubric_outcome/citation counts without reaching into
+    # `feedback/writer.py`'s own persisted row (this module may not import
+    # from there; only `feedback.capture` and `observability.analytics`
+    # are read here). Deferred import for the same reason `capture_run`'s
+    # own import is deferred above: the streaming path is hot.
+    try:
+        from system_03_search_agent.feedback.capture import assemble_interaction
+        from system_03_search_agent.observability.analytics import (
+            AnalyticsEvent,
+            capture_event,
+        )
+
+        interaction = assemble_interaction(query, events)
+        if interaction is not None:
+            # AGGREGATES ONLY (this ticket's binding constraint):
+            # query_class/trust_signal/rubric_outcome are closed
+            # vocabularies, has_citations/citation_count/latency_ms are a
+            # bool and two numbers. Never the query text, never citation
+            # content, never an account identifier beyond `owner_id`
+            # itself, which is already the opaque "user:<uuid>"/
+            # "guest:<uuid>" form `capture_event`'s own docstring names as
+            # safe.
+            await capture_event(
+                AnalyticsEvent.QUERY_COMPLETED,
+                distinct_id=query.owner_id,
+                properties={
+                    "query_class": interaction.query_class,
+                    "trust_signal": interaction.trust_signal,
+                    "rubric_outcome": interaction.rubric_outcome,
+                    "has_citations": bool(interaction.citations),
+                    "citation_count": len(interaction.citations),
+                    "latency_ms": interaction.latency_ms,
+                },
+            )
+    except Exception:
+        logger.warning(
+            "analytics query_completed event failed for trace_id=%s",
+            query.trace_id,
+            exc_info=True,
         )
 
 
@@ -464,66 +543,82 @@ async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     # own record to capture from on EVERY exit, not only on exhaustion
     # (F-4.6-A-02). See `_terminal_events_for_capture`.
     emitted: list[Event] = []
-    try:
-        harness = Harness(trace_id=query.trace_id)
-        context = await _load_session_memory(query, context)
-        initial_state: GraphState = {
-            "query": query,
-            "context": context,
-            "harness": harness,
-            "seq": 0,
-            "events": [],
-            "start_monotonic": start,
-        }
+    # T-5.0-05: bound at the top of the run, for the run's whole duration,
+    # and reset on exit by the scope helper rather than a bare set with no
+    # matching reset. See the module docstring's "Tracing scope note" for
+    # why this is what lets the transport chokepoints stamp trace_id with
+    # no argument threaded through any tool signature.
+    with trace_id_scope(query.trace_id):
         try:
-            with tracing_context(enabled=False):
-                final_state = await compiled_graph.ainvoke(initial_state)
-        except Exception:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
-            elapsed_ms = int((time.monotonic() - start) * 1000)
-            crash_events = _crash_fallback_events(query.trace_id, elapsed_ms)
-            emitted.extend(crash_events)
-            for event in crash_events:
+            harness = Harness(trace_id=query.trace_id)
+            context = await _load_session_memory(query, context)
+            initial_state: GraphState = {
+                "query": query,
+                "context": context,
+                "harness": harness,
+                "seq": 0,
+                "events": [],
+                "start_monotonic": start,
+            }
+            try:
+                # T-5.0-05: replaces the hardcoded `tracing_context
+                # (enabled=False)` this call site used to carry. See the
+                # module docstring's rewritten "Tracing scope note".
+                # `config=` attaches `trace_id` as LangSmith's own join key
+                # (Section 20.1) whenever tracing is actually on.
+                with traced_graph_run(run_name="core.run.run", tags=["run"]):
+                    final_state = await compiled_graph.ainvoke(
+                        initial_state,
+                        config=build_runnable_config(
+                            trace_id=query.trace_id, run_name="core.run.run"
+                        ),
+                    )
+            except Exception:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
+                elapsed_ms = int((time.monotonic() - start) * 1000)
+                crash_events = _crash_fallback_events(query.trace_id, elapsed_ms)
+                emitted.extend(crash_events)
+                for event in crash_events:
+                    yield event
+                # T-4.6-07: a crashed run still captures. It does so through the
+                # `finally` below rather than here, so there is exactly one
+                # capture dispatch on exactly one code path.
+                return
+            emitted.extend(final_state["events"])
+            for event in final_state["events"]:
                 yield event
-            # T-4.6-07: a crashed run still captures. It does so through the
-            # `finally` below rather than here, so there is exactly one
-            # capture dispatch on exactly one code path.
-            return
-        emitted.extend(final_state["events"])
-        for event in final_state["events"]:
-            yield event
-        # After the caller has the answer, never before: see `_remember_turn`.
-        # Left on the normal-completion path deliberately. Capture is the
-        # ledger entry the daily caps count and must survive every
-        # termination; memory is an optimization for the NEXT turn of a
-        # conversation, and a run that was stopped has no next turn to serve.
-        try:
-            await _remember_turn(query, final_state["events"])
-        except Exception:
-            # Logged rather than silently swallowed: a memory write that fails
-            # on every turn makes the feature look implemented and behave
-            # inert, which is F-4.5-09's failure mode arriving by a second
-            # route. The answer is already streamed, so this cannot affect the
-            # caller.
-            logger.warning(
-                "session memory not recorded for trace_id=%s",
-                query.trace_id,
-                exc_info=True,
+            # After the caller has the answer, never before: see `_remember_turn`.
+            # Left on the normal-completion path deliberately. Capture is the
+            # ledger entry the daily caps count and must survive every
+            # termination; memory is an optimization for the NEXT turn of a
+            # conversation, and a run that was stopped has no next turn to serve.
+            try:
+                await _remember_turn(query, final_state["events"])
+            except Exception:
+                # Logged rather than silently swallowed: a memory write that fails
+                # on every turn makes the feature look implemented and behave
+                # inert, which is F-4.5-09's failure mode arriving by a second
+                # route. The answer is already streamed, so this cannot affect the
+                # caller.
+                logger.warning(
+                    "session memory not recorded for trace_id=%s",
+                    query.trace_id,
+                    exc_info=True,
+                )
+        finally:
+            # T-4.6-07, hardened by F-4.6-A-02. In a `finally` rather than after
+            # the last yield, because code after the last yield of an async
+            # generator runs ONLY when a consumer exhausts it. A consumer that
+            # breaks, is cancelled (the Stop button, the registry's abandonment
+            # timer), calls `aclose()`, or is collected finalizes the generator
+            # instead, and every one of those paths runs this block. Capture is
+            # independent of session memory above for the same reason it always
+            # was: neither failure may skip the other.
+            await _capture_interaction(
+                query,
+                _terminal_events_for_capture(
+                    query, emitted, int((time.monotonic() - start) * 1000)
+                ),
             )
-    finally:
-        # T-4.6-07, hardened by F-4.6-A-02. In a `finally` rather than after
-        # the last yield, because code after the last yield of an async
-        # generator runs ONLY when a consumer exhausts it. A consumer that
-        # breaks, is cancelled (the Stop button, the registry's abandonment
-        # timer), calls `aclose()`, or is collected finalizes the generator
-        # instead, and every one of those paths runs this block. Capture is
-        # independent of session memory above for the same reason it always
-        # was: neither failure may skip the other.
-        await _capture_interaction(
-            query,
-            _terminal_events_for_capture(
-                query, emitted, int((time.monotonic() - start) * 1000)
-            ),
-        )
 
 
 async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[Event]:
@@ -570,6 +665,18 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
     # surface, which is the one real users actually reach, while every test
     # that calls `run()` passed.
     seen_events: list[Event] = []
+    # T-5.0-05: bound at the top of the run, matching `run()`, for the same
+    # reason. This is the entry point that matters most for the transport
+    # chokepoints to actually see a trace_id in production: see the module
+    # docstring's "Tracing scope note". `set_trace_id`/`reset_trace_id`
+    # rather than the `trace_id_scope` context manager `run()` uses: this
+    # function's existing try/finally already spans the whole body (a
+    # "manual try/finally spanning a callback boundary", exactly the shape
+    # `observability/audit.py`'s own docstring names as the one case a
+    # context manager does not fit), so the token is reset in that same
+    # `finally` below rather than reindenting this function's entire body
+    # under a second nested block.
+    _trace_id_token = set_trace_id(query.trace_id)
     try:
         harness = Harness(trace_id=query.trace_id)
         context = await _load_session_memory(query, context)
@@ -612,9 +719,19 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
             # are genuinely the same event arriving by two routes.
             yielded_seqs: set[int] = set()
 
-            with tracing_context(enabled=False):
+            # T-5.0-05: replaces the hardcoded `tracing_context
+            # (enabled=False)` this call site used to carry. See the module
+            # docstring's rewritten "Tracing scope note". `config=` attaches
+            # `trace_id` as LangSmith's own join key (Section 20.1) whenever
+            # tracing is actually on; this is the entry point a real SSE
+            # surface uses, so it is traced too, not only `run()`.
+            with traced_graph_run(run_name="core.run.run_streaming", tags=["run_streaming"]):
                 async for mode, chunk in compiled_graph.astream(
-                    initial_state, stream_mode=["updates", "custom"]
+                    initial_state,
+                    stream_mode=["updates", "custom"],
+                    config=build_runnable_config(
+                        trace_id=query.trace_id, run_name="core.run.run_streaming"
+                    ),
                 ):
                     if mode == "custom":
                         # Written by `_EventSink.emit_live`. Anything else on
@@ -671,3 +788,8 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
                 query, seen_events, int((time.monotonic() - start) * 1000)
             ),
         )
+        # T-5.0-05: the matching reset for `set_trace_id` above, run last so
+        # the contextvar stays bound through capture (which does not itself
+        # need it, but nothing above should be able to observe it unset
+        # early either). Runs on every exit this `finally` already covers.
+        reset_trace_id(_trace_id_token)

@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-28.
+Last updated: 2026-08-30.
 
 ## Table of contents
 
@@ -393,11 +393,26 @@ One thing we got wrong and are recording rather than quietly fixing. We predicte
 
 The lesson, and it is the one worth keeping: a thing that has never actually run is not tested, however carefully it has been checked. Three real releases found five things in an afternoon that a suite of four thousand tests could not, because all five lived outside the code.
 
+### Sprint: making the system show its workings (30 August)
+
+Until this sprint the tool answered you and then forgot everything about how it got there. If an answer was wrong, there was no way to go back and see which sources it had consulted, how long each one took, or whether one of them had quietly failed. This sprint gives it a memory of its own work, in three separate records rather than one, so that losing any single one still leaves a usable picture.
+
+The first is a step-by-step trace of a whole question, sent to an outside service built for exactly this, so you can open one question and watch it move through the system. The second counts behaviour in aggregate: how many questions, how often the system refuses, how often someone gives a thumbs up. It counts, it never stores the question. The third is a plain file on our own machine, one line per outside lookup, that only ever gets added to and never edited, recording which source was consulted, under which permission, what it answered and how long it took.
+
+The hardest part was not building any of that. It was making sure none of the three records can accidentally carry a password or an account name off our machine. That took five rounds of fixing and re-checking one control, which is the most any single piece of this project has ever taken.
+
+What went wrong is worth stating plainly, because it was a thinking error rather than a coding one. Error messages from a failed lookup can contain the password used to make it, because the password sits inside the web address. We spent four rounds hardening the check that scans those messages before writing them to our own file on our own machine, and each round was defeated by a slightly different message. Meanwhile the very same text was being sent, unchecked, to the outside tracing service. Four rounds guarding the front door of a house whose back door was open. Two independent reviewers found it; the people doing the work did not, because each round only looked at the file the previous round had been editing.
+
+The fix was to stop trying to scan the text at all. The system no longer sends the message; it sends a short code saying what kind of failure it was, and the name of the failure type. Nothing else. A message you never send is a message that cannot leak.
+
+One more thing happened at the very end, and it is recorded because a reader learns more from it than from another green tick. The session that paused this work wrote a handoff note saying one small item was still unfinished. It was not: the fix, its tests, and the record of it had all been saved together. The note was written after a genuine re-check, but the re-check tested the wrong door and found a real problem behind a different one. The next session re-measured before building anything and caught it. Had it trusted three documents that all agreed, it would have rebuilt a working control on top of itself.
+
+
 ## What is next
 
 Where the finished work sits against what is still ahead:
 
-The immediate next piece of work is making the system show its workings: recording what it did on every question it is asked, so we can tell which answers were good and which were not, and then measuring it against a fixed set of fifty questions with known answers. Until that exists we can say the system answers questions, and we cannot say how often it answers them well.
+The immediate next piece of work is measuring how good the answers actually are. We have fifty questions with known-correct answers written down in advance, and the plan is to run all fifty and score them, so that "it seems better" becomes a number we can watch move. The recording built this sprint is what makes that possible: it is what the scoring reads.
 
 
 ```mermaid
@@ -469,6 +484,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| When a question is being answered, the system waits for the counting service to acknowledge it before showing you the answer. If that outside service is slow, your search is slow, for no benefit to you. The fix is written down and not yet applied, because applying it breaks a set of existing tests that would have to be rewritten in the same change | The next time the counting code is touched. The work is scoped and the tests that need rewriting are named |
+| One of the two places we send records to the outside tracing service still has no word-by-word check on ordinary text. Nothing sent there today contains anything private, but that is true because of what the code happens to send, not because anything stops it | Deliberately left open rather than closed with another text scanner, since four rounds this sprint proved a text scanner loses. It is re-checked whenever new information starts being sent |
+| The old, over-powerful key for the counting service still exists and needs cancelling by hand. It has been removed from our machine and nothing uses it, but it has not been switched off at the far end | Needs a person to click cancel in the counting service. Nothing in the code can do it |
 | Reloading the page signs you out, so your saved searches only appear after you sign in again. They are not lost, they are behind a sign-in you did not expect | Its own piece of work, scheduled deliberately rather than bolted on, because where a browser may store the thing that proves who you are is a security decision worth making properly |
 | On a shared computer, if one person uses the tool without an account and a different person then creates an account in that same browser, the first person's questions follow them into the new account. The system cannot tell those two situations apart | Owned alongside the earlier work that moves a guest's searches into a new account, since this sprint made a pre-existing problem visible rather than creating it |
 | A search list longer than fifty is quietly cut to the fifty most recent, and nothing on screen says there is more | Whenever the sidebar gets a way to show more, which the approved design does not currently have |
