@@ -1,9 +1,87 @@
 # Build phase 5.2: the offline eval harness grading
 
+## PARKED 2026-08-30. DO NOT MERGE THIS BRANCH.
+
+The harness on `phase/5.2-eval-harness-grading` is KNOWN BROKEN and its own
+test suite is GREEN with every defect below live. That combination is what
+makes it dangerous: it looks finished.
+
+Four review rounds, four FAIL verdicts, roughly ninety findings. The last
+round measured an answer about a gene that does not exist, citing a record
+that does not exist, scoring 16 of 16 with no hard-fail.
+
+WHY IT IS PARKED RATHER THAN FIXED, and this is the product owner's reasoning
+rather than the reviewers': the 50 golden questions are a FIRST ATTEMPT, not
+a settled target. This is a prototype and the question set will change. A
+grader precise enough to catch an invented fact about the right gene is
+precision spent against a moving specification, and the instrument cannot be
+more settled than the thing it measures. The bottleneck is the question set,
+not the grader.
+
+WHAT IS SAFE AND MERGED: build phase 5.1, the 50-query golden dataset, its
+loader, its builder and `docs/build/Golden_dataset_method.md`. It passed all
+four rounds, and every identifier was independently re-verified against live
+NCBI by two separate reviewers.
+
+BEFORE RESUMING, read in this order:
+
+1. This file's "The root defect" section immediately below.
+2. `tracker/phase_5.2_review4_report.md`, the most recent and sharpest round.
+3. `tracker/phase_5.2_rereview_report.md`, round three.
+4. The two round-one reports, `tracker/phase_5.1_judge_report.md` and
+   `tracker/phase_5.1_adversary_report.md`.
+
+## The root defect, which no amount of patching reaches
+
+`anchors_for()` reads `entity_name`, `source_id` and `claim_text` from the
+citation. On a real trace those come from citation EVENTS THE AGENT EMITTED.
+Both the answer and the citation are agent output.
+
+So grounding compared the agent's prose against the agent's own citation.
+That is SELF-CONSISTENCY WEARING THE NAME OF GROUNDING. An agent that
+fabricates both is perfectly self-consistent and scores full marks.
+
+Measured, 2026-08-30, on row G-002 with a judge returning 2:
+
+    answer:   "ZZZFAKE1 encodes a mitochondrial transporter [1]."
+    citation: entity_name ZZZFAKE1, source_id NCBIGene:9999
+    result:   grounding=(5,5)  evidence_quality=2  total=16/16
+              outcome=pass  hard_fails=[]
+
+The identical circularity was deliberately designed OUT of the dataset
+builder, which verifies against live NCBI on a path that touches none of the
+agent's machinery, with a long docstring explaining why. It was then designed
+back INTO the grader one file over.
+
+A second, blunter defect sat on top: anchors matched as plain substrings with
+no word boundary, so the anchor "gene" matched inside "generate". An answer
+about mitochondria producing energy scored fully grounded and passed, while
+an answer about the wrong gene was correctly rejected. On that pair the check
+pointed the wrong way.
+
+## The three ways to resume, with what each can actually catch
+
+Four ways an answer can be wrong: (A) invents the entity, (B) right entity
+and invented fact, (C) right facts and wrong conclusion, (D) off-topic.
+
+| Approach | A | B | C | D |
+|---|---|---|---|---|
+| Anchor on the dataset's live-verified values | yes | no | no | yes |
+| Drop deterministic grounding, a judge owns it | unknown without calibration | unknown | unknown | unknown |
+| Make the trace carry what was actually retrieved | yes | yes | no | yes |
+
+The third is the honest root fix and needs the event contract to carry the
+real tool output rather than the agent's description of it. It is product
+work driven by an eval need, so it wants its own decision.
+
+
 Branch: `phase/5.2-eval-harness-grading`. Opened 2026-08-30, carrying work written during build phase 5.1 and held back from it.
 
 ## Table of contents
 
+- [PARKED 2026-08-30. DO NOT MERGE THIS BRANCH.](#parked-2026-08-30-do-not-merge-this-branch)
+- [The root defect, which no amount of patching reaches](#the-root-defect-which-no-amount-of-patching-reaches)
+- [The three ways to resume, with what each can actually catch](#the-three-ways-to-resume-with-what-each-can-actually-catch)
 - [Why this phase exists](#why-this-phase-exists)
 - [What is on this branch already](#what-is-on-this-branch-already)
 - [The finding that split the phase](#the-finding-that-split-the-phase)
