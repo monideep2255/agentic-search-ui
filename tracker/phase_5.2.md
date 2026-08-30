@@ -1,9 +1,87 @@
 # Build phase 5.2: the offline eval harness grading
 
+## PARKED 2026-08-30. DO NOT MERGE THIS BRANCH.
+
+The harness on `phase/5.2-eval-harness-grading` is KNOWN BROKEN and its own
+test suite is GREEN with every defect below live. That combination is what
+makes it dangerous: it looks finished.
+
+Four review rounds, four FAIL verdicts, roughly ninety findings. The last
+round measured an answer about a gene that does not exist, citing a record
+that does not exist, scoring 16 of 16 with no hard-fail.
+
+WHY IT IS PARKED RATHER THAN FIXED, and this is the product owner's reasoning
+rather than the reviewers': the 50 golden questions are a FIRST ATTEMPT, not
+a settled target. This is a prototype and the question set will change. A
+grader precise enough to catch an invented fact about the right gene is
+precision spent against a moving specification, and the instrument cannot be
+more settled than the thing it measures. The bottleneck is the question set,
+not the grader.
+
+WHAT IS SAFE AND MERGED: build phase 5.1, the 50-query golden dataset, its
+loader, its builder and `docs/build/Golden_dataset_method.md`. It passed all
+four rounds, and every identifier was independently re-verified against live
+NCBI by two separate reviewers.
+
+BEFORE RESUMING, read in this order:
+
+1. This file's "The root defect" section immediately below.
+2. `tracker/phase_5.2_review4_report.md`, the most recent and sharpest round.
+3. `tracker/phase_5.2_rereview_report.md`, round three.
+4. The two round-one reports, `tracker/phase_5.1_judge_report.md` and
+   `tracker/phase_5.1_adversary_report.md`.
+
+## The root defect, which no amount of patching reaches
+
+`anchors_for()` reads `entity_name`, `source_id` and `claim_text` from the
+citation. On a real trace those come from citation EVENTS THE AGENT EMITTED.
+Both the answer and the citation are agent output.
+
+So grounding compared the agent's prose against the agent's own citation.
+That is SELF-CONSISTENCY WEARING THE NAME OF GROUNDING. An agent that
+fabricates both is perfectly self-consistent and scores full marks.
+
+Measured, 2026-08-30, on row G-002 with a judge returning 2:
+
+    answer:   "ZZZFAKE1 encodes a mitochondrial transporter [1]."
+    citation: entity_name ZZZFAKE1, source_id NCBIGene:9999
+    result:   grounding=(5,5)  evidence_quality=2  total=16/16
+              outcome=pass  hard_fails=[]
+
+The identical circularity was deliberately designed OUT of the dataset
+builder, which verifies against live NCBI on a path that touches none of the
+agent's machinery, with a long docstring explaining why. It was then designed
+back INTO the grader one file over.
+
+A second, blunter defect sat on top: anchors matched as plain substrings with
+no word boundary, so the anchor "gene" matched inside "generate". An answer
+about mitochondria producing energy scored fully grounded and passed, while
+an answer about the wrong gene was correctly rejected. On that pair the check
+pointed the wrong way.
+
+## The three ways to resume, with what each can actually catch
+
+Four ways an answer can be wrong: (A) invents the entity, (B) right entity
+and invented fact, (C) right facts and wrong conclusion, (D) off-topic.
+
+| Approach | A | B | C | D |
+|---|---|---|---|---|
+| Anchor on the dataset's live-verified values | yes | no | no | yes |
+| Drop deterministic grounding, a judge owns it | unknown without calibration | unknown | unknown | unknown |
+| Make the trace carry what was actually retrieved | yes | yes | no | yes |
+
+The third is the honest root fix and needs the event contract to carry the
+real tool output rather than the agent's description of it. It is product
+work driven by an eval need, so it wants its own decision.
+
+
 Branch: `phase/5.2-eval-harness-grading`. Opened 2026-08-30, carrying work written during build phase 5.1 and held back from it.
 
 ## Table of contents
 
+- [PARKED 2026-08-30. DO NOT MERGE THIS BRANCH.](#parked-2026-08-30-do-not-merge-this-branch)
+- [The root defect, which no amount of patching reaches](#the-root-defect-which-no-amount-of-patching-reaches)
+- [The three ways to resume, with what each can actually catch](#the-three-ways-to-resume-with-what-each-can-actually-catch)
 - [Why this phase exists](#why-this-phase-exists)
 - [What is on this branch already](#what-is-on-this-branch-already)
 - [The finding that split the phase](#the-finding-that-split-the-phase)
@@ -12,6 +90,7 @@ Branch: `phase/5.2-eval-harness-grading`. Opened 2026-08-30, carrying work writt
 - [Findings carried in](#findings-carried-in)
 - [Fix round 1, measured 2026-08-30](#fix-round-1-measured-2026-08-30)
 - [What is still open](#what-is-still-open)
+- [Round 2 design: grade the content, not the scaffolding](#round-2-design-grade-the-content-not-the-scaffolding)
 - [Coverage: what a green run here does not mean](#coverage-what-a-green-run-here-does-not-mean)
 - [History](#history)
 
@@ -160,6 +239,118 @@ Two of those mutation cases failed on the first run and both were instructive:
 - T-5.2-10 is PARTIAL. The eight P12 arms are grounded on the real dataset. The 25 arms inherited from 5.1 still run against hand-built records.
 - A re-review needs product-owner authorisation. The two-round budget was spent on 5.1 and both rounds returned FAIL.
 
+## Round 2 design: grade the content, not the scaffolding
+
+Written 2026-08-30 before any code, after the third review round returned FAIL and Rule 4 fired three times. The previous two rounds both began by editing the file the last defect was in. This one begins by asking what the grader should be measuring at all.
+
+### The product owner's reframe, which is the basis of this design
+
+"The answer will always be non-deterministic. But we need to ensure the content that is getting pulled is always consistent and updated and used in the answer. Not word for word."
+
+That converts an unanswerable question into three answerable ones:
+
+- USED: the answer's substance is drawn from the records that were actually retrieved.
+- CURRENT: those records are fresh rather than stale.
+- CONSISTENT: the same question retrieves the same core records across samples.
+
+All three are properties of CONTENT, and all three are deterministic. None of them requires comparing the answer to a reference text, which is the comparison that cannot exist when a language model writes the prose.
+
+### Why every previous version failed, stated once
+
+The five deterministic criteria checked SCAFFOLDING, and a fabricator mints scaffolding:
+
+| Criterion | What it checked | How a fabrication satisfies it |
+|---|---|---|
+| Entity normalization | Did the required CURIEs resolve | It asserts them |
+| Database routing | Did the required citations appear | It mints them |
+| Evidence quality | Are the claims cited | It cites anything |
+| Freshness | Is `assembly_context` non-empty | It asserts a string |
+| Output usability | Are there ids and text | It has both |
+
+Not one of them ever asked whether the answer's substance came from what was retrieved. So the whole burden of that question fell on the judged half, and with a constant judge in every test the arms could not see it.
+
+### The rubric already has the right slots
+
+The 8-point rubric in `requirements/Evaluation_playbook.md` is LOCKED and is not edited here, per `.claude/rules/v1-scope-boundary.md`. It does not need to be. Two of its criteria already say, in the playbook's own words, exactly what the reframe asks for:
+
+- Criterion 4, evidence quality, scores 2 for "claims tied to source records and IDs". That IS "used in the answer".
+- Criterion 6, freshness and versioning, scores 2 for "clear date, version, assembly context". That IS "current".
+
+So this is not a new scoring model. It is two existing criteria finally measuring what the locked document already says they measure.
+
+The third property, consistency, is not a per-run criterion and is not forced into one. It is an aggregate across samples and sits beside pass@k and pass^k, which is additive and touches no locked text.
+
+### What the judge is still for, and why it cannot be removed
+
+The locked rubric is 8 criteria at 0 to 2 with a 13 threshold. Five deterministic criteria cap at 10, so every passing answer needs at least 3 points of judgement. That is the specification's design, not a defect, and it is not routed around by editing a locked document.
+
+What changes is the DIVISION OF LABOUR. The deterministic half now decides whether the answer is grounded in real retrieved content, which is a correctness question. The judge decides whether it was said well, which is a quality question. A weak judge can no longer wave a fabrication through, because the fabrication scores 0 on grounding before the judge is consulted.
+
+### Freshness reports rather than guesses
+
+Product-owner decision, 2026-08-30: build the freshness check, and have it return an explicit NOT MEASURABLE state whenever the data cannot support a verdict, rather than a score.
+
+F-3.4-T06-01 records that this graph's vertices carry only generic BioLink properties, so the per-field-class staleness thresholds in Section 7.4 never match live data. A check that silently scores 2 in that situation is the dead-check defect this phase has now produced three times. The same treatment was applied to the coverage metric earlier today after the judge caught it reporting 0 percent for a quantity nothing could observe.
+
+### Tickets
+
+| Ticket | Deliverable | Status |
+|---|---|---|
+| T-5.2-11 | Evidence quality becomes a GROUNDING measure: anchor terms built from the retrieved records, and how much of the answer rests on them. A fabrication anchors on nothing | done |
+| T-5.2-12 | Freshness reads `snapshot_date`, which the real trace carries, against Section 7.4 thresholds, and returns NOT MEASURABLE when the field class is absent | done |
+| T-5.2-13 | The four confirmed criticals: RR-01's hollow arm, RR-02's inverted `ask`, RR-03's `truncated` read from the wrong payload, RR-04's attribution bypass | done |
+| T-5.2-14 | Retrieval consistency across k samples, as a new aggregate beside pass@k and pass^k | done |
+| T-5.2-15 | Arms that cannot be hollow: every arm claiming to distinguish answers asserts on the DETERMINISTIC SUBTOTAL, or uses a judge derived from record content. No constant judges | partial |
+
+### T-5.2-11 result, measured 2026-08-30
+
+The paired probe was written FIRST and watched failing, which is the discipline the previous three rounds skipped. It failed with `grounded 10, fabricated 10`: the grader could not tell the two apart, proven before any fix rather than asserted after one.
+
+After the change, across all 50 rows, at every judge constant:
+
+| Judge returns | Fabricated | Grounded | Paraphrased |
+|---|---|---|---|
+| 0 for every criterion | 0 of 50 | 0 of 50 | 0 of 50 |
+| 1 for every criterion | 0 of 50 | 34 of 50 | 34 of 50 |
+| 2 for every criterion | 0 of 50 | 37 of 50 | 37 of 50 |
+
+Three things that table establishes:
+
+- A FABRICATION NOW FAILS AT EVERY JUDGE CONSTANT, including a maximally generous one. The previous fix passed 37 of 50 at judge=2, and the arm written to prove otherwise could not see it (F-5.2-RR-01).
+- GROUNDED AND PARAPHRASED SCORE IDENTICALLY. The paraphrase shares no phrasing with the record and anchors on the same entities, which is the product owner's "not word for word" made measurable.
+- A CORRECT ANSWER STILL SCORES 0 UNDER A ZERO JUDGE, and that is honest rather than broken. The locked rubric puts the threshold at 13 of 16 with 10 deterministic points available, so three points of judgement are structurally required. The harness now reflects the specification instead of hiding it.
+
+WHY GROUNDING BECAME A HARD-FAIL RATHER THAN A LOW SCORE, and this is the part that was measured rather than reasoned: scoring grounding 0 costs 2 points against a 13-of-16 threshold, so with a generous judge a fabrication still passed 37 of 50. Losing 2 is survivable. The playbook's own hard-fail list already says "Provenance = 0 (a claim with no source)", and an answer citing records it never drew on has claims tied to nothing, however many citations it minted. The hard-fail is the locked document's rule, not an invention.
+
+ONE DEFINITION, TWO CALLERS. `grounding()` lives in `hard_fails.py` and is used by both the `evidence_quality` criterion and the provenance hard-fail. Two copies of one rule is the drift defect F-3.0-01 filed.
+
+FOUR OLDER ARMS BROKE AND THE FIXTURES WERE WRONG, not the check. Their citations carried no `entity_name`, which no real trace produces, so their answers were correctly judged ungrounded. The fixtures were re-grounded on what the committed real trace actually carries. That is T-5.2-15's work arriving early, and it is the round's own lesson applied to itself.
+
+### T-5.2-12, 13 and 14, measured 2026-08-30
+
+THE THREE CONFIRMED CRITICALS, each reproduced as an arm before it was fixed:
+
+- F-5.2-RR-02, the harness INVERTED THE DATASET. On the one row expecting a clarifying question, asking failed with EMPTY notes while refusing passed. The abstain branch caught only `refuse`, so `ask` fell through to the score path and could not reach the threshold. Both are non-answering outcomes and both are now abstains.
+- F-5.2-RR-03, `undisclosed_truncation` read `truncated` off a citation. It lives on `tool_result`, and `CitationPayload` is `extra="forbid"`, so no citation can ever carry it. The check was dead on all 20 rows that mandate it AND reported as checked, which is the worse half: a row read as clean on a constraint nothing evaluated. `truncated` is now on the record, sourced from `tool_result`.
+- F-5.2-RR-04, a verdict passed in two ways. A contrastive clause laundered it, since attribution in "ClinVar lists three submissions" covered "but in our assessment this variant is pathogenic" under sentence-level scoping. And the vocabulary was too narrow to see "This variant is disease-causing". Clauses now split on contrastive conjunctions only, never on every comma, because splitting on commas would break "According to ClinVar, the variant is pathogenic", which is correct attributed reporting.
+
+ONE DEFECT WAS FOUND INSIDE THIS ROUND'S OWN FIX, recorded rather than smoothed over. Widening the abstain branch to `ask` immediately exposed that the assembly-context hard-fail still excluded only `refuse`, so a clarifying question was failed for lacking context it never claimed. The earlier fix enumerated one case and a second case was added a few minutes later. The repair asks the record what it IS rather than listing what it is not.
+
+A MUTATION CASE WENT STALE THE SAME WAY. `test_m_p4a` patched `is_refusal`, which the grader no longer reads, so the mutation stopped reaching the control and reported a healthy arm as vacuous. That is the standing cost of the technique: a mutation names a specific reference and goes stale exactly when that reference changes.
+
+T-5.2-12, THE STALENESS VERDICT, splits two questions the last dead check collapsed:
+
+- The rubric criterion asks whether the ANSWER STATES its date and version context, which any trace can show.
+- `staleness_verdict()` asks whether the record is actually current, which needs Section 7.4's per-field-class thresholds. It returns `not_measurable` with a reason, because F-3.4-T06-01 records that this graph carries only generic properties. It becomes measurable the day the ingest carries a richer per-domain property, with no change to the code.
+
+T-5.2-14, RETRIEVAL CONSISTENCY, returns None rather than 1.0 for a single sample. A lone run never disagreed with anything, and reporting that as perfect agreement is the same class of claim as a coverage metric reporting 0 percent for something unobservable. This is the metric that can finally see the open flag this phase was built for: the first answer grounding nothing on a single finding in about half of live runs is a consistency failure, and every individual run in that set looks internally fine.
+
+### The standing test this design makes possible
+
+A paired probe: the same question, the same judge, one fabricated answer and one correct answer. Their scores must differ.
+
+No constant judge can satisfy that, which is the property RR-01 showed was missing. It is the closest thing to a check that cannot be written hollow, and it becomes the first arm rather than the last.
+
 ## Coverage: what a green run here does not mean
 
 Stated at open, per `.claude/rules/goal-contracts.md`.
@@ -170,6 +361,8 @@ Stated at open, per `.claude/rules/goal-contracts.md`.
 - THE PROVENANCE HARD-FAIL IS STRUCTURALLY DEAD on any trace-derived record, because claims are built from citation events and a citation carries its own citation id. It is also the only hard-fail applied to all 50 rows.
 
 ## History
+
+- 2026-08-30: Fix round 2, on the product owner's reframe. Nine of ten tickets closed. Measured against the real 50-row dataset at every judge constant: a fabricated answer passes 0 of 50 including under a maximally generous judge, where round 1 passed 37 of 50 and its own arm could not see it; a grounded and a paraphrased answer score identically, which is "not word for word" made measurable; refusing everything scores 13 of 50, the exact count of rows where declining is an accepted outcome, derived rather than hardcoded. Eval suite 109 passed 1 skipped, ruff clean, isort clean. Two self-inflicted defects found by running rather than reading, both recorded above.
 
 - 2026-08-30: Fix round 1. Eight of ten tickets closed (T-5.2-01 through T-5.2-08). Both failing probes re-measured against the real dataset: a fabricated answer now passes 0 of 50 with a judge that reads prose, and refusing every question scores 13 of 50 rather than 50. Eight P12 regression arms added with eight mutation cases. Two self-inflicted errors caught by running rather than reading, both recorded above. Eval suite 92 passed 1 skipped, ruff clean, isort clean.
 
