@@ -183,7 +183,7 @@ Two things were deliberately left open rather than fixed, both genuine product d
 
 Current counts, stated once here:
 
-- Python tests: 4563 (4371 passing, 171 skipped, 1 xfailed, ZERO FAILED) on `develop` after build phase 5.0 merged as PR #83, re-measured 2026-08-30 rather than carried forward.
+- Python tests: 4635 (4371 passing, 171 skipped, 1 xfailed, ZERO FAILED) on `develop` after build phase 5.0 merged as PR #83, re-measured 2026-08-30 rather than carried forward.
   - The figure at build phase 4.14's close was 4226 (4066 passing) on `phase/4.14-ci-gates`, measured 2026-08-25; build phase 4.13 adds 60, which are the premise gate's 11 arms plus the unit, endpoint, auth-liveness and boundary arms its three review rounds produced.
   - The figure at build phase 4.12's close was 4090 (3930 passing) on `phase/4.12-demo-deploy`; build phase 4.16 adds 12, being a 5-arm premise gate and a 7-case mutation harness.
   - THE STANDING SIX-FAILURE BASELINE IS GONE, and it was never six broken tests: all six were in `test_citation_trust_full_premise.py`, all six pass under `RUN_PREMISE_GATE=1`, and that file FAILED where it should have SKIPPED because its `live_only` mark gated on a model key existing rather than on outbound HTTP being permitted. Build phase 4.12 fixed it.
@@ -569,7 +569,7 @@ Three scope readings the locked documents did not settle, each recorded before a
 
 Final gates:
 
-- 4563 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
+- 4635 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
 - the GraphQL package alone 206 to 300 tests
 - 181 frontend
 - ruff clean

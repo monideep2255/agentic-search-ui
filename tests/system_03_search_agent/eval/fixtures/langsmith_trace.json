@@ -1,0 +1,775 @@
+{
+  "runs": [
+    {
+      "trace_id": "01a04e22-b3e2-7701-95b7-d61735d1af59",
+      "name": "write",
+      "inputs": {
+        "query": {
+          "text": "What diseases are associated with BRCA1?",
+          "audience_depth": "clinical_brief"
+        },
+        "events": [
+          {
+            "type": "guard",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 0,
+            "ts": "2026-08-29T15:28:14.161763Z",
+            "payload": {
+              "passed": true,
+              "category": "ok",
+              "reason": null
+            }
+          },
+          {
+            "type": "cost",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 1,
+            "ts": "2026-08-29T15:28:14.161837Z",
+            "payload": {
+              "query_cost_usd": 0.00126952,
+              "query_cap_usd": 0.1,
+              "cap_fraction": 0.012695199999999998,
+              "model_tier": "guard"
+            }
+          },
+          {
+            "type": "think",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 2,
+            "ts": "2026-08-29T15:28:15.270023Z",
+            "payload": {
+              "narrative": "The query asks for diseases associated with a gene, which requires traversing from Gene to Disease nodes via gene_associated_with_condition or has_phenotype edges, a classic multi-hop graph traversal.",
+              "query_class": "multi_hop",
+              "resolved_entities": [
+                {
+                  "text": "BRCA1",
+                  "curie": "NCBIGene:672",
+                  "confidence": 1.0
+                }
+              ],
+              "clarifying_question": null
+            }
+          },
+          {
+            "type": "cost",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 3,
+            "ts": "2026-08-29T15:28:15.270063Z",
+            "payload": {
+              "query_cost_usd": 0.0072597420000000005,
+              "query_cap_usd": 0.1,
+              "cap_fraction": 0.07259742,
+              "model_tier": "plan"
+            }
+          },
+          {
+            "type": "plan",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 4,
+            "ts": "2026-08-29T15:28:16.369596Z",
+            "payload": {
+              "narrative": "selected cypher_query for a Layer 1 graph lookup and ncbi_efetch for a Layer 2 confirmation of NCBIGene:672",
+              "tool_calls": [
+                {
+                  "tool": "cypher_query",
+                  "call_id": "cq-38f827dd6515",
+                  "layer": "layer_1_graph"
+                },
+                {
+                  "tool": "ncbi_efetch",
+                  "call_id": "ne-01b2b5781f42",
+                  "layer": "layer_2_api"
+                }
+              ],
+              "resolved_entities": [
+                {
+                  "text": "BRCA1",
+                  "curie": "NCBIGene:672",
+                  "confidence": 1.0
+                }
+              ]
+            }
+          },
+          {
+            "type": "cost",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 5,
+            "ts": "2026-08-29T15:28:16.369645Z",
+            "payload": {
+              "query_cost_usd": 0.012484726000000002,
+              "query_cap_usd": 0.1,
+              "cap_fraction": 0.12484726000000002,
+              "model_tier": "plan"
+            }
+          },
+          {
+            "type": "tool_start",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 6,
+            "ts": "2026-08-29T15:28:16.372804Z",
+            "payload": {
+              "call_id": "cq-38f827dd6515",
+              "tool": "cypher_query",
+              "layer": "layer_1_graph",
+              "status": "running"
+            }
+          },
+          {
+            "type": "tool_result",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 7,
+            "ts": "2026-08-29T15:28:18.633085Z",
+            "payload": {
+              "call_id": "cq-38f827dd6515",
+              "tool": "cypher_query",
+              "layer": "layer_1_graph",
+              "status": "ok",
+              "summary": "9 row(s) of 9",
+              "result_count": 9,
+              "truncated": false
+            }
+          },
+          {
+            "type": "tool_start",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 8,
+            "ts": "2026-08-29T15:28:18.633150Z",
+            "payload": {
+              "call_id": "ne-01b2b5781f42",
+              "tool": "ncbi_efetch",
+              "layer": "layer_2_api",
+              "status": "running"
+            }
+          },
+          {
+            "type": "tool_result",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 9,
+            "ts": "2026-08-29T15:28:18.816461Z",
+            "payload": {
+              "call_id": "ne-01b2b5781f42",
+              "tool": "ncbi_efetch",
+              "layer": "layer_2_api",
+              "status": "ok",
+              "summary": "dataset_report: 1 record(s)",
+              "result_count": 1,
+              "truncated": false
+            }
+          }
+        ]
+      },
+      "outputs": {
+        "events": [
+          {
+            "type": "token",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 10,
+            "ts": "2026-08-29T15:28:33.250462Z",
+            "payload": {
+              "text": "BRCA1 (NCBIGene:672), named \"BRCA1 DNA repair associated\" [1], is associated with four disease records in the knowledge graph: MedGen:C0346153 [2], MedGen:C2676676 [3], MedGen:C3280442 [4], and MedGen:C4554406 [5]. ",
+              "marker_ids": [
+                "cq-38f827dd6515-1",
+                "cq-38f827dd6515-2",
+                "cq-38f827dd6515-3",
+                "cq-38f827dd6515-4",
+                "cq-38f827dd6515-5"
+              ]
+            }
+          },
+          {
+            "type": "token",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 11,
+            "ts": "2026-08-29T15:28:33.250601Z",
+            "payload": {
+              "text": "The gene symbol for this gene is BRCA1 [6]. ",
+              "marker_ids": [
+                "ne-01b2b5781f42-6"
+              ]
+            }
+          },
+          {
+            "type": "citation",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 12,
+            "ts": "2026-08-29T15:28:33.250613Z",
+            "payload": {
+              "citation_id": "cq-38f827dd6515-1",
+              "display_index": 1,
+              "source": "NCBIGene",
+              "source_id": "NCBIGene:672",
+              "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+              "layer": "layer_1_graph",
+              "field": "name",
+              "claim_text": "BRCA1 (NCBIGene:672), named \"BRCA1 DNA repair associated\"",
+              "evidence_kind": "primary_assertion",
+              "assertion_confidence": "asserted",
+              "population_ancestry_context": null,
+              "license": "public_domain_us_gov",
+              "snapshot_date": "2026-04-22",
+              "entity_name": "BRCA1 DNA repair associated"
+            }
+          },
+          {
+            "type": "citation",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 13,
+            "ts": "2026-08-29T15:28:33.250657Z",
+            "payload": {
+              "citation_id": "cq-38f827dd6515-2",
+              "display_index": 2,
+              "source": "MedGen",
+              "source_id": "MedGen:C0346153",
+              "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+              "layer": "layer_1_graph",
+              "field": "curie",
+              "claim_text": "is associated with four disease records in the knowledge graph: MedGen:C0346153",
+              "evidence_kind": "primary_assertion",
+              "assertion_confidence": "hedged",
+              "population_ancestry_context": null,
+              "license": "public_domain_us_gov",
+              "snapshot_date": "2026-04-22",
+              "entity_name": null
+            }
+          },
+          {
+            "type": "citation",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 14,
+            "ts": "2026-08-29T15:28:33.250664Z",
+            "payload": {
+              "citation_id": "cq-38f827dd6515-3",
+              "display_index": 3,
+              "source": "MedGen",
+              "source_id": "MedGen:C2676676",
+              "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+              "layer": "layer_1_graph",
+              "field": "curie",
+              "claim_text": "MedGen:C2676676",
+              "evidence_kind": "primary_assertion",
+              "assertion_confidence": "hedged",
+              "population_ancestry_context": null,
+              "license": "public_domain_us_gov",
+              "snapshot_date": "2026-04-22",
+              "entity_name": null
+            }
+          },
+          {
+            "type": "citation",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 15,
+            "ts": "2026-08-29T15:28:33.250678Z",
+            "payload": {
+              "citation_id": "cq-38f827dd6515-4",
+              "display_index": 4,
+              "source": "MedGen",
+              "source_id": "MedGen:C3280442",
+              "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+              "layer": "layer_1_graph",
+              "field": "curie",
+              "claim_text": "MedGen:C3280442",
+              "evidence_kind": "primary_assertion",
+              "assertion_confidence": "hedged",
+              "population_ancestry_context": null,
+              "license": "public_domain_us_gov",
+              "snapshot_date": "2026-04-22",
+              "entity_name": null
+            }
+          },
+          {
+            "type": "citation",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 16,
+            "ts": "2026-08-29T15:28:33.250684Z",
+            "payload": {
+              "citation_id": "cq-38f827dd6515-5",
+              "display_index": 5,
+              "source": "MedGen",
+              "source_id": "MedGen:C4554406",
+              "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4554406",
+              "layer": "layer_1_graph",
+              "field": "curie",
+              "claim_text": "MedGen:C4554406",
+              "evidence_kind": "primary_assertion",
+              "assertion_confidence": "hedged",
+              "population_ancestry_context": null,
+              "license": "public_domain_us_gov",
+              "snapshot_date": "2026-04-22",
+              "entity_name": null
+            }
+          },
+          {
+            "type": "citation",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 17,
+            "ts": "2026-08-29T15:28:33.250690Z",
+            "payload": {
+              "citation_id": "ne-01b2b5781f42-6",
+              "display_index": 6,
+              "source": "gene",
+              "source_id": "672",
+              "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+              "layer": "layer_2_api",
+              "field": "symbol",
+              "claim_text": "The gene symbol for this gene is BRCA1",
+              "evidence_kind": "primary_assertion",
+              "assertion_confidence": "asserted",
+              "population_ancestry_context": null,
+              "license": "public_domain_us_gov",
+              "snapshot_date": null,
+              "entity_name": null
+            }
+          },
+          {
+            "type": "trust_signal",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 18,
+            "ts": "2026-08-29T15:28:33.250753Z",
+            "payload": {
+              "outcome": "ask",
+              "risk_tier": "high",
+              "grounded": true,
+              "triangulated": false,
+              "citation_id": "cq-38f827dd6515-1",
+              "scope": "claim",
+              "message": null,
+              "fallback_link": null
+            }
+          },
+          {
+            "type": "trust_signal",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 19,
+            "ts": "2026-08-29T15:28:33.250786Z",
+            "payload": {
+              "outcome": "ask",
+              "risk_tier": "high",
+              "grounded": true,
+              "triangulated": false,
+              "citation_id": "cq-38f827dd6515-2",
+              "scope": "claim",
+              "message": null,
+              "fallback_link": null
+            }
+          },
+          {
+            "type": "trust_signal",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 20,
+            "ts": "2026-08-29T15:28:33.250793Z",
+            "payload": {
+              "outcome": "ask",
+              "risk_tier": "high",
+              "grounded": true,
+              "triangulated": false,
+              "citation_id": "cq-38f827dd6515-3",
+              "scope": "claim",
+              "message": null,
+              "fallback_link": null
+            }
+          },
+          {
+            "type": "trust_signal",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 21,
+            "ts": "2026-08-29T15:28:33.250833Z",
+            "payload": {
+              "outcome": "ask",
+              "risk_tier": "high",
+              "grounded": true,
+              "triangulated": false,
+              "citation_id": "cq-38f827dd6515-4",
+              "scope": "claim",
+              "message": null,
+              "fallback_link": null
+            }
+          },
+          {
+            "type": "trust_signal",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 22,
+            "ts": "2026-08-29T15:28:33.250874Z",
+            "payload": {
+              "outcome": "ask",
+              "risk_tier": "high",
+              "grounded": true,
+              "triangulated": false,
+              "citation_id": "cq-38f827dd6515-5",
+              "scope": "claim",
+              "message": null,
+              "fallback_link": null
+            }
+          },
+          {
+            "type": "trust_signal",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 23,
+            "ts": "2026-08-29T15:28:33.250888Z",
+            "payload": {
+              "outcome": "answer",
+              "risk_tier": "low",
+              "grounded": true,
+              "triangulated": null,
+              "citation_id": "ne-01b2b5781f42-6",
+              "scope": "claim",
+              "message": null,
+              "fallback_link": null
+            }
+          },
+          {
+            "type": "trust_signal",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 24,
+            "ts": "2026-08-29T15:28:33.250921Z",
+            "payload": {
+              "outcome": "ask",
+              "risk_tier": "high",
+              "grounded": true,
+              "triangulated": null,
+              "citation_id": null,
+              "scope": "answer",
+              "message": null,
+              "fallback_link": null
+            }
+          },
+          {
+            "type": "cost",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 25,
+            "ts": "2026-08-29T15:28:33.251492Z",
+            "payload": {
+              "query_cost_usd": 0.027427475,
+              "query_cap_usd": 0.1,
+              "cap_fraction": 0.27427474999999996,
+              "model_tier": "synth"
+            }
+          },
+          {
+            "type": "done",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 26,
+            "ts": "2026-08-29T15:28:33.251503Z",
+            "payload": {
+              "total_cost_usd": 0.027427475,
+              "total_tool_calls": 2,
+              "elapsed_ms": 6654,
+              "trust_outcome": "ask"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "trace_id": "01a04e22-b3e2-7701-95b7-d61735d1af59",
+      "name": "act",
+      "inputs": {
+        "query": {
+          "text": "What diseases are associated with BRCA1?",
+          "audience_depth": "clinical_brief"
+        },
+        "events": [
+          {
+            "payload": {
+              "category": "ok",
+              "passed": true,
+              "reason": null
+            },
+            "seq": 0,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:14.161763Z",
+            "type": "guard",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "cap_fraction": 0.012695199999999998,
+              "model_tier": "guard",
+              "query_cap_usd": 0.1,
+              "query_cost_usd": 0.00126952
+            },
+            "seq": 1,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:14.161837Z",
+            "type": "cost",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "clarifying_question": null,
+              "narrative": "The query asks for diseases associated with a gene, which requires traversing from Gene to Disease nodes via gene_associated_with_condition or has_phenotype edges, a classic multi-hop graph traversal.",
+              "query_class": "multi_hop",
+              "resolved_entities": [
+                {
+                  "confidence": 1.0,
+                  "curie": "NCBIGene:672",
+                  "text": "BRCA1"
+                }
+              ]
+            },
+            "seq": 2,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:15.270023Z",
+            "type": "think",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "cap_fraction": 0.07259742,
+              "model_tier": "plan",
+              "query_cap_usd": 0.1,
+              "query_cost_usd": 0.0072597420000000005
+            },
+            "seq": 3,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:15.270063Z",
+            "type": "cost",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "narrative": "selected cypher_query for a Layer 1 graph lookup and ncbi_efetch for a Layer 2 confirmation of NCBIGene:672",
+              "resolved_entities": [
+                {
+                  "confidence": 1.0,
+                  "curie": "NCBIGene:672",
+                  "text": "BRCA1"
+                }
+              ],
+              "tool_calls": [
+                {
+                  "call_id": "cq-38f827dd6515",
+                  "layer": "layer_1_graph",
+                  "tool": "cypher_query"
+                },
+                {
+                  "call_id": "ne-01b2b5781f42",
+                  "layer": "layer_2_api",
+                  "tool": "ncbi_efetch"
+                }
+              ]
+            },
+            "seq": 4,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:16.369596Z",
+            "type": "plan",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "cap_fraction": 0.12484726000000002,
+              "model_tier": "plan",
+              "query_cap_usd": 0.1,
+              "query_cost_usd": 0.012484726000000002
+            },
+            "seq": 5,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:16.369645Z",
+            "type": "cost",
+            "version": "v1"
+          }
+        ]
+      },
+      "outputs": {
+        "events": [
+          {
+            "type": "tool_start",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 6,
+            "ts": "2026-08-29T15:28:16.372804Z",
+            "payload": {
+              "call_id": "cq-38f827dd6515",
+              "tool": "cypher_query",
+              "layer": "layer_1_graph",
+              "status": "running"
+            }
+          },
+          {
+            "type": "tool_result",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 7,
+            "ts": "2026-08-29T15:28:18.633085Z",
+            "payload": {
+              "call_id": "cq-38f827dd6515",
+              "tool": "cypher_query",
+              "layer": "layer_1_graph",
+              "status": "ok",
+              "summary": "9 row(s) of 9",
+              "result_count": 9,
+              "truncated": false
+            }
+          },
+          {
+            "type": "tool_start",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 8,
+            "ts": "2026-08-29T15:28:18.633150Z",
+            "payload": {
+              "call_id": "ne-01b2b5781f42",
+              "tool": "ncbi_efetch",
+              "layer": "layer_2_api",
+              "status": "running"
+            }
+          },
+          {
+            "type": "tool_result",
+            "version": "v1",
+            "trace_id": "pii-check-b958f3ec",
+            "seq": 9,
+            "ts": "2026-08-29T15:28:18.816461Z",
+            "payload": {
+              "call_id": "ne-01b2b5781f42",
+              "tool": "ncbi_efetch",
+              "layer": "layer_2_api",
+              "status": "ok",
+              "summary": "dataset_report: 1 record(s)",
+              "result_count": 1,
+              "truncated": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "trace_id": "01a04e22-b3e2-7701-95b7-d61735d1af59",
+      "name": "_route_after_plan",
+      "inputs": {
+        "query": {
+          "text": "What diseases are associated with BRCA1?",
+          "audience_depth": "clinical_brief"
+        },
+        "events": [
+          {
+            "payload": {
+              "category": "ok",
+              "passed": true,
+              "reason": null
+            },
+            "seq": 0,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:14.161763Z",
+            "type": "guard",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "cap_fraction": 0.012695199999999998,
+              "model_tier": "guard",
+              "query_cap_usd": 0.1,
+              "query_cost_usd": 0.00126952
+            },
+            "seq": 1,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:14.161837Z",
+            "type": "cost",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "clarifying_question": null,
+              "narrative": "The query asks for diseases associated with a gene, which requires traversing from Gene to Disease nodes via gene_associated_with_condition or has_phenotype edges, a classic multi-hop graph traversal.",
+              "query_class": "multi_hop",
+              "resolved_entities": [
+                {
+                  "confidence": 1.0,
+                  "curie": "NCBIGene:672",
+                  "text": "BRCA1"
+                }
+              ]
+            },
+            "seq": 2,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:15.270023Z",
+            "type": "think",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "cap_fraction": 0.07259742,
+              "model_tier": "plan",
+              "query_cap_usd": 0.1,
+              "query_cost_usd": 0.0072597420000000005
+            },
+            "seq": 3,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:15.270063Z",
+            "type": "cost",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "narrative": "selected cypher_query for a Layer 1 graph lookup and ncbi_efetch for a Layer 2 confirmation of NCBIGene:672",
+              "resolved_entities": [
+                {
+                  "confidence": 1.0,
+                  "curie": "NCBIGene:672",
+                  "text": "BRCA1"
+                }
+              ],
+              "tool_calls": [
+                {
+                  "call_id": "cq-38f827dd6515",
+                  "layer": "layer_1_graph",
+                  "tool": "cypher_query"
+                },
+                {
+                  "call_id": "ne-01b2b5781f42",
+                  "layer": "layer_2_api",
+                  "tool": "ncbi_efetch"
+                }
+              ]
+            },
+            "seq": 4,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:16.369596Z",
+            "type": "plan",
+            "version": "v1"
+          },
+          {
+            "payload": {
+              "cap_fraction": 0.12484726000000002,
+              "model_tier": "plan",
+              "query_cap_usd": 0.1,
+              "query_cost_usd": 0.012484726000000002
+            },
+            "seq": 5,
+            "trace_id": "pii-check-b958f3ec",
+            "ts": "2026-08-29T15:28:16.369645Z",
+            "type": "cost",
+            "version": "v1"
+          }
+        ]
+      },
+      "outputs": {}
+    }
+  ]
+}
