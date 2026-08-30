@@ -93,7 +93,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | Caching | Redis |
 | Frontend | React |
 | Auth | PyJWT (HS256 access tokens), argon2-cffi (argon2id password hashing) |
-| Observability | LangSmith |
+| Observability | LangSmith, PostHog, an append-only JSONL tool-call audit log |
 
 ---
 
@@ -103,7 +103,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), now as TWO separate deployments with a release-branch flow between them, and CI running Section 24's ten gates on every pull request and on both deployment branches. Three releases are cut (v0.1.0 through v0.1.2, 2026-08-28), proving the promotion path works end to end. Build phase 5.0, observability (LangSmith tracing, PostHog analytics, the append-only tool-call audit log), is complete on `phase/5.0-observability` and not yet merged; its pull request is the next step, then build phase 5.1 for the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.16, and 5.0. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), now as TWO separate deployments with a release-branch flow between them, and CI running Section 24's ten gates on every pull request and on both deployment branches. Three releases are cut (v0.1.0 through v0.1.2, 2026-08-28), proving the promotion path works end to end. Build phase 5.0, observability (LangSmith tracing, PostHog analytics, the append-only tool-call audit log), MERGED as PR #83 on 2026-08-30 with all four CI gates green. Build phase 5.1, the 50-query golden dataset and the eval harness, is next and unblocked as of 2026-08-30. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -138,6 +138,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 4.14 | CI: the ten gates from Section 24, advisory rather than merge-blocking since branch protection needs GitHub Pro or a public repository | Merged into develop, PR #68, 2026-08-26, after three review rounds and a Rule 4 stop |
 | 4.15 | Two SEPARATE Railway projects and a release-branch flow, plus release automation: a semantic version derived from the Conventional Commit subjects, a CHANGELOG.md section, an annotated tag, a GitHub Release, and an automated back-merge into develop | Merged into develop, PR #71, 2026-08-28, after four review rounds and two Rule 4 stops. Two projects rather than two environments because a Railway service's git branch is service-level, measured rather than assumed |
 | 4.16 | The seven UI defects the first live session surfaced. The largest was backend, not frontend: the Act step emitted no events at all, so eleven seconds of a run were silent and no tool chip had ever rendered | Merged into develop, PR #63, 2026-08-25. Inserted by product-owner decision |
+| 5.0 | Observability: technical specification Section 20 in full, as three records with one job each, LangSmith per-run tracing joined on `trace_id`, PostHog behavioural analytics as aggregates only, and the append-only JSONL tool-call audit log | Merged into develop, PR #83, 2026-08-30, after a judge round, an adversary round, and five fix-and-verify rounds on one control |
 
 Per-phase narrative, including what each review round found and what it cost, is `requirements/Plan.md`'s Revision history. Per-phase tickets and evidence are `tracker/phase_N.M.md`.
 
@@ -212,6 +213,7 @@ agentic-search-ui/
       tools/                    # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
       export/                   # KGX subgraph export (build phase 4.4)
       feedback/                 # Interaction capture and the weekly review ritual (build phase 4.6), plus the durable history read path (build phase 4.13)
+      observability/            # LangSmith tracing, PostHog analytics, the append-only tool-call audit log (build phase 5.0)
       adapters/
         web_sse/                # FastAPI plus SSE, the public API surface
         graphql/                # Strawberry schema over the same core

@@ -110,3 +110,21 @@ docs/artifacts/
 # repository's permanent history, where it cannot be removed by the
 # append-only discipline that governs the file itself.
 logs/
+
+# JUnit XML reports the Section 24 gates write, at the repository root
+# because that is the working directory a gate runs from. Three today, one
+# per gate that produces a report: gate 4 (`unit-results.xml`), gate 5
+# (`integration-results.xml`) and gate 9 (`required-paths.xml`). They are
+# build artifacts, regenerated on every run and read by the gate that
+# follows, never source.
+#
+# Added 2026-08-30 after two of them turned up untracked while closing
+# build phase 5.0. Listed by name rather than matched by a glob, because
+# `*-results.xml` would miss `required-paths.xml` anyway and a wider
+# pattern would quietly swallow a file somebody meant to commit. The cost
+# of the explicit list is that a NEW gate writing a report needs a line
+# here; that is the intended trade, since adding one is a visible edit and
+# a silently ignored file is not.
+/unit-results.xml
+/integration-results.xml
+/required-paths.xml
