@@ -81,6 +81,12 @@ class RunRecord:
     retrieval_hit_count: int = 0
     databases_reached: list[str] = field(default_factory=list)
     latency_ms: int = 0
+    # Whether ANY tool result was cut short. It lives on `tool_result`,
+    # never on a citation: `CitationPayload` is `extra="forbid"`, so a
+    # citation carrying `truncated` would be rejected by the contract.
+    # The forbidden-constraint check read it off citations and was
+    # therefore dead on all 20 rows that mandate it (F-5.2-RR-03).
+    truncated: bool = False
 
     def __post_init__(self) -> None:
         for name in _REQUIRED:
@@ -102,6 +108,19 @@ class RunRecord:
         be wrong.
         """
         return self.outcome == "refuse"
+
+    @property
+    def is_non_answer(self) -> bool:
+        """A run that declined to answer, whether by refusing or by asking.
+
+        Both are non-answering outcomes and both belong in the abstain
+        branch. Treating only `refuse` that way INVERTED the dataset on the
+        one row expecting a clarifying question: asking, the behaviour the
+        row requires, fell through to the score path, could not reach the
+        threshold, and failed with empty notes, while refusing passed
+        (F-5.2-RR-02).
+        """
+        return self.outcome in ("refuse", "ask")
 
 
 def iter_events(runs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -274,6 +293,7 @@ def record_from_runs(
         retrieval_hit_count=hits,
         databases_reached=databases,
         latency_ms=latency,
+        truncated=any(bool(p.get("truncated")) for p in tool_results),
     )
 
 

@@ -154,7 +154,18 @@ def test_m_p3c_assembly_context_check_removed(monkeypatch):
 
 
 def test_m_p4a_abstain_always_counts_as_fail(monkeypatch):
-    monkeypatch.setattr(rubric_grader.RunRecord, "is_refusal", property(lambda s: False))
+    """Patches `is_non_answer`, which is what the grader actually reads.
+
+    It patched `is_refusal` until `ask` became a second non-answering
+    outcome and the grader moved to `is_non_answer`. The mutation then
+    stopped reaching the control and reported a healthy arm as vacuous.
+    A mutation case names a specific reference, so it goes stale exactly
+    when that reference changes, which is the cost of the technique and
+    the reason every case here says which reference it patches.
+    """
+    monkeypatch.setattr(
+        rubric_grader.RunRecord, "is_non_answer", property(lambda s: False)
+    )
     _must_go_red(gate.test_p4a_refusal_with_zero_retrieval_is_a_pass)
 
 

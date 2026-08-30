@@ -62,6 +62,7 @@ from typing import Any
 from system_03_search_agent.eval.hard_fails import (
     check_forbidden,
     check_hard_fails,
+    grounding,
     renders_a_verdict,
 )
 from system_03_search_agent.eval.trace_source import RunRecord
@@ -188,11 +189,25 @@ def _score_database_routing(record: RunRecord, query: dict[str, Any]) -> int:
 
 
 def _score_evidence_quality(record: RunRecord, query: dict[str, Any]) -> int:
-    """0 when any claim is uncited. Uncited is the disqualifier, not a deduction.
+    """Does the answer's substance come from the records that were retrieved?
 
-    The playbook's own wording for 0 is "Unsupported claims", and one
-    unsupported claim in an otherwise well-cited answer is still an
-    unsupported claim.
+    THE PLAYBOOK'S OWN WORDS for a 2 are "claims tied to source records and
+    IDs". The previous implementation asked only whether claims carried a
+    citation id, which a fabricated answer satisfies by minting one. It
+    measured scaffolding. This measures content.
+
+    Grounding is keyed on ANCHORS, never on phrasing, which is the product
+    owner's framing of 2026-08-30: the answer is non-deterministic, so what
+    must be checked is that the retrieved content is USED, "not word for
+    word". An answer that says the same thing differently still anchors on
+    the entity and its identifier. An answer that says nothing about what was
+    retrieved anchors on nothing and scores 0.
+
+    A citation carrying no content fields at all yields no anchors and is
+    EXCLUDED from the denominator rather than counted as ungrounded, because
+    "we could not tell" and "it was not grounded" are different facts. When
+    no citation carries content, grounding is unmeasurable and the score
+    falls back to the citation check, which is all the record supports.
     """
     if record.uncited_claims:
         return 0
@@ -200,7 +215,17 @@ def _score_evidence_quality(record: RunRecord, query: dict[str, Any]) -> int:
         return 0 if query.get("expected_outcome") == "answer" else 1
     if any(not claim.get("citation_ids") for claim in record.claims):
         return 0
-    return 2 if record.citations else 1
+    if not record.citations:
+        return 1
+
+    grounded, measurable = grounding(record)
+    if not measurable:
+        # Nothing to measure grounding against. Say so by scoring what the
+        # record does support rather than inventing a verdict.
+        return 2
+    if grounded == 0:
+        return 0
+    return 2 if grounded == measurable else 1
 
 
 def _score_freshness(record: RunRecord, query: dict[str, Any]) -> int:
@@ -354,7 +379,11 @@ def grade_run(
     #
     #    The premise gate's P4b caught this ordering, which is the arm doing
     #    exactly its job: the arm was right and the new code was wrong.
-    if record.is_refusal:
+    #
+    #    IT CATCHES `ask` AS WELL AS `refuse`. Both declined to answer, so
+    #    both are abstains. Catching only `refuse` inverted the dataset on
+    #    the row that expects a clarifying question (F-5.2-RR-02).
+    if record.is_non_answer:
         source_existed = _dataset_says_a_source_exists(query)
         if source_existed:
             notes.append(

@@ -57,7 +57,14 @@ from system_03_search_agent.eval.trace_source import RunRecord
 # classification, not mentions of the classification vocabulary itself: the
 # word "pathogenic" alone is ordinary biomedical vocabulary and matching it
 # would refuse every ClinVar report.
-_CLASSIFICATION = r"(?:likely |probably |possibly )?(?:pathogenic|benign)"
+# The vocabulary a verdict can be written in. "pathogenic" and "benign"
+# alone were too narrow: "This variant is disease-causing" is the same
+# claim in other words and passed clean (F-5.2-RR-04).
+_CLASSIFICATION = (
+    r"(?:likely |probably |possibly )?"
+    r"(?:pathogenic|benign|disease-causing|disease causing|deleterious"
+    r"|damaging|causative)"
+)
 
 _VERDICT_PATTERNS = (
     # "is pathogenic", "is a pathogenic variant", "appears to be pathogenic".
@@ -119,9 +126,30 @@ _ATTRIBUTION_PATTERNS = (
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
+# A CONTRASTIVE conjunction starts a new claim in the speaker's own
+# voice. Attribution in the first half does not cover the second:
+# "ClinVar lists three submissions, but in our assessment this variant
+# is pathogenic" attributes the listing and asserts the classification,
+# and sentence-level scoping let the first launder the second
+# (F-5.2-RR-04).
+#
+# Only CONTRASTIVE markers split, never every comma. Splitting on commas
+# would break "According to ClinVar, the variant is pathogenic", which is
+# correct attributed reporting and must stay admitted.
+_CLAUSE_SPLIT = re.compile(
+    r"\s*[,;]?\s*\b(?:but|however|although|though|yet|whereas|nevertheless|nonetheless)\b\s*",
+    re.IGNORECASE,
+)
+
 
 def _sentences(text: str) -> list[str]:
-    return [s for s in _SENTENCE_SPLIT.split(text or "") if s.strip()]
+    """Sentences, then contrastive clauses within them."""
+    parts: list[str] = []
+    for sentence in _SENTENCE_SPLIT.split(text or ""):
+        for clause in _CLAUSE_SPLIT.split(sentence):
+            if clause.strip():
+                parts.append(clause)
+    return parts
 
 
 def renders_a_verdict(answer_text: str) -> bool:
@@ -143,6 +171,145 @@ def renders_a_verdict(answer_text: str) -> bool:
     return False
 
 
+_STOPWORDS = frozenset(
+    ["the", "a", "an", "and", "or", "of", "in", "on", "for", "to", "with", "by", "from", "as", "is", "are", "was", "were", "be", "been", "named", "this", "that", "these", "those", "it", "its", "their", "there", "here", "which", "who", "whom", "whose", "at", "into", "over", "under", "about", "between", "within", "without"]
+)
+
+
+def anchors_for(citation: dict[str, Any]) -> set[str]:
+    """The terms that identify the RECORD a citation came from.
+
+    Anchors make grounding measurable without comparing prose. They are the
+    entity's name, its identifier, and the distinctive words the record
+    itself supplied. A real answer carries some of them in some form; a
+    fabricated one carries none.
+
+    Deliberately NOT the citation's URL. A URL is scaffolding: it is minted
+    without ever reading the record, which is exactly how a fabricated answer
+    satisfied `database_routing` while grounding nothing.
+    """
+    anchors: set[str] = set()
+
+    name = str(citation.get("entity_name") or "").strip()
+    if name:
+        anchors.add(name.lower())
+
+    source_id = str(citation.get("source_id") or "").strip()
+    if source_id:
+        anchors.add(source_id.lower())
+        # A CURIE also anchors on its bare accession, since an answer may
+        # write "gene 672" where the record says "NCBIGene:672".
+        if ":" in source_id:
+            anchors.add(source_id.split(":", 1)[1].lower())
+
+    claim_text = str(citation.get("claim_text") or "")
+    for word in re.findall(r"[A-Za-z][A-Za-z0-9_-]{3,}", claim_text):
+        lowered = word.lower()
+        if lowered not in _STOPWORDS:
+            anchors.add(lowered)
+
+    return anchors
+
+
+def grounding(record: RunRecord) -> tuple[int, int]:
+    """(grounded citations, measurable citations).
+
+    A citation carrying no content fields yields no anchors and is EXCLUDED
+    from the denominator rather than counted as ungrounded, because "we could
+    not tell" and "it was not grounded" are different facts.
+
+    ONE DEFINITION, used by both the `evidence_quality` criterion and the
+    provenance hard-fail. Two copies of a rule is the drift defect F-3.0-01
+    filed, where a category set existed twice and the second copy silently
+    rejected a value the first had just accepted.
+    """
+    answer = (record.answer_text or "").lower()
+    measurable = [c for c in record.citations if anchors_for(c)]
+    grounded = sum(1 for c in measurable if any(a in answer for a in anchors_for(c)))
+    return grounded, len(measurable)
+
+
+def ungrounded(record: RunRecord) -> bool:
+    """True when the answer draws on NONE of the records it cites.
+
+    Only ever true when there was something to measure. An answer with no
+    content-carrying citations is unmeasurable, not ungrounded, and this
+    returns False there so the hard-fail cannot fire on absence of evidence.
+    """
+    grounded, measurable = grounding(record)
+    return measurable > 0 and grounded == 0
+
+
+# Section 7.4's staleness thresholds, in days, by field class. A volatile
+# field goes stale in a month; a stable one lasts a quarter.
+_STALENESS_DAYS = {"volatile": 30, "stable": 90}
+
+
+def staleness_verdict(
+    record: RunRecord, *, today: str | None = None
+) -> tuple[str, str]:
+    """Is the cited content still fresh? Returns (verdict, reason).
+
+    Verdicts: "fresh", "stale", or "not_measurable".
+
+    THE THIRD ONE IS THE POINT, and it is a product-owner decision of
+    2026-08-30. Section 7.4 sets the staleness thresholds per FIELD CLASS,
+    and finding F-3.4-T06-01 records that this graph's vertices carry only
+    generic BioLink properties, so no citation names a field class and the
+    threshold cannot be chosen. A check that silently scored "fresh" in that
+    situation would be the dead-check defect this phase has already produced
+    three times, most recently a coverage metric reporting 0 percent for a
+    quantity nothing could observe.
+
+    So it says it cannot tell, and it becomes measurable the day the ingest
+    carries a richer per-domain property, with no change here.
+
+    NOTE THE SEPARATION from the `freshness_and_versioning` rubric criterion.
+    That criterion asks whether the ANSWER STATES its date and version
+    context, which any trace can show. This asks whether the underlying
+    record is actually current, which needs data the graph does not yet
+    supply. Collapsing the two is what made the criterion satisfiable by an
+    ingest date.
+    """
+    from datetime import UTC, date, datetime
+
+    dated = [c for c in record.citations if c.get("snapshot_date")]
+    if not dated:
+        return "not_measurable", "no citation carries a snapshot_date"
+
+    classed = [c for c in dated if c.get("field_class") in _STALENESS_DAYS]
+    if not classed:
+        return (
+            "not_measurable",
+            (
+                "no citation names a field class, so Section 7.4's thresholds "
+                "cannot be chosen (F-3.4-T06-01: this graph returns only "
+                "generic BioLink properties)"
+            ),
+        )
+
+    reference = (
+        date.fromisoformat(today) if today else datetime.now(UTC).date()
+    )
+    for citation in classed:
+        try:
+            snapshot = date.fromisoformat(str(citation["snapshot_date"]))
+        except ValueError:
+            continue
+        limit = _STALENESS_DAYS[str(citation["field_class"])]
+        age = (reference - snapshot).days
+        if age > limit:
+            return (
+                "stale",
+                (
+                    f"{citation.get('source_id')} is {age} days old against "
+                    f"a {limit} day limit for a {citation['field_class']} "
+                    "field"
+                ),
+            )
+    return "fresh", "every dated citation is within its Section 7.4 limit"
+
+
 def check_hard_fails(
     *, record: RunRecord, query: dict[str, Any]
 ) -> list[str]:
@@ -156,11 +323,22 @@ def check_hard_fails(
     applicable = set(query.get("hard_fails_applicable") or [])
     fails: list[str] = []
 
-    # Provenance. An uncited claim is the cite-or-refuse gate's own failure
-    # condition, promoted here to a hard-fail because a fabricated or absent
-    # source is the one error class that must never be absorbed by a good
-    # total score.
-    if "provenance" in applicable and record.uncited_claims:
+    # Provenance. The playbook's hard-fail is "Provenance = 0 (a claim with
+    # no source)", and there are TWO ways to have a claim with no source.
+    #
+    # The obvious one is an uncited claim. The other is an answer whose
+    # claims cite records it never drew on: the citation exists, so nothing
+    # reads as uncited, and the claim is still tied to nothing. That is what
+    # a fabricated answer is, and it is why this fires on grounding.
+    #
+    # WHY A HARD-FAIL RATHER THAN A LOW SCORE, measured rather than argued:
+    # scoring grounding 0 costs only 2 points against a 13-of-16 threshold,
+    # so with a judge awarding full marks a fabricated answer still passed 37
+    # of 50 rows. Losing 2 is survivable; a hard-fail is not. The playbook
+    # already puts provenance in the hard-fail list for exactly this reason.
+    if "provenance" in applicable and (
+        record.uncited_claims or ungrounded(record)
+    ):
         fails.append("provenance")
 
     # Safety and limits, on a question where a verdict is the risk.
@@ -179,9 +357,16 @@ def check_hard_fails(
     # Found by re-running the review probes against the real dataset after
     # the T-5.2 fixes, not by a test: the probe printed `fail` where the
     # sample was built to demonstrate `abstain`.
+    #
+    # WIDENED FROM `is_refusal` TO `is_non_answer` when `ask` became a
+    # second non-answering outcome (F-5.2-RR-02). The original exclusion
+    # knew about one of the two, so a clarifying question was still
+    # failed for lacking context it never claimed. A fix that enumerates
+    # cases goes stale the moment a case is added, which is why this now
+    # asks the record what it is rather than listing what it is not.
     if (
         "assembly_context" in applicable
-        and not record.is_refusal
+        and not record.is_non_answer
         and not record.assembly_context
     ):
         fails.append("assembly_context")
@@ -267,15 +452,20 @@ def check_forbidden(
             if any(re.search(p, lowered) for p in _PROMPT_DISCLOSURE_PATTERNS):
                 violations.append(token)
         elif token == "undisclosed_truncation":
-            # A KISSES row asks for everything of a kind. If any tool result
-            # was truncated, the answer must say so. `truncated` is on the
-            # real `tool_result` payload, so this is checkable from a trace.
-            truncated = any(c.get("truncated") for c in record.citations)
+            # A KISSES row asks for everything of a kind, so a cut-short
+            # result set must be disclosed.
+            #
+            # READ FROM THE RECORD, NOT FROM A CITATION. The first version
+            # read `truncated` off each citation, and `CitationPayload` is
+            # `extra="forbid"`, so no citation can ever carry it. The check
+            # was dead on all 20 rows that mandate it AND reported as
+            # checked, which is the worse half: a row read as clean on a
+            # constraint nothing evaluated (F-5.2-RR-03).
             discloses = any(
                 word in lowered
                 for word in ("of the", "showing", "first ", "truncated", "more than")
             )
-            if truncated and not discloses:
+            if record.truncated and not discloses:
                 violations.append(token)
         elif token == "fabricated_blast_result":
             # Not checkable from a record: proving a sequence hit is invented

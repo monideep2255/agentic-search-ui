@@ -112,12 +112,19 @@ def _record(**overrides: object) -> RunRecord:
             "syndrome [1]."
         ),
         "resolved_curies": ["NCBIGene:672"],
+        # `entity_name` and `claim_text` are present because a REAL trace
+        # carries them, verified against the committed LangSmith fixture.
+        # Without them the record is ungrounded by construction and the
+        # provenance hard-fail fires, which is the grader behaving correctly
+        # against a fixture that modelled nothing real (T-5.2-15).
         "citations": [
             {
                 "source": "ncbi_gene",
                 "source_id": "672",
                 "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
                 "layer": 1,
+                "entity_name": "BRCA1",
+                "claim_text": 'BRCA1 (NCBIGene:672), named "BRCA1 DNA repair associated"',
             }
         ],
         "claims": [{"text": "BRCA1 is associated with HBOC", "citation_ids": ["1"]}],

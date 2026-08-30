@@ -104,3 +104,40 @@ def aggregate_dataset(
         "pass_caret_k": sum(caret_k) / len(caret_k),
         "queries_scored": float(len(outcomes_by_query)),
     }
+
+
+def retrieval_consistency(records) -> float | None:
+    """How much the samples of one question agree on WHAT THEY RETRIEVED.
+
+    Returns the mean pairwise Jaccard overlap of the cited source ids across
+    samples, or None when there are fewer than two samples.
+
+    NONE RATHER THAN 1.0 FOR A SINGLE SAMPLE. A lone run never disagreed
+    with anything, and reporting that as perfect agreement is the same class
+    of claim as a coverage metric reporting 0 percent for a quantity nothing
+    observed. Consistency is a property of a SET, so a set of one has none.
+
+    THE PROPERTY THIS EXISTS FOR: the open flag this phase was built to
+    measure is that the first answer grounds nothing on a single finding in
+    about half of live runs, measured across twelve live runs at two commits
+    on 2026-08-20. That is a RETRIEVAL consistency failure, and no per-run
+    check can see it, because each individual run looks internally fine.
+    """
+    sets = [
+        frozenset(
+            str(c.get("source_id"))
+            for c in record.citations
+            if c.get("source_id")
+        )
+        for record in records
+    ]
+    if len(sets) < 2:
+        return None
+
+    scores: list[float] = []
+    for i in range(len(sets)):
+        for j in range(i + 1, len(sets)):
+            a, b = sets[i], sets[j]
+            union = a | b
+            scores.append(len(a & b) / len(union) if union else 1.0)
+    return sum(scores) / len(scores)

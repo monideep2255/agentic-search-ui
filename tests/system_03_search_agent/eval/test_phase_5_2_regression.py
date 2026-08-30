@@ -67,7 +67,14 @@ def _rows():
 def _fabricated(row) -> RunRecord:
     """The adversary's attack: nonsense prose with every constraint minted."""
     citations = [
-        {"source": "x", "source_id": "x", "source_url": url, "layer": 1}
+        {
+            "source": "ncbi_gene",
+            "source_id": "672",
+            "source_url": url,
+            "layer": 1,
+            "entity_name": "BRCA1",
+            "claim_text": 'BRCA1 (NCBIGene:672), named "BRCA1 DNA repair associated"',
+        }
         for url in row["must_cite"]
     ]
     return RunRecord(
@@ -81,6 +88,31 @@ def _fabricated(row) -> RunRecord:
         claims=[{"text": "Fabricated.", "citation_ids": ["1"]}] if citations else [],
         assembly_context="GRCh38.p14",
         retrieval_hit_count=5,
+    )
+
+
+def _grounded(row) -> RunRecord:
+    """The same shape as `_fabricated`, with prose that uses the record.
+
+    The ONLY difference is the answer text. That is what makes the pair a
+    controlled comparison: anything that scores them differently is scoring
+    the content, which is the property this round exists to add.
+    """
+    record = _fabricated(row)
+    return RunRecord(
+        trace_id=record.trace_id,
+        query_id=record.query_id,
+        question=record.question,
+        outcome=record.outcome,
+        answer_text=(
+            "BRCA1, the gene named BRCA1 DNA repair associated, is linked to "
+            "hereditary breast and ovarian cancer syndrome [1]."
+        ),
+        resolved_curies=record.resolved_curies,
+        citations=record.citations,
+        claims=record.claims,
+        assembly_context=record.assembly_context,
+        retrieval_hit_count=record.retrieval_hit_count,
     )
 
 
@@ -184,7 +216,13 @@ def test_p12d_answering_a_question_that_must_be_refused_fails():
             question=row["question"],
             query_id=row["id"],
             outcome="answer",
-            answer_text="Here is a confident and well presented answer [1].",
+            # Grounded on purpose. An ungrounded answer trips the provenance
+            # hard-fail at gate 1 and never reaches the outcome gate this arm
+            # is about, so the arm would pass for the wrong reason again.
+            answer_text=(
+                "BRCA1, the gene named BRCA1 DNA repair associated, is "
+                "described in the cited record [1]."
+            ),
             resolved_curies=[curie],
             citations=[
                 {
@@ -192,6 +230,8 @@ def test_p12d_answering_a_question_that_must_be_refused_fails():
                     "source_id": "672",
                     "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
                     "layer": 1,
+                    "entity_name": "BRCA1",
+                    "claim_text": 'BRCA1 (NCBIGene:672), named "BRCA1 DNA repair associated"',
                 }
             ],
             claims=[{"text": "a claim", "citation_ids": ["1"]}],
@@ -283,7 +323,7 @@ def test_p12h_populate_check_a_good_answer_still_passes():
         for r in _rows()
         if r["acceptable_outcomes"] == ["answer"] and r["must_cite"] and r["must_resolve"]
     )
-    record = _fabricated(row)
+    record = _grounded(row)
     result = grade_run(record=record, query=row, judge=_judge(_GENEROUS))
     assert result.counts_as_pass, (
         "a run satisfying every pinned constraint, with a judge scoring full "
