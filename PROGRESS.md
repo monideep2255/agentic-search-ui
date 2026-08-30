@@ -393,7 +393,7 @@ One thing we got wrong and are recording rather than quietly fixing. We predicte
 
 The lesson, and it is the one worth keeping: a thing that has never actually run is not tested, however carefully it has been checked. Three real releases found five things in an afternoon that a suite of four thousand tests could not, because all five lived outside the code.
 
-### Sprint: making the system show its workings (30 August)
+### Sprint: making the system show its workings (30 August, merged)
 
 Until this sprint the tool answered you and then forgot everything about how it got there. If an answer was wrong, there was no way to go back and see which sources it had consulted, how long each one took, or whether one of them had quietly failed. This sprint gives it a memory of its own work, in three separate records rather than one, so that losing any single one still leaves a usable picture.
 
@@ -412,7 +412,7 @@ One more thing happened at the very end, and it is recorded because a reader lea
 
 Where the finished work sits against what is still ahead:
 
-The immediate next piece of work is measuring how good the answers actually are. We have fifty questions with known-correct answers written down in advance, and the plan is to run all fifty and score them, so that "it seems better" becomes a number we can watch move. The recording built this sprint is what makes that possible: it is what the scoring reads.
+The immediate next piece of work is measuring how good the answers actually are, and it is now unblocked. We have fifty questions with known-correct answers written down in advance, and the plan is to run all fifty and score them, so that "it seems better" becomes a number we can watch move. The recording built last sprint is what makes that possible: it is what the scoring reads. One thing about it is worth saying plainly, because it decides how much the score is worth: somebody has to certify that those fifty answers are actually correct, and that somebody is now the project owner rather than an outside specialist. A wrong answer in that list would quietly pass a wrong system, forever. We have fifty questions with known-correct answers written down in advance, and the plan is to run all fifty and score them, so that "it seems better" becomes a number we can watch move. The recording built this sprint is what makes that possible: it is what the scoring reads.
 
 
 ```mermaid

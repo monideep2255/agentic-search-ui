@@ -1,10 +1,12 @@
 # Handoff: build phase 5.0, observability
 
-Written 2026-08-29 at a deliberate stopping point, and CORRECTED 2026-08-30 when the stated next action turned out to be already done (F-5.0-29). Branch `phase/5.0-observability`.
+THIS PHASE IS MERGED. Build phase 5.0 merged as PR #83 on 2026-08-30 with all four CI gates green, and the branch `phase/5.0-observability` is deleted. THIS FILE IS NOW A HISTORICAL RECORD, not an instruction. Do not work "Start here" below: every step in it describes a branch that no longer exists.
 
-THIS FILE IS THE ENTRY POINT. If you were handed it and nothing else, work "Start here" below top to bottom, then stop reading and act.
+If you are looking for what to do next, read `requirements/phase_6/Continuation_prompt.md`. It is the source of truth, and its next action is build phase 5.1, the 50-query golden dataset and the eval harness.
 
-On precedence, which matters because two documents describing one phase always drift: this file carries the next action and enough state to act on it. `requirements/phase_6/Continuation_prompt.md` carries the fuller narrative and is the source of truth for anything not stated here. Where the two disagree, that file wins and this one is stale. This phase spent five rounds on the cost of a confident sentence that stopped being true, so the precedence is written down rather than assumed.
+The rest of this file is kept unedited below because of what it got wrong, which is more useful than what it got right. It told the next session to finish F-5.0-28, and F-5.0-28 was already done: its fix, its two arms, its mutation case and its `fixed` status had all landed in the very commit whose message said the fix was not in. The session that wrote this file had genuinely re-probed rather than inferring from the diff, and still concluded wrongly, because it varied the KEY rather than the control. Full account: F-5.0-29 in `tracker/phase_5.0.md`, and the 2026-08-30 entry in `LEARNINGS.md`.
+
+Written 2026-08-29 at a deliberate stopping point, corrected 2026-08-30 when the stated next action turned out to be already done, and closed 2026-08-30 at the merge.
 
 ## Start here
 
