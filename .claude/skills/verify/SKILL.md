@@ -58,6 +58,18 @@ Confirmed from `pyproject.toml`: ruff is configured as a dev dependency (`[proje
 
 If a future environment genuinely lacks ruff, "command not found" or a `ModuleNotFoundError` is the signal: report "lint configured in pyproject.toml but ruff is not installed, run `pip install -e '.[dev]'`" as a note in that case only, and do not invent a different lint command. That is not the current state of `venv/`.
 
+### 3b. Import order
+
+```bash
+bash .github/gates/gate02_import_order.sh
+```
+
+This runs the CI gate's own script rather than a hand-written `isort` line, and that is the point of it. Section 24 gate 2 is `isort --check-only --diff` over `src tests services tracker alembic .claude .github`, and if this skill restated that command instead of invoking it, the two could drift and nothing would report it.
+
+Added 2026-08-30 after build phase 5.0's pull request went red on exactly this gate while every local check was green (F-5.0-30 in `tracker/phase_5.0.md`). The gate existed only in CI, so it had never once run against that branch. This is build phase 4.15's lesson one layer out: 4.15 found that `ruff check` with no path is a different command from `ruff check src services`, and 5.0 found that a gate the local ritual omits entirely has never run at all. "Verified locally" names a set of commands, so the honest form of the claim is the list.
+
+Two things not to do when it fails. Do not run bare `isort` and commit whatever comes out: isort is not idempotent on every input, and on the input that caused this, its first pass split a statement and its second merged it back with a `# noqa: F401` hoisted onto the `import (` line, where it suppresses the unused-import check for every name in the statement rather than one. That form passes both this gate and ruff, and taking it would trade a red gate for a quietly weakened one, which `goal-contracts` forbids outright. And do not add the file to an ignore list to make the check pass. Fix the imports, then confirm that gate 3 still passes too, since the two tools can disagree.
+
 ### 4. Git status
 
 ```bash
@@ -123,7 +135,9 @@ The repository is no longer near-empty: five build phases are merged, and the Py
 
 Done when all of these are true:
 
-- [ ] All 5 checks ran: Python compile, test suite, lint, git status, frontend
+- [ ] All 7 checks ran: Python compile, test suite, lint, import order, git status, frontend, documentation drift
+- [ ] Import order ran the gate's own script, `bash .github/gates/gate02_import_order.sh`, not a hand-written `isort` line that could drift from it
+- [ ] A failing import-order check was fixed by correcting the imports, never by taking bare `isort` output that broadens a `# noqa`, and never by adding the file to an ignore list
 - [ ] Each result captured with pass/fail and counts where relevant, taken from the actual command output, never hardcoded into this skill
 - [ ] Zero collected Python tests reported as FAIL with a likely cause, never as a pass-with-note
 - [ ] The frontend `lint` gap (no `lint` script in `frontend/package.json`) reported as a note, not fabricated as a command that will fail with "missing script"
