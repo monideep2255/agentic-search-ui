@@ -11,6 +11,7 @@ strategy. Depends on build phases 3.1, 3.2, 3.3 and 3.5, all merged.
 - [What this phase is for](#what-this-phase-is-for)
 - [Everything measured before any change was made](#everything-measured-before-any-change-was-made)
 - [The finding that reframes the phase](#the-finding-that-reframes-the-phase)
+- [Where the call ceiling belongs, and why it is not `act_node`](#where-the-call-ceiling-belongs-and-why-it-is-not-act_node)
 - [Goal contract](#goal-contract)
 - [Tickets](#tickets)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
@@ -76,6 +77,51 @@ sentence is where the next reader stops looking. Here the correct repair is not 
 since the claim becomes true once T-6.0-01 lands. It is ordering: the comment is corrected
 in the same edit that makes it true, and never before.
 
+## Where the call ceiling belongs, and why it is not `act_node`
+
+Established 2026-08-31, before any implementation, by reading the call graph rather than by
+reasoning from where the loop's steps live.
+
+The obvious place to enforce Section 21.3 is `act_node`'s planned-call loop at
+`core/graph.py:3076`, which is where the cost cap is already checked immediately before each
+dispatch. That would bound the wrong number. `act_node` iterates PLANNED tool calls, of
+which a real query has one to three. Section 21.3 bounds something else, and says so in its
+own words: it names "a retry, a wider-than-expected fan-out, or an ELink traversal that
+returns more targets than planned" as exactly the cases a 21st call arrives from. All three
+of those happen INSIDE a tool, below `act_node`, and are invisible to a counter that
+increments once per planned call.
+
+This is build phase 5.0's finding two arriving a second time for a second reason. That phase
+put the audit hook at the three TRANSPORT chokepoints and never at `act_node`, because five
+production call sites reach a data layer without passing through `act_node` at all, proven
+by a live query whose first audit line was `think_node`'s symbol resolution. The same
+argument applies unchanged to a call counter: `think_node`'s entity resolution issues real
+Layer 2 calls before Act ever runs, and a ceiling that cannot see them is not the ceiling
+Section 21.3 describes.
+
+So the ceiling counts at the transport, and `act_node` reads the count. Two facts make that
+cheap rather than a redesign, and both were verified rather than assumed:
+
+- The Layer 2 and Layer 3 surface is exactly two functions, and the enumeration is closed.
+  `ncbi_transport.execute_get` is the single HTTP chokepoint for all eight HTTP tools
+  (`clinicaltrials_search`, `litvar2_lookup`, `ncbi_coordinate_overlap`,
+  `ncbi_datasets_actions`, `ncbi_dbsnp`, `ncbi_eutils_actions`, `ncbi_pubchem_actions`,
+  `pubtator_annotate`), and `pathogen_ftp_transport` is the FTP path. Checked by grepping
+  every module that names `httpx`, `ftplib`, `urlopen` or `requests`: in
+  `ncbi_datasets_actions`, `ncbi_pubchem_actions`, `ncbi_coordinate_overlap` and
+  `pathogen_detection`, every `httpx` occurrence is a type annotation on a client passed
+  through, never a request issued directly. `graph_http_transport` is Layer 1 and is out of
+  scope by 21.3's own wording.
+- The run-scoped key the counter needs already exists and already reaches those chokepoints.
+  `observability/audit.py:334` holds a `trace_id` ContextVar, bound in `core/run.py` and
+  inherited by every task the run spawns, which is precisely how the audit line gets a
+  `trace_id` at a call site that has no run object in scope. A per-query call counter keyed
+  on the same ContextVar rides the mechanism build phase 5.0 already built and proved.
+
+What `act_node` still owns is the control flow 21.3 requires: on refusal the loop moves to
+Write with whatever `tool_results` exist, rather than failing the run. That half stays where
+the loop is.
+
 ## Goal contract
 
 Written before any ticket was dispatched, per `.claude/rules/goal-contracts.md`.
@@ -126,7 +172,7 @@ Blocked-stop:
 | Ticket | Wave | Deliverable | Files it may touch | Status |
 |---|---|---|---|---|
 | T-6.0-00 | 0 | The premise gate for this phase, written first and watched failing | `tests/system_03_search_agent/core/test_rate_limit_concurrency_premise.py` | todo |
-| T-6.0-01 | 1 | Section 21.3: the at-most-20 Layer 2 and Layer 3 calls per query budget. Plan drafts against the ceiling, Act enforces it as a hard stop and moves to Write with what exists. Corrects `adapters/web_sse/app.py:231` in the same edit that makes it true | `core/graph.py`, `adapters/web_sse/app.py` | todo |
+| T-6.0-01 | 1 | Section 21.3: the at-most-20 Layer 2 and Layer 3 calls per query budget, counted at the two transport chokepoints and keyed on the run-scoped `trace_id` ContextVar, never at `act_node`'s planned-call loop (see the section above for why). `act_node` reads the count and moves to Write with what exists. Corrects `adapters/web_sse/app.py:231` in the same edit that makes it true | `tools/ncbi_transport.py`, `tools/pathogen_ftp_transport.py`, `core/graph.py`, `adapters/web_sse/app.py` | todo |
 | T-6.0-02 | 1 | Section 21.4: wire `wait_ceiling_s` to the calling query's remaining latency budget rather than the per-call timeout default | `core/graph.py`, `harness/harness.py`, `tools/*` call sites | todo |
 | T-6.0-03 | 2 | Measure 21.2 rather than assert it: a concurrency arm proving one family's bucket is shared across concurrent queries, plus the mutation case that proves the arm can fail | `tests/system_03_search_agent/tools/` | todo |
 | T-6.0-04 | 2 | Settle Section 21.4's own named open question on jump-the-queue behaviour, as a recorded decision rather than as code | `DECISIONS.md`, this file | todo |
