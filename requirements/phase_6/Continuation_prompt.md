@@ -134,7 +134,7 @@ WHAT DOES NOT CHANGE, and do not let this be quietly lost: the premise gate writ
 
 WHAT WOULD REVERSE IT: a genuinely phase-sized deliverable, most likely whatever user feedback asks for that does not exist yet.
 
-Read the board carefully rather than by its shape. It carries exactly ONE open row, build phase 6.1, still marked `todo`, and that is accurate: `todo` means not started, not next. The row stays rather than being deleted the way the 7.0 and 7.1 rows were when the model track moved, because 6.1's two flags are live findings whose trail should not be broken. What orders the work is this table, not the board's row count. The thing standing between this product and a v1 real people can use is not a build phase at all.
+THE BOARD CARRIES NO OPEN PHASE AT ALL, as of later the same day: 6.1 left it too, joining 7.0 and 7.1. That is the honest state rather than a gap, because the thing standing between this product and a v1 real people can use is not a build phase. 6.1 needed handling the 7.x removals did not: those rows had EMPTY flag cells, while 6.1 carried two live findings, so their mentions moved to the phases that FOUND them (F-1.2-04 to build phase 1.2, ADV-03/06/07 to build phase 3.0) rather than being orphaned or deleted. What orders the work is this table.
 
 ### The evaluation track is CLOSED, and that is a decision rather than an oversight
 
