@@ -109,6 +109,16 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
+THE HONEST HEADLINE AS OF 31 AUGUST, and it replaces the one below because we finally looked at the product the way a visitor does. Someone asked the live site which diseases are linked to the gene BRCA1. It answered, quickly, and cited every claim. This is what it said:
+
+> The knowledge graph associates the gene BRCA1 with four disease records: MedGen:C0346153, MedGen:C2676676, MedGen:C3280442, and MedGen:C4554406.
+
+Four reference codes where four disease names should be. A researcher cannot use that sentence for anything. Everything around it works: the page is well built, the system found real records, and it honestly showed its sources. The answer is still useless.
+
+We found the cause by looking in our copy of the database rather than guessing. Each disease record has a field meant to hold its name, and for diseases that field was filled in with the name of the CATALOGUE the record came from, not the name of the disease. Across twenty-five records it only ever said one of three things: "MedGen", "MeSH", or "SNOMEDCT_US". Gene records are fine, which is why gene questions read normally. So a readable answer was never possible from our own copy of the data, and showing the system that field would have made things worse, not better: it would have answered "SNOMEDCT_US" four times.
+
+The encouraging part is that the fix looks small. The system ALREADY looks the records up at one of the public medical databases during that same search, as the second of two steps. The ability to turn a code into a disease name is already there and already being used. It is simply not being used to write the names into the answer. That is the next thing we are doing.
+
 
 The newest honest limitation, and it is the one a person will actually notice. Your searches are now saved properly on our side, but the browser still forgets WHO YOU ARE when you reload the page. So you come back, you are signed out, and you have to sign in again before your searches appear. They are not lost, they are just behind a sign-in you did not expect. Keeping you signed in is its own piece of work and is deliberately not bolted onto this one, because where a browser is allowed to store the thing that proves who you are is a security question worth deciding properly rather than in the last hour of an unrelated week.
 
@@ -144,6 +154,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A budget on how much we ask of others | Capped how many requests one question may make of the public medical databases, and made a quick question give up waiting sooner than a deep one | 31 August |
 | 1.0 | The skeleton of the service, and the fixed format every answer travels in | 2026-07-27 |
 | 1.1 | Sign-in, accounts, and the database that holds user information | 2026-07-28 |
 | 2.0 | The five-step thinking loop the system follows for every question, and the machinery that picks which AI model does which step | 2026-07-28 |
@@ -420,7 +431,15 @@ One more thing happened at the very end, and it is recorded because a reader lea
 
 Where the finished work sits against what is still ahead:
 
-The immediate next step is a decision rather than a piece of building: are the fifty test questions the right fifty?
+THE IMMEDIATE NEXT STEP CHANGED ON 31 AUGUST, and the previous one is kept below it because the reasoning still stands.
+
+1. Make the answers readable. Turn the reference codes into disease names, using the lookup the system already performs during the same search. Nothing else matters while a researcher cannot read the answer.
+2. Fix the rest of what a real person noticed on the live site: an answer flow that feels disjointed, follow-up questions that do not continue the conversation, an integrations page that lists things nobody can actually use, and an answer that simply stops instead of offering where to go next.
+3. Put it in front of people and listen.
+4. Two safety items pulled out of the larger review, worth doing alongside step 3 because real visitors mean real exposure: a security scan that is overdue, since the site has been public since 24 August, and a small flaw where the sign-up page reveals whether an email address is already registered.
+5. Everything else: the nine problems the reviewer found this week, and the rest of the safety and quality review.
+
+The previous next step, still true and now further down the list: are the fifty test questions the right fifty?
 
 Everything else waits on that. They were written as a first attempt to get moving, and they held up well, every one checked against the live databases and re-checked by four separate reviews. But nobody has yet said they are the RIGHT fifty questions to judge this system by, and until someone does, there is little point building a scorer precise enough to catch subtle mistakes against them.
 
@@ -498,6 +517,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| Answers about diseases come back as reference codes rather than disease names, which makes them unreadable. Our copy of the database has the catalogue's name where the disease's name should be, so a readable answer was never possible from it alone | NEXT. The lookup that can supply the names already runs during the same search |
+| The automatic tests written to prove the new request budget works do not actually check it. The whole feature could be deleted and every test would still pass. The feature does work, confirmed by watching it run, but nothing would warn us if it stopped | After we have heard from real users. A gap in the tests rather than a fault in the product, written down with owners rather than quietly left |
+| When a question uses up its allowance of outside requests partway through, the system stops asking, which is correct, but it does not pass that news along properly. A person could see a message saying something is broken when the honest message is that the question was too large | After we have heard from real users. It affects six separate search tools the same way, so it is one decision rather than six small fixes |
 | When a question is being answered, the system waits for the counting service to acknowledge it before showing you the answer. If that outside service is slow, your search is slow, for no benefit to you. The fix is written down and not yet applied, because applying it breaks a set of existing tests that would have to be rewritten in the same change | The next time the counting code is touched. The work is scoped and the tests that need rewriting are named |
 | One of the two places we send records to the outside tracing service still has no word-by-word check on ordinary text. Nothing sent there today contains anything private, but that is true because of what the code happens to send, not because anything stops it | Deliberately left open rather than closed with another text scanner, since four rounds this sprint proved a text scanner loses. It is re-checked whenever new information starts being sent |
 | The old, over-powerful key for the counting service still exists and needs cancelling by hand. It has been removed from our machine and nothing uses it, but it has not been switched off at the far end | Needs a person to click cancel in the counting service. Nothing in the code can do it |
@@ -579,6 +601,18 @@ That last row is the important one. None of these can affect a real person while
 | If the day's free searches run out, the page can still show a visitor searches remaining until they actually try one. The refusal itself is honest when it comes | The next piece of web page work |
 | A search that is stopped part-way still costs one of the five. This is deliberate: the answer was already on screen, so giving the search back would be a way to read answers for free | Not planned to change |
 
+
+### Sprint: a budget on how much the system may ask of others (31 August, merged)
+
+Every search this system runs asks questions of public medical databases that other people pay to keep running, and those databases are free to us. That combination is the problem: our own spending limits cannot see free requests at all, so nothing stopped a single question from asking hundreds of them. This sprint set a ceiling of twenty per question, and made a quick question stop waiting sooner than a deep one when those databases are busy.
+
+Two honest things about it.
+
+The first is that most of this was already built. Before writing anything we checked all eight requirements in the plan against the code that already existed, and five of them had been quietly built already, one at a time, as each search tool was added over previous weeks. The plan promised a piece of work that was mostly finished. Finding that out was arguably worth more than the two pieces we added.
+
+The second is that we built the wrong thing this week, and that is worth saying plainly rather than burying. This protects against many people using the tool at once, and today almost nobody is using it. Meanwhile the reference-code problem described at the top of this page, the one that makes answers unreadable, was sitting in our notes the whole time. We had the evidence for what actually needed fixing and worked somewhere else. The order of work has been changed as a result: making answers readable now comes first, and the remaining safety and quality work waits until real people have tried it.
+
+An independent reviewer checked the work and found nine problems in it, three of them serious. All three say the same thing: the automatic tests written to prove this feature works do not actually check it, and the feature could be deleted without a single test complaining. The feature itself does work, proven by watching it run rather than by the tests. We fixed the one problem that made answers worse, wrote the other eight down with owners, and merged, because unreadable answers are the bigger problem and this is not where the effort belongs.
 
 ### Sprint: a map of the code (31 August, merged)
 

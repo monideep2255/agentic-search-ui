@@ -103,7 +103,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.16, and 5.0. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), now as TWO separate deployments with a release-branch flow between them, and CI running Section 24's ten gates on every pull request and on both deployment branches. Three releases are cut (v0.1.0 through v0.1.2, 2026-08-28), proving the promotion path works end to end. Build phase 5.0, observability (LangSmith tracing, PostHog analytics, the append-only tool-call audit log), MERGED as PR #83 on 2026-08-30 with all four CI gates green. Build phase 5.1, the 50-query golden dataset and the eval harness, is next and unblocked as of 2026-08-30. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.16, and 5.0. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), now as TWO separate deployments with a release-branch flow between them, and CI running Section 24's ten gates on every pull request and on both deployment branches. Three releases are cut (v0.1.0 through v0.1.2, 2026-08-28), proving the promotion path works end to end. Build phase 5.0, observability (LangSmith tracing, PostHog analytics, the append-only tool-call audit log), MERGED as PR #83 on 2026-08-30 with all four CI gates green. Build phases 5.1, 5.2 and 5.3 all merged on 2026-08-30 and 2026-08-31, and the evaluation track was CLOSED at that point by product-owner decision: the 50-query golden dataset is sound, the grading harness is merged and PARKED because it does not work, and the follow-up sits in `requirements/Plan.md` Phase 7 rather than on the board. Build phase 6.0, rate limiting and concurrency, MERGED as PR #91 on 2026-08-31, all four CI jobs green. NOTHING ON THE BOARD IS NEXT: build phases 6.0 and 6.1 moved BEHIND the prototype the same day 6.0 merged, because a live run showed answers reading `MedGen:C0346153` where a disease name should be. The next action is that disease-name fix, recorded in `UI_feedback.md`, and it is not a build phase. See `tracker/BOARD.md` for per-phase status, `requirements/phase_6/Continuation_prompt.md` for what to do next, and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -347,4 +347,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-30
+Last updated: 2026-08-31
