@@ -278,6 +278,13 @@ from xml.etree import ElementTree
 
 import httpx
 
+# Imported as a module rather than by name. `execute_get` already has a
+# parameter called `wait_ceiling_s`, so a bare `from ... import
+# wait_ceiling_s` would shadow it, and the alias that avoids the shadowing
+# is the one form isort and ruff disagree about here (build phase 5.0's
+# F-5.0-30 recorded that isort is not idempotent in this repository). The
+# module-qualified call is unambiguous and settles both.
+from system_03_search_agent.harness import call_budget
 from system_03_search_agent.observability.audit import (
     UNEXPECTED_ERROR_CODE,
     record_tool_call,
@@ -1277,7 +1284,28 @@ async def execute_get(
         url = base_url
 
     limiter = get_rate_limiter(family)
-    effective_ceiling = wait_ceiling_s if wait_ceiling_s is not None else timeout_s
+    # T-6.0-02, Section 21.4: "The queue reads the caller's remaining
+    # per-step time budget rather than applying one constant across every
+    # query class." Resolution order, most specific first:
+    #
+    #   1. An explicit `wait_ceiling_s` from the caller. Unchanged, and it
+    #      still wins, because a caller that names a ceiling knows something
+    #      this function does not (`ncbi_coordinate_overlap` splits one
+    #      budget across a two-step traversal).
+    #   2. The running query's own class budget, when a query scope is bound.
+    #      This is the branch Section 21.4 describes and the branch that did
+    #      not exist before this ticket.
+    #   3. `timeout_s`, the per-call default. Reached only outside a query,
+    #      which is exactly where there is no query class to read.
+    #
+    # Step 2 is what makes a lookup fail fast against a saturated pool while
+    # a deep-research query waits. Before it, every class took step 3 and
+    # got the identical ceiling, which is the "one constant" 21.4 rules out.
+    effective_ceiling = wait_ceiling_s
+    if effective_ceiling is None:
+        effective_ceiling = call_budget.wait_ceiling_s()
+    if effective_ceiling is None:
+        effective_ceiling = timeout_s
 
     # T-5.0-05: this is one of the three transport chokepoints (audit.py's
     # module docstring, tracker/phase_5.0.md finding one), so it and not
@@ -1404,6 +1432,24 @@ async def _execute_with_retry(
     wait_spent = 0.0
 
     for attempt_index in range(2):
+        # T-6.0-01, Section 21.3's per-query Layer 2/3 call ceiling. Charged
+        # here, inside the attempt loop, rather than once per `execute_get`,
+        # because 21.3 names "a retry" first in its own list of where a 21st
+        # call comes from. A charge hoisted out of this loop would let a
+        # query issue 40 requests against a 20-call ceiling and report 20.
+        #
+        # Charged BEFORE `limiter.acquire`, so a refused call spends neither
+        # a rate-limit token nor queue depth on its way to being refused,
+        # and never reaches the network at all. Same ordering discipline as
+        # `act_node`'s cost check: refuse before dispatch, never after.
+        #
+        # No-ops outside a query scope; see `charge_one_call`'s docstring
+        # for why unscoped work (a KGX export batch) is deliberately not
+        # bounded by a per-query ceiling.
+        call_budget.charge_one_call(
+            tool="ncbi_transport:" + family, layer=_LAYER_BY_FAMILY.get(family, 2)
+        )
+
         remaining_wait_budget = max(0.0, wait_budget_s - wait_spent)
         acquire_started = time_fn()
         try:

@@ -52,6 +52,7 @@ from typing import Final
 
 import httpx
 
+from system_03_search_agent.harness.call_budget import charge_one_call
 from system_03_search_agent.observability.audit import record_tool_call
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,12 @@ async def _get_directory_listing(
     # "the bulk FTP path" as a single item. This one is the small,
     # frequent directory-listing GET; the other is the actual bulk
     # transfer. Timed around the actual await only.
+    # T-6.0-01, Section 21.3. This module is the SECOND of the two
+    # Layer 2/3 transports, and a ceiling wired into only the HTTP one
+    # is a ceiling `pathogen_detection` walks around. Charged before the
+    # request, so a refused call never reaches the network. No-ops
+    # outside a query scope.
+    charge_one_call(tool="pathogen_detection", layer=2)
     audit_started = time.monotonic()
     status_code: int | None = None
     try:
@@ -285,6 +292,12 @@ async def stream_filtered_tsv_rows(
     # read, the actual await this call spends on the network, not around
     # the deadline arithmetic above or the TsvScanResult construction
     # below.
+    # T-6.0-01, Section 21.3. This module is the SECOND of the two
+    # Layer 2/3 transports, and a ceiling wired into only the HTTP one
+    # is a ceiling `pathogen_detection` walks around. Charged before the
+    # request, so a refused call never reaches the network. No-ops
+    # outside a query scope.
+    charge_one_call(tool="pathogen_detection", layer=2)
     audit_started = time.monotonic()
     status_code: int | None = None
     try:

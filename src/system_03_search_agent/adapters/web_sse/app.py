@@ -230,6 +230,17 @@ app.mount("/mcp", _mcp_asgi_app)
 # a run's own citation count is already implicitly bounded by Section 21's
 # at-most-20-tool-calls-per-query cap, so this is defense in depth, not the
 # primary bound.
+#
+# F-6.0-01, build phase 6.0: the sentence above was FALSE when it was
+# written and is true now. No such cap existed anywhere in `src/` between
+# build phase 4.0 and build phase 6.0, so for six phases this comment
+# justified a weaker bound by pointing at a stronger one that was not
+# there. The cap it names is
+# `harness/call_budget.py`'s `MAX_LAYER_2_3_CALLS_PER_QUERY`, charged at the
+# two Layer 2/3 transport chokepoints. Named here rather than left implicit
+# so the next reader can check the claim in one grep instead of trusting it,
+# which is the whole lesson build phase 4.15 drew from finding four of these
+# in one phase.
 _MAX_CITATIONS_PER_RUN = 50
 
 # F-4.0-A-02/A-03 (adversary round 1, build phase 4.0): the ONLY valid

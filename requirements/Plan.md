@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-31.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0, and on 2026-08-30 and 2026-08-31 all of 5.1, 5.2 and 5.3. NOTHING IS BLOCKED. Six phases are open and the authoritative list is `tracker/BOARD.md`, rendered at `tracker/board.html`. The next buildable phase today is 6.0, rate limiting and concurrency. Two evaluation phases sit ahead of it in dependency order but are gated on a product-owner decision rather than on engineering: 5.4 unparks 5.2's grading harness, and 5.5 authors the golden rows that use 5.3's `must_reach` and `live_only` fields. Both wait on whether the 50 questions are the right 50. |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 465 (DECISIONS.md).
+Decisions logged: 467 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -830,6 +830,21 @@ Build phases 5.1, 5.2 and 5.3 all merged and the evaluation track was closed at 
 | The A and B randomized-routing mechanism, formerly build phase 7.1 | Never opened. Human-gated online routing between model choices | Model-bench, plus enough real traffic for a comparison to mean anything |
 
 WHY THE MODEL TRACK MOVED HERE TOO, decided 2026-08-31: the need of the hour is getting something in front of users and hearing back from them. Benchmarking which model wins on a fifty-question set is an optimization, and it is an optimization gated on a grader that does not work, measured against questions nobody outside the team has reviewed. Neither is the constraint right now. Build phases 6.0 and 6.1 are what stand between the deployed product and a v1 real people can use.
+
+### Carried here when build phases 6.0 and 6.1 moved behind the prototype, 2026-08-31
+
+Product-owner decision, taken the same day 6.0 merged and superseding that morning's ordering, which had put 6.0 and 6.1 ahead of any UI work. The reason the ordering changed is that a live run that afternoon showed what an answer actually looks like to a person: `MedGen:C0346153, MedGen:C2676676, MedGen:C3280442`. Three opaque identifiers where a disease name should be. Hardening a product whose core answer nobody can read is optimizing a non-bottleneck, which is what `.claude/rules/attack-the-constraint.md` exists to prevent.
+
+So the sequence is now: make the prototype usable, put it in front of people, hear back, THEN harden.
+
+| Item | State at the move | What finishing it would need |
+|---|---|---|
+| Build phase 6.0's nine judge findings | 6.0 MERGED with its two deliverables working and its GATE substantially decorative. Three of the nine are critical and they say the same thing three ways: the tests do not pin the production wiring. F-6.0-J-05, the whole Section 21.4 wiring can be deleted and all tests stay green. F-6.0-J-07, the Section 21.2 concurrency arm measures a limiter it built itself. F-6.0-J-09, removing both production scope bindings changes no test | A fix round against `tracker/phase_6.0_judge_report.md`. The features are verified working by execution rather than by the gate, so this is test debt rather than a broken product |
+| F-6.0-J-04: six tool modules swallow the budget error | A CLASS, not an instance, counted by grep rather than assumed. Every tool fronting a Layer 2/3 transport ends in `except Exception`, so `CallBudgetExceededError` can never propagate to a caller. The ceiling still refuses the call; what breaks is the degradation path and the actionability of the error | A decision about whether the budget error is exempt from the catch-all, which touches six modules and their tests |
+| The adversary round for 6.0 | NEVER RUN. The judge round was stopped mid-flight by product-owner decision once it was clear the phase was not the constraint | An adversary round, if 6.0's code is ever load-bearing enough to warrant it |
+| Build phase 6.1, hardening and release | NOT STARTED, and it is five unrelated things wearing one number. Assessed 2026-08-31: the security scan is genuinely overdue, since its trigger was exposure and the product went public on 2026-08-24; F-1.2-04, signup's 409 leaking which emails are registered, is a small real bug rather than a phase; the CI and CD gates it names already shipped in build phases 4.14, 4.12 and 4.15, leaving only the advisory-versus-merge-blocking question, which needs GitHub Pro or a public repository and is a billing decision; the accessibility pass and the `dev-standards` six-lens review are real and are not preconditions for a feedback round | Splitting it. The security scan and F-1.2-04 are worth pulling out as their own small tickets; the rest waits for user feedback |
+
+WHAT STAYS AHEAD OF ALL OF THIS: the disease-name defect recorded in `UI_feedback.md`. Disease nodes carry the source vocabulary in `name`, so a readable answer was never expressible from Layer 1, and `ncbi_efetch` already runs in that same query and already reaches MedGen. It is the single highest-value change available and it lives in this repository.
 
 ### How new information enters the system
 

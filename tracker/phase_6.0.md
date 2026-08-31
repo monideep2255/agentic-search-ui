@@ -11,8 +11,10 @@ strategy. Depends on build phases 3.1, 3.2, 3.3 and 3.5, all merged.
 - [What this phase is for](#what-this-phase-is-for)
 - [Everything measured before any change was made](#everything-measured-before-any-change-was-made)
 - [The finding that reframes the phase](#the-finding-that-reframes-the-phase)
+- [Where the call ceiling belongs, and why it is not `act_node`](#where-the-call-ceiling-belongs-and-why-it-is-not-act_node)
 - [Goal contract](#goal-contract)
 - [Tickets](#tickets)
+- [Evidence](#evidence)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [Findings](#findings)
 - [History](#history)
@@ -48,7 +50,7 @@ a table rather than a paragraph so a later reader can check each row independent
 | 21.4 | The wait ceiling is tied to the calling query's own remaining latency budget, not one fixed number across every query class | NOT WIRED | The parameter exists: `execute_get(wait_ceiling_s=...)` at `tools/ncbi_transport.py:1217`, defaulting to `timeout_s` at line 1280. No caller in `core/graph.py` supplies a query-class-derived value, so every call in the shipped loop takes the per-call default. The only non-default call sites are inside `tools/ncbi_coordinate_overlap.py`, which passes its own parameter through unchanged |
 | 21.4 | FIFO within a family, no user-tier prioritization in v1 | BUILT by construction | `RateLimiter` holds no priority concept |
 | 21.4 | Single-instance v1, buckets in-process, moving to a shared store only if the deployment scales out | BUILT by construction | The registry is a module-level dict |
-| 21.4 | Open question, named rather than silently settled: whether any call class jumps the FIFO queue | UNSETTLED | Nothing in the code implements a jump, which matches the spec's own stated v1 assumption. It stays an assumption until the product owner confirms it |
+| 21.4 | Open question, named rather than silently settled: whether any call class jumps the FIFO queue | SETTLED 2026-08-31 | CONFIRMED as written by product-owner decision: no jump-the-queue in v1. Nothing to build. The specification's reasoning was re-checked rather than assumed and holds: the guardrail runs before Think, Think issues the first Layer 2 call, so a guardrail rejection has no in-flight calls to cancel. The Stop-button variant is reachable and was deliberately not taken into this phase. `DECISIONS.md` |
 | Section 24 | The graph query service carries a hard row limit, a per-call timeout matching `cypher_query`'s 30 seconds, and a rate limit per caller | BUILT server-side | `tools/graph_http_transport.py` sends `row_limit` and `timeout_s` and raises `GraphRateLimitedError` on the service's own `rate_limited` code. Layer 1 has no client-side bucket by design: the graph is not an NCBI API and its limit is enforced at the service |
 
 The short version: five of the eight Section 21 requirements are already shipped, one is
@@ -75,6 +77,51 @@ conclusion was that the fix is DELETION rather than a better sentence, because a
 sentence is where the next reader stops looking. Here the correct repair is not deletion,
 since the claim becomes true once T-6.0-01 lands. It is ordering: the comment is corrected
 in the same edit that makes it true, and never before.
+
+## Where the call ceiling belongs, and why it is not `act_node`
+
+Established 2026-08-31, before any implementation, by reading the call graph rather than by
+reasoning from where the loop's steps live.
+
+The obvious place to enforce Section 21.3 is `act_node`'s planned-call loop at
+`core/graph.py:3076`, which is where the cost cap is already checked immediately before each
+dispatch. That would bound the wrong number. `act_node` iterates PLANNED tool calls, of
+which a real query has one to three. Section 21.3 bounds something else, and says so in its
+own words: it names "a retry, a wider-than-expected fan-out, or an ELink traversal that
+returns more targets than planned" as exactly the cases a 21st call arrives from. All three
+of those happen INSIDE a tool, below `act_node`, and are invisible to a counter that
+increments once per planned call.
+
+This is build phase 5.0's finding two arriving a second time for a second reason. That phase
+put the audit hook at the three TRANSPORT chokepoints and never at `act_node`, because five
+production call sites reach a data layer without passing through `act_node` at all, proven
+by a live query whose first audit line was `think_node`'s symbol resolution. The same
+argument applies unchanged to a call counter: `think_node`'s entity resolution issues real
+Layer 2 calls before Act ever runs, and a ceiling that cannot see them is not the ceiling
+Section 21.3 describes.
+
+So the ceiling counts at the transport, and `act_node` reads the count. Two facts make that
+cheap rather than a redesign, and both were verified rather than assumed:
+
+- The Layer 2 and Layer 3 surface is exactly two functions, and the enumeration is closed.
+  `ncbi_transport.execute_get` is the single HTTP chokepoint for all eight HTTP tools
+  (`clinicaltrials_search`, `litvar2_lookup`, `ncbi_coordinate_overlap`,
+  `ncbi_datasets_actions`, `ncbi_dbsnp`, `ncbi_eutils_actions`, `ncbi_pubchem_actions`,
+  `pubtator_annotate`), and `pathogen_ftp_transport` is the FTP path. Checked by grepping
+  every module that names `httpx`, `ftplib`, `urlopen` or `requests`: in
+  `ncbi_datasets_actions`, `ncbi_pubchem_actions`, `ncbi_coordinate_overlap` and
+  `pathogen_detection`, every `httpx` occurrence is a type annotation on a client passed
+  through, never a request issued directly. `graph_http_transport` is Layer 1 and is out of
+  scope by 21.3's own wording.
+- The run-scoped key the counter needs already exists and already reaches those chokepoints.
+  `observability/audit.py:334` holds a `trace_id` ContextVar, bound in `core/run.py` and
+  inherited by every task the run spawns, which is precisely how the audit line gets a
+  `trace_id` at a call site that has no run object in scope. A per-query call counter keyed
+  on the same ContextVar rides the mechanism build phase 5.0 already built and proved.
+
+What `act_node` still owns is the control flow 21.3 requires: on refusal the loop moves to
+Write with whatever `tool_results` exist, rather than failing the run. That half stays where
+the loop is.
 
 ## Goal contract
 
@@ -125,11 +172,38 @@ Blocked-stop:
 
 | Ticket | Wave | Deliverable | Files it may touch | Status |
 |---|---|---|---|---|
-| T-6.0-00 | 0 | The premise gate for this phase, written first and watched failing | `tests/system_03_search_agent/core/test_rate_limit_concurrency_premise.py` | todo |
-| T-6.0-01 | 1 | Section 21.3: the at-most-20 Layer 2 and Layer 3 calls per query budget. Plan drafts against the ceiling, Act enforces it as a hard stop and moves to Write with what exists. Corrects `adapters/web_sse/app.py:231` in the same edit that makes it true | `core/graph.py`, `adapters/web_sse/app.py` | todo |
-| T-6.0-02 | 1 | Section 21.4: wire `wait_ceiling_s` to the calling query's remaining latency budget rather than the per-call timeout default | `core/graph.py`, `harness/harness.py`, `tools/*` call sites | todo |
-| T-6.0-03 | 2 | Measure 21.2 rather than assert it: a concurrency arm proving one family's bucket is shared across concurrent queries, plus the mutation case that proves the arm can fail | `tests/system_03_search_agent/tools/` | todo |
-| T-6.0-04 | 2 | Settle Section 21.4's own named open question on jump-the-queue behaviour, as a recorded decision rather than as code | `DECISIONS.md`, this file | todo |
+| T-6.0-00 | 0 | The premise gate for this phase, written first and watched failing | `tests/system_03_search_agent/core/test_rate_limit_concurrency_premise.py` | done |
+| T-6.0-01 | 1 | Section 21.3: the at-most-20 Layer 2 and Layer 3 calls per query budget, counted at the two transport chokepoints and keyed on the run-scoped `trace_id` ContextVar, never at `act_node`'s planned-call loop (see the section above for why). `act_node` reads the count and moves to Write with what exists. Corrects `adapters/web_sse/app.py:231` in the same edit that makes it true | `tools/ncbi_transport.py`, `tools/pathogen_ftp_transport.py`, `core/graph.py`, `adapters/web_sse/app.py` | todo |
+| T-6.0-02 | 1 | Section 21.4: wire `wait_ceiling_s` to the calling query's remaining latency budget rather than the per-call timeout default | `core/graph.py`, `harness/harness.py`, `tools/*` call sites | done |
+| T-6.0-03 | 2 | Measure 21.2 rather than assert it: a concurrency arm proving one family's bucket is shared across concurrent queries, plus the mutation case that proves the arm can fail | `tests/system_03_search_agent/core/test_rate_limit_concurrency_mutation.py` | done |
+| T-6.0-04 | 2 | Settle Section 21.4's own named open question on jump-the-queue behaviour, as a recorded decision rather than as code | `DECISIONS.md`, this file | done |
+
+## Evidence
+
+Measured 2026-08-31 on `phase/6.0-rate-limit-concurrency`.
+
+- The premise gate was watched failing in TWO stages, and the second is the
+  one that matters. Against the tree before any implementation: `8 failed in
+  0.10s`, every arm at the same shared ImportError line, which proves only
+  that the API was absent. Against the half-wired tree: `3 failed, 5 passed`,
+  with the three failing INDIVIDUALLY for three different reasons. Eight arms
+  failing at one line is one failure wearing eight costumes, which is exactly
+  the mistake F-5.0-16 cost this repository a round; three arms failing for
+  three reasons is evidence they are separate arms.
+- The gate now passes: `8 passed in 4.12s`.
+- Full Python suite: `4531 passed, 171 skipped, 1 xfailed`, zero failed, up
+  from a `4529 passed, 2 failed` baseline whose two failures were the
+  `Debugging_guide.md` coverage obligation this phase owed for its new source
+  file. That obligation is met and its manifest regenerated.
+- `ruff check` over the WHOLE repository with no path, matching CI gate 3
+  rather than the narrower `ruff check src services` every local check used
+  to run: `All checks passed!`.
+- `isort --check-only .`, matching CI gate 2, which `/verify` does not run
+  and which went red on build phase 5.0 for exactly that reason: clean.
+- T-6.0-02 is proven wired by A2's own failure rather than by reading the
+  call site. The 1.5 second lookup ceiling bit a real `execute_get` call
+  chain during A2's first run, which is only possible if the transport is
+  genuinely consulting it.
 
 ## Coverage: what this phase does not cover
 
@@ -154,7 +228,18 @@ coverage, so a gap is arguable rather than invisible.
 
 | ID | Severity | What | Found by | Status | Evidence |
 |---|---|---|---|---|---|
-| F-6.0-01 | minor | `adapters/web_sse/app.py:231` asserts in the present tense that Section 21's at-most-20-tool-calls-per-query cap already bounds a run's citation count, and uses that claim to justify `_MAX_CITATIONS_PER_RUN = 50` being defense in depth rather than the primary bound. No such cap exists anywhere in `src/`. The fifth instance in this repository of a confident sentence describing a check that is not there | lead, at phase open, 2026-08-31 | open | Grep for the cap across `src/` and `tests/` returns only this comment. `act_node` at `core/graph.py:3012` bounds cost and not call count. Owned by T-6.0-01, which corrects the comment in the same edit that makes it true |
+| F-6.0-J-05 | critical | Section 21.4's ENTIRE wiring can be deleted and all 20 of this phase's tests stay green. `A6` asks the budget what it would return, `A6b` builds its own `RateLimiter` and passes values by hand, and NEITHER calls `execute_get`, so no arm sees whether the transport consults the budget at all | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | Judge mutated a scratchpad COPY of the repository, removed the one wiring line, and got `20 passed`. The feature itself IS wired, proven separately by A2's own live failure during the build, so this is test debt rather than a broken product |
+| F-6.0-J-07 | critical | The arm the phase record calls "Section 21.2 measured rather than asserted" measures a `RateLimiter` it constructs itself, so it passes with private per-caller pools. It never touches `get_rate_limiter`, which is the registry whose sharing was the claim | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | Counted: 1 arm, and it is the only arm claiming to measure 21.2. Exactly the shape build phase 4.15's signing-key arm had, and I wrote this one having quoted that lesson in its own docstring |
+| F-6.0-J-09 | critical | Removing BOTH production scope bindings in `core/run.py` leaves the entire `tests/.../core/` suite identical, so nothing pins that the ceiling is bound on the real query path at all | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | Counted: 3 lines, 1 file, 2 call sites, 0 arms covering either |
+| F-6.0-J-04 | major | SIX tool modules swallow `CallBudgetExceededError` into an ordinary tool error, because each dispatcher ends in an unconditional `except Exception`. A CLASS, not the instance J-01 reports | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | Counted by grep, one instance proven by execution and five by reading. The ceiling still refuses the call, so the safety property holds; the degradation path and the error's actionability do not |
+| F-6.0-J-03 | major | `act_node`'s pre-dispatch check refused LAYER 1 `cypher_query` calls, which Section 21.3 does not bound, and `break`-ed the loop. A query spending its ceiling in `think_node` answered with ZERO graph rows, turning a partial answer into a refusal under cite-or-refuse | judge, 2026-08-31 | FIXED before merge | A live regression I introduced, and the only finding fixed in this phase because it made answers strictly worse. Guard is now keyed on the planned call's declared LAYER rather than the tool's type, and `continue`s rather than `break`s so an exhausted Layer 2/3 budget leaves Layer 1 calls alone. Pinned by new arm A8 plus its mutation |
+| F-6.0-J-08 | major | The retry-charging property, which Section 21.3 names FIRST among the ways a 21st call arrives, is unpinned. Hoisting the charge out of the retry loop leaves 90 tests green, and the comment above it states the property confidently | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | Counted: 1 charge site, 0 arms covering the retry path |
+| F-6.0-J-06 | major | The FTP transport's two charge points are unpinned, and T-6.0-03, the ticket whose own gate names that gap as its to close, is marked done without closing it | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | The gate's docstring names this gap explicitly and assigns it to T-6.0-03. Marking that ticket done while the gap stood is the same confident-sentence shape a third time |
+| F-6.0-J-02 | major | Gate arm A7, the arm the phase record cites as the pin for F-6.0-01, is VACUOUS. It never opens `app.py`, never reads any comment, and passes with the entire comment block deleted. Its second assertion duplicates A1's verbatim | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | Proven by deleting the comment in a scratchpad copy and running A7's body. The fix for a confident-sentence finding was itself a confident sentence: sixth instance in this repository, second in this phase |
+| F-6.0-J-01 | major | `act_node`'s mid-tool `CallBudgetExceededError` catch is DEAD CODE, because `ncbi_efetch`'s last-resort `except Exception` converts it to a tool error first. So `cap_exceeded` is never set on that path, the error tells the agent to fix a module defect rather than to synthesize from what it has, and the branch's own comment claims a property of code that never runs | judge, 2026-08-31 | OPEN, carried to Plan.md Phase 7 | Reproduced by execution: charged 20, awaited `ncbi_efetch`, got a return value and no exception. Generalized by J-04 into a six-module class |
+| F-6.0-03 | major | The FIRST version of this phase's own mutation harness was vacuous, and its correspondence check would have reported full coverage for an arm with no mutation at all. It imported the eight premise arms by name into the mutation module and then compared `dir(premise)` against `globals()` by substring, so every arm was present in BOTH sets and matched itself. The same import also made pytest re-collect and re-run all eight arms, which is why the first run reported 20 tests for a file defining 12. One cause, two symptoms: importing the functions instead of the module | lead, immediately after writing it, 2026-08-31 | FIXED | The count is the tell: 20 reported where 12 were written. Rewritten to import the premise MODULE only and to read an explicit `_drives` marker declared per mutation, so nothing an arm does can put its own name into the covered set. PROVEN NON-VACUOUS BY EXECUTION rather than by reading: removing one `@drives` marker in a throwaway copy made the check fail naming exactly the uncovered arm, and the file was restored and re-verified byte-identical. This is the fourth instance of this shape in this repository and the second inside this phase |
+| F-6.0-02 | major | The two ceilings this phase ships interact, and the RATE ceiling binds long before the CALL ceiling for the commonest query class. A `lookup` query derives a 1.5 second queue wait ceiling (21.4) and the `eutils` pool paces at 3 requests/second, so sequential calls accumulate scheduled wait and the pool refuses at roughly the sixth call, well short of the 20-call ceiling (21.3). Section 21.3's ceiling is therefore not the binding constraint on a lookup query against E-utilities; 21.4's is. Neither figure is wrong on its own and the direction of failure is safe (fail fast, degrade, synthesize from what arrived), but a later reader who "fixes" one without seeing the other will be surprised | lead, from the premise gate's own A2 failure, 2026-08-31 | CLOSED, product-owner decision 2026-08-31 | A2 drove 20 sequential `execute_get` calls under a `lookup` scope and the sixth raised `TransportRateLimitedError: eutils rate pool wait (1.6s) exceeds this call's 1.5s budget`, never reaching the call ceiling. Found by the gate rather than by review, which is the gate doing its job. DECIDED 2026-08-31, product owner: KEEP IT. The rate ceiling binds first, which is what Section 21.4 literally describes for a short-budget query, and the direction of failure is safe. The cost is stated rather than hidden: Section 21.3's 20-call ceiling is effectively unreachable for the commonest query class on E-utilities, so it guards the longer classes and mid-tool fan-out rather than the typical query. Alternatives considered and rejected are in `DECISIONS.md` |
+| F-6.0-01 | minor | `adapters/web_sse/app.py:231` asserts in the present tense that Section 21's at-most-20-tool-calls-per-query cap already bounds a run's citation count, and uses that claim to justify `_MAX_CITATIONS_PER_RUN = 50` being defense in depth rather than the primary bound. No such cap exists anywhere in `src/`. The fifth instance in this repository of a confident sentence describing a check that is not there | lead, at phase open, 2026-08-31 | FIXED | Grep for the cap across `src/` and `tests/` returns only this comment. `act_node` at `core/graph.py:3012` bounds cost and not call count. Closed by T-6.0-01. The cap now exists, so the sentence is true; the comment was amended in the same commit to NAME the constant and to record that it was false for six phases, so the next reader can check it in one grep rather than trusting it. Pinned by the gate's A7 arm |
 
 ## History
 

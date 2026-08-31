@@ -74,6 +74,7 @@
     "src/system_03_search_agent/guardrail/verdict.py": "eefe43b814438c81a4b0fe69f051f622b38d1b82b648a6ee0d89c39250e0ad1b",
     "src/system_03_search_agent/harness/__init__.py": "d5c1b92330485b660e5a651fba0faf707241f6d5f459d3103eadfb29956e339a",
     "src/system_03_search_agent/harness/cache.py": "1588904dfb1d96c375bec718060ddc19ce70b2ec09558263868717b5b637232b",
+    "src/system_03_search_agent/harness/call_budget.py": "591664af1a26fd32873e1257cfd80f8548a1595367b7b8c9bfb70f4a0b42935c",
     "src/system_03_search_agent/harness/coordinator_worker.py": "f3178880b43d0be0fc05d5be1d907dc7bca0d10d6b87a07d98989349866c4059",
     "src/system_03_search_agent/harness/cost_control.py": "dbf40ac71d6838f46687e28a32cc705b7d64a6387331bbaccbbea27c4ef79251",
     "src/system_03_search_agent/harness/harness.py": "dda6722008624126e09a991b42d66ac5d6143c748f81540ef63723099ce28e16",
