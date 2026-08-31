@@ -18,6 +18,7 @@ Last updated: 2026-08-18.
 
 | I want to | Read |
 |-----------|------|
+| Debug something that is broken | `build/Debugging_guide.md`, the symptom index first |
 | Understand the project from zero | `data-engineering/Project_overview_A_to_Z.md`, the navigation hub |
 | Understand the search agent's design | `architecture/System_3_architecture_brainstorming.md` |
 | Know how the agent reaches data | `architecture/Three_layer_data_architecture.md` |
@@ -47,6 +48,7 @@ Last updated: 2026-08-18.
 |-----|-----------|
 | `Build_workflow_cadence.md` | The quick reference for one build phase: twelve stages, who acts at each, the model and effort per stage, where every file gets written. Stage 5 is the blocking premise gate |
 | `Phase_6_execution_flow.html` | The same cadence as a visual page. Opens in a browser with no server. Also published as a Claude artifact |
+| `Debugging_guide.md` | Which file to open when something is wrong, and what every source file does. A symptom index plus a full inventory of `src/` |
 | `Agent_teams_tmux_quickstart.md` | tmux launch guide so parallel builders appear in live panes rather than invisible background sessions |
 
 ### `ncbi/` the data sources and their traps
