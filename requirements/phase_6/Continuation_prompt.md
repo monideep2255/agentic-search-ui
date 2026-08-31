@@ -120,7 +120,19 @@ Nothing is blocked, and NOTHING ON THE BOARD IS THE NEXT ACTION. That is deliber
 | 4 | The security scan, and F-1.2-04's signup enumeration leak, pulled out of build phase 6.1 as their own small tickets | `requirements/Plan.md` Phase 7 | Nothing technically. Worth doing alongside item 3 since real users mean real exposure |
 | 5 | Build phase 6.0's eight open judge findings, and what remains of 6.1 | `requirements/Plan.md` Phase 7 | User feedback |
 
-SO: fix the disease names. Build phases 6.0 and 6.1 moved BEHIND the prototype by product-owner decision on 2026-08-31, reversing that morning's ordering.
+SO: fix the disease names.
+
+### The unit of work is no longer a build phase
+
+Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and `UI_feedback.md`, not from Section 25's build order.
+
+Section 25 has run its course as a driver. Every numbered phase has merged or moved to `requirements/Plan.md` Phase 7, and `tracker/BOARD.md` carries NO open phase at all. What remains is of two kinds and neither is phase-shaped: findings attached to code, which are conditional and become work only when someone touches that code; and defects a real person hit on the live site.
+
+Build phase 6.0 is the argument for the change rather than an aside. It was opened because the board said it was next. It delivered contention protection that is invisible with one user, and measuring its own specification section first showed five of its eight requirements were already built. Meanwhile the defect that makes every disease answer unreadable sat in `UI_feedback.md` the whole time. A phase number is a poor proxy for value once the specification is mostly built.
+
+WHAT DOES NOT CHANGE, and do not let this be quietly lost: the premise gate written before the code and watched failing, the judge round, the write-first rule for findings, and a goal contract before any autonomous run. Those apply to a piece of work whatever it is called. `docs/build/Build_workflow_cadence.md` is scoped to a build phase and now needs a smaller sibling for flag-sized work. That sibling is NOT yet written, which is recorded here rather than assumed to exist.
+
+WHAT WOULD REVERSE IT: a genuinely phase-sized deliverable, most likely whatever user feedback asks for that does not exist yet.
 
 Read the board carefully rather than by its shape. It carries exactly ONE open row, build phase 6.1, still marked `todo`, and that is accurate: `todo` means not started, not next. The row stays rather than being deleted the way the 7.0 and 7.1 rows were when the model track moved, because 6.1's two flags are live findings whose trail should not be broken. What orders the work is this table, not the board's row count. The thing standing between this product and a v1 real people can use is not a build phase at all.
 
