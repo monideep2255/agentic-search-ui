@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-30.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0, and on 2026-08-30 both 5.1 and 5.2. 5.1, the 50-query golden dataset, merged as PR #85 and is sound. 5.2, the grading harness, merged as PR #86 and is PARKED: it does not work, and its own suite is green with every defect live. NEXT is a product-owner decision rather than a build step, namely whether the 50 questions are the right 50, after which Section 25's order resumes at build phase 6.0. |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 455 (DECISIONS.md).
+Decisions logged: 458 (DECISIONS.md).
 
 Deliverables produced:
 
