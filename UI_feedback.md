@@ -9,6 +9,7 @@ Last updated: 2026-08-31.
 ## Table of contents
 
 - [The headline finding](#the-headline-finding)
+- [Seen in a real browser, not inferred](#seen-in-a-real-browser-not-inferred)
 - [The evidence, measured](#the-evidence-measured)
 - [Complaint 1: the UI is not as responsive as the design](#complaint-1-the-ui-is-not-as-responsive-as-the-design)
 - [Complaint 2: the answer flow feels fragmented](#complaint-2-the-answer-flow-feels-fragmented)
@@ -47,6 +48,45 @@ The answer ended with this, shown to the user:
 > Note: this answer reports 3 of the 5 findings prepared for it, and the 2 not reported are absent from the citations as well as from the text above
 
 That is internal accounting. It tells a researcher nothing they can act on, and it undermines confidence in the three results that did survive. The run also came back with `trust_outcome: "ask"` and `risk_tier: "high"`, so the interface renders it as a hedged, half-trusted response rather than an answer.
+
+## Seen in a real browser, not inferred
+
+Playwright drove Chromium against live production on 2026-08-31 and captured the answer screen. Screenshot: `docs/build/design/evidence/2026-08-31_live_answer_brca1.png`.
+
+The picture settles the argument more cleanly than any API probing did. THE INTERFACE IS NOT THE PROBLEM.
+
+What the page renders is competent. It has all of this, and it is laid out well:
+
+- A clear question header with a "New search" control.
+- A trust line carrying elapsed time, tool count and source count.
+- The answer in a quoted block.
+- Numbered citation chips under the answer.
+- A collapsible sources disclosure.
+- Trust pills.
+- A follow-up field with three suggested questions.
+- A feedback control.
+
+It is a well-built page displaying this:
+
+```
+The knowledge graph associates the gene BRCA1 with four disease records:
+MedGen:C0346153, MedGen:C2676676, MedGen:C3280442, and MedGen:C4554406.
+```
+
+Four identifiers. A researcher cannot use that sentence for anything. This is the whole problem in one screenshot: excellent chrome around content nobody can read.
+
+Details the browser run added that the API run did not:
+
+| Observed | Note |
+|---|---|
+| Header reads "Single source, not independently confirmed" | The trust line leads with a caveat before the answer |
+| "12.3s, 2 tools, 5 sources from 2 layers" | Latency is shown honestly, which is good, and it is still 12 seconds |
+| Pills read "Grounded, every claim cited" and "high risk claim" | Both true, and together they tell a user the answer is simultaneously trustworthy and dangerous |
+| The findings-accounting note did NOT appear this run | It appeared in the API run earlier the same day. So it is intermittent, not constant, and reproducing it needs a specific path |
+| Four diseases here, three in the earlier API run | Same question, different result count on two runs minutes apart. Worth understanding before anything else is tuned |
+| Follow-up help text says "A follow-up runs a full search" | The interface is HONEST about the behaviour in complaint 3. It is documented, not broken. Whether it is the right behaviour is a product question |
+
+The last row matters for how complaint 3 gets framed. The product is not failing to do something it claims. It is doing something it explains clearly, and that behaviour is not what you want.
 
 ## The evidence, measured
 
@@ -165,6 +205,26 @@ The reasoning is the repository's own `attack-the-constraint` rule. The bottlene
 - Release hardening (6.1) hardens the same.
 - Making the UI match the design more closely renders unreadable output more beautifully.
 - User feedback gathered now would all be the same feedback: the answers are not answers.
+
+### DECIDED: 6.0 and 6.1 go first. Product owner, 2026-08-31
+
+This overrides the recommendation below, which argued for fixing answer readability first. The recommendation is left in place rather than deleted, so the reasoning on both sides survives.
+
+The product owner's reasoning, and it is stronger than mine on the thing I was not weighing:
+
+- Fixing UI issues piecemeal means some are fixed and some remain, and every partial pass requires re-testing the whole surface. That is worse than one coherent pass.
+- The feedback is not finished being collected. This document is going to grow as the app gets used.
+- This is a show piece. It needs to be right as a whole, not right in patches.
+
+So the plan is: build 6.0 and 6.1, collect UI feedback into this file continuously while doing it, then fix the UI issues in ONE pass against a complete list.
+
+What that means for whoever picks this up:
+
+- Do NOT start fixing items from this file yet. It is still being written.
+- Add to it freely. Every new observation makes the eventual single pass better.
+- The answer-readability finding is the exception worth watching: if 6.0 and 6.1 take long enough that the product is shown to anyone in the meantime, revisit whether it should jump the queue, because it is the one item that makes every demo fail.
+
+### The original recommendation, kept for its reasoning
 
 Suggested order, with the reasoning attached to each:
 
