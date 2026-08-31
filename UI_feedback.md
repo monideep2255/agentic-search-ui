@@ -17,6 +17,8 @@ Last updated: 2026-08-31.
 - [Complaint 4: the integrations page is a placeholder](#complaint-4-the-integrations-page-is-a-placeholder)
 - [What this means for sequencing](#what-this-means-for-sequencing)
 - [Why the two-day reference build felt better](#why-the-two-day-reference-build-felt-better)
+- [Test against develop, not production](#test-against-develop-not-production)
+- [End-to-end workflows for browser-driven testing](#end-to-end-workflows-for-browser-driven-testing)
 - [What has not been checked](#what-has-not-been-checked)
 
 ## The headline finding
@@ -39,7 +41,38 @@ If the model is never told a Disease node carries a human-readable name, it cann
 
 This is the same shape as the build phase 2.1 lesson already recorded in `.claude/rules/attack-the-constraint.md`: the schema slice handed to the model contained no Disease label at all, and three review rounds hardened the wrong component before anyone printed the prompt. The rule's own words apply here without modification: check whether the correct answer is even expressible from what the model was given, before debugging what it produced.
 
-Confirm before building anything: run one Cypher query against a Disease node and look at its `properties` payload. If a name key is there, this is a schema-slice fix and a prompt fix, not a UI fix.
+CONFIRMED AND CORRECTED, 2026-08-31, by querying the live graph. The hypothesis was half right, and the half it got wrong is the important half.
+
+A `name` property DOES exist on Disease nodes. It does not hold a disease name. Sampled across 25 Disease nodes, `name` takes exactly three distinct values:
+
+```
+MedGen:C0000737   name='SNOMEDCT_US'
+MedGen:C0000744   name='MedGen'
+MedGen:C0000771   name='MeSH'
+```
+
+Three values across twenty-five nodes. The Disease `name` column was populated with the SOURCE VOCABULARY the record came from, not the label of the disease.
+
+The same probe against Gene nodes shows the field working correctly there, 23 distinct values across 23 nodes:
+
+```
+NCBIGene:213      name='albumin'
+NCBIGene:207      name='AKT serine/threonine kinase 1'
+NCBIGene:226      name='aldolase, fructose-bisphosphate A'
+```
+
+So this is not a general graph problem and not a schema-slice problem. It is specific to the Disease label, and it means the readable answer was NEVER EXPRESSIBLE from Layer 1. Exposing `name` to the Cypher generator would have changed the answer from four CURIEs to the word "SNOMEDCT_US" four times, which is worse.
+
+### Two ways to fix it, and only one of them lives in this repository
+
+| Path | Where | Trade-off |
+|---|---|---|
+| Re-ingest Disease nodes with the real MedGen label in `name` | Systems 1 and 2, the data-engineering repository. NOT this one | The correct fix. Fixes every query at once and costs nothing at runtime. Needs a re-ingest and is not on this repository's schedule |
+| Resolve MedGen CURIEs to names at query time through Layer 2 | This repository. `ncbi_efetch` already reaches MedGen | Available now, no re-ingest. Costs a live API call per answer and adds latency to a path already taking 12 to 14 seconds |
+
+The second path is worth noting carefully: `ncbi_efetch` ALREADY RAN in the observed query, as the second of the two tools. So the machinery to turn `MedGen:C0346153` into a disease name is already in the loop and is already being called. What it is not doing is using that call to label the entities in the answer.
+
+That makes this materially cheaper than it first looked, and it is the single highest-value thing on this whole list.
 
 ### The second defect in the same answer
 
@@ -255,6 +288,55 @@ This build interposes a deterministic grounding layer between the model and the 
 That layer is why this system cannot invent a citation. It is also, on the evidence above, why the answer reads as three identifiers and a disclaimer: the only claims that could be grounded were the CURIEs, so the CURIEs are what survived.
 
 The moat and the defect are the same mechanism. The fix is not to remove the grounding layer, it is to give it human-readable fields to ground against. That is what makes item 1 above a schema and prompt problem rather than an architectural retreat.
+
+## Test against develop, not production
+
+Correction to how the evidence in this file was gathered. Everything above was run against PRODUCTION, and it should have been run against DEVELOP. Production moves only on a deliberate release, so it lags whatever is being worked on, and testing there measures an older build than the one anyone is fixing.
+
+The two deployments, from `README.md`:
+
+| Deployment | Web | API |
+|---|---|---|
+| Develop | `https://search-agent-web-develop-2aeb.up.railway.app` | `https://search-agent-api-develop-43b3.up.railway.app` |
+| Production | `https://search-agent-web-production.up.railway.app` | `https://search-agent-api-production.up.railway.app` |
+
+They are fully separate: different Railway projects, different databases, different signing keys. Ask either API's `/health` and it names itself in an `app_env` field.
+
+From here on, UI verification runs against DEVELOP. Production gets checked only when confirming a release actually shipped what it claimed. The live diagnostic spec at `frontend/e2e/live-answer-screenshot.spec.ts` currently hardcodes the production URL and should take the target from an environment variable instead.
+
+## End-to-end workflows for browser-driven testing
+
+Browser control is available and proven, not theoretical:
+
+- Playwright 1.62 with Chromium is installed.
+- `frontend/e2e/` already holds live diagnostic specs.
+- A run against the deployed app on 2026-08-31 drove a real query and captured the answer screen in 29 seconds.
+
+What is missing is a set of workflows worth running. The specs that exist test narrow assertions. What this file needs is journeys a real person takes, each ending in a screenshot that a human or an agent can look at and judge.
+
+Build these as `frontend/e2e/journeys/`, gated behind an environment variable like the existing diagnostics, pointed at DEVELOP by default.
+
+### The journeys worth having
+
+| # | Journey | What it must capture | Which complaint it covers |
+|---|---|---|---|
+| 1 | First visit to first answer | Landing, disclaimer, question typed, every intermediate state during the wait, final answer | 1, 2 |
+| 2 | The wait itself | A screenshot every second from submit to answer, so the 12 to 14 second gap is visible as a filmstrip rather than described | 2 |
+| 3 | Follow-up continuity | Ask, then ask a dependent follow-up such as "what variants cause it", and capture whether the second answer knows what "it" refers to | 3 |
+| 4 | Guest allowance exhaustion | Ask six times as a guest, capture what the fifth and sixth look like | Untested entirely |
+| 5 | Every integrations affordance | Click each control on the integrations page, capture what happens, including the KGX button that does nothing | 4 |
+| 6 | Refusal and error paths | Ask something unanswerable, ask something the guardrail rejects, capture both | Untested entirely |
+| 7 | Narrow viewports | Journey 1 repeated at 390px, 768px and 1440px | 1 |
+| 8 | Sign up, sign out, sign in | Including whether history survives, which build phase 4.13 merged with known gaps | Untested entirely |
+
+### What makes them useful rather than decorative
+
+- Each ends in a named screenshot committed under `docs/build/design/evidence/`, dated, so a change can be compared against the last run rather than against memory.
+- Each captures INTERMEDIATE states, not just the end. The complaint in this file is about the experience during the wait, and a final screenshot cannot show it.
+- Each runs against develop by default and takes its target from an environment variable.
+- None of them assert. They CAPTURE. A journey that fails a strict assertion stops and tells you nothing about the other seven steps, and the point here is to see the whole flow.
+
+Journey 2 is the one to build first. The fragmentation complaint is currently described in prose, and a filmstrip of the twelve-second wait would turn it into something anyone can look at and immediately agree or disagree with.
 
 ## What has not been checked
 
