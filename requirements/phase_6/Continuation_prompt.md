@@ -99,142 +99,49 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 ## State now
 
-NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending their session.
+This section is DERIVED FROM `tracker/BOARD.md`. If the two disagree, the board wins and this section is stale. Open `tracker/board.html` in a browser for the same thing visually.
 
-- BUILD PHASE 5.1, THE 50-QUERY GOLDEN DATASET, IS MERGED as PR #85 on 2026-08-30, all four CI gates green. It is the evaluation set: 50 biomedical questions whose constraints were established from LIVE NCBI lookups on a path that deliberately touches none of the agent's own machinery, then independently re-verified by every review round. Three search categories, named by the product owner: KISS (one exact answer), KISSES (all known results), discovery (a thread of dependent turns), each graded against a different metric because each fails differently. Method: `docs/build/Golden_dataset_method.md`.
-- BUILD PHASE 5.2, THE GRADING HARNESS, IS MERGED as PR #86 on 2026-08-30 AND IS PARKED. IT DOES NOT WORK. Four independent review rounds returned FAIL with roughly ninety findings, and its own suite is GREEN with every defect live, which is what makes it dangerous rather than merely unfinished. `replay()` raises `HarnessParkedError` unless the caller passes `acknowledge_parked=True`. Read `tracker/phase_5.2.md`'s banner before touching any of it.
-- WHY IT WAS PARKED RATHER THAN FIXED, and this is the product-owner's reasoning rather than the reviewers': the 50 questions are a FIRST ATTEMPT, not a settled target. This is a prototype and the question set will change. A grader precise enough to catch an invented fact about the right gene is precision spent against a moving specification, and the instrument cannot be more settled than the thing it measures. By `attack-the-constraint`, the bottleneck is the question set.
-- THE ROOT DEFECT, worth reading before any resumption: grounding compared the agent's prose against the agent's OWN citation payload, because a trace carries the agent's description of a record rather than the record. An answer about a gene that does not exist, citing a record that does not exist, scored 16 of 16 with no hard-fail. The identical circularity had been designed OUT of the dataset builder in the same phase, with a docstring explaining why, and was then designed back IN one file over.
-- THE NEXT ACTION IS A PRODUCT-OWNER DECISION, not a build step: settle whether the 50 questions are the right 50. Everything downstream depends on it, including whether a grader is worth building precisely. `docs/build/Golden_dataset_method.md` documents how to change the set, and `eval/golden/build_dataset.py` re-verifies every constraint against live NCBI, so revising questions is cheap and safe. Deciding what to ask is the expensive part.
-- AFTER THAT, Section 25's order resumes at build phase 6.0, rate limiting and concurrency. Build phase 7.0, model-bench, is where the parked grader would need to work, since it benchmarks candidate models per tier against the golden dataset.
-- ALSO MERGED 2026-08-30, harness rather than product: PR #87 took the Write tool off review agents and grew `/standup` to seven lines; PR #88 states the branch steady state. `.claude/agents/phase-reviewer.md` is the agent to dispatch at cadence stages 8 and 9 from now on, and it has Read, Grep, Glob and Bash and NO Write, because a review round dispatched with full access deleted a tracked file outside its brief.
-- WHAT FOUR FAILED ROUNDS COST AND TAUGHT, in one line each. A fabricated answer passed 34 of 50 rows while every arm was green. A hollow measurement was reported to the product owner as proof: "a fabricated answer now passes 0 of 50", produced by a probe using a judge under which nothing could pass at all. The durable repair is a PAIRED PROBE, grading a fabricated and a correct answer with the same judge and requiring the scores to differ, which no constant judge can satisfy. Both are in `LEARNINGS.md`.
-- Build phase 4.16 is MERGED as PR #63 on 2026-08-25.
-- Seven defects closed: the Act step now emits `tool_start` and `tool_result` AT DISPATCH via LangGraph's custom stream; a conversation thread keeps earlier turns on screen; client-side routing over `/`, `/integrations`, `/about`, `/docs` with no router dependency; the integrations page names the five surfaces that actually shipped; a citation chip no longer repeats its own source; the `ask` outcome no longer blames the reader for single-source evidence; and the feedback thumb no longer renders outside its own button.
-- Then build phase 4.13 (durable cross-reload history).
-- WHAT THIS PHASE COST AND TAUGHT, and it is not the features. SIX assertions that could not fail were found, FIVE of them written by the lead during this phase, every one caught by mutation or by a screenshot and NONE by reading:
-  - A landed-signal that waited for the "New search" button, which BOTH the run screen and the answer screen render, so it passed the instant a question was dispatched. Two second-turn tests passed in under two seconds proving nothing. Caught by screenshotting the deployed demo and seeing a run screen with five pending pips.
-  - An integrations guard whose fixture read the raw file and matched the old wrong values inside the COMMENT documenting them, where the tempting fix was deleting the comment.
-  - That same guard's populate-check asserting page CONTENT rather than fixture health, so under mutation it fired first and masked all four real failures, reporting a broken harness for an intact page.
-  - That same guard's surfaces arm using a substring, so "GraphQL" passed against "GraphQLXX".
-- THE DEEPEST ONE IS NOT ON THAT LIST.
-- Both of this phase's existing second-turn arms were CORRECT, honest, and blind: they asked "can a second turn be taken" and answered yes, on every path, in two environments, while the actual defect was that the previous turn vanished.
-- A test can be right and measuring the wrong property, and that is why defect 2 survived two rounds of being looked for directly.
-- THREE HARNESS GAPS FOUND, each recorded with an owner rather than worked around.
-- The guest path had NEVER been exercisable in the browser suite, because the e2e mock omits `ANON_DAILY_RUN_CAP` and `_read_int_env` raises rather than defaulting, so every anonymous run 500'd; no spec had ever asked a question without signing up first, which is the only way the demo is used.
-- The browser suite cannot reach a REAL tool dispatch at all, since the mock fakes only the model and `plan_node` needs a live NCBI lookup first, which is also why `query-stream-and-stop`'s `answer-cap` arm fails.
-- And two live diagnostic specs were written claiming "skipped by default" with no skip, which would have fired at the public demo on every CI run.
-- A DESIGN-SYSTEM GAP WORTH FIXING BEFORE THE NEXT UI PHASE: the follow-up field and the conversation thread exist ONLY in `prototype/app.html` and in NO component card, and `design-system/components/trust-pills.html` has no `ask` state.
-- `Design_to_build_workflow.md` makes the cards the thing builders build against and gates assert on, so a surface absent from them is a surface nothing can grade.
-- That is how a missing conversation thread shipped through build phases 4.8 and 4.9 with every gate green.
+### The next action
 
-Separately from any build phase, the HARNESS itself changed on 2026-08-25 across three pull requests:
+Nothing is blocked. Six phases are open, and the first two are gated on a product-owner decision rather than on engineering.
 
-- PR #64: the `doc-readability` skill, a preservation script plus a `doc-auditor` agent that together enforce a no-information-lost guarantee on any restructured document.
-- PR #65: a cost-model correction, replacing an estimated hosting figure with a measured one.
-- PR #66: a phase checkpoint followed by a five-document readability pass over `Plan.md`, this file, `PROGRESS.md`, `CLAUDE.md` and `AGENTS.md`. It also carried the most serious gate fix so far, described below, and produced `tracker/locked_docs_readability_report.md`, a report-only analysis of the two LOCKED requirements documents that is ready to execute the moment the Step 6.2 reconciliation lifts the lock. Neither locked document was edited.
+| Next | Phase | What it is | Gated on |
+|---|---|---|---|
+| 1 | 5.4 | Make build phase 5.2's grading harness actually work, then remove its `acknowledge_parked` guard | The golden 50 settling. Precision aimed at a moving specification is what parked 5.2 |
+| 2 | 5.5 | Author the golden rows that USE 5.3's `must_reach` and `live_only` fields | SME review. 5.3 shipped the mechanism and deliberately authored no rows |
+| 3 | 6.0 | Rate limiting and concurrency: per-layer throttling, the bounded queue per API family, the 20-calls-per-query budget | Nothing. This is the first phase you can open today |
+| 4 | 6.1 | The full `dev-standards` six-lens pass, CI and CD gates, the security scan, accessibility | 6.0 |
+| 5 | 7.0 | Benchmark candidate models per tier against the golden dataset | 5.1, and a working grader from 5.4 |
+| 6 | 7.1 | The A/B routing mechanism | 7.0 |
 
-- Running the new gate against real documents found EIGHT defects in the gate itself, every one a FALSE POSITIVE, which is the direction that gets a gate switched off rather than trusted. Where each came from:
-  - `docs/build/Build_workflow_cadence.md`, four: union candidates ranked by raw overlap so a diagram outranked the bullets a sentence split into; the candidate pool truncated away a bullet holding only an identifier; the negation check read a single anchor; the comma-chain arm counted across a whole line and required no coordinator.
-  - `README.md`, three: a bare noun list flagged as a wall; a heading designator read as title case and reported twice; inline code DELETED before counting series items, which inflated the average and fired a false wall.
-  - The five-document batch, one, and it is the worst: the gate was NON-DETERMINISTIC. String hashing is randomized per process and the candidate ranking followed set order, so byte-identical input produced different answers between runs. Fixed by sorting; proven by running a real pair under six hash seeds. A gate whose answer moves is worse than no gate, because a real finding becomes indistinguishable from noise.
-- The determinism TEST was itself vacuous on its first two attempts, and that is recorded because it is the trap: with the fix reverted, the bundled fixture, a fixture built deliberately to force ties, and a real 355-line pair with zero findings ALL passed. Only a real pair carrying findings caught it. A green determinism result on a clean pair proves nothing.
-- All six were FALSE POSITIVES, closed by calibrating the gate rather than by changing the documents.
-- Full evidence, one row per run: `tracker/doc_readability_runs.md`.
+SO: if you want to build something today, open build phase 6.0. If you want to unblock the evaluation track instead, the next step is not code, it is the product owner settling whether the 50 questions are the right 50.
 
-- Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition.
-- That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE.
-- Merged as PR #23.
-- Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
+### The one decision waiting on the product owner
 
-Two things were deliberately left open rather than fixed, both genuine product decisions, not bugs: whether the stopword list should exclude entries that are themselves real gene symbols (F-3.1-41), and what happens when a gene is mentioned in lowercase (F-3.1-42). Three more minor, non-blocking findings from the final review are carried to before `ncbi_efetch` gets wired into `act_node` (F-3.1-50, F-3.1-51, and F-3.1-46 already tracked).
+The golden 50 are a data-derived v1, not a settled target. Every constraint in them was read from a live NCBI lookup and independently re-verified, so the rows are factually SOUND. What is unsettled is whether they are the right QUESTIONS, and whether each expected answer is the one a domain expert would give. Neither is answerable from a lookup. Until that settles, 5.4 and 5.5 stay shut.
 
-- F-2.1-C15's generation half, the finding where a generated query took the graph server down for every user, closed on `fix/c15-generation-bound` the same day: `validate_cypher` now rejects any generated Cypher carrying a variable-length relationship pattern (`[:orthologous_to*]` or similar) before execution, the mechanism behind the original OOM.
-- The existing `_MEMORY_GUARD_SQL` session-level mitigation is unchanged.
-- This fix's own first version, sliced from the existing relationship-hop regex, was itself found bypassable by a fresh-context adversarial review before merge: a nested bracket (a list-valued property) alongside the variable-length spec defeated it, the same non-nesting-regex defect class already fixed once in this file for node patterns (F-2.1-A9) and never generalized to relationship hops.
-- Rebuilt as a standalone, wildcard-free pattern matched directly against the quote-masked query string, independent of the hop regex entirely.
-- A second independent review confirmed the bypass closed, found no new one, checked for ReDoS (none), and found one narrow, non-blocking gap against full Cypher grammar unreachable by this system's actual generation, documented rather than fixed.
-- F-2.2-01 (a separate, lower-severity generation flake, roughly 1 run in 10) was deliberately left open rather than folded into the same branch, per the ticket's own allowed alternative.
-- Full account: `tracker/fix_c15_generation_bound.md`.
+### Before you touch anything under `src/`
 
-- Twelve build phases are done, all twelve merged into `develop` (renamed from `main` at Step 6.2).
-- The first six complete the Step 6.1 prototype group; 3.0 through 3.5 are all six of the Step 6.3 tool-and-trust v1 phases, and with 3.4's merge every one of them is now closed:
+Read `docs/build/Debugging_guide.md`. It is a symptom index followed by one row for every Python file under `src/system_03_search_agent/`, and it is the fastest route from a failure to the file that owns it.
 
-| Phase | Delivered | PR |
-|-------|-----------|-----|
-| 1.0 | FastAPI skeleton, the typed event contract, Pydantic boundary validation | #5 |
-| 1.1 | Auth service, the PostgreSQL user-data schema | #6 |
-| 2.0 | Real LangGraph agent loop, the three-tier harness | #9 |
-| 1.2 | React shell, SSE streaming, chat UI wired end to end | #12 |
-| 2.1 | cypher_query over Layer 1, first live graph access | #15 |
-| 2.2 | Deterministic cite-or-refuse, Layer 1 provenance, the first trust signal | #18 |
-| 3.0 | The full Section 10 guardrail, replacing the passthrough stub | #19 |
-| 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | Merged as PR #22 on 2026-08-05, PR #23 on 2026-08-07 |
-| 3.2 | ncbi_dbsnp, the second Layer 2 tool: Variation Services normalization plus dbSNP ESummary clinical and population data, six review passes | #25 |
-| 3.3 | pubtator_annotate and litvar2_lookup, the two Layer 3 enrichment tools, ten review rounds | #26 |
-| 3.4 | Provenance extended to Layers 2 and 3 (the four added CitationPayload fields), the two-tier risk gate, data freshness and conflict resolution, T-3.1-28 (Act-step dispatch of a second layer) folded in. Two judge rounds, an adversary round (7 findings, 1 critical), a fix round, a final confirmation round | #28 |
-| 3.5 | pathogen_detection and clinicaltrials_search, completing the seven-tool roster. A judge round and an adversary round that found the judge round's own fix had introduced two new critical regressions of the identical shape, both closed and live re-verified | Merged on `phase/3.5-pathogen-clinicaltrials-tools` |
+It also carries an obligation that CI enforces. Add, delete, rename or repurpose a file under `src/` and you update the guide in the SAME commit, then regenerate its manifest:
 
-Current counts, stated once here:
+```bash
+python tests/system_03_search_agent/test_debugging_guide_coverage.py
+```
 
-- Python tests: 4652 at the 2026-08-30 merge (4480 passing, 171 skipped, 1 xfailed, ZERO FAILED) on `develop` after build phases 5.1 and 5.2 merged as PR #85 and PR #86 on 2026-08-30
-  - The figure at build phase 4.14's close was 4226 (4066 passing) on `phase/4.14-ci-gates`, measured 2026-08-25; build phase 4.13 adds 60, which are the premise gate's 11 arms plus the unit, endpoint, auth-liveness and boundary arms its three review rounds produced.
-  - The figure at build phase 4.12's close was 4090 (3930 passing) on `phase/4.12-demo-deploy`; build phase 4.16 adds 12, being a 5-arm premise gate and a 7-case mutation harness.
-  - THE STANDING SIX-FAILURE BASELINE IS GONE, and it was never six broken tests: all six were in `test_citation_trust_full_premise.py`, all six pass under `RUN_PREMISE_GATE=1`, and that file FAILED where it should have SKIPPED because its `live_only` mark gated on a model key existing rather than on outbound HTTP being permitted. Build phase 4.12 fixed it.
-  - The figure before that was 4046 (3887 passing, 6 failed) on `develop` with both fix branches merged (PR #59, F-4.7-A-02, and PR #60, F-4.7-A-01), against a baseline RE-MEASURED in a throwaway worktree at `4d759da`: 3826 passing, 146 skipped, 6 failed. Neither branch's own figure is reproduced here, deliberately: each measured only its own branch, and the merged tree is neither of them, so carrying either number forward would record a total that was never true of this commit.
-  - The figure recorded at build phase 4.7's close was 3979 total / 3826 passing, and the total was already 13 stale when that line was written, which is the exact failure the rest of this bullet warns about. The 6 are all PRE-EXISTING and none belong to build phase 4.7: all six are in `test_citation_trust_full_premise.py`, and they fail because that file's live Layer 2 and Layer 3 calls are blocked in the ordinary unit run.
-  - RE-MEASURED AT THIS BRANCH POINT rather than carried forward, which is the practice this line exists to enforce: the figure recorded at build phase 4.4's close was 10, and the 3 `test_cypher_query_e2e.py` failures in it are simply gone, because build phase 4.11 moved Layer 1 behind an HTTPS service and those tests no longer depend on a hand-opened tunnel. The seventh `test_citation_trust_full_premise.py` failure recorded there is also gone. Neither disappearance was caused by build phase 4.7.
-  - A stale baseline is how a genuine regression hides, since the next reader compares against a number that was never true, so re-measure at each phase close rather than carrying it forward, and say which commit you measured at.
-- Frontend tests: 235
-- Playwright end-to-end tests: 43 declarations, 50 executed cases, of which 2 are LIVE DIAGNOSTICS gated off by default behind `RUN_LIVE_DIAGNOSTICS=1` because they reach the deployed demo and spend real budget.
-  - Re-run in full on 2026-08-25 during build phase 4.16.
-  - The one failure is `query-stream-and-stop.spec.ts`'s "a signed-in query streams through the pipeline and produces an answer", waiting for `answer-cap`, and it is PROVEN PRE-EXISTING rather than asserted: the same spec was run at `e486310`, build phase 4.16's branch point, where it fails identically with none of that phase's changes present. Unowned as of this line.
-  - The previous figure here, 29 declarations and 30 executed ALL PASSING, was measured at build phase 4.10's close on 2026-08-15 and had been carried forward through five merged phases without re-measurement, which is exactly what this file's own baseline rule forbids.
-  - A webServer timeout seen during that run was an orphaned probe process squatting on the backend port, diagnosed rather than assumed, since this suite once carried an IPv6-binding defect as "environmental" for five phases. First green as of 2026-08-13, the first green run since build phase 3.0.
-  - The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing.
-  - Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
-- Premise gate, cypher_query: 9 of 9
-- Premise gate, write-step grounding: 11 passed, 1 xfailed by design
-- Premise gate, guardrail: 20 of 20
-- Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
-- Premise gate, ncbi_dbsnp: 8 of 8, live, no tunnel-gated skip
-- Premise gate, pubtator_annotate + litvar2_lookup: 12 of 12, live, no tunnel-gated skip
-- Premise gate, pathogen_detection: 5 of 5, live, no tunnel-gated skip
-- Premise gate, clinicaltrials_search: 3 of 3, live, no tunnel-gated skip
-- Premise gate, citation trust full (Layer 2/3 provenance, the two-tier risk gate, freshness, conflict detection): 10 of 10, live, no tunnel-gated skip, graded pass@8 on its one Synth-sampling-sensitive case (F-3.4-T05-05)
-- Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
-- Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
-- Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
-- Decisions logged: 458
-- Learnings entries: 152, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+### Where the detail lives
 
-- Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below).
-- This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
+Per-phase narrative is deliberately NOT repeated here, because a second copy drifts.
 
-- The build phase 3.1 tool surface is complete and its findings are settled: 40 of 42 numbered findings closed, F-3.1-04's answer-path half (Act-step wiring, Layer 2 citation, trust gate) closed by T-3.1-28, folded into build phase 3.4 as T-3.4-05, and exactly two left open on genuine product decisions, F-3.1-41 and F-3.1-42, detailed in `tracker/phase_3.1.md`.
-
-- Step 6.2 moved on 2026-08-03 to run AFTER the 3.x tool phases rather than between 2.2 and 3.0, because its own written reasoning names 3.x as the code its security scan most exists for, and because reconciling the frozen documents after the tool phases is better input than reconciling before them.
-- With build phase 3.4's merge, that condition was met, and Step 6.2 ran and closed the same day, 2026-08-10 (see "Step 6.2, done" below).
-- Its security scan stays separately PAUSED INDEFINITELY on cost, with one condition that turns it back on: exposure.
-- First contact with a real user, a deploy, or a public URL triggers it, whichever comes first.
-- Step 6.3 continues at build phase 4.0.
-
-Per-phase detail lives in `tracker/phase_N.M.md`. Phase narrative lives in `requirements/Plan.md`'s Revision history. Phase status and the flags that gate a phase live in `tracker/BOARD.md`.
-
-- READ THE BOARD'S FLAG COUNT AS TWO NUMBERS, not one.
-- Its flags table is a LEDGER, not a queue: a closed finding keeps its row so the trail survives, so the total only ever grows and is not a backlog.
-- `render_board.py` reports the split, currently `flags: 57 open, 29 closed` (86 total), after the single number was read as 83 outstanding problems on 2026-08-23 when 26 of them were already closed.
-- Of the open ones, most are CONDITIONAL, worded "whenever X is next touched": those are notes attached to code, not scheduled work, and they become work only if someone touches that code.
-- The rows that are genuinely queued name a phase or a branch.
-
-One exception to the one-owner convention, stated rather than left to be discovered.
-
-- The Open items table below is NOT a copy of `tracker/BOARD.md`.
-- Measured 2026-08-04: of its 28 tracked identifiers, 14 also appear on the board and 14 appear nowhere else in the repository.
-- So the table is the full forward backlog by owner and is the sole record for half its rows, while the board carries the subset that blocks a specific phase from closing.
-- Where an item appears in both, the board's "Resolve before" column is authoritative.
-
-That split is a known wart rather than a design: the board is the incomplete one. Folding the 14 orphans into it would break the renderer's invariant that every phase's flag count matches the Open flags table, so it is a deliberate task and not a tidy-up. Until then, do not delete a row here on the assumption the board already has it.
+| What you want | Where it is |
+|---|---|
+| Current status, evidence, open flags | `tracker/BOARD.md`, or `tracker/board.html` in a browser |
+| One file per phase, with tickets and findings | `tracker/phase_N.M.md` |
+| The dated narrative of every phase | `requirements/Plan.md`, Revision history |
+| What broke and what fixed it | `LEARNINGS.md` |
+| Choices between alternatives | `DECISIONS.md` |
+| Older Phase 6 state, kept for reference | `requirements/phase_6/Phase_6_history.md` |
 
 ## Which session to open, before anything else
 

@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-30.
+Last updated: 2026-08-31.
 
 ## Table of contents
 
@@ -178,6 +178,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 5.0 | Recording of what the system does on every question: how long it took, what it cost, and which sources it touched | 2026-08-30 |
 | 5.1 | Fifty test questions with known-correct answers, each checked against the live public databases rather than taken on trust. Sorted into three kinds: questions with one exact answer, questions asking for everything of a kind, and open-ended conversations that build over several turns | 2026-08-30 |
 | 5.2 | The machine meant to score answers against those questions. Built, reviewed four times, failed four times, and SHELVED. It is kept and it refuses to run, so nobody mistakes it for working | 2026-08-30 |
+| A map of the code | A guide that says which file to open when something breaks, plus one line on what every single code file does. Written for whoever picks this up next, human or machine | 2026-08-31 |
 
 Nine of these are worth understanding, because they explain how this project works.
 
@@ -578,6 +579,26 @@ That last row is the important one. None of these can affect a real person while
 | If the day's free searches run out, the page can still show a visitor searches remaining until they actually try one. The refusal itself is honest when it comes | The next piece of web page work |
 | A search that is stopped part-way still costs one of the five. This is deliberate: the answer was already on screen, so giving the search back would be a way to read answers for free | Not planned to change |
 
+
+### Sprint: a map of the code (31 August, merged)
+
+The problem was mundane and had been true since the start. Nothing in this project told a person which file to open when something went wrong. There was a list of folders, but no route from "this is broken" to "look here".
+
+So the team wrote one. It has two halves. The first is a list of symptoms: seventeen real failures that have actually happened here, each pointing at the file that explains it. The second is a line for every one of the 120 code files, saying what that file is for.
+
+The interesting part is not the guide itself. A document like this normally goes out of date within weeks. It happens quietly, and nobody notices until it sends someone to a file that is no longer there.
+
+So the guide comes with an automatic check that runs on every change. Three ways to make the build go red:
+
+- Add a file and do not describe it.
+- Delete a file and leave its description behind.
+- Change what a file is for.
+
+The check caught three mistakes before the guide was even finished. One file had been left out entirely, and one pointer named a file path that does not exist.
+
+Three separate independent reviewers read the guide, and all three found real errors. Thirty in total. The most useful finding was not any single error. It was a pattern: nine of one reviewer's fourteen findings were concentrated in the one section the automatic check does not watch. The reviewer spotted that connection itself. It is a useful thing to know in general, that putting a check on one part of your work does not just find problems there, it pushes the remaining problems somewhere else.
+
+Three of the errors were sentences the author had written confidently, and confidence was exactly the problem: a reader stops checking when a sentence sounds sure. One of them began with the word "Measured", and the measurement was wrong.
 ### Found on the live site, 24 August
 
 One person used the deployed site for an afternoon. These are their words, kept as they said them rather than tidied up, because the plain wording is the useful part. All seven are now fixed, as of 25 August, and checked by opening the real address afterwards rather than by trusting that the fix had worked.

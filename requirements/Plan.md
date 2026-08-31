@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-08-30.
+Kick-off: 2026-05-06. Last updated: 2026-08-31.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-08-30.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0, and on 2026-08-30 both 5.1 and 5.2. 5.1, the 50-query golden dataset, merged as PR #85 and is sound. 5.2, the grading harness, merged as PR #86 and is PARKED: it does not work, and its own suite is green with every defect live. NEXT is a product-owner decision rather than a build step, namely whether the 50 questions are the right 50, after which Section 25's order resumes at build phase 6.0. |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0, and on 2026-08-30 and 2026-08-31 all of 5.1, 5.2 and 5.3. NOTHING IS BLOCKED. Six phases are open and the authoritative list is `tracker/BOARD.md`, rendered at `tracker/board.html`. The next buildable phase today is 6.0, rate limiting and concurrency. Two evaluation phases sit ahead of it in dependency order but are gated on a product-owner decision rather than on engineering: 5.4 unparks 5.2's grading harness, and 5.5 authors the golden rows that use 5.3's `must_reach` and `live_only` fields. Both wait on whether the 50 questions are the right 50. |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 458 (DECISIONS.md).
+Decisions logged: 464 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -597,21 +597,32 @@ Deliverables:
 
 ## Phase 6: build (bossman execution)
 
-Status: IN PROGRESS. Five build phases done and merged:
+Status: IN PROGRESS. Thirty-eight phases done, six open, NONE BLOCKED.
 
-- 1.0 (PR #5, 2026-07-27)
-- 1.1 (PR #6, 2026-07-28)
-- 2.0 (PR #9, 2026-07-28)
-- 1.2 (PR #12, 2026-07-28)
-- 2.1 (PR #15, 2026-08-01)
-- 2.2 (PR #18, 2026-08-03)
-- 3.0 (PR #19, 2026-08-04)
+The per-phase list that used to sit here is gone on purpose. It went stale within days, every time. By 2026-08-31 it had three separate defects:
 
-Next up, in this order and not the build-order order:
+- It said five phases while listing seven.
+- Its newest entry was build phase 3.0, seventeen phases behind.
+- It told the reader to re-review build phase 3.1, which had merged three weeks earlier.
 
-1. Re-review build phase 3.1's fix round.
-2. F-2.1-C15 on `fix/c15-generation-bound`.
-3. Open build phase 3.2, `ncbi_dbsnp`.
+THE BOARD IS THE SOURCE. `tracker/BOARD.md`, rendered at `tracker/board.html`, holds every phase with its status, evidence and open flags. A script refuses to render it when the counts do not reconcile.
+
+What is next, derived from that board rather than restated from memory:
+
+| Next | Phase | Gated on |
+|---|---|---|
+| 1 | 5.4, unpark build phase 5.2's grading harness | The golden 50 settling, a product-owner decision |
+| 2 | 5.5, author golden rows that use 5.3's `must_reach` and `live_only` | SME review |
+| 3 | 6.0, rate limiting and concurrency | Nothing. This is the first phase openable today |
+| 4 | 6.1, the full `dev-standards` pass and release hardening | 6.0 |
+| 5 | 7.0, model-bench per tier | A working grader from 5.4 |
+| 6 | 7.1, the A/B routing mechanism | 7.0 |
+
+So there are two independent tracks. The evaluation track (5.4, 5.5) waits on a decision about the questions, not on code. The delivery track (6.0 onward) is open right now.
+
+The dated narrative of every merged phase is in Revision history at the end of this document. Older Phase 6 state is in `requirements/phase_6/Phase_6_history.md`.
+
+### How the early phases got here, kept as dated record
 
 - Build phase 3.1 (`ncbi_efetch`) landed in two parts: the phase branch on 2026-08-05 under PR #22, then its re-review debt closing separately on 2026-08-07 under PR #23, which is the number the phase is recorded by elsewhere. It went in without the adversarial pass over its own fix round, so twenty-six of its twenty-seven findings sit at `fix-landed` rather than closed.
 - The re-review is what converts them, and it runs before 3.2 opens because 3.2 depends on 3.1.
@@ -935,6 +946,16 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+
+- 2026-08-31: THE DEBUGGING GUIDE MERGED as PR #90, and it is NOT a Section 25 build phase. `docs/build/Debugging_guide.md`, 824 lines: a symptom index of seventeen verified rows, then one row for every Python file under `src/system_03_search_agent/`, 120 in all, then the frontend, test, tracker and CI files a debugger actually opens, then the environment table. It exists because nothing in this repository answered "which file do I open when this breaks": README's tree is package-level with no call flow, and the tech spec's module layout is both stale and locked.
+
+  - WHAT MAKES IT DIFFERENT FROM A DOCUMENT is that it cannot silently rot. `tests/system_03_search_agent/test_debugging_guide_coverage.py` rides CI gate 4 with three arms, each shipped with its own mutation case: a source file added or deleted with no row, a path named that is not on disk, and a file whose docstring summary line changed since its row was written. All 120 files carry a docstring, so the third arm has no coverage gap.
+  - THE GATE EARNED ITS PLACE BEFORE THE DOCUMENT EXISTED. Arm 1, run against the assembled draft, found three files no author had covered, one of them `tools/__init__.py`, where the read-plus-one-source tool contract is written down. Arm 2 then caught a phantom path written by hand.
+  - WHAT IT COST: three `doc-auditor` rounds against a two-round cap, the third authorised by the product owner on falling severity, 30 defects in total. Verified at merge: the Python suite 4523 passed 0 failed out of 4695 collected, style gate 0 hard 0 advisory, doc drift 0 stale 0 structural, all four CI jobs green.
+  - THE MOST TRANSFERABLE RESULT IS NOT A DEFECT. Nine of round 2's fourteen findings sat in the one section no arm watches, the environment table, and the AUDITOR named that correlation rather than the author. A gate does not only decide whether defects are found, it decides where the surviving ones live.
+  - THREE OF THE DEFECTS WERE THE AUTHOR'S OWN CONFIDENT SENTENCES, which is the shape this repository keeps meeting: a cell opening "Measured:" whose measurement `synthesis/freshness.py` falsified; a stated method, every cell taken from its file's own docstring, that did not hold for the largest file because `core/graph.py`'s docstring still says "stub nodes"; and a symptom row telling readers `/verify` does not run `isort`, which it has since 2026-08-30. The guide's own streaming paragraph had also reproduced a STALE DOCSTRING rather than the call site, since `run.py` states `stream_mode="updates"` in two docstrings while the call site passes `["updates", "custom"]`.
+  - TWO PROCESS FAILURES ARE RECORDED RATHER THAN TIDIED AWAY, because they weaken round 2's verdict: its brief told the auditor it was a second round, leaking prior-round knowledge into a context `self-eval-loop` requires to be blind, and the document was edited WHILE that round graded it. The auditor flagged both itself. Round 3 ran with a clean brief against a frozen file.
+  - IT ALSO RESTORED A CORRUPTED HISTORICAL FIGURE. Build phase 4.3 closed at 3308 Python tests, proven from commit `f52761f`; commit `5249f36` had overwritten it with the then-current 4652 while relocating the section into `Phase_6_history.md`. Build phase 5.3 independently hit the same line and hedged it with "as measured then", keeping the wrong number, which adds false authority. The merge kept 3308.
 
 - 2026-08-30: BUILD PHASES 5.1 AND 5.2 BOTH CLOSED, and they closed differently.
 
