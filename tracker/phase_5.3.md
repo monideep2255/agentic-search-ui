@@ -1,11 +1,54 @@
 # Build phase 5.3: golden dataset schema v2, layer-reach constraints
 
+## STATUS: BLOCKED. THE CENTRAL CONTROL DOES NOT WORK. READ THIS BEFORE ANYTHING ELSE.
+
+`live_only` is NOT ENFORCED. `assert_absent_from_graph` has no caller on the
+build path, so a `live_only` fact ships on the author's word alone. Two
+independent review rounds found this and each proved it end to end by building
+a row whose value the live graph provably holds. Verdicts: FAIL and FAIL.
+
+A FIX ROUND WAS AUTHORIZED, ATTEMPTED, AND REVERTED on 2026-08-31. Wiring the
+call in does NOT close the finding, which is why the code is not on the branch:
+the comparison it wires in is a casefolded substring test over `json.dumps`
+output, and it was defeated four separate ways.
+
+- ANY NON-ASCII VALUE is certified absent unconditionally, because `json.dumps`
+  defaults to `ensure_ascii=True` and escapes the haystack while the needle
+  stays literal. `TNF-α`, `Sjögren` and `5′ UTR` all evade a graph that holds
+  them. Verified directly by the lead, not merely reported.
+- A value with one extra space, or a trailing period, evades it.
+- The check reads only the row's own anchor nodes, so a fact on a neighbouring
+  node or on an edge is not detected.
+
+THE SECOND RULE 4 STOP fired here: the defect was inside this phase's own fix.
+Product-owner decision, 2026-08-31, was to REVERT to the last green commit
+rather than patch a fifth time, because this is the shape build phase 5.2 died
+of, four rounds each defeated by an input of the same family.
+
+WHAT THE NEXT SESSION SHOULD NOT DO: patch the substring comparison again. By
+`.claude/rules/attack-the-constraint.md`, when a check keeps losing to inputs of
+one shape, change what it checks. A substring scan over serialised JSON is the
+wrong instrument; a structured per-property comparison with normalisation is the
+direction, and the scope question ("absent from WHICH part of the graph") has to
+be answered before the comparison is written.
+
+ALSO UNRESOLVED, and it may invalidate the other half of the design: F-5.3-A-16
+reports that `must_reach` pins a vocabulary no observable record uses, because
+`ncbi_efetch` and `ncbi_dbsnp` both collapse to `ncbi_transport:eutils` in the
+audit log. If that holds, `must_reach` is ungradeable even after build phase 5.2
+unparks, and the mechanism needs rethinking rather than repairing. NOT VERIFIED
+by the lead; verify it before designing anything on top of `must_reach`.
+
+Full findings: `tracker/phase_5.3_judge_report.md` (10) and
+`tracker/phase_5.3_adversary_report.md` (25), plus the four below.
+
 Branch: `phase/5.3-golden-dataset-schema-v2`. Opened 2026-08-31.
 
 Not a Section 25 row. This phase exists because of a product-owner review of build phase 5.1's merged dataset on 2026-08-31, in the same way build phase 5.2 was carved out of 5.1 rather than named by Section 25. Depends on 5.1, merged as PR #85.
 
 ## Table of contents
 
+- [STATUS: BLOCKED. The central control does not work. Read this before anything else.](#status-blocked-the-central-control-does-not-work-read-this-before-anything-else)
 - [What this phase is for](#what-this-phase-is-for)
 - [The measurement that opened it](#the-measurement-that-opened-it)
 - [Everything measured before any change was made](#everything-measured-before-any-change-was-made)
@@ -110,7 +153,7 @@ Blocked-stop:
 |---|---|---|---|
 | T-5.3-01 | `must_reach` on specs, carried into rows by the builder | Loader refuses a tool name outside the seven-tool roster; the roster is pinned in ONE place, not copied | done: `ALLOWED_MUST_REACH` is a comprehension over `REGISTERED_TOOL_SCHEMAS`, and P1 asserts set EQUALITY with it rather than containment |
 | T-5.3-02 | `live_only` field: the fact, its value, its live source | Builder verifies the value against live E-utilities over raw HTTP, reusing the existing verifier machinery | done: `LiveOnlyFact` with all four keys required, and `observed_from` refused when it names the agent under test |
-| T-5.3-03 | Builder refuses a `live_only` fact the GRAPH already contains | A planted graph-satisfiable fact makes the build FAIL. Raw HTTPS to the graph service only, no agent-tool import | done: `assert_absent_from_graph` over raw `urllib`, proven live against BRCA1's real property set, with a paired control so a refuse-everything checker cannot satisfy it |
+| T-5.3-03 | Builder refuses a `live_only` fact the GRAPH already contains | A planted graph-satisfiable fact makes the build FAIL. Raw HTTPS to the graph service only, no agent-tool import | NOT DONE, and was WRONGLY MARKED DONE. The function exists and is unit-tested; nothing on the build path calls it. Marking it done was the error that let the phase reach review claiming a control it did not have |
 | T-5.3-04 | Snapshot-date secondary guard, and its limits stated | Parses the date from `GRAPH_SNAPSHOT_VERSION`; the coverage statement says plainly that this is only as current as the env var, and that T-5.3-03 is the real check | NOT BUILT, deliberately. Once T-5.3-03 measures the graph directly, a date comparison against a hand-maintained env var adds no signal and would be a second, weaker answer to the same question. Building it would invite a future reader to trust the cheaper one. The limitation it was meant to document is stated in the coverage section instead |
 | T-5.3-05 | Schema `version` 1 to 2, loader accepts both | All 50 existing rows load unchanged under v2, proven field by field | done: all 50 rebuilt against live NCBI, 50 of 50 verified in 10.1s across 43 live calls. The ONLY change is `provenance.read_on` moving 2026-08-30 to 2026-08-31, plus the additive `must_reach`. Every constraint byte-identical |
 | T-5.3-06 | Premise gate plus applied-mutation harness | One mutation case per arm, added in the same edit as the arm; every arm goes red under its own mutation | done: 21 arms, 12 applied mutations, plus a no-op guard and a green control. It caught F-5.3-01 and F-5.3-03 on its first run |
