@@ -38,13 +38,20 @@ held" from "nothing happened" is not an arm.
 WHAT THIS GATE CANNOT PROVE ABOUT ITSELF, recorded at the moment it was
 watched failing rather than left for a reviewer to find:
 
-- Today every arm fails at the same place, `_budget_api()`'s ImportError,
-  because `harness/call_budget.py` does not exist. That proves the API is
-  absent. It does NOT prove each arm can fail for its own distinct reason,
-  which is the property that makes them separate arms. Until T-6.0-03's
-  mutation harness has driven each arm red individually against a present
-  but wrong implementation, treat every assertion below the populate-check
-  as an assertion of intent.
+- HOW THIS GATE WAS WATCHED FAILING, in two stages, because the two say
+  different things. Against the tree before any implementation, all eight
+  arms went red at `_budget_api()`'s ImportError: `harness/call_budget.py`
+  did not exist. That proved the API was absent and nothing more, since
+  eight arms failing at one shared line is one failure wearing eight
+  costumes, which is the shape F-5.0-16 already cost this repository a
+  round. Against the tree with the implementation half-wired, three arms
+  then went red INDIVIDUALLY and for three different reasons, which is the
+  evidence that they are separate arms: A2 and A3 on a rate ceiling that
+  bit before the call ceiling (F-6.0-02, real behaviour, kept), and A6b on
+  a saturation depth past both ceilings (a defect in the arm, fixed).
+  Five arms have still never been seen red for their own reason, and
+  T-6.0-03's mutation harness owes one mutation per arm before any of them
+  should be read as proven.
 - A6 pins that the wait ceiling VARIES with query class. It does not pin
   the specific numbers, deliberately: `.claude/rules/tool-call-budgets.md`
   requires asking the product owner before locking a queue or budget
@@ -131,8 +138,41 @@ def _reset_transport_state(monkeypatch: pytest.MonkeyPatch):
 
 
 async def _noop_sleep(_seconds: float) -> None:
-    """Consume a scheduled wait without spending wall-clock time on it."""
-    return None
+    """Consume a scheduled wait without spending wall-clock time on it.
+
+    Only for arms that never want the clock to move, which today is A6b,
+    where a pool must STAY saturated while two ceilings are compared
+    against it. Everywhere else use `_FakeClock`, for the reason its own
+    docstring gives.
+    """
+    return
+
+
+class _FakeClock:
+    """A monotonic clock that advances exactly when the limiter sleeps.
+
+    A2 and A3 drive twenty sequential calls through a 3 requests/second
+    pool. With `_noop_sleep` the clock never moves, so each call's
+    scheduled wait grows by a third of a second while its ceiling stays
+    fixed, and the sixth call is refused by the RATE ceiling before the
+    CALL ceiling those arms exist to test is ever reached. That is not an
+    artifact: it is F-6.0-02, real behaviour, found by A2 failing this way
+    and recorded in `tracker/phase_6.0.md` rather than tidied away here.
+
+    Advancing the clock on sleep is what real time does, and it is what
+    lets these two arms measure one ceiling at a time. Using a fake clock
+    rather than real sleeps keeps the suite fast without changing which
+    property is under test.
+    """
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def time(self) -> float:
+        return self.now
+
+    async def sleep(self, seconds: float) -> None:
+        self.now += seconds
 
 
 # ===========================================================================
@@ -179,6 +219,7 @@ async def test_a2_the_twenty_first_layer_2_call_in_one_query_is_refused() -> Non
     call_budget = _budget_api()
     limit = call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY
 
+    clock = _FakeClock()
     client = _FakeClient([httpx.Response(200, text="{}") for _ in range(limit + 1)])
 
     with call_budget.query_budget_scope(query_class="lookup"):
@@ -188,7 +229,8 @@ async def test_a2_the_twenty_first_layer_2_call_in_one_query_is_refused() -> Non
                 {"db": "pubmed", "term": "BRCA1"},
                 family="eutils",
                 client=client,
-                sleep_fn=_noop_sleep,
+                sleep_fn=clock.sleep,
+                time_fn=clock.time,
             )
 
         # POPULATE-CHECK. Everything below asserts a call did NOT happen,
@@ -208,7 +250,8 @@ async def test_a2_the_twenty_first_layer_2_call_in_one_query_is_refused() -> Non
                 {"db": "pubmed", "term": "BRCA1"},
                 family="eutils",
                 client=client,
-                sleep_fn=_noop_sleep,
+                sleep_fn=clock.sleep,
+                time_fn=clock.time,
             )
 
     assert len(client.calls) == limit, (
@@ -246,6 +289,7 @@ async def test_a3_a_second_query_gets_its_own_fresh_ceiling() -> None:
     call_budget = _budget_api()
     limit = call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY
 
+    clock = _FakeClock()
     client = _FakeClient([])
     first_scope_raised = False
 
@@ -256,7 +300,8 @@ async def test_a3_a_second_query_gets_its_own_fresh_ceiling() -> None:
                 {"db": "pubmed"},
                 family="eutils",
                 client=client,
-                sleep_fn=_noop_sleep,
+                sleep_fn=clock.sleep,
+                time_fn=clock.time,
             )
         try:
             await ncbi_transport.execute_get(
@@ -264,7 +309,8 @@ async def test_a3_a_second_query_gets_its_own_fresh_ceiling() -> None:
                 {"db": "pubmed"},
                 family="eutils",
                 client=client,
-                sleep_fn=_noop_sleep,
+                sleep_fn=clock.sleep,
+                time_fn=clock.time,
             )
         except call_budget.CallBudgetExceededError:
             first_scope_raised = True
@@ -284,7 +330,8 @@ async def test_a3_a_second_query_gets_its_own_fresh_ceiling() -> None:
             {"db": "pubmed"},
             family="eutils",
             client=client,
-            sleep_fn=_noop_sleep,
+            sleep_fn=clock.sleep,
+            time_fn=clock.time,
         )
 
     assert len(client.calls) == calls_before_second_scope + 1, (
@@ -313,7 +360,7 @@ def test_a4_the_ceiling_covers_a_second_transport_surface() -> None:
     call_budget = _budget_api()
     limit = call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY
 
-    with call_budget.query_budget_scope(query_class="deep_research"):
+    with call_budget.query_budget_scope(query_class="exploratory"):
         for _ in range(limit):
             call_budget.charge_one_call(tool="pathogen_detection", layer=3)
 
@@ -399,7 +446,7 @@ async def test_a6_the_queue_wait_ceiling_varies_with_query_class() -> None:
 
     with call_budget.query_budget_scope(query_class="lookup"):
         lookup_ceiling = call_budget.wait_ceiling_s()
-    with call_budget.query_budget_scope(query_class="deep_research"):
+    with call_budget.query_budget_scope(query_class="exploratory"):
         deep_ceiling = call_budget.wait_ceiling_s()
 
     # POPULATE-CHECK. A comparison of two Nones, or of two values one of
@@ -443,15 +490,24 @@ async def test_a6b_a_saturated_pool_refuses_a_lookup_before_a_deep_research() ->
     def _time_fn() -> float:
         return clock["now"]
 
-    # Saturate: ten calls at one per second push `_next_available` roughly
-    # ten seconds into the future while the clock stays put, so the next
-    # caller faces a real, large wait rather than a synthetic one.
-    for _ in range(10):
+    # Saturate to a depth BETWEEN the two ceilings, which is the only depth
+    # that can tell them apart. Three calls at one per second push
+    # `_next_available` three seconds ahead while the clock stays put, so
+    # the next caller faces a 3.0s wait: past a lookup's ceiling and inside
+    # a deep-research one.
+    #
+    # Saturating deeper is what this arm did first, and it failed for a
+    # reason worth keeping: at ten seconds deep BOTH ceilings refuse, the
+    # arm goes red, and it looks exactly like a broken implementation. A
+    # comparative arm has to be run at a point where the two things being
+    # compared can actually differ, or it is measuring the saturation depth
+    # rather than the query class.
+    for _ in range(3):
         await limiter.acquire(60.0, time_fn=_time_fn, sleep_fn=_noop_sleep)
 
     with call_budget.query_budget_scope(query_class="lookup"):
         lookup_ceiling = call_budget.wait_ceiling_s()
-    with call_budget.query_budget_scope(query_class="deep_research"):
+    with call_budget.query_budget_scope(query_class="exploratory"):
         deep_ceiling = call_budget.wait_ceiling_s()
 
     # POPULATE-CHECK. The pool must really be saturated: if the wait were
@@ -472,7 +528,7 @@ async def test_a6b_a_saturated_pool_refuses_a_lookup_before_a_deep_research() ->
         deep_refused = True
 
     assert lookup_refused and not deep_refused, (
-        "against a pool saturated roughly 10 seconds deep, a lookup query "
+        "against a pool saturated 3 seconds deep, a lookup query "
         f"(ceiling {lookup_ceiling}s, refused={lookup_refused}) must fail "
         f"fast where a deep_research query (ceiling {deep_ceiling}s, "
         f"refused={deep_refused}) waits. Section 21.4"

@@ -14,6 +14,7 @@ strategy. Depends on build phases 3.1, 3.2, 3.3 and 3.5, all merged.
 - [Where the call ceiling belongs, and why it is not `act_node`](#where-the-call-ceiling-belongs-and-why-it-is-not-act_node)
 - [Goal contract](#goal-contract)
 - [Tickets](#tickets)
+- [Evidence](#evidence)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [Findings](#findings)
 - [History](#history)
@@ -171,11 +172,38 @@ Blocked-stop:
 
 | Ticket | Wave | Deliverable | Files it may touch | Status |
 |---|---|---|---|---|
-| T-6.0-00 | 0 | The premise gate for this phase, written first and watched failing | `tests/system_03_search_agent/core/test_rate_limit_concurrency_premise.py` | todo |
+| T-6.0-00 | 0 | The premise gate for this phase, written first and watched failing | `tests/system_03_search_agent/core/test_rate_limit_concurrency_premise.py` | done |
 | T-6.0-01 | 1 | Section 21.3: the at-most-20 Layer 2 and Layer 3 calls per query budget, counted at the two transport chokepoints and keyed on the run-scoped `trace_id` ContextVar, never at `act_node`'s planned-call loop (see the section above for why). `act_node` reads the count and moves to Write with what exists. Corrects `adapters/web_sse/app.py:231` in the same edit that makes it true | `tools/ncbi_transport.py`, `tools/pathogen_ftp_transport.py`, `core/graph.py`, `adapters/web_sse/app.py` | todo |
-| T-6.0-02 | 1 | Section 21.4: wire `wait_ceiling_s` to the calling query's remaining latency budget rather than the per-call timeout default | `core/graph.py`, `harness/harness.py`, `tools/*` call sites | todo |
+| T-6.0-02 | 1 | Section 21.4: wire `wait_ceiling_s` to the calling query's remaining latency budget rather than the per-call timeout default | `core/graph.py`, `harness/harness.py`, `tools/*` call sites | done |
 | T-6.0-03 | 2 | Measure 21.2 rather than assert it: a concurrency arm proving one family's bucket is shared across concurrent queries, plus the mutation case that proves the arm can fail | `tests/system_03_search_agent/tools/` | todo |
 | T-6.0-04 | 2 | Settle Section 21.4's own named open question on jump-the-queue behaviour, as a recorded decision rather than as code | `DECISIONS.md`, this file | todo |
+
+## Evidence
+
+Measured 2026-08-31 on `phase/6.0-rate-limit-concurrency`.
+
+- The premise gate was watched failing in TWO stages, and the second is the
+  one that matters. Against the tree before any implementation: `8 failed in
+  0.10s`, every arm at the same shared ImportError line, which proves only
+  that the API was absent. Against the half-wired tree: `3 failed, 5 passed`,
+  with the three failing INDIVIDUALLY for three different reasons. Eight arms
+  failing at one line is one failure wearing eight costumes, which is exactly
+  the mistake F-5.0-16 cost this repository a round; three arms failing for
+  three reasons is evidence they are separate arms.
+- The gate now passes: `8 passed in 4.12s`.
+- Full Python suite: `4531 passed, 171 skipped, 1 xfailed`, zero failed, up
+  from a `4529 passed, 2 failed` baseline whose two failures were the
+  `Debugging_guide.md` coverage obligation this phase owed for its new source
+  file. That obligation is met and its manifest regenerated.
+- `ruff check` over the WHOLE repository with no path, matching CI gate 3
+  rather than the narrower `ruff check src services` every local check used
+  to run: `All checks passed!`.
+- `isort --check-only .`, matching CI gate 2, which `/verify` does not run
+  and which went red on build phase 5.0 for exactly that reason: clean.
+- T-6.0-02 is proven wired by A2's own failure rather than by reading the
+  call site. The 1.5 second lookup ceiling bit a real `execute_get` call
+  chain during A2's first run, which is only possible if the transport is
+  genuinely consulting it.
 
 ## Coverage: what this phase does not cover
 
@@ -200,7 +228,8 @@ coverage, so a gap is arguable rather than invisible.
 
 | ID | Severity | What | Found by | Status | Evidence |
 |---|---|---|---|---|---|
-| F-6.0-01 | minor | `adapters/web_sse/app.py:231` asserts in the present tense that Section 21's at-most-20-tool-calls-per-query cap already bounds a run's citation count, and uses that claim to justify `_MAX_CITATIONS_PER_RUN = 50` being defense in depth rather than the primary bound. No such cap exists anywhere in `src/`. The fifth instance in this repository of a confident sentence describing a check that is not there | lead, at phase open, 2026-08-31 | open | Grep for the cap across `src/` and `tests/` returns only this comment. `act_node` at `core/graph.py:3012` bounds cost and not call count. Owned by T-6.0-01, which corrects the comment in the same edit that makes it true |
+| F-6.0-02 | major | The two ceilings this phase ships interact, and the RATE ceiling binds long before the CALL ceiling for the commonest query class. A `lookup` query derives a 1.5 second queue wait ceiling (21.4) and the `eutils` pool paces at 3 requests/second, so sequential calls accumulate scheduled wait and the pool refuses at roughly the sixth call, well short of the 20-call ceiling (21.3). Section 21.3's ceiling is therefore not the binding constraint on a lookup query against E-utilities; 21.4's is. Neither figure is wrong on its own and the direction of failure is safe (fail fast, degrade, synthesize from what arrived), but a later reader who "fixes" one without seeing the other will be surprised | lead, from the premise gate's own A2 failure, 2026-08-31 | open | A2 drove 20 sequential `execute_get` calls under a `lookup` scope and the sixth raised `TransportRateLimitedError: eutils rate pool wait (1.6s) exceeds this call's 1.5s budget`, never reaching the call ceiling. Found by the gate rather than by review, which is the gate doing its job. NEEDS A PRODUCT-OWNER DECISION: whether a lookup query should be able to queue past 1.5 seconds against a shared NCBI pool, or whether the rate ceiling binding first is the intended behaviour |
+| F-6.0-01 | minor | `adapters/web_sse/app.py:231` asserts in the present tense that Section 21's at-most-20-tool-calls-per-query cap already bounds a run's citation count, and uses that claim to justify `_MAX_CITATIONS_PER_RUN = 50` being defense in depth rather than the primary bound. No such cap exists anywhere in `src/`. The fifth instance in this repository of a confident sentence describing a check that is not there | lead, at phase open, 2026-08-31 | FIXED | Grep for the cap across `src/` and `tests/` returns only this comment. `act_node` at `core/graph.py:3012` bounds cost and not call count. Closed by T-6.0-01. The cap now exists, so the sentence is true; the comment was amended in the same commit to NAME the constant and to record that it was false for six phases, so the next reader can check it in one grep rather than trusting it. Pinned by the gate's A7 arm |
 
 ## History
 

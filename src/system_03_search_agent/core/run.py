@@ -133,6 +133,11 @@ from system_03_search_agent.contracts.events import (
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.graph import compiled_graph
 from system_03_search_agent.core.state import GraphState
+from system_03_search_agent.harness.call_budget import (
+    query_budget_scope,
+    reset_query_budget,
+    set_query_budget,
+)
 from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.observability.audit import (
     reset_trace_id,
@@ -548,7 +553,14 @@ async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     # matching reset. See the module docstring's "Tracing scope note" for
     # why this is what lets the transport chokepoints stamp trace_id with
     # no argument threaded through any tool signature.
-    with trace_id_scope(query.trace_id):
+    # T-6.0-01/02: opened alongside the trace scope, and for the same reason.
+    # Both Layer 2/3 transports read a ContextVar an enclosing scope binds, so
+    # this must wrap the WHOLE run rather than only Act: `think_node` issues
+    # real Layer 2 calls for symbol resolution before Act ever runs, and
+    # Section 21.3 counts those. Opened at `lookup`, the shortest wait
+    # ceiling, because the real query class is `think_node`'s own output and
+    # is not knowable here; `think_node` widens it via `set_query_class`.
+    with trace_id_scope(query.trace_id), query_budget_scope("lookup"):
         try:
             harness = Harness(trace_id=query.trace_id)
             context = await _load_session_memory(query, context)
@@ -677,6 +689,10 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
     # `finally` below rather than reindenting this function's entire body
     # under a second nested block.
     _trace_id_token = set_trace_id(query.trace_id)
+    # T-6.0-01/02: the same pairing as above, in the same bare set-and-reset
+    # shape and for the identical reason the comment above gives for
+    # trace_id. Reset in the same `finally`.
+    _call_budget_handle = set_query_budget("lookup")
     try:
         harness = Harness(trace_id=query.trace_id)
         context = await _load_session_memory(query, context)
@@ -793,3 +809,4 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
         # need it, but nothing above should be able to observe it unset
         # early either). Runs on every exit this `finally` already covers.
         reset_trace_id(_trace_id_token)
+        reset_query_budget(_call_budget_handle)

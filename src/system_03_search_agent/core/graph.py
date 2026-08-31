@@ -479,7 +479,7 @@ from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
 from system_03_search_agent.guardrail.verdict import GuardVerdict
-from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import call_budget, cost_control
 from system_03_search_agent.harness.cache import REGISTERED_TOOL_SCHEMAS, build_stable_prefix
 from system_03_search_agent.harness.coordinator_worker import (
     Finding,
@@ -1481,6 +1481,14 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     resolved_entities = resolved_entities[:_TARGET_ENTITIES_MAX_ITEMS]
 
     query_class: QueryClass = classification.query_class
+    # T-6.0-02, Section 21.4. The run opened its call-budget scope at
+    # `lookup`, the shortest queue wait ceiling, because this line is where
+    # the real class first exists. Widened here, at the earliest point it is
+    # known, so every Layer 2/3 call from Plan and Act onward waits against
+    # the budget this query actually has rather than the conservative floor.
+    # Only the wait ceiling moves; the Section 21.3 call COUNT is the same
+    # 20 for every class.
+    call_budget.set_query_class(query_class)
     think_payload = ThinkPayload(
         narrative=classification.narrative,
         query_class=query_class,
@@ -3087,6 +3095,27 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             cap_exceeded = True
             break
 
+        # T-6.0-01, Section 21.3's half of the ceiling that belongs to the
+        # LOOP rather than to the transport. The transport refuses the 21st
+        # call; this stops planning a 21st tool whose every call would be
+        # refused, so the run does not pay a dispatch and a tool_start frame
+        # to learn what is already known.
+        #
+        # Reuses `cap_exceeded` deliberately rather than adding a second
+        # degradation flag. Section 21.3 requires the same outcome the cost
+        # cap already produces, "the loop moves to Write with whatever
+        # tool_results already exist", `write_node` already implements
+        # exactly that, and its user-facing note already reads "reached its
+        # resource limit" with no mention of cost. A second flag would be a
+        # second path to test for one behaviour.
+        already_made = call_budget.calls_made()
+        if (
+            already_made is not None
+            and already_made >= call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY
+        ):
+            cap_exceeded = True
+            break
+
         tool_calls.append(planned.tool_call)
 
         # T-4.16-01. Written immediately BEFORE dispatch, never after, so
@@ -3136,6 +3165,43 @@ async def act_node(state: GraphState) -> dict[str, Any]:
                     False,
                 )
                 continue
+            except call_budget.CallBudgetExceededError:
+                # T-6.0-01. The ceiling was reached MID-TOOL, which is the
+                # case the pre-dispatch check above cannot see and the one
+                # Section 21.3 actually names: a retry or a wider-than-
+                # expected fan-out inside a single planned call. The
+                # `tool_start` frame for this call is already on the wire,
+                # so it is closed here rather than left spinning, and the
+                # loop stops instead of continuing: every later call would
+                # be refused by the same budget.
+                results.append(
+                    ToolExecutionResult(
+                        contains_untrusted_free_text=False,
+                        structured_fields={
+                            # A curated string, never `str(exc)`. The
+                            # exception's own message is built entirely from
+                            # this repository's own values and would be safe,
+                            # but build phase 5.0 spent five rounds on
+                            # exception text reaching a sink, and matching
+                            # the sibling branch above costs nothing.
+                            "status": "error",
+                            "error": (
+                                "refused: this query reached its Layer 2/3 API "
+                                "call ceiling (Section 21.3) before this call "
+                                "completed"
+                            ),
+                        },
+                    )
+                )
+                _close_tool_call(
+                    planned.tool_call,
+                    "error",
+                    "refused: this query reached its Layer 2/3 API call ceiling",
+                    0,
+                    False,
+                )
+                cap_exceeded = True
+                break
 
             layer2_raw_outputs[planned.tool_call.call_id] = ncbi_efetch_output
             results.append(
