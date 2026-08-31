@@ -31,6 +31,7 @@ guard fires.
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -164,6 +165,47 @@ MUTATIONS: tuple[Mutation, ...] = (
 )
 
 
+def _collect_count(node_names: tuple[str, ...]) -> int:
+    """How many arms the selector actually matches, MEASURED not assumed.
+
+    Closes F-5.3-A-11. The case below decided on a non-zero exit code, and
+    pytest exits 5 when `-k` matches NOTHING, so a mutation naming a
+    misspelled, renamed or deleted arm passed while asserting nothing about
+    any control. The adversary demonstrated it against this harness with a
+    real deleted control and a one-letter typo: "HARNESS VERDICT: PASSED,
+    proving nothing". Arm renames are ordinary maintenance, so that was a live
+    decay path in the instrument whose whole job is proving other arms are not
+    vacuous.
+    """
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "pytest", GATE,
+            "-k", " or ".join(node_names), "--collect-only", "-q", "--no-header",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    match = re.search(r"^(\d+)/?\d* tests? collected", result.stdout, re.MULTILINE)
+    return int(match.group(1)) if match else 0
+
+
+def _all_selected_arms_skipped(result: subprocess.CompletedProcess) -> bool:
+    """True when every arm the selector matched SKIPPED rather than ran.
+
+    A skip is not a pass and it is not a red either: it is NOT MEASURABLE HERE.
+    Conflating skip with pass made this harness report a FALSE DIAGNOSIS on CI,
+    where no graph credential exists: the live P5 arms skipped, pytest exited
+    0, and the harness announced the arms "stayed GREEN with the control they
+    name deleted, so they are vacuous". They had not stayed green. They had not
+    run. CI caught it; no local run could, because the graph is reachable here.
+    """
+    return bool(re.search(r"^\d+ skipped", result.stdout, re.MULTILINE)) and not (
+        re.search(r"\d+ passed", result.stdout) or re.search(r"\d+ failed", result.stdout)
+    )
+
+
 def _run_arms(node_names: tuple[str, ...]) -> subprocess.CompletedProcess:
     selector = " or ".join(node_names)
     return subprocess.run(
@@ -186,12 +228,40 @@ def test_each_arm_goes_red_under_its_own_mutation(mutation: Mutation) -> None:
         "nothing is a silent no-op and would make this whole case vacuous."
     )
 
+    # Checked PER NAME rather than against the total. A parametrized arm is one
+    # name and several collected tests (M4's target is one name over four keys),
+    # so an equality check on the total is wrong. What must hold is that no name
+    # matches nothing: that is the exit-5 hole, and one dead name hiding behind
+    # a sibling's four collected cases is exactly what a total would miss.
+    for name in mutation.expect_red:
+        assert _collect_count((name,)) > 0, (
+            f"{mutation.name}: expect_red names {name!r}, which matches NO test. "
+            "pytest exits 5 when `-k` selects nothing, and 5 is non-zero, so this "
+            "case would PASS while covering no control at all. Arm renames are "
+            "ordinary maintenance, so this is a live decay path."
+        )
+
     try:
         mutation.path.write_text(original.replace(mutation.old, mutation.new))
         result = _run_arms(mutation.expect_red)
-        assert result.returncode != 0, (
-            f"{mutation.name}: the arms {list(mutation.expect_red)} stayed GREEN "
-            "with the control they name deleted, so they are vacuous.\n"
+
+        if _all_selected_arms_skipped(result):
+            pytest.skip(
+                f"{mutation.name}: every arm it targets SKIPPED, so this case is "
+                "not measurable in this environment (the live-graph arms need a "
+                "graph credential CI does not hold). Skipped rather than passed, "
+                "and never reported as vacuity: the arms did not stay green, "
+                "they did not run."
+            )
+
+        # Exit 1 SPECIFICALLY, a real assertion failure. Non-zero also covers
+        # exit 5 (nothing collected) and exit 4 (usage error), neither of which
+        # is evidence that a control fired.
+        assert result.returncode == 1, (
+            f"{mutation.name}: expected exit 1, a real assertion failure, from "
+            f"arms {list(mutation.expect_red)} with the control they name "
+            f"deleted; got exit {result.returncode}. Exit 0 means those arms are "
+            "vacuous; any other code means the run never reached an assertion.\n"
             f"{result.stdout[-2000:]}"
         )
     finally:
@@ -215,6 +285,28 @@ def test_harness_rejects_a_mutation_that_does_not_apply() -> None:
     )
     with pytest.raises(AssertionError, match="found 0"):
         test_each_arm_goes_red_under_its_own_mutation(stale)
+
+
+def test_harness_rejects_a_mutation_naming_an_arm_that_does_not_exist() -> None:
+    """The guard for F-5.3-A-11, proven rather than asserted.
+
+    Before it, this exact case PASSED: the arm name carries one extra letter,
+    `-k` matches nothing, pytest exits 5, and `returncode != 0` was satisfied
+    while no control was exercised.
+    """
+    bogus = Mutation(
+        name="MX: a real control deleted, but the named arm is a typo",
+        path=LOADER,
+        old="    unknown = [name for name in raw if name not in ALLOWED_MUST_REACH]",
+        new="    unknown = []",
+        expect_red=("test_p2_unknown_tool_in_must_reach_is_refusedd",),
+    )
+    with pytest.raises(AssertionError, match="matches NO test"):
+        test_each_arm_goes_red_under_its_own_mutation(bogus)
+
+    # The control was never written to disk, because the guard runs BEFORE the
+    # mutation is applied. Proven, not assumed.
+    assert "unknown = [name for name in raw" in LOADER.read_text()
 
 
 def test_control_the_gate_is_green_before_any_mutation() -> None:
