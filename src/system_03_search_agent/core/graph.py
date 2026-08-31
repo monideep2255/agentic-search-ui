@@ -3108,13 +3108,32 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         # exactly that, and its user-facing note already reads "reached its
         # resource limit" with no mention of cost. A second flag would be a
         # second path to test for one behaviour.
+        # F-6.0-J-03 (judge round): this check used to apply to EVERY planned
+        # call and to `break`, which refused Layer 1 `cypher_query` calls the
+        # ceiling does not bound. The reachable path was not hypothetical:
+        # `think_node` spends Layer 2 calls on entity resolution before Act
+        # runs, so a query that exhausted its ceiling in Think answered with
+        # ZERO graph rows, having never queried the free in-house graph at
+        # all. Under cite-or-refuse that turns a partial answer into a
+        # refusal, which is the opposite of what Section 21.3 asks for.
+        #
+        # Two changes. It is gated on the planned call's own declared LAYER,
+        # since "Layer 2 and Layer 3" is the property 21.3 actually names,
+        # rather than on the tool's type, which would need editing again for
+        # every tool added. And it `continue`s rather than `break`s, so an
+        # exhausted budget skips the calls it bounds and leaves the ones it
+        # does not. `cap_exceeded` is still set, so `write_node` ships the
+        # partial answer and says so.
+        #
+        # Pairing is preserved because this precedes `tool_calls.append`.
         already_made = call_budget.calls_made()
         if (
-            already_made is not None
+            planned.tool_call.layer in ("layer_2_api", "layer_3_enrichment")
+            and already_made is not None
             and already_made >= call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY
         ):
             cap_exceeded = True
-            break
+            continue
 
         tool_calls.append(planned.tool_call)
 

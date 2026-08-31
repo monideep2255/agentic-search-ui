@@ -246,6 +246,34 @@ async def test_a6b_mutation_transport_ignores_the_query_ceiling(
     )
 
 
+@drives("test_a8_an_exhausted_budget_does_not_bound_a_layer_1_call")
+@pytest.mark.asyncio
+async def test_a8_mutation_guard_is_not_layer_aware(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A8 reads `act_node`'s source, so the mutation replaces what it reads.
+
+    Patching `inspect.getsource` to return the PRE-FIX guard is the whole
+    mutation: it is exactly the code the judge found refusing Layer 1 calls,
+    so if A8 stays green on it the arm is not reading what it claims to.
+    """
+    import inspect
+
+    pre_fix_guard = (
+        "async def act_node(state):\n"
+        "    MAX_LAYER_2_3_CALLS_PER_QUERY\n"
+        "    already_made = call_budget.calls_made()\n"
+        "    if (\n"
+        "        already_made is not None\n"
+        "        and already_made >= call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY\n"
+        "    ):\n"
+        "        cap_exceeded = True\n"
+        "        break\n"
+    )
+    monkeypatch.setattr(inspect, "getsource", lambda _obj: pre_fix_guard)
+    await _assert_arm_fails("test_a8_an_exhausted_budget_does_not_bound_a_layer_1_call")
+
+
 @drives("test_a7_the_web_adapter_comment_no_longer_claims_an_absent_cap")
 @pytest.mark.asyncio
 async def test_a7_mutation_the_named_cap_moves(monkeypatch: pytest.MonkeyPatch) -> None:

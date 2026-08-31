@@ -536,6 +536,58 @@ async def test_a6b_a_saturated_pool_refuses_a_lookup_before_a_deep_research() ->
 
 
 # ===========================================================================
+# A8: an exhausted Layer 2/3 budget must not refuse a Layer 1 graph call.
+# ===========================================================================
+
+
+def test_a8_an_exhausted_budget_does_not_bound_a_layer_1_call() -> None:
+    """F-6.0-J-03: Section 21.3 bounds Layer 2 and Layer 3, and nothing else.
+
+    Added by the judge round, which found the original check applied to every
+    planned call and broke the loop, so a query that spent its ceiling on
+    `think_node`'s entity resolution answered with zero graph rows having
+    never queried the free in-house graph. Under cite-or-refuse that is a
+    refusal where a partial answer was available.
+
+    This asserts on the SOURCE of `act_node`'s guard rather than driving the
+    node, deliberately and with its limitation stated. Driving `act_node`
+    needs a stub harness, a patched `cypher_query` and a hand-built planned
+    call, which is what the judge's own probe did and what belongs in the
+    mutation harness. What this arm is for is cheap and specific: the guard
+    must be layer-aware and must not stop the loop, and both are readable
+    from the source with no scaffolding. It is a weaker arm than driving the
+    node and it is honest about being one.
+    """
+    import inspect
+
+    from system_03_search_agent.core import graph as graph_module
+
+    source = inspect.getsource(graph_module.act_node)
+
+    # POPULATE-CHECK. If the guard is absent entirely the assertions below
+    # would pass or fail for a reason unrelated to layer-awareness.
+    assert "MAX_LAYER_2_3_CALLS_PER_QUERY" in source, (
+        "populate-check failed: act_node has no per-query call ceiling guard "
+        "at all, so this arm is not measuring the guard's layer-awareness"
+    )
+
+    guard_start = source.index("already_made = call_budget.calls_made()")
+    guard = source[guard_start : guard_start + 400]
+
+    assert "layer_2_api" in guard and "layer_3_enrichment" in guard, (
+        "act_node's ceiling guard is not layer-aware. Section 21.3 bounds "
+        "Layer 2 and Layer 3 only, and a guard that also refuses a Layer 1 "
+        "`cypher_query` removes the one retrieval path that could still have "
+        "grounded an answer (F-6.0-J-03)"
+    )
+    assert "continue" in guard and "break" not in guard, (
+        "act_node's ceiling guard stops the whole loop rather than skipping "
+        "the call it bounds, so an exhausted Layer 2/3 budget also discards "
+        "every later Layer 1 call (F-6.0-J-03)"
+    )
+
+
+# ===========================================================================
 # A7: F-6.0-01, the comment that claims this ceiling already exists.
 # ===========================================================================
 
