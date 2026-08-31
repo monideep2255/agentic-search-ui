@@ -37,10 +37,11 @@ the agent.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from system_03_search_agent.harness.cache import REGISTERED_TOOL_SCHEMAS
 from system_03_search_agent.tools.cypher_schemas import QueryClass
 
 GOLDEN_DATASET_PATH = (
@@ -90,6 +91,25 @@ _SEARCH_CATEGORIES = frozenset({"kiss", "kisses", "discovery"})
 # failure the category exists to measure.
 _TRUNCATION_CONSTRAINT = "undisclosed_truncation"
 
+# The seven-tool roster a `must_reach` entry may name, DERIVED from the
+# registry rather than re-typed. F-3.0-01 is the recorded cost of a second
+# hand-maintained copy of a vocabulary: the frontend's own list silently
+# rejected a category the backend had just added. Deriving it means adding an
+# eighth tool cannot leave this set behind.
+ALLOWED_MUST_REACH = frozenset(
+    schema["name"] for schema in REGISTERED_TOOL_SCHEMAS
+)
+
+# The keys a `live_only` block must carry. `observed_from` is required, not
+# optional, because a fact that cannot say where it was observed is the
+# circular authoring this dataset exists to prevent.
+_REQUIRED_LIVE_ONLY_FIELDS = ("fact", "value", "observed_from", "observed_on")
+
+# Schema versions this loader accepts. v1 is build phase 5.1's shipped shape;
+# v2 adds `must_reach` and `live_only`, both OPTIONAL, so every v1 row is a
+# valid v2 row and the bump breaks nothing.
+_SUPPORTED_VERSIONS = frozenset({1, 2})
+
 _REQUIRED_ROW_FIELDS = (
     "id",
     "question",
@@ -133,6 +153,31 @@ class Provenance:
 
 
 @dataclass(frozen=True)
+class LiveOnlyFact:
+    """A fact the Layer 1 graph does not contain, so answering needs a live call.
+
+    This is the ANSWER-side half of the layer-reach constraint. Its sibling,
+    `must_reach`, names the tools a row requires and so grades the retrieval
+    PATH. They are kept separate because they fail differently: a row that
+    satisfies `must_reach` while failing this one means the tool was called
+    and its result was discarded.
+
+    `observed_from` names the live source the value was read from, and is
+    required. A value with no stated origin is indistinguishable from one the
+    author assumed, and build phase 4.15 found four separate defects that were
+    a confident sentence describing a check that was not there.
+
+    Its absence from the graph is NOT taken on the author's word: the builder
+    asks the live graph and refuses the row if the graph already holds it.
+    """
+
+    fact: str
+    value: str
+    observed_from: str
+    observed_on: str
+
+
+@dataclass(frozen=True)
 class GoldenQuery:
     """One question and the constraints its answer must satisfy.
 
@@ -165,6 +210,14 @@ class GoldenQuery:
     forbidden: list[str] = field(default_factory=list)
     hard_fails_applicable: list[str] = field(default_factory=list)
     notes: str = ""
+    # Tools this row's answer cannot be produced without. Empty means the row
+    # states no layer-reach requirement, which is every row shipped today.
+    # NOTHING CHECKS THIS AT GRADING TIME YET: verifying a tool was actually
+    # called means reading tool calls out of a trace, which is `replay()`'s
+    # job, and `replay()` is parked. This field makes the requirement
+    # expressible and enforces its shape; build phase 5.2 makes it graded.
+    must_reach: list[str] = field(default_factory=list)
+    live_only: LiveOnlyFact | None = None
 
     def as_dict(self) -> dict[str, Any]:
         """The mapping shape the grader and hard-fail checker read."""
@@ -182,6 +235,10 @@ class GoldenQuery:
             "must_cite": list(self.must_cite),
             "forbidden": list(self.forbidden),
             "hard_fails_applicable": list(self.hard_fails_applicable),
+            "must_reach": list(self.must_reach),
+            "live_only": (
+                None if self.live_only is None else asdict(self.live_only)
+            ),
         }
 
 
@@ -236,6 +293,82 @@ def _validate_provenance(row_id: str, raw: Any) -> Provenance:
         read_on=raw["read_on"],
         signed_off_by=raw["signed_off_by"],
         sign_off_bound=raw["sign_off_bound"],
+    )
+
+
+def _validate_must_reach(row_id: str, raw: Any) -> list[str]:
+    """Validate the optional `must_reach` list, or return an empty one.
+
+    Absent and empty mean the same thing here, deliberately: a row that
+    states no layer-reach requirement. That is every row shipped today.
+    """
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        # The message names the REJECTED TYPE, and the premise gate asserts
+        # that phrase. Without a distinguishing fingerprint this arm passes
+        # under its own mutation: with the type check deleted, a bare string
+        # falls through to the roster check, which iterates it character by
+        # character, finds 'l' and 'i' are not tools, and raises an error that
+        # also mentions must_reach. Asserting "an error occurred" would not
+        # tell the two apart.
+        raise DatasetValidationError(
+            f"row {row_id}: must_reach must be a list of tool names, got "
+            f"a bare {type(raw).__name__}"
+        )
+
+    unknown = [name for name in raw if name not in ALLOWED_MUST_REACH]
+    if unknown:
+        raise DatasetValidationError(
+            f"row {row_id}: must_reach names {unknown} which are not "
+            f"registered tools. Expected a subset of "
+            f"{sorted(ALLOWED_MUST_REACH)}. A row requiring a tool that does "
+            "not exist can never be satisfied, so it would fail forever "
+            "while looking like an agent defect."
+        )
+    return list(raw)
+
+
+def _validate_live_only(row_id: str, raw: Any) -> LiveOnlyFact | None:
+    """Validate the optional `live_only` block, or return None.
+
+    This checks the block's SHAPE only. That the value is genuinely absent
+    from the graph is a live measurement, made by `eval/golden/build_dataset.py`
+    at authoring time, because no loader can ask the graph without importing
+    the tool layer this dataset exists to grade.
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise DatasetValidationError(
+            f"row {row_id}: live_only must be an object, got {type(raw).__name__}"
+        )
+
+    for name in _REQUIRED_LIVE_ONLY_FIELDS:
+        value = raw.get(name)
+        if not isinstance(value, str) or not value.strip():
+            raise DatasetValidationError(
+                f"row {row_id}: live_only is missing a non-empty {name!r}. "
+                f"All of {list(_REQUIRED_LIVE_ONLY_FIELDS)} are required."
+            )
+
+    # The same refusal `authored_from` already makes on provenance, applied
+    # here. A fact observed from the agent under test certifies that agent's
+    # current behaviour as correct forever, which is the circularity that
+    # parked build phase 5.2.
+    observed_from = raw["observed_from"]
+    if any(token in observed_from.lower() for token in _REFUSED_AUTHORED_FROM):
+        raise DatasetValidationError(
+            f"row {row_id}: live_only.observed_from={observed_from!r} names the "
+            "agent under test. A fact observed from the agent grades the agent "
+            "against itself."
+        )
+
+    return LiveOnlyFact(
+        fact=raw["fact"],
+        value=raw["value"],
+        observed_from=observed_from,
+        observed_on=raw["observed_on"],
     )
 
 
@@ -332,6 +465,9 @@ def _validate_row(raw: Any) -> GoldenQuery:
             "confident wrong answer, not a partial one."
         )
 
+    must_reach = _validate_must_reach(row_id, raw.get("must_reach"))
+    live_only = _validate_live_only(row_id, raw.get("live_only"))
+
     return GoldenQuery(
         id=raw["id"],
         question=raw["question"],
@@ -339,6 +475,8 @@ def _validate_row(raw: Any) -> GoldenQuery:
         query_class=raw["query_class"],
         expected_outcome=expected_outcome,
         provenance=provenance,
+        must_reach=must_reach,
+        live_only=live_only,
         acceptable_outcomes=acceptable,
         personas=list(raw.get("personas") or []),
         must_resolve=list(raw.get("must_resolve") or []),
@@ -376,6 +514,13 @@ def load_golden_dataset(path: Path | str = GOLDEN_DATASET_PATH) -> GoldenDataset
     version = raw.get("version")
     if not isinstance(version, int):
         raise DatasetValidationError(f"{path}: an integer 'version' is required")
+    if version not in _SUPPORTED_VERSIONS:
+        raise DatasetValidationError(
+            f"{path}: schema version {version} is not supported, expected one "
+            f"of {sorted(_SUPPORTED_VERSIONS)}. An unknown version is refused "
+            "rather than read on a guess, because a row shape this loader does "
+            "not understand still grades."
+        )
 
     rows = raw.get("queries")
     if not isinstance(rows, list):

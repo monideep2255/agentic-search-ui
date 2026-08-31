@@ -49,7 +49,7 @@ Measured 2026-08-31 at the branch point, on `develop` at `332da84`.
 | Branch point | `332da84` | `git rev-parse --short HEAD` |
 | Doc drift | 0 stale, 0 structural, 10 facts computed | `python tracker/check_doc_drift.py --check` |
 | Transports | product-model ok 851ms, harness-model ok 95ms, graph ok 934ms via the HTTPS query service | `python3 tracker/preflight.py` |
-| Python tests | 4652 | `check_doc_drift.py` |
+| Python tests | 4652 at the branch point | `check_doc_drift.py` |
 | Frontend tests | 235 | `check_doc_drift.py` |
 | Golden rows | 50, schema `version: 1` | `eval/golden/golden_dataset.json` |
 | Graph snapshot label | `ncbi_kg_v1_2026-04-22` (the `_DEFAULT_GRAPH_SNAPSHOT_VERSION` fallback) | `cypher_query.py:237` |
@@ -108,13 +108,13 @@ Blocked-stop:
 
 | Ticket | What | Acceptance | Status |
 |---|---|---|---|
-| T-5.3-01 | `must_reach` on specs, carried into rows by the builder | Loader refuses a tool name outside the seven-tool roster; the roster is pinned in ONE place, not copied | todo |
-| T-5.3-02 | `live_only` field: the fact, its value, its live source | Builder verifies the value against live E-utilities over raw HTTP, reusing the existing verifier machinery | todo |
-| T-5.3-03 | Builder refuses a `live_only` fact the GRAPH already contains | A planted graph-satisfiable fact makes the build FAIL. Raw HTTPS to the graph service only, no agent-tool import | todo |
-| T-5.3-04 | Snapshot-date secondary guard, and its limits stated | Parses the date from `GRAPH_SNAPSHOT_VERSION`; the coverage statement says plainly that this is only as current as the env var, and that T-5.3-03 is the real check | todo |
-| T-5.3-05 | Schema `version` 1 to 2, loader accepts both | All 50 existing rows load unchanged under v2, proven field by field | todo |
-| T-5.3-06 | Premise gate plus applied-mutation harness | One mutation case per arm, added in the same edit as the arm; every arm goes red under its own mutation | todo |
-| T-5.3-07 | Record the SME content boundary where a later reader will look | Present in the continuation prompt's open items table and on `tracker/BOARD.md`, with an owner | todo |
+| T-5.3-01 | `must_reach` on specs, carried into rows by the builder | Loader refuses a tool name outside the seven-tool roster; the roster is pinned in ONE place, not copied | done: `ALLOWED_MUST_REACH` is a comprehension over `REGISTERED_TOOL_SCHEMAS`, and P1 asserts set EQUALITY with it rather than containment |
+| T-5.3-02 | `live_only` field: the fact, its value, its live source | Builder verifies the value against live E-utilities over raw HTTP, reusing the existing verifier machinery | done: `LiveOnlyFact` with all four keys required, and `observed_from` refused when it names the agent under test |
+| T-5.3-03 | Builder refuses a `live_only` fact the GRAPH already contains | A planted graph-satisfiable fact makes the build FAIL. Raw HTTPS to the graph service only, no agent-tool import | done: `assert_absent_from_graph` over raw `urllib`, proven live against BRCA1's real property set, with a paired control so a refuse-everything checker cannot satisfy it |
+| T-5.3-04 | Snapshot-date secondary guard, and its limits stated | Parses the date from `GRAPH_SNAPSHOT_VERSION`; the coverage statement says plainly that this is only as current as the env var, and that T-5.3-03 is the real check | NOT BUILT, deliberately. Once T-5.3-03 measures the graph directly, a date comparison against a hand-maintained env var adds no signal and would be a second, weaker answer to the same question. Building it would invite a future reader to trust the cheaper one. The limitation it was meant to document is stated in the coverage section instead |
+| T-5.3-05 | Schema `version` 1 to 2, loader accepts both | All 50 existing rows load unchanged under v2, proven field by field | done: all 50 rebuilt against live NCBI, 50 of 50 verified in 10.1s across 43 live calls. The ONLY change is `provenance.read_on` moving 2026-08-30 to 2026-08-31, plus the additive `must_reach`. Every constraint byte-identical |
+| T-5.3-06 | Premise gate plus applied-mutation harness | One mutation case per arm, added in the same edit as the arm; every arm goes red under its own mutation | done: 21 arms, 12 applied mutations, plus a no-op guard and a green control. It caught F-5.3-01 and F-5.3-03 on its first run |
+| T-5.3-07 | Record the SME content boundary where a later reader will look | Present in the continuation prompt's open items table and on `tracker/BOARD.md`, with an owner | done: an open-items row plus the board flag REOPENED AND NARROWED rather than overwritten, so the 2026-08-30 sign-off is still readable beside its 2026-08-31 narrowing |
 
 ## Coverage: what this phase does not cover
 
@@ -129,6 +129,10 @@ Stated here rather than left to be inferred, per `goal-contracts`: a verify surf
 
 | Finding | Severity | What | Status |
 |---|---|---|---|
+| F-5.3-01 | major | A VACUOUS ARM IN THIS PHASE'S OWN GATE, written by the lead, caught by mutation M3 and not by reading. `test_p2_must_reach_must_be_a_list_of_strings` asserted `match="must_reach"`. With the type check deleted, a bare string `"litvar2_lookup"` falls through to the roster check, which iterates it CHARACTER BY CHARACTER, finds `'l'` and `'i'` are not registered tools, and raises its own error that also contains `must_reach`. The arm passed with the control it names deleted. This is build phase 4.3's finding reproduced exactly: on a surface with many independent reasons to error, asserting that an error occurred proves nothing about WHICH control fired | fixed: the type error now says "got a bare str", the arm asserts that fingerprint, and M3 goes red |
+| F-5.3-02 | minor | The graph error message blamed the credential for EVERY HTTP status. A 422 from a malformed `as_clause` reported "verify GRAPH_QUERY_TOKEN is set and current", which sent this session looking for a token problem that did not exist. The retry-safety gate in `production-standards` requires an error to say what to do NEXT, and this one confidently said the wrong thing | fixed: the status now picks the advice, and a 422 reports the service's own rejection message |
+| F-5.3-03 | minor | Mutation M7 was a BAD MUTATION rather than a bad arm, and it exposed a real gap. It reverted the builder's `_SCHEMA_VERSION` and named an arm that never reads the version, so it stayed green for a reason unrelated to the control. Diagnosis found that NO arm read the builder's constant at all, only its output, so the shipped file could say version 2 while the builder still wrote 1 and the next rebuild would silently revert the schema | fixed by a NEW ARM, `test_p4_the_builder_and_the_shipped_file_agree_on_the_schema_version`, rather than by retargeting the mutation at something already covered |
+| F-5.3-04 | minor | The premise gate's two live arms SKIPPED on every run, because `_graph_request` read only `os.environ` while this module's existing `NCBI_API_KEY` path reads `.env`. Under pytest the graph looked unreachable, so the arm that makes `live_only` mean anything was silently absent from every run while the file reported 18 passed | fixed: the graph reads `os.environ` then `.env`, the same order as the sibling credential. Both arms now execute against the live graph |
 
 ## History
 

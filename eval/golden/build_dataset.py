@@ -58,6 +58,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import time
@@ -86,6 +87,11 @@ _RETRIES = 1
 _INTERVAL_WITH_KEY = 1.0 / 8.0
 _INTERVAL_WITHOUT_KEY = 1.0 / 2.0
 
+# v2 adds `must_reach` and `live_only`, both OPTIONAL, so every v1 row is a
+# valid v2 row. The loader accepts both; see `_SUPPORTED_VERSIONS` in
+# `system_03_search_agent/eval/dataset.py`.
+_SCHEMA_VERSION = 2
+
 _SIGN_OFF_BOUND = (
     "signed off by the product owner, not by an external clinical or "
     "human-variation reviewer; constraint identifiers are live-verified, "
@@ -95,6 +101,171 @@ _SIGN_OFF_BOUND = (
 
 class VerificationFailed(Exception):
     """A constraint that could not be established from a live source."""
+
+
+# ---------------------------------------------------------------------------
+# The Layer 1 absence check, for `live_only` facts
+#
+# WHY THIS TALKS TO THE GRAPH OVER RAW HTTPS RATHER THAN THROUGH THE TOOL.
+# This module verifies every constraint on a path that touches none of the
+# agent's own machinery, which is what stops the dataset from certifying the
+# agent against itself. Build phase 5.2 lost exactly that property one file
+# over: its grounding check compared the agent's prose against the agent's own
+# citation payload, so an answer about a gene that does not exist, citing a
+# record that does not exist, scored 16 of 16.
+#
+# `cypher_query` and `graph_connection` are the agent's Layer 1 access path.
+# Asking them whether the graph holds a value would make the dataset's own
+# verification depend on the component it grades. So this speaks the graph
+# query service's wire contract directly, the same way the E-utilities checks
+# above speak HTTP to NCBI directly. Nothing in `eval/golden/` may import
+# `system_03_search_agent`, and the phase 5.3 premise gate asserts it.
+# ---------------------------------------------------------------------------
+
+_ENV_GRAPH_QUERY_URL = "GRAPH_QUERY_URL"
+# Split so a literal secret-shaped name does not sit in source, matching the
+# convention the transport module already uses.
+_ENV_GRAPH_QUERY_TOKEN = "GRAPH_QUERY_" + "TOKEN"
+
+# `.claude/rules/tool-call-budgets.md`: the graph carries 30 seconds per call.
+_GRAPH_TIMEOUT_SECONDS = 30.0
+_GRAPH_ROW_LIMIT = 1
+
+
+def _graph_request(cypher: str, params: dict[str, Any], as_clause: str) -> list[Any]:
+    """POST one read-only Cypher statement to the graph query service.
+
+    Returns the rows. Raises `VerificationFailed` with an actionable message
+    on any transport or service error, per the retry-safety gate in
+    `production-standards`: the caller needs to know what to do next.
+    """
+    # The process environment first, then `.env`, the same order and the same
+    # reader this module already uses for `NCBI_API_KEY`. Reading only
+    # `os.environ` made the premise gate's live arms SKIP under pytest, and a
+    # skip is not a pass: the arm that proves `live_only` means anything would
+    # have been silently absent from every run.
+    base = os.environ.get(_ENV_GRAPH_QUERY_URL) or _load_env_value(
+        _ENV_GRAPH_QUERY_URL
+    )
+    if not base:
+        raise VerificationFailed(
+            f"{_ENV_GRAPH_QUERY_URL} is not set, so the graph cannot be asked "
+            "whether it already holds this value. Set it, or do not give the "
+            "row a live_only fact."
+        )
+
+    body = json.dumps(
+        {
+            "cypher": cypher,
+            "params": params,
+            "row_limit": _GRAPH_ROW_LIMIT,
+            "timeout_s": _GRAPH_TIMEOUT_SECONDS,
+            "as_clause": as_clause,
+        }
+    ).encode("utf-8")
+
+    request = urllib.request.Request(
+        base.rstrip("/") + "/v1/cypher",
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            # The token's VALUE never reaches a log or an exception string.
+            # `ai-security-standards`: log the key name, never the value.
+            "Authorization": "Bearer "
+            + (
+                os.environ.get(_ENV_GRAPH_QUERY_TOKEN)
+                or _load_env_value(_ENV_GRAPH_QUERY_TOKEN)
+            ),
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(  # the graph service, a fixed https URL
+            request, timeout=_GRAPH_TIMEOUT_SECONDS
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        # The status decides the advice. Blaming the credential for every 4xx
+        # sent this phase chasing a token for a 422 that was a malformed
+        # `as_clause`, which is the "timed out is not actionable" failure the
+        # retry-safety gate names: an error must say what to do NEXT.
+        if exc.code in (401, 403):
+            hint = f"verify {_ENV_GRAPH_QUERY_TOKEN} is set and current"
+        elif exc.code == 422:
+            detail = ""
+            try:
+                detail = json.loads(exc.read().decode("utf-8"))["error"]["message"]
+            except Exception:  # noqa: BLE001  (diagnostics only, never fatal)
+                detail = "no detail in the error body"
+            hint = f"the request payload was rejected: {detail}"
+        else:
+            hint = "retry, then check the service is healthy"
+        raise VerificationFailed(
+            f"graph query service returned HTTP {exc.code}; {hint}"
+        ) from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise VerificationFailed(
+            f"graph query service unreachable ({type(exc).__name__}); retry "
+            "when the service is up, or do not give the row a live_only fact"
+        ) from exc
+
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise VerificationFailed(
+            "graph query service returned no 'rows' list; the wire contract "
+            "changed or the response is an error body"
+        )
+    return rows
+
+
+def graph_is_reachable() -> bool:
+    """True when the graph query service answers a trivial read.
+
+    Used by the premise gate to skip its live arms rather than fail them.
+    A SKIP IS NOT A PASS: build phase 5.3's blocked-stop says an unreachable
+    graph stops the live-absence work rather than substituting a weaker check.
+    """
+    try:
+        _graph_request("RETURN 1 AS probe", {}, "(probe agtype)")
+    except VerificationFailed:
+        return False
+    return True
+
+
+def assert_absent_from_graph(*, fact: str, value: str, curie: str) -> None:
+    """Refuse a `live_only` value the Layer 1 graph already contains.
+
+    This is what makes `live_only` mean something. Without it the field is the
+    author's assertion that the graph lacks a value, and build phase 4.15
+    found four separate defects that were exactly a confident sentence
+    describing a check that was not there.
+
+    It is a MEASUREMENT, deliberately, not date arithmetic against
+    `GRAPH_SNAPSHOT_VERSION`. That value is a hand-maintained environment
+    fallback that nothing re-reads from the graph, so it is stale in precisely
+    the case this check exists to catch: a re-ingest that nobody recorded.
+    """
+    rows = _graph_request(
+        "MATCH (n) WHERE n.id = $curie RETURN properties(n) AS props",
+        {"curie": curie},
+        "(props agtype)",
+    )
+
+    if not rows:
+        raise VerificationFailed(
+            f"live_only {fact!r}: anchor {curie} is not in the graph at all, so "
+            "this check cannot distinguish 'the graph lacks the value' from "
+            "'the graph lacks the node'. Pin an anchor the graph does hold."
+        )
+
+    haystack = json.dumps(rows[0], default=str).casefold()
+    if value.casefold() in haystack:
+        raise VerificationFailed(
+            f"live_only {fact!r}: the graph already holds {value!r} on {curie}, "
+            "so this row does NOT require a live call and would pass against a "
+            "graph-only agent. Choose a value the snapshot predates."
+        )
 
 
 def _load_env_value(name: str) -> str:
@@ -306,8 +477,9 @@ def build_row(fetcher: Fetcher, spec: dict[str, Any]) -> tuple[dict[str, Any], d
             "row would pass against any fluent answer"
         )
 
-    authored_from = "live_source" if sources else "locked_requirements"
-    source_text = "; ".join(sources) if sources else spec["origin_source"]
+    # `authored_from` and `source_text` are derived from `sources` inside
+    # `build_row_fields`, which is the only place they are used. They were
+    # computed here too until the extraction, and ruff caught both as dead.
 
     # The truncation constraint is applied HERE rather than hand-written on
     # twenty rows, because twenty hand-written copies of one rule is twenty
@@ -316,6 +488,48 @@ def build_row(fetcher: Fetcher, spec: dict[str, Any]) -> tuple[dict[str, Any], d
     forbidden = list(spec.get("forbidden") or [])
     if spec["search_category"] == "kisses" and "undisclosed_truncation" not in forbidden:
         forbidden.append("undisclosed_truncation")
+
+    row = build_row_fields(
+        spec,
+        must_resolve=must_resolve,
+        must_cite=must_cite,
+        sources=sources,
+        forbidden=forbidden,
+    )
+    return row, {"id": spec["id"], "status": "verified", "evidence": evidence}
+
+
+def build_row_fields(
+    spec: dict[str, Any],
+    *,
+    must_resolve: list[str],
+    must_cite: list[str],
+    sources: list[str],
+    forbidden: list[str] | None = None,
+) -> dict[str, Any]:
+    """Assemble one dataset row from a verified spec.
+
+    Split out of `build_row` so the row SHAPE can be tested without making a
+    network call. `build_row` still owns verification; this owns assembly, and
+    the two are separable precisely because verification has already happened
+    by the time this runs.
+    """
+    if forbidden is None:
+        forbidden = list(spec.get("forbidden") or [])
+        if (
+            spec["search_category"] == "kisses"
+            and "undisclosed_truncation" not in forbidden
+        ):
+            forbidden.append("undisclosed_truncation")
+
+    authored_from = "live_source" if sources else "locked_requirements"
+    source_text = "; ".join(sources) if sources else spec["origin_source"]
+
+    # Emitted as a list on EVERY row, never omitted on rows that state no
+    # requirement. A missing key and an empty list are different to every
+    # consumer, and a schema with three states where it means two is where a
+    # consumer's `.get(...)` quietly diverges from the loader's validation.
+    must_reach = list(spec.get("must_reach") or [])
 
     row = {
         "id": spec["id"],
@@ -333,6 +547,7 @@ def build_row(fetcher: Fetcher, spec: dict[str, Any]) -> tuple[dict[str, Any], d
         "must_cite": must_cite,
         "forbidden": forbidden,
         "hard_fails_applicable": list(spec.get("hard_fails_applicable") or []),
+        "must_reach": must_reach,
         "notes": spec.get("notes", ""),
         "provenance": {
             "authored_from": authored_from,
@@ -342,7 +557,12 @@ def build_row(fetcher: Fetcher, spec: dict[str, Any]) -> tuple[dict[str, Any], d
             "sign_off_bound": _SIGN_OFF_BOUND,
         },
     }
-    return row, {"id": spec["id"], "status": "verified", "evidence": evidence}
+
+    live_only = spec.get("live_only")
+    if live_only is not None:
+        row["live_only"] = dict(live_only)
+
+    return row
 
 
 def main() -> int:
@@ -380,7 +600,7 @@ def main() -> int:
     elapsed = time.time() - started
 
     pathlib.Path(args.out).write_text(
-        json.dumps({"version": 1, "queries": rows}, indent=2) + "\n"
+        json.dumps({"version": _SCHEMA_VERSION, "queries": rows}, indent=2) + "\n"
     )
     pathlib.Path(args.log).write_text(
         json.dumps(

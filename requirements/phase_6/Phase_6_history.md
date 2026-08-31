@@ -260,7 +260,7 @@ Three scope readings the locked documents did not settle, each recorded before a
 
 Final gates:
 
-- 4652 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
+- 4652 Python tests as measured then (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
 - the GraphQL package alone 206 to 300 tests
 - 181 frontend
 - ruff clean
