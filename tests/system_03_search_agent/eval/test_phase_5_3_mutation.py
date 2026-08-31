@@ -247,11 +247,12 @@ def test_each_arm_goes_red_under_its_own_mutation(mutation: Mutation) -> None:
 
         if _all_selected_arms_skipped(result):
             pytest.skip(
-                f"{mutation.name}: every arm it targets SKIPPED, so this case is "
-                "not measurable in this environment (the live-graph arms need a "
-                "graph credential CI does not hold). Skipped rather than passed, "
-                "and never reported as vacuity: the arms did not stay green, "
-                "they did not run."
+                f"{mutation.name}: every arm it targets needs the live graph and "
+                "SKIPPED, so this case is NOT MEASURABLE HERE. CI holds no "
+                "Layer 1 graph credential, the sanctioned skip category in "
+                "`.github/scripts/assert_no_db_skips.py`. Skipped rather than "
+                "passed, and never reported as vacuity: the arms did not stay "
+                "green, they did not run."
             )
 
         # Exit 1 SPECIFICALLY, a real assertion failure. Non-zero also covers

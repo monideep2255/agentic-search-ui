@@ -394,8 +394,12 @@ def test_p5_a_graph_satisfiable_fact_is_refused_by_the_builder() -> None:
 
     if not graph_is_reachable():
         pytest.skip(
-            "graph query service unreachable; this arm is a live measurement "
-            "and a skip is NOT a pass (see the phase file's blocked-stop)"
+            "the live graph is unreachable, so this arm cannot run: it is a live "
+            "measurement against Layer 1 and a skip is NOT a pass. CI holds no "
+            "graph credential, which is the sanctioned skip category in "
+            "`.github/scripts/assert_no_db_skips.py`, and is why this arm "
+            "NEVER executes on a pull request (F-4.14-RV-08 records the same "
+            "gap for gate 5). See the phase file's blocked-stop."
         )
 
     # BRCA1's symbol is in the graph by construction, so a live_only block
@@ -416,7 +420,8 @@ def test_p5_control_a_fact_the_graph_lacks_is_accepted() -> None:
     from eval.golden.build_dataset import assert_absent_from_graph, graph_is_reachable
 
     if not graph_is_reachable():
-        pytest.skip("graph query service unreachable; a skip is NOT a pass")
+        pytest.skip("the live graph is unreachable; a skip is NOT a pass, and CI never runs "
+            "this arm because it holds no Layer 1 graph credential")
 
     assert_absent_from_graph(
         fact="gene_symbol",
