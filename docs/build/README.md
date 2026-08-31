@@ -22,6 +22,14 @@ These two are one thing in two forms. If they ever disagree, the markdown is the
 
 Stage 5, the premise gate, is mandatory and blocking for any phase whose deliverable is model-generated. That is the stage this repo added after build phase 2.1, and it is the one most likely to feel skippable and least safe to skip.
 
+### Debugging the product
+
+| File | What it is | Read when |
+|------|-----------|-----------|
+| `Debugging_guide.md` | A symptom index, then one row for every Python file under `src/system_03_search_agent/`, plus the frontend, test, tracker and CI files a debugger actually opens | Something is broken and you do not know which file owns it |
+
+It is the one file here about the product rather than the process. It carries a maintenance contract enforced by `tests/system_03_search_agent/test_debugging_guide_coverage.py`: add, delete, rename or repurpose a file under `src/` and the guide is updated in the same commit.
+
 ### Running the harness
 
 | File | What it is | Read when |
