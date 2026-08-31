@@ -611,14 +611,10 @@ What is next, derived from that board rather than restated from memory:
 
 | Next | Phase | Gated on |
 |---|---|---|
-| 1 | 5.4, unpark build phase 5.2's grading harness | The golden 50 settling, a product-owner decision |
-| 2 | 5.5, author golden rows that use 5.3's `must_reach` and `live_only` | SME review |
-| 3 | 6.0, rate limiting and concurrency | Nothing. This is the first phase openable today |
-| 4 | 6.1, the full `dev-standards` pass and release hardening | 6.0 |
-| 5 | 7.0, model-bench per tier | A working grader from 5.4 |
-| 6 | 7.1, the A/B routing mechanism | 7.0 |
+| 1 | 6.0, rate limiting and concurrency | Nothing. Open it today |
+| 2 | 6.1, the full `dev-standards` pass and release hardening | 6.0 |
 
-So there are two independent tracks. The evaluation track (5.4, 5.5) waits on a decision about the questions, not on code. The delivery track (6.0 onward) is open right now.
+THE EVALUATION TRACK IS CLOSED. Build phases 5.1, 5.2 and 5.3 merged and the track closed at that, by product-owner decision on 2026-08-31. The follow-up it leaves behind is post-v1 work and lives in Phase 7 below, deliberately not on the board, because a board row would say queued when it is not.
 
 The dated narrative of every merged phase is in Revision history at the end of this document. Older Phase 6 state is in `requirements/phase_6/Phase_6_history.md`.
 
@@ -820,6 +816,20 @@ Phase 6 output: working System 3 (v1).
 Status: NOT STARTED
 
 Goal: incorporate new learnings and evolve the system after v1 ships.
+
+### Carried here when the evaluation track closed, 2026-08-31
+
+Build phases 5.1, 5.2 and 5.3 all merged and the evaluation track was closed at that point by product-owner decision. Three things were left genuinely unfinished, and they are recorded here rather than on the board so that closed does not quietly read as finished:
+
+| Item | State at close | What finishing it would need |
+|---|---|---|
+| The grading harness | Merged and PARKED. It does not work, its own suite is green with every defect live, and `replay()` refuses to run without `acknowledge_parked=True` | Fixing the root defect first: grounding compared the agent's prose against the agent's OWN citation payload, so a fabricated answer citing a record that does not exist scored 16 of 16 |
+| Golden rows using `must_reach` and `live_only` | The fields exist. NO row uses them, so the dataset still cannot tell an agent that federated three layers from one that read the graph and stopped | Subject-matter-expert review of the 50 questions, since authoring against a set that review will move is what parked the harness |
+| Per-tool coverage | `litvar2_lookup` and `pubtator_annotate` are required by ZERO rows | The same SME review |
+| Model-bench per tier, formerly build phase 7.0 | Never opened. Benchmarks candidate models per tier against the golden dataset and picks the winners | A grader that works, which is the first row of this table |
+| The A and B randomized-routing mechanism, formerly build phase 7.1 | Never opened. Human-gated online routing between model choices | Model-bench, plus enough real traffic for a comparison to mean anything |
+
+WHY THE MODEL TRACK MOVED HERE TOO, decided 2026-08-31: the need of the hour is getting something in front of users and hearing back from them. Benchmarking which model wins on a fifty-question set is an optimization, and it is an optimization gated on a grader that does not work, measured against questions nobody outside the team has reviewed. Neither is the constraint right now. Build phases 6.0 and 6.1 are what stand between the deployed product and a v1 real people can use.
 
 ### How new information enters the system
 

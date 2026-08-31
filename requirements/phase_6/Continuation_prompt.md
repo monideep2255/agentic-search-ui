@@ -103,22 +103,30 @@ This section is DERIVED FROM `tracker/BOARD.md`. If the two disagree, the board 
 
 ### The next action
 
-Nothing is blocked. Six phases are open, and the first two are gated on a product-owner decision rather than on engineering.
+Nothing is blocked. Four phases are open, and the first one is buildable today.
 
 | Next | Phase | What it is | Gated on |
 |---|---|---|---|
-| 1 | 5.4 | Make build phase 5.2's grading harness actually work, then remove its `acknowledge_parked` guard | The golden 50 settling. Precision aimed at a moving specification is what parked 5.2 |
-| 2 | 5.5 | Author the golden rows that USE 5.3's `must_reach` and `live_only` fields | SME review. 5.3 shipped the mechanism and deliberately authored no rows |
-| 3 | 6.0 | Rate limiting and concurrency: per-layer throttling, the bounded queue per API family, the 20-calls-per-query budget | Nothing. This is the first phase you can open today |
-| 4 | 6.1 | The full `dev-standards` six-lens pass, CI and CD gates, the security scan, accessibility | 6.0 |
-| 5 | 7.0 | Benchmark candidate models per tier against the golden dataset | 5.1, and a working grader from 5.4 |
-| 6 | 7.1 | The A/B routing mechanism | 7.0 |
+| 1 | 6.0 | Rate limiting and concurrency: per-layer throttling, the bounded queue per API family, the 20-calls-per-query budget | Nothing. Open it today |
+| 2 | 6.1 | The full `dev-standards` six-lens pass, CI and CD gates, the security scan, accessibility | 6.0 |
 
-SO: if you want to build something today, open build phase 6.0. If you want to unblock the evaluation track instead, the next step is not code, it is the product owner settling whether the 50 questions are the right 50.
+SO: open build phase 6.0. Two phases stand between here and a v1 that real people can use, and the product owner's stated priority on 2026-08-31 is exactly that: get something going and get feedback from users.
 
-### The one decision waiting on the product owner
+Everything else that used to sit on this board, the evaluation follow-up and the model-benchmarking track, is now post-v1 work in `requirements/Plan.md` under Phase 7. It is off the board on purpose. A board row would say queued, and none of it is queued ahead of user feedback.
 
-The golden 50 are a data-derived v1, not a settled target. Every constraint in them was read from a live NCBI lookup and independently re-verified, so the rows are factually SOUND. What is unsettled is whether they are the right QUESTIONS, and whether each expected answer is the one a domain expert would give. Neither is answerable from a lookup. Until that settles, 5.4 and 5.5 stay shut.
+### The evaluation track is CLOSED, and that is a decision rather than an oversight
+
+Every phase in the evaluation track has merged, and the track is closed at that by product-owner decision on 2026-08-31. Do not open new evaluation work off the back of it.
+
+What that leaves standing, stated plainly so a later reader does not mistake closed for finished:
+
+- The 50-question golden dataset exists and its constraints were each read from a live NCBI lookup. The rows are factually sound.
+- The grading harness merged and DOES NOT WORK. `replay()` refuses to run without `acknowledge_parked=True`. That is deliberate.
+- Build phase 5.3's `must_reach` and `live_only` fields exist and NO golden row uses them.
+
+Making the grader work, and authoring rows that use those fields, are post-v1 follow-up. They sit in `requirements/Plan.md` under Phase 7, not on the board, because putting them on the board would say they are queued work when they are not.
+
+The one thing this affects downstream: build phase 7.0 benchmarks models against the golden dataset, and it will need a working grader. That dependency is real and is recorded in Phase 7 rather than being allowed to surprise whoever opens 7.0.
 
 ### Before you touch anything under `src/`
 
