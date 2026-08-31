@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-31.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0, and on 2026-08-30 and 2026-08-31 all of 5.1, 5.2 and 5.3. NOTHING IS BLOCKED. Six phases are open and the authoritative list is `tracker/BOARD.md`, rendered at `tracker/board.html`. The next buildable phase today is 6.0, rate limiting and concurrency. Two evaluation phases sit ahead of it in dependency order but are gated on a product-owner decision rather than on engineering: 5.4 unparks 5.2's grading harness, and 5.5 authors the golden rows that use 5.3's `must_reach` and `live_only` fields. Both wait on whether the 50 questions are the right 50. |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 465 (DECISIONS.md).
+Decisions logged: 467 (DECISIONS.md).
 
 Deliverables produced:
 
