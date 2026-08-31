@@ -19,6 +19,7 @@ Last updated: 2026-08-31.
 - [Why the two-day reference build felt better](#why-the-two-day-reference-build-felt-better)
 - [Test against develop, not production](#test-against-develop-not-production)
 - [End-to-end workflows for browser-driven testing](#end-to-end-workflows-for-browser-driven-testing)
+- [Working practice: two sessions, one checkout](#working-practice-two-sessions-one-checkout)
 - [What has not been checked](#what-has-not-been-checked)
 
 ## The headline finding
@@ -338,12 +339,37 @@ Build these as `frontend/e2e/journeys/`, gated behind an environment variable li
 
 Journey 2 is the one to build first. The fragmentation complaint is currently described in prose, and a filmstrip of the twelve-second wait would turn it into something anyone can look at and immediately agree or disagree with.
 
+## Working practice: two sessions, one checkout
+
+Recorded because it already caused a real mistake, and it will keep happening while UI work and build-phase work run at the same time.
+
+WHAT HAPPENED, 2026-08-31. A second session opened build phase 6.0 and created `phase/6.0-rate-limit-concurrency` in the SAME working directory this session was using. Git branches are per-checkout, so the branch switched under this session mid-task. The consequences, in order:
+
+- A UI documentation commit intended for `develop` landed on the 6.0 phase branch instead.
+- Pushing that to `develop` carried the other session's phase-opening commit `42847f5` with it, so a tracker commit reached `develop` without passing through its own pull request.
+- Nothing broke. Both commits are documentation, and git will not duplicate `42847f5` when 6.0 merges. But neither was the pushing session's to push.
+
+WHY IT MATTERS BEYOND THIS INSTANCE: the failure is silent.
+
+- Neither session is told the branch moved.
+- The first sign is a `git status` showing a branch nobody in this conversation checked out.
+- The commit still succeeds and the push still succeeds, so the wrong thing lands without an error.
+
+THE FIX, when the UI pass starts: give the UI work its own git worktree, the way the debugging guide got one. A worktree is a second checkout with its own branch and its own working directory, so two sessions cannot move each other's branch. The command is one line:
+
+```bash
+git worktree add ../agentic-search-ui-ui develop
+```
+
+It was deliberately NOT done today, by product-owner decision, because today's work was recording feedback rather than changing code. Do it before the first UI fix lands, not after.
+
+THE INTERIM RULE while both streams share one checkout: check `git rev-parse --abbrev-ref HEAD` immediately before every commit, and never assume the branch is the one you were on when you started.
+
 ## What has not been checked
 
 Stated so this document is not read as more complete than it is:
 
 - Complaint 1 entirely. No browser comparison against the design prototype was run.
-- Whether Disease nodes actually carry a name property. The root-cause hypothesis stands or falls on this and it needs one live Cypher query.
 - Why `total_cost_usd` reported `0.0`.
 - Whether the two-token delivery is the Write step's design or a defect.
 - Anything about the reference build beyond its directory listing.
