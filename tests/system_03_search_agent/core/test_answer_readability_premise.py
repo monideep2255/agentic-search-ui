@@ -258,7 +258,7 @@ def _get_json(url: str) -> dict[str, Any]:
     _last_eutils_call_at = time.monotonic()
 
     request = urllib.request.Request(url, headers={"User-Agent": "system3-premise-gate"})
-    with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+    with urllib.request.urlopen(request, timeout=30) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -498,7 +498,8 @@ async def test_a3_a_resolved_name_is_cited_to_the_record_it_came_from() -> None:
     )
 
 
-def test_a4_an_unresolvable_concept_id_is_disclosed_and_never_invented() -> None:
+@pytest.mark.asyncio
+async def test_a4_an_unresolvable_concept_id_is_disclosed_and_never_invented() -> None:
     """A4: the honest-failure direction of the resolver.
 
     Drives: T-6.2-02's non-invention criterion.
@@ -512,13 +513,23 @@ def test_a4_an_unresolvable_concept_id_is_disclosed_and_never_invented() -> None
     a property of the resolver, and driving it through a live question
     would need a graph row that does not exist.
 
-    THIS ARM FAILS TODAY WITH AN ImportError, and that is the point.
-    `synthesis.disease_names` is T-6.2-02's deliverable. The gate names the
-    contract the fix must satisfy before the fix is written.
+    Written before the resolver existed, and it failed with an ImportError
+    on the gate's first run, which is the point: the gate named the
+    contract the fix had to satisfy before the fix was written.
+
+    Made `async` on 2026-09-01 when the resolver landed, because every
+    E-utilities action in this repository is a coroutine and a synchronous
+    resolver would have needed its own HTTP path, invisible to the shared
+    rate pool, to the per-query call ceiling and to the audit log. The
+    ASSERTIONS BELOW ARE UNCHANGED: this is the arm adapting to the
+    contract's real shape, not the check being relaxed to let something
+    pass. Recorded here rather than silently, since editing a verify
+    surface mid-run is exactly the move `goal-contracts` forbids doing
+    quietly.
     """
     from system_03_search_agent.synthesis.disease_names import resolve_concept_ids
 
-    resolved = resolve_concept_ids([UNRESOLVABLE_CONCEPT_ID])
+    resolved = await resolve_concept_ids([UNRESOLVABLE_CONCEPT_ID])
 
     assert UNRESOLVABLE_CONCEPT_ID in resolved, (
         "an unresolvable id must be reported, not dropped: a dropped id "

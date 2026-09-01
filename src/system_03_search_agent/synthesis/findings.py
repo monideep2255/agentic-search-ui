@@ -75,7 +75,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from system_03_search_agent.harness.coordinator_worker import Finding
@@ -131,6 +131,14 @@ class SynthFinding:
     curie_fallback: bool = False
     entity_type: str = ""
     curie: str = ""
+    # Build phase 6.2, T-6.2-02. True when `field_value` is a human-readable
+    # label read live from the record this finding cites, replacing a
+    # `curie_fallback` whose only citable value was the identifier. Like the
+    # two flags above it is not on Section 8.1's wire schema, but UNLIKE
+    # them it does reach `render_for_prompt`, because the identifier is
+    # exactly what must stop appearing in the model's input. See
+    # `render_findings_block`.
+    name_resolved: bool = False
 
     def as_schema_dict(self) -> dict[str, Any]:
         """The seven Section 8.1 fields, in schema order, and nothing else."""
@@ -435,6 +443,91 @@ def build_synth_findings(
     return collected, total_citable > len(collected)
 
 
+# The Layer 2 tool and field a resolved disease name is attributed to.
+# Named constants rather than inline literals because `layer` is read by
+# the trust gate, the freshness gate and the citation builder, and a typo
+# in one of three string literals would silently route a resolved name
+# down a different path in one of them.
+_RESOLVED_NAME_LAYER = "layer_2_api"
+_RESOLVED_NAME_TOOL = "ncbi_efetch"
+_RESOLVED_NAME_FIELD = "name"
+
+
+def apply_resolved_disease_names(
+    synth_findings: list[SynthFinding],
+    resolved: dict[str, str | None],
+) -> list[SynthFinding]:
+    """Replace a CURIE-only finding with the disease name, as a Layer 2 fact.
+
+    Build phase 6.2, ticket T-6.2-02. The input is what
+    `build_synth_findings` produced and a mapping from
+    `synthesis.disease_names.resolve_concept_ids`.
+
+    ONLY a `curie_fallback` finding is rewritten. That flag means the row's
+    own representative field was unusable and the CURIE was cited in its
+    place, which is exactly the population this phase exists to make
+    readable. A Disease row whose field WAS usable is left alone: it is
+    already stating a real fact, and overwriting it with a MedGen title
+    would replace retrieved data with different retrieved data for no
+    reason.
+
+    ## Why the layer changes, and why that is the whole point
+
+    The name is read live from MedGen, so the finding becomes a Layer 2
+    fact and says so. The tempting shortcut is to keep `layer_1_graph` and
+    just swap the value, since the graph row is what prompted the lookup.
+    That would produce an answer that reads correctly and whose provenance
+    is false, which is worse than the unreadable answer this phase started
+    with: `production-standards.md`'s layer authority gate exists for
+    precisely this, and the premise gate's arm A3 fails on it.
+
+    `source_url` needs no change and is deliberately not touched. A
+    MedGen-prefixed Layer 1 row already carries the MedGen record page as
+    its source, so the citation on a resolved name already points at the
+    record the name was read from. Rebuilding the URL here would be a
+    second implementation of a mapping `tools/cypher_provenance.py` already
+    owns.
+
+    `value_is_suspect` and `curie_fallback` both clear, and that is a
+    behaviour change worth naming: those flags drove the `hedged` downgrade
+    that was correct while the only citable value was a corrupted
+    vocabulary token. A title read live from the authoritative record is
+    not a suspect value, so continuing to hedge it would understate a fact
+    the system now genuinely knows.
+
+    `ref_index` and `citation_id` are preserved, because both are join keys
+    the grounding pass and `_node_or_edge_type_by_citation_id` resolve
+    against, and renumbering here would break a marker the model has not
+    written yet against a row type looked up from the original findings.
+
+    An id that did not resolve keeps its CURIE finding UNCHANGED, hedge and
+    all. That is the honest failure direction: the answer stays as
+    unreadable as it was rather than acquiring a name nothing verified.
+    """
+    if not resolved:
+        return synth_findings
+
+    rewritten: list[SynthFinding] = []
+    for finding in synth_findings:
+        title = resolved.get(finding.curie)
+        if not finding.curie_fallback or not title:
+            rewritten.append(finding)
+            continue
+        rewritten.append(
+            replace(
+                finding,
+                layer=_RESOLVED_NAME_LAYER,
+                tool=_RESOLVED_NAME_TOOL,
+                field=_RESOLVED_NAME_FIELD,
+                field_value=_clip(title, MAX_FIELD_VALUE_CHARS),
+                value_is_suspect=False,
+                curie_fallback=False,
+                name_resolved=True,
+            )
+        )
+    return rewritten
+
+
 # The Synth system instruction. Fixed text, no interpolation: it is part of
 # the stable prompt prefix (`.claude/rules/prompt-cache-discipline.md`),
 # and a single interpolated byte here misses the cache for the whole
@@ -540,6 +633,35 @@ def render_findings_block(
             # The value IS the identifier, so naming the field as well
             # ("curie: MedGen:...") adds a word and no information.
             body = f"{label}record {finding.field_value}"
+        elif finding.name_resolved:
+            # Build phase 6.2, T-6.2-02, and this branch is the whole reason
+            # `name_resolved` reaches the prompt at all.
+            #
+            # Measured, not predicted. With the resolution wired up but this
+            # branch absent, the finding fell through to the `elif
+            # finding.curie` case below and rendered as
+            # "Disease MedGen:C0346153, name: Familial cancer of breast".
+            # The live answer became:
+            #
+            #     BRCA1 ... is associated with familial cancer of breast
+            #     (MedGen:C0346153) [2], breast-ovarian cancer, familial,
+            #     susceptibility to, 1 (MedGen:C2676676) [3], ...
+            #
+            # Readable, and still carrying four identifiers the reader did
+            # not ask for. THE MODEL WAS NOT WRONG: the system instruction
+            # tells it to state a finding's value as written and to use the
+            # identifiers the findings give it, so printing an identifier it
+            # was handed is the obedient answer. `attack-the-constraint`'s
+            # rule applies exactly as written, one layer up from where the
+            # symptom appeared: the assembly step feeding the model is
+            # upstream of it, so the assembly step is the constraint.
+            #
+            # The identifier is not lost, and this is the load-bearing half
+            # of the argument. It is still on the finding, still on the
+            # citation, and still on the chip the reader clicks, which is
+            # where a reader who wants to verify goes. It is removed only
+            # from the prose, where it displaced the thing they asked for.
+            body = f"{label}{finding.field}: {finding.field_value}"
         elif finding.curie:
             body = f"{label}{finding.curie}, {finding.field}: {finding.field_value}"
         else:

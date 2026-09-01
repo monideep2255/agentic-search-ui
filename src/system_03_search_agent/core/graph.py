@@ -494,8 +494,10 @@ from system_03_search_agent.harness.harness import (
 )
 from system_03_search_agent.harness.tiers import Tier
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
+from system_03_search_agent.synthesis.disease_names import resolve_concept_ids
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
+    apply_resolved_disease_names,
     build_completeness_directive,
     build_synth_findings,
     build_synth_messages,
@@ -5475,6 +5477,35 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     synth_findings, findings_capped = build_synth_findings(
         findings, _pick_representative_field, max_findings=_MAX_CITATIONS_PER_ANSWER
     )
+
+    # Build phase 6.2, T-6.2-02. A `curie_fallback` finding is one whose own
+    # field was unusable, which for a Disease row in this snapshot is the
+    # normal case: the MedGen ETL wrote the source vocabulary into `name`,
+    # so the strongest true statement the row supported was its identifier.
+    # That is what made a fully grounded, fully cited answer read
+    # "MedGen:C0346153, MedGen:C2676676, MedGen:C3280442" to a researcher.
+    #
+    # Resolution happens HERE, after the findings list is built and before
+    # the model is called, for two reasons. It needs the finding list to
+    # know which CURIEs are actually going to be cited, so a row that was
+    # capped out of the list never costs a lookup. And it must be upstream
+    # of the Synth call, because the point is to hand the model a readable
+    # value rather than to post-process prose it already wrote: rewriting
+    # the answer afterwards would put an unciteable name into a sentence the
+    # grounding pass then strips.
+    #
+    # It cannot fail the query. `resolve_concept_ids` never raises and maps
+    # anything it could not resolve to None, and `apply_resolved_disease_names`
+    # leaves those findings exactly as they were, so the failure mode of
+    # this whole path is the unreadable-but-correct answer that shipped
+    # before it existed.
+    synth_findings = apply_resolved_disease_names(
+        synth_findings,
+        await resolve_concept_ids(
+            [f.curie for f in synth_findings if f.curie_fallback and f.curie]
+        ),
+    )
+
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 
     # F-4.5-A-04: ONE declared budget for the whole Write step, shared by

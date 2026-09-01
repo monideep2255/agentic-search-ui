@@ -180,7 +180,7 @@ History:
 
 ### T-6.2-02: Disease identifiers are resolved to disease names in the answer
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-6.2-01
 Spec: `UI_feedback.md` headline finding; tech spec Section 6.2; `production-standards.md` layer authority gate
@@ -193,10 +193,76 @@ Acceptance criteria:
 - [ ] The resolution respects the `eutils` rate pool and build phase 6.0's per-query call ceiling
 - [ ] The existing vocabulary-artifact detector is unchanged: this ticket adds a resolution path, it does not weaken the detector
 
-Files: `src/system_03_search_agent/core/graph.py`, `src/system_03_search_agent/synthesis/`, `src/system_03_search_agent/tools/ncbi_eutils_actions.py`
+Files: `src/system_03_search_agent/synthesis/disease_names.py` (new),
+`src/system_03_search_agent/synthesis/findings.py`, `src/system_03_search_agent/core/graph.py`
+
+Evidence:
+
+The live answer, captured after the change. Compare against the one at the top of this file:
+
+```
+BRCA1 (gene symbol: BRCA1 [1]. breast-ovarian cancer, familial, susceptibility to, 1 [2],
+pancreatic cancer, susceptibility to, 4 [3], and Fanconi anemia, complementation
+group S [4].
+
+  [2] layer=layer_2_api name='breast-ovarian cancer, familial, susceptibility to, 1'
+      https://www.ncbi.nlm.nih.gov/medgen/C2676676
+  [3] layer=layer_2_api name='pancreatic cancer, susceptibility to, 4'
+      https://www.ncbi.nlm.nih.gov/medgen/C3280442
+  [4] layer=layer_2_api name='Fanconi anemia, complementation group S'
+      https://www.ncbi.nlm.nih.gov/medgen/C4554406
+```
+
+Each name is cited to the MedGen record it was read from, at `layer_2_api` rather than
+laundered into the Layer 1 citation that prompted the lookup.
+
+The premise gate: `6 passed in 129.66s`, having been watched failing 5 of 6 before the
+change. READ THAT NUMBER WITH F-6.2-04: arm A5 is non-deterministic and its green in that
+run is a false one, so this ticket rests on A1, A2, A3 and A4 and not on A5.
+
+Resolver measured directly, four real diseases plus three inputs that must not resolve:
+
+```
+MedGen:C0346153 -> 'Familial cancer of breast'
+MedGen:C4554406 -> 'Fanconi anemia, complementation group S'
+MedGen:C9999999 -> None      (MedGen does not hold it)
+MeSH:D001943    -> None      (not a MedGen id; no lookup spent)
+not-a-curie     -> None
+cold 0.73s, warm 0.0000s, every input key present in the result
+```
+
+Regression suites: `750 passed, 68 skipped, 1 xfailed` across
+`tests/system_03_search_agent/synthesis/` and `core/`. `ruff check src services tests`
+clean. CI gate 2 (`isort`) run before and after the change, exit 0 both times.
+
+TWO CALLS TOTAL rather than two per disease, verified live before the code was written:
+one ESearch ORing every `[ConceptId]` clause, one ESummary over every returned UID. The
+UID-to-concept mapping reads MedGen's own `conceptid` field rather than relying on result
+ordering, which would have attached the wrong name to the right identifier the day NCBI
+reordered.
+
+THE FIX HAD TWO STAGES AND THE SECOND IS THE TRANSFERABLE ONE. Resolution alone produced
+`familial cancer of breast (MedGen:C0346153) [2]`: readable, and still carrying four
+identifiers the reader did not ask for, which arm A2 had pre-registered as the partial fix
+it exists to reject. The model was NOT wrong. It had been handed
+`Disease MedGen:C0346153, name: Familial cancer of breast` by `render_findings_block`, and
+the system instruction tells it to state values as written and to use the identifiers it is
+given. `attack-the-constraint` applied unchanged: the assembly step feeding the model is
+upstream of the model, so it is the constraint. The rendered line is now
+`Disease name: Familial cancer of breast`, and the identifier survives on the finding, the
+citation and the chip, which is where a reader who wants to verify goes.
 
 History:
 - 2026-09-01 lead: created. The two-call resolution path verified live before scoping
+- 2026-09-01 lead: `synthesis/disease_names.py` added, `apply_resolved_disease_names` and
+  the `name_resolved` render branch added to `synthesis/findings.py`, wired into
+  `write_node` between the findings build and the Synth call
+- 2026-09-01 lead: A2 failed on the first live run, and the check was NOT relaxed to
+  accommodate it. Its own docstring, written before the fix, had already named
+  "names AND identifiers beside them" as the partial fix it exists to reject, so the subject
+  was changed rather than the verify surface. Recorded because relaxing it would have been
+  indistinguishable from progress in the summary
+- 2026-09-01 lead: moved to `in-review`. The judge closes this, not the lead who wrote it
 
 ### T-6.2-03: The internal findings-accounting note is not shown to the user
 
@@ -490,6 +556,44 @@ needing explanation, which is the opposite of what the brief assumed.
 History:
 - 2026-09-01 lead: filed. Corrects a characterization in `UI_feedback.md` rather than
   reporting something new
+
+### F-6.2-04: Arm A5 of this phase's own premise gate reports a FALSE GREEN
+
+Status: filed
+Raised by: lead, evidence capture after T-6.2-02 landed
+Severity: high
+Round: 0 (pre-build)
+Ticket: T-6.2-01 (the gate), T-6.2-03 (the defect it fails to pin)
+
+What happened. The full gate run after T-6.2-02 landed reported `6 passed`, including A5,
+the arm asserting the internal findings-accounting note never reaches the reader. T-6.2-03,
+the ticket that fixes that note, HAS NOT BEEN STARTED. A single evidence-capture run of the
+same question minutes later produced:
+
+> BRCA1 (gene symbol: BRCA1 [1]. breast-ovarian cancer, familial, susceptibility to, 1 [2],
+> pancreatic cancer, susceptibility to, 4 [3], and Fanconi anemia, complementation group S
+> [4]. Note: this answer reports 4 of the 5 findings prepared for it, and the one not
+> reported is absent from the citations as well as from the text above
+
+So A5 passed because that particular run happened to drop no findings, not because the
+defect is fixed. This is F-6.2-03's non-determinism turning one arm of the gate into a coin
+flip, and it is the more dangerous consequence of it: a green arm reads as "this class is
+covered".
+
+Why this is filed at severity high against a cosmetic underlying defect: the failure is in
+the VERIFY SURFACE, not in the product. `goal-contracts.md` says a gate that cannot
+distinguish the property holding from nothing having happened is not a gate, and an arm that
+reports green on a live defect is that failure with an extra step. It must be made
+deterministic before T-6.2-03 can be closed against it, or T-6.2-03 will be closed on
+evidence that proves nothing.
+
+The likely fix is not to retry until the note appears, which would be tuning the arm to the
+defect. It is to drive the omission deterministically, so the arm asserts on what a user is
+shown WHEN findings are dropped, which is the case the note exists for.
+
+History:
+- 2026-09-01 lead: filed immediately on noticing the contradiction between a green A5 and a
+  live note in the very next run, before continuing
 
 ### F-6.2-03: The non-determinism reproduces inside the gate itself
 
