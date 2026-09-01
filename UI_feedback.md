@@ -1,13 +1,37 @@
 # UI feedback
 
-Product owner feedback on the user experience, raised 2026-08-31, plus what was verified against the live production deployment rather than taken on trust.
-
-The short version: the backend works and the product is still not usable. Every complaint below was checked, and one of them turned out to have a different root cause than the words suggested. That one is the most important thing in this file.
+Product owner feedback on the user experience, raised 2026-08-31, plus what was verified rather than taken on trust.
 
 Last updated: 2026-09-01.
 
+## Read this first
+
+The short version as written on 2026-08-31: the backend works and the product is still not usable. That sentence was the whole point of this document and it is kept rather than quietly updated, because the second half is what has changed. The backend still works. Whether the product is usable is now YOUR call to make against the workflows below, which is a different state from the one that sentence described.
+
+This document is now two things at once, and the order below reflects which one you need today.
+
+- What to test, and how. The next section. Nine workflows with what to type and what to watch, and an empty column for your verdict.
+- Why each of them exists. Everything after that, kept as the original record with a status line added at the top of each complaint. Nothing has been rewritten or removed, so the reasoning on both sides of every decision survives.
+
+Where things stand, in one table. The detail behind every row is in the section it names.
+
+| Complaint | State on 2026-09-01 | Test with |
+|---|---|---|
+| Answers were unreadable identifiers | FIXED, awaiting your verdict | W1, W4 |
+| Internal findings accounting shown to the reader | FIXED, awaiting your verdict | W3 |
+| 1. Not as responsive as the design | PARTLY DIAGNOSED. An 8px horizontal bleed at 390px, measured; the side-by-side is still owed | not yet |
+| 2. The answer flow feels fragmented | HALF FIXED. The wait now moves. It is not faster, and it is WORSE than measured here | W2 |
+| 3. Follow-ups do not continue the thread | FIXED, awaiting your verdict | W5, W6 |
+| 4. The integrations page is a placeholder | PREMISE IN DOUBT. Journey 5 found no dead button on develop | not yet |
+| 5. The answer never offers a next step | FIXED, awaiting your verdict | W7, W8 |
+| Broken sentence fragments in an answer | FIXED, awaiting your verdict | W9 |
+
+Three things are recorded and NOT fixed, so they are not worth reporting as new: the answer can take over 25 seconds, the app scrolls sideways about 8px on a 390px screen, and the reported cost of a run is `0.0`.
+
 ## Table of contents
 
+- [Read this first](#read-this-first)
+- [Manual test workflows, for the product owner to run](#manual-test-workflows-for-the-product-owner-to-run)
 - [The headline finding](#the-headline-finding)
 - [Seen in a real browser, not inferred](#seen-in-a-real-browser-not-inferred)
 - [The evidence, measured](#the-evidence-measured)
@@ -19,10 +43,74 @@ Last updated: 2026-09-01.
 - [What this means for sequencing](#what-this-means-for-sequencing)
 - [Why the two-day reference build felt better](#why-the-two-day-reference-build-felt-better)
 - [Test against develop, not production](#test-against-develop-not-production)
-- [Manual test workflows, for the product owner to run](#manual-test-workflows-for-the-product-owner-to-run)
 - [End-to-end workflows for browser-driven testing](#end-to-end-workflows-for-browser-driven-testing)
 - [Working practice: two sessions, one checkout](#working-practice-two-sessions-one-checkout)
 - [What has not been checked](#what-has-not-been-checked)
+
+## Manual test workflows, for the product owner to run
+
+Added 2026-09-01, by product-owner decision. THE ASSISTANT DOES NOT DRIVE THE BROWSER unless asked. The loop is:
+
+- The assistant fixes the frontend and the backend.
+- The assistant writes the workflow here.
+- The product owner runs it and records what they saw.
+
+Where to test: DEVELOP, `https://search-agent-web-develop-2aeb.up.railway.app`. Production is checked only when confirming a release shipped what it claimed.
+
+How to read the tables:
+
+- Type this: type it exactly.
+- What to watch: what should happen, and what should not.
+- What I saw: your verdict, in your words.
+
+A blank verdict means not yet run, which is different from a passing one.
+
+### Ready to test now
+
+These are on the build phase 6.2 branch and are NOT on develop yet. They become testable the moment that branch merges. Nothing below has been seen by a person yet.
+
+| # | Workflow | Type this | What to watch | What I saw |
+|---|---|---|---|---|
+| W1 | Disease names in an answer | `Which diseases are associated with BRCA1?` | The answer names diseases in words, for example "breast-ovarian cancer, familial, susceptibility to, 1". It should NOT read `MedGen:C2676676`. Each name should have a numbered citation that opens a real MedGen page | |
+| W2 | The wait feels alive | The same question, then watch without touching anything | A number next to the question counting up every second, and the current step's dot pulsing. There should be no stretch longer than about two seconds where nothing on screen moves | |
+| W3 | No internal bookkeeping | The same question | If the answer says something was left out, it should say it in your terms, for example "3 further disease records were found for this question and are not described above". It should NOT say "4 of the 5 findings prepared for it" | |
+| W4 | A second gene, to see it is not a one-off | `Which diseases are associated with TP53?` | Same three things as W1 to W3. TP53 has more associated diseases, so this is also the case where something is most likely to be left out | |
+
+### Also ready to test, built after the decisions of 2026-09-01
+
+UPDATED 2026-09-01: all five are now BUILT and sit on the phase branch alongside W1 to W4. They become testable at the same moment, when that branch merges to develop. Nothing here has been seen by a person yet.
+
+| # | Workflow | Type this | What to watch | What I saw |
+|---|---|---|---|---|
+| W5 | A follow-up continues the thread (BUILT) | Ask `Which diseases are associated with BRCA1?`, wait for the answer, then in the follow-up box ask `What variants cause it?` | The second answer should know that "it" means the diseases just discussed, without you naming them again. Every claim in it should still carry its own citation | |
+| W6 | The thread survives more than one turn (BUILT) | After W5, ask a third question referring further back, for example `And which of those has the most evidence?` | It should still be following the conversation, not just the previous turn | |
+| W7 | The answer offers a next step (BUILT) | Any question that returns several results | The answer may end by offering somewhere to go next. That offer must be about something actually found and not described, never an invented topic. Accepting it should CONTINUE the thread, not start over | |
+| W8 | An answer with nothing to offer stays quiet (BUILT) | Ask something with no answer, for example `Which diseases are associated with the gene ZZZZZZ999?` | It should refuse cleanly and offer NO next step. A system that always asks something is padding | |
+| W9 | No broken sentences (BUILT) | Any question where part of the answer is left out, W4 is the likeliest | Sentences should be whole. No unclosed brackets, no sentence missing its verb. A sentence that lost a piece should be dropped entirely rather than shown broken | |
+
+### Known, not yet fixed, so not worth reporting as new
+
+Recording these so a test run does not spend time on things already on the list:
+
+- The answer can take more than 25 seconds on develop, longer than the 12 to 14 seconds measured on 2026-08-31. The counter in W2 makes the wait visible and makes it no shorter.
+- The app scrolls sideways by about 8 pixels on a 390px-wide phone screen. 768px and 1440px are clean.
+- The answer arrives in one or two chunks at the end rather than streaming in word by word.
+- The reported cost of a run is `0.0`, which is not yet trusted either way.
+
+### The eight browser journeys, and what each would cost to run
+
+Built and gated behind `RUN_LIVE_JOURNEYS=1`, available the moment they are asked for. Three have been run; the rest are waiting on an instruction, per the decision above.
+
+| # | Journey | Cost to run | State |
+|---|---|---|---|
+| 1 | First visit to first answer | 1 guest answer | Built, not run |
+| 2 | The wait, one frame a second | 1 guest answer | Run 2026-09-01 |
+| 3 | Follow-up continuity | 2 guest answers | Built, not run. The evidence behind W5 |
+| 4 | Guest allowance exhaustion | 6 answers, a whole guest allowance | Built, not run |
+| 5 | Every integrations affordance | None | Run 2026-09-01 |
+| 6 | Refusal and error paths | Up to 2 answers | Built, not run. The evidence behind W8 |
+| 7 | Narrow viewports | None | Run 2026-09-01 |
+| 8 | Sign up, reload, sign in | None, creates an account | Built, not run |
 
 ## The headline finding
 
@@ -147,6 +235,8 @@ Two things in that table deserve their own follow-up beyond the answer-quality p
 
 ## Complaint 1: the UI is not as responsive as the design
 
+STATUS 2026-09-01: PARTLY DIAGNOSED, not fixed. Journey 7 measured the app bleeding 8px horizontally at 390px, which is the one layout defect a screenshot cannot show; 768px and 1440px are clean. The side-by-side comparison against the prototype is still owed (T-6.2-10).
+
 Design source: `docs/build/design/`, in particular `design/design-system/prototype/app.html`.
 
 Not yet diagnosed. This one I have not verified, because judging responsiveness against the approved design needs a browser and a side-by-side comparison, not a curl. It should be checked by opening the prototype and the live app next to each other at the same viewport widths.
@@ -154,6 +244,8 @@ Not yet diagnosed. This one I have not verified, because judging responsiveness 
 What is worth knowing before that comparison: build phases 4.8 and 4.9 delivered the visual design and a nine-gap fidelity pass, so the gap being described now is either a regression since then or something the fidelity pass did not cover. Establish which before opening work, because those are different jobs.
 
 ## Complaint 2: the answer flow feels fragmented
+
+STATUS 2026-09-01: HALF FIXED. The wait now shows continuous motion, a counter ticking every second and a pulsing step. It is NOT faster, and journey 2 measured it WORSE than this section records: no answer at 25 seconds against the 12 to 14 measured here, with 15 consecutive seconds of no visual change. The two-chunk delivery below is also unchanged.
 
 Confirmed, and the measurement above explains it. There are 14 seconds to cover and the interface currently gives the user very little during them.
 
@@ -175,6 +267,8 @@ The sequence a user actually experiences today:
 That last point matters and is easy to miss. Only two `token` events were emitted 47 microseconds apart. The answer is not being streamed word by word, it is being delivered whole in two chunks at the end. Any perception of "streaming" in the current UI is therefore cosmetic. If streaming is wanted, that is a Write-step change, not a frontend change.
 
 ## Complaint 3: follow-up questions do not continue the thread
+
+STATUS 2026-09-01: FIXED, awaiting your verdict. A follow-up now carries the whole thread forward, bounded, as retrieval guidance only. Test it with W5 and W6.
 
 Partly built, and the gap is real.
 
@@ -201,6 +295,8 @@ Fixing this is more than wiring. It means deciding what a follow-up turn actuall
 That is a product decision before it is an engineering one, and it is the single change that would most move this from a search box to an assistant.
 
 ## Complaint 4: the integrations page is a placeholder
+
+STATUS 2026-09-01: PREMISE IN DOUBT. Journey 5 found NO buttons at all on develop, so the dead button this section describes may already be gone. See the correction at the end of this section.
 
 Confirmed, and the underlying problem is worse than the page.
 
@@ -229,7 +325,21 @@ The specific question to answer when it is done: what did that build put in fron
 
 So the page is not lying, but it advertises a shelf of capabilities and hands the visitor nothing to pick up. For KGX specifically the honest options are to build the HTTP endpoint or to stop advertising a button that does nothing.
 
+### Correction to complaint 4, from journey 5
+
+The integrations page on DEVELOP has no buttons at all. It is five cards, and each one hands a visitor something usable:
+
+- Real endpoint paths.
+- A pasteable MCP config.
+- Real CLI commands.
+
+The KGX card states its own limitation in the product's own words: "A batch command rather than a live endpoint, and not a whole-graph snapshot". The GraphQL card says "Registered accounts only".
+
+That does not match complaint 4 below, which describes "a request button that acknowledges and does nothing". The likely reason is the one this document itself raises: complaint 4's evidence was gathered against PRODUCTION, which lags develop by a release. NOT YET ESTABLISHED, and deliberately not assumed: whether production still shows the dead button.
+
 ## Complaint 5: the answer just stops, and never offers the next step
+
+STATUS 2026-09-01: FIXED, awaiting your verdict. An answer may now offer one honest next step derived from what retrieval left out, or stay quiet. Test it with W7 and W8.
 
 Raised by the product owner, 2026-08-31: an answer should be able to end by offering where to go next, for example "would you like me to dive deeper into XYZ", so a discussion can actually finish rather than simply halting.
 
@@ -246,9 +356,16 @@ Checked in the source rather than assumed, because the interesting part is that 
 | Frontend type | Declared, `frontend/src/lib/events.ts:76`, as `string` or `null` |
 | Frontend renderer | NONE. Every other reference in `frontend/src/` is a test fixture passing `null` |
 
-So the field is wired end to end as a TYPE and is dead as a BEHAVIOUR. This is the same shape build phase 4.5 recorded for session memory, in that phase's own words: write without read and read without write are the same bug seen from two sides, and both look correct in isolation. Here it is neither written nor read, which is why no test has ever failed over it.
+So the field is wired end to end as a TYPE and is dead as a BEHAVIOUR. This is the same shape build phase 4.5 recorded for session memory, in that phase's own words:
 
-There is a second, adjacent piece of machinery that is genuinely live: Section 22.1's ambiguous-query path emits `trust_signal = ask` with a clarifying question as the answer text. That path works. It is not this. It fires BEFORE any tool runs, to disambiguate an entity the system could not resolve, and it replaces the answer. What is being asked for here fires AFTER a complete, cited answer and adds to it.
+- Write without read and read without write are the same bug seen from two sides.
+- Both look correct in isolation. Here it is neither written nor read, which is why no test has ever failed over it.
+
+There is a second, adjacent piece of machinery that is genuinely live: Section 22.1's ambiguous-query path emits `trust_signal = ask` with a clarifying question as the answer text. That path works. It is not this. It differs on every axis that matters:
+
+- It fires BEFORE any tool runs.
+- Its job is to disambiguate an entity the system could not resolve.
+- It replaces the answer rather than adding to it. What is being asked for here fires AFTER a complete, cited answer and adds to it.
 
 ### What has to be decided before this is buildable
 
@@ -261,7 +378,10 @@ Naming this as a product decision rather than a ticket, because getting it wrong
 
 ### Sequencing
 
-Behind build phases 6.0 and 6.1 with the rest of the UI work, per the decision below, and behind complaint 3 within that work for the reason just given.
+Two orderings applied to this item as originally written:
+
+- Behind build phases 6.0 and 6.1, with the rest of the UI work, per the decision below.
+- Behind complaint 3 within that work, for the reason just given.
 
 ## What this means for sequencing
 
@@ -340,67 +460,6 @@ The two deployments, from `README.md`:
 They are fully separate: different Railway projects, different databases, different signing keys. Ask either API's `/health` and it names itself in an `app_env` field.
 
 From here on, UI verification runs against DEVELOP. Production gets checked only when confirming a release actually shipped what it claimed. The live diagnostic spec at `frontend/e2e/live-answer-screenshot.spec.ts` currently hardcodes the production URL and should take the target from an environment variable instead.
-
-## Manual test workflows, for the product owner to run
-
-Added 2026-09-01, by product-owner decision. THE ASSISTANT DOES NOT DRIVE THE BROWSER unless asked. It fixes the frontend and the backend, then writes the workflow here, and the product owner runs it and records what they saw.
-
-Where to test: DEVELOP, `https://search-agent-web-develop-2aeb.up.railway.app`. Production is checked only when confirming a release shipped what it claimed.
-
-How to read the tables: type what is in the "type this" column, watch for what is in "what to watch", and write what you actually saw in "what I saw". A blank verdict means not yet run, which is different from a passing one.
-
-### Ready to test now
-
-These are on the build phase 6.2 branch and are NOT on develop yet. They become testable the moment that branch merges. Nothing below has been seen by a person yet.
-
-| # | Workflow | Type this | What to watch | What I saw |
-|---|---|---|---|---|
-| W1 | Disease names in an answer | `Which diseases are associated with BRCA1?` | The answer names diseases in words, for example "breast-ovarian cancer, familial, susceptibility to, 1". It should NOT read `MedGen:C2676676`. Each name should have a numbered citation that opens a real MedGen page | |
-| W2 | The wait feels alive | The same question, then watch without touching anything | A number next to the question counting up every second, and the current step's dot pulsing. There should be no stretch longer than about two seconds where nothing on screen moves | |
-| W3 | No internal bookkeeping | The same question | If the answer says something was left out, it should say it in your terms, for example "3 further disease records were found for this question and are not described above". It should NOT say "4 of the 5 findings prepared for it" | |
-| W4 | A second gene, to see it is not a one-off | `Which diseases are associated with TP53?` | Same three things as W1 to W3. TP53 has more associated diseases, so this is also the case where something is most likely to be left out | |
-
-### Also ready to test, built after the decisions of 2026-09-01
-
-UPDATED 2026-09-01: all five are now BUILT and sit on the phase branch alongside W1 to W4. They become testable at the same moment, when that branch merges to develop. Nothing here has been seen by a person yet.
-
-| # | Workflow | Type this | What to watch | What I saw |
-|---|---|---|---|---|
-| W5 | A follow-up continues the thread (BUILT) | Ask `Which diseases are associated with BRCA1?`, wait for the answer, then in the follow-up box ask `What variants cause it?` | The second answer should know that "it" means the diseases just discussed, without you naming them again. Every claim in it should still carry its own citation | |
-| W6 | The thread survives more than one turn (BUILT) | After W5, ask a third question referring further back, for example `And which of those has the most evidence?` | It should still be following the conversation, not just the previous turn | |
-| W7 | The answer offers a next step (BUILT) | Any question that returns several results | The answer may end by offering somewhere to go next. That offer must be about something actually found and not described, never an invented topic. Accepting it should CONTINUE the thread, not start over | |
-| W8 | An answer with nothing to offer stays quiet (BUILT) | Ask something with no answer, for example `Which diseases are associated with the gene ZZZZZZ999?` | It should refuse cleanly and offer NO next step. A system that always asks something is padding | |
-| W9 | No broken sentences (BUILT) | Any question where part of the answer is left out, W4 is the likeliest | Sentences should be whole. No unclosed brackets, no sentence missing its verb. A sentence that lost a piece should be dropped entirely rather than shown broken | |
-
-### Known, not yet fixed, so not worth reporting as new
-
-Recording these so a test run does not spend time on things already on the list:
-
-- The answer can take more than 25 seconds on develop, longer than the 12 to 14 seconds measured on 2026-08-31. The counter in W2 makes the wait visible and makes it no shorter.
-- The app scrolls sideways by about 8 pixels on a 390px-wide phone screen. 768px and 1440px are clean.
-- The answer arrives in one or two chunks at the end rather than streaming in word by word.
-- The reported cost of a run is `0.0`, which is not yet trusted either way.
-
-### The eight browser journeys, and what each would cost to run
-
-Built and gated behind `RUN_LIVE_JOURNEYS=1`, available the moment they are asked for. Three have been run; the rest are waiting on an instruction, per the decision above.
-
-| # | Journey | Cost to run | State |
-|---|---|---|---|
-| 1 | First visit to first answer | 1 guest answer | Built, not run |
-| 2 | The wait, one frame a second | 1 guest answer | Run 2026-09-01 |
-| 3 | Follow-up continuity | 2 guest answers | Built, not run. The evidence behind W5 |
-| 4 | Guest allowance exhaustion | 6 answers, a whole guest allowance | Built, not run |
-| 5 | Every integrations affordance | None | Run 2026-09-01 |
-| 6 | Refusal and error paths | Up to 2 answers | Built, not run. The evidence behind W8 |
-| 7 | Narrow viewports | None | Run 2026-09-01 |
-| 8 | Sign up, reload, sign in | None, creates an account | Built, not run |
-
-### Correction to complaint 4, from journey 5
-
-The integrations page on DEVELOP has no buttons at all. It is five cards carrying real endpoint paths, a pasteable MCP config and real CLI commands, and the KGX card states its own limitation in the product's own words: "A batch command rather than a live endpoint, and not a whole-graph snapshot". The GraphQL card says "Registered accounts only".
-
-That does not match complaint 4 below, which describes "a request button that acknowledges and does nothing". The likely reason is the one this document itself raises: complaint 4's evidence was gathered against PRODUCTION, which lags develop by a release. NOT YET ESTABLISHED, and deliberately not assumed: whether production still shows the dead button.
 
 ## End-to-end workflows for browser-driven testing
 
