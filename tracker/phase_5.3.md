@@ -93,7 +93,7 @@ Measured 2026-08-31 at the branch point, on `develop` at `332da84`.
 | Doc drift | 0 stale, 0 structural, 10 facts computed | `python tracker/check_doc_drift.py --check` |
 | Transports | product-model ok 851ms, harness-model ok 95ms, graph ok 934ms via the HTTPS query service | `python3 tracker/preflight.py` |
 | Python tests | 4652 at the branch point | `check_doc_drift.py` |
-| Frontend tests | 235 | `check_doc_drift.py` |
+| Frontend tests | 235 at the branch point | `check_doc_drift.py` |
 | Golden rows | 50, schema `version: 1` | `eval/golden/golden_dataset.json` |
 | Graph snapshot label | `ncbi_kg_v1_2026-04-22` (the `_DEFAULT_GRAPH_SNAPSHOT_VERSION` fallback) | `cypher_query.py:237` |
 

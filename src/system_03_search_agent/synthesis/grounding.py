@@ -803,7 +803,34 @@ def run_grounding_pass(
     display_slot: dict[int, int] = {}
 
     for sentence in _split_sentences(narrative):
-        kept_parts: list[str] = []
+        # Build phase 6.2, T-6.2-15. Nothing in this sentence is committed to
+        # `claims`, `display_slot` or `surviving_sentences` until the whole
+        # sentence has been walked, because whether a surviving clause may be
+        # SHOWN depends on what happened to the clauses AFTER it.
+        #
+        # Observed live before this change:
+        #
+        #     BRCA1 (gene symbol: BRCA1 [1]. breast-ovarian cancer ... [2],
+        #
+        # A clause boundary runs from one marker to the next, so the segment
+        # holding [2] was ") is associated with familial cancer of breast ".
+        # Stripping it took the closing parenthesis AND the sentence's only
+        # verb, and what shipped was a fragment. The connective tissue of a
+        # sentence lives inside its clauses, so removing one from the middle
+        # can leave the rest ungrammatical.
+        #
+        # `kept_parts` holds `(text, ref_index_or_None)` rather than finished
+        # strings, because the display number cannot be assigned until the
+        # sentence is known to survive: numbering a claim that is then
+        # discarded would leave a gap in a sequence Section 9.4 requires to
+        # be dense.
+        kept_parts: list[tuple[str, int | None]] = []
+        # Claims for THIS sentence, promoted to `claims` only on commit.
+        pending_claims: list[GroundedClaim] = []
+        # One entry per segment that asserted something, True if it survived.
+        # This is what makes "was a clause stripped from the MIDDLE" decidable
+        # rather than guessed at.
+        segment_kept: list[bool] = []
         for text, marker in _segments(sentence):
             if marker is None:
                 # Unmarked text. Framing is allowed to stand; anything else
@@ -814,9 +841,11 @@ def run_grounding_pass(
                 if not _asserts_something(text):
                     continue
                 if _is_framing(text):
-                    kept_parts.append(text.strip())
+                    kept_parts.append((text.strip(), None))
+                    segment_kept.append(True)
                 else:
                     stripped += 1
+                    segment_kept.append(False)
                 continue
 
             finding = by_ref.get(marker)
@@ -824,6 +853,7 @@ def run_grounding_pass(
                 # Step 2: the marker names a finding this call was never
                 # given. Hallucinated. Drop the clause and the marker.
                 stripped += 1
+                segment_kept.append(False)
                 continue
 
             claim_text = _clean_claim(text)
@@ -875,18 +905,72 @@ def run_grounding_pass(
             ):
                 # Steps 5 and 6: no similarity fallback, no partial credit.
                 stripped += 1
+                segment_kept.append(False)
                 continue
 
-            if finding.ref_index not in display_slot:
-                display_slot[finding.ref_index] = len(display_slot) + 1
             # `text`, not `claim_text`: the original span carries the
             # separators that make the rebuilt sentence read as prose. The
             # cleaned form is what gets matched and stored as the claim.
-            kept_parts.append(f"{text.rstrip()} [{display_slot[finding.ref_index]}]")
-            claims.append(GroundedClaim(claim_text=claim_text, finding=finding))
+            #
+            # T-6.2-15: NOT committed here. The display number and the claim
+            # are both assigned below, once this sentence is known to
+            # survive, so a discarded sentence leaves no numbered gap and no
+            # claim pointing at prose nobody will read.
+            kept_parts.append((text.rstrip(), finding.ref_index))
+            pending_claims.append(GroundedClaim(claim_text=claim_text, finding=finding))
+            segment_kept.append(True)
+
+        # T-6.2-15, and the decision recorded in `DECISIONS.md` on
+        # 2026-09-01: a sentence that lost a clause from its MIDDLE is
+        # dropped whole, rather than showing the remainder.
+        #
+        # "From the middle" is decided rather than guessed: a stripped
+        # segment counts only when a SURVIVING segment follows it. That is
+        # exactly the case where the removed clause was carrying connective
+        # tissue the rest depends on, a verb or a closing bracket.
+        #
+        # A strip at the END of a sentence is deliberately NOT this case.
+        # "A [1], B [2], and C [3]" losing C leaves "A [1], B [2]", which is
+        # a grammatical prefix, and dropping the sentence there would throw
+        # away two good claims to fix nothing. The narrower rule keeps them.
+        #
+        # THE COST IS REAL AND WAS ACCEPTED, not discovered later: one
+        # unsupported disease in the middle of a list of four takes the other
+        # three with it, turning a partial answer into a smaller one. The
+        # product owner weighed that against showing a fragment and chose
+        # this, on the grounds that a fragment is a sentence whose meaning
+        # nobody verified. Repairing the remainder into grammatical prose was
+        # never available: that means generating text AFTER the grounding
+        # pass, which is the one thing that would let unverified prose reach
+        # a reader.
+        dropped_from_middle = any(
+            not kept and any(segment_kept[later] for later in range(index + 1, len(segment_kept)))
+            for index, kept in enumerate(segment_kept)
+        )
+
+        if dropped_from_middle:
+            # Everything this sentence would have contributed is discarded,
+            # and the discarded claims are counted as stripped. Leaving them
+            # out of the count would understate the omission to the
+            # disclosure that reports it.
+            stripped += len(pending_claims)
+            pending_claims.clear()
+            kept_parts.clear()
 
         if kept_parts:
-            rebuilt = "".join(kept_parts).strip()
+            # The display numbers are assigned HERE, on a sentence that is
+            # actually going to be shown, so the sequence Section 9.4
+            # requires to be dense stays dense.
+            rendered: list[str] = []
+            for part_text, ref_index in kept_parts:
+                if ref_index is None:
+                    rendered.append(part_text)
+                    continue
+                if ref_index not in display_slot:
+                    display_slot[ref_index] = len(display_slot) + 1
+                rendered.append(f"{part_text} [{display_slot[ref_index]}]")
+            claims.extend(pending_claims)
+            rebuilt = "".join(rendered).strip()
             # A surviving fragment can begin with the glue that joined it to
             # a stripped predecessor. Reading ", and Disease record X [1]."
             # as a sentence is worse than reading it without the comma.

@@ -346,6 +346,12 @@ export function App() {
   const activeEntryId = useRef<string | null>(null);
   /** True while a stopped run should stay stopped (F-4.8-A-10). */
   const [stopped, setStopped] = useState(false);
+  // T-6.2-05. When the current run started, client-side, driving the
+  // elapsed counter on the run screen. Deliberately NOT `view.elapsedMs`,
+  // which comes from the server's `done` payload and therefore only
+  // exists once the answer has already landed: the number a user needs
+  // is the one during the 12 to 14 second wait, not after it.
+  const [runStartedAt, setRunStartedAt] = useState<number | null>(null);
   /**
    * Whether the stored-searches rail is open (F-4.8-P-03).
    *
@@ -701,6 +707,7 @@ export function App() {
       }
       setRunId(null);
       setStopped(false);
+      setRunStartedAt(Date.now());
       setSearchView({ name: "run", question });
 
       try {
@@ -896,6 +903,10 @@ export function App() {
           <RunScreen
             question={searchView.question}
             activeStep={stopped ? null : step}
+            // Null once the run is no longer in flight, which is what stops
+            // the counter and the pulse. A landed or stopped run that kept
+            // counting would assert work that is not happening.
+            startedAt={stopped || view.landed ? null : runStartedAt}
             reachedSteps={view.reachedSteps}
             toolCalls={view.toolCalls}
             steps={view.steps}
@@ -966,6 +977,12 @@ export function App() {
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}
+                // T-6.2-08. Accepting the offer goes through the SAME `ask`
+                // as anything typed, so it continues the thread rather than
+                // starting over. That was the product owner's condition on
+                // this feature: an offer the system makes and then forgets
+                // making is worse than no offer.
+                nextStep={view.nextStep}
                 onAsk={(next) => void ask(next, depth, true)}
               />
             }

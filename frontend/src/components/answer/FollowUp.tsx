@@ -26,9 +26,25 @@ import { designTokens } from "../../theme";
 export interface FollowUpProps {
   hints?: string[];
   onAsk?: (question: string) => void;
+  /**
+   * T-6.2-08. The backend's offer of somewhere to go next, or null.
+   *
+   * Rendered as ONE offer above the hint row rather than as a fourth hint,
+   * and the distinction is the point rather than styling. The hints are a
+   * fixed MENU that is the same on every answer; this is a single sentence
+   * about THIS answer, derived from what this retrieval actually left out.
+   * Folding it into the menu would make a specific, earned offer look like
+   * the generic three.
+   *
+   * Accepting it dispatches through the same `onAsk` as anything typed, so
+   * it continues the thread rather than starting over. That ordering was
+   * the product-owner's condition on this feature: an offer the system
+   * makes and then forgets making is worse than no offer.
+   */
+  nextStep?: string | null;
 }
 
-export function FollowUp({ hints = [], onAsk }: FollowUpProps) {
+export function FollowUp({ hints = [], onAsk, nextStep = null }: FollowUpProps) {
   const [text, setText] = useState("");
 
   const submit = (event: FormEvent) => {
@@ -115,6 +131,52 @@ export function FollowUp({ hints = [], onAsk }: FollowUpProps) {
           Ask
         </Box>
       </Box>
+
+      {nextStep ? (
+        <Box
+          data-testid="next-step-offer"
+          sx={{
+            mt: 1.75,
+            p: 1.5,
+            borderRadius: 0.5,
+            border: `1px solid ${designTokens.line}`,
+            bgcolor: designTokens.surfaceSunk,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            flexWrap: "wrap",
+          }}
+        >
+          <Typography sx={{ fontSize: 14, flex: 1, minWidth: 220 }}>
+            {nextStep}
+          </Typography>
+          {/*
+            A real button, not a chip styled like one. Accepting an offer is
+            the same action as typing the question, so it goes through the
+            same `onAsk` and therefore continues the thread.
+          */}
+          <Box
+            component="button"
+            type="button"
+            data-testid="next-step-accept"
+            onClick={() => onAsk?.(nextStep)}
+            sx={{
+              font: "inherit",
+              fontSize: 13.5,
+              fontWeight: 600,
+              px: 1.6,
+              py: 0.75,
+              borderRadius: 0.5,
+              cursor: "pointer",
+              color: "#FFFFFF",
+              bgcolor: designTokens.blue,
+              border: 0,
+            }}
+          >
+            Yes, go deeper
+          </Box>
+        </Box>
+      ) : null}
 
       {hints.length > 0 ? (
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.5 }}>

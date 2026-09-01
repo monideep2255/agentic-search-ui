@@ -291,7 +291,21 @@ _DEPTH_LENGTH_RATIO = 1.4
 #: this exact phrase, not merely "some note appeared", so a generic caveat
 #: cannot satisfy the disclosure branch: build phase 4.3 found four gate arms
 #: that passed because SOMETHING arrived rather than the right thing.
-_INCOMPLETE_NOTE_MARKER = "not reported are absent from the citations"
+#:
+#: Moved by build phase 6.2's T-6.2-03, which reworded that note from the
+#: system's side to the reader's: it said "the 2 not reported are absent from
+#: the citations as well as from the text above" and now says "2 further
+#: disease records were found for this question and are not described above".
+#: The PROPERTY this constant guards is unchanged, that an answer omitting a
+#: pinned disease says so, and only the phrase carrying it moved.
+#:
+#: The comment at the assertion below warns that a fingerprint a grammar fix
+#: can invalidate is testing the wording rather than the control, and that
+#: warning applies to this line as much as to the count it replaced. "not
+#: described above" is the clause that states the omission, so it is the last
+#: part of the sentence a rewording would keep; it is still a phrase rather
+#: than a property, which is the residual this comment exists to flag.
+_INCOMPLETE_NOTE_MARKER = "not described above"
 
 # F-4.5-03. Live gene-symbol resolution goes to E-utilities, whose
 # unauthenticated pool is 3 requests per second, and this file fires several

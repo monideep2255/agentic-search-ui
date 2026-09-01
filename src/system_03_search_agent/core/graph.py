@@ -494,8 +494,10 @@ from system_03_search_agent.harness.harness import (
 )
 from system_03_search_agent.harness.tiers import Tier
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
+from system_03_search_agent.synthesis.disease_names import resolve_concept_ids
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
+    apply_resolved_disease_names,
     build_completeness_directive,
     build_synth_findings,
     build_synth_messages,
@@ -4002,20 +4004,123 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     grader splits sentences on periods, so inlining values would fragment the
     note into uncited pieces no matter how it was worded.
     """
-    total = reported + len(omitted)
     count = len(omitted)
-    # Singular and plural are handled rather than left as "1 findings are",
+
+    # Build phase 6.2, T-6.2-03. The note is now written from the READER'S
+    # side rather than the system's, and the three fixes above are preserved
+    # rather than undone: it is still ONE sentence, it still states SCALE
+    # instead of inlining values, and it still never claims the omitted rows
+    # are in the citations.
+    #
+    # What changed is who it is for. It read:
+    #
+    #     Note: this answer reports 3 of the 5 findings prepared for it, and
+    #     the 2 not reported are absent from the citations as well as from
+    #     the text above
+    #
+    # A researcher hit that on the live site (`UI_feedback.md`) and it told
+    # them nothing they could act on. "Findings prepared for it" is this
+    # system's internal unit, the reader never saw a list of five, and
+    # reporting a shortfall against a denominator they cannot inspect reads
+    # as a warning about the three results that ARE there.
+    #
+    # THE DENOMINATOR PROPERTY IS NOT LOST, which matters because
+    # F-4.5-A-16 was a real defect: `count` is `len(omitted)`, derived from
+    # the same prepared-findings set the old `total` was, so an answer
+    # built from 500 retrieved rows still says "2" here and never "498".
+    # `test_write_completeness.py` asserts exactly that against this
+    # wording.
+    #
+    # Naming the record TYPE is safe where naming values is not. The
+    # docstring above explains why values cannot be inlined: a Layer 1
+    # value like "NM_007294.4(BRCA1):c.190T>G" is full of periods and the
+    # coverage grader splits sentences on them. A type is a single word.
+    # For the same reason there is no semicolon in this sentence, since the
+    # grounding pass treats `;` as a sentence boundary too, and a second
+    # sentence here would read as an uncited factual claim.
+    types = {
+        entity_type.strip().lower()
+        for finding in omitted
+        if (entity_type := str(getattr(finding, "entity_type", "") or ""))
+    }
+    label = f"{types.pop()} record" if len(types) == 1 else "record"
+
+    # Singular and plural are handled rather than left as "1 records are",
     # because this string is shown to a reader in a clinical context and a
     # visible grammar slip in a caveat undermines the caveat.
-    tail = (
-        "and the one not reported is absent"
-        if count == 1
-        else f"and the {count} not reported are absent"
-    )
+    if count == 1:
+        return (
+            f"Note: one further {label} was found for this question and is "
+            "not described above"
+        )
     return (
-        f"Note: this answer reports {reported} of the {total} findings "
-        f"prepared for it, {tail} from the citations as well as from the "
-        "text above"
+        f"Note: {count} further {label}s were found for this question and "
+        "are not described above"
+    )
+
+
+def _build_next_step_offer(
+    omitted: list[Any], trust_outcome: str, refused: bool
+) -> str | None:
+    """Offer somewhere to go next, or None when there is nowhere honest.
+
+    Build phase 6.2, T-6.2-08, on the product-owner decision of 2026-09-01.
+
+    ## Built in code, never generated
+
+    `UI_feedback.md` names the generated version as the easy and dangerous
+    path, and the reasoning is worth restating rather than referencing: an
+    offer to go deeper is a CLAIM that there is something deeper. A model
+    asked to write one will happily propose a follow-up about data this
+    graph does not hold, and that is a confident wrong answer wearing a
+    question mark. It would also bypass every control this system has,
+    because the grounding pass checks the ANSWER and would never see it.
+
+    So the offer is derived from the one thing that is already known to
+    exist and already known to be absent from the answer: the findings
+    retrieval returned and the answer did not report. Those are the same
+    `omitted` rows `_build_incomplete_answer_note` discloses, so the offer
+    and the disclosure can never disagree about whether there is more.
+
+    ## When it declines, which is most of the time
+
+    Returning None is the correct and common outcome, and the product-owner
+    decision names it explicitly: an answer that always asks something will
+    pad. Four cases decline:
+
+    - Nothing was omitted. There is no more, so there is nothing to offer.
+    - The answer was refused. There is no answer to go deeper from.
+    - `trust_outcome` is `refuse`, the same case reached by a different
+      route.
+    - The omitted rows carry no usable entity type, so the offer would have
+      to be vague enough to be worthless ("would you like to see more?").
+
+    ## Why it names a TYPE and not the values
+
+    The same reason `_build_incomplete_answer_note` states scale rather than
+    inlining values: a Layer 1 value like `NM_007294.4(BRCA1):c.190T>G` is
+    full of periods, and inlining one fragments the sentence for anything
+    downstream that splits on them. A type is a single word.
+    """
+    if refused or trust_outcome == "refuse" or not omitted:
+        return None
+
+    types = {
+        entity_type.strip().lower()
+        for finding in omitted
+        if (entity_type := str(getattr(finding, "entity_type", "") or ""))
+    }
+    if len(types) != 1:
+        # Either nothing usable, or a mixed bag whose only honest phrasing
+        # is too vague to be worth showing.
+        return None
+
+    label = types.pop()
+    count = len(omitted)
+    noun = f"{label} record" if count == 1 else f"{label} records"
+    return (
+        f"Would you like me to go through the {count} further {noun} "
+        f"found for this question?"
     )
 
 
@@ -5475,6 +5580,35 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     synth_findings, findings_capped = build_synth_findings(
         findings, _pick_representative_field, max_findings=_MAX_CITATIONS_PER_ANSWER
     )
+
+    # Build phase 6.2, T-6.2-02. A `curie_fallback` finding is one whose own
+    # field was unusable, which for a Disease row in this snapshot is the
+    # normal case: the MedGen ETL wrote the source vocabulary into `name`,
+    # so the strongest true statement the row supported was its identifier.
+    # That is what made a fully grounded, fully cited answer read
+    # "MedGen:C0346153, MedGen:C2676676, MedGen:C3280442" to a researcher.
+    #
+    # Resolution happens HERE, after the findings list is built and before
+    # the model is called, for two reasons. It needs the finding list to
+    # know which CURIEs are actually going to be cited, so a row that was
+    # capped out of the list never costs a lookup. And it must be upstream
+    # of the Synth call, because the point is to hand the model a readable
+    # value rather than to post-process prose it already wrote: rewriting
+    # the answer afterwards would put an unciteable name into a sentence the
+    # grounding pass then strips.
+    #
+    # It cannot fail the query. `resolve_concept_ids` never raises and maps
+    # anything it could not resolve to None, and `apply_resolved_disease_names`
+    # leaves those findings exactly as they were, so the failure mode of
+    # this whole path is the unreadable-but-correct answer that shipped
+    # before it existed.
+    synth_findings = apply_resolved_disease_names(
+        synth_findings,
+        await resolve_concept_ids(
+            [f.curie for f in synth_findings if f.curie_fallback and f.curie]
+        ),
+    )
+
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 
     # F-4.5-A-04: ONE declared budget for the whole Write step, shared by
@@ -5946,6 +6080,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             total_tool_calls=total_tool_calls,
             elapsed_ms=elapsed_ms,
             trust_outcome=trust_outcome,
+            # T-6.2-08. Computed from the SAME `omitted_findings` the
+            # incompleteness disclosure is built from, so an answer can never
+            # offer to show more while its own note says there is no more.
+            next_step=_build_next_step_offer(
+                omitted_findings, trust_outcome, refused=False
+            ),
         ),
     )
     return sink.result()

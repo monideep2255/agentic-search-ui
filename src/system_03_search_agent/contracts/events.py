@@ -22,7 +22,7 @@ enumerates a number.
 """
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -337,6 +337,38 @@ class DonePayload(BaseModel):
     total_tool_calls: int = Field(..., ge=0)
     elapsed_ms: int = Field(..., ge=0)
     trust_outcome: TrustOutcome
+
+    next_step: Annotated[str | None, Field(default=None, max_length=200)] = None
+    """An offer of somewhere to go next, or None when there is nowhere honest.
+
+    Build phase 6.2, T-6.2-08, on the product-owner decision of 2026-09-01.
+    ADDITIVE and OPTIONAL, which is what keeps it inside v1: `system-design-
+    patterns` pattern 10 allows a new optional field within a major version
+    and requires a v2 for anything that removes a field or changes one's
+    meaning. Every existing consumer ignores it and behaves exactly as
+    before.
+
+    THREE THINGS THIS FIELD IS NOT, each of which it would be easy to turn
+    it into:
+
+    It is not model-generated text. `UI_feedback.md` names that as the easy
+    and dangerous path: an offer to go deeper is a claim that there IS
+    something deeper, so a model-invented follow-up about data the graph does
+    not hold is a confident wrong answer wearing a question mark, and it
+    would defeat cite-or-refuse through a surface nothing checks. The value
+    is built in code from the findings retrieval actually returned and the
+    answer did not report.
+
+    It is not `ThinkPayload.clarifying_question`, and conflating the two is
+    the mistake this docstring exists to prevent. That field belongs to
+    Section 22.1's ambiguous-query path, fires BEFORE any tool runs, and
+    REPLACES the answer in order to disambiguate an entity. This one fires
+    after a complete, cited answer and ADDS to it.
+
+    It is not mandatory. `None` is the correct value for a refusal, an empty
+    retrieval, or a single-fact lookup, because none of those has an honest
+    next step and a system that always asks something will pad.
+    """
 
 
 # Binds each envelope `type` value to the Section 2.3 payload model that

@@ -32,9 +32,18 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- FIX THE DISEASE NAMES. Not a build phase. `UI_feedback.md` is the brief.
+- WAIT FOR THE PRODUCT OWNER'S TEST RESULTS. Build phase 6.2 merged on 2026-09-01. `UI_feedback.md`'s "Manual test workflows" section is what they are running, and its "What I saw" column is where their verdict lands. Do not open new work against that document until those cells are filled in.
 
-Everything else on this page is context for that one line. What follows is the state as of 2026-08-31, rewritten rather than appended, so there is exactly one description of where things stand.
+THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong by a session that reads only the old instructions below. Product-owner decision, in `DECISIONS.md`:
+
+- The assistant fixes the frontend and the backend.
+- The assistant writes the test workflow into `UI_feedback.md`.
+- The PRODUCT OWNER runs it on develop and records what they saw.
+- Feedback comes back, it gets discussed, and the cycle repeats.
+
+Two consequences for whoever picks this up. THE ASSISTANT DOES NOT DRIVE THE BROWSER unless explicitly asked, so the eight journeys under `frontend/e2e/journeys/` stay gated behind `RUN_LIVE_JOURNEYS=1` and are run on request rather than on initiative. And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
+
+Everything else on this page is context for that one line. What follows was written on 2026-08-31 and describes the state before build phase 6.2 merged; the disease-name defect it treats as the constraint is fixed, and the sections below are kept as the record of why it was.
 
 ### Why that is the next action rather than a build phase
 
@@ -286,4 +295,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-31.
+Last updated: 2026-09-01.

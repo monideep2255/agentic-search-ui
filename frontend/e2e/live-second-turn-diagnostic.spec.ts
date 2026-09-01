@@ -12,7 +12,13 @@
 
 import { expect, test, type Page } from "@playwright/test";
 
-const LIVE = "https://search-agent-web-production.up.railway.app";
+// T-6.2-12: the target is no longer hardcoded, and it is no longer
+// PRODUCTION. Every measurement in `UI_feedback.md` was taken against
+// production and should not have been: production lags whatever is
+// being worked on, so a run there measures an older build than the one
+// anyone is fixing. Defaults to develop, overridable with
+// S3_LIVE_WEB_URL. See `live-target.ts`.
+import { LIVE_WEB_URL as LIVE, describeTarget } from "./live-target";
 
 async function enterApp(page: Page): Promise<void> {
   await page.goto(LIVE, { waitUntil: "domcontentloaded" });
@@ -37,6 +43,12 @@ const LIVE_ENABLED = process.env.RUN_LIVE_DIAGNOSTICS === "1";
 test.describe(LIVE_ENABLED ? "LIVE diagnostic" : "LIVE diagnostic (skipped: set RUN_LIVE_DIAGNOSTICS=1)", () => {
   test.skip(!LIVE_ENABLED, "reaches the deployed demo and spends real budget");
   test.describe.configure({ timeout: 180_000 });
+
+  // T-6.2-12: see the sibling spec. Which deployment answered is part of
+  // the diagnostic, not context someone is expected to remember.
+  test.beforeAll(async () => {
+    console.log(`[live target] ${await describeTarget()}`);
+  });
 
   test("two turns against the deployed demo, as a guest", async ({ page }) => {
     const errors: string[] = [];
