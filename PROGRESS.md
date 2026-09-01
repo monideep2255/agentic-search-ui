@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-31.
+Last updated: 2026-09-01.
 
 ## Table of contents
 
@@ -51,7 +51,16 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
 
-Concretely:
+NEW ON 1 SEPTEMBER, and this is the sprint a person will actually notice:
+
+- Answers name things. Ask which diseases are linked to BRCA1 and you get "breast-ovarian cancer, familial, susceptibility to, 1", not a reference code. Each name carries a link to the medical record it was read from, so you can check it.
+- The waiting no longer looks broken. A number counts up every second and the current step pulses, so there is never a long stretch where the screen appears frozen. It is not faster, it is just honest about being slow.
+- Follow-up questions continue the conversation. Ask about BRCA1, then ask "what variants cause it", and it knows what "it" means. The earlier conversation steers what gets looked up and never what gets claimed, so every statement in the new answer is still checked against a real record.
+- An answer can offer where to go next, and can decline to. If the search found records it did not describe, it offers to go through them, and saying yes continues the conversation rather than starting over. If there is nothing genuinely further to offer, it says nothing, because a system that always asks a question is padding.
+- Answers are whole sentences. If our checking removes a claim from the middle of a sentence, the whole sentence goes rather than leaving a fragment with a missing verb and an unclosed bracket.
+- The system stopped talking to itself in public. It used to end an answer with "this answer reports 4 of the 5 findings prepared for it", which means nothing to a reader. It now says "3 further disease records were found for this question and are not described above".
+
+Concretely, and from earlier sprints:
 
 - There is a practice site and a real site, and they share nothing. Changes appear on the practice site as soon as they are merged, and the real site moves only when someone deliberately cuts a release. An account made on one does not exist on the other. Before 28 August there was one site, and anything merged went straight to the address people visit.
 - Cutting a release does its own paperwork. It works out the new version number from the descriptions written on each change, writes the list of what is in the release, stamps the version permanently, and publishes a release page. Nobody summarises anything by hand.
@@ -109,15 +118,21 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 31 AUGUST, and it replaces the one below because we finally looked at the product the way a visitor does. Someone asked the live site which diseases are linked to the gene BRCA1. It answered, quickly, and cited every claim. This is what it said:
+THE HONEST HEADLINE AS OF 1 SEPTEMBER: the answers are readable now, and the thing that replaced unreadability as the biggest problem is that they are SLOW.
+
+An answer can take more than twenty-five seconds. We had believed it was twelve to fourteen, and we were wrong: we filmed the live site one picture per second and the answer had still not arrived at twenty-five. Worse, for fifteen of those seconds NOTHING ON THE SCREEN CHANGED. We have made the waiting look alive, with a number counting up and a moving indicator, and that is honest rather than fast. It does not make the answer arrive any sooner, and nobody is currently assigned to make it faster.
+
+Two smaller ones we found and have not fixed. On a phone-sized screen the page is about eight pixels too wide, so it slides sideways slightly; on a laptop it is fine, which is why nobody noticed. And the system reports the cost of answering a question as zero, which cannot be right, so no spending figure should be trusted yet.
+
+THE PREVIOUS HEADLINE, from 31 August, kept because the story of it is worth more than the fix. Someone asked the live site which diseases are linked to the gene BRCA1. It answered, quickly, and cited every claim:
 
 > The knowledge graph associates the gene BRCA1 with four disease records: MedGen:C0346153, MedGen:C2676676, MedGen:C3280442, and MedGen:C4554406.
 
-Four reference codes where four disease names should be. A researcher cannot use that sentence for anything. Everything around it works: the page is well built, the system found real records, and it honestly showed its sources. The answer is still useless.
+Four reference codes where four disease names should be. A researcher cannot use that sentence for anything. Everything around it worked: the page was well built, the system found real records, and it honestly showed its sources. The answer was still useless.
 
 We found the cause by looking in our copy of the database rather than guessing. Each disease record has a field meant to hold its name, and for diseases that field was filled in with the name of the CATALOGUE the record came from, not the name of the disease. Across twenty-five records it only ever said one of three things: "MedGen", "MeSH", or "SNOMEDCT_US". Gene records are fine, which is why gene questions read normally. So a readable answer was never possible from our own copy of the data, and showing the system that field would have made things worse, not better: it would have answered "SNOMEDCT_US" four times.
 
-The encouraging part is that the fix looks small. The system ALREADY looks the records up at one of the public medical databases during that same search, as the second of two steps. The ability to turn a code into a disease name is already there and already being used. It is simply not being used to write the names into the answer. That is the next thing we are doing.
+WE THOUGHT THE FIX WAS ALREADY HALF DONE, AND WE WERE HALF WRONG, which is the part worth keeping. Our notes said the system already looked these records up at a public medical database during the same search, so the ability to turn a code into a name was already there. The notes also said to check that before promising it. We checked, and the public database REJECTS a request made that way: it needs two steps, one to find the record and one to read its name. What survived was the useful half, that the system could already do both steps, so this was wiring rather than building. It now makes those two requests once for the whole answer rather than once per disease, and it matches each name to the right code by reading the code back out of the reply instead of trusting the order they arrive in, which would have quietly attached the wrong disease name to the right code the day that database changed its ordering.
 
 
 The newest honest limitation, and it is the one a person will actually notice. Your searches are now saved properly on our side, but the browser still forgets WHO YOU ARE when you reload the page. So you come back, you are signed out, and you have to sign in again before your searches appear. They are not lost, they are just behind a sign-in you did not expect. Keeping you signed in is its own piece of work and is deliberately not bolted onto this one, because where a browser is allowed to store the thing that proves who you are is a security question worth deciding properly rather than in the last hour of an unrelated week.
@@ -431,13 +446,15 @@ One more thing happened at the very end, and it is recorded because a reader lea
 
 Where the finished work sits against what is still ahead:
 
-THE IMMEDIATE NEXT STEP CHANGED ON 31 AUGUST, and the previous one is kept below it because the reasoning still stands.
+THE IMMEDIATE NEXT STEP IS NOT WORK. It is waiting, and that is deliberate.
 
-1. Make the answers readable. Turn the reference codes into disease names, using the lookup the system already performs during the same search. Nothing else matters while a researcher cannot read the answer.
-2. Fix the rest of what a real person noticed on the live site: an answer flow that feels disjointed, follow-up questions that do not continue the conversation, an integrations page that lists things nobody can actually use, and an answer that simply stops instead of offering where to go next.
-3. Put it in front of people and listen.
-4. Two safety items pulled out of the larger review, worth doing alongside step 3 because real visitors mean real exposure: a security scan that is overdue, since the site has been public since 24 August, and a small flaw where the sign-up page reveals whether an email address is already registered.
-5. Everything else: the nine problems the reviewer found this week, and the rest of the safety and quality review.
+1. Someone has to actually use it. The nine things worth checking are written down as a checklist, in plain words, with an empty column for what the tester saw. Nothing on that list has been looked at by a person yet. Until it has, we would be guessing about whether the fixes landed.
+2. Whatever that tells us, plus the six items this sprint knowingly left undone.
+3. Make it faster. An answer can take over twenty-five seconds and NOBODY IS ASSIGNED TO THIS, which is the most honest thing on this page. We made the wait visible; we did not make it shorter.
+4. Two safety items, worth doing once real people are using it: a security scan that is overdue, since the site has been public since 24 August, and a small flaw where the sign-up page reveals whether an email address is already registered.
+5. Everything else: the problems the reviewer found earlier, and the rest of the safety and quality review.
+
+The previous first step, "make the answers readable", is done and merged, which is why it has left this list.
 
 The previous next step, still true and now further down the list: are the fifty test questions the right fifty?
 
@@ -523,7 +540,10 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| Answers about diseases come back as reference codes rather than disease names, which makes them unreadable. Our copy of the database has the catalogue's name where the disease's name should be, so a readable answer was never possible from it alone | NEXT. The lookup that can supply the names already runs during the same search |
+| Answers can take more than twenty-five seconds. We had believed twelve to fourteen and were wrong: we filmed the live site and the answer had not arrived at twenty-five, with fifteen of those seconds showing no change on screen at all. The waiting is now visible, which is honest rather than fast | NOT ASSIGNED. This is the largest problem on this page with nobody working on it |
+| On a phone-sized screen the page is about eight pixels too wide, so it slides sideways a little. On a tablet or laptop it is fine, which is why it went unnoticed for so long | With the design comparison against the approved mock-up, not yet scheduled |
+| The system reports the cost of answering a question as zero, which cannot be right. No spending figure should be trusted until this is understood | Not yet scheduled. It matters because the daily spending limits read this number |
+| The page listing ways to connect other software may already be fine. It was described as advertising things nobody can use, but that was checked against the real site rather than the practice one, and the practice site has no such dead button. We do not yet know which is true of the real site | Needs one check against the real site before anyone decides |
 | The automatic tests written to prove the new request budget works do not actually check it. The whole feature could be deleted and every test would still pass. The feature does work, confirmed by watching it run, but nothing would warn us if it stopped | After we have heard from real users. A gap in the tests rather than a fault in the product, written down with owners rather than quietly left |
 | When a question uses up its allowance of outside requests partway through, the system stops asking, which is correct, but it does not pass that news along properly. A person could see a message saying something is broken when the honest message is that the question was too large | After we have heard from real users. It affects six separate search tools the same way, so it is one decision rather than six small fixes |
 | When a question is being answered, the system waits for the counting service to acknowledge it before showing you the answer. If that outside service is slow, your search is slow, for no benefit to you. The fix is written down and not yet applied, because applying it breaks a set of existing tests that would have to be rewritten in the same change | The next time the counting code is touched. The work is scoped and the tests that need rewriting are named |
@@ -619,6 +639,22 @@ The first is that most of this was already built. Before writing anything we che
 The second is that we built the wrong thing this week, and that is worth saying plainly rather than burying. This protects against many people using the tool at once, and today almost nobody is using it. Meanwhile the reference-code problem described at the top of this page, the one that makes answers unreadable, was sitting in our notes the whole time. We had the evidence for what actually needed fixing and worked somewhere else. The order of work has been changed as a result: making answers readable now comes first, and the remaining safety and quality work waits until real people have tried it.
 
 An independent reviewer checked the work and found nine problems in it, three of them serious. All three say the same thing: the automatic tests written to prove this feature works do not actually check it, and the feature could be deleted without a single test complaining. The feature itself does work, proven by watching it run rather than by the tests. We fixed the one problem that made answers worse, wrote the other eight down with owners, and merged, because unreadable answers are the bigger problem and this is not where the effort belongs.
+
+### Sprint: making the answers readable, and the interface around them (1 September, merged)
+
+The sprint that came from watching someone use the thing. Every complaint a real person had raised about the live site was fixed in ONE pass rather than a few at a time, because fixing them piecemeal would mean re-testing the whole thing after each one.
+
+What changed for a user is the list at the top of this page. What is worth recording is how it went.
+
+We checked our own notes before trusting them, and they were half wrong. The notes said the fix for unreadable answers was nearly free, because the system already looked these records up during the same search. They also said to verify that before promising it. We verified, and the public database rejects a request made the way our notes assumed; it needs two steps. The useful half survived, that the system could already do both steps, so this was wiring rather than building.
+
+The most uncomfortable result is about our own checking rather than the product. Of the nine problems found this sprint, FOUR were faults in the tools we use to check our work, not in the work. Three of those four did not fail, they returned a believable wrong answer. One nearly had us report a fault in the product that did not exist: a script watching the live site was looking for two things by the wrong name, found nothing, and reported "nothing happened" on every frame of a recording where things plainly did happen. We caught it only because the recording contradicted something we already knew.
+
+They all have the same shape, and it is now written down: each one NAMED SOMETHING THAT DOES NOT EXIST, and the surrounding machinery reported the absence as an ordinary value rather than an error. A missing thing counted as zero. An unknown label became a warning nobody reads. A state we forgot to handle counted as "not finished yet". None of those can fail, so none of them was really a check.
+
+The way work gets checked also changed this sprint. Until now an independent reviewer went over each piece before it was released to the practice site. From here the product owner tests it there instead, and their verdict is what marks something finished. The argument that won: a problem a real person hits is worth more than one a reviewer imagines, and the practice site is now a place to try things rather than the thing itself, so a problem there costs a test run rather than a user. One rule was kept: whoever built something still does not get to declare it finished.
+
+Six things were knowingly left undone, and the largest is that answers are SLOW. We filmed the live site one picture per second and the answer had not arrived after twenty-five seconds, where we had believed twelve to fourteen. Nobody is assigned to that yet.
 
 ### Sprint: a map of the code (31 August, merged)
 

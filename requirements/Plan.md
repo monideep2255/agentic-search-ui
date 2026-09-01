@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-08-31.
+Kick-off: 2026-05-06. Last updated: 2026-09-01.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-08-31.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, and on 2026-08-31 build phase 6.0. NOTHING IS BLOCKED, AND NOTHING ON THE BOARD IS NEXT. Build phases 6.0 and 6.1 moved BEHIND the prototype the same day 6.0 merged, reversing that morning's ordering, because a live run showed answers reading `MedGen:C0346153` where a disease name should be. The next action is the disease-name fix in `UI_feedback.md`, which is not a build phase. THE BOARD NOW CARRIES NO OPEN PHASE AT ALL: 6.1 left it the same day, joining 7.0 and 7.1, so every numbered phase in Section 25 has merged or moved here. THE UNIT OF WORK IS NO LONGER A BUILD PHASE, decided the same day: work is picked from open flags and `UI_feedback.md`. 6.0's residue and 6.1's breakdown are in Phase 7 below. Authoritative state: `tracker/BOARD.md`, rendered at `tracker/board.html`; what to do next: `requirements/phase_6/Continuation_prompt.md` |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0 on 2026-08-31, and BUILD PHASE 6.2 on 2026-09-01 as PR #92. THE NEXT ACTION IS NOT WORK, IT IS WAITING: the product owner is testing workflows W1 to W9 in `UI_feedback.md`, and their verdict is what moves build phase 6.2's tickets from `in-review` to `done`. 6.2 is the sixth stated exception on the board, since Section 25 has no row for defects a live user hits. THE LOOP CHANGED THE SAME DAY: the assistant fixes frontend and backend and writes the test workflow, the product owner runs it on develop, feedback returns, repeat. The judge round is no longer the gate before a merge to develop, so a phase merges at `in-review`. Six tickets merged open, and the largest unowned problem is that an answer can exceed 25 SECONDS. Authoritative state: `tracker/BOARD.md`, rendered at `tracker/board.html`; what to do next: `requirements/phase_6/Continuation_prompt.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 476 (DECISIONS.md).
+Decisions logged: 477 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -609,10 +609,11 @@ THE BOARD IS THE SOURCE. `tracker/BOARD.md`, rendered at `tracker/board.html`, h
 
 What is next, derived from that board rather than restated from memory:
 
-| Next | Phase | Gated on |
+| Next | What | Gated on |
 |---|---|---|
-| 1 | 6.0, rate limiting and concurrency | Nothing. Open it today |
-| 2 | 6.1, the full `dev-standards` pass and release hardening | 6.0 |
+| 1 | The product owner's verdict on `UI_feedback.md`'s workflows W1 to W9 | Nothing. It is their turn |
+| 2 | Whatever that verdict asks for, plus build phase 6.2's six open tickets | Item 1 |
+| 3 | The answer can exceed 25 seconds on develop, and NO TICKET OWNS IT | Nothing technically |
 
 THE EVALUATION TRACK IS CLOSED. Build phases 5.1, 5.2 and 5.3 merged and the track closed at that, by product-owner decision on 2026-08-31. The follow-up it leaves behind is post-v1 work and lives in Phase 7 below, deliberately not on the board, because a board row would say queued when it is not.
 
@@ -970,6 +971,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+- 2026-09-01: BUILD PHASE 6.2, ANSWER READABILITY AND THE SINGLE UI PASS, MERGED as PR #92, all four CI gates green, and the review loop itself changed with it
+
+  - WHAT IT DELIVERS is the complete contents of `UI_feedback.md` as one pass rather than in patches, which is what the product owner asked for on 2026-08-31 and the reason it became a phase at all. It is the SIXTH stated exception on `tracker/BOARD.md`: Section 25 has no row for defects a live user hits, the same gap build phase 4.16 was inserted to fill. Full ticket-level record, evidence and findings: `tracker/phase_6.2.md`.
+  - WHAT A PERSON WILL NOTICE, which is the only summary that matters for this phase. An answer names diseases in words rather than as `MedGen:C0346153`, each cited to the MedGen record the name was read from. The wait shows continuous motion, a counter ticking every second and a pulsing step. A follow-up carries the whole thread forward, bounded, as retrieval guidance only. An answer may offer one honest next step or stay quiet. A sentence that loses a clause from its middle is dropped whole rather than shown broken. The incompleteness note speaks to the reader instead of reporting internal bookkeeping.
+  - MEASURING BEFORE BUILDING CHANGED THE WORK TWICE, and both are the transferable results rather than the features. The brief said `ncbi_efetch` already resolves these CURIEs and told the reader to verify before promising it; verified, and half wrong, because NCBI rejects an ESummary keyed on a concept id outright, so resolution takes ESearch on `[ConceptId]` then ESummary on the returned UID. What survived is the load-bearing half, that both actions already exist in the shipped tool, and the implementation is TWO CALLS TOTAL for any number of diseases, mapped back by MedGen's own `conceptid` rather than result ordering, which would have attached the wrong name to the right identifier the day NCBI reordered. Separately, "the whole thread" was mostly already built: `compressed_findings` and `resolved_entities` already flowed to Think and Plan, and the one missing piece was the QUESTION. `SessionMemorySummary.open_threads` had sat on the contract with no producer since build phase 4.5, which had written down that whoever added one must replace its docstring paragraph in the same change and pinned that with a test; both obligations were honoured, and the test was INVERTED rather than deleted, because the property worth protecting was that the code and the docstring agree.
+  - THE ROOT CAUSE WAS ALREADY IN THIS REPOSITORY, recorded as F-2.1-B07, and the CURIE fallback is DELIBERATE: `_is_vocabulary_token_artifact` detects the corrupted graph `name` and refuses to state it. The moat and the defect are one mechanism, so the phase added a Layer 2 resolution path and did not weaken the detector. Exposing `name` to the Cypher generator would have returned the word `SNOMEDCT_US` four times, which is worse than four identifiers.
+  - WHAT IT COST, and this is the number worth carrying forward: NINE findings, FOUR of them defects in the lead's own INSTRUMENTS rather than in the product. Three of those four reported a plausible value instead of erroring, and one nearly became a confident wrong conclusion about the agent, when a browser capture named two testids that do not exist and reported `chips=0 answered=false` on every frame of a working run. Recorded as ONE `LEARNINGS.md` entry rather than four, because the pattern is the point: each NAMED SOMETHING THAT DID NOT EXIST, and the harness reported absence as an ordinary value, so a missing selector is `0`, an unknown pytest marker is a warning, and an unhandled CI state is "not pending". None of them can fail, so none of them is a check.
+  - NO JUDGE ROUND WAS RUN, and that is a change to the harness rather than a skipped step. The product owner asked "what are you going to judge, I think judging is my domain now", the assistant conceded that it had conflated product judgement with engineering review, and the decision stands on the stronger argument: a defect a person hits on develop is worth more than one a reviewer hypothesizes, and `develop` is now a test environment rather than the product, so a defect there costs a test cycle rather than a user. ONE CONTROL IS KEPT: tickets merge at `in-review` and reach `done` only on the product owner's verdict, since the maker does not sign off their own work.
+  - VERIFIED: 4559 Python tests, 244 frontend tests, 0 failed; `ruff`, `isort` and `tsc` clean; axe 10 passed; doc drift 0 stale 0 structural; all four CI gates green on the merge commit. The premise gate was written first and WATCHED FAILING 5 of 6 before any production code existed. Every behavioural change is mutation-proven, and the sentence-integrity fix is proven in BOTH directions so the narrow rule cannot silently become the over-broad one that would shrink every partial answer.
+  - THE DEVELOP DEPLOY WAS VERIFIED BY WHAT ANSWERED, not by a 200: the bundle hash changed from `index-BnGS20ut.js` to `index-DXZumJtn.js` and the compiled bundle points at the develop API, which is the check build phase 4.15 did not have when it shipped a develop app that was live, answered 200, and could reach no API because `VITE_API_BASE_URL` is compiled in at build time.
+  - SIX TICKETS MERGE OPEN: the 8px horizontal bleed at 390px, which no screenshot can show and which journey 7 found by measuring `scrollWidth` against `clientWidth`; the latency itself, where journey 2 filmed no answer at 25 seconds against the 12 to 14 this project had recorded, with 15 consecutive seconds of no visual change, AND NO TICKET OWNS IT; `total_cost_usd` reporting `0.0`; design fidelity against the prototype; the reference-build comparison; and the integrations page, whose premise is now in doubt because journey 5 found NO dead button on develop, the complaint having been measured against production.
 
 - 2026-08-31: BUILD PHASE 6.0, RATE LIMITING AND CONCURRENCY, MERGED as PR #91, all four CI jobs green, and the ordering of everything after it reversed the same day.
 

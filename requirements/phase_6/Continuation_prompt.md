@@ -43,56 +43,20 @@ THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong
 
 Two consequences for whoever picks this up. THE ASSISTANT DOES NOT DRIVE THE BROWSER unless explicitly asked, so the eight journeys under `frontend/e2e/journeys/` stay gated behind `RUN_LIVE_JOURNEYS=1` and are run on request rather than on initiative. And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
 
-Everything else on this page is context for that one line. What follows was written on 2026-08-31 and describes the state before build phase 6.2 merged; the disease-name defect it treats as the constraint is fixed, and the sections below are kept as the record of why it was.
+Everything else on this page is context for that one line, and it describes the state AFTER build phase 6.2 merged. The three sections that described the state before it are gone rather than left below, for the reason the next section gives.
 
-### Why that is the next action rather than a build phase
+### What the sections below used to say, and where that content lives now
 
-A live browser run on 2026-08-31 captured what an answer looks like to a person:
+REWRITTEN 2026-09-01, not appended to. This spot held three sections written on 2026-08-31: why fixing the disease names was the next action, what build phase 6.0 delivered, and why build phase 6.1 should be split rather than opened. The first is DONE, so an instruction to go do it would send the next session to redo finished work. The other two are still true and are no longer this file's to carry.
 
-> The knowledge graph associates the gene BRCA1 with four disease records: MedGen:C0346153, MedGen:C2676676, MedGen:C3280442, and MedGen:C4554406.
+Each fact now has exactly one owner:
 
-Four opaque identifiers where disease names should be. The interface around that sentence is competent, the agent loop runs end to end, two tools fire, three claims are grounded and all three are cited. None of it matters, because a researcher cannot use that sentence.
+- Why the disease names were the constraint, and what the fix turned out to be: `tracker/phase_6.2.md`, and `UI_feedback.md`'s headline finding.
+- What build phase 6.0 delivered and what merged open with it: CLAUDE.md's Build phase history table, and `tracker/phase_6.0.md`.
+- Why build phase 6.1 should be split rather than opened, with the security scan and F-1.2-04 pulled out as their own small tickets: `requirements/Plan.md` Phase 7.
 
-The cause was established by querying the live graph rather than guessed: Disease nodes carry the SOURCE VOCABULARY in `name`, not a disease name. Sampled across 25 nodes it takes three distinct values, `MedGen`, `MeSH` and `SNOMEDCT_US`. Gene nodes are fine, 23 distinct values across 23 nodes. So a readable answer was NEVER EXPRESSIBLE from Layer 1, and exposing `name` to the Cypher generator would have made it worse, returning the word `SNOMEDCT_US` four times.
+This deletion is the point rather than tidiness. After five build phases handled as appends instead of rewrites, this file once described build phase 2.1 in five contradictory sections at once and told the next agent not to open the phase that was actually next.
 
-WHAT MAKES IT CHEAP, and this is the part worth not losing: `ncbi_efetch` ALREADY RUNS in that exact query, as the second of the two tools, and already reaches MedGen. The machinery to turn `MedGen:C0346153` into a disease name is already in the loop and is already being called. What it is not doing is using that call to label the entities in the answer. Verify that before promising it, but it looks closer to wiring than to building.
-
-The full brief, including the two fix paths and why only one of them lives in this repository, is `UI_feedback.md`.
-
-### Build phase 6.0, merged, and what merged open with it
-
-MERGED as PR #91 on 2026-08-31, all four CI jobs green. It delivers technical specification Section 21's two genuinely missing halves:
-
-- Section 21.3, the at-most-20 Layer 2 and Layer 3 calls per query. The dollar caps cannot see these calls, since NCBI and enrichment APIs are free, so nothing bounded how far one question could fan out.
-- Section 21.4's unwired half, the queue wait ceiling read from the calling query's own latency budget. A `lookup` now fails fast at 1.5s and degrades; a deep-research query waits up to 5s.
-
-MEASURING SECTION 21 BEFORE WRITING A TICKET IS WHAT MADE THE PHASE SMALL: five of its eight requirements were already built by the tool phases 3.1 to 3.5, because each tool needed its own rate pool the day it shipped. That measurement is the table at the top of `tracker/phase_6.0.md`.
-
-THE DESIGN DECISION MOST LIKELY TO BE WRONGLY SIMPLIFIED BACK: the ceiling counts at the two Layer 2/3 TRANSPORT chokepoints and never at `act_node`. `act_node` iterates PLANNED calls, one to three per query, while Section 21.3 names retries, wider-than-expected fan-out and ELink traversals as where a 21st call arrives from, all of which happen inside a tool and below `act_node`. This is build phase 5.0's audit-hook argument arriving again for a second reason.
-
-WHAT IT COST AND WHAT THAT BOUGHT: one judge round, no adversary round, twelve findings, four fixed. The judge found NINE, and three of them are CRITICAL saying one thing three ways, that the gate does not pin the production wiring. F-6.0-J-05, the whole Section 21.4 wiring can be deleted and every test stays green. F-6.0-J-07, the arm claiming to measure Section 21.2 builds its own limiter and never touches the shared registry. F-6.0-J-09, removing both production scope bindings changes no test. That is TEST DEBT rather than a broken product, and the distinction is why it merged: both features are verified working by execution, the wait ceiling proven wired by a premise arm failing against it live during the build.
-
-ONE FINDING WAS FIXED BEFORE MERGE and only one, F-6.0-J-03, because it alone made answers strictly worse: the ceiling guard refused Layer 1 graph calls, so a query that spent its budget on `think_node`'s entity resolution answered with zero graph rows and refused where a partial cited answer was available.
-
-THE ADVERSARY ROUND WAS NEVER RUN. Stopped mid-flight by product-owner decision once it was clear the phase was not the constraint. Recorded rather than quietly skipped.
-
-THE MOST TRANSFERABLE RESULT IS A CRITIQUE OF THE LEAD'S OWN JUDGMENT rather than of any line of code: the whole phase was spent on a non-bottleneck while the evidence for the real one, the CURIE answer above, sat in a file the lead edited the same evening. `.claude/rules/attack-the-constraint.md` exists to prevent exactly that and was not applied. The board pointed at 6.0 and the lead followed it without saying out loud that it was not what stood between the product and a usable demo.
-
-TWO PROCESS ERRORS from the same session, recorded rather than tidied away. The phase's own first mutation harness was VACUOUS, matching every arm against itself so it would have reported full coverage for an arm with no mutation, caught only because it reported 20 tests for a file defining 12 (F-6.0-03). And `git stash -u` was run while the judge agent was actively writing its report into the tree, which is the 2026-08-27 mutation-sweep hazard seen from the other side; no damage, but luck rather than care.
-
-### Build phase 6.1, and why it should be split rather than opened
-
-NOT STARTED, and assessed on 2026-08-31 as five unrelated things wearing one number:
-
-| Item | Worth doing before users? |
-|---|---|
-| The security scan before first ship | Arguably yes, but the trigger was EXPOSURE and that already happened: the product went public on 2026-08-24 and shipping without the scan was a decision taken then. It is overdue, not new |
-| F-1.2-04, signup's 409 leaking which emails are registered | Small and real. A handful of lines, not a phase |
-| CI and CD gates finalized | ALREADY SHIPPED, in build phases 4.14, 4.12 and 4.15. The only residue is that CI is advisory rather than merge-blocking, which needs GitHub Pro or a public repository and is a billing decision |
-| The accessibility pass | Real, and not a precondition for a feedback round with a few people |
-| The `dev-standards` six-lens review | A review pass over code. It will find things, the way 6.0's judge round did |
-
-The recommendation recorded with that assessment: pull the security scan and F-1.2-04 out as their own small tickets, and let the rest wait for user feedback.
 
 ### Step 3: how a phase runs across sessions
 
@@ -119,17 +83,41 @@ This section is DERIVED FROM `tracker/BOARD.md`. If the two disagree, the board 
 
 ### The next action
 
-Nothing is blocked, and NOTHING ON THE BOARD IS THE NEXT ACTION. That is deliberate, not an oversight.
+Nothing is blocked. THE NEXT ACTION IS NOT WORK, it is waiting, and that is deliberate rather than an oversight.
 
 | Next | What it is | Where it is tracked | Gated on |
 |---|---|---|---|
-| 1 | Fix the disease names, so an answer reads a disease rather than `MedGen:C0346153` | `UI_feedback.md`, the headline finding | Nothing. It is the constraint |
-| 2 | The rest of the UI feedback: the fragmented answer flow, follow-ups that do not continue the thread, the placeholder integrations page, and an answer that never offers a next step | `UI_feedback.md`, complaints 1 to 5 | The first item, for complaint 5 specifically |
-| 3 | Put it in front of people and hear back | Not a ticket yet | Items 1 and 2 |
-| 4 | The security scan, and F-1.2-04's signup enumeration leak, pulled out of build phase 6.1 as their own small tickets | `requirements/Plan.md` Phase 7 | Nothing technically. Worth doing alongside item 3 since real users mean real exposure |
+| 1 | Wait for the product owner's verdict on workflows W1 to W9 | `UI_feedback.md`, "Manual test workflows", the "What I saw" column | Nothing. It is their turn |
+| 2 | Whatever that verdict asks for, plus the six tickets build phase 6.2 merged with open | `tracker/phase_6.2.md` | Item 1 |
+| 3 | The answer can exceed 25 SECONDS on develop, and no ticket owns it | F-6.2-07 in `tracker/phase_6.2.md` | Nothing technically. It is the largest unowned problem in the product |
+| 4 | The security scan, and F-1.2-04's signup enumeration leak, pulled out of build phase 6.1 as their own small tickets | `requirements/Plan.md` Phase 7 | Nothing technically. Worth doing once real people are using it |
 | 5 | Build phase 6.0's eight open judge findings, and what remains of 6.1 | `requirements/Plan.md` Phase 7 | User feedback |
 
-SO: fix the disease names.
+SO: wait for the verdict, and do not open new work against `UI_feedback.md` until those cells are filled in.
+
+### Build phase 6.2, merged, and what merged open with it
+
+MERGED as PR #92 on 2026-09-01, all four CI gates green, branch deleted both sides. It is the sixth stated exception on `tracker/BOARD.md`: Section 25 has no row for defects a live user hits, the same gap build phase 4.16 was inserted to fill.
+
+WHAT A PERSON WILL NOTICE, which is the only summary that matters for a phase like this:
+
+- An answer names diseases in words rather than as `MedGen:C0346153`, each cited to the MedGen record the name was read from.
+- The wait shows continuous motion, a counter ticking every second and a pulsing step.
+- A follow-up carries the whole thread forward, bounded, as retrieval guidance only.
+- An answer may offer one honest next step, or stay quiet.
+- A sentence that loses a clause from its middle is dropped whole rather than shown broken.
+- The incompleteness note speaks to the reader instead of reporting internal bookkeeping.
+
+MEASURING BEFORE BUILDING CHANGED THE WORK TWICE, and both are the transferable results:
+
+- The brief said `ncbi_efetch` already resolves these CURIEs and told the reader to verify before promising it. Verified, and half wrong: NCBI rejects an ESummary keyed on a concept id outright. Resolution takes ESearch on `[ConceptId]` then ESummary on the returned UID, two calls TOTAL for any number of diseases, mapped back by MedGen's own `conceptid` rather than result ordering.
+- "The whole thread" was mostly already built. `compressed_findings` and `resolved_entities` already flowed to Think and Plan; the one missing piece was the QUESTION. `open_threads` had sat on the contract with no producer since build phase 4.5, which had written down that whoever added one must replace its docstring paragraph in the same change. Both obligations were honoured.
+
+WHAT IT COST, and this is the number worth carrying forward: NINE findings, FOUR of them defects in the lead's own instruments rather than in the product. Three of those four reported a plausible value instead of erroring, and one nearly became a confident wrong conclusion about the agent. Recorded as a single `LEARNINGS.md` entry rather than four, because the pattern is the point: each NAMED SOMETHING THAT DID NOT EXIST, and the harness reported absence as an ordinary value.
+
+NO JUDGE ROUND WAS RUN, by product-owner decision, and this is a change to the harness rather than a skipped step. The product owner testing on develop is now the verification step, so tickets merge at `in-review` and reach `done` on their verdict. `DECISIONS.md`, 2026-09-01.
+
+SIX TICKETS MERGE OPEN: the 8px horizontal bleed at 390px (F-6.2-08), the latency itself (F-6.2-07, no ticket owns it), `total_cost_usd` reporting `0.0`, design fidelity against the prototype, the reference-build comparison, and the integrations page, which journey 5 suggests may already be fine on develop and whose premise is therefore in doubt (F-6.2-09).
 
 ### The unit of work is no longer a build phase
 
