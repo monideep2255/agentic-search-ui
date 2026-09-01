@@ -569,9 +569,29 @@ Seven journeys remain: first visit to first answer, follow-up continuity, guest 
 exhaustion, every integrations affordance, refusal and error paths, narrow viewports, and
 sign up / sign out / sign in.
 
+Filmstrip captured 2026-09-01 against develop, committed at
+`docs/build/design/evidence/2026-09-01_journey2_wait/`, 26 frames plus `filmstrip.md`.
+It immediately produced two findings, F-6.2-07 about the product and F-6.2-06 about this
+journey's own instrument, which is the argument for building it first.
+
+TWO THINGS COULD NOT BE FILMED, and both are recorded rather than worked around:
+
+- The AFTER state. T-6.2-05's counter is on this branch and not deployed, so a develop run
+  captures the BEFORE. This strip is therefore a baseline, and the comparable after-run
+  belongs immediately post-merge.
+- A local capture with the fix. `playwright.config.ts` boots a full local stack, but its mock
+  backend cannot answer this question, and pointing the local frontend at the develop API is
+  refused by CORS, correctly. Loosening a deployed CORS policy to take a screenshot was
+  rejected rather than attempted.
+
 History:
 - 2026-09-01 lead: created
 - 2026-09-01 lead: journey 2 built, gated, typechecked. Seven remain
+- 2026-09-01 lead: two defects in the journey itself fixed before its output was trusted. It
+  used auto-waiting locators in the capture helper, so with no live step on screen it blocked
+  for the full 180-second timeout and filmed one frame; `page.evaluate` cannot wait, so it
+  cannot hang. Then two of its five fields named testids that do not exist and reported
+  plausible constants (F-6.2-06). Re-run after each fix
 
 ### T-6.2-12: Live browser checks target develop, not production
 
@@ -674,8 +694,11 @@ Stated so a green phase is not read as a complete one, per `goal-contracts.md`.
 - One question shape. The premise gate anchors on gene-to-disease association. A question
   reaching Disease nodes by another route is not exercised, which is the same blind spot
   build phase 2.1's gate had and is named here rather than discovered later.
-- Latency. Nothing in this phase makes the 12 to 14 second answer faster. T-6.2-05 covers
-  the wait's presentation and T-6.2-02 adds two calls to it.
+- Latency. Nothing in this phase makes the answer faster. T-6.2-05 covers the wait's
+  PRESENTATION and T-6.2-02 adds two calls to it. REVISED 2026-09-01: this used to say "the
+  12 to 14 second answer", quoting `UI_feedback.md`. Journey 2 filmed a develop run that had
+  not answered at TWENTY-FIVE seconds, so that figure is an underestimate and the number is
+  no longer stated here as though it were known. See F-6.2-07.
 - Build phase 6.0's eight open judge findings and the residue of 6.1. Both stay in
   `requirements/Plan.md` Phase 7.
 
@@ -784,6 +807,88 @@ needing explanation, which is the opposite of what the brief assumed.
 History:
 - 2026-09-01 lead: filed. Corrects a characterization in `UI_feedback.md` rather than
   reporting something new
+
+### F-6.2-07: The wait is roughly twice what was measured, with a 15-second dead stretch
+
+Status: filed
+Raised by: lead, journey 2's first successful run against develop
+Severity: high
+Round: 0 (pre-build)
+Ticket: T-6.2-05 covers the presentation half only. The LATENCY half has no ticket
+
+What happened. Journey 2 filmed the develop deployment, one frame a second, and the strip
+is the finding:
+
+```
+frame-01..03   stepper up, NO live step        3s of an inert stepper
+frame-04..06   Guard
+frame-07..08   Think
+frame-09       Act, first tool chip
+frame-11       Act, second tool chip
+frame-12..25   Act, 2 chips, NOTHING CHANGES   15 consecutive seconds
+                                               answer had NOT landed at 25s
+```
+
+TWO THINGS, and they are separate.
+
+First, the wait is longer than anyone has recorded. `UI_feedback.md` measured 12 to 14
+seconds and this run had not produced an answer at TWENTY-FIVE, which is where the filmstrip
+stops. Every latency figure in this repository's UI discussion is therefore an underestimate,
+and the 14.1 seconds in that document's evidence table was one sample.
+
+Second, and this is what a user actually experiences: from frame 11 to frame 25 there is NO
+VISUAL CHANGE AT ALL. Same live step, same two chips, fifteen seconds. That is the
+fragmentation complaint, and it is now a picture rather than a sentence, which is exactly
+what `UI_feedback.md` said building this journey first would buy.
+
+WHAT THIS MEANS FOR T-6.2-05, stated plainly because it would be easy to overclaim: the
+elapsed counter and the pulse make that 15-second stretch show continuous motion, so they
+fix the "is this thing alive" half completely. They do NOT make the answer arrive sooner, and
+they do not tell the user what Act is doing for 15 seconds. A ticking counter over a
+25-second wait is honest, and it is not fast.
+
+The latency itself is out of this phase's stated coverage, which already says "nothing in
+this phase makes the 12 to 14 second answer faster". That statement now needs revising to a
+larger number, and the underlying question, what Act spends 15 seconds on when both its tool
+calls have already returned, belongs to whoever picks up the latency work.
+
+History:
+- 2026-09-01 lead: filed from journey 2's own filmstrip, on the first run whose instrument
+  was working
+
+### F-6.2-06: This journey's own capture reported plausible wrong values for two of five fields
+
+Status: closed same session, pending judge verification
+Raised by: lead, reading a filmstrip that disagreed with `UI_feedback.md`
+Severity: high
+Round: 0 (pre-build)
+Ticket: T-6.2-11
+
+What happened. `describeFrame` queried `[data-testid^="tool-chip"]` and
+`[data-testid="answer-screen"]`. NEITHER EXISTS: the chips are `tool-${call.name}` and the
+answer screen has no such id. Both selectors returned a plausible constant rather than an
+error, so every frame of a real run reported `chips=0  answered=false`.
+
+THE COST WAS NEARLY A CONFIDENT WRONG CONCLUSION ABOUT THE PRODUCT. The first strip read as
+"no tool ever fired and the answer never landed", and the working conclusion drafted from it
+said Act sat for 16 seconds having done nothing. The corrected run shows two tool chips
+arriving at frames 9 and 11. The defect was in the instrument and it was about to be reported
+as a defect in the agent.
+
+It was caught only because the reading contradicted `UI_feedback.md`, which had observed
+chips appearing. A capture that silently reports a plausible value is worse than one that
+crashes: a crash is a question and a plausible constant is an answer.
+
+THIRD INSTANCE OF THIS SHAPE IN ONE SESSION, all three written by the lead: an unregistered
+pytest marker that warned instead of failing, a structural arm blind to a subdirectory
+(F-6.2-05), and this. The common thread is not carelessness about logic, it is that each one
+NAMED SOMETHING THAT DID NOT EXIST and the harness reported absence as an ordinary value.
+The durable habit that would have caught all three cheaply: after writing any selector,
+marker or path, assert once that it matches something before trusting what it says.
+
+History:
+- 2026-09-01 lead: filed and fixed in the same edit, re-run against develop to confirm the
+  corrected reading. Left open for the judge
 
 ### F-6.2-05: This phase's own structural arm was blind to a subdirectory
 

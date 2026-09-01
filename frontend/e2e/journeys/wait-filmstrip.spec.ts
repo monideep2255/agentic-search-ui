@@ -70,43 +70,50 @@ async function enterApp(page: Page): Promise<void> {
  * What the page shows at this instant, in one line, so the filmstrip is
  * readable without opening 25 images.
  *
- * Every read is `.catch()`ed to a placeholder. A journey must survive a
- * missing element: the run screen not being there IS the observation on a
- * run that failed, and throwing here would discard the remaining frames.
+ * ONE `page.evaluate`, and that is the whole design of this function rather
+ * than a style choice. The first version used Playwright locators, and
+ * `locator.getAttribute()` AUTO-WAITS: with no live step on the page it
+ * blocked for the full 180-second test timeout on the first frame, so the
+ * journey captured frame 0 and then died having filmed nothing. A capture
+ * helper that can block is a capture helper that can lose the recording.
+ *
+ * `page.evaluate` reads the DOM as it is at this instant and returns. It
+ * cannot wait, so it cannot hang. The whole call is wrapped so that a page
+ * that has navigated or closed yields a placeholder rather than throwing,
+ * because a missing page IS the observation on a run that died.
  */
 async function describeFrame(page: Page): Promise<string> {
-  const text = async (testId: string): Promise<string> => {
-    try {
-      const el = page.getByTestId(testId);
-      if (!(await el.isVisible())) return "-";
-      return ((await el.textContent()) ?? "").trim() || "-";
-    } catch {
-      return "-";
-    }
-  };
-
-  const liveStep = await page
-    .locator('[data-state="live"]')
-    .first()
-    .getAttribute("data-testid")
-    .catch(() => null);
-
-  const chips = await page
-    .locator('[data-testid^="tool-chip"]')
-    .count()
-    .catch(() => 0);
-
-  const answered = await page
-    .getByTestId("answer-screen")
-    .isVisible()
-    .catch(() => false);
-
-  return [
-    `elapsed=${await text("run-elapsed")}`,
-    `live=${liveStep ?? "-"}`,
-    `chips=${chips}`,
-    `answered=${answered}`,
-  ].join("  ");
+  try {
+    return await page.evaluate(() => {
+      const text = (testId: string): string => {
+        const el = document.querySelector(`[data-testid="${testId}"]`);
+        return el?.textContent?.trim() || "-";
+      };
+      const live = document.querySelector('[data-state="live"]');
+      const liveName = live?.getAttribute("data-testid") ?? "-";
+      // `tool-${call.name}` (RunScreen.tsx), NOT `tool-chip`. The first
+      // version of this helper guessed `tool-chip` and `answer-screen`, and
+      // NEITHER EXISTS. Both reported a plausible constant rather than an
+      // error, `chips=0` and `answered=false` on every frame of a real run,
+      // so the filmstrip read as "no tool ever fired and the answer never
+      // landed" when in fact the instrument was blind. A capture that
+      // silently reports a plausible wrong value is worse than one that
+      // crashes, and it nearly produced a confident wrong conclusion about
+      // the product from evidence that was about this file.
+      const chips = document.querySelectorAll('[data-testid^="tool-"]').length;
+      const answered = document.querySelector('[data-testid="answer-meta"]') !== null;
+      const stepper = document.querySelectorAll('[data-testid^="step-"]').length > 0;
+      return [
+        `elapsed=${text("run-elapsed")}`,
+        `live=${liveName}`,
+        `chips=${chips}`,
+        `stepper=${stepper}`,
+        `answered=${answered}`,
+      ].join("  ");
+    });
+  } catch {
+    return "page unavailable";
+  }
 }
 
 test.describe(
@@ -135,11 +142,17 @@ test.describe(
       await page.screenshot({ path: path.join(dir, "frame-00.png") });
       log.push(`frame-00  (before submit)  ${await describeFrame(page)}`);
 
-      await main
-        .getByRole("button", { name: /search|ask|submit/i })
-        .first()
-        .click()
-        .catch(() => undefined);
+      // The accessible name is "Search the knowledge graph"
+      // (`HomeScreen.tsx`). Whether the click LANDED is recorded rather than
+      // swallowed: the first run of this journey silently failed to submit
+      // and the filmstrip could not say so, which made a broken journey look
+      // like a broken product.
+      const submitted = await main
+        .getByRole("button", { name: /search the knowledge graph/i })
+        .click({ timeout: 10_000 })
+        .then(() => true)
+        .catch(() => false);
+      log.push(`submit clicked: ${submitted}`);
 
       let captured = 1;
       for (let frame = 1; frame <= MAX_FRAMES; frame += 1) {

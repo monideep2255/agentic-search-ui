@@ -40,6 +40,26 @@ const DEVELOP_WEB = "https://search-agent-web-develop-2aeb.up.railway.app";
 const DEVELOP_API = "https://search-agent-api-develop-43b3.up.railway.app";
 
 /**
+ * Loopback is allowed, and this is a carve-out rather than a hole.
+ *
+ * The `https://` rule exists because a live check spends a real guest
+ * allowance and real model budget against whatever it is pointed at, so a
+ * typo resolving to some plaintext host would burn a run and produce
+ * evidence about nothing. Loopback is not that case: `playwright.config.ts`
+ * boots a full local stack, Vite on 5273 and FastAPI on 8931 with the
+ * outbound model call FAKED, so a capture against it spends no allowance
+ * and no budget at all.
+ *
+ * Refusing it had a real cost, found by hitting it: the first version of
+ * this file made it impossible to film a UI change before that change was
+ * deployed anywhere, which is precisely when someone wants to look at it.
+ *
+ * Only the two loopback literals, never a bare hostname. `http://internal`
+ * or `http://localhost.evil.example` are still refused.
+ */
+const LOOPBACK = ["http://127.0.0.1:", "http://localhost:"];
+
+/**
  * The web app a live check drives. Override with `S3_LIVE_WEB_URL`.
  *
  * Rejects anything that is not `https://`. These specs spend a real guest
@@ -58,13 +78,15 @@ export const LIVE_API_URL = requireHttps(
   "S3_LIVE_API_URL",
 );
 
+
 function requireHttps(url: string, variable: string): string {
+  if (LOOPBACK.some((prefix) => url.startsWith(prefix))) return url;
   if (!url.startsWith("https://")) {
     throw new Error(
-      `${variable} must be an https:// URL, got ${JSON.stringify(url)}. ` +
-        `A live check spends a real guest allowance against whatever it is ` +
-        `pointed at, so an unreachable or plaintext target is refused rather ` +
-        `than attempted.`,
+      `${variable} must be an https:// URL or a loopback address, got ` +
+        `${JSON.stringify(url)}. A live check spends a real guest allowance ` +
+        `against whatever it is pointed at, so an unreachable or plaintext ` +
+        `remote target is refused rather than attempted.`,
     );
   }
   return url;

@@ -81,7 +81,19 @@ export default defineConfig({
       // different address than the one Playwright actually probes.
       command: `npm run dev -- --port ${FRONTEND_PORT} --strictPort --host 127.0.0.1`,
       cwd: __dirname,
-      env: { VITE_API_BASE_URL: BACKEND_URL },
+      // T-6.2-11: overridable, default UNCHANGED. A journey that films a
+      // frontend change needs the real API behind it, because the mock
+      // backend answers in milliseconds and the whole subject of journey 2
+      // is a 12 to 14 second wait. Pointing the local frontend at a
+      // deployed API is the only way to film a frontend change BEFORE it is
+      // deployed, which is exactly when someone wants to look at it.
+      //
+      // Every ordinary run is unaffected: without the variable this is the
+      // mock backend it always was, so no suite silently starts reaching
+      // the internet.
+      env: {
+        VITE_API_BASE_URL: process.env.S3_E2E_API_BASE_URL ?? BACKEND_URL,
+      },
       url: FRONTEND_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
