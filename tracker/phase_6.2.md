@@ -324,8 +324,8 @@ History:
 
 ### T-6.2-15: A stripped mid-sentence clause must not leave a broken sentence
 
-Status: todo
-Refine: product_refine
+Status: in-review
+Refine: refined
 Depends on: T-6.2-04
 Spec: F-6.2-01 in the Findings section below; `synthesis/grounding.py`'s clause boundaries
 
@@ -351,9 +351,44 @@ Acceptance criteria:
 
 Files: `src/system_03_search_agent/synthesis/grounding.py`
 
+Evidence:
+
+DECIDED by the product owner 2026-09-01: drop the whole sentence. `DECISIONS.md` carries the
+rejected option and its cost.
+
+THE RULE IS NARROWER THAN "drop on any strip", and the narrowness is the design rather than
+an optimization. A stripped segment triggers the drop only when a SURVIVING segment follows
+it, which is exactly when the removed clause was carrying connective tissue the rest depends
+on. A strip at the END of a sentence leaves a grammatical prefix, so `A [1], B [2], and C [3]`
+losing C still shows A and B rather than throwing away two good claims to fix nothing.
+
+Nothing is committed until the sentence is known to survive. The display numbers in
+particular are assigned at commit, because numbering a claim in a sentence that is then
+discarded would leave a hole in a sequence Section 9.4 requires to be dense.
+
+```
+4 arms, all green
+238 synthesis tests, 4549 Python tests, 171 skipped, 0 failed
+ruff clean
+```
+
+MUTATION-PROVEN IN BOTH DIRECTIONS, which is what makes the narrowness real rather than
+asserted:
+
+- Reverting the fix (never drop) turns 2 arms red, including the reported defect.
+- The over-broad version (drop whenever anything was stripped) turns the trailing-strip arm
+  red, which is the arm that stops this change from quietly shrinking every partial answer.
+
+ONE DEFECT IN THIS TICKET'S OWN TEST, caught by its own control arm: the first draft passed
+no `question`, so `claim_introduces_no_new_content` stripped every clause containing the gene
+name and even the fully-grounded control came back empty. The harness was wrong, not the
+product, which is precisely what a control arm exists to distinguish.
+
 History:
 - 2026-09-01 lead: created from F-6.2-01 once measurement showed it is a consequence of the
   omission path rather than an independent defect, and that the repair is a product trade
+- 2026-09-01 product owner: decided, drop the whole sentence
+- 2026-09-01 lead: built, 4 arms, mutation-proven in both directions. Moved to `in-review`
 
 ### T-6.2-04: The same question returns the same disease count on repeated runs
 
