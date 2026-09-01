@@ -535,7 +535,7 @@ History:
 
 ### T-6.2-11: Browser journeys capture the experience rather than assert on it
 
-Status: in-progress, 1 of 8 journeys built
+Status: in-review, all 8 journeys built, 3 run
 Refine: refined
 Depends on: T-6.2-12
 Spec: `UI_feedback.md` "end-to-end workflows for browser-driven testing", the eight-journey table
@@ -565,9 +565,24 @@ missing run screen IS the observation on a failed run.
 
 Gated behind `RUN_LIVE_JOURNEYS=1` and pointed at develop through `live-target.ts`.
 
-Seven journeys remain: first visit to first answer, follow-up continuity, guest allowance
-exhaustion, every integrations affordance, refusal and error paths, narrow viewports, and
-sign up / sign out / sign in.
+ALL EIGHT NOW EXIST, sharing `journeys/_capture.ts` so journey 2's three instrument defects
+are fixed once rather than seven more times. Playwright collects nine tests across eight
+files, every one gated behind `RUN_LIVE_JOURNEYS=1`.
+
+Three have been RUN. Journey 2 against develop, and journeys 5 and 7, which were run because
+they spend NO guest answer: one never asks a question and the other films layout. Both found
+something on their first run.
+
+| Journey | Cost to run | State |
+|---|---|---|
+| 1 first visit to first answer | 1 answer | built, not run |
+| 2 the wait | 1 answer | RUN. F-6.2-07 |
+| 3 follow-up continuity | 2 answers | built, not run. Evidence for T-6.2-07's product decision |
+| 4 guest allowance exhaustion | 6 answers, a whole guest allowance | built, not run |
+| 5 integrations affordances | none | RUN. F-6.2-09 |
+| 6 refusal and error paths | up to 2 answers | built, not run |
+| 7 narrow viewports | none | RUN. F-6.2-08 |
+| 8 sign up, reload, sign in | none, creates an account | built, not run |
 
 Filmstrip captured 2026-09-01 against develop, committed at
 `docs/build/design/evidence/2026-09-01_journey2_wait/`, 26 frames plus `filmstrip.md`.
@@ -587,6 +602,11 @@ TWO THINGS COULD NOT BE FILMED, and both are recorded rather than worked around:
 History:
 - 2026-09-01 lead: created
 - 2026-09-01 lead: journey 2 built, gated, typechecked. Seven remain
+- 2026-09-01 lead: remaining seven journeys built on a shared `_capture.ts`. Journeys 5 and
+  7 run at zero allowance cost and both found a defect on the first run, F-6.2-09 and
+  F-6.2-08. Journey 5's assertion was itself wrong, copied from journey 2: `frames > 1`
+  turned "the page has no dead buttons" into a red test, when one frame is the correct output
+  for a page with no controls. Moved to `in-review`
 - 2026-09-01 lead: two defects in the journey itself fixed before its output was trusted. It
   used auto-waiting locators in the capture helper, so with no live step on screen it blocked
   for the full 180-second timeout and filmed one frame; `page.evaluate` cannot wait, so it
@@ -807,6 +827,82 @@ needing explanation, which is the opposite of what the brief assumed.
 History:
 - 2026-09-01 lead: filed. Corrects a characterization in `UI_feedback.md` rather than
   reporting something new
+
+### F-6.2-09: Complaint 4's premise does not hold on develop
+
+Status: filed. CHANGES T-6.2-09, which is one of the tickets awaiting a product decision
+Raised by: lead, journey 5's first run
+Severity: medium, and it makes a blocked ticket smaller rather than larger
+Round: 0 (pre-build)
+Ticket: T-6.2-09
+
+What happened. Journey 5 clicks every control on the integrations page. It found NONE:
+`buttons on the page: 0`.
+
+The page on develop is five informational cards, REST and SSE, GraphQL, MCP server, KGX
+export and Command line, each carrying real endpoint paths, a real MCP config snippet, and
+real CLI invocations. The KGX card states its own limitation in the product's own words, "A
+batch command rather than a live endpoint, and not a whole-graph snapshot", and the GraphQL
+card says "Registered accounts only".
+
+`UI_feedback.md` describes something different: "a request button that acknowledges and does
+nothing", quoting `frontend/src/stubs/registry.ts`, and concludes the page "advertises a
+shelf of capabilities and hands the visitor nothing to pick up". On develop it hands a
+visitor endpoint paths, a pasteable MCP config and CLI commands, and it has no dead control
+to click.
+
+WHY THE TWO DISAGREE, and this is the load-bearing part: that document's evidence was
+gathered against PRODUCTION, and it says so itself in the section correcting exactly this
+habit. Production lags develop by a release. So this is most likely the fix already having
+landed on develop and not yet been promoted, rather than a contradiction.
+
+NOT YET ESTABLISHED, and deliberately not assumed: whether production still shows the dead
+button. Confirming that needs one run of this journey against production, which is a
+one-line override and is the legitimate use of pointing at production, confirming what a
+release actually shipped.
+
+What survives of complaint 4 regardless: there is still no KGX HTTP endpoint. The page is now
+honest about that rather than advertising one, which is one of the two options T-6.2-09 put
+to the product owner, apparently already taken.
+
+History:
+- 2026-09-01 lead: filed from journey 5's own output, before drawing any conclusion about
+  what the product owner should decide
+
+### F-6.2-08: The app bleeds 8px horizontally at 390px
+
+Status: filed
+Raised by: lead, journey 7's first run
+Severity: medium
+Round: 0 (pre-build)
+Ticket: T-6.2-10
+
+What happened. Journey 7 measures `scrollWidth` against `clientWidth` at each of the three
+widths `UI_feedback.md` names:
+
+```
+390px:  scrollWidth 398 vs clientWidth 390   HORIZONTAL OVERFLOW
+768px:  scrollWidth 768 vs clientWidth 768
+1440px: scrollWidth 1440 vs clientWidth 1440
+```
+
+So the page is 8 pixels wider than a 390px viewport and scrolls sideways on a phone. 768 and
+1440 are clean, which is why nobody has noticed: the two widths a developer actually looks at
+are both fine.
+
+WHY THIS WAS MEASURED RATHER THAN LOOKED AT, and it is the reason journey 7 does anything
+beyond taking pictures: horizontal overflow is the one layout defect a screenshot CANNOT
+show, because the frame is clipped to the viewport. Every screenshot at 390px looks correct.
+Complaint 1 has sat undiagnosed since 2026-08-31 with the note that judging it "needs a
+browser and a side-by-side", and the first thing a browser found was invisible to the
+side-by-side.
+
+Which element overflows is NOT established here. That is T-6.2-10's job, and it must first
+decide whether this is a regression since build phase 4.9 or a gap that phase never covered,
+because those are different jobs.
+
+History:
+- 2026-09-01 lead: filed from journey 7's own measurement
 
 ### F-6.2-07: The wait is roughly twice what was measured, with a 15-second dead stretch
 
