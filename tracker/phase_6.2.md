@@ -266,7 +266,7 @@ History:
 
 ### T-6.2-03: The internal findings-accounting note is not shown to the user
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-6.2-01
 Spec: `UI_feedback.md` "the second defect in the same answer"
@@ -276,10 +276,84 @@ Acceptance criteria:
 - [ ] Where information was genuinely withheld, the disclosure states what a reader can act on, not an internal count
 - [ ] The accounting itself is retained wherever it is used for grading or tracing, so this is a presentation change and not a loss of the signal
 
-Files: `src/system_03_search_agent/synthesis/`
+Files: `src/system_03_search_agent/core/graph.py`,
+`tests/system_03_search_agent/core/test_write_completeness.py`,
+`tests/system_03_search_agent/core/test_personalization_premise.py`
+
+Evidence:
+
+The note read, to a researcher on the live site:
+
+```
+Note: this answer reports 4 of the 5 findings prepared for it, and the one not reported
+is absent from the citations as well as from the text above
+```
+
+It now reads:
+
+```
+Note: 3 further disease records were found for this question and are not described above
+```
+
+The three earlier fixes to this note are PRESERVED rather than undone, which is why it was
+reworded rather than rewritten: it is still ONE sentence (a second would read as an uncited
+claim to the coverage grader), it still states SCALE rather than inlining values (a Layer 1
+value like `NM_007294.4(BRCA1):c.190T>G` is full of periods and the grader splits on them),
+and it still never claims the omitted rows are in the citations, which they are not. It also
+carries no semicolon, since the grounding pass treats `;` as a sentence boundary too.
+
+TWO EXISTING TESTS PINNED THE OLD WORDING AND BOTH PINNED REAL PROPERTIES, so neither was
+deleted:
+
+- `test_write_completeness.py` guarded F-4.5-A-16, that the denominator counts findings
+  PREPARED for the answer rather than rows retrieved, a defect that once understated by 25x.
+  The new note prints no denominator, so the arm now asserts the same property through the
+  count it does print: 3 omitted from 5 prepared, never 498 or 500. Mutation-proven by
+  forcing the count to 498, which turns it red, then restoring it.
+- `test_personalization_premise.py` used the note's wording as a fingerprint to prove the
+  disclosure branch fired at all. Its fingerprint moved to `not described above`. That file's
+  own comment warns that a fingerprint a grammar fix can invalidate is testing the wording
+  rather than the control, and that warning is now recorded against the new line too, since
+  it is still a phrase rather than a property.
 
 History:
 - 2026-09-01 lead: created
+- 2026-09-01 lead: note rewritten from the system's side to the reader's, both dependent
+  tests re-pinned against the same properties rather than dropped, mutation verified
+- 2026-09-01 lead: moved to `in-review`. The judge closes this, not the lead
+
+### T-6.2-15: A stripped mid-sentence clause must not leave a broken sentence
+
+Status: todo
+Refine: product_refine
+Depends on: T-6.2-04
+Spec: F-6.2-01 in the Findings section below; `synthesis/grounding.py`'s clause boundaries
+
+Blocked on a product decision, and the decision is a genuine trade rather than a detail.
+When the grounding pass strips a clause from the middle of a sentence, the surviving text
+can lose its verb and its punctuation. The two honest repairs pull in opposite directions:
+
+- Drop the whole sentence. Safe, and it means one unsupported disease out of four takes the
+  other three with it, turning a partial answer into no answer.
+- Keep the fragment. Preserves the surviving facts and shows a reader an ungrammatical
+  sentence.
+
+A third option, repairing the remainder into grammatical prose, is NOT on the table: it
+means generating text after the grounding pass has run, which is the one thing this system's
+trust position does not permit.
+
+Acceptance criteria:
+- [ ] Whichever option the product owner picks, no user-facing answer contains an unbalanced
+      bracket or a sentence with no verb where a clause was stripped
+- [ ] The choice is recorded in `DECISIONS.md` with the rejected option and its cost
+- [ ] An arm drives a mid-sentence strip deterministically and asserts the chosen behaviour,
+      rather than waiting for the run-to-run variation to produce one
+
+Files: `src/system_03_search_agent/synthesis/grounding.py`
+
+History:
+- 2026-09-01 lead: created from F-6.2-01 once measurement showed it is a consequence of the
+  omission path rather than an independent defect, and that the repair is a product trade
 
 ### T-6.2-04: The same question returns the same disease count on repeated runs
 
@@ -506,11 +580,58 @@ the argument for writing the gate before the fix rather than after it.
 
 ### F-6.2-01: The narrative is a broken sentence fragment, not just an unreadable one
 
-Status: filed
+Status: confirmed as a MECHANISM, measured as LATENT. Needs a product decision, see below
 Raised by: lead, first live premise-gate run
-Severity: high
+Severity: high when it fires, and it did not fire in 5 of 5 runs after T-6.2-02
 Round: 0 (pre-build)
-Ticket: unassigned
+Ticket: T-6.2-15 (opened for it), and it is downstream of T-6.2-04
+
+MEASURED 2026-09-01, after T-6.2-02 landed. Five consecutive live runs of the same
+question, checking parenthesis balance and disease coverage:
+
+```
+run 0: parens 1/1 ok   BRCA1 (gene symbol BRCA1) [1] is associated with four disease records...
+run 1: parens 0/0 ok   BRCA1 [1] is associated with four disease records in the knowledge graph...
+run 2: parens 0/0 ok   BRCA1 [1] is associated with familial cancer of breast [2], breast-ovarian...
+run 3: parens 0/0 ok   BRCA1 [1] is associated with four disease records in the knowledge graph...
+run 4: parens 0/0 ok   BRCA1 [1] is associated with four diseases: familial cancer of breast [2]...
+```
+
+Zero reproductions in five, and every run named all four diseases. Before T-6.2-02 the
+observed runs dropped one. So this finding is NOT an independent defect: it is a
+CONSEQUENCE of the omission path F-6.2-03 describes, and resolving the names appears to
+have made omission rarer, plausibly because a model reproduces a disease name verbatim more
+reliably than it reproduces `MedGen:C0346153`. That is an inference from five runs, not a
+proof, and it is stated as one.
+
+THE MECHANISM, established by reading `synthesis/grounding.py` rather than by guessing.
+A clause runs from the end of the previous marker to the marker itself, so
+
+    BRCA1 (gene symbol: BRCA1 [1]) is associated with familial cancer of breast [2], ...
+
+splits into a segment ending at [1] and a segment `") is associated with familial cancer of
+breast "` ending at [2]. If the [2] finding is stripped, the closing parenthesis AND the
+sentence's only verb go with it, and the surviving text is the fragment that was observed.
+The connective tissue of a sentence lives inside its clauses, so stripping one mid-sentence
+can leave the rest ungrammatical.
+
+WHY THIS IS NOT FIXED IN THIS TICKET, and it is a product decision rather than a technical
+one. The obvious repair is to drop the WHOLE SENTENCE when a mid-sentence segment is
+stripped, which is honest and safe. It is also destructive in exactly the case that matters:
+one unsupported disease out of four would take the other three with it, turning a partial
+answer into no answer. The alternative, repairing the remainder into a grammatical sentence,
+means generating prose AFTER the grounding pass has run, which is the one thing this
+system's trust position does not permit.
+
+So the choice is between an ungrammatical partial answer and a smaller complete one, and
+that is the product owner's call. Recorded as T-6.2-15 with both options rather than
+settled by the lead.
+
+History:
+- 2026-09-01 lead: filed from the gate's own failure output, before any fix
+- 2026-09-01 lead: measured at 0 of 5 after T-6.2-02, mechanism established by reading
+  `grounding.py`'s segment boundaries, reclassified from an independent defect to a
+  consequence of F-6.2-03, and opened as T-6.2-15 carrying a product decision
 
 What happened. Arm A1's captured narrative, in full:
 
@@ -559,7 +680,7 @@ History:
 
 ### F-6.2-04: Arm A5 of this phase's own premise gate reports a FALSE GREEN
 
-Status: filed
+Status: closed by T-6.2-01's deterministic rewrite, pending judge verification
 Raised by: lead, evidence capture after T-6.2-02 landed
 Severity: high
 Round: 0 (pre-build)
@@ -594,6 +715,14 @@ shown WHEN findings are dropped, which is the case the note exists for.
 History:
 - 2026-09-01 lead: filed immediately on noticing the contradiction between a green A5 and a
   live note in the very next run, before continuing
+- 2026-09-01 lead: A5 rewritten. It now drives the omission DIRECTLY through
+  `_build_incomplete_answer_note`, covering both the singular and plural branches, so the
+  disclosure is guaranteed to exist and the arm always has something to assert. The live
+  half is kept but now SKIPS explicitly when a run omits nothing, rather than passing
+  silently: the gate reports `5 passed, 1 skipped`, and that skip is the arm saying out loud
+  that the live path was not exercised. Mutation-proven by restoring the old wording in the
+  singular branch only, which turns it red in 3.14s, before any live call. Left open for the
+  judge rather than closed by the lead who wrote both the defect and the fix
 
 ### F-6.2-03: The non-determinism reproduces inside the gate itself
 

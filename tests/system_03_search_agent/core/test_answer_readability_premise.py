@@ -557,7 +557,79 @@ async def test_a5_internal_findings_accounting_never_reaches_the_reader() -> Non
 
     This arm does not object to disclosing that information was withheld.
     It objects to disclosing it as internal bookkeeping.
+
+    ## Why this arm is now DETERMINISTIC, and what it looked like when it
+    ## was not (F-6.2-04)
+
+    As first written this arm ran a live question and asserted the note was
+    absent from whatever came back. It reported GREEN on the run right
+    after T-6.2-02 landed, while T-6.2-03 had not been started and the note
+    was fully live: the very next run of the same question produced
+
+        ... Note: this answer reports 4 of the 5 findings prepared for it,
+        and the one not reported is absent from the citations as well as
+        from the text above
+
+    The note only appears when synthesis actually omits a prepared finding,
+    and whether it does varies run to run (F-6.2-03). So the arm was a coin
+    flip that read as coverage, which is precisely the "a gate that cannot
+    distinguish the property holding from nothing having happened is not a
+    gate" failure `goal-contracts.md` names.
+
+    The fix is NOT to retry the live question until the note appears, which
+    would be tuning the arm to the defect and would still be probabilistic.
+    It is to drive the omission DIRECTLY, by calling the note builder with
+    an omission, so the disclosure is guaranteed to exist and this arm can
+    assert on what a reader is shown WHEN it does. That is the case the note
+    exists for, and it is the only case in which this arm ever had anything
+    to say.
+
+    The live half is not discarded, because an offline call to one builder
+    cannot see the note reaching a real answer. It moves to a POPULATE-CHECK
+    shape: run the real question, and if a disclosure appears in it, hold it
+    to the same rule. A run with no omission now SKIPS that half explicitly
+    instead of passing it silently.
+
+    `test_write_completeness.py::test_the_incomplete_note_counts_findings_handed_to_synthesis`
+    carries the same assertion through the real `write_node`, with the
+    omission forced by fixtures. Between them the property is pinned at the
+    builder, at the node, and opportunistically at the live answer.
     """
+    from system_03_search_agent.core.graph import _build_incomplete_answer_note
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    def _omitted(count: int) -> list[SynthFinding]:
+        return [
+            SynthFinding(
+                ref_index=i,
+                citation_id=f"omitted-{i}",
+                layer="layer_1_graph",
+                tool="cypher_query",
+                field="curie",
+                field_value=f"MedGen:C{i}",
+                source_url=f"https://www.ncbi.nlm.nih.gov/medgen/C{i}",
+                entity_type="Disease",
+                curie=f"MedGen:C{i}",
+            )
+            for i in range(1, count + 1)
+        ]
+
+    # The deterministic half. Both the singular and plural branches are
+    # exercised, because the note has two of them and an arm that only ever
+    # sees one leaves the other free to say anything.
+    for count in (1, 3):
+        note = _build_incomplete_answer_note(_omitted(count), reported=2)
+        leaked = _FINDINGS_ACCOUNTING.findall(note)
+        assert not leaked, (
+            f"internal findings accounting is what the reader is shown when "
+            f"{count} finding(s) are omitted: {leaked}. Note: {note!r}"
+        )
+        assert "not described above" in note, (
+            f"the omission must still be DISCLOSED, and this arm must never "
+            f"be satisfiable by deleting the note: {note!r}"
+        )
+
+    # The live half, now explicit about when it has nothing to say.
     answer = await _run_once(BRCA1_DISEASE_QUESTION)
     _assert_answered(answer)
 
@@ -566,3 +638,11 @@ async def test_a5_internal_findings_accounting_never_reaches_the_reader() -> Non
         f"internal findings accounting reached the reader: {leaked}"
         f"{answer.describe()}"
     )
+    if "not described above" not in answer.narrative:
+        pytest.skip(
+            "the live half of A5 had nothing to assert on: this run omitted "
+            "no finding, so no disclosure was produced. The deterministic "
+            "half above ran and passed. Recorded as a skip rather than a "
+            "pass so a green run is never read as evidence the live path "
+            "was exercised (F-6.2-04)"
+        )

@@ -430,23 +430,52 @@ async def test_the_incomplete_note_counts_findings_handed_to_synthesis(
     so a denominator that meant "retrieved" and a denominator that means
     "prepared" cannot both be right.
 
-    MUTATION PROOF. Restoring the word "retrieved" turns this arm red:
+    REWORDED, NOT WEAKENED, by build phase 6.2's T-6.2-03. The note no
+    longer prints a denominator at all, because "3 of the 5 findings
+    prepared for it" is this system's internal unit and a researcher hit it
+    on the live site and could act on none of it (`UI_feedback.md`). This
+    arm therefore stopped asserting on the SENTENCE and started asserting
+    on the PROPERTY that sentence existed to carry, which is unchanged: the
+    number disclosed is derived from the prepared-findings set, so it is 3,
+    and it is never the 500 retrieved rows.
 
-        AssertionError: the note must say what it counts; got 'Note: this
-        answer reports 2 of the 5 findings retrieved for it, ...'
+    That property is what F-4.5-A-16 was about. Dropping this arm when the
+    wording changed would have retired the only check standing between this
+    disclosure and a 25x understatement, which is why it is rewritten here
+    rather than deleted.
+
+    MUTATION PROOF, re-derived against the new wording. Deriving the count
+    from `total_available` instead of `len(omitted)` turns this arm red:
+
+        AssertionError: the disclosed count is the prepared-findings
+        shortfall, not the retrieved row count; got 'Note: 498 further
+        disease records were found for this question ...'
     """
     synth_pair(first={1, 2}, repaired={1, 2})
 
     result = await graph_module.write_node(_write_state(total_available=500))
     narrative = _narrative(result["events"])
 
-    assert "of the 5 findings prepared for it" in narrative, (
-        f"the note must say what it counts; got {narrative!r}"
+    assert "3 further disease records" in narrative, (
+        f"the disclosed count is the prepared-findings shortfall (5 prepared "
+        f"minus 2 reported), not the retrieved row count; got {narrative!r}"
+    )
+    assert "498" not in narrative, (
+        f"the disclosure is counting retrieved rows, not prepared findings; "
+        f"got {narrative!r}"
+    )
+    assert "500" not in narrative, (
+        f"the disclosure is counting retrieved rows, not prepared findings; "
+        f"got {narrative!r}"
+    )
+
+    # The reader-facing half of T-6.2-03, asserted here rather than only in
+    # the premise gate, because this arm can drive the omission
+    # deterministically and the gate's live arm cannot (F-6.2-04).
+    assert "findings prepared for it" not in narrative, (
+        f"internal findings accounting reached the reader; got {narrative!r}"
     )
     assert "findings retrieved for it" not in narrative
-    assert "reports 2 of the 5" in narrative, (
-        "the denominator is the prepared-findings count, not the row count"
-    )
 
 
 # ---------------------------------------------------------------------------
