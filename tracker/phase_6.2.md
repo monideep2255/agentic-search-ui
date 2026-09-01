@@ -506,7 +506,7 @@ History:
 
 ### T-6.2-12: Live browser checks target develop, not production
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: none
 Spec: `UI_feedback.md` "test against develop, not production"
@@ -516,10 +516,48 @@ Acceptance criteria:
 - [ ] No spec in `frontend/e2e/` hardcodes a production URL
 - [ ] The `app_env` field of the target's `/health` is captured alongside each run, so a capture states which deployment produced it
 
-Files: `frontend/e2e/`
+Files: `frontend/e2e/live-target.ts` (new), `frontend/e2e/live-target.spec.ts` (new),
+`frontend/e2e/live-answer-screenshot.spec.ts`, `frontend/e2e/live-second-turn-diagnostic.spec.ts`
+
+Evidence:
+
+`live-target.ts` resolves the web and API targets from `S3_LIVE_WEB_URL` and `S3_LIVE_API_URL`,
+defaulting to develop, and refuses anything that is not `https://` rather than attempting it,
+since these specs spend a real guest allowance against whatever they are pointed at.
+
+Both live diagnostics now import it, and both record `app_env` READ FROM THE API'S OWN
+`/health` rather than inferred from the URL string. A URL is what someone intended to hit and
+`app_env` is what answered, and those differ exactly when it matters: build phase 4.15 shipped
+a develop web app that was live, answered 200, and could reach no API at all.
+
+REWIRING THE TWO FILES THAT EXIST IS NOT THE FIX, and this is the transferable half.
+`live-target.spec.ts` checks the WHOLE DIRECTORY, so the third live spec someone writes next
+week cannot quietly hardcode a target. It runs offline, in the ordinary suite. Two arms: no
+spec names a deployment in a string literal, and the default is develop rather than
+production, asserted in that direction because defaulting to production is what produced a
+whole feedback document measured against the wrong build.
+
+Mutation-proven rather than asserted: adding a hardcoded production URL to `routing.spec.ts`
+turns the first arm red naming that file, and removing it turns it green again.
+
+```
+2 passed (4.8s)          both arms
+1 failed, 1 passed       with routing.spec.ts mutated
+tsc --noEmit             exit 0
+vitest                   235 passed
+```
+
+ONE DEFECT IN THIS TICKET'S OWN ARM, recorded rather than quietly fixed: it first used
+`__dirname`, which does not exist in this ESM project. Playwright reported it as a
+ReferenceError at COLLECTION time and printed `No tests found`, so the arm would have been
+silently absent rather than failing. That is the same family as the unregistered pytest
+marker earlier in this phase: a check that does not run reports nothing, and nothing reads as
+fine.
 
 History:
 - 2026-09-01 lead: created. First, because every other browser ticket inherits the wrong target otherwise
+- 2026-09-01 lead: shared target module, `app_env` capture, and a directory-wide structural
+  arm; mutation verified. Moved to `in-review`
 
 ### T-6.2-13: The reported cost of a run is either accurate or absent
 
