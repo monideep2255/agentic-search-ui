@@ -490,24 +490,70 @@ History:
 
 ### T-6.2-07: A follow-up question continues the thread
 
-Status: todo
-Refine: product_refine
+Status: in-review
+Refine: refined
 Depends on: none
 Spec: `UI_feedback.md` complaint 3
 
-Blocked on a product decision: what a follow-up turn carries forward. The three candidates
-are the prior question and answer as context, the resolved entities from the previous turn,
-or the full thread. Only the product owner moves this ticket.
+DECIDED by the product owner 2026-09-01: carry the WHOLE THREAD, bounded by the cap that
+already exists, and strictly as retrieval guidance rather than as citable evidence.
+`DECISIONS.md` carries both rejected options and the two refinements accepted with it.
 
 Acceptance criteria:
 - [ ] A follow-up asking "what variants cause it" after a question about BRCA1 resolves "it" to the subject of the previous turn
 - [ ] The carried context is bounded and enters the dynamic suffix, never the stable prefix, per `prompt-cache-discipline.md`
 - [ ] A follow-up from a different session never inherits another session's thread
 
-Files: `frontend/src/`, `src/system_03_search_agent/core/session_memory.py`, `src/system_03_search_agent/core/graph.py`
+Files: `src/system_03_search_agent/core/session_memory.py`,
+`src/system_03_search_agent/core/run.py`,
+`tests/system_03_search_agent/core/test_session_memory.py`
+
+Evidence:
+
+MEASURING FIRST MADE THIS SMALL, and the measurement is the interesting part. Most of "the
+whole thread" already existed and was simply not obvious. `compressed_findings` carries what
+each turn ESTABLISHED and `resolved_entities` carries what it resolved, both already flowing
+to Think and Plan. The one missing piece was what the user actually ASKED, so a follow-up
+saying "what variants cause it" reached Think holding the entities and no record of the
+sentence the pronoun points back at.
+
+`SessionMemorySummary.open_threads` already existed on the contract, was already rendered,
+and had NO PRODUCER. Build phase 4.5 scoped one out deliberately, wrote in its own module
+docstring that whoever added one must replace that paragraph in the same change, and pinned
+that with a test. Both obligations were honoured: the paragraph is replaced, and the test is
+INVERTED rather than removed, because the property worth protecting was never "there is no
+producer", it was that the code and the docstring agree about whether there is one.
+
+So there is NO new field, NO contract change, and NO frontend change. An open thread is a
+question the conversation has not closed.
+
+THE BOUNDS ARE THE ONES ALREADY DECLARED, which is what keeps "the whole thread" inside
+Section 14.3's hard 1500-token budget: `MAX_OPEN_THREADS` 10, `MAX_OPEN_THREAD_LENGTH` 200,
+and `compact` drops the OLDEST threads first. A side effect worth naming rather than
+leaving to be rediscovered: Section 14.3's first compaction rule now fires on real data,
+where before compaction always began at the more expensive findings merge.
+
+THE CONSTRAINT HOLDS BY CONSTRUCTION rather than by instruction. `injected_steps` is
+`("think", "plan")` and never `"write"`, so the thread shapes what gets looked up and cannot
+become a citation. The product's own follow-up help text already promises exactly that, and
+it stays true.
+
+Verified by execution, the block a third turn receives:
+
+```
+Session so far: resolved BRCA1 to NCBIGene:672 (Gene).
+Open: Which diseases are associated with BRCA1?. Open: What variants cause it?.
+injected into: ('think', 'plan')
+```
+
+Four arms, mutation-proven: removing the producer turns three of them red. The bounding arm
+asserts the NEWEST turn survives and the OLDEST falls off, since discarding the newest would
+throw away the turn a pronoun most likely points at.
 
 History:
 - 2026-09-01 lead: created, labelled `product_refine` at creation
+- 2026-09-01 product owner: decided, the whole thread, bounded, retrieval guidance only
+- 2026-09-01 lead: built as the producer `open_threads` never had. Moved to `in-review`
 
 ### T-6.2-08: An answer can offer an honest next step
 

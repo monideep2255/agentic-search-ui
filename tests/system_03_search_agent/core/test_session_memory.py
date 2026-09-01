@@ -970,21 +970,118 @@ class TestCompactionOrder:
 
 
 class TestOpenThreadsHaveNoProducer:
-    def test_merge_turn_offers_no_way_to_add_an_open_thread(self) -> None:
-        """F-4.5-A-10, pinned as a statement rather than left in prose.
+    """RENAMED IN SPIRIT, kept in place: open_threads HAS a producer now.
 
-        Nothing in `src/` writes `open_threads`, so Section 14.3's first
-        compaction rule cannot fire on real data and premise-gate arm P9
-        proves the order only because it hands ten threads in. Adding a
-        producer is another phase's work under
-        `.claude/rules/v1-scope-boundary.md`, so what this module owes the
-        next reader is an honest statement, and this is what keeps the
-        statement true: whoever adds the parameter has to come here, see
-        this, and update the module docstring's no-producer paragraph in the
-        same change.
+    This class used to pin the ABSENCE of one. That was correct and
+    deliberate: build phase 4.5 scoped a producer out under
+    `.claude/rules/v1-scope-boundary.md`, and the arm existed so that
+    whoever added one would have to come here, see it, and update the
+    module docstring in the same change. It worked exactly as designed,
+    which is why this comment exists rather than a quiet deletion.
+
+    Build phase 6.2's T-6.2-07 added the producer on a product-owner
+    decision, so the arm below now pins the OPPOSITE contract. The
+    docstring assertion is kept and inverted rather than dropped, because
+    the thing worth protecting was never "there is no producer": it was
+    that the code and the docstring agree about whether there is one.
+    """
+
+    def test_merge_turn_records_the_question_as_an_open_thread(
+        self, char_counter: None
+    ) -> None:
+        """The producer exists, and the docstring says so.
+
+        A follow-up resolves a pronoun only if the earlier QUESTION reached
+        Think. Memory already carried the entities a turn resolved and the
+        facts it established; the sentence the user typed was the missing
+        piece.
         """
-        assert "open_threads" not in inspect.signature(sm.merge_turn).parameters
-        assert "no producer" in sm.__doc__
+        assert "question" in inspect.signature(sm.merge_turn).parameters
+        assert "no producer" not in sm.__doc__, (
+            "the docstring still claims open_threads has no producer while "
+            "merge_turn takes a question: the two must not disagree"
+        )
+        assert "HAS A PRODUCER" in sm.__doc__
+
+        folded = sm.merge_turn(
+            None,
+            session_id="s-1",
+            now=_now(),
+            resolved=[],
+            findings=[],
+            question="Which diseases are associated with BRCA1?",
+        )
+        assert folded.open_threads == ["Which diseases are associated with BRCA1?"]
+
+    def test_the_thread_accumulates_in_order_and_is_bounded(
+        self, char_counter: None
+    ) -> None:
+        """The whole thread, oldest first, up to the cap already declared.
+
+        Order is load-bearing beyond readability: `compact` drops the OLDEST
+        threads first when the token budget bites, so a list in the wrong
+        order would discard the most recent turn, which is the one a pronoun
+        most likely points at.
+        """
+        summary = None
+        for index in range(1, 15):
+            summary = sm.merge_turn(
+                summary,
+                session_id="s-1",
+                now=_now(),
+                resolved=[],
+                findings=[],
+                question=f"question {index}",
+            )
+
+        assert summary is not None
+        assert len(summary.open_threads) <= 10, (
+            f"the thread must stay inside MAX_OPEN_THREADS, got "
+            f"{len(summary.open_threads)}"
+        )
+        assert summary.open_threads[-1] == "question 14", (
+            "the newest turn must survive: it is the one a pronoun points at"
+        )
+        assert "question 1" not in summary.open_threads, (
+            "the OLDEST turns are the ones that fall off, not the newest"
+        )
+
+    def test_an_immediate_repeat_does_not_duplicate(self, char_counter: None) -> None:
+        """Asking the same thing twice in a row adds nothing to the thread.
+
+        Deliberately only an IMMEDIATE repeat. Asking a question again after
+        three other turns is a real return to a topic, and the thread should
+        show that it happened rather than silently collapsing it.
+        """
+        first = sm.merge_turn(
+            None, session_id="s", now=_now(), resolved=[], findings=[], question="same"
+        )
+        second = sm.merge_turn(
+            first, session_id="s", now=_now(), resolved=[], findings=[], question="same"
+        )
+        assert second.open_threads == ["same"]
+
+        third = sm.merge_turn(
+            second, session_id="s", now=_now(), resolved=[], findings=[], question="other"
+        )
+        fourth = sm.merge_turn(
+            third, session_id="s", now=_now(), resolved=[], findings=[], question="same"
+        )
+        assert fourth.open_threads == ["same", "other", "same"], (
+            "a return to an earlier topic is a real event and must be visible"
+        )
+
+    def test_a_turn_with_no_question_adds_nothing(self, char_counter: None) -> None:
+        """The default is empty, so an existing caller that does not pass a
+        question is unchanged rather than writing a blank thread."""
+        folded = sm.merge_turn(
+            _summary(open_threads=["existing"]),
+            session_id="s-1",
+            now=_now(),
+            resolved=[],
+            findings=[],
+        )
+        assert folded.open_threads == ["existing"]
 
     def test_merge_turn_carries_an_existing_thread_list_forward(
         self, char_counter: None

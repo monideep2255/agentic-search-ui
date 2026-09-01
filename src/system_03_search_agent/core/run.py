@@ -520,6 +520,11 @@ async def _remember_turn(query: Query, events: list[Event]) -> None:
         now=datetime.now(UTC),
         resolved=resolved,
         findings=findings,
+        # T-6.2-07. The question is what a later turn's pronoun points back
+        # at, and until this line nothing carried it forward: memory held the
+        # entities a turn resolved and the facts it established, but not the
+        # sentence the user actually typed.
+        question=query.text,
     )
 
 
