@@ -17,8 +17,36 @@
 import { Box, Button, Typography } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
+import { useElapsedSeconds } from "../../hooks/useElapsedSeconds";
 import { ReasoningLog } from "./ReasoningLog";
 import { PersonaCaption } from "../shell/PersonaChip";
+
+/**
+ * The live step's pulse (T-6.2-05).
+ *
+ * The live dot already had a static ring, which distinguishes it from the
+ * other four and does not distinguish a working run from a dead page. This
+ * is the only element on screen that moves continuously, so across the
+ * several-second gaps between step transitions there is always something
+ * saying the run is alive.
+ *
+ * `prefers-reduced-motion` is honoured by the caller: a user who has asked
+ * the system for less motion gets the static ring back, and the elapsed
+ * counter still carries the liveness signal for them, which is why that
+ * counter is text rather than an animation.
+ */
+const LIVE_PULSE = {
+  "@keyframes s3-step-pulse": {
+    "0%": { boxShadow: `0 0 0 0 ${designTokens.layer1Wash}` },
+    "70%": { boxShadow: `0 0 0 7px rgba(0,0,0,0)` },
+    "100%": { boxShadow: `0 0 0 0 rgba(0,0,0,0)` },
+  },
+  animation: "s3-step-pulse 1.8s ease-out infinite",
+  "@media (prefers-reduced-motion: reduce)": {
+    animation: "none",
+    boxShadow: `0 0 0 4px ${designTokens.layer1Wash}`,
+  },
+} as const;
 
 /** The five nodes of the agent loop, in order. Never a subset. */
 export const STEPS = ["Guard", "Think", "Plan", "Act", "Write"] as const;
@@ -75,6 +103,12 @@ export interface RunScreenProps {
    * unconditionally, including after the run had already finished.
    */
   stopEnabled?: boolean;
+  /**
+   * When this run started, as `Date.now()`. Drives the elapsed counter
+   * (T-6.2-05). Null before a run starts and after it lands, which is what
+   * stops the counter rather than a separate flag.
+   */
+  startedAt?: number | null;
   /** Guardrail refusal copy, when the question was turned away. */
   refusal?: string | null;
   /** Cap copy, when the run stopped early on its processing budget. */
@@ -121,12 +155,15 @@ export function RunScreen({
   onStop,
   onNewSearch,
   stopEnabled = true,
+  startedAt = null,
   refusal = null,
   capMessage = null,
   failure = null,
 }: RunScreenProps) {
   const activeIndex = activeStep ? STEPS.indexOf(activeStep) : -1;
   const reached = new Set(reachedSteps);
+  const elapsed = useElapsedSeconds(startedAt);
+  const running = startedAt !== null && activeStep !== null;
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
@@ -151,6 +188,28 @@ export function RunScreen({
           <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
             {question}
           </Typography>
+          {running ? (
+            <Typography
+              data-testid="run-elapsed"
+              variant="body2"
+              // aria-hidden is load-bearing, not an oversight. This value
+              // changes every second, and inside a live region a screen
+              // reader would read out "one second, two seconds, three
+              // seconds" for the whole run and bury the step transitions
+              // that carry the meaning. Those are announced separately
+              // below, once per change.
+              aria-hidden="true"
+              sx={{
+                color: designTokens.inkMuted,
+                fontVariantNumeric: "tabular-nums",
+                alignSelf: "center",
+                minWidth: 34,
+                textAlign: "right",
+              }}
+            >
+              {elapsed}s
+            </Typography>
+          ) : null}
           <Button
             onClick={onStop}
             disabled={!stopEnabled}
@@ -211,6 +270,13 @@ export function RunScreen({
                     borderColor: done || live ? designTokens.blue : designTokens.lineStrong,
                     bgcolor: done ? designTokens.blue : designTokens.surface,
                     boxShadow: live ? `0 0 0 4px ${designTokens.layer1Wash}` : "none",
+                    // Only the LIVE dot pulses, and only while a run is
+                    // actually in flight. A landed run keeps its static
+                    // ring: an animation still running after the answer
+                    // arrived would say the system is working when it is
+                    // not, which is the same class of lie as a progress
+                    // bar that never completes.
+                    ...(live && running ? LIVE_PULSE : {}),
                   }}
                 />
                 <Typography
@@ -226,6 +292,29 @@ export function RunScreen({
               </Box>
             );
           })}
+        </Box>
+
+        {/*
+          The screen-reader half of T-6.2-05. The visible progress is the
+          pulse and the ticking counter, and neither is announceable: one is
+          an animation and the other would spam. This announces the step
+          instead, once per change, which is the information a sighted user
+          reads off the stepper.
+        */}
+        <Box
+          data-testid="run-step-announcement"
+          role="status"
+          aria-live="polite"
+          sx={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {running && activeStep ? `${activeStep} step running` : ""}
         </Box>
 
         {refusal ? (

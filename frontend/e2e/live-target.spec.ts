@@ -36,11 +36,32 @@ const TARGET_MODULE = "live-target.ts";
 
 const DEPLOYMENT_HOST = /https:\/\/[a-z0-9-]*\.up\.railway\.app/gi;
 
+/**
+ * Every `.ts` under `e2e/`, RECURSIVELY.
+ *
+ * The first version used a flat `readdirSync` while this file's own
+ * docstring said it checked the whole directory. It did not: `e2e/journeys/`
+ * was added minutes later in the same session and the arm could not see a
+ * single file in it, so a hardcoded production URL in any journey would have
+ * passed silently. Caught by noticing the arm reported green on a directory
+ * it had never opened, which is the "confident sentence describing a check
+ * that is not there" shape this repository has now hit seven times, this one
+ * written while fixing the sixth.
+ */
 function specFiles(): string[] {
-  return fs
-    .readdirSync(E2E_DIR)
-    .filter((name) => name.endsWith(".ts") && name !== TARGET_MODULE)
-    .sort();
+  const found: string[] = [];
+  const walk = (dir: string, prefix: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const rel = prefix ? path.join(prefix, entry.name) : entry.name;
+      if (entry.isDirectory()) {
+        walk(path.join(dir, entry.name), rel);
+      } else if (entry.name.endsWith(".ts") && entry.name !== TARGET_MODULE) {
+        found.push(rel);
+      }
+    }
+  };
+  walk(E2E_DIR, "");
+  return found.sort();
 }
 
 test.describe("live target", () => {

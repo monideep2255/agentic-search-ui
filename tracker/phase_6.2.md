@@ -373,7 +373,7 @@ History:
 
 ### T-6.2-05: The interface shows continuous progress during the wait
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: none
 Spec: `UI_feedback.md` complaint 2
@@ -383,10 +383,58 @@ Acceptance criteria:
 - [ ] The progress indication names the step underway rather than showing an undifferentiated spinner
 - [ ] A Playwright journey captures the whole wait as a per-second filmstrip, and the filmstrip shows no blank interval
 
-Files: `frontend/src/`, `frontend/e2e/journeys/`
+Files: `frontend/src/hooks/useElapsedSeconds.ts` (new),
+`frontend/src/components/screens/RunScreen.tsx`, `frontend/src/App.tsx`,
+`frontend/src/components/screens/RunScreen.progress.test.tsx` (new)
+
+Evidence:
+
+WHAT WAS ALREADY THERE, established by reading before changing anything: the run screen
+already renders all five loop steps, marks the live one, and lands tool chips coloured by
+data layer. The complaint was not that progress is unnamed. It is that NOTHING MOVES. The
+live step carried a static ring, so across a five-second gap between transitions the page was
+indistinguishable from one that had died.
+
+Three changes, and the ordering of them is the reasoning:
+
+- An elapsed counter that ticks once a second. It is the only element that is both
+  always-moving and informative: a spinner would move and say nothing. It also states the 12
+  to 14 second wait honestly rather than hiding it. Recomputed from `Date.now()` each tick
+  rather than incremented, so a throttled background tab does not UNDERSTATE the wait in
+  exactly the case where someone tabbed away and came back wanting to know how long it had
+  been.
+- A pulse on the live step dot, which stops when the run does. An animation still running
+  after the answer landed asserts work that is not happening. `prefers-reduced-motion` gets
+  the static ring back, which is why the liveness signal is ALSO text.
+- A politely-announced step change for screen readers.
+
+THE ACCESSIBILITY TRAP IS THE PART MOST LIKELY TO BE UNDONE BY A LATER READER: the counter is
+`aria-hidden`. A value changing every second inside a live region would have a screen reader
+announce "one second, two seconds, three seconds" for the whole run and bury the step
+transitions that carry the meaning. Making it announceable would look like an accessibility
+improvement and would be the opposite, so the step announcement is a separate element.
+
+```
+5 new arms passed, 240 frontend tests total (from 235)
+mutation: removing the counter, the pre-fix state, turns 4 of 5 red
+tsc --noEmit exit 0
+playwright accessibility 10 passed, axe clean on the run and answer screens
+```
+
+One arm asserts the acceptance criterion DIRECTLY rather than by proxy: it walks 20 seconds
+and measures the longest run of consecutive seconds in which the display did not change,
+failing above two. The first arm would still pass if the counter ticked once every ten
+seconds, which is why the second exists.
+
+COVERAGE, since a green run here is not the whole criterion: these arms cannot see whether
+the change is VISIBLE, and cannot see the pulse at all, which is CSS. T-6.2-11's journey 2
+covers that.
 
 History:
 - 2026-09-01 lead: created
+- 2026-09-01 lead: elapsed counter, live-step pulse and screen-reader announcement, five arms
+  with the criterion asserted directly, mutation-proven against the pre-fix state, axe clean.
+  Moved to `in-review`
 
 ### T-6.2-06: The answer is delivered progressively rather than in two chunks at the end
 
@@ -487,7 +535,7 @@ History:
 
 ### T-6.2-11: Browser journeys capture the experience rather than assert on it
 
-Status: todo
+Status: in-progress, 1 of 8 journeys built
 Refine: refined
 Depends on: T-6.2-12
 Spec: `UI_feedback.md` "end-to-end workflows for browser-driven testing", the eight-journey table
@@ -499,10 +547,31 @@ Acceptance criteria:
 - [ ] None of them asserts. A journey runs all its steps even when a step produces something wrong
 - [ ] Journey 2, the per-second filmstrip of the wait, is built first
 
-Files: `frontend/e2e/journeys/`
+Files: `frontend/e2e/journeys/wait-filmstrip.spec.ts` (new)
+
+Evidence so far:
+
+Journey 2, the per-second filmstrip of the wait, built FIRST as `UI_feedback.md` directs:
+the fragmentation complaint is described in prose, and a filmstrip turns it into something
+anyone can look at and agree or disagree with.
+
+It CAPTURES rather than asserts, which is the rule for this whole directory. It carries no
+`expect` on the product at all: if the answer never arrives, a filmstrip of it never arriving
+is the evidence wanted. Its ONE assertion is about itself, that it captured more than one
+frame, because a silent zero-frame pass would read as "the wait looked fine". Each frame is
+paired with a one-line state summary in `filmstrip.md`, so the strip is readable without
+opening 25 images, and every read degrades to a placeholder rather than throwing, since a
+missing run screen IS the observation on a failed run.
+
+Gated behind `RUN_LIVE_JOURNEYS=1` and pointed at develop through `live-target.ts`.
+
+Seven journeys remain: first visit to first answer, follow-up continuity, guest allowance
+exhaustion, every integrations affordance, refusal and error paths, narrow viewports, and
+sign up / sign out / sign in.
 
 History:
 - 2026-09-01 lead: created
+- 2026-09-01 lead: journey 2 built, gated, typechecked. Seven remain
 
 ### T-6.2-12: Live browser checks target develop, not production
 
@@ -715,6 +784,36 @@ needing explanation, which is the opposite of what the brief assumed.
 History:
 - 2026-09-01 lead: filed. Corrects a characterization in `UI_feedback.md` rather than
   reporting something new
+
+### F-6.2-05: This phase's own structural arm was blind to a subdirectory
+
+Status: closed same session, pending judge verification
+Raised by: lead, minutes after writing the arm
+Severity: medium
+Round: 0 (pre-build)
+Ticket: T-6.2-12
+
+What happened. `live-target.spec.ts`'s docstring says it checks the WHOLE DIRECTORY, and it
+used a flat `readdirSync`. `frontend/e2e/journeys/` was created minutes later in the same
+session, and the arm could not see a single file in it, so a hardcoded production URL in any
+journey would have passed silently, which is the exact defect the arm exists to prevent.
+
+Caught by noticing it reported green on a directory it had never opened, rather than by any
+check. SEVENTH instance in this repository of a confident sentence describing a check that is
+not there, and this one was written in the same session as the sixth, while the lesson was
+being quoted in a commit message.
+
+Fixed by walking recursively, and mutation-proven from the subdirectory specifically: a
+hardcoded production URL in `journeys/wait-filmstrip.spec.ts` now turns the arm red naming
+that path, where before it was invisible.
+
+The transferable form: an arm that enumerates files is only as good as its enumeration, and
+the enumeration is the part nobody re-reads. When an arm's scope is stated in prose, the
+scope is a claim to be tested like any other.
+
+History:
+- 2026-09-01 lead: filed and fixed in the same edit, mutation verified from inside the
+  subdirectory. Left open for the judge rather than self-closed
 
 ### F-6.2-04: Arm A5 of this phase's own premise gate reports a FALSE GREEN
 
