@@ -295,4 +295,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-31.
+Last updated: 2026-09-01.
