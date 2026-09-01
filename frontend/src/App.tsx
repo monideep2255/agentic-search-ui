@@ -977,6 +977,12 @@ export function App() {
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}
+                // T-6.2-08. Accepting the offer goes through the SAME `ask`
+                // as anything typed, so it continues the thread rather than
+                // starting over. That was the product owner's condition on
+                // this feature: an offer the system makes and then forgets
+                // making is worse than no offer.
+                nextStep={view.nextStep}
                 onAsk={(next) => void ask(next, depth, true)}
               />
             }

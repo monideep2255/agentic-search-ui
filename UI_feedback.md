@@ -360,17 +360,17 @@ These are on the build phase 6.2 branch and are NOT on develop yet. They become 
 | W3 | No internal bookkeeping | The same question | If the answer says something was left out, it should say it in your terms, for example "3 further disease records were found for this question and are not described above". It should NOT say "4 of the 5 findings prepared for it" | |
 | W4 | A second gene, to see it is not a one-off | `Which diseases are associated with TP53?` | Same three things as W1 to W3. TP53 has more associated diseases, so this is also the case where something is most likely to be left out | |
 
-### Not built yet, listed so the list is complete
+### Also ready to test, built after the decisions of 2026-09-01
 
-These are the decisions taken on 2026-09-01 and are being built now. The workflow is written in advance so it is ready when the work lands, and so the intent can be corrected before the code exists rather than after.
+UPDATED 2026-09-01: all five are now BUILT and sit on the phase branch alongside W1 to W4. They become testable at the same moment, when that branch merges to develop. Nothing here has been seen by a person yet.
 
 | # | Workflow | Type this | What to watch | What I saw |
 |---|---|---|---|---|
-| W5 | A follow-up continues the thread | Ask `Which diseases are associated with BRCA1?`, wait for the answer, then in the follow-up box ask `What variants cause it?` | The second answer should know that "it" means the diseases just discussed, without you naming them again. Every claim in it should still carry its own citation | |
-| W6 | The thread survives more than one turn | After W5, ask a third question referring further back, for example `And which of those has the most evidence?` | It should still be following the conversation, not just the previous turn | |
-| W7 | The answer offers a next step | Any question that returns several results | The answer may end by offering somewhere to go next. That offer must be about something actually found and not described, never an invented topic. Accepting it should CONTINUE the thread, not start over | |
-| W8 | An answer with nothing to offer stays quiet | Ask something with no answer, for example `Which diseases are associated with the gene ZZZZZZ999?` | It should refuse cleanly and offer NO next step. A system that always asks something is padding | |
-| W9 | No broken sentences | Any question where part of the answer is left out, W4 is the likeliest | Sentences should be whole. No unclosed brackets, no sentence missing its verb. A sentence that lost a piece should be dropped entirely rather than shown broken | |
+| W5 | A follow-up continues the thread (BUILT) | Ask `Which diseases are associated with BRCA1?`, wait for the answer, then in the follow-up box ask `What variants cause it?` | The second answer should know that "it" means the diseases just discussed, without you naming them again. Every claim in it should still carry its own citation | |
+| W6 | The thread survives more than one turn (BUILT) | After W5, ask a third question referring further back, for example `And which of those has the most evidence?` | It should still be following the conversation, not just the previous turn | |
+| W7 | The answer offers a next step (BUILT) | Any question that returns several results | The answer may end by offering somewhere to go next. That offer must be about something actually found and not described, never an invented topic. Accepting it should CONTINUE the thread, not start over | |
+| W8 | An answer with nothing to offer stays quiet (BUILT) | Ask something with no answer, for example `Which diseases are associated with the gene ZZZZZZ999?` | It should refuse cleanly and offer NO next step. A system that always asks something is padding | |
+| W9 | No broken sentences (BUILT) | Any question where part of the answer is left out, W4 is the likeliest | Sentences should be whole. No unclosed brackets, no sentence missing its verb. A sentence that lost a piece should be dropped entirely rather than shown broken | |
 
 ### Known, not yet fixed, so not worth reporting as new
 

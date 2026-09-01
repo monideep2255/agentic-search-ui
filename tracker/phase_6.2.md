@@ -557,24 +557,80 @@ History:
 
 ### T-6.2-08: An answer can offer an honest next step
 
-Status: todo
-Refine: product_refine
+Status: in-review
+Refine: refined
 Depends on: T-6.2-07
-Spec: `UI_feedback.md` complaint 5; `contracts/events.py:128` `ThinkPayload.clarifying_question`
+Spec: `UI_feedback.md` complaint 5
 
-Blocked on the same product decision plus three of its own, all named in `UI_feedback.md`:
-where the suggestion comes from, whether it is one offer or several, and whether an answer
-may decline to offer anything. It must be able to decline.
+DECIDED by the product owner 2026-09-01, answering all four of the questions this ticket was
+blocked on. The offer is DERIVED from what retrieval left out, never generated. It is ONE
+offer rather than a menu, since the menu already exists as the hint row. An answer with no
+honest next step offers NONE. And accepting one continues the thread, which is why this
+ticket sits behind T-6.2-07.
+
+CORRECTION to this ticket's original Spec line, which named
+`ThinkPayload.clarifying_question` as the field: THAT IS THE WRONG FIELD, and
+`UI_feedback.md` says so in the same section that raised the complaint. It belongs to Section
+22.1's ambiguous-query path, fires BEFORE any tool runs, and REPLACES the answer to
+disambiguate an entity. This fires after a complete cited answer and ADDS to it. Conflating
+them would have shipped the offer on the wrong side of the loop.
 
 Acceptance criteria:
 - [ ] An offer to go deeper is derived from what retrieval actually returned and had to leave out, never generated as free text about data the system does not hold
 - [ ] An answer with no honest next step offers none, and this case is covered by a test
 - [ ] Accepting an offer continues the thread rather than starting a fresh run
 
-Files: `src/system_03_search_agent/core/graph.py`, `frontend/src/`
+Files: `src/system_03_search_agent/contracts/events.py`,
+`src/system_03_search_agent/core/graph.py`, `frontend/src/lib/events.ts`,
+`frontend/src/hooks/useRunView.ts`, `frontend/src/components/answer/FollowUp.tsx`,
+`frontend/src/App.tsx`
+
+Evidence:
+
+`DonePayload.next_step`, a new OPTIONAL field, which is what keeps this inside v1:
+`system-design-patterns` pattern 10 permits an additive optional field within a major
+version, so every existing consumer ignores it and behaves exactly as before. The frontend
+type is `?` AND nullable, so a backend predating the field and one that declines to offer are
+indistinguishable to the renderer, which is correct.
+
+BUILT IN CODE, NEVER GENERATED, and pinned STRUCTURALLY rather than only behaviourally. One
+arm reads the builder's own source and fails if it contains `call_tier`, `harness`, `await`
+or `_dispatch_tier_call`. That arm is deliberately crude: the entire safety argument for this
+feature is that the text cannot propose a topic retrieval did not find, and a behavioural arm
+inspecting the returned string would still pass the day someone wired a model into it.
+
+It is computed from the SAME `omitted_findings` the incompleteness disclosure uses, so an
+answer can never offer to show more while its own note says there is no more.
+
+MOST OF THE ARMS ARE ABOUT DECLINING, which is the right proportion for a feature whose named
+failure mode is padding. Four decline cases are covered: nothing omitted, a refusal by flag,
+a refusal by trust outcome, and a mixed bag of entity types whose only honest phrasing would
+be too vague to be worth showing. That last one is what stops the obvious "just say records"
+fallback, which would put an offer on nearly every answer.
+
+On the frontend the offer is ONE sentence above the hint row, not a fourth hint. The hints
+are the same three on every answer; this is earned from what this retrieval left out, and
+folding it into the menu would make a specific offer look generic. Accepting it dispatches
+through the SAME `onAsk` as anything typed, so it continues the thread, and that is the arm
+this ticket most depends on.
+
+```
+7 backend arms, 4 frontend arms
+4559 Python tests, 244 frontend tests, 0 failed
+ruff clean, tsc clean, axe 10 passed
+```
+
+ONE DEFECT IN THIS TICKET'S OWN TEST, recorded rather than tidied: a frontend arm asserted the
+offer did not contain the hint text and used `"a"` as the hint, which fails because
+`toHaveTextContent` matches a substring and the offer contains that letter. The arm was
+wrong, not the component. It now uses distinctive hint text AND asserts the hint still
+renders outside the offer, since the first version would have passed on a component that
+dropped the hints entirely.
 
 History:
 - 2026-09-01 lead: created, labelled `product_refine` at creation. Ordered behind T-6.2-07 because an offer the system then forgets making is worse than no offer
+- 2026-09-01 product owner: decided, derived not generated, one offer, may decline, accepting continues the thread
+- 2026-09-01 lead: built across the contract, the loop and the frontend. Moved to `in-review`
 
 ### T-6.2-09: The integrations page offers only what a visitor can actually use
 

@@ -188,6 +188,17 @@ export interface DonePayload {
   total_tool_calls: number;
   elapsed_ms: number;
   trust_outcome: TrustOutcome;
+  /**
+   * T-6.2-08. An offer of somewhere to go next, or null when there is
+   * nowhere honest. OPTIONAL on the wire: an older backend omits it
+   * entirely, so this is `?` as well as nullable, and every consumer must
+   * treat absent and null identically.
+   *
+   * It is built in code from the findings the answer did not report, never
+   * generated, so it can never propose a topic the retrieval did not
+   * actually find. See `DonePayload.next_step` in `contracts/events.py`.
+   */
+  next_step?: string | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -163,6 +163,14 @@ export interface RunView {
   outcome: string | null;
   /** Wall-clock the run reported, in ms, from `done.elapsed_ms`. */
   elapsedMs: number | null;
+  /**
+   * T-6.2-08. The backend's offer of somewhere to go next, or null.
+   *
+   * Read from the `done` payload, where it is OPTIONAL: a backend that
+   * predates this field omits it, so absent and null must behave
+   * identically and the `?? null` below is what guarantees that.
+   */
+  nextStep: string | null;
   /** How the outcome word should read: a success, a caution, or a refusal. */
   outcomeTone: "good" | "warn" | "risk" | null;
   /**
@@ -224,6 +232,7 @@ export const EMPTY_RUN_VIEW: RunView = {
   steps: [],
   outcome: null,
   elapsedMs: null,
+  nextStep: null,
   outcomeTone: null,
   layerCount: 0,
   landed: false,
@@ -662,6 +671,12 @@ export function useRunView(events: AgentEvent[]): RunView {
       done && done.type === "done" && typeof done.payload.elapsed_ms === "number"
         ? done.payload.elapsed_ms
         : null;
+    // T-6.2-08. `?? null` rather than a truthiness check, so an offer is
+    // read when present and absent and null collapse to the same thing.
+    const nextStep =
+      done && done.type === "done" && typeof done.payload.next_step === "string"
+        ? (done.payload.next_step ?? null)
+        : null;
 
     /*
      * Counted from the SOURCES, not the tool calls (F-4.9-A-05, F-4.9-A-06).
@@ -776,6 +791,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       outcome,
       outcomeTone,
       elapsedMs,
+      nextStep,
       layerCount,
       landed,
       failure,

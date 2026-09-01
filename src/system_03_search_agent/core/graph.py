@@ -4059,6 +4059,71 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     )
 
 
+def _build_next_step_offer(
+    omitted: list[Any], trust_outcome: str, refused: bool
+) -> str | None:
+    """Offer somewhere to go next, or None when there is nowhere honest.
+
+    Build phase 6.2, T-6.2-08, on the product-owner decision of 2026-09-01.
+
+    ## Built in code, never generated
+
+    `UI_feedback.md` names the generated version as the easy and dangerous
+    path, and the reasoning is worth restating rather than referencing: an
+    offer to go deeper is a CLAIM that there is something deeper. A model
+    asked to write one will happily propose a follow-up about data this
+    graph does not hold, and that is a confident wrong answer wearing a
+    question mark. It would also bypass every control this system has,
+    because the grounding pass checks the ANSWER and would never see it.
+
+    So the offer is derived from the one thing that is already known to
+    exist and already known to be absent from the answer: the findings
+    retrieval returned and the answer did not report. Those are the same
+    `omitted` rows `_build_incomplete_answer_note` discloses, so the offer
+    and the disclosure can never disagree about whether there is more.
+
+    ## When it declines, which is most of the time
+
+    Returning None is the correct and common outcome, and the product-owner
+    decision names it explicitly: an answer that always asks something will
+    pad. Four cases decline:
+
+    - Nothing was omitted. There is no more, so there is nothing to offer.
+    - The answer was refused. There is no answer to go deeper from.
+    - `trust_outcome` is `refuse`, the same case reached by a different
+      route.
+    - The omitted rows carry no usable entity type, so the offer would have
+      to be vague enough to be worthless ("would you like to see more?").
+
+    ## Why it names a TYPE and not the values
+
+    The same reason `_build_incomplete_answer_note` states scale rather than
+    inlining values: a Layer 1 value like `NM_007294.4(BRCA1):c.190T>G` is
+    full of periods, and inlining one fragments the sentence for anything
+    downstream that splits on them. A type is a single word.
+    """
+    if refused or trust_outcome == "refuse" or not omitted:
+        return None
+
+    types = {
+        entity_type.strip().lower()
+        for finding in omitted
+        if (entity_type := str(getattr(finding, "entity_type", "") or ""))
+    }
+    if len(types) != 1:
+        # Either nothing usable, or a mixed bag whose only honest phrasing
+        # is too vague to be worth showing.
+        return None
+
+    label = types.pop()
+    count = len(omitted)
+    noun = f"{label} record" if count == 1 else f"{label} records"
+    return (
+        f"Would you like me to go through the {count} further {noun} "
+        f"found for this question?"
+    )
+
+
 def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
     """F-2.1-C12: state the scale of what is not shown, not just that a
     cut happened. "Results were truncated" said nothing when the user was
@@ -6015,6 +6080,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             total_tool_calls=total_tool_calls,
             elapsed_ms=elapsed_ms,
             trust_outcome=trust_outcome,
+            # T-6.2-08. Computed from the SAME `omitted_findings` the
+            # incompleteness disclosure is built from, so an answer can never
+            # offer to show more while its own note says there is no more.
+            next_step=_build_next_step_offer(
+                omitted_findings, trust_outcome, refused=False
+            ),
         ),
     )
     return sink.result()
