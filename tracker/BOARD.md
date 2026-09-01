@@ -6,7 +6,7 @@ Build phases and their dependencies come from `requirements/Technical_specificat
 
 FIVE rows are a stated exception to that line rather than a breach of it, all inserted by product-owner decision and logged in `DECISIONS.md`: build phase 4.11, the read-only HTTPS graph query service, and build phase 4.12, the demo deployment, both 2026-08-21; and build phases 4.14, continuous integration, and 4.15, the two-environment release flow, both on 2026-08-24. 4.14 is a PULL-FORWARD rather than an invention: Section 24 specifies its ten gates in full and build phase 6.1 owned them, and 4.12 changed the urgency by wiring CD to `develop`, so an unguarded merge now reaches a live public URL. Section 25 does not contain either. 4.11 exists because Section 24 specifies the service in full and says its credential is populated "when the service is built (Section 25 build order)", while Section 25 never assigns it to a phase, so one locked section points at another for something that is not there. 4.12 exists because deployment was implied inside build phase 6.1's "CI and CD gates" line, named as no ticket, and sat behind every other phase, so nothing was demoable to anyone until the entire build finished. 4.16 exists because build phase 4.12 put the product in front of a person for the first time, and that person found six defects no suite in this repository can see; Section 25 has no row for defects a demo surfaces, and the product owner ranked them ahead of 4.14 on 2026-08-25. Both locked documents stay unedited until the next reconciliation, per `v1-scope-boundary`. This is the same deliberate exception build phase 4.8 set when it was inserted, and 4.10 set when it was pulled forward.
 
-Last updated: 2026-08-31.
+Last updated: 2026-09-01.
 
 ## Status counts
 

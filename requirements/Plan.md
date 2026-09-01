@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-31.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, and on 2026-08-31 build phase 6.0. NOTHING IS BLOCKED, AND NOTHING ON THE BOARD IS NEXT. Build phases 6.0 and 6.1 moved BEHIND the prototype the same day 6.0 merged, reversing that morning's ordering, because a live run showed answers reading `MedGen:C0346153` where a disease name should be. The next action is the disease-name fix in `UI_feedback.md`, which is not a build phase. THE BOARD NOW CARRIES NO OPEN PHASE AT ALL: 6.1 left it the same day, joining 7.0 and 7.1, so every numbered phase in Section 25 has merged or moved here. THE UNIT OF WORK IS NO LONGER A BUILD PHASE, decided the same day: work is picked from open flags and `UI_feedback.md`. 6.0's residue and 6.1's breakdown are in Phase 7 below. Authoritative state: `tracker/BOARD.md`, rendered at `tracker/board.html`; what to do next: `requirements/phase_6/Continuation_prompt.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 470 (DECISIONS.md).
+Decisions logged: 472 (DECISIONS.md).
 
 Deliverables produced:
 
