@@ -32,7 +32,26 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WAIT FOR THE PRODUCT OWNER'S TEST RESULTS. Build phase 6.2 merged on 2026-09-01. `testing/UI_feedback.md`'s "Manual test workflows" section is what they are running, and its "What I saw" column is where their verdict lands. Do not open new work against that document until those cells are filled in.
+- PICK UP `fix/signin-screen-and-testing-folder`, PUSHED AND GREEN at d0132f9, six commits ahead of develop. Nothing is half-done and nothing is blocked. The next piece of work is PHASE 4 of the plan: build the tier 1 automated tests named in `testing/Product_workflows.md`. Read that file first; it is the specification and it is ranked.
+
+WHAT CHANGED ON 2026-09-05, because it supersedes everything below about workflows W1 to W9:
+
+- The nine hand-written test questions are GONE, replaced by `testing/Product_workflows.md`, 50 workflows in three tiers derived from what is built rather than invented. 46 of the 50 are layer A and cost NOTHING to run.
+- Everything for UI testing now lives in `testing/`. `UI_feedback.md` moved there. The run commands are written down for the first time, in `testing/README.md`.
+- The product owner drops screenshots into `testing/feedback/inbox/` with the comment in the filename. No convention beyond that.
+- Nine defects are open and named in the spec. The worst is that `thread` survives sign-out, so one person's conversation reaches the next person at that browser.
+
+FOUR THINGS ARE WAITING ON THE PRODUCT OWNER, all in the spec's own section:
+
+- Whether to add `layer1OnNavy`, `layer2OnNavy` and `layer3OnNavy` to `theme.ts`. `tracker/check_design_tokens.py` reports exactly three violations and they are the logo's on-navy rungs. The check is correct; changing `theme.ts` is the Ask state in `.claude/rules/design-consistency.md`, which is why it was not done.
+- Whether a no-data refusal and a guardrail refusal should look identical. ALREADY DONE, they now do, but the intent was never stated anywhere and deserves confirmation.
+- Whether the five undesigned surfaces get designs.
+- Whether answers should carry any medical-advice notice, now that the permanent band is gone by their own instruction.
+
+TWO PROCESS FAILURES FROM THIS SESSION, recorded because both will recur:
+
+- A `git add -A` staged an older version of a file an agent was still writing, and the commit message then described three changes the commit did not contain. Caught only by reading the COMMITTED BLOB rather than the working tree. Check `git show HEAD:path` before trusting a commit message.
+- Three agents each burned roughly a million tokens stuck in wait-for-background-run loops after their work was already complete. Verify their output yourself rather than waiting for their report.
 
 THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong by a session that reads only the old instructions below. Product-owner decision, in `DECISIONS.md`:
 
@@ -283,4 +302,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-01.
+Last updated: 2026-09-05.
