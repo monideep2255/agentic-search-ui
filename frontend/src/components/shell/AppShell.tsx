@@ -115,32 +115,47 @@ export function AppShell({
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: designTokens.canvas }}>
       <AppBar position="static" component="header">
         {/*
-            THE BAR WRAPS TO TWO ROWS BELOW `sm`, and this is a gap being
-            filled rather than a design being implemented. Measured
-            2026-09-05 at 390px: the brand button had `minWidth: 0` and no
-            wrap control, so "NCBI Agentic Search" broke across three lines
-            and OVERLAPPED the Search nav item, with "Log in" clipped at the
-            right edge. `testing/UI_feedback.md` records this viewport as an
-            "8px horizontal bleed", which is the measurement rather than the
-            defect: the bar collides with itself, and journey 7's own
-            evidence from 2026-09-01 shows it identically.
+            THE MOBILE BAR FOLLOWS THE PROTOTYPE, and the first attempt at
+            this did not, which is the correction worth recording.
 
-            `docs/build/design/design-system/components/app-bar.html` carries
-            NO responsive rule and no media query, so there is no designed
-            mobile bar to copy. The one `flex-wrap` in that file belongs to
-            the specimen page's own layout helper, not to the component.
-            Per `.claude/rules/design-consistency.md`, the gap is named here
-            rather than filled silently, and what is built uses only the
-            foundations: every value below is a breakpoint or a spacing step,
-            no new colour and no new type size.
+            The defect was real and measured 2026-09-05 at 390px: the brand
+            button had `minWidth: 0` and no wrap control, so "NCBI Agentic
+            Search" broke across three lines and OVERLAPPED the Search nav
+            item, with "Log in" clipped at the right edge. Journey 7's
+            evidence from 2026-09-01 shows the same collision, and
+            `testing/UI_feedback.md` records the viewport as an "8px
+            horizontal bleed", which was the measurement rather than the
+            defect.
+
+            THE FIRST FIX WRAPPED THE BAR TO TWO ROWS AND WAS INVENTED.
+            `components/app-bar.html` carries no responsive rule, and that
+            was read as "no mobile design exists". It does exist, in
+            `prototype/app.html`, which is the assembled design and part of
+            the same system: line 403 is
+            `.nav button:not(.on):not(.login){display:none}` at 720px, and
+            line 404 tightens `.appbar` to `padding:0 14px;gap:10px`. So the
+            design keeps ONE row and drops the nav items a phone cannot fit,
+            leaving the current page and the auth action. That is what is
+            implemented below, at the design's own 720px rather than at a
+            MUI breakpoint, because the design names a pixel value.
+
+            `.claude/rules/design-consistency.md` exists because of exactly
+            this: a missing design and a design you did not find look
+            identical from the browser, and only one of them licenses
+            invention.
+
+            ONE CONSEQUENCE IS A PRODUCT QUESTION, NOT A BUG: below 720px
+            Integrations, About and Docs become unreachable, because the
+            design provides no menu to reach them from. That is what the
+            approved design says, so it ships, and it is flagged rather than
+            quietly improved.
           */}
           <Toolbar
             sx={{
               minHeight: 54,
-              gap: { xs: 1, sm: 2 },
+              gap: 2,
               px: { xs: 1.5, sm: 2.25 },
-              flexWrap: { xs: "wrap", sm: "nowrap" },
-              py: { xs: 1, sm: 0 },
+              "@media (max-width:720px)": { px: "14px", gap: "10px" },
             }}
           >
           {/*
@@ -189,14 +204,7 @@ export function AppShell({
           <Box
             component="nav"
             aria-label="Main"
-            sx={{
-              ml: { xs: 0, sm: "auto" },
-              width: { xs: "100%", sm: "auto" },
-              display: "flex",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 0.25,
-            }}
+            sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 0.25, minWidth: 0 }}
           >
             {NAV.map(({ key, label }) => (
               <Button
@@ -205,9 +213,13 @@ export function AppShell({
                 sx={{
                   fontSize: 13,
                   fontWeight: 500,
-                  px: { xs: 0.9, sm: 1.4 },
+                  px: 1.4,
                   py: 0.75,
                   whiteSpace: "nowrap",
+                  // prototype/app.html:403. Only the current page survives.
+                  "@media (max-width:720px)": {
+                    display: current === key ? "inline-flex" : "none",
+                  },
                   color: current === key ? "#FFFFFF" : "rgba(255,255,255,.86)",
                   borderRadius: current === key ? 0 : 1,
                   boxShadow: current === key ? "inset 0 -2px 0 #fff" : "none",
@@ -237,7 +249,7 @@ export function AppShell({
               <Button
                 onClick={onSignIn}
                 sx={{
-                  ml: { xs: "auto", sm: 1 },
+                  ml: 1,
                   fontSize: 13,
                   fontWeight: 600,
                   whiteSpace: "nowrap",
