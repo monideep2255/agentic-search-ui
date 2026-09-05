@@ -4,18 +4,14 @@ What the guest experience is for: a stranger must be able to judge whether this 
 
 ## Table of contents
 
-- [W-GUEST-1: A first visit](#w-guest-1-a-first-visit)
-- [W-GUEST-2: Asking the first question, from a chip and from typing](#w-guest-2-asking-the-first-question-from-a-chip-and-from-typing)
-- [W-GUEST-3: The allowance counting down across five answers](#w-guest-3-the-allowance-counting-down-across-five-answers)
-- [W-GUEST-4: A returning guest cannot see their own allowance](#w-guest-4-a-returning-guest-cannot-see-their-own-allowance)
-- [W-GUEST-5: The attempt ceiling is not the answer allowance](#w-guest-5-the-attempt-ceiling-is-not-the-answer-allowance)
-- [W-GUEST-6: The wall on an exhausted allowance](#w-guest-6-the-wall-on-an-exhausted-allowance)
-- [W-GUEST-7: The wall on the attempt ceiling](#w-guest-7-the-wall-on-the-attempt-ceiling)
-- [W-GUEST-8: The wall on a migrated identity](#w-guest-8-the-wall-on-a-migrated-identity)
-- [W-GUEST-9: What a guest can and cannot do](#w-guest-9-what-a-guest-can-and-cannot-do)
-- [W-GUEST-10: Guest to account migration, and the five-minute window that empties it](#w-guest-10-guest-to-account-migration-and-the-five-minute-window-that-empties-it)
-- [W-GUEST-11: The shared daily ceilings, which are not the guest's own allowance](#w-guest-11-the-shared-daily-ceilings-which-are-not-the-guests-own-allowance)
+- [The workflows](#the-workflows)
 - [Notes on the two things I was asked to check](#notes-on-the-two-things-i-was-asked-to-check)
+- [What I found that the shared brief did not mention](#what-i-found-that-the-shared-brief-did-not-mention)
+- [Checklist items covered](#checklist-items-covered)
+
+## The workflows
+
+Eleven, W-GUEST-1 to W-GUEST-11, in the order a stranger meets them.
 
 ### W-GUEST-1: A first visit
 
