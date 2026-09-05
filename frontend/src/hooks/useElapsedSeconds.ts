@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Whole seconds since a run started, ticking once a second while it runs.
  *
- * Build phase 6.2, T-6.2-05, complaint 2 in `UI_feedback.md`.
+ * Build phase 6.2, T-6.2-05, complaint 2 in `testing/UI_feedback.md`.
  *
  * ## Why a ticking number rather than a nicer spinner
  *

@@ -889,3 +889,129 @@ describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () =
     expect(stillNine).toBe(true);
   });
 });
+
+describe("system notes: App forwards the run's disclosures to AnswerScreen", () => {
+  /**
+   * Regression test for a wiring gap, not a rendering gap.
+   *
+   * `useRunView` already lifted a truncation or unaddressed-entity token
+   * out of `claims` and into `systemNotes`, and `AnswerScreen` already
+   * rendered a `systemNotes` array as a notice. Neither piece was broken.
+   * `App` simply never passed `view.systemNotes` to `<AnswerScreen>`, so
+   * both disclosures were computed and then dropped on the floor between
+   * the two components that each handled their half correctly.
+   *
+   * This is deliberately an App-level test that drives a real SSE stream
+   * through `openEventStream`, the same path `useAgentRun` and
+   * `useRunView` consume, rather than a unit test that renders
+   * `AnswerScreen` directly with a hand-built `systemNotes` prop. A direct
+   * `AnswerScreen` test would pass against the broken code, because the
+   * broken code was entirely in `App`, one prop above `AnswerScreen`. Only
+   * a test that starts at the top of the tree can see whether the wiring
+   * between the two actually exists.
+   */
+  const frame = (seq: number, type: string, payload: unknown): string =>
+    `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+      type,
+      version: "v1",
+      trace_id: "sysnote-1",
+      seq,
+      ts: "2026-09-05T00:00:00Z",
+      payload,
+    })}\n\n`;
+
+  const STREAM = [
+    frame(0, "guard", { passed: true, category: "ok", reason: null }),
+    frame(1, "think", {
+      narrative: "Resolving the gene named in the question.",
+      query_class: "single_hop",
+      resolved_entities: [],
+      clarifying_question: null,
+    }),
+    frame(2, "plan", { narrative: "Read the curated edges.", tool_calls: [] }),
+    frame(3, "tool_result", {
+      call_id: "c1",
+      tool: "cypher_query",
+      layer: "layer_1_graph",
+      status: "ok",
+      summary: "",
+      result_count: 30,
+      truncated: true,
+    }),
+    frame(4, "token", { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["k1"] }),
+    frame(5, "citation", {
+      citation_id: "k1",
+      display_index: 1,
+      source: "NCBI Gene",
+      source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/672",
+      layer: "layer_1_graph",
+      field: "cypher_query",
+      claim_text: "x",
+      evidence_kind: "curated assertion",
+      assertion_confidence: "high",
+      population_ancestry_context: null,
+      license: "public domain",
+    }),
+    // The disclosure under test. `write_node` emits this as a bare token
+    // with no marker_ids, which `useRunView` recognises by prefix and
+    // lifts into `systemNotes` instead of the claim list.
+    frame(6, "token", {
+      text: "Note: this result was truncated. Showing 5 of 30 matching rows.",
+      marker_ids: [],
+    }),
+    frame(7, "trust_signal", {
+      outcome: "answer",
+      risk_tier: "low",
+      grounded: true,
+      triangulated: false,
+    }),
+    frame(8, "done", {
+      total_cost_usd: 0.0031,
+      total_tool_calls: 1,
+      elapsed_ms: 4200,
+      trust_outcome: "answer",
+    }),
+  ].join("");
+
+  function scriptedResponse(): Promise<Response> {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(STREAM));
+        controller.close();
+      },
+    });
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    );
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementation(() => scriptedResponse());
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1",
+      guest_id: "guest-1",
+      used: 0,
+      total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("renders the truncation disclosure once the run lands", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await ask(user, "What genes are associated with HBOC?");
+
+    const note = await screen.findByTestId("answer-note-0");
+    expect(note.textContent).toMatch(/showing 5 of 30 matching rows/i);
+  });
+});

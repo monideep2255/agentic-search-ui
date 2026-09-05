@@ -1,7 +1,7 @@
 /**
  * Journey 1: first visit to first answer.
  *
- * `UI_feedback.md`'s journey table, covering complaints 1 and 2: the landing
+ * `testing/UI_feedback.md`'s journey table, covering complaints 1 and 2: the landing
  * screen, the disclaimer, the question typed, every intermediate state
  * during the wait, and the final answer.
  *

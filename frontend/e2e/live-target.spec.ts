@@ -7,7 +7,7 @@
  * and the cost of that one is not a failing test: it is a browser run
  * quietly measuring production while its author believes they are looking
  * at their own branch, which is exactly how every measurement in
- * `UI_feedback.md` came to be taken against the wrong build.
+ * `testing/UI_feedback.md` came to be taken against the wrong build.
  *
  * This is the same shape as build phase 4.14's fix for the CI gates, and
  * for the same reason. A convention that lives only in the two files that

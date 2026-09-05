@@ -1,7 +1,7 @@
 /**
  * Journey 5: every affordance on the integrations page.
  *
- * `UI_feedback.md` complaint 4. The page names KGX, MCP, GraphQL, REST and
+ * `testing/UI_feedback.md` complaint 4. The page names KGX, MCP, GraphQL, REST and
  * SSE, and what it does not do is let anyone use them. The document's own
  * table is blunt about the worst of it: the KGX control is described in this
  * repository's own `stubs/registry.ts` as "a request button that

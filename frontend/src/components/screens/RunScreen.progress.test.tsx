@@ -1,7 +1,7 @@
 /**
  * Build phase 6.2, T-6.2-05: the wait shows continuous progress.
  *
- * Complaint 2 in `UI_feedback.md`, measured rather than described: the run
+ * Complaint 2 in `testing/UI_feedback.md`, measured rather than described: the run
  * takes 12 to 14 seconds and the sequence a user experiences is a gap, some
  * tool chips, another gap of several seconds, then the answer all at once.
  * The stepper named the live step and the tool chips coloured themselves,

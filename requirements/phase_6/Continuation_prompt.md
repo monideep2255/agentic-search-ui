@@ -32,12 +32,12 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WAIT FOR THE PRODUCT OWNER'S TEST RESULTS. Build phase 6.2 merged on 2026-09-01. `UI_feedback.md`'s "Manual test workflows" section is what they are running, and its "What I saw" column is where their verdict lands. Do not open new work against that document until those cells are filled in.
+- WAIT FOR THE PRODUCT OWNER'S TEST RESULTS. Build phase 6.2 merged on 2026-09-01. `testing/UI_feedback.md`'s "Manual test workflows" section is what they are running, and its "What I saw" column is where their verdict lands. Do not open new work against that document until those cells are filled in.
 
 THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong by a session that reads only the old instructions below. Product-owner decision, in `DECISIONS.md`:
 
 - The assistant fixes the frontend and the backend.
-- The assistant writes the test workflow into `UI_feedback.md`.
+- The assistant writes the test workflow into `testing/UI_feedback.md`.
 - The PRODUCT OWNER runs it on develop and records what they saw.
 - Feedback comes back, it gets discussed, and the cycle repeats.
 
@@ -51,7 +51,7 @@ REWRITTEN 2026-09-01, not appended to. This spot held three sections written on 
 
 Each fact now has exactly one owner:
 
-- Why the disease names were the constraint, and what the fix turned out to be: `tracker/phase_6.2.md`, and `UI_feedback.md`'s headline finding.
+- Why the disease names were the constraint, and what the fix turned out to be: `tracker/phase_6.2.md`, and `testing/UI_feedback.md`'s headline finding.
 - What build phase 6.0 delivered and what merged open with it: CLAUDE.md's Build phase history table, and `tracker/phase_6.0.md`.
 - Why build phase 6.1 should be split rather than opened, with the security scan and F-1.2-04 pulled out as their own small tickets: `requirements/Plan.md` Phase 7.
 
@@ -87,13 +87,13 @@ Nothing is blocked. THE NEXT ACTION IS NOT WORK, it is waiting, and that is deli
 
 | Next | What it is | Where it is tracked | Gated on |
 |---|---|---|---|
-| 1 | Wait for the product owner's verdict on workflows W1 to W9 | `UI_feedback.md`, "Manual test workflows", the "What I saw" column | Nothing. It is their turn |
+| 1 | Wait for the product owner's verdict on workflows W1 to W9 | `testing/UI_feedback.md`, "Manual test workflows", the "What I saw" column | Nothing. It is their turn |
 | 2 | Whatever that verdict asks for, plus the six tickets build phase 6.2 merged with open | `tracker/phase_6.2.md` | Item 1 |
 | 3 | The answer can exceed 25 SECONDS on develop, and no ticket owns it | F-6.2-07 in `tracker/phase_6.2.md` | Nothing technically. It is the largest unowned problem in the product |
 | 4 | The security scan, and F-1.2-04's signup enumeration leak, pulled out of build phase 6.1 as their own small tickets | `requirements/Plan.md` Phase 7 | Nothing technically. Worth doing once real people are using it |
 | 5 | Build phase 6.0's eight open judge findings, and what remains of 6.1 | `requirements/Plan.md` Phase 7 | User feedback |
 
-SO: wait for the verdict, and do not open new work against `UI_feedback.md` until those cells are filled in.
+SO: wait for the verdict, and do not open new work against `testing/UI_feedback.md` until those cells are filled in.
 
 ### Build phase 6.2, merged, and what merged open with it
 
@@ -121,11 +121,11 @@ SIX TICKETS MERGE OPEN: the 8px horizontal bleed at 390px (F-6.2-08), the latenc
 
 ### The unit of work is no longer a build phase
 
-Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and `UI_feedback.md`, not from Section 25's build order.
+Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and `testing/UI_feedback.md`, not from Section 25's build order.
 
 Section 25 has run its course as a driver. Every numbered phase has merged or moved to `requirements/Plan.md` Phase 7, and `tracker/BOARD.md` carries NO open phase at all. What remains is of two kinds and neither is phase-shaped: findings attached to code, which are conditional and become work only when someone touches that code; and defects a real person hit on the live site.
 
-Build phase 6.0 is the argument for the change rather than an aside. It was opened because the board said it was next. It delivered contention protection that is invisible with one user, and measuring its own specification section first showed five of its eight requirements were already built. Meanwhile the defect that makes every disease answer unreadable sat in `UI_feedback.md` the whole time. A phase number is a poor proxy for value once the specification is mostly built.
+Build phase 6.0 is the argument for the change rather than an aside. It was opened because the board said it was next. It delivered contention protection that is invisible with one user, and measuring its own specification section first showed five of its eight requirements were already built. Meanwhile the defect that makes every disease answer unreadable sat in `testing/UI_feedback.md` the whole time. A phase number is a poor proxy for value once the specification is mostly built.
 
 WHAT DOES NOT CHANGE, and do not let this be quietly lost: the premise gate written before the code and watched failing, the judge round, the write-first rule for findings, and a goal contract before any autonomous run. Those apply to a piece of work whatever it is called. `docs/build/Build_workflow_cadence.md` is scoped to a build phase and now needs a smaller sibling for flag-sized work. That sibling is NOT yet written, which is recorded here rather than assumed to exist.
 

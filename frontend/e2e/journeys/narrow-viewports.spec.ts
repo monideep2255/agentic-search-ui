@@ -1,7 +1,7 @@
 /**
  * Journey 7: journey 1 repeated at three widths.
  *
- * `UI_feedback.md` complaint 1, the one item in that document explicitly
+ * `testing/UI_feedback.md` complaint 1, the one item in that document explicitly
  * marked NOT YET DIAGNOSED, with the reason stated: judging responsiveness
  * against the approved design needs a browser and a side-by-side, not a
  * curl.

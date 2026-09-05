@@ -114,7 +114,35 @@ export function AppShell({
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: designTokens.canvas }}>
       <AppBar position="static" component="header">
-        <Toolbar sx={{ minHeight: 54, gap: 2, px: { xs: 1.5, sm: 2.25 } }}>
+        {/*
+            THE BAR WRAPS TO TWO ROWS BELOW `sm`, and this is a gap being
+            filled rather than a design being implemented. Measured
+            2026-09-05 at 390px: the brand button had `minWidth: 0` and no
+            wrap control, so "NCBI Agentic Search" broke across three lines
+            and OVERLAPPED the Search nav item, with "Log in" clipped at the
+            right edge. `testing/UI_feedback.md` records this viewport as an
+            "8px horizontal bleed", which is the measurement rather than the
+            defect: the bar collides with itself, and journey 7's own
+            evidence from 2026-09-01 shows it identically.
+
+            `docs/build/design/design-system/components/app-bar.html` carries
+            NO responsive rule and no media query, so there is no designed
+            mobile bar to copy. The one `flex-wrap` in that file belongs to
+            the specimen page's own layout helper, not to the component.
+            Per `.claude/rules/design-consistency.md`, the gap is named here
+            rather than filled silently, and what is built uses only the
+            foundations: every value below is a breakpoint or a spacing step,
+            no new colour and no new type size.
+          */}
+          <Toolbar
+            sx={{
+              minHeight: 54,
+              gap: { xs: 1, sm: 2 },
+              px: { xs: 1.5, sm: 2.25 },
+              flexWrap: { xs: "wrap", sm: "nowrap" },
+              py: { xs: 1, sm: 0 },
+            }}
+          >
           {/*
             First in the bar, left of the brand, exactly where the prototype's
             `#railBtn` sits. `aria-expanded` carries the rail's real state, so
@@ -148,6 +176,9 @@ export function AppShell({
               gap: 1.1,
               p: 0,
               minWidth: 0,
+              // Without these the label wrapped mid-word into the nav.
+              whiteSpace: "nowrap",
+              flexShrink: 0,
               "&:hover": { bgcolor: "transparent" },
             }}
           >
@@ -158,7 +189,14 @@ export function AppShell({
           <Box
             component="nav"
             aria-label="Main"
-            sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 0.25 }}
+            sx={{
+              ml: { xs: 0, sm: "auto" },
+              width: { xs: "100%", sm: "auto" },
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 0.25,
+            }}
           >
             {NAV.map(({ key, label }) => (
               <Button
@@ -167,8 +205,9 @@ export function AppShell({
                 sx={{
                   fontSize: 13,
                   fontWeight: 500,
-                  px: 1.4,
+                  px: { xs: 0.9, sm: 1.4 },
                   py: 0.75,
+                  whiteSpace: "nowrap",
                   color: current === key ? "#FFFFFF" : "rgba(255,255,255,.86)",
                   borderRadius: current === key ? 0 : 1,
                   boxShadow: current === key ? "inset 0 -2px 0 #fff" : "none",
@@ -198,9 +237,10 @@ export function AppShell({
               <Button
                 onClick={onSignIn}
                 sx={{
-                  ml: 1,
+                  ml: { xs: "auto", sm: 1 },
                   fontSize: 13,
                   fontWeight: 600,
+                  whiteSpace: "nowrap",
                   color: "#FFFFFF",
                   border: "1px solid rgba(255,255,255,.55)",
                   borderRadius: 1,

@@ -2,7 +2,7 @@
 
 Product owner feedback on the user experience, raised 2026-08-31, plus what was verified rather than taken on trust.
 
-Last updated: 2026-09-01.
+Last updated: 2026-09-05.
 
 ## Read this first
 
@@ -10,28 +10,28 @@ The short version as written on 2026-08-31: the backend works and the product is
 
 This document is now two things at once, and the order below reflects which one you need today.
 
-- What to test, and how. The next section. Nine workflows with what to type and what to watch, and an empty column for your verdict.
+- What to test, and how. The next section. TWO END-TO-END JOURNEYS, a stranger's first visit and the sign-up that follows it, with an empty column for your verdict at every step.
 - Why each of them exists. Everything after that, kept as the original record with a status line added at the top of each complaint. Nothing has been rewritten or removed, so the reasoning on both sides of every decision survives.
 
 Where things stand, in one table. The detail behind every row is in the section it names.
 
 | Complaint | State on 2026-09-01 | Test with |
 |---|---|---|
-| Answers were unreadable identifiers | FIXED, awaiting your verdict | W1, W4 |
-| Internal findings accounting shown to the reader | FIXED, awaiting your verdict | W3 |
+| Answers were unreadable identifiers | FIXED, awaiting your verdict | 1.2, 1.5 |
+| Internal findings accounting shown to the reader | FIXED, awaiting your verdict | 1.2 |
 | 1. Not as responsive as the design | PARTLY DIAGNOSED. An 8px horizontal bleed at 390px, measured; the side-by-side is still owed | not yet |
-| 2. The answer flow feels fragmented | HALF FIXED. The wait now moves. It is not faster, and it is WORSE than measured here | W2 |
-| 3. Follow-ups do not continue the thread | FIXED, awaiting your verdict | W5, W6 |
+| 2. The answer flow feels fragmented | HALF FIXED. The wait now moves. It is not faster, and it is WORSE than measured here | 1.2 |
+| 3. Follow-ups do not continue the thread | FIXED, awaiting your verdict | 1.3, 1.4 |
 | 4. The integrations page is a placeholder | PREMISE IN DOUBT. Journey 5 found no dead button on develop | not yet |
-| 5. The answer never offers a next step | FIXED, awaiting your verdict | W7, W8 |
-| Broken sentence fragments in an answer | FIXED, awaiting your verdict | W9 |
+| 5. The answer never offers a next step | FIXED, awaiting your verdict | 1.5, 1.6 |
+| Broken sentence fragments in an answer | FIXED, awaiting your verdict | 1.5 |
 
-Three things are recorded and NOT fixed, so they are not worth reporting as new: the answer can take over 25 seconds, the app scrolls sideways about 8px on a 390px screen, and the reported cost of a run is `0.0`.
+Four things are recorded and NOT fixed, so they are not worth reporting as new: the answer can take over 25 seconds, the sign-in screen is unstyled, the app scrolls sideways about 8px on a 390px screen, and the reported cost of a run is `0.0`.
 
 ## Table of contents
 
 - [Read this first](#read-this-first)
-- [Manual test workflows, for the product owner to run](#manual-test-workflows-for-the-product-owner-to-run)
+- [The two journeys, for the product owner to run](#the-two-journeys-for-the-product-owner-to-run)
 - [The headline finding](#the-headline-finding)
 - [Seen in a real browser, not inferred](#seen-in-a-real-browser-not-inferred)
 - [The evidence, measured](#the-evidence-measured)
@@ -47,70 +47,66 @@ Three things are recorded and NOT fixed, so they are not worth reporting as new:
 - [Working practice: two sessions, one checkout](#working-practice-two-sessions-one-checkout)
 - [What has not been checked](#what-has-not-been-checked)
 
-## Manual test workflows, for the product owner to run
+## The two journeys, for the product owner to run
 
-Added 2026-09-01, by product-owner decision. THE ASSISTANT DOES NOT DRIVE THE BROWSER unless asked. The loop is:
-
-- The assistant fixes the frontend and the backend.
-- The assistant writes the workflow here.
-- The product owner runs it and records what they saw.
+REWRITTEN 2026-09-05 by product-owner decision: test the WHOLE FLOW, not one question at a time. The nine single-question checks that used to sit here were each true and collectively useless, because nobody uses a product one question at a time. They survive as the "watch for" lines inside the steps below, so nothing that was being checked has stopped being checked.
 
 Where to test: DEVELOP, `https://search-agent-web-develop-2aeb.up.railway.app`. Production is checked only when confirming a release shipped what it claimed.
 
-How to read the tables:
+How to record what you saw: drop a screenshot into `feedback/inbox/` and put the verdict in the filename, for example `J1 step 3 lost the thread.png`. Longer thoughts go in `feedback/inbox/notes.md`. The convention is in `feedback/README.md`.
 
-- Type this: type it exactly.
-- What to watch: what should happen, and what should not.
-- What I saw: your verdict, in your words.
+### Before you start: the allowance shapes the journey
 
-A blank verdict means not yet run, which is different from a passing one.
+A guest gets FIVE answers, held against a signed token in browser storage that lasts seven days, so a browser you tested on last week still remembers. Journey 1 is built to spend exactly those five and then walk into the wall on purpose, because the wall is part of the product.
 
-### Ready to test now
+If you need a fresh guest identity, either open a private window or run this in the browser console:
 
-These are on the build phase 6.2 branch and are NOT on develop yet. They become testable the moment that branch merges. Nothing below has been seen by a person yet.
+```js
+localStorage.removeItem("agentic-search-ui.guest-token.v1");
+localStorage.removeItem("agentic-search-ui.guest-migrated.v1");
+location.reload();
+```
 
-| # | Workflow | Type this | What to watch | What I saw |
-|---|---|---|---|---|
-| W1 | Disease names in an answer | `Which diseases are associated with BRCA1?` | The answer names diseases in words, for example "breast-ovarian cancer, familial, susceptibility to, 1". It should NOT read `MedGen:C2676676`. Each name should have a numbered citation that opens a real MedGen page | |
-| W2 | The wait feels alive | The same question, then watch without touching anything | A number next to the question counting up every second, and the current step's dot pulsing. There should be no stretch longer than about two seconds where nothing on screen moves | |
-| W3 | No internal bookkeeping | The same question | If the answer says something was left out, it should say it in your terms, for example "3 further disease records were found for this question and are not described above". It should NOT say "4 of the 5 findings prepared for it" | |
-| W4 | A second gene, to see it is not a one-off | `Which diseases are associated with TP53?` | Same three things as W1 to W3. TP53 has more associated diseases, so this is also the case where something is most likely to be left out | |
+### Journey 1: a stranger arrives, and uses up the free allowance
 
-### Also ready to test, built after the decisions of 2026-09-01
+The whole point is the THREAD. Steps 2 and 3 are follow-ups that must know what came before, and the journey fails if you ever have to repeat yourself.
 
-UPDATED 2026-09-01: all five are now BUILT and sit on the phase branch alongside W1 to W4. They become testable at the same moment, when that branch merges to develop. Nothing here has been seen by a person yet.
-
-| # | Workflow | Type this | What to watch | What I saw |
-|---|---|---|---|---|
-| W5 | A follow-up continues the thread (BUILT) | Ask `Which diseases are associated with BRCA1?`, wait for the answer, then in the follow-up box ask `What variants cause it?` | The second answer should know that "it" means the diseases just discussed, without you naming them again. Every claim in it should still carry its own citation | |
-| W6 | The thread survives more than one turn (BUILT) | After W5, ask a third question referring further back, for example `And which of those has the most evidence?` | It should still be following the conversation, not just the previous turn | |
-| W7 | The answer offers a next step (BUILT) | Any question that returns several results | The answer may end by offering somewhere to go next. That offer must be about something actually found and not described, never an invented topic. Accepting it should CONTINUE the thread, not start over | |
-| W8 | An answer with nothing to offer stays quiet (BUILT) | Ask something with no answer, for example `Which diseases are associated with the gene ZZZZZZ999?` | It should refuse cleanly and offer NO next step. A system that always asks something is padding | |
-| W9 | No broken sentences (BUILT) | Any question where part of the answer is left out, W4 is the likeliest | Sentences should be whole. No unclosed brackets, no sentence missing its verb. A sentence that lost a piece should be dropped entirely rather than shown broken | |
-
-### Known, not yet fixed, so not worth reporting as new
-
-Recording these so a test run does not spend time on things already on the list:
-
-- The answer can take more than 25 seconds on develop, longer than the 12 to 14 seconds measured on 2026-08-31. The counter in W2 makes the wait visible and makes it no shorter.
-- The app scrolls sideways by about 8 pixels on a 390px-wide phone screen. 768px and 1440px are clean.
-- The answer arrives in one or two chunks at the end rather than streaming in word by word.
-- The reported cost of a run is `0.0`, which is not yet trusted either way.
-
-### The eight browser journeys, and what each would cost to run
-
-Built and gated behind `RUN_LIVE_JOURNEYS=1`, available the moment they are asked for. Three have been run; the rest are waiting on an instruction, per the decision above.
-
-| # | Journey | Cost to run | State |
+| Step | Do this | What to watch | What I saw |
 |---|---|---|---|
-| 1 | First visit to first answer | 1 guest answer | Built, not run |
-| 2 | The wait, one frame a second | 1 guest answer | Run 2026-09-01 |
-| 3 | Follow-up continuity | 2 guest answers | Built, not run. The evidence behind W5 |
-| 4 | Guest allowance exhaustion | 6 answers, a whole guest allowance | Built, not run |
-| 5 | Every integrations affordance | None | Run 2026-09-01 |
-| 6 | Refusal and error paths | Up to 2 answers | Built, not run. The evidence behind W8 |
-| 7 | Narrow viewports | None | Run 2026-09-01 |
-| 8 | Sign up, reload, sign in | None, creates an account | Built, not run |
+| 1.1 | Open the site in a private window. Do not sign in | The home screen offers questions you can tap rather than a blank box. There is some sign of how many free searches you have | |
+| 1.2 | Tap the suggested question `Diseases linked to BRCA1` | While it works: a counter ticking every second, the current step pulsing, nothing frozen longer than about two seconds. In the answer: diseases named in WORDS, never `MedGen:C2676676`, each with a numbered citation that opens a real page. Whole sentences, no unclosed brackets. If something was left out it says so in your terms, not "4 of the 5 findings prepared for it" | |
+| 1.3 | In the follow-up box ask `What variants cause it?` | It knows "it" means the diseases just discussed. You should not have to name them again. Every claim still carries its own citation | |
+| 1.4 | Ask a third time, further back: `And which of those has the most evidence?` | Still following the whole conversation, not just the previous turn. This is the step most likely to break | |
+| 1.5 | Start a fresh question in your own words: `Which diseases are associated with TP53?` | Same checks as 1.2. TP53 returns more, so this is where truncation and broken sentences are likeliest. If the answer offers a next step, that offer must be about something it actually found, and taking it should CONTINUE the thread rather than start over | |
+| 1.6 | Ask something with no answer: `Which diseases are associated with the gene ZZZZZZ999?` | A clean refusal that does not invent an answer, and NO next step offered. A system that always asks a follow-up is padding | |
+| 1.7 | Try a sixth search | You hit the wall. Read it as a stranger would: does it explain what happened and what to do, or does it just stop you? | |
+
+### Journey 2: the stranger signs up, and the thread survives
+
+This is the join between the two halves of the product, and it is the least tested thing in it. Two questions matter more than the rest: does your work survive the sign-up, and is the rail on the left worth having.
+
+| Step | Do this | What to watch | What I saw |
+|---|---|---|---|
+| 2.1 | From the wall in step 1.7, click through to create an account | The sign-in screen. It is currently UNSTYLED and known bad, so no need to report that again. What IS worth reporting: does it tell you what it wants, and do the errors make sense if you get something wrong | |
+| 2.2 | Create an account and land back in the product | Do the searches you just ran as a guest come with you, or did you lose them? Either answer is worth knowing. Are you still where you were, or dumped back at the start | |
+| 2.3 | Look at the left side | A rail listing your earlier searches. It appears only once signed in, by design. Does it name them in a way you recognise, and can you tell which one you are looking at | |
+| 2.4 | Click an earlier search in the rail | It reopens that answer. Does it come back whole, citations and all, or a thinner version of it | |
+| 2.5 | Collapse the rail, then expand it again | It gets out of the way and comes back. The collapsed state should survive you moving around | |
+| 2.6 | Ask a new question while signed in, then a follow-up | Same thread behaviour as journey 1, plus: the new search should appear in the rail | |
+| 2.7 | Reload the page | KNOWN ISSUE, confirm whether it still happens: a reload signs you out, and your history only reappears after signing in again | |
+| 2.8 | Sign out, then sign back in | Your searches are still there. This is the only step that proves anything was really saved | |
+
+### What is already known, so not worth reporting as new
+
+- An answer can take more than 25 seconds. The counter makes the wait visible, not shorter.
+- The sign-in and sign-up screen is unstyled, raw browser defaults. Root cause found 2026-09-05: `AuthGate.tsx` is the only screen component that imports no MUI and references four CSS classes that exist nowhere.
+- The app scrolls sideways about 8 pixels on a 390px phone screen. 768px and 1440px are clean.
+- The answer arrives in one or two chunks at the end rather than streaming word by word.
+- The reported cost of a run is `0.0`, not yet trusted either way.
+
+### A blank verdict means not run
+
+Not a passing one. An empty cell and a cell reading "fine" are different facts, and only one of them is evidence.
 
 ## The headline finding
 
@@ -175,7 +171,7 @@ That is internal accounting. It tells a researcher nothing they can act on, and 
 
 ## Seen in a real browser, not inferred
 
-Playwright drove Chromium against live production on 2026-08-31 and captured the answer screen. Screenshot: `docs/build/design/evidence/2026-08-31_live_answer_brca1.png`.
+Playwright drove Chromium against live production on 2026-08-31 and captured the answer screen. Screenshot: `testing/evidence/2026-08-31_live_answer_brca1.png`.
 
 The picture settles the argument more cleanly than any API probing did. THE INTERFACE IS NOT THE PROBLEM.
 
@@ -268,7 +264,7 @@ That last point matters and is easy to miss. Only two `token` events were emitte
 
 ## Complaint 3: follow-up questions do not continue the thread
 
-STATUS 2026-09-01: FIXED, awaiting your verdict. A follow-up now carries the whole thread forward, bounded, as retrieval guidance only. Test it with W5 and W6.
+STATUS 2026-09-01: FIXED, awaiting your verdict. A follow-up now carries the whole thread forward, bounded, as retrieval guidance only. Test it with journey 1, steps 1.3 and 1.4.
 
 Partly built, and the gap is real.
 
@@ -339,7 +335,7 @@ That does not match complaint 4 below, which describes "a request button that ac
 
 ## Complaint 5: the answer just stops, and never offers the next step
 
-STATUS 2026-09-01: FIXED, awaiting your verdict. An answer may now offer one honest next step derived from what retrieval left out, or stay quiet. Test it with W7 and W8.
+STATUS 2026-09-01: FIXED, awaiting your verdict. An answer may now offer one honest next step derived from what retrieval left out, or stay quiet. Test it with journey 1, steps 1.5 and 1.6.
 
 Raised by the product owner, 2026-08-31: an answer should be able to end by offering where to go next, for example "would you like me to dive deeper into XYZ", so a discussion can actually finish rather than simply halting.
 
@@ -488,7 +484,7 @@ Build these as `frontend/e2e/journeys/`, gated behind an environment variable li
 
 ### What makes them useful rather than decorative
 
-- Each ends in a named screenshot committed under `docs/build/design/evidence/`, dated, so a change can be compared against the last run rather than against memory.
+- Each ends in a named screenshot committed under `testing/evidence/`, dated, so a change can be compared against the last run rather than against memory.
 - Each captures INTERMEDIATE states, not just the end. The complaint in this file is about the experience during the wait, and a final screenshot cannot show it.
 - Each runs against develop by default and takes its target from an environment variable.
 - None of them assert. They CAPTURE. A journey that fails a strict assertion stops and tells you nothing about the other seven steps, and the point here is to see the whole flow.

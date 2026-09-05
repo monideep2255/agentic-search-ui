@@ -962,6 +962,7 @@ export function App() {
              */
             failure={dispatchError ?? view.failure ?? streamError}
             capMessage={view.capMessage}
+            systemNotes={view.systemNotes}
             /*
              * F-4.6-08. `AnswerScreen` builds `FeedbackSurface` itself
              * (T-4.6-09) and needs the real POST target and bearer token to
