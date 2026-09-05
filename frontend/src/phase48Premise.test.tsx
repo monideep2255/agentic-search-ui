@@ -204,9 +204,16 @@ describe("clause 1: token conformance", () => {
 });
 
 describe("clause 2: structure", () => {
-  it("the app shell renders the bar, the disclaimer strip and the persona", async () => {
-    // T-4.8-03. The disclaimer strip is permanent and not dismissible, so its
-    // absence is a compliance defect rather than a styling one.
+  it("the app shell renders the bar and the persona", async () => {
+    // T-4.8-03, UPDATED 2026-09-05. This clause used to also assert a
+    // permanent, non-dismissible disclaimer strip here, which was correct
+    // when the strip was part of the shell. Product-owner decision on
+    // 2026-09-05 removed that strip from `AppShell.tsx` entirely: the
+    // disclaimer now shows once per session, on the home page, from
+    // `DisclaimerModal.tsx`, which `AppShell` does not render and this
+    // clause therefore has nothing of that kind left to assert. Asserting
+    // the strip's absence would only prove a negative that changes shape
+    // with any future refactor, so it is dropped rather than inverted.
     const { AppShell } = await loadShell();
     // T-4.5-10: the shell no longer invents a persona. It used to default to
     // a hardcoded "Mendel", which meant this assertion passed whether or not
@@ -219,7 +226,6 @@ describe("clause 2: structure", () => {
       </AppShell>,
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
-    expect(screen.getByText(/not medical advice/i)).toBeInTheDocument();
     expect(screen.getByTestId("persona-chip")).toBeInTheDocument();
   });
 

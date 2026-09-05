@@ -167,6 +167,23 @@ export interface TrustSignalPayload {
   risk_tier: string;
   grounded: boolean;
   triangulated: boolean | null;
+  // T-6.2 no-data-refusal fix. Additive per Section 2.6: `contracts/
+  // events.py`'s `TrustSignalPayload` has carried these three since build
+  // phase 2.2 (`scope`) and build phase 4.3 (`message`, `fallback_link`),
+  // and every payload built before that still validates unchanged because
+  // all three are optional here too.
+  //
+  // `scope` distinguishes Section 8.3's per-claim verdict ("claim") from
+  // Section 8.4's whole-response verdict ("answer"). `message` and
+  // `fallback_link` carry Section 8.4's refuse payload: the refusal
+  // sentence and its NCBI cross-database search link, as two separate,
+  // independently capped fields rather than one string a consumer would
+  // have to split. `useRunView` reads all three to find the answer-level
+  // refusal signal and render it through the same notice a guardrail
+  // refusal uses, instead of matching on the refusal SENTENCE's wording.
+  scope?: "claim" | "answer" | null;
+  message?: string | null;
+  fallback_link?: string | null;
 }
 
 export interface ErrorPayload {
@@ -420,7 +437,13 @@ function isTrustSignalPayload(value: unknown): value is TrustSignalPayload {
     isTrustOutcome(value.outcome) &&
     typeof value.risk_tier === "string" &&
     typeof value.grounded === "boolean" &&
-    (value.triangulated === null || typeof value.triangulated === "boolean")
+    (value.triangulated === null || typeof value.triangulated === "boolean") &&
+    (value.scope === undefined ||
+      value.scope === null ||
+      value.scope === "claim" ||
+      value.scope === "answer") &&
+    (value.message === undefined || isNullableString(value.message)) &&
+    (value.fallback_link === undefined || isNullableString(value.fallback_link))
   );
 }
 
