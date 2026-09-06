@@ -277,9 +277,32 @@ test.describe("the stored-searches rail collapses", () => {
     // The prototype's own media query. jsdom cannot evaluate this, which is
     // why the vitest gate declares it as NOT exercised rather than claiming it.
     await expect(page.getByTestId("history-rail")).toBeHidden();
-
-    await expect(toggle(page)).toBeVisible();
-    await toggle(page).click();
     await expect(page.getByTestId("collapsed-rail")).toBeHidden();
+
+    // CHANGED 2026-09-05, and the change is the point rather than a repair.
+    //
+    // This test used to assert the toggle was VISIBLE here, then click it.
+    // That pinned a defect as if it were the contract: the toggle had no
+    // breakpoint guard while both the rail and its collapsed strip carry
+    // `display: { xs: "none", md: "flex" }`, so a signed-in user on a phone
+    // pressed a visible, enabled control and nothing on screen changed.
+    // Product-owner decision, 2026-09-05: hide the toggle so its visibility
+    // matches what it operates.
+    //
+    // Rewriting an assertion to match a change is normally how a gate gets
+    // quietly weakened, so the distinction is stated rather than assumed.
+    // `.claude/rules/goal-contracts.md` names three cases when a check goes
+    // red, and this is the second: the check was wrong. It asserted the
+    // presence of a control that did nothing, so the old assertion could only
+    // ever have passed while the defect was live. Nothing here is looser than
+    // before: the test still pins a real, falsifiable property, and it now
+    // pins the one the product actually wants.
+    //
+    // Recorded rather than resolved: THE DESIGN HAS THIS DEFECT TOO.
+    // `prototype/app.html:65` hides `#rail` and `#railStub` at 860px, `.ham`
+    // carries no media query at all, and `#railBtn` is toggled only by
+    // availability. So this is a fix the design does not yet describe, and a
+    // future reader must not "correct" it back to the prototype.
+    await expect(toggle(page)).toBeHidden();
   });
 });

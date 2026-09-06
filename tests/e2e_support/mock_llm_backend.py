@@ -317,6 +317,33 @@ _GUARD_ADMIT_JSON = (
 )
 
 
+#: Think's own structured contract, added 2026-09-05. `_ThinkClassification`
+#: (`core/graph.py:981`) is `extra="forbid"`, so this carries exactly its three
+#: fields and nothing else.
+#:
+#: `entities` is deliberately EMPTY rather than naming a gene. A populated
+#: entity list sends `think_node` on to live NCBI confirmation, and this backend
+#: exists precisely so a run touches no network. An empty list keeps the run
+#: offline and deterministic, at the cost of never exercising the resolution
+#: path, which is stated here rather than left for a reader to discover.
+_THINK_CLASSIFICATION_JSON = (
+    '{"query_class": "lookup", '
+    '"narrative": "Classified as a lookup with no entities to resolve.", '
+    '"entities": []}'
+)
+
+
+def _looks_like_think_call(blob: str) -> bool:
+    """Whether this call is `think_node`'s query-shape classification.
+
+    Matched on the prompt's own marker, the literal `query_class` it asks the
+    model to return (`core/graph.py:1068`), for the same reason
+    `_looks_like_guard_call` matches on `is_injection`: this helper replaces
+    `litellm.acompletion` and never sees which tier the harness resolved.
+    """
+    return "query_class" in blob.lower()
+
+
 def _looks_like_guard_call(blob: str) -> bool:
     """Whether this call is the guardrail's own classification request.
 
@@ -352,6 +379,30 @@ async def _fake_acompletion(*_args: object, **kwargs: object):
     The lesson worth keeping: a test double is a contract with the code it
     stands in for, and changing that contract without updating the double
     leaves a suite that cannot pass. A suite that cannot RUN hides it.
+
+    THE SAME FAILURE THEN HAPPENED AGAIN, ONE STEP LATER IN THIS FILE, and it
+    is recorded here rather than quietly repaired because the recurrence is
+    more interesting than either instance. Build phase 4.7 gave `think_node` a
+    strict JSON classification contract exactly as build phase 3.0 had given
+    one to the guard, and this double was again not updated, so from 4.7 until
+    2026-09-05 every real run through this backend died at the THINK step with
+    "the plan tier did not return valid JSON for query classification". The
+    paragraph above, stating the lesson, was already sitting in this docstring
+    the whole time.
+
+    WHAT HID IT IS THE PART WORTH CARRYING FORWARD. The suite ran and looked
+    healthy, because most specs assert on things that are present whether or
+    not a run produces an answer: `second-turn.spec.ts` checks that the
+    follow-up field is visible, and the answer screen renders that field on a
+    failed run too. Only `query-stream-and-stop.spec.ts`'s answer assertion
+    actually required a completed run, and it was the single failure everyone
+    read as flake. A green suite meant "the interface renders", never "the
+    agent answers".
+
+    There was a second, quieter consequence: because the run ended having
+    produced nothing, `run_registry` REFUNDED the guest's answer allowance on
+    every attempt, so the five-answer wall could not be reached by any real run
+    and could not be tested at all.
     """
     messages = kwargs.get("messages", [])
     blob = " ".join(
@@ -363,6 +414,8 @@ async def _fake_acompletion(*_args: object, **kwargs: object):
         await asyncio.sleep(_SLOW_QUERY_DELAY_S)
     if _looks_like_guard_call(blob):
         return _fake_response(_GUARD_ADMIT_JSON)
+    if _looks_like_think_call(blob):
+        return _fake_response(_THINK_CLASSIFICATION_JSON)
     return _fake_response()
 
 
