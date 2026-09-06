@@ -1015,3 +1015,256 @@ describe("system notes: App forwards the run's disclosures to AnswerScreen", () 
     expect(note.textContent).toMatch(/showing 5 of 30 matching rows/i);
   });
 });
+
+/**
+ * The privacy leak (W-identity-9). `setThread([])` used to appear only in
+ * the three New-search handlers, never in sign-out, so a shared browser
+ * kept the previous person's collapsed conversation turns, their
+ * questions, claims, sources and trust verdicts, on screen for whoever
+ * signed in next.
+ *
+ * Deliberately an App-level test that drives a real SSE stream through
+ * `openEventStream`, not a unit test that renders `AnswerScreen` directly
+ * with a hand-built `previousTurns` prop. The defect is entirely in
+ * `App.tsx`'s sign-out handler, one prop above `AnswerScreen`, which
+ * already renders whatever `previousTurns` it is given correctly; a direct
+ * `AnswerScreen` test would exercise none of that handler and would pass
+ * against the broken code.
+ */
+describe("privacy: the previous person's thread is cleared on sign-out", () => {
+  const frame = (seq: number, type: string, payload: unknown): string =>
+    `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+      type,
+      version: "v1",
+      trace_id: "privacy-1",
+      seq,
+      ts: "2026-09-05T00:00:00Z",
+      payload,
+    })}\n\n`;
+
+  const STREAM = [
+    frame(0, "guard", { passed: true, category: "ok", reason: null }),
+    frame(1, "think", {
+      narrative: "Resolving the gene named in the question.",
+      query_class: "single_hop",
+      resolved_entities: [],
+      clarifying_question: null,
+    }),
+    frame(2, "plan", { narrative: "Read the curated edges.", tool_calls: [] }),
+    frame(3, "tool_result", {
+      call_id: "c1", tool: "cypher_query", layer: "layer_1_graph",
+      status: "ok", summary: "", result_count: 25, truncated: false,
+    }),
+    frame(4, "token", { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["k1"] }),
+    frame(5, "citation", {
+      citation_id: "k1", display_index: 1, source: "NCBI Gene", source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/672", layer: "layer_1_graph",
+      field: "cypher_query", claim_text: "x", evidence_kind: "curated assertion",
+      assertion_confidence: "high", population_ancestry_context: null,
+      license: "public domain",
+    }),
+    frame(6, "trust_signal", {
+      outcome: "answer", risk_tier: "low", grounded: true, triangulated: false,
+    }),
+    frame(7, "done", {
+      total_cost_usd: 0.0031, total_tool_calls: 1, elapsed_ms: 11400,
+      trust_outcome: "answer",
+    }),
+  ].join("");
+
+  function scriptedResponse(): Promise<Response> {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(STREAM));
+        controller.close();
+      },
+    });
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    );
+  }
+
+  /** Sign out through the account menu, the same route `T-4.13-03` uses. */
+  async function signOut(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token", refresh_token: "test-refresh", token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementation(() => scriptedResponse());
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("does not show the next signed-in person the previous person's collapsed turns", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // 1. Land a real answer, then continue the conversation. Continuing
+    //    archives the landed turn into `thread`, so `thread` is non-empty
+    //    the instant sign-out fires below.
+    await ask(user, "What is BRCA1?");
+    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+    await user.type(
+      screen.getByLabelText(/ask a follow-up question/i),
+      "What variants cause it?",
+    );
+    await user.click(screen.getByRole("button", { name: /^ask$/i }));
+    // Continuing the thread starts a new run under the follow-up question;
+    // waiting for its heading confirms the archive above already ran,
+    // since it happens synchronously before this new run is dispatched.
+    await screen.findByRole("heading", { name: "What variants cause it?" });
+
+    // 2. The person at this workstation signs out.
+    await signOut(user);
+
+    // 3. The next person signs in and lands their OWN, unrelated answer.
+    await signIn(user);
+    await ask(user, "What variants cause cystic fibrosis?");
+    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+
+    // The first person's archived turn must not be here. `AnswerScreen`
+    // only renders the `data-testid="thread"` wrapper when `previousTurns`
+    // is non-empty, so its absence is a direct proof `thread` was cleared,
+    // not an inference from something else.
+    expect(screen.queryByTestId("thread")).not.toBeInTheDocument();
+    expect(screen.queryByText(/what is brca1\?/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The returning-guest allowance gap (W-GUEST-4). `allowance` was seeded
+ * `null` on every mount and the only two writers were a landed run and a
+ * fresh sign-in, so a guest whose token was restored from storage saw no
+ * dots at all until their NEXT ask spent a third search, even though the
+ * server already knew their count.
+ */
+describe("a returning guest's allowance is fetched at mount", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("shows the real count before the first ask, for a token restored from a prior visit", async () => {
+    // `persistGuestToken` writes through the same key `guestToken`'s own
+    // initializer reads (`loadPersistedGuestToken`), so this is exactly
+    // what a prior visit's mint would have left behind, not a hand-built
+    // storage key that could drift from the real one.
+    const { persistGuestToken } = await import("./lib/guestSession");
+    persistGuestToken("restored-guest-token");
+    // Two of five already spent, per the server, from a prior visit.
+    getAllowanceMock.mockResolvedValue({ kind: "guest", used: 2, total: 5, counted: true });
+
+    const user = userEvent.setup();
+    render(<App />);
+    void user; // not driving any interaction; the fetch must happen unasked
+
+    await waitFor(() => expect(getAllowanceMock).toHaveBeenCalledTimes(1));
+    expect(getAllowanceMock).toHaveBeenCalledWith(
+      "restored-guest-token",
+      expect.anything(),
+    );
+
+    const banner = await screen.findByTestId("guest-allowance");
+    expect(banner.textContent).toMatch(/3 searches left/i);
+    // Nothing was asked, so nothing should have minted a fresh identity or
+    // started a run: this is purely the mount-time read of an existing one.
+    expect(mintGuestMock).not.toHaveBeenCalled();
+    expect(createRunMock).not.toHaveBeenCalled();
+  });
+
+  it("does not change what a brand-new visitor with no persisted token sees", async () => {
+    // The control for the test above, and the boundary F-4.10-A-13
+    // (`tracker/phase_4.10.md`) leaves open: a visitor with NO persisted
+    // token still sees no footer at all before their first ask. Left alone
+    // deliberately, since that is a separate, open product-owner question.
+    render(<App />);
+
+    expect(getAllowanceMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("guest-allowance")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Honest copy that never reached the reader (W-GUEST-11). The backend
+ * emits `anon_daily_cap_reached` and `anon_source_daily_cap_reached` as
+ * 429s, each carrying a purpose-written sentence in
+ * `GuestAllowance.tsx`'s own `BLOCKED_COPY`, and `ask`'s catch block
+ * branched only on the two 403 personal-allowance reasons, so a guest
+ * hitting either shared daily ceiling saw the generic dispatch-failure
+ * fallback instead of the true, already-written reason.
+ */
+describe("a guest hitting a shared daily ceiling sees the true reason", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "guest", used: 0, total: 5, counted: true });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("shows GuestAllowance's own sentence for anon_daily_cap_reached, not the generic failure", async () => {
+    const { ApiError } = await import("./lib/api");
+    createRunMock.mockRejectedValueOnce(
+      new ApiError(429, "createRun failed with 429", "anon_daily_cap_reached"),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+
+    await ask(user, "What is BRCA1?");
+
+    const failure = await screen.findByTestId("answer-failure");
+    expect(failure.textContent).toMatch(/guest searches are paused for today/i);
+    expect(failure.textContent).not.toMatch(/could not be sent/i);
+  });
+
+  it("shows GuestAllowance's own sentence for anon_source_daily_cap_reached, not the generic failure", async () => {
+    const { ApiError } = await import("./lib/api");
+    createRunMock.mockRejectedValueOnce(
+      new ApiError(429, "createRun failed with 429", "anon_source_daily_cap_reached"),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+
+    await ask(user, "What is BRCA1?");
+
+    const failure = await screen.findByTestId("answer-failure");
+    expect(failure.textContent).toMatch(/this network has used its guest searches for today/i);
+    expect(failure.textContent).not.toMatch(/could not be sent/i);
+  });
+});
