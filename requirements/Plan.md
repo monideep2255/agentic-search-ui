@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-01.
+Kick-off: 2026-05-06. Last updated: 2026-09-05.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-09-01.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0 on 2026-08-31, and BUILD PHASE 6.2 on 2026-09-01 as PR #92. THE NEXT ACTION IS NOT WORK, IT IS WAITING: the product owner is testing workflows W1 to W9 in `testing/UI_feedback.md`, and their verdict is what moves build phase 6.2's tickets from `in-review` to `done`. 6.2 is the sixth stated exception on the board, since Section 25 has no row for defects a live user hits. THE LOOP CHANGED THE SAME DAY: the assistant fixes frontend and backend and writes the test workflow, the product owner runs it on develop, feedback returns, repeat. The judge round is no longer the gate before a merge to develop, so a phase merges at `in-review`. Six tickets merged open, and the largest unowned problem is that an answer can exceed 25 SECONDS. Authoritative state: `tracker/BOARD.md`, rendered at `tracker/board.html`; what to do next: `requirements/phase_6/Continuation_prompt.md` |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0 on 2026-08-31, 6.2 on 2026-09-01 as PR #92, and PR #93 on 2026-09-05. PR #93 IS NOT A NUMBERED BUILD PHASE: work is now picked from open flags and from the product owner's own testing rather than from Section 25, which has run its course. It delivered the sign-in screen, chrome reduction, a usable integrations page, one shape for every refusal, a session-state privacy leak fix, and `testing/Product_workflows.md`, 50 workflows in three tiers derived from what is built. THE NEXT ACTION IS NOT WORK, IT IS WAITING: the product owner is testing develop against that spec and drops screenshots into `testing/feedback/inbox/`. Authoritative state: `tracker/BOARD.md`; what to do next: `requirements/phase_6/Continuation_prompt.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 478 (DECISIONS.md).
+Decisions logged: 485 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,22 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-05, PR #93 merged to `develop`, all four CI gates green, branch deleted both sides. NOT a numbered build phase: Section 25 has run its course as a driver, and this work was picked from a defect the product owner hit plus everything deriving a specification then turned up.
+
+WHAT IT STARTED AS: one unstyled sign-in screen. Investigating it found the more useful fact, that the screen was never in the design system at all rather than drifted from it, which is a different problem needing the opposite response.
+
+WHAT IT DELIVERED, in the terms a person notices: a designed sign-in screen that submits on Enter; an app bar that no longer collides with itself on a phone, with the nav reachable there through an overflow menu; no permanent disclaimer band, roughly 90px back above the fold; an integrations page with a copy button on every snippet and live links to the API reference and OpenAPI schema; four disclosures that were computed and rendered nowhere; one shape for every refusal; and a returning guest who can see the allowance the server already knew.
+
+THE DEFECT THAT MATTERED MOST was not on anyone's list: `thread` was never cleared on sign out, so on a shared browser the next person to sign in saw the previous person's questions, claims, sources and trust verdicts. Two comments asserted the fix that was not there, one of them confident enough to document a deliberate exception for the guest token, which is why it survived review.
+
+THE METHOD IS THE TRANSFERABLE PART. `testing/Product_workflows.md` states 50 obligations derived from what is built, each carrying a status verified against a file and line, ranked in three tiers so the reader can stop anywhere. Writing it, before running a single test, surfaced twelve defects. It replaced nine hand-written test questions that were each true and collectively useless, because nobody uses a product one question at a time, and because those nine needed about seven searches against a five-search guest allowance, so a full round could never be completed.
+
+TWO MISTAKES WERE MADE AND REVERTED INSIDE THE BRANCH, recorded because both are cheap to repeat. A mobile app bar was INVENTED because one design file carried no responsive rule, which was read as "no design exists"; one does, in the assembled prototype, and the invention was reverted and the design followed. The rule that failed was strengthened rather than restated: `.claude/rules/design-consistency.md` now names the prototype as the first place to look, and `docs/build/design/README.md` carries a coverage map naming all six surfaces that genuinely have no design. Separately, a commit described three app shell changes and CONTAINED NONE OF THEM, because an agent wrote the file after `git add` had staged the older version; it was caught by reading the committed blob rather than the working tree.
+
+THE LARGEST FINDING IS THE TEST HARNESS, not the product. Since build phase 4.7 every real run through the e2e mock backend has died at the THINK step, because 4.7 gave `think_node` a strict JSON contract and the double was never updated. The identical failure had already happened one node earlier at build phase 3.0, and the docstring recording that lesson was in the file the whole time. What hid it: the suite ran green because almost every spec asserts on something present whether or not a run produces an answer, so a green suite meant "the interface renders", never "the agent answers". The think contract is now fixed and the gap is narrower but still open, since the double fakes the model and not Layer 1.
+
+MERGED OPEN, deliberately: three logo colours with no token, six undesigned surfaces, and the answer test that still cannot pass until the double fakes Layer 1. Eight decisions logged.
 
 - 2026-09-01: BUILD PHASE 6.2, ANSWER READABILITY AND THE SINGLE UI PASS, MERGED as PR #92, all four CI gates green, and the review loop itself changed with it
 

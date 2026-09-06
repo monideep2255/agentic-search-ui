@@ -32,21 +32,38 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- PICK UP `fix/signin-screen-and-testing-folder`, PUSHED AND GREEN at d0132f9, six commits ahead of develop. Nothing is half-done and nothing is blocked. The next piece of work is PHASE 4 of the plan: build the tier 1 automated tests named in `testing/Product_workflows.md`. Read that file first; it is the specification and it is ranked.
+- WAIT. It is the product owner's turn. PR #93 MERGED to `develop` on 2026-09-05 with all four CI gates green, the branch is deleted on both sides, and the develop app has redeployed. They are testing it against `testing/Product_workflows.md` and will drop screenshots into `testing/feedback/inbox/`. Do not open new work against that spec until they have.
 
-WHAT CHANGED ON 2026-09-05, because it supersedes everything below about workflows W1 to W9:
+WHERE TO LOOK, in the order a fresh session should read them:
 
-- The nine hand-written test questions are GONE, replaced by `testing/Product_workflows.md`, 50 workflows in three tiers derived from what is built rather than invented. 46 of the 50 are layer A and cost NOTHING to run.
-- Everything for UI testing now lives in `testing/`. `UI_feedback.md` moved there. The run commands are written down for the first time, in `testing/README.md`.
-- The product owner drops screenshots into `testing/feedback/inbox/` with the comment in the filename. No convention beyond that.
-- Nine defects are open and named in the spec. The worst is that `thread` survives sign-out, so one person's conversation reaches the next person at that browser.
+| Question | File |
+|---|---|
+| What must the product do, and what is broken | `testing/Product_workflows.md`, 50 workflows in three tiers |
+| How do I run any of it | `testing/README.md`, the three layers and the run commands |
+| What did the product owner say | `testing/feedback/inbox/`, any file in it |
+| What is designed and what is not | `docs/build/design/README.md`, the coverage map |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05 |
 
-FOUR THINGS ARE WAITING ON THE PRODUCT OWNER, all in the spec's own section:
+WHAT SHIPPED IN PR #93, in the terms a person notices rather than by ticket:
 
-- Whether to add `layer1OnNavy`, `layer2OnNavy` and `layer3OnNavy` to `theme.ts`. `tracker/check_design_tokens.py` reports exactly three violations and they are the logo's on-navy rungs. The check is correct; changing `theme.ts` is the Ask state in `.claude/rules/design-consistency.md`, which is why it was not done.
-- Whether a no-data refusal and a guardrail refusal should look identical. ALREADY DONE, they now do, but the intent was never stated anywhere and deserves confirmation.
-- Whether the five undesigned surfaces get designs.
+- The sign-in screen is designed rather than raw browser defaults, and Enter submits it.
+- The app bar no longer collides with itself on a phone, and the nav is reachable there through an overflow menu.
+- The permanent disclaimer band is gone from every screen, roughly 90px back above the fold. The modal still gates once per session.
+- Integrations has a copy button on every snippet and live links to the API reference and the OpenAPI schema.
+- Four disclosures that were computed and rendered nowhere now render.
+- A refusal looks like a refusal, whichever path produced it.
+- Signing out no longer leaves the previous person's conversation on screen.
+
+FOUR THINGS ARE WAITING ON THE PRODUCT OWNER, and none should be decided for them:
+
+- Whether to add `layer1OnNavy`, `layer2OnNavy` and `layer3OnNavy` to `theme.ts`. `tracker/check_design_tokens.py` reports exactly three violations, all the logo's on-navy rungs. The check is correct; changing `theme.ts` is the Ask state in `.claude/rules/design-consistency.md`.
+- Whether the six undesigned surfaces get designs, and in what order. `docs/build/design/README.md` names all six.
 - Whether answers should carry any medical-advice notice, now that the permanent band is gone by their own instruction.
+- Whether hiding the nav below 720px is right, given the design provides no menu and the overflow menu that now exists overrules it.
+
+THE LARGEST UNFIXED THING IS THE TEST HARNESS, not the product. Since build phase 4.7 every real run through `tests/e2e_support/mock_llm_backend.py` died at the THINK step, because 4.7 gave `think_node` a strict JSON contract and the double was never updated. That is now fixed, and the run gets further, but it still cannot produce an answer: the double fakes the MODEL and not Layer 1, so `act_node` reaches for a graph that is not there. Until that is closed, no layer A test can assert on a real answer, and `query-stream-and-stop.spec.ts`'s answer case stays red.
+
+WHAT HID IT FOR SEVEN BUILD PHASES is the transferable part. The suite ran green because almost every spec asserts on something present whether or not a run produces an answer: `second-turn.spec.ts` checks that the follow-up field is visible, and the answer screen renders that field on a failed run too. A green suite meant "the interface renders", never "the agent answers". The identical failure had already happened one node earlier at build phase 3.0, and the docstring recording that lesson was sitting in the file the whole time.
 
 TWO PROCESS FAILURES FROM THIS SESSION, recorded because both will recur:
 

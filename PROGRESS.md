@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-01.
+Last updated: 2026-09-05.
 
 ## Table of contents
 
@@ -118,11 +118,21 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 1 SEPTEMBER: the answers are readable now, and the thing that replaced unreadability as the biggest problem is that they are SLOW.
+THE HONEST HEADLINE AS OF 5 SEPTEMBER: the product is much easier on the eye than it was, and the biggest remaining problem is still that answers are SLOW. Nothing done this week made them faster.
+
+Two things are worth saying about the week, because they are the kind of thing a progress note usually leaves out.
+
+The first is that we found a privacy problem nobody was looking for. If two people used the same computer, one after the other, the second person could still see the first person's conversation on screen after the first had signed out: their questions, the claims, and the sources. It is fixed. It had been there a while, and it survived because two comments in the code confidently said it had already been handled.
+
+The second is that a test we trusted had been quietly broken for seven rounds of work. The tests kept passing, so nobody looked. They were passing because almost all of them checked that the SCREEN drew correctly, and the screen draws correctly whether or not the system actually answers. A green tick meant "the page rendered", never "it answered the question". That is now partly fixed and honestly recorded as not finished.
+
+THE HEADLINE FROM 1 SEPTEMBER, still true: the answers are readable, and the thing that replaced unreadability as the biggest problem is that they are SLOW.
 
 An answer can take more than twenty-five seconds. We had believed it was twelve to fourteen, and we were wrong: we filmed the live site one picture per second and the answer had still not arrived at twenty-five. Worse, for fifteen of those seconds NOTHING ON THE SCREEN CHANGED. We have made the waiting look alive, with a number counting up and a moving indicator, and that is honest rather than fast. It does not make the answer arrive any sooner, and nobody is currently assigned to make it faster.
 
-Two smaller ones we found and have not fixed. On a phone-sized screen the page is about eight pixels too wide, so it slides sideways slightly; on a laptop it is fine, which is why nobody noticed. And the system reports the cost of answering a question as zero, which cannot be right, so no spending figure should be trusted yet.
+One smaller one we found and have not fixed: the system reports the cost of answering a question as zero. That turned out not to be a bug at all. The figure is deliberately hidden from ordinary users, and it is hidden from us too unless an account is explicitly marked as an operator. The control is working; we were reading it wrong.
+
+The phone-sized page that slid sideways IS now fixed, and the cause was not what the note said. It was recorded as "about eight pixels too wide", which sounds like a rounding nuisance. The real cause was that the bar across the top of the page overlapped itself: the product name wrapped onto three lines and ran into the menu beside it, and the sign-in button was cut off the edge. The eight pixels were the symptom. Anyone reading the old description would have put it off; anyone seeing the actual screen would have fixed it that day.
 
 THE PREVIOUS HEADLINE, from 31 August, kept because the story of it is worth more than the fix. Someone asked the live site which diseases are linked to the gene BRCA1. It answered, quickly, and cited every claim:
 
@@ -169,6 +179,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Making it easier on the eye, and writing down what it must do | Rebuilt the sign-in screen, which had never been designed at all and looked like a raw form. Removed a permanent warning strip that sat on every screen and took up a tenth of a phone display. Made the top bar work on a phone instead of overlapping itself. Gave the integrations page working copy buttons and real links, where before it was text you could only read. Fixed a privacy problem where one person's conversation stayed on screen for the next person. And wrote down, for the first time, the fifty things the product must be able to do, ranked so the most important come first | 5 September |
 | A budget on how much we ask of others | Capped how many requests one question may make of the public medical databases, and made a quick question give up waiting sooner than a deep one | 31 August |
 | 1.0 | The skeleton of the service, and the fixed format every answer travels in | 2026-07-27 |
 | 1.1 | Sign-in, accounts, and the database that holds user information | 2026-07-28 |
@@ -448,11 +459,12 @@ Where the finished work sits against what is still ahead:
 
 THE IMMEDIATE NEXT STEP IS NOT WORK. It is waiting, and that is deliberate.
 
-1. Someone has to actually use it. The nine things worth checking are written down as a checklist, in plain words, with an empty column for what the tester saw. Nothing on that list has been looked at by a person yet. Until it has, we would be guessing about whether the fixes landed.
-2. Whatever that tells us, plus the six items this sprint knowingly left undone.
+1. Someone has to actually use it. There is now a proper list: fifty things the product must be able to do, ranked into three groups so a tester can stop anywhere and still have covered what matters most. The top group is the ten the product would have no reason to exist without. Nothing on the list has been looked at by a person yet, so until it has we are guessing about whether this week's fixes landed. The nine-question checklist this replaced could never have been finished in one sitting anyway: it needed about seven searches, and a visitor without an account only gets five.
+2. Whatever that tells us, plus the things this week knowingly left undone.
 3. Make it faster. An answer can take over twenty-five seconds and NOBODY IS ASSIGNED TO THIS, which is the most honest thing on this page. We made the wait visible; we did not make it shorter.
-4. Two safety items, worth doing once real people are using it: a security scan that is overdue, since the site has been public since 24 August, and a small flaw where the sign-up page reveals whether an email address is already registered.
-5. Everything else: the problems the reviewer found earlier, and the rest of the safety and quality review.
+4. Teach the test system to stand in for the medical databases as well as for the writing model. It currently pretends to be one but not the other, which is why our tests still cannot check a real, finished answer from end to end.
+5. Two safety items, worth doing once real people are using it: a security scan that is overdue, since the site has been public since 24 August, and a small flaw where the sign-up page reveals whether an email address is already registered.
+6. Everything else: the problems the reviewer found earlier, and the rest of the safety and quality review.
 
 The previous first step, "make the answers readable", is done and merged, which is why it has left this list.
 
