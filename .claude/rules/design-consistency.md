@@ -14,6 +14,16 @@ When 1 and 2 disagree, 1 is the design intent and the disagreement is a defect w
 
 Open the design system first and look for the surface you are about to build. Most of them are there. Build phases 4.8 and 4.9 delivered the visual design and a nine-gap fidelity pass against it, so a surface that looks wrong today is usually a drift from something already specified.
 
+CHECKING ONE FILE IS NOT CHECKING THE DESIGN SYSTEM. Added 2026-09-05, hours after this rule was written and broken by its own author. `components/app-bar.html` carries no responsive rule, and that was read as "the app bar has no mobile design". It has one, in `prototype/app.html`: line 403 hides every non-current nav item at 720px and line 404 tightens the bar. A two-row wrapping bar was invented, shipped, and reverted.
+
+So the search is at least three places, in this order:
+
+- `design-system/prototype/app.html`, the ASSEMBLED product. It is the only file that answers "what happens at 390px", because every media query lives there and nowhere else.
+- The relevant card under `components/`, `screens/`, `identity/` or `flows/`.
+- `foundations/`, for any value the first two do not settle.
+
+`docs/build/design/README.md` carries a coverage table naming every surface that has a design and every one that does not. Read it before concluding that a design is missing. A missing design and a design you did not find look identical from the browser, and only one of them licenses invention.
+
 ### When a surface has no design, say so
 
 Measured 2026-09-05: the sign-in and sign-up screen is not in the design system at all. `flows/guest-states.html` designs the wall a guest hits and contains zero input fields, and no other file carries an email or password field. That is why the screen shipped unstyled: it was never part of the design pass, so there was nothing to implement.
