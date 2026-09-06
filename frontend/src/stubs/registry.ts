@@ -101,7 +101,18 @@ export const STUB_REGISTRY: StubEntry[] = [
   },
   {
     surface: "kgx-export",
-    rendersToday: "A request button that acknowledges and does nothing.",
+    rendersToday:
+      "REAL as of build phase 4.4 (T-4.4-01, s3-kgx-export): the integrations " +
+      "page card names it correctly as a batch command over the existing Layer " +
+      "1 graph, never a live endpoint, and its code block is the actual " +
+      "`s3-kgx-export` invocation, copyable with the card's own copy control " +
+      "(T-6.2-09). There never was a request button here that acknowledged and " +
+      "did nothing; F-6.2-09 traced that description to production lagging " +
+      "develop by a release, not to a defect in this code. What is honestly " +
+      "NOT offered, by design: no download button and no in-browser 'try it' " +
+      "console, because KGX export has no HTTP route to call. Advertising one " +
+      "would repeat the exact fabricated-endpoint failure T-4.16-04 already " +
+      "found and removed.",
     wiredBy: "4.4",
     realSource:
       "The KGX export utility, specified as a batch job over the existing " +

@@ -19,7 +19,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 // T-6.2-12: the target is no longer hardcoded, and it is no longer
-// PRODUCTION. Every measurement in `UI_feedback.md` was taken against
+// PRODUCTION. Every measurement in `testing/UI_feedback.md` was taken against
 // production and should not have been: production lags whatever is
 // being worked on, so a run there measures an older build than the one
 // anyone is fixing. Defaults to develop, overridable with

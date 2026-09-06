@@ -1,5 +1,8 @@
 import { useId, useState } from "react";
+import type { FormEvent } from "react";
+import { Box, Button, Stack, TextField, Typography } from "@mui/material";
 import { ApiError, login, signup } from "../../lib/api";
+import { designTokens } from "../../theme";
 
 interface AuthGateProps {
   /**
@@ -115,54 +118,184 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
 
   const fieldsFilled = email.length > 0 && password.length > 0;
 
+  // The fields live in a real <form> so pressing Enter submits the default
+  // action, log in, the same way any browser form behaves. Sign up stays a
+  // plain type="button" outside the submit path: it is the secondary
+  // action here and Enter should not trigger it.
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending || !fieldsFilled) return;
+    void runAuth("login");
+  };
+
+  // The field label above each input matches the design system's micro-label
+  // (`.lbl` in `docs/build/design/design-system/foundations/colors.html`, the
+  // same spec `search-bar.html`'s field convention uses): 10.5px, uppercase,
+  // 0.1em tracking, weight 700, `ink-faint`. It is a real <label> rendered as
+  // a styled Typography, not an MUI floating label, because the design system
+  // has no floating-label component anywhere and inventing one here would be
+  // the one-off vocabulary this pass exists to avoid. `htmlFor`/`id` still do
+  // the association, so this keeps the same accessible-name wiring the
+  // original raw <label>/<input> pair had.
+  const fieldLabelSx = {
+    display: "block",
+    fontSize: "10.5px",
+    letterSpacing: "0.1em",
+    textTransform: "uppercase" as const,
+    fontWeight: 700,
+    color: designTokens.inkFaint,
+    mb: 0.75,
+  };
+
+  // The input shell copies `search-bar.html`, the one designed text-input
+  // precedent in the system: a 2px `line-strong` border (deliberately
+  // heavier than the 1px used elsewhere, "so it holds its own"), `surface`
+  // background, and radius `r` (the theme's default `shape.borderRadius`,
+  // hence `borderRadius: 1` rather than a literal pixel value). A default
+  // MUI outlined 1px border reads as a foreign control next to that bar.
+  const inputSx = {
+    "& .MuiOutlinedInput-root": {
+      bgcolor: designTokens.surface,
+      borderRadius: 1,
+      "& fieldset": { borderColor: designTokens.lineStrong, borderWidth: "2px" },
+      "&:hover fieldset": { borderColor: designTokens.lineStrong },
+      "&.Mui-focused fieldset": { borderColor: designTokens.blue, borderWidth: "2px" },
+    },
+    "& .MuiOutlinedInput-input": {
+      padding: "10px 14px",
+      fontSize: "15.5px",
+      color: designTokens.ink,
+    },
+  };
+
   return (
     // A <section>, not a <main>. Build phase 4.8 renders this inside AppShell,
     // which owns the page's single main landmark, and two main landmarks on one
     // page is invalid: assistive technology offers "jump to main content" and
     // then cannot say which. Labelled so the section is announced by name.
-    <section className="auth-gate" aria-labelledby="auth-gate-title">
-      <h1 id="auth-gate-title">Sign in to search</h1>
-      <div className="auth-gate__form">
-        <label htmlFor={emailId}>Email</label>
-        <input
-          id={emailId}
-          name="email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          autoComplete="email"
-        />
-        <label htmlFor={passwordId}>Password</label>
-        <input
-          id={passwordId}
-          name="password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-        />
-        {error !== null ? (
-          <p role="alert" className="auth-gate__error">
-            {error}
-          </p>
-        ) : null}
-        <div className="auth-gate__actions">
-          <button
-            type="button"
-            onClick={() => void runAuth("login")}
-            disabled={pending || !fieldsFilled}
-          >
-            {pending ? "Working…" : "Log in"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void runAuth("signup")}
-            disabled={pending || !fieldsFilled}
-          >
-            {pending ? "Working…" : "Sign up"}
-          </button>
-        </div>
-      </div>
-    </section>
+    //
+    // This screen has no designed precedent of its own: guest-states.html
+    // designs the wall this screen is reached from and has zero input
+    // fields (`grep -c "<input"` on it returns 0). The outer width, 900,
+    // matches that wall's own outer wrapper so the two screens share one
+    // page rhythm; the card inside is narrower, sized to a form rather than
+    // to the wall's centred sentence.
+    <Box
+      component="section"
+      data-testid="auth-gate"
+      aria-labelledby="auth-gate-title"
+      sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}
+    >
+      <Box
+        sx={{
+          maxWidth: 440,
+          mx: "auto",
+          border: `1px solid ${designTokens.lineStrong}`,
+          borderRadius: 1,
+          bgcolor: designTokens.surface,
+          p: { xs: 3, sm: 4.5 },
+        }}
+      >
+        <Typography id="auth-gate-title" variant="h2" component="h1" sx={{ fontSize: 22, mb: 1 }}>
+          Sign in to search
+        </Typography>
+        <Typography sx={{ color: designTokens.inkMuted, mb: 2.5, fontSize: 14.5 }}>
+          Log in to your account, or create one to keep going.
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Stack spacing={2}>
+            <Box>
+              <Typography component="label" htmlFor={emailId} sx={fieldLabelSx}>
+                Email
+              </Typography>
+              <TextField
+                id={emailId}
+                name="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                fullWidth
+                sx={inputSx}
+              />
+            </Box>
+            <Box>
+              <Typography component="label" htmlFor={passwordId} sx={fieldLabelSx}>
+                Password
+              </Typography>
+              <TextField
+                id={passwordId}
+                name="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                // "current-password" on both paths, including signup. One
+                // field serves both actions, and the browser has to guess
+                // before either button is pressed. A returning user logging
+                // in is the far more common case for that field, and
+                // "new-password" here would make the browser offer to save
+                // a fresh password on every ordinary login too.
+                autoComplete="current-password"
+                fullWidth
+                sx={inputSx}
+              />
+            </Box>
+            {error !== null ? (
+              <Typography role="alert" sx={{ color: designTokens.risk, fontSize: 13.5 }}>
+                {error}
+              </Typography>
+            ) : null}
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              {/*
+                Primary button: no colour override needed. The theme's
+                default `contained` button already IS the design system's
+                primary button (`.go` in search-bar.html): palette.primary
+                resolves to designTokens.blue with white contrast text,
+                MuiButton's own styleOverrides already sets borderRadius 4
+                (`--r-sm`) and disableElevation, and typography.button
+                already sets weight 600 and no uppercase transform. Only the
+                font size and padding are `.go`-specific and not part of the
+                theme default, so only those are set here.
+              */}
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={pending || !fieldsFilled}
+                sx={{ fontSize: "14px", padding: "9px 18px" }}
+              >
+                {pending ? "Working…" : "Log in"}
+              </Button>
+              {/*
+                Secondary button: the design system's only secondary-action
+                precedent is the "Not now" dismiss in guest-states.html's
+                soft-prompt state (`.mini.alt`): transparent background,
+                `ink-muted` text, `line` border. There is no designed
+                full-size secondary action button, so this scales that
+                same language up to this screen's button size rather than
+                inventing an unrelated one.
+              */}
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={() => void runAuth("signup")}
+                disabled={pending || !fieldsFilled}
+                sx={{
+                  fontSize: "14px",
+                  padding: "9px 18px",
+                  color: designTokens.inkMuted,
+                  borderColor: designTokens.line,
+                  "&:hover": {
+                    borderColor: designTokens.lineStrong,
+                    bgcolor: designTokens.surfaceSunk,
+                  },
+                }}
+              >
+                {pending ? "Working…" : "Sign up"}
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+      </Box>
+    </Box>
   );
 }

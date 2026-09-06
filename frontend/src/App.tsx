@@ -105,6 +105,27 @@ const FOLLOW_UP_HINTS = [
 ];
 
 /**
+ * Verbatim duplicates of `GuestAllowance.tsx`'s own `BLOCKED_COPY` entries
+ * for the two 429 reasons `createRun` returns when a shared daily guest
+ * ceiling, not this caller's personal allowance, is what is blocking the
+ * question (`adapters/web_sse/app.py`'s `anon_daily_cap_reached` and
+ * `anon_source_daily_cap_reached`). Before this fix, `ask`'s catch block
+ * branched only on the two 403 personal-allowance reasons, so both of
+ * these purpose-written sentences existed on the server and on the wire
+ * and were never read: a guest hitting either ceiling saw the generic
+ * "the question could not be sent" fallback instead of the true reason.
+ *
+ * These are transcribed rather than imported because `BLOCKED_COPY` is
+ * private to `GuestAllowance.tsx`, and this fix does not modify that file.
+ * If either sentence there ever changes, this map must change with it in
+ * the same edit.
+ */
+const DAILY_CAP_COPY: Record<"anon_daily_cap_reached" | "anon_source_daily_cap_reached", string> = {
+  anon_daily_cap_reached: "Guest searches are paused for today",
+  anon_source_daily_cap_reached: "This network has used its guest searches for today",
+};
+
+/**
  * One rail item.
  *
  * `id` INVARIANT, stated here because F-4.13-RV-01 shipped for want of it
@@ -262,6 +283,14 @@ export function App() {
    * Cleared by "New search" and by signing out, never trimmed: a reader who
    * asked six follow-ups is entitled to all six, and the prototype's own
    * `#thread` grows without a cap.
+   *
+   * The sign-out half of that sentence was false until this fix. `setThread`
+   * appeared only in the three New-search handlers, never in the sign-out
+   * handler, so on a shared browser the first person's collapsed turns,
+   * their questions, claims, sources and trust verdicts, stayed on screen
+   * for whoever signed in next. Closed by adding `setThread([])` to the
+   * sign-out handler below, which is what makes this sentence true rather
+   * than merely stated.
    */
   const [thread, setThread] = useState<PreviousTurn[]>([]);
   const [searchView, setSearchView] = useState<SearchView>({ name: "home" });
@@ -488,6 +517,63 @@ export function App() {
       .catch(() => undefined);
     return () => controller.abort();
   }, [token]);
+
+  /**
+   * Fetch a returning guest's own allowance once, at mount.
+   *
+   * Before this fix, `allowance` was seeded `null` on every mount and the
+   * only two writers were a landed run and a fresh sign-in, so a guest who
+   * had already spent part of yesterday's five, and whose token was
+   * restored from storage by `guestToken`'s own initializer above, saw no
+   * dots at all until their NEXT ask spent a third search: the server
+   * already knew the count, and nothing on mount ever asked it.
+   *
+   * This is a DIFFERENT question from F-4.10-A-13 (`tracker/phase_4.10.md`),
+   * which asks whether a BRAND NEW visitor, one with no persisted token at
+   * all, should see dots before their first ask. That is an open
+   * product-owner design question and is deliberately left alone here: a
+   * first-time visitor still mints no guest identity until they actually
+   * ask (T-4.10-08), `guestToken` is still `null` for them at mount, this
+   * effect still does nothing for them, and the footer is still absent
+   * until their first ask, exactly as before this fix.
+   *
+   * Deliberately `[]` rather than `[guestToken]`: this fetches the
+   * ALREADY-PERSISTED token's own standing once, at load. A guest token
+   * minted later, on the first ask, already gets its `used`/`total` from
+   * the mint response itself (see `ask` below), so re-running this effect
+   * on that later change would be a redundant fetch, not a missing one.
+   *
+   * Best-effort per production-standards' graceful-degradation gate: a
+   * failed or malformed fetch leaves `allowance` at `null`, exactly the
+   * behaviour before this fix, never a broken-looking footer.
+   */
+  useEffect(() => {
+    if (guestToken === null) return undefined;
+    const controller = new AbortController();
+    let cancelled = false;
+    // `async`/`await` rather than `.then` chained directly onto the call:
+    // `await` accepts any value, not only a genuine promise, so a caller
+    // whose fetch layer is stubbed with something other than a real
+    // `Promise` (a test double with no implementation configured, most
+    // realistically) still resolves cleanly here instead of throwing on
+    // `.then` of something that is not thenable. `fetched` is still
+    // checked for truthiness before use, so that same case degrades to
+    // "nothing to apply" rather than writing a malformed value into state.
+    void (async () => {
+      try {
+        const fetched = await getAllowance(guestToken, { signal: controller.signal });
+        if (!cancelled && fetched) setAllowance(fetched);
+      } catch {
+        // Best-effort per production-standards' graceful-degradation gate:
+        // a failed or malformed fetch leaves `allowance` exactly as it was.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signedIn = token !== null;
   /**
@@ -814,6 +900,22 @@ export function App() {
           setSearchView({ name: "wall", reason: "attempt_limit" });
           return;
         }
+        if (
+          error instanceof ApiError &&
+          error.status === 429 &&
+          (error.reason === "anon_daily_cap_reached" ||
+            error.reason === "anon_source_daily_cap_reached")
+        ) {
+          // Not the wall: both reasons are transient, clearing at UTC
+          // midnight, and neither is this identity's own allowance being
+          // spent, so a permanent sign-in prompt would overstate what
+          // happened. The answer screen's failure banner, the same surface
+          // every other dispatch failure below already uses, gets the
+          // sentence the server already wrote for this exact reason.
+          setDispatchError(DAILY_CAP_COPY[error.reason]);
+          setSearchView({ name: "answer", question });
+          return;
+        }
         if (error instanceof ApiError && error.status === 401 && !signedIn) {
           // The guest token this tab was holding did not work. It is dropped
           // either way, so the same 401 does not repeat forever, but WHY it
@@ -962,6 +1064,7 @@ export function App() {
              */
             failure={dispatchError ?? view.failure ?? streamError}
             capMessage={view.capMessage}
+            systemNotes={view.systemNotes}
             /*
              * F-4.6-08. `AnswerScreen` builds `FeedbackSurface` itself
              * (T-4.6-09) and needs the real POST target and bearer token to
@@ -1106,13 +1209,21 @@ export function App() {
           // research queries and results.
           //
           // Everything session-scoped is cleared here, in one place, so a new
-          // sign-in starts from nothing.
+          // sign-in starts from nothing. That claim was false for `thread`:
+          // this handler cleared the run and the rail but left the previous
+          // turns rendered by AnswerScreen on screen, so on a shared
+          // workstation the next person to sign in saw the last person's
+          // collapsed questions, claims, sources and trust verdicts.
+          // `setThread([])` below closes it, so the claim is something this
+          // handler actually does rather than something its comment merely
+          // asserted.
           askSeq.current += 1;
           stop();
           setToken(null);
           setAccountEmail(null);
           setRunId(null);
           setStopped(false);
+          setThread([]);
           setHistory([]);
           setFlagged([]);
           setDispatchError(null);

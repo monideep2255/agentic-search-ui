@@ -57,6 +57,17 @@ const SYSTEM_NOTE_PREFIXES = [
   CAP_NOTE_PREFIX,
   "Note: this result was truncated",
   "Note: this answer does not address the following entities",
+  // 2026-09-05 no-data-refusal fix. `_build_repair_cap_note`
+  // (`core/graph.py`) is a fourth system note, the same DISCLOSURE shape as
+  // its three siblings above, and it matched none of them: it rendered as
+  // an uncited grey claim on the provenance spine the same day this list's
+  // brittleness as a classification mechanism was the reason the no-data
+  // refusal below no longer uses a prefix list at all. Kept here anyway,
+  // because this note genuinely has no better signal on the wire, unlike
+  // the refusal case: it ships inside the normal grounded-answer branch,
+  // alongside real citations, so there is no scope="answer" trust_signal
+  // to key off. A prefix stays the only option for this one note.
+  "Note: this answer's completeness check could not run to the end",
 ];
 
 const isSystemNote = (text: string) =>
@@ -371,10 +382,64 @@ export function useRunView(events: AgentEvent[]): RunView {
     // The general lesson, which this repository's `attack-the-constraint` rule
     // already states: when a component is fed by an assembly step, read what it
     // was GIVEN before debugging what it produced. The binding was on the wire.
+    // A NO-DATA refusal, 2026-09-05 product-owner decision.
+    //
+    // WHAT WENT WRONG. `write_node` (`core/graph.py`) has two sites that
+    // decide it cannot honestly answer: the unresolved-entity early exit
+    // (an entity never resolved) and the general `trust_outcome == "refuse"`
+    // branch (synthesis ran but produced nothing citeable). Both emit the
+    // refusal sentence as an ordinary `token` event, so with no other
+    // signal it fell through the claims loop below exactly like a real
+    // narrative sentence and rendered as ONE UNCITED GREY CLAIM on the
+    // provenance spine, the one surface whose entire job is to show a claim
+    // next to the source that backs it. A refusal has no source to show.
+    //
+    // CLASSIFICATION MECHANISM CHOSEN: a `trust_signal` event whose
+    // `scope === "answer"` and `outcome === "refuse"`. Rejected the obvious
+    // alternative, adding the refusal sentence's opening words to
+    // `SYSTEM_NOTE_PREFIXES` above, for the reason that list already
+    // demonstrates: a fourth system note, `_build_repair_cap_note`, was
+    // added to the backend without a matching prefix here and rendered as
+    // an uncited claim the same day this fix was written, and a prefix list
+    // is a bet that nobody reworks a sentence without knowing this file
+    // depends on its exact opening words. The `trust_signal` fields are not
+    // prose: `TrustSignalPayload.scope`, `.outcome`, `.message` and
+    // `.fallback_link` are a typed, schema-validated contract
+    // (`contracts/events.py`, Section 8.4's refuse payload, additive since
+    // build phases 2.2 and 4.3), and both refusal sites already emit one,
+    // proven by reading `core/graph.py` rather than guessing: the
+    // unresolved-entity branch at its `sink.emit("trust_signal", ...
+    // scope="answer")` call, and the general refuse branch at its own
+    // `scope="answer"` call a few hundred lines later. No third site emits
+    // a bare refusal token without this signal: the two `HarnessCallError`
+    // early exits ship `error` plus `done`, never a `token`, so they cannot
+    // reach the claims loop at all.
+    //
+    // Exhaustiveness this relies on: within `write_node`, the branch that
+    // emits `scope="answer"` with `outcome="refuse"` is mutually exclusive
+    // with the branch that emits real narrative tokens (`if trust_outcome
+    // == "refuse": ... else: for chunk in _narrative_chunks(...): ...`), so
+    // a run carrying this signal never also carries a genuine claim. Every
+    // token in such a run IS the refusal, in full, which is why the loop
+    // below skips all of them rather than trying to tell a refusal token
+    // apart from a claim token one at a time.
+    const answerRefusalSignal = events.find(
+      (event): event is Extract<AgentEvent, { type: "trust_signal" }> =>
+        event.type === "trust_signal" &&
+        event.payload.scope === "answer" &&
+        event.payload.outcome === "refuse",
+    );
+
     const claims: Claim[] = [];
     const systemNotes: string[] = [];
     for (const event of events) {
       if (event.type !== "token") continue;
+      // The whole point of `answerRefusalSignal`: none of this run's tokens
+      // are a claim, so none are added to the spine or to `systemNotes`
+      // either. The refusal text itself is rendered through `refusal`
+      // below, from the trust_signal's own `message` and `fallback_link`
+      // fields, never from this token's text.
+      if (answerRefusalSignal) continue;
       // R-08: a repeated marker_id must not produce a repeated chip.
       const seenMarkers = new Set<string>();
       const cited = (event.payload.marker_ids ?? [])
@@ -752,10 +817,35 @@ export function useRunView(events: AgentEvent[]): RunView {
     const failedGuard = events.find(
       (event) => event.type === "guard" && event.payload.passed === false,
     );
+    // The two refusal shapes read identically from here down (2026-09-05
+    // product-owner decision): both set `refusal`, both render through the
+    // same `Notice` in `RunScreen` and `AnswerScreen` (`data-testid=
+    // "guardrail-notice"` / `"answer-refusal"`), and neither's text can
+    // reach the claims list, since a guardrail refusal never emits a
+    // `token` at all and a no-data refusal's tokens were removed from
+    // `claims` above.
+    //
+    // Guardrail copy stays exactly as it was: a fixed, interpolation-free
+    // table keyed on `category`, never the backend's free-form `reason`.
+    // The no-data refusal has no such table, because the sentence itself
+    // (unresolved entity, withdrawn record, no groundable finding) is the
+    // content, not a category to look up; it is read from the
+    // `answerRefusalSignal` trust_signal's own `message` and
+    // `fallback_link` fields rather than from the token text, for the
+    // reason given at `answerRefusalSignal`'s definition above. Joined
+    // with one space, the same join `synthesis/refuse.py`'s
+    // `build_refusal_text` and `core/graph.py`'s
+    // `_build_unresolved_entity_refusal_text` both use to build the token
+    // text this is standing in for, so the rendered sentence reads the
+    // same either way.
     const refusal =
       failedGuard && failedGuard.type === "guard"
         ? (CATEGORY_COPY[failedGuard.payload.category] ?? CATEGORY_COPY.ok)
-        : null;
+        : answerRefusalSignal && answerRefusalSignal.type === "trust_signal"
+          ? [answerRefusalSignal.payload.message, answerRefusalSignal.payload.fallback_link]
+              .filter((part): part is string => typeof part === "string" && part.length > 0)
+              .join(" ") || null
+          : null;
 
     // F-4.8-A-14. `_partial_result_for_cap` emits only a `token` plus
     // `done{trust_outcome:"flag"}` and NO error event, so `isCapShapedError`

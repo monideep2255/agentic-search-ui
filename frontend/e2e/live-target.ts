@@ -6,7 +6,7 @@
  *
  * ## Why this exists
  *
- * Every piece of evidence in `UI_feedback.md` was gathered against
+ * Every piece of evidence in `testing/UI_feedback.md` was gathered against
  * PRODUCTION, and that was the wrong target. Production moves only on a
  * deliberate release, so it lags whatever anyone is working on, and a
  * browser run there measures an older build than the one being fixed. The
@@ -21,9 +21,9 @@
  * ## The `app_env` capture is not decoration
  *
  * A screenshot of an answer screen looks identical whichever deployment
- * produced it. Committing one under `docs/build/design/evidence/` without
+ * produced it. Committing one under `testing/evidence/` without
  * recording which app answered produces evidence that cannot be compared
- * against a later run, which is the failure `UI_feedback.md` hit from the
+ * against a later run, which is the failure `testing/UI_feedback.md` hit from the
  * other side: its own measurements are correct and were taken against the
  * wrong build, and nothing in them says so.
  *

@@ -351,7 +351,7 @@ class DonePayload(BaseModel):
     THREE THINGS THIS FIELD IS NOT, each of which it would be easy to turn
     it into:
 
-    It is not model-generated text. `UI_feedback.md` names that as the easy
+    It is not model-generated text. `testing/UI_feedback.md` names that as the easy
     and dangerous path: an offer to go deeper is a claim that there IS
     something deeper, so a model-invented follow-up about data the graph does
     not hold is a confident wrong answer wearing a question mark, and it

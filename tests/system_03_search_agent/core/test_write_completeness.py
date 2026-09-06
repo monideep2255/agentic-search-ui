@@ -433,7 +433,7 @@ async def test_the_incomplete_note_counts_findings_handed_to_synthesis(
     REWORDED, NOT WEAKENED, by build phase 6.2's T-6.2-03. The note no
     longer prints a denominator at all, because "3 of the 5 findings
     prepared for it" is this system's internal unit and a researcher hit it
-    on the live site and could act on none of it (`UI_feedback.md`). This
+    on the live site and could act on none of it (`testing/UI_feedback.md`). This
     arm therefore stopped asserting on the SENTENCE and started asserting
     on the PROPERTY that sentence existed to carry, which is unchanged: the
     number disclosed is derived from the prepared-findings set, so it is 3,

@@ -1,7 +1,7 @@
 /**
  * Journey 3: does a follow-up continue the thread?
  *
- * `UI_feedback.md` complaint 3, and the journey table's exact framing: ask,
+ * `testing/UI_feedback.md` complaint 3, and the journey table's exact framing: ask,
  * then ask a DEPENDENT follow-up such as "what variants cause it", and
  * capture whether the second answer knows what "it" refers to.
  *
