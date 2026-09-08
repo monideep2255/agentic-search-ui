@@ -96,6 +96,7 @@ Multi-model harness with three tiers:
 | `build/Golden_dataset_method.md` | The complete method behind the 50-query golden dataset: the three options for what a row pins and why two were rejected, the KISS / KISSES / discovery taxonomy and why each is graded differently, why verification runs on a path independent of the agent's own tool layer, the eleven build steps, and the proof that the verifier can actually reject | Before adding, removing or editing any golden row, and before changing the eval harness's expectations |
 | `build/Debugging_guide.md` | Which file to open when something is wrong. A symptom index, then one row for every Python file under `src/`, plus the frontend, test, tracker and CI files a debugger opens | When anything is broken and you do not know where to start. ALSO: update it in the same commit that adds, deletes, renames or repurposes a file under `src/`, which `tests/system_03_search_agent/test_debugging_guide_coverage.py` enforces |
 | `build/Feedback_review_ritual.md` | The weekly human-gated review of captured interactions (Section 16 stage 3): the cadence, the exact commands, what the reviewer is looking for, and Section 16's own warning that most of what turns up is noise rather than a real gap | Before running the weekly review, and before promoting any competency question into the few-shot pool |
+| `build/design/NCBI_design_system_migration_assessment.md` | Assessment, not a decision: what this app's design system is today, what the NCBI design system is (`@ncbi-design-system/base` 5.12.0 and `@ncbi-design-system/react` 5.12.0-b0, both NCBI-internal), which of its 25 React components could replace an app surface, and that the public NCBI Storybook is reachable off-network while the packages are not | Before scoping or deciding on a migration to the NCBI design system |
 
 ---
 
@@ -258,4 +259,4 @@ Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on Pre
 
 ---
 
-Last updated: 2026-09-05
+Last updated: 2026-09-08

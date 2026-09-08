@@ -283,6 +283,7 @@ agentic-search-ui/
 | [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build cadence as a visual page, also published as a Claude artifact |
 | [CI gate scripts](.github/gates/README.md) | Why the CI workflow contains no inline shell: one script per Section 24 gate, and the premise-gate defeats that forced the design |
 | [Debugging guide](docs/build/Debugging_guide.md) | Which file to open when something is wrong: a symptom index, then what every source file does |
+| [NCBI design system migration assessment](docs/build/design/NCBI_design_system_migration_assessment.md) | Assessment, not a decision, answering four questions: this app's current design system, what the NCBI design system is, which parts could migrate, and whether the work can be done off the NCBI network |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 
 ---
@@ -348,4 +349,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-09-05
+Last updated: 2026-09-08
