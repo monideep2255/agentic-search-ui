@@ -197,12 +197,12 @@ describe("AboutScreen: where the data comes from", () => {
       <AboutScreen onNavigateToArchitecture={onNavigateToArchitecture} />,
     );
 
-    screen.getByRole("button", { name: "Open Architecture" }).click();
+    screen.getByRole("button", { name: "Explore the architecture" }).click();
     expect(onNavigateToArchitecture).toHaveBeenCalledTimes(1);
     unmount();
 
     render(<AboutScreen />);
-    expect(screen.queryByRole("button", { name: "Open Architecture" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Open Architecture in the bar above/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Explore the architecture" })).not.toBeInTheDocument();
+    expect(screen.getByText(/The Architecture page, at \/architecture, is there/)).toBeInTheDocument();
   });
 });

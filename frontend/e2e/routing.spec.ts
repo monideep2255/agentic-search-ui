@@ -33,12 +33,17 @@ const ROUTES = [
   { path: "/", nav: "Search", heading: null },
   { path: "/integrations", nav: "Integrations", heading: /^Integrations$/ },
   { path: "/about", nav: "About", heading: /How an answer is built/i },
-  // Added 2026-09-13 with the page itself. Its nav label and its <h1> are the
-  // same word, which is the exception on this list rather than the rule, so
-  // the heading is pinned with anchors: a substring match for /architecture/
-  // would also find the About page's strip.
-  { path: "/architecture", nav: "Architecture", heading: /^Architecture$/ },
 ] as const;
+
+/**
+ * Screens with NO nav item that are still first-class routes: reached by
+ * their own address and by an in-page link, so the deep-link arm covers
+ * them and the nav arm cannot. `/architecture` (2026-09-13) is the deeper
+ * page behind About, kept out of the bar by product-owner decision the same
+ * day. Its heading is pinned with anchors because a substring match for
+ * /architecture/ would also find the About page's strip.
+ */
+const LINKED_ROUTES = [{ path: "/architecture", heading: /^Architecture$/ }] as const;
 
 /**
  * Paths with no nav item, which therefore appear only in the deep-link arm.
@@ -83,7 +88,7 @@ test.describe("client-side routing", () => {
   });
 
   test("a deep link renders its own screen, not the landing screen", async ({ page }) => {
-    for (const route of ROUTES) {
+    for (const route of [...ROUTES, ...LINKED_ROUTES]) {
       if (route.heading === null) continue;
       await enterApp(page, route.path);
       await expect(

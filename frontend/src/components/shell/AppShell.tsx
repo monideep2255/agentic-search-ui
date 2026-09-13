@@ -42,14 +42,11 @@ const NAV: { key: ScreenName; label: string }[] = [
   { key: "search", label: "Search" },
   { key: "integrations", label: "Integrations" },
   { key: "about", label: "About" },
-  // Added 2026-09-13 on the product owner's request for a page showing where
-  // the data itself comes from. It sits AFTER About because About is the
-  // gentler read of the two: one question followed through the running
-  // system, no counts or hostnames. Architecture is the deeper page behind
-  // it. A fourth item needs no new responsive work: the 720px rule below
-  // already hides every non-current item inline and `NavOverflowMenu`
-  // already carries whatever is hidden.
-  { key: "architecture", label: "Architecture" },
+  // The Architecture page (2026-09-13) has NO nav item, by product-owner
+  // decision the same day: it is the deeper page behind About, reached from
+  // About's "Explore the architecture" link and by its own address,
+  // `/architecture`. `ScreenName` still names it so routing and rendering
+  // treat it as a first-class screen; only the bar leaves it out.
 ];
 
 export interface AppShellProps {

@@ -25,8 +25,8 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 /** Dismiss the disclaimer, which gates every screen behind it. */
-async function enterApp(page: import("@playwright/test").Page) {
-  await page.goto("/");
+async function enterApp(page: import("@playwright/test").Page, path = "/") {
+  await page.goto(path);
   const dialog = page.getByTestId("disclaimer-modal");
   if (await dialog.isVisible().catch(() => false)) {
     await dialog.getByRole("checkbox").check();
@@ -164,10 +164,7 @@ test.describe("accessibility", () => {
   // "Docs" left this list with the tab itself, fix set 5 (R18, 2026-09-13).
   // Its content is now the "API documentation" section of the Integrations
   // screen, so the Integrations run below covers it.
-  // "Architecture" joined this list with the page itself (2026-09-13). A
-  // screen the suite never visits has not been checked, however green the run
-  // looks, which is the lesson the sign-in arm below already records.
-  for (const screen of ["Integrations", "About", "Architecture"] as const) {
+  for (const screen of ["Integrations", "About"] as const) {
     test(`the ${screen.toLowerCase()} screen is clean`, async ({ page }) => {
       await enterApp(page);
       // `exact: true` (2026-09-13): the persona chip's info button carries
@@ -187,6 +184,19 @@ test.describe("accessibility", () => {
       expect(results.violations).toEqual([]);
     });
   }
+
+  test("the architecture screen is clean", async ({ page }) => {
+    // The page has no nav item (product-owner decision, 2026-09-13), so it is
+    // reached by its address. A screen the suite never visits has not been
+    // checked, however green the run looks, which is the lesson the sign-in
+    // arm below records.
+    await enterApp(page, "/architecture");
+    await expect(
+      page.getByRole("main").getByRole("heading", { name: /^Architecture$/ }),
+    ).toBeVisible();
+    const results = await analyse(page);
+    expect(results.violations).toEqual([]);
+  });
 
   test("the sign-in screen is clean", async ({ page }) => {
     // ADDED after this suite missed a real defect. AuthGate rendered its own

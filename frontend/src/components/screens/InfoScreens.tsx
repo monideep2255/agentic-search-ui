@@ -1455,10 +1455,10 @@ export function AboutScreen({
               textDecoration: "underline",
             }}
           >
-            Open Architecture
+            Explore the architecture
           </Box>
         ) : (
-          "Open Architecture in the bar above"
+          "The Architecture page, at /architecture, is there"
         )}{" "}
         for the pipelines behind that snapshot, what each database contributes, and every API the
         two live layers call.

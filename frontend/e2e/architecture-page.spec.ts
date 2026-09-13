@@ -71,7 +71,7 @@ test.describe("the architecture page", () => {
   test("the About strip reaches this page without a reload", async ({ page }) => {
     await enterApp(page, "/about");
 
-    await page.getByRole("button", { name: "Open Architecture" }).click();
+    await page.getByRole("button", { name: "Explore the architecture" }).click();
 
     await expect(page).toHaveURL(/\/architecture$/);
     await expect(
