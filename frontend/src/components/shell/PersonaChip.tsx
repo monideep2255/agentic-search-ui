@@ -106,15 +106,35 @@ export interface PersonaChipProps {
   wikipedia?: string | null;
 }
 
-export function PersonaChip({ name, variant = "onNavy", about = null, wikipedia = null }: PersonaChipProps) {
+
+export interface PersonaInfoProps {
+  name: string;
+  about: string | null;
+  wikipedia: string | null;
+  variant: "onLight" | "onNavy";
+  /** Which edge of the anchor the card hangs from. */
+  align: "left" | "right";
+}
+
+/**
+ * The circled "i" and the card it opens, shared by every place the
+ * scientist's name appears: the app bar chip and the per-step caption on
+ * the run screen (product-owner request 2026-09-13, "it should also be
+ * there when the agent name is there in the answer"). Renders nothing
+ * when there is no about line, so an older backend leaves both surfaces
+ * exactly as they were.
+ *
+ * Outside click and Escape close the card, the same mechanics
+ * `AccountMenu`'s popover uses, so every anchored card in this product
+ * behaves identically rather than each inventing its own rules. The
+ * anchor must be `position: relative`; both callers are.
+ */
+export function PersonaInfo({ name, about, wikipedia, variant, align }: PersonaInfoProps) {
   const onNavy = variant === "onNavy";
   const [open, setOpen] = useState(false);
   const dialogId = useId();
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
 
-  // Outside click and Escape close the dialog, the same mechanics
-  // `AccountMenu`'s popover already uses, so the two anchored cards in this
-  // app bar behave identically rather than each inventing their own rules.
   useEffect(() => {
     if (!open) return;
     const onDown = (event: MouseEvent) => {
@@ -131,14 +151,115 @@ export function PersonaChip({ name, variant = "onNavy", about = null, wikipedia 
     };
   }, [open]);
 
-  if (name === null) return null;
+  if (about === null) return null;
 
   const infoIconColor = onNavy ? "rgba(255,255,255,.7)" : designTokens.inkFaint;
   const showLink = wikipedia !== null && isPinnedWikipediaUrl(wikipedia);
 
   return (
+    <Box component="span" ref={wrapRef} sx={{ display: "inline-flex", alignItems: "center" }}>
+      <Box
+        component="button"
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={`About ${name}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? dialogId : undefined}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flex: "none",
+          width: 18,
+          height: 18,
+          p: 0,
+          border: 0,
+          background: "none",
+          cursor: "pointer",
+          color: infoIconColor,
+          borderRadius: "50%",
+          "&:hover": {
+            color: onNavy ? "#FFFFFF" : designTokens.ink,
+          },
+        }}
+      >
+        <InfoIcon />
+      </Box>
+
+      {open ? (
+        <Box
+          id={dialogId}
+          role="dialog"
+          aria-labelledby={`${dialogId}-heading`}
+          sx={{
+            position: "absolute",
+            top: "calc(100% + 9px)",
+            ...(align === "right" ? { right: 0 } : { left: 0 }),
+            width: 280,
+            maxWidth: "calc(100vw - 32px)",
+            "@media (max-width: 720px)": {
+              width: "calc(100vw - 32px)",
+            },
+            bgcolor: designTokens.surface,
+            border: `1px solid ${designTokens.line}`,
+            borderRadius: 1,
+            boxShadow: "0 14px 34px rgba(0,0,0,.2)",
+            zIndex: 60,
+            p: "12px 14px",
+            color: designTokens.ink,
+            textAlign: "left",
+            // The chip sets `whiteSpace: "nowrap"` so the label never
+            // breaks, and this card can sit inside it, so it inherited
+            // that and the about line ran off the right edge of the page
+            // (measured live at 1280px: 1555px of scroll width). Reset
+            // here so the card wraps like ordinary text.
+            whiteSpace: "normal",
+          }}
+        >
+          <Typography
+            id={`${dialogId}-heading`}
+            component="p"
+            sx={{ fontSize: 13.5, fontWeight: 700, color: designTokens.ink, m: 0, mb: "4px" }}
+          >
+            {name}
+          </Typography>
+          <Typography
+            component="p"
+            sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, lineHeight: 1.45 }}
+          >
+            {about}
+          </Typography>
+          {showLink ? (
+            <Typography
+              component="a"
+              href={wikipedia as string}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                display: "inline-block",
+                mt: "8px",
+                fontSize: 12.5,
+                color: designTokens.link,
+                textDecoration: "none",
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              Learn more on Wikipedia
+            </Typography>
+          ) : null}
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+export function PersonaChip({ name, variant = "onNavy", about = null, wikipedia = null }: PersonaChipProps) {
+  const onNavy = variant === "onNavy";
+  if (name === null) return null;
+
+  return (
     <Box
-      ref={wrapRef}
       data-testid="persona-chip"
       sx={{
         position: "relative",
@@ -186,100 +307,7 @@ export function PersonaChip({ name, variant = "onNavy", about = null, wikipedia 
         </Box>
       </Typography>
 
-      {about !== null ? (
-        <Box
-          component="button"
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={`About ${name}`}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-controls={open ? dialogId : undefined}
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: "none",
-            width: 18,
-            height: 18,
-            p: 0,
-            border: 0,
-            background: "none",
-            cursor: "pointer",
-            color: infoIconColor,
-            borderRadius: "50%",
-            "&:hover": {
-              color: onNavy ? "#FFFFFF" : designTokens.ink,
-            },
-          }}
-        >
-          <InfoIcon />
-        </Box>
-      ) : null}
-
-      {open && about !== null ? (
-        <Box
-          id={dialogId}
-          role="dialog"
-          aria-labelledby={`${dialogId}-heading`}
-          sx={{
-            position: "absolute",
-            top: "calc(100% + 9px)",
-            right: 0,
-            width: 280,
-            maxWidth: "calc(100vw - 32px)",
-            "@media (max-width: 720px)": {
-              width: "calc(100vw - 32px)",
-            },
-            bgcolor: designTokens.surface,
-            border: `1px solid ${designTokens.line}`,
-            borderRadius: 1,
-            boxShadow: "0 14px 34px rgba(0,0,0,.2)",
-            zIndex: 60,
-            p: "12px 14px",
-            color: designTokens.ink,
-            textAlign: "left",
-            // The chip sets `whiteSpace: "nowrap"` so the label never
-            // breaks, and this card sits inside it, so it inherited that
-            // and the about line ran off the right edge of the page
-            // (measured live at 1280px: 1555px of scroll width). Reset
-            // here so the card wraps like ordinary text.
-            whiteSpace: "normal",
-          }}
-        >
-          <Typography
-            id={`${dialogId}-heading`}
-            component="p"
-            sx={{ fontSize: 13.5, fontWeight: 700, color: designTokens.ink, m: 0, mb: "4px" }}
-          >
-            {name}
-          </Typography>
-          <Typography
-            component="p"
-            sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, lineHeight: 1.45 }}
-          >
-            {about}
-          </Typography>
-          {showLink ? (
-            <Typography
-              component="a"
-              href={wikipedia as string}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                display: "inline-block",
-                mt: "8px",
-                fontSize: 12.5,
-                color: designTokens.link,
-                textDecoration: "none",
-                "&:hover": { textDecoration: "underline" },
-              }}
-            >
-              Learn more on Wikipedia
-            </Typography>
-          ) : null}
-        </Box>
-      ) : null}
+      <PersonaInfo name={name} about={about} wikipedia={wikipedia} variant={variant} align="right" />
     </Box>
   );
 }
@@ -305,15 +333,25 @@ export interface PersonaCaptionProps {
   name: string | null;
   /** The live step, or null when no run is in flight. */
   step: string | null;
+  /** The scientist's about line and Wikipedia address, for the "i" card. */
+  about?: string | null;
+  wikipedia?: string | null;
 }
 
 /** The per-step caption on the run screen. Renders nothing when idle. */
-export function PersonaCaption({ name, step }: PersonaCaptionProps) {
+export function PersonaCaption({ name, step, about = null, wikipedia = null }: PersonaCaptionProps) {
   if (!step || name === null) return null;
   return (
     <Box
       data-testid="persona-caption"
-      sx={{ display: "flex", alignItems: "center", gap: 1.2, mt: 2, minHeight: 22 }}
+      sx={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        gap: 1.2,
+        mt: 2,
+        minHeight: 22,
+      }}
     >
       <Box
         component="span"
@@ -338,6 +376,7 @@ export function PersonaCaption({ name, step }: PersonaCaptionProps) {
         </Box>{" "}
         {STEP_NARRATIVE[step] ?? "is working"}
       </Typography>
+      <PersonaInfo name={name} about={about} wikipedia={wikipedia} variant="onLight" align="left" />
     </Box>
   );
 }

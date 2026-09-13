@@ -93,6 +93,9 @@ export interface RunScreenProps {
   steps?: ReasoningStep[];
   /** Server-assigned persona (T-4.5-10); null until the first run returns. */
   personaName?: string | null;
+  /** The scientist's about line and Wikipedia address, for the caption's "i" card. */
+  personaAbout?: string | null;
+  personaWikipedia?: string | null;
   onStop?: () => void;
   onNewSearch?: () => void;
   /**
@@ -173,6 +176,8 @@ export function RunScreen({
   toolCalls = [],
   steps = [],
   personaName = null,
+  personaAbout = null,
+  personaWikipedia = null,
   onStop,
   onNewSearch,
   stopped = false,
@@ -406,7 +411,12 @@ export function RunScreen({
         ) : null}
         {failure ? <Notice testId="run-failure" tone="warn" text={failure} /> : null}
 
-        <PersonaCaption name={personaName} step={activeStep ?? null} />
+        <PersonaCaption
+          name={personaName}
+          step={activeStep ?? null}
+          about={personaAbout}
+          wikipedia={personaWikipedia}
+        />
 
         {!stopped && toolCalls.length > 0 ? (
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.25, mt: 2.25, alignItems: "center" }}>

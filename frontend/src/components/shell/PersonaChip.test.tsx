@@ -19,7 +19,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { isPinnedWikipediaUrl, PersonaChip } from "./PersonaChip";
+import { PersonaCaption, isPinnedWikipediaUrl, PersonaChip } from "./PersonaChip";
 
 describe("isPinnedWikipediaUrl", () => {
   it("accepts an https en.wikipedia.org URL", () => {
@@ -132,5 +132,36 @@ describe("PersonaChip", () => {
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("PersonaCaption on the run screen", () => {
+  // Product-owner request 2026-09-13: the "i" must also be there where the
+  // scientist's name appears during the answer, not only in the app bar.
+  it("offers the same info card beside the name in the per-step caption", async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonaCaption
+        name="Mendel"
+        step="Guard"
+        about="Pea plant experiments established the laws of inheritance."
+        wikipedia="https://en.wikipedia.org/wiki/Gregor_Mendel"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "About Mendel" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("Pea plant experiments established the laws of inheritance.");
+    expect(screen.getByRole("link", { name: /wikipedia/i })).toHaveAttribute(
+      "href",
+      "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    );
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("renders no info button in the caption when there is no about line", () => {
+    render(<PersonaCaption name="Mendel" step="Guard" />);
+    expect(screen.queryByRole("button", { name: "About Mendel" })).toBeNull();
+    expect(screen.getByTestId("persona-caption")).toHaveTextContent("Mendel");
   });
 });

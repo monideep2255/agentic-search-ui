@@ -1261,6 +1261,8 @@ export function App() {
             toolCalls={view.toolCalls}
             steps={view.steps}
             personaName={persona?.name ?? null}
+            personaAbout={persona?.about ?? null}
+            personaWikipedia={persona?.wikipedia ?? null}
             stopEnabled={view.stopEnabled && !stopped}
             refusal={view.refusal}
             capMessage={view.capMessage}
