@@ -162,6 +162,21 @@ export interface AnswerScreenProps {
    * product, not an error state, and it must be legible.
    */
   refusal?: string | null;
+  /**
+   * The refusal's short neutral label (R13, R44).
+   *
+   * Chosen in `useRunView` from a fixed, interpolation-free table, so no
+   * cost figure can reach it. Rendered as the refusal block's first line.
+   */
+  refusalLabel?: string | null;
+  /**
+   * The refusal's NCBI fallback address (R14).
+   *
+   * Arrives as its own field rather than inside `refusal`, so this screen
+   * can render a real link instead of showing a reader an address they
+   * cannot follow. Host-pinned here, at the point the anchor is built.
+   */
+  refusalLink?: string | null;
   /** A fatal run error, or a dispatch failure. Never rendered as silence. */
   failure?: string | null;
   /** Cap copy, when the run stopped early on its processing budget. */
@@ -215,10 +230,142 @@ export function isLinkableCitationUrl(raw: string): boolean {
 }
 
 /**
- * A refusal, failure or cap notice.
+ * Is this refusal's fallback address safe to turn into a link? (R14)
+ *
+ * SEPARATE FROM `isLinkableCitationUrl` above, and the difference is the
+ * host rule rather than an oversight. A citation points at one specific
+ * record on one of six known hosts, so an exact-membership list is the
+ * tighter check and stays the right one there. A refusal's fallback is a
+ * SEARCH address the backend composes (`synthesis/refuse.py`'s
+ * `FALLBACK_BASE`), and the subdomain it is composed against is a backend
+ * choice this screen does not control, so the rule pinned here is the
+ * `production-standards` host regex in its own words: https, and the NCBI
+ * domain or any subdomain of it.
+ *
+ * Anything else, a `javascript:` scheme, a lookalike domain, plain http,
+ * or a string that is not a URL at all, is NOT linked. The address is
+ * still shown, as text, because hiding it would lose the one thing the
+ * refusal was trying to hand the reader.
+ */
+export function isLinkableRefusalLink(raw: string): boolean {
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:") return false;
+    return (
+      parsed.hostname === "ncbi.nlm.nih.gov" || parsed.hostname.endsWith(".ncbi.nlm.nih.gov")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A refusal: a calm grey block, never an error (R13, R44).
+ *
+ * Source of truth: `design-system/components/trust-pills.html`'s
+ * `.refusal` rule, transcribed rather than improvised. Every value below
+ * names the token it came from:
+ *
+ *   border            1px solid var(--line)         `line`
+ *   border-left       4px solid var(--line-strong)  `lineStrong`
+ *   background        var(--surface-sunk)           `surfaceSunk`
+ *   border-radius     var(--r-sm), 4px              `borderRadius: 0.5`
+ *   padding           14px 16px                     `py: 1.75, px: 2`
+ *   gap               6px                           `gap: 0.75`
+ *   first line        <strong>, 14px                `ink`, weight 700
+ *   explanation       var(--ink-muted), 13.5px      `inkMuted`
+ *   explanation width max-width 62ch                `maxWidth: "62ch"`
+ *
+ * WHY NOT THE `Notice` COMPONENT. `Notice` has two tones and both are
+ * alarms: amber `warn` and red `risk`. That card's own note says why a
+ * refusal takes neither: "Refusal is a first-class state, not an error."
+ * The amber box it used to render, with red trust pills under it and a red
+ * "⚠ Refused" above, read as a malfunction on the one path where the
+ * system is working exactly as designed. `Notice` is unchanged and still
+ * carries the cap note, the system notes and the genuine failure.
+ */
+function RefusalBlock({
+  label,
+  text,
+  link,
+}: {
+  label: string | null;
+  text: string | null;
+  link: string | null;
+}) {
+  return (
+    <Box
+      data-testid="answer-refusal"
+      role="status"
+      sx={{
+        mb: 2.5,
+        px: 2,
+        py: 1.75,
+        fontSize: 14,
+        display: "flex",
+        flexDirection: "column",
+        gap: 0.75,
+        borderRadius: 0.5,
+        border: `1px solid ${designTokens.line}`,
+        borderLeft: `4px solid ${designTokens.lineStrong}`,
+        bgcolor: designTokens.surfaceSunk,
+        color: designTokens.ink,
+      }}
+    >
+      {label ? (
+        <Box component="span" sx={{ fontWeight: 700, fontSize: 14 }}>
+          {label}
+        </Box>
+      ) : null}
+      {text ? (
+        <Box
+          component="span"
+          sx={{ color: designTokens.inkMuted, fontSize: 13.5, maxWidth: "62ch" }}
+        >
+          {text}
+        </Box>
+      ) : null}
+      {link ? (
+        <Box
+          component="span"
+          sx={{ fontSize: 13.5, maxWidth: "62ch", wordBreak: "break-word" }}
+        >
+          {isLinkableRefusalLink(link) ? (
+            <Box
+              component="a"
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: designTokens.link }}
+            >
+              {link}
+            </Box>
+          ) : (
+            /*
+             * Shown, not linked, and not hidden either. An address that
+             * fails the host pin is either a backend change nobody meant
+             * or an attempt to steer a reader somewhere else; in both
+             * cases the honest rendering is the characters themselves,
+             * with no affordance suggesting they can be trusted.
+             */
+            <Box component="span" sx={{ color: designTokens.inkMuted }}>
+              {link}
+            </Box>
+          )}
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+/**
+ * A failure or cap notice.
  *
  * Copy arrives already chosen from a fixed, interpolation-free table, so no
- * cost figure can reach a user-facing refusal even by accident.
+ * cost figure can reach a user-facing notice even by accident.
+ *
+ * NO LONGER CARRIES THE REFUSAL: that is `RefusalBlock` above, per R13 and
+ * R44. Both of this component's tones are alarms, and a refusal is not one.
  */
 function Notice({
   testId,
@@ -266,6 +413,8 @@ export function AnswerScreen({
   previousTurns = [],
   onNewSearch,
   refusal = null,
+  refusalLabel = null,
+  refusalLink = null,
   failure = null,
   capMessage = null,
   systemNotes = [],
@@ -456,7 +605,15 @@ export function AnswerScreen({
           ) : null}
         </Box>
 
-        {refusal ? <Notice testId="answer-refusal" tone="warn" text={refusal} /> : null}
+        {/*
+          Rendered on EITHER field, not on `refusal` alone. A refusal whose
+          `message` arrives empty still has a label, and a refusal a reader
+          can see is the whole requirement; gating on the sentence alone
+          would reproduce the silent blank page F-4.8-J-02 closed.
+        */}
+        {refusal || refusalLabel ? (
+          <RefusalBlock label={refusalLabel} text={refusal} link={refusalLink} />
+        ) : null}
         {failure ? <Notice testId="answer-failure" tone="risk" text={failure} /> : null}
         {capMessage ? <Notice testId="answer-cap" tone="warn" text={capMessage} /> : null}
         {systemNotes.map((note, i) => (

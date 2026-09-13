@@ -96,6 +96,27 @@ export interface RunScreenProps {
   onStop?: () => void;
   onNewSearch?: () => void;
   /**
+   * Whether Stop has already latched (decision U7, requirement R45,
+   * `DECISIONS.md` row 2026-09-12).
+   *
+   * Pressing Stop used to leave the stepper frozen mid-run with no word on
+   * what happened, since `activeStep` and `startedAt` both go null but
+   * nothing replaces the stepper they were driving. This prop swaps the
+   * stepper and the reasoning area for an explicit "Search stopped" block
+   * with a way forward, instead of a page that merely stopped moving.
+   *
+   * The design system has no designed "stopped" screen (checked
+   * `docs/build/design/README.md`'s coverage table and
+   * `design-system/prototype/app.html`), so this is built from the nearest
+   * designed neighbours rather than invented: the run screen's own card,
+   * the `.btn` filled blue button already used here for "New search", and
+   * the `designTokens.inkMuted` body-text token used for the elapsed
+   * counter above.
+   */
+  stopped?: boolean;
+  /** Re-runs the same question unchanged (decision U7). */
+  onRunAgain?: () => void;
+  /**
    * Whether Stop is still meaningful.
    *
    * Derived from the run's own events by `deriveStopEnabled`, which has 19
@@ -154,6 +175,8 @@ export function RunScreen({
   personaName = null,
   onStop,
   onNewSearch,
+  stopped = false,
+  onRunAgain,
   stopEnabled = true,
   startedAt = null,
   refusal = null,
@@ -193,7 +216,7 @@ export function RunScreen({
           <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
             {question}
           </Typography>
-          {running ? (
+          {running && !stopped ? (
             <Typography
               data-testid="run-elapsed"
               variant="body2"
@@ -215,24 +238,70 @@ export function RunScreen({
               {elapsed}s
             </Typography>
           ) : null}
-          <Button
-            onClick={onStop}
-            disabled={!stopEnabled}
-            sx={{
-              fontSize: 12.5,
-              color: designTokens.inkMuted,
-              border: `1px solid ${designTokens.lineStrong}`,
-              px: 1.6,
-              py: 0.6,
-            }}
-          >
-            Stop
-          </Button>
-          {/* Set 2, R12: filled blue with white text, the design system's `.btn`, so it reads apart from Stop. */}
-          <Button variant="contained" onClick={onNewSearch} sx={{ fontSize: 12.5, px: 1.6, py: 0.6 }}>
-            New search
-          </Button>
+          {/* Stop and this header's own New search both disappear once
+              stopped, decision U7: the stopped block below carries its own
+              New search, and a second "New search" on the same screen
+              breaks the `getByRole("button", { name: "New search", exact:
+              true })` strict-mode lookup the browser specs use. */}
+          {!stopped ? (
+            <>
+              <Button
+                onClick={onStop}
+                disabled={!stopEnabled}
+                sx={{
+                  fontSize: 12.5,
+                  color: designTokens.inkMuted,
+                  border: `1px solid ${designTokens.lineStrong}`,
+                  px: 1.6,
+                  py: 0.6,
+                }}
+              >
+                Stop
+              </Button>
+              {/* Set 2, R12: filled blue with white text, the design system's `.btn`, so it reads apart from Stop. */}
+              <Button variant="contained" onClick={onNewSearch} sx={{ fontSize: 12.5, px: 1.6, py: 0.6 }}>
+                New search
+              </Button>
+            </>
+          ) : null}
         </Box>
+
+        {stopped ? (
+          // Decision U7, requirement R45: Stop used to leave the stepper
+          // frozen with five pending dots and nothing said. This block
+          // replaces the stepper and the reasoning/tool-call area below it
+          // with an explicit state and a way forward, built from the run
+          // screen's own card, the `.btn` filled button already on this
+          // screen, and the `designTokens.inkMuted` body token, since the
+          // design system itself has no "stopped" screen to copy from.
+          <Box data-testid="run-stopped" role="status" sx={{ py: 1 }}>
+            <Typography variant="h3" sx={{ color: designTokens.ink }}>
+              Search stopped
+            </Typography>
+            <Typography variant="body2" sx={{ color: designTokens.inkMuted, mt: 1, mb: 2.5 }}>
+              No answer was produced. Run the same question again, or start a new one.
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1.25 }}>
+              <Button variant="contained" onClick={onRunAgain} sx={{ fontSize: 12.5, px: 1.6, py: 0.6 }}>
+                Run again
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={onNewSearch}
+                sx={{
+                  fontSize: 12.5,
+                  color: designTokens.ink,
+                  borderColor: designTokens.lineStrong,
+                  px: 1.6,
+                  py: 0.6,
+                }}
+              >
+                New search
+              </Button>
+            </Box>
+          </Box>
+        ) : (
+          <>
 
         <Box sx={{ display: "flex", alignItems: "flex-start" }}>
           {STEPS.map((step, index) => {
@@ -322,7 +391,13 @@ export function RunScreen({
         >
           {running && activeStep ? `${activeStep} step running` : ""}
         </Box>
+          </>
+        )}
 
+        {/* The refusal, cap and failure Notices keep rendering regardless
+            of `stopped`: none of them were part of the frozen-screen
+            complaint, and a run can stop on its own cap or failure path
+            before the user ever presses Stop. */}
         {refusal ? (
           <Notice testId="guardrail-notice" tone="warn" text={refusal} />
         ) : null}
@@ -333,7 +408,7 @@ export function RunScreen({
 
         <PersonaCaption name={personaName} step={activeStep ?? null} />
 
-        {toolCalls.length > 0 ? (
+        {!stopped && toolCalls.length > 0 ? (
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.25, mt: 2.25, alignItems: "center" }}>
             <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
               Querying
@@ -372,7 +447,7 @@ export function RunScreen({
 
         {/* The reasoning log, F-4.8-D-10. Same component as the answer
             screen's `Show work`, so the two cannot drift apart. */}
-        {steps.length > 0 ? (
+        {!stopped && steps.length > 0 ? (
           <Box sx={{ mt: 2.5 }}>
             <Typography
               component="p"

@@ -478,15 +478,36 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
   }
 
   it("does not dress a refusal in a success tick (F-4.9-A-03)", async () => {
+    /*
+     * F-4.9-A-03 was a green "✓ Refused": a tick and the success green on
+     * every outcome, which at a glance says "done, fine" beside a refusal.
+     * The fix at the time was a per-outcome glyph and colour, so the word
+     * read "⚠ Refused" in red.
+     *
+     * R13 and R44, product-owner decision U6 (2026-09-12), went further:
+     * a refusal is not an error either, so there is no outcome word in the
+     * meta line at all now, and no pill under it. The original property is
+     * unchanged and asserted more strongly below, since a word that is
+     * absent cannot be dressed in anything. What replaced it is the calm
+     * grey label, asserted here THROUGH `App` because the defect class
+     * this file exists for is a prop that never arrives: a component test
+     * with a hand-built `refusalLabel` would pass with `App` passing none.
+     */
     const user = userEvent.setup();
     openEventStreamMock.mockImplementation(serve(variant({ guardPassed: false })));
     render(<App />);
     await askIt(user);
 
     const strip = await screen.findByTestId("answer-meta");
-    expect(strip).toHaveTextContent(/refused/i);
-    // A green tick beside "Refused" reads as "done, fine" at a glance.
+    expect(strip).not.toHaveTextContent(/refused/i);
     expect(strip).not.toHaveTextContent("✓");
+    expect(strip).not.toHaveTextContent("⚠");
+
+    // The refusal itself, as a labelled neutral block rather than an alarm.
+    const refusal = screen.getByTestId("answer-refusal");
+    expect(refusal).toHaveTextContent("Outside biomedical research");
+    // And no red verdict beside it: this run refused, it did not fail.
+    expect(screen.queryByTestId("trust-risk")).not.toBeInTheDocument();
   });
 
   it("never reports a grounding verdict the run did not give (F-4.9-A-02)", async () => {

@@ -948,6 +948,15 @@ export function App() {
             refusal={view.refusal}
             capMessage={view.capMessage}
             failure={streamError}
+            stopped={stopped}
+            onRunAgain={() => {
+              // Decision U7: "Run again" re-asks the exact same question at
+              // the depth it was last asked, rather than sending the reader
+              // back to the landing screen first. `ask` already flips
+              // `stopped` back to false and switches the view to "run" on
+              // the next event, the same as a fresh ask.
+              void ask(searchView.question, depth);
+            }}
             onStop={() => {
               // A-10. `deriveStopEnabled` only goes false on a terminal event,
               // and stopping ABORTS the stream so no terminal event ever
@@ -988,6 +997,12 @@ export function App() {
             // build phase 3.0's guardrail was unreachable: a refused question
             // rendered as a blank page.
             refusal={view.refusal}
+            // R13, R14 and R44. The label and the NCBI address travel as
+            // their own fields now, so the refusal reads as a calm labelled
+            // block with a real link rather than an amber alarm holding an
+            // address nobody can click.
+            refusalLabel={view.refusalLabel}
+            refusalLink={view.refusalLink}
             /*
              * `view.failure` BEFORE `streamError` (F-4.9-A-01). The other
              * order put the raw stream error ahead of the curated string, so

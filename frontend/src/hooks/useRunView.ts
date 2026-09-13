@@ -25,7 +25,7 @@
 
 import { useMemo } from "react";
 
-import type { AgentEvent, Layer } from "../lib/events";
+import type { AgentEvent, GuardPayload, Layer } from "../lib/events";
 import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
@@ -139,6 +139,49 @@ export function layerNumber(layer: Layer): 1 | 2 | 3 {
   }
 }
 
+/**
+ * The short neutral label a refusal leads with, per guard category.
+ *
+ * R13 and R44, product-owner decision U6 (2026-09-12): a refusal must not
+ * look like an error. It reads as a calm grey label naming the reason,
+ * followed by the reviewed sentence, with no red pill and no outcome word
+ * beside it.
+ *
+ * SAME DISCIPLINE AS `CATEGORY_COPY`, deliberately: a fixed `Record` with
+ * no interpolation slot anywhere in it. Section 12.6's no-cost-figure rule
+ * is guaranteed structurally rather than by careful wording, so a label
+ * cannot acquire a dollar figure even if a future backend put one in
+ * `guard.reason`. This table never reads that field, exactly as
+ * `CATEGORY_COPY` never does.
+ *
+ * `ok` is present only because `GuardPayload["category"]` requires an
+ * exhaustive `Record`. The server never emits `passed: false` with
+ * `category: "ok"`; if it ever did, the generic label ships rather than
+ * nothing.
+ */
+export const GUARD_REFUSAL_LABEL: Record<GuardPayload["category"], string> = {
+  ok: "Could not process the question",
+  off_topic: "Outside biomedical research",
+  medical_advice: "Not a source of medical advice",
+  injection: "Not a research question",
+  rate_limited: "Daily question limit reached",
+  cost_capped: "System at capacity",
+  write_seeking: "Read-only system",
+};
+
+/**
+ * The label for an answer-level refusal, both of its shapes.
+ *
+ * `write_node`'s two refusal sites, the unresolved-entity early exit and
+ * the general ungrounded-synthesis branch, are NOT distinguishable on the
+ * wire: both emit `scope: "answer"` with `outcome: "refuse"` and carry
+ * their difference only inside the free-form `message`, which this table
+ * cannot key on without becoming the prefix-matching bet
+ * `SYSTEM_NOTE_PREFIXES` above already demonstrates the cost of. One label
+ * covers both, and the sentence beneath it says which happened.
+ */
+export const ANSWER_REFUSAL_LABEL = "No answer found in NCBI records";
+
 export interface RunView {
   /** The live step, or null when the run has reached a terminal event. */
   activeStep: StepName | null;
@@ -197,14 +240,41 @@ export interface RunView {
   /** A refusal or fatal error message, if the run produced one. */
   failure: string | null;
   /**
-   * The guardrail's own refusal copy, when a guard event failed.
+   * The refusal SENTENCE, and only the sentence, or null.
    *
    * Reuses `GuardrailBanner`'s reviewed table rather than paraphrasing it. That
    * table is deliberately interpolation-free so no cost figure can ever reach a
    * refusal message, which is a structural guarantee rather than careful
    * wording, and reimplementing it here would quietly discard that.
+   *
+   * NO LONGER CARRIES THE NCBI ADDRESS. It used to be `message` and
+   * `fallback_link` joined with a space; the address now travels in
+   * `refusalLink` below, so a surface can make it clickable (R14).
    */
   refusal: string | null;
+  /**
+   * The refusal's short neutral label, or null (R13, R44).
+   *
+   * SEPARATE FROM `refusal` rather than prepended to it, because the two
+   * read differently: the label is the heading a reader scans, the
+   * sentence is the explanation under it. Joining them into one string
+   * would force the surface to split prose apart again to style it, which
+   * is the shape of defect `sourceDisplayName` above exists to undo.
+   */
+  refusalLabel: string | null;
+  /**
+   * The refusal's NCBI fallback address, or null (R14).
+   *
+   * SEPARATE FROM `refusal` rather than joined onto the end of it. The old
+   * join put a URL inside the sentence, which is why it rendered as plain
+   * unclickable text: a surface handed one string cannot tell which part
+   * of it is an address. Carried as its own field so the answer screen can
+   * render a real link, host-pinned at the point it builds the anchor.
+   *
+   * Present only on an answer-level refusal. A guardrail refusal carries
+   * no `fallback_link` on the wire, because no search term was accepted.
+   */
+  refusalLink: string | null;
   /** Cap copy, when the run stopped early on its processing budget. */
   capMessage: string | null;
   /**
@@ -249,6 +319,8 @@ export const EMPTY_RUN_VIEW: RunView = {
   landed: false,
   failure: null,
   refusal: null,
+  refusalLabel: null,
+  refusalLink: null,
   capMessage: null,
   systemNotes: [],
   stopEnabled: false,
@@ -818,34 +890,84 @@ export function useRunView(events: AgentEvent[]): RunView {
       (event) => event.type === "guard" && event.payload.passed === false,
     );
     // The two refusal shapes read identically from here down (2026-09-05
-    // product-owner decision): both set `refusal`, both render through the
-    // same `Notice` in `RunScreen` and `AnswerScreen` (`data-testid=
-    // "guardrail-notice"` / `"answer-refusal"`), and neither's text can
-    // reach the claims list, since a guardrail refusal never emits a
-    // `token` at all and a no-data refusal's tokens were removed from
-    // `claims` above.
+    // product-owner decision): both set `refusal` and `refusalLabel`, both
+    // render through the same block in `AnswerScreen` (`data-testid=
+    // "answer-refusal"`) and the same notice in `RunScreen`
+    // (`"guardrail-notice"`), and neither's text can reach the claims
+    // list, since a guardrail refusal never emits a `token` at all and a
+    // no-data refusal's tokens were removed from `claims` above.
     //
     // Guardrail copy stays exactly as it was: a fixed, interpolation-free
     // table keyed on `category`, never the backend's free-form `reason`.
-    // The no-data refusal has no such table, because the sentence itself
-    // (unresolved entity, withdrawn record, no groundable finding) is the
-    // content, not a category to look up; it is read from the
-    // `answerRefusalSignal` trust_signal's own `message` and
-    // `fallback_link` fields rather than from the token text, for the
-    // reason given at `answerRefusalSignal`'s definition above. Joined
-    // with one space, the same join `synthesis/refuse.py`'s
-    // `build_refusal_text` and `core/graph.py`'s
-    // `_build_unresolved_entity_refusal_text` both use to build the token
-    // text this is standing in for, so the rendered sentence reads the
-    // same either way.
+    // The no-data refusal has no such table for its SENTENCE, because the
+    // sentence itself (unresolved entity, withdrawn record, no groundable
+    // finding) is the content, not a category to look up; it is read from
+    // the `answerRefusalSignal` trust_signal's own `message` field rather
+    // than from the token text, for the reason given at
+    // `answerRefusalSignal`'s definition above. Its LABEL does come from a
+    // table, `ANSWER_REFUSAL_LABEL`, which has exactly one entry for the
+    // reason stated there.
+    //
+    // R13, R14 and R44, product-owner decision U6 (2026-09-12). The join
+    // that used to live here put `fallback_link` INSIDE the sentence, one
+    // space after `message`, so the NCBI address arrived at every surface
+    // as an indistinguishable run of characters in a prose string and
+    // rendered as plain unclickable text. A reader was shown an address and
+    // given no way to follow it, on the one screen whose entire job is to
+    // say where to look next.
+    //
+    // The three parts are now carried separately: the label a reader
+    // scans, the sentence explaining it, and the address as an address.
+    // Nothing is lost in the split, because the surface renders all three.
     const refusal =
       failedGuard && failedGuard.type === "guard"
         ? (CATEGORY_COPY[failedGuard.payload.category] ?? CATEGORY_COPY.ok)
         : answerRefusalSignal && answerRefusalSignal.type === "trust_signal"
-          ? [answerRefusalSignal.payload.message, answerRefusalSignal.payload.fallback_link]
-              .filter((part): part is string => typeof part === "string" && part.length > 0)
-              .join(" ") || null
+          ? typeof answerRefusalSignal.payload.message === "string" &&
+            answerRefusalSignal.payload.message.length > 0
+            ? answerRefusalSignal.payload.message
+            : null
           : null;
+    const refusalLabel =
+      failedGuard && failedGuard.type === "guard"
+        ? (GUARD_REFUSAL_LABEL[failedGuard.payload.category] ?? GUARD_REFUSAL_LABEL.ok)
+        : answerRefusalSignal
+          ? ANSWER_REFUSAL_LABEL
+          : null;
+    // Read only from the answer-level signal. A guardrail refusal has no
+    // accepted search term, so there is nothing to point an NCBI search at.
+    const refusalLink =
+      !failedGuard &&
+      answerRefusalSignal &&
+      answerRefusalSignal.type === "trust_signal" &&
+      typeof answerRefusalSignal.payload.fallback_link === "string" &&
+      answerRefusalSignal.payload.fallback_link.length > 0
+        ? answerRefusalSignal.payload.fallback_link
+        : null;
+
+    /*
+     * A REFUSAL IS NOT A FAILURE (R13, R44).
+     *
+     * The trust strip and the outcome word were both written for an
+     * ANSWER: they report how well a set of claims is grounded. A refusal
+     * has no claims at all, so every verdict they could offer is about an
+     * absence. In practice that produced "Not fully grounded" and "Not
+     * verified" in red under a calm, correct, deliberate refusal, with a
+     * red "⚠ Refused" above them: four separate signals, none of them
+     * wrong on its own terms, together reading as a system malfunction.
+     * `docs/build/design/design-system/components/trust-pills.html` states
+     * the intent in its own note: "Refusal is a first-class state, not an
+     * error."
+     *
+     * A FATAL RUN IS DELIBERATELY EXCLUDED. "Not verified · the run did
+     * not finish" is about a run that died, which IS a failure, and
+     * F-4.9-A-01 is the finding that put it there: a crashed run kept
+     * whatever positive verdict it had emitted before crashing. Silencing
+     * the strip on a fatal run would reopen that critical, so the fatal
+     * path keeps its pill and its precedence here.
+     */
+    const isRefusal =
+      fatalError === undefined && (refusal !== null || refusalLabel !== null);
 
     // F-4.8-A-14. `_partial_result_for_cap` emits only a `token` plus
     // `done{trust_outcome:"flag"}` and NO error event, so `isCapShapedError`
@@ -875,17 +997,19 @@ export function useRunView(events: AgentEvent[]): RunView {
       toolCalls,
       claims,
       sources,
-      trust,
+      trust: isRefusal ? [] : trust,
       meta,
       steps,
-      outcome,
-      outcomeTone,
+      outcome: isRefusal ? null : outcome,
+      outcomeTone: isRefusal ? null : outcomeTone,
       elapsedMs,
       nextStep,
       layerCount,
       landed,
       failure,
       refusal,
+      refusalLabel,
+      refusalLink,
       capMessage,
       // The cap note is already surfaced as `capMessage`, so it is not
       // repeated here.

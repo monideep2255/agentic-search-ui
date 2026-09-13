@@ -244,12 +244,24 @@ test.describe("cite or refuse", () => {
   test("a no-data refusal renders as a refusal notice, never as a claim", async ({ page }) => {
     await askWithScriptedStream(page, NO_DATA_REFUSAL_STREAM, "Is BRCA9 associated with any disease?");
 
-    // The refusal notice, built from the SAME trust_signal fields a
+    // The refusal block, built from the SAME trust_signal fields a
     // guardrail refusal would use.
     const notice = page.getByTestId("answer-refusal");
     await expect(notice).toBeVisible();
     await expect(notice).toContainText(REFUSE_MESSAGE);
     await expect(notice).toContainText(FALLBACK_LINK);
+
+    // R13, R14 and R44 (2026-09-12). The label a reader scans first, the
+    // address as a real link rather than characters on a page, and no red
+    // verdict beside either: a refusal is a first-class state, not an
+    // error. The two assertions above still hold unchanged, because the
+    // anchor's visible text IS the address.
+    await expect(notice).toContainText("No answer found in NCBI records");
+    const fallback = notice.getByRole("link", { name: FALLBACK_LINK });
+    await expect(fallback).toHaveAttribute("href", FALLBACK_LINK);
+    await expect(fallback).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(page.getByTestId("trust-risk")).toHaveCount(0);
+    await expect(page.getByTestId("answer-meta")).not.toContainText(/refused/i);
 
     // THE WHOLE POINT: no claim, cited or uncited, exists on the spine.
     // Before the 2026-09-05 fix this exact token rendered as an ordinary
@@ -279,6 +291,16 @@ test.describe("cite or refuse", () => {
     await expect(notice).toBeVisible();
     await expect(notice).toContainText(UNRESOLVED_MESSAGE);
     await expect(notice).toContainText(UNRESOLVED_LINK);
+
+    // The two answer-level refusal shapes are not distinguishable on the
+    // wire, so they share one label; the sentence above carries the
+    // difference. The address is a link here too (R14).
+    await expect(notice).toContainText("No answer found in NCBI records");
+    await expect(notice.getByRole("link", { name: UNRESOLVED_LINK })).toHaveAttribute(
+      "href",
+      UNRESOLVED_LINK,
+    );
+    await expect(page.getByTestId("trust-risk")).toHaveCount(0);
 
     await expect(page.getByTestId(/^spine-segment-/)).toHaveCount(0);
     await expect(page.getByTestId(/^claim-text-/)).toHaveCount(0);

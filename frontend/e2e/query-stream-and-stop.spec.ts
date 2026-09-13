@@ -209,12 +209,29 @@ test.describe("query stream and stop", () => {
       )
       .toBe(true);
 
+    // Decision U7, requirement R45: Stop used to leave this frozen stepper
+    // on screen with nothing said about what happened. The browser itself
+    // now shows the replacement instead, not just the unit test's mock of
+    // it.
+    await expect(page.getByTestId("run-stopped")).toBeVisible();
+    await expect(page.getByTestId("run-stopped")).toContainText("Search stopped");
+    await expect(page.getByRole("button", { name: "Run again" })).toBeVisible();
+
     // CLIENT-SIDE PROOF, also restored. `think` needs another delayed call to
     // reach "done", which never fires because the run was stopped right after
-    // `guard`. Waiting past that point and finding it still not done shows no
-    // further events reached this page.
+    // `guard`. This used to wait and then read `step-Think`'s state, but the
+    // stopped block above REPLACES the stepper, so that locator now finds
+    // nothing and `not.toHaveAttribute` fails on absence rather than
+    // proving anything (caught by running this spec after the U7 change).
+    // The property it was guarding is "no further event reached this
+    // page": had one arrived, the run would have landed and the answer
+    // screen would have replaced the stopped block. So the proof is that,
+    // after waiting past the point `done` would have fired, the stopped
+    // block is still here and no answer meta strip ever appeared.
     await page.waitForTimeout(3_000);
-    await expect(page.getByTestId("step-Think")).not.toHaveAttribute("data-state", "done");
+    await expect(page.getByTestId("run-stopped")).toBeVisible();
+    await expect(page.getByTestId("answer-meta")).toHaveCount(0);
+    await expect(page.getByTestId("step-Think")).toHaveCount(0);
   });
 
   test("stop stops being offered once the run has finished", async ({ page }) => {

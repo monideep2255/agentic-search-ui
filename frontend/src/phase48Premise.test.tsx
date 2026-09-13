@@ -512,8 +512,25 @@ describe("clause 3c: the screens render from the real event stream", () => {
     // assessed elevated risk where none was ever computed. Mutation that
     // turns this red: drop the `&& payload.risk_tier !== "unknown"` clause
     // from useRunView.ts's risk-pill condition.
+    //
+    // REWRITTEN 2026-09-12 for R13, product-owner decision U6: a refusal
+    // now carries NO trust pill at all, so the original first arm (a
+    // failed guard plus an "unknown" tier, asserting that "Not fully
+    // grounded" is present and "unknown risk claim" is not) can no longer
+    // distinguish a correct fix from a broken one. Neither half of what it
+    // guarded has been dropped, and both are now checked on the fixture
+    // that can still fail:
+    //
+    //   - The refusal half became STRONGER, arm 1 below: no pill of any
+    //     kind, which subsumes "no spurious unknown-risk pill".
+    //   - The `risk_tier` half moved to arm 2 below, a run with an
+    //     "unknown" tier and NO refusal, which is the only shape where
+    //     that clause is still reachable. The mutation named above still
+    //     turns arm 2 red.
     const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
 
+    // Arm 1: a refusal reports no grounding verdict, because it has no
+    // claims to report one about.
     const events = [
       { type: "guard", payload: { passed: false, category: "off_topic", reason: "outside biomedical research" } },
       {
@@ -531,10 +548,29 @@ describe("clause 3c: the screens render from the real event stream", () => {
     const { result } = renderHook(() => useRunView(events));
     const view = result.current;
 
-    const labels = view.trust.map((t: { label: string }) => t.label);
-    expect(labels.some((label: string) => /not fully grounded/i.test(label))).toBe(true);
-    expect(labels.some((label: string) => /unknown risk claim/i.test(label))).toBe(false);
-    // The second arm: a GENUINELY unrecognised (not "unknown") tier must
+    expect(view.trust).toHaveLength(0);
+    expect(view.refusalLabel).toBe("Outside biomedical research");
+
+    // Arm 2: the `risk_tier !== "unknown"` clause, on the one shape that
+    // still renders pills. `grounded: false` keeps the grounding pill
+    // present, so this arm also proves the strip did not simply vanish.
+    const unknownTierEvents = [
+      {
+        type: "trust_signal",
+        payload: {
+          outcome: "flag",
+          risk_tier: "unknown",
+          grounded: false,
+          triangulated: null,
+        },
+      },
+      { type: "done", payload: {} },
+    ];
+    const { result: unknownTier } = renderHook(() => useRunView(unknownTierEvents));
+    const unknownLabels = unknownTier.current.trust.map((t: { label: string }) => t.label);
+    expect(unknownLabels.some((label: string) => /not fully grounded/i.test(label))).toBe(true);
+    expect(unknownLabels.some((label: string) => /unknown risk claim/i.test(label))).toBe(false);
+    // The third arm: a GENUINELY unrecognised (not "unknown") tier must
     // still over-report, per F-4.8-A-19's own reasoning, so this is not a
     // control that silently stopped reporting every non-"low" tier.
     const escalatedEvents = [

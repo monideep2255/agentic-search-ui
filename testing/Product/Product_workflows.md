@@ -128,7 +128,13 @@ Query: `What is the capital of France?`
 
 Steps: type the query → Search
 
-Expected: a clear refusal explaining that this is outside what it can answer, never an invented answer.
+Expected:
+
+- A refusal box with a calm grey label reading "Outside biomedical research".
+- A short sentence explaining the refusal.
+- No red "Not verified" or "Not fully grounded" pill.
+- No error styling.
+- Never an invented answer.
 
 ## 9. Stop a search
 
@@ -138,7 +144,14 @@ Query: `Which diseases are associated with BRCA1?`
 
 Steps: Search → press Stop while the progress screen is running
 
-Expected: the search stops, and no answer appears afterwards.
+Expected:
+
+- The progress steps disappear.
+- A "Search stopped" message appears.
+- Two buttons appear: "Run again" and "New search".
+- Clicking "Run again" asks the same question again from the start.
+- Clicking "New search" returns to the home page.
+- No answer appears from the stopped search.
 
 ## 10. Feedback on an answer
 
@@ -191,6 +204,7 @@ Expected:
 
 - Sometimes one suggested next step, which makes sense for your question. Sometimes none, which is also fine.
 - If the answer left something out, a plain note says so in everyday words, with no internal jargon.
+- If the answer is a refusal instead, it shows a grey label such as "No answer found in NCBI records", and the NCBI search address inside it is a clickable link that opens in a new tab on ncbi.nlm.nih.gov.
 - No note ever appears as a normal cited sentence.
 
 ## 14. The scientist name at the top
@@ -250,8 +264,12 @@ Steps: type the query → Search
 
 Expected:
 
-- A clear "could not find information" style answer.
-- No diseases listed, and no citations pointing at unrelated records.
+- A refusal box with the grey label "No answer found in NCBI records".
+- A plain sentence saying nothing was found.
+- A clickable NCBI search link.
+- No diseases listed.
+- No citation chips.
+- No red "Not verified" or "Not fully grounded" pill.
 
 ## 20. Too many guest attempts (removed)
 
@@ -282,13 +300,10 @@ Found by the browser run on 2026-09-12. Full report with screenshots: `../Develo
 
 - Follow-up questions get refused, including the suggested "What variants cause it?". Refused 3 times out of 3.
 - "Which diseases are associated with BRCA1?" is refused with "I could not find grounded evidence" about one time in three. "Variants in GCK causing MODY" was refused too.
-- Refusals show a red "Not verified" or "Not fully grounded" pill, and the NCBI search address in a refusal cannot be clicked.
 - An answer can open with "These include…" without saying what "these" are, and a "one further gene record" note shows as a grey sentence with no source.
 - After sign-up, your guest searches do appear in your history, but no message says so.
 - Answers sometimes take more than 25 seconds.
 - An answer's first sentence can come out garbled, for example "BRCA1 (gene symbol BRCA1 [1]. These are…". Seen 2026-09-12.
-- Stop shows no "stopped" confirmation. The screen just freezes.
 - Reloading the page logs you out.
 - A returning guest cannot see how many searches are left until they run one.
-- A "no data found" refusal looks different from an off-topic refusal.
 - At phone width, the button that shows or hides your searches does nothing.
