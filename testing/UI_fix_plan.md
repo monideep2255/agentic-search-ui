@@ -216,7 +216,7 @@ Built: · Live: · Approved:
 
 ### 2.13 NCBI design system: the changes possible today (retest feedback)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the app follows the NCBI design system as far as it can without NCBI's internal packages.
 - What you noted: "is there a design system that we can use? at least minimum the color scheme?", then "Can we implement the NCBI design system changes that are possible?"
@@ -224,7 +224,7 @@ Built: ✅ · Live: · Approved:
 
 ### 2.14 A favicon (retest feedback)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the browser tab shows the app's own icon and name.
 - What you noted: "have a background agent add a favicon please"
