@@ -2,37 +2,261 @@
   "version": 1,
   "basis": "Deceased biomedical scientists, selected for contribution to biology and medicine, spread across genetics, structural biology, microbiology, neuroscience, pharmacology and public health. Product-owner decision 2026-08-20: deceased only, because a living scientist's name rendered above a generated biomedical answer reads as an endorsement they never gave. Every entry carries a year of death so the deceased-only property is checkable rather than trusted, and the premise gate asserts it against this file. Scoped at roughly 30 with the mechanism sized for 100, so extending this list is a data change and not a code change.",
   "personas": [
-    { "name": "Mendel", "full_name": "Gregor Mendel", "died": 1884, "basis": "laws of inheritance" },
-    { "name": "Pasteur", "full_name": "Louis Pasteur", "died": 1895, "basis": "germ theory and vaccination" },
-    { "name": "Koch", "full_name": "Robert Koch", "died": 1910, "basis": "microbial causation of disease" },
-    { "name": "Nightingale", "full_name": "Florence Nightingale", "died": 1910, "basis": "medical statistics and infection control" },
-    { "name": "Ehrlich", "full_name": "Paul Ehrlich", "died": 1915, "basis": "chemotherapy and the receptor concept" },
-    { "name": "Ramon y Cajal", "full_name": "Santiago Ramon y Cajal", "died": 1934, "basis": "the neuron doctrine" },
-    { "name": "Avery", "full_name": "Oswald Avery", "died": 1955, "basis": "DNA as the transforming principle" },
-    { "name": "Fleming", "full_name": "Alexander Fleming", "died": 1955, "basis": "discovery of penicillin" },
-    { "name": "Franklin", "full_name": "Rosalind Franklin", "died": 1958, "basis": "X-ray diffraction of DNA" },
-    { "name": "Florey", "full_name": "Howard Florey", "died": 1968, "basis": "penicillin as a usable therapeutic" },
-    { "name": "Chain", "full_name": "Ernst Chain", "died": 1979, "basis": "penicillin isolation and chemistry" },
-    { "name": "Delbruck", "full_name": "Max Delbruck", "died": 1981, "basis": "bacteriophage genetics" },
-    { "name": "Luria", "full_name": "Salvador Luria", "died": 1991, "basis": "bacterial mutation and inheritance" },
-    { "name": "McClintock", "full_name": "Barbara McClintock", "died": 1992, "basis": "transposable genetic elements" },
-    { "name": "Ochoa", "full_name": "Severo Ochoa", "died": 1993, "basis": "enzymatic synthesis of RNA" },
-    { "name": "Sabin", "full_name": "Albert Sabin", "died": 1993, "basis": "oral polio vaccine" },
-    { "name": "Hodgkin", "full_name": "Dorothy Hodgkin", "died": 1994, "basis": "protein crystallography, insulin and B12" },
-    { "name": "Pauling", "full_name": "Linus Pauling", "died": 1994, "basis": "the chemical bond and molecular disease" },
-    { "name": "Salk", "full_name": "Jonas Salk", "died": 1995, "basis": "inactivated polio vaccine" },
-    { "name": "Hershey", "full_name": "Alfred Hershey", "died": 1997, "basis": "DNA as the genetic material" },
-    { "name": "Elion", "full_name": "Gertrude Elion", "died": 1999, "basis": "rational drug design" },
-    { "name": "Perutz", "full_name": "Max Perutz", "died": 2002, "basis": "the structure of haemoglobin" },
-    { "name": "Chargaff", "full_name": "Erwin Chargaff", "died": 2002, "basis": "base composition rules" },
-    { "name": "Chase", "full_name": "Martha Chase", "died": 2003, "basis": "DNA as the genetic material" },
-    { "name": "Crick", "full_name": "Francis Crick", "died": 2004, "basis": "the double helix and the genetic code" },
-    { "name": "Palade", "full_name": "George Palade", "died": 2008, "basis": "the ribosome and cell secretion" },
-    { "name": "Nirenberg", "full_name": "Marshall Nirenberg", "died": 2010, "basis": "deciphering the genetic code" },
-    { "name": "Khorana", "full_name": "Har Gobind Khorana", "died": 2011, "basis": "synthesis of nucleic acids and the genetic code" },
-    { "name": "Levi-Montalcini", "full_name": "Rita Levi-Montalcini", "died": 2012, "basis": "nerve growth factor" },
-    { "name": "Sanger", "full_name": "Frederick Sanger", "died": 2013, "basis": "protein and DNA sequencing" },
-    { "name": "de Duve", "full_name": "Christian de Duve", "died": 2013, "basis": "the lysosome and the peroxisome" },
-    { "name": "Tsien", "full_name": "Roger Tsien", "died": 2016, "basis": "fluorescent proteins for imaging" }
+    {
+      "name": "Mendel",
+      "full_name": "Gregor Mendel",
+      "died": 1884,
+      "basis": "laws of inheritance",
+      "about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+    },
+    {
+      "name": "Pasteur",
+      "full_name": "Louis Pasteur",
+      "died": 1895,
+      "basis": "germ theory and vaccination",
+      "about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+    },
+    {
+      "name": "Koch",
+      "full_name": "Robert Koch",
+      "died": 1910,
+      "basis": "microbial causation of disease",
+      "about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+    },
+    {
+      "name": "Nightingale",
+      "full_name": "Florence Nightingale",
+      "died": 1910,
+      "basis": "medical statistics and infection control",
+      "about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+    },
+    {
+      "name": "Ehrlich",
+      "full_name": "Paul Ehrlich",
+      "died": 1915,
+      "basis": "chemotherapy and the receptor concept",
+      "about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+    },
+    {
+      "name": "Ramon y Cajal",
+      "full_name": "Santiago Ramon y Cajal",
+      "died": 1934,
+      "basis": "the neuron doctrine",
+      "about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+    },
+    {
+      "name": "Avery",
+      "full_name": "Oswald Avery",
+      "died": 1955,
+      "basis": "DNA as the transforming principle",
+      "about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+    },
+    {
+      "name": "Fleming",
+      "full_name": "Alexander Fleming",
+      "died": 1955,
+      "basis": "discovery of penicillin",
+      "about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+    },
+    {
+      "name": "Franklin",
+      "full_name": "Rosalind Franklin",
+      "died": 1958,
+      "basis": "X-ray diffraction of DNA",
+      "about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+    },
+    {
+      "name": "Florey",
+      "full_name": "Howard Florey",
+      "died": 1968,
+      "basis": "penicillin as a usable therapeutic",
+      "about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+    },
+    {
+      "name": "Chain",
+      "full_name": "Ernst Chain",
+      "died": 1979,
+      "basis": "penicillin isolation and chemistry",
+      "about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+    },
+    {
+      "name": "Delbruck",
+      "full_name": "Max Delbruck",
+      "died": 1981,
+      "basis": "bacteriophage genetics",
+      "about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+    },
+    {
+      "name": "Luria",
+      "full_name": "Salvador Luria",
+      "died": 1991,
+      "basis": "bacterial mutation and inheritance",
+      "about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+    },
+    {
+      "name": "McClintock",
+      "full_name": "Barbara McClintock",
+      "died": 1992,
+      "basis": "transposable genetic elements",
+      "about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+    },
+    {
+      "name": "Ochoa",
+      "full_name": "Severo Ochoa",
+      "died": 1993,
+      "basis": "enzymatic synthesis of RNA",
+      "about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+      "name": "Sabin",
+      "full_name": "Albert Sabin",
+      "died": 1993,
+      "basis": "oral polio vaccine",
+      "about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+    },
+    {
+      "name": "Hodgkin",
+      "full_name": "Dorothy Hodgkin",
+      "died": 1994,
+      "basis": "protein crystallography, insulin and B12",
+      "about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+    },
+    {
+      "name": "Pauling",
+      "full_name": "Linus Pauling",
+      "died": 1994,
+      "basis": "the chemical bond and molecular disease",
+      "about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+    },
+    {
+      "name": "Salk",
+      "full_name": "Jonas Salk",
+      "died": 1995,
+      "basis": "inactivated polio vaccine",
+      "about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+    },
+    {
+      "name": "Hershey",
+      "full_name": "Alfred Hershey",
+      "died": 1997,
+      "basis": "DNA as the genetic material",
+      "about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+    },
+    {
+      "name": "Elion",
+      "full_name": "Gertrude Elion",
+      "died": 1999,
+      "basis": "rational drug design",
+      "about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+    },
+    {
+      "name": "Perutz",
+      "full_name": "Max Perutz",
+      "died": 2002,
+      "basis": "the structure of haemoglobin",
+      "about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+    },
+    {
+      "name": "Chargaff",
+      "full_name": "Erwin Chargaff",
+      "died": 2002,
+      "basis": "base composition rules",
+      "about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+    },
+    {
+      "name": "Chase",
+      "full_name": "Martha Chase",
+      "died": 2003,
+      "basis": "DNA as the genetic material",
+      "about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+    },
+    {
+      "name": "Crick",
+      "full_name": "Francis Crick",
+      "died": 2004,
+      "basis": "the double helix and the genetic code",
+      "about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+    },
+    {
+      "name": "Palade",
+      "full_name": "George Palade",
+      "died": 2008,
+      "basis": "the ribosome and cell secretion",
+      "about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+    },
+    {
+      "name": "Nirenberg",
+      "full_name": "Marshall Nirenberg",
+      "died": 2010,
+      "basis": "deciphering the genetic code",
+      "about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+    },
+    {
+      "name": "Khorana",
+      "full_name": "Har Gobind Khorana",
+      "died": 2011,
+      "basis": "synthesis of nucleic acids and the genetic code",
+      "about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+    },
+    {
+      "name": "Levi-Montalcini",
+      "full_name": "Rita Levi-Montalcini",
+      "died": 2012,
+      "basis": "nerve growth factor",
+      "about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+      "name": "Sanger",
+      "full_name": "Frederick Sanger",
+      "died": 2013,
+      "basis": "protein and DNA sequencing",
+      "about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+    },
+    {
+      "name": "de Duve",
+      "full_name": "Christian de Duve",
+      "died": 2013,
+      "basis": "the lysosome and the peroxisome",
+      "about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+    },
+    {
+      "name": "Tsien",
+      "full_name": "Roger Tsien",
+      "died": 2016,
+      "basis": "fluorescent proteins for imaging",
+      "about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+    }
   ]
 }

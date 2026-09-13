@@ -152,6 +152,10 @@ class TestTheDrawSurvivesTheListGrowing:
                 "full_name": f"Added Scientist {n}",
                 "died": 1900 + n,
                 "basis": "test extension",
+                # The loader requires both since 2026-09-13 (the chip's
+                # "about" card); a fabricated entry without them is refused.
+                "about": "A fabricated scientist for the growing-list arm.",
+                "wikipedia": f"https://en.wikipedia.org/wiki/Added_Scientist_{n}",
             }
             for n in range(20)
         ]

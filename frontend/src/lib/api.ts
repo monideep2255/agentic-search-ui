@@ -27,6 +27,15 @@ export interface CreateRunRequestBody {
 export interface CreateRunResponse {
   run_id: string;
   persona_name: string;
+  /**
+   * One or two sentences on the persona's achievements, at most 160
+   * characters. Optional so an older backend, or any existing test mock
+   * that returns `{run_id, persona_name}` alone, keeps working: the info
+   * affordance on the persona chip simply does not render without it.
+   */
+  persona_about?: string | null;
+  /** An `https://en.wikipedia.org/wiki/...` page for the persona. Optional for the same reason as `persona_about`. */
+  persona_wikipedia?: string | null;
 }
 
 export interface StopRunResponse {
@@ -297,6 +306,10 @@ export async function fetchMe(
 
 export interface PersonaResponse {
   persona_name: string;
+  /** See `CreateRunResponse.persona_about`. Optional for the same reason. */
+  persona_about?: string | null;
+  /** See `CreateRunResponse.persona_wikipedia`. Optional for the same reason. */
+  persona_wikipedia?: string | null;
 }
 
 /**

@@ -60,6 +60,13 @@ _PERSONA_FILE = Path(__file__).resolve().parent.parent / "data" / "personas_v1.j
 #: to this is a data change with no code change.
 MAX_PERSONAS = 100
 
+#: The longest `about` line the chip's card is designed to hold: one or two
+#: sentences, never a biography.
+MAX_ABOUT_LENGTH = 160
+
+#: The one host a persona's "Learn more" link may point at.
+WIKIPEDIA_PREFIX = "https://en.wikipedia.org/wiki/"
+
 
 @dataclass(frozen=True)
 class Persona:
@@ -74,6 +81,14 @@ class Persona:
     full_name: str
     died: int
     basis: str
+    #: One or two sentences on what the scientist did, for the "about" card
+    #: behind the persona chip (product-owner request, 2026-09-13). Capped
+    #: at `MAX_ABOUT_LENGTH` at load time so the card stays a caption.
+    about: str
+    #: An `https://en.wikipedia.org/wiki/...` address, host-pinned at load
+    #: time so a data edit cannot turn the "Learn more" link into a link to
+    #: anywhere else. The frontend pins the host again before rendering.
+    wikipedia: str
 
 
 @lru_cache(maxsize=1)
@@ -112,6 +127,24 @@ def load_persona_list() -> tuple[Persona, ...]:
                 "year is how that is checkable rather than trusted"
             )
         name = str(entry["name"])
+        about = entry.get("about")
+        if not isinstance(about, str) or not about.strip():
+            raise ValueError(
+                f"persona {name!r} has no 'about' line. Every entry carries one "
+                "or two sentences on what the scientist did, for the chip's card"
+            )
+        if len(about) > MAX_ABOUT_LENGTH:
+            raise ValueError(
+                f"persona {name!r} has an 'about' line of {len(about)} characters, "
+                f"past the {MAX_ABOUT_LENGTH} the chip's card is designed to hold"
+            )
+        wikipedia = entry.get("wikipedia")
+        if not isinstance(wikipedia, str) or not wikipedia.startswith(WIKIPEDIA_PREFIX):
+            raise ValueError(
+                f"persona {name!r} has no Wikipedia address under "
+                f"{WIKIPEDIA_PREFIX!r}. The link is host-pinned by product decision "
+                "so a data edit cannot point a reader anywhere else"
+            )
         if name in seen:
             # A duplicate would silently skew the draw toward one name, which
             # is invisible in any test that only checks membership.
@@ -123,9 +156,33 @@ def load_persona_list() -> tuple[Persona, ...]:
                 full_name=str(entry["full_name"]),
                 died=died,
                 basis=str(entry["basis"]),
+                about=about.strip(),
+                wikipedia=wikipedia,
             )
         )
     return tuple(personas)
+
+
+def persona_record(name: str) -> Persona:
+    """The curated record behind a name the draw handed out.
+
+    Raises `KeyError` for a name the shipped list does not carry, which
+    cannot happen for a name produced by `persona_for_session` in the same
+    process, since both read the same cached list.
+    """
+    for persona in load_persona_list():
+        if persona.name == name:
+            return persona
+    raise KeyError(name)
+
+
+def persona_record_for_session(*, session_id: str, user_id: str | None) -> Persona:
+    """`persona_for_session`, returning the whole record rather than the name.
+
+    The draw itself is unchanged: this looks the drawn name back up, so the
+    name a caller has seen for months is exactly the name this returns.
+    """
+    return persona_record(persona_for_session(session_id=session_id, user_id=user_id))
 
 
 def _rendezvous_score(identity: str, name: str) -> bytes:

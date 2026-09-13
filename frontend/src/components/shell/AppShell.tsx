@@ -52,6 +52,15 @@ export interface AppShellProps {
   /** The session's persona. Stubbed; wired by build phase 4.5. */
   /** Server-assigned persona (T-4.5-10); null until the first run returns. */
   personaName?: string | null;
+  /**
+   * One or two sentences on the persona's achievements (2026-09-13
+   * product-owner request). Forwarded to `PersonaChip`'s `about` prop;
+   * null whenever the backend has not sent one, which is also how the
+   * chip's info affordance stays absent for an older backend.
+   */
+  personaAbout?: string | null;
+  /** The persona's Wikipedia page. Forwarded to `PersonaChip`'s `wikipedia` prop. */
+  personaWikipedia?: string | null;
   signedIn?: boolean;
   accountEmail?: string;
   /** Forwarded to `AccountMenu`'s `limitCopy` (T-4.10-09). See that prop's own docstring. */
@@ -256,6 +265,8 @@ export function AppShell({
   current = "search",
   onNavigate,
   personaName = null,
+  personaAbout = null,
+  personaWikipedia = null,
   signedIn = false,
   accountEmail,
   accountLimitCopy,
@@ -475,7 +486,12 @@ export function AppShell({
             <NavOverflowMenu items={NAV.filter(({ key }) => key !== current)} onNavigate={onNavigate} />
 
             <Box sx={{ ml: 1, display: { xs: "none", md: "block" } }}>
-              <PersonaChip name={personaName} variant="onNavy" />
+              <PersonaChip
+                name={personaName}
+                about={personaAbout}
+                wikipedia={personaWikipedia}
+                variant="onNavy"
+              />
             </Box>
 
             {hideAuthAction ? null : signedIn ? (

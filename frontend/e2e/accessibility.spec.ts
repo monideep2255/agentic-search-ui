@@ -167,7 +167,19 @@ test.describe("accessibility", () => {
   for (const screen of ["Integrations", "About"] as const) {
     test(`the ${screen.toLowerCase()} screen is clean`, async ({ page }) => {
       await enterApp(page);
-      await page.getByRole("navigation", { name: /main/i }).getByRole("button", { name: screen }).click();
+      // `exact: true` (2026-09-13): the persona chip's info button carries
+      // an accessible name of "About {persona name}", e.g. "About de Duve".
+      // Playwright's default string match for `name` is substring and
+      // case-insensitive, so an unqualified `{ name: "About" }` resolved to
+      // BOTH the nav item and the info button once the persona chip grew
+      // one, a strict-mode violation. The nav item's own accessible name is
+      // exactly "About", never a prefix of something longer, so pinning the
+      // match to exact is the correct fix here rather than renaming the info
+      // button's aria-label.
+      await page
+        .getByRole("navigation", { name: /main/i })
+        .getByRole("button", { name: screen, exact: true })
+        .click();
       const results = await analyse(page);
       expect(results.violations).toEqual([]);
     });

@@ -22,8 +22,28 @@
  * Renders nothing when `name` is null, which is the window before the first
  * run returns. A placeholder there would visibly change once the first answer
  * lands, which reads as a bug.
+ *
+ * THE INFO AFFORDANCE (2026-09-13 product-owner request): visitors do not
+ * know who "Mendel" or "Franklin" is. A small circled-"i" button sits after
+ * the name and opens a short dialog naming the persona's achievements, with
+ * a link out to Wikipedia. This surface has NO design card of its own: the
+ * design system's `persona.html` shows only the chip and the per-step
+ * caption, with no affordance to expand either one. Per
+ * `.claude/rules/design-consistency.md`'s "when a surface has no design, say
+ * so" section, that gap is named here rather than filled silently, and the
+ * dialog is built from the nearest designed neighbour instead: `AccountMenu`'s
+ * popover (outside-click and Escape close it, the same surface tokens, the
+ * same shadow), since a small anchored card reading account information is
+ * the closest precedent this app already ships. Every colour below reads
+ * from `designTokens`; nothing here is a new hex, radius, or shadow.
+ *
+ * The chip itself is UNCHANGED when `about` is null or absent, which is the
+ * graceful-degradation path for an older backend or an existing test mock
+ * that returns `{persona_name}` alone: no info button renders, so the chip
+ * is byte-identical to the pre-2026-09-13 shape.
  */
 
+import { useEffect, useId, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
@@ -38,20 +58,90 @@ function PersonIcon({ size = 12 }: { size?: number }) {
   );
 }
 
+/** A 14px circled "i", the chip's info affordance. Inherits `currentColor`. */
+function InfoIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.3" stroke="currentColor" strokeWidth="1.2" />
+      <path
+        d="M8 7.1v3.9M8 5v.01"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Host-pinned check for the Wikipedia link, per `production-standards`'
+ * source-url rule: a citation-shaped URL that only checks for `https://` can
+ * be spoofed to point anywhere. Exported so it carries its own test rather
+ * than being asserted only through the rendered component.
+ *
+ * Returns false rather than throwing on a malformed URL, since the caller's
+ * job here is "render the link or don't", never to surface a parse error.
+ */
+export function isPinnedWikipediaUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname === "en.wikipedia.org";
+  } catch {
+    return false;
+  }
+}
+
 export interface PersonaChipProps {
   /** The server-assigned persona, or null before the first run returns. */
   name: string | null;
   /** `onNavy` for the app bar; `onLight` for a plain surface. */
   variant?: "onLight" | "onNavy";
+  /**
+   * One or two sentences on the persona's achievements, at most 160
+   * characters. Null omits the info button entirely, which is the
+   * graceful-degradation path for an older backend.
+   */
+  about?: string | null;
+  /** The persona's Wikipedia page. Rendered as a link only when it passes `isPinnedWikipediaUrl`. */
+  wikipedia?: string | null;
 }
 
-export function PersonaChip({ name, variant = "onNavy" }: PersonaChipProps) {
+export function PersonaChip({ name, variant = "onNavy", about = null, wikipedia = null }: PersonaChipProps) {
   const onNavy = variant === "onNavy";
+  const [open, setOpen] = useState(false);
+  const dialogId = useId();
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  // Outside click and Escape close the dialog, the same mechanics
+  // `AccountMenu`'s popover already uses, so the two anchored cards in this
+  // app bar behave identically rather than each inventing their own rules.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   if (name === null) return null;
+
+  const infoIconColor = onNavy ? "rgba(255,255,255,.7)" : designTokens.inkFaint;
+  const showLink = wikipedia !== null && isPinnedWikipediaUrl(wikipedia);
+
   return (
     <Box
+      ref={wrapRef}
       data-testid="persona-chip"
       sx={{
+        position: "relative",
         display: "inline-flex",
         alignItems: "center",
         gap: 1,
@@ -95,6 +185,95 @@ export function PersonaChip({ name, variant = "onNavy" }: PersonaChipProps) {
           {name}
         </Box>
       </Typography>
+
+      {about !== null ? (
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={`About ${name}`}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls={open ? dialogId : undefined}
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: "none",
+            width: 18,
+            height: 18,
+            p: 0,
+            border: 0,
+            background: "none",
+            cursor: "pointer",
+            color: infoIconColor,
+            borderRadius: "50%",
+            "&:hover": {
+              color: onNavy ? "#FFFFFF" : designTokens.ink,
+            },
+          }}
+        >
+          <InfoIcon />
+        </Box>
+      ) : null}
+
+      {open && about !== null ? (
+        <Box
+          id={dialogId}
+          role="dialog"
+          aria-labelledby={`${dialogId}-heading`}
+          sx={{
+            position: "absolute",
+            top: "calc(100% + 9px)",
+            right: 0,
+            width: 280,
+            maxWidth: "calc(100vw - 32px)",
+            "@media (max-width: 720px)": {
+              width: "calc(100vw - 32px)",
+            },
+            bgcolor: designTokens.surface,
+            border: `1px solid ${designTokens.line}`,
+            borderRadius: 1,
+            boxShadow: "0 14px 34px rgba(0,0,0,.2)",
+            zIndex: 60,
+            p: "12px 14px",
+            color: designTokens.ink,
+            textAlign: "left",
+          }}
+        >
+          <Typography
+            id={`${dialogId}-heading`}
+            component="p"
+            sx={{ fontSize: 13.5, fontWeight: 700, color: designTokens.ink, m: 0, mb: "4px" }}
+          >
+            {name}
+          </Typography>
+          <Typography
+            component="p"
+            sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, lineHeight: 1.45 }}
+          >
+            {about}
+          </Typography>
+          {showLink ? (
+            <Typography
+              component="a"
+              href={wikipedia as string}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                display: "inline-block",
+                mt: "8px",
+                fontSize: 12.5,
+                color: designTokens.link,
+                textDecoration: "none",
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              Learn more on Wikipedia
+            </Typography>
+          ) : null}
+        </Box>
+      ) : null}
     </Box>
   );
 }

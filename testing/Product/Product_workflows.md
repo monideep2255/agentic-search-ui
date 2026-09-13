@@ -214,13 +214,15 @@ Expected:
 
 ## 14. The scientist name at the top
 
-Testing: the "Working as" name is decoration only.
+Testing: the "Working as" name is decoration only, and a reader can learn who the scientist was.
 
-Steps: look at "Working as …" at the top right → run test 1's query in two separate private windows
+Steps: look at "Working as …" at the top right → click the small "i" next to the name → click "Learn more on Wikipedia" → close the card with Escape or by clicking elsewhere → run test 1's query in two separate private windows
 
 Expected:
 
 - A scientist's name, which may differ between visits.
+- The "i" opens a small card with one or two lines on what the scientist did, and a "Learn more on Wikipedia" link that opens their Wikipedia page in a new tab.
+- The card closes with Escape or a click elsewhere.
 - The answer is the same whichever name is shown.
 
 ## 15. The disclaimer

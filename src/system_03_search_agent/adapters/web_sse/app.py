@@ -50,7 +50,7 @@ from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.core.persona import persona_for_session
+from system_03_search_agent.core.persona import persona_record_for_session
 from system_03_search_agent.core.run_registry import (
     CONCURRENT_RUN_CAP_RETRY_AFTER_S,
     ConcurrentRunCapExceededError,
@@ -488,6 +488,13 @@ _CONCURRENT_RUN_CAP_MESSAGES_BY_BOUND: dict[str, str] = {
 class CreateRunResponse(BaseModel):
     run_id: str
     persona_name: str
+    # Additive per Section 2.6 (product-owner request 2026-09-13): the one
+    # or two sentence "about" line and the host-pinned Wikipedia address
+    # behind the persona chip's info card. Read from the same curated
+    # record the name comes from, so they can never describe a different
+    # scientist than the one named.
+    persona_about: str
+    persona_wikipedia: str
 
 
 # T-4.10-04 (design decision 6's wire shape): {kind, used, total, counted}.
@@ -554,6 +561,9 @@ class PersonaResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     persona_name: str
+    # Same two additive fields as `CreateRunResponse`, same source record.
+    persona_about: str
+    persona_wikipedia: str
 
 
 # T-4.5-10, Section 14.2. Why this endpoint exists rather than the client
@@ -619,8 +629,11 @@ def get_v1_persona(
             user_id = resolve_caller_from_bearer_token(authorization, session).user_id
         except InvalidCallerError:
             user_id = None
+    record = persona_record_for_session(session_id=session_id, user_id=user_id)
     return PersonaResponse(
-        persona_name=persona_for_session(session_id=session_id, user_id=user_id)
+        persona_name=record.name,
+        persona_about=record.about,
+        persona_wikipedia=record.wikipedia,
     )
 
 
@@ -1395,11 +1408,14 @@ async def post_v1_query(
     # session otherwise, so an anonymous session holds one for that session
     # and draws a new one next time. Delivered HERE, once, on the response
     # body, and never repeated on a streamed event.
+    record = persona_record_for_session(
+        session_id=request.session_id, user_id=caller.user_id
+    )
     return CreateRunResponse(
         run_id=run_id,
-        persona_name=persona_for_session(
-            session_id=request.session_id, user_id=caller.user_id
-        ),
+        persona_name=record.name,
+        persona_about=record.about,
+        persona_wikipedia=record.wikipedia,
     )
 
 

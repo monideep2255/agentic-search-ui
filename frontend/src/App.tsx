@@ -468,7 +468,18 @@ export function App() {
   // Null until the first run returns. `PersonaChip` renders nothing rather
   // than a placeholder in that window, because a name that changes once the
   // first answer lands reads as a bug to the user.
-  const [persona, setPersona] = useState<string | null>(null);
+  //
+  // `about` and `wikipedia` (2026-09-13 product-owner request: visitors do
+  // not know who these scientists are) ride along as the same object so the
+  // chip's info affordance can never show one persona's name next to
+  // another's biography. Both are null whenever the backend has not sent
+  // them yet, which is the same graceful degradation as the name itself:
+  // the chip's info button simply does not render, never a fabricated bio.
+  const [persona, setPersona] = useState<{
+    name: string;
+    about: string | null;
+    wikipedia: string | null;
+  } | null>(null);
 
   // Fetch the persona before the first question, so the chip build phase 4.8
   // put in the shell has a real name rather than a locally invented one.
@@ -494,7 +505,13 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     fetchPersona(sessionId, { signal: controller.signal, token })
-      .then((result) => setPersona(result.persona_name))
+      .then((result) =>
+        setPersona({
+          name: result.persona_name,
+          about: result.persona_about ?? null,
+          wikipedia: result.persona_wikipedia ?? null,
+        }),
+      )
       .catch(() => undefined);
     return () => controller.abort();
   }, [sessionId, token]);
@@ -1117,7 +1134,11 @@ export function App() {
         // T-4.5-10: adopt the server's persona. Set every run rather than
         // only the first, so a sign-in that changes the identity behind the
         // session is reflected without a reload.
-        setPersona(response.persona_name);
+        setPersona({
+          name: response.persona_name,
+          about: response.persona_about ?? null,
+          wikipedia: response.persona_wikipedia ?? null,
+        });
         // T-4.13-03: give this rail item the trace id its `interactions`
         // row will carry, so `mergeServerHistory` can recognise the SAME
         // run when the server later echoes it back, rather than matching
@@ -1239,7 +1260,7 @@ export function App() {
             reachedSteps={view.reachedSteps}
             toolCalls={view.toolCalls}
             steps={view.steps}
-            personaName={persona}
+            personaName={persona?.name ?? null}
             stopEnabled={view.stopEnabled && !stopped}
             refusal={view.refusal}
             capMessage={view.capMessage}
@@ -1429,7 +1450,9 @@ export function App() {
           setScreen(next);
           if (next === "search") setSearchView({ name: "home" });
         }}
-        personaName={persona}
+        personaName={persona?.name ?? null}
+        personaAbout={persona?.about ?? null}
+        personaWikipedia={persona?.wikipedia ?? null}
         signedIn={signedIn}
         hideAuthAction={searchView.name === "signin" && screen === "search"}
         // T-4.9-10: the account menu names the account, so the bar needs the
