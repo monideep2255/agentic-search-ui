@@ -13,8 +13,8 @@
  * Source of truth: `docs/build/design/design-system/screens/home.html`.
  */
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import { Box, Button, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
@@ -79,6 +79,23 @@ function ArrowIcon() {
   );
 }
 
+/**
+ * Product-owner request, 2026-09-12: the search box should hold at least a
+ * tweet's worth of text, 240 characters, without scrolling. At the current
+ * 15.5px size that is about 3 visible rows; it then grows with the question
+ * up to about 6 rows before it scrolls, so a long question never crowds out
+ * the rest of the hero.
+ */
+const QUESTION_FONT_SIZE = 15.5;
+const QUESTION_LINE_HEIGHT = 1.5;
+const QUESTION_MIN_ROWS = 3;
+const QUESTION_MAX_ROWS = 6;
+const QUESTION_LINE_HEIGHT_PX = QUESTION_FONT_SIZE * QUESTION_LINE_HEIGHT;
+const QUESTION_MIN_HEIGHT = QUESTION_LINE_HEIGHT_PX * QUESTION_MIN_ROWS;
+const QUESTION_MAX_HEIGHT = QUESTION_LINE_HEIGHT_PX * QUESTION_MAX_ROWS;
+/** The server truncates `text` at 2000 characters; the field matches it. */
+const QUESTION_MAX_LENGTH = 2000;
+
 function SearchIcon() {
   return (
     <svg
@@ -105,6 +122,7 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const [question, setQuestion] = useState("");
   const [localDepth, setLocalDepth] = useState<AudienceDepth>("researcher");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Controlled when the parent supplies a value, uncontrolled otherwise. One
   // `depth` and one `setDepth` below, so no call site has to know which mode
@@ -115,10 +133,36 @@ export function HomeScreen({
     else setLocalDepth(next);
   };
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
+  // Shared by the form's onSubmit and the Enter-to-send key handler below, so
+  // there is exactly one place that decides an empty or whitespace-only
+  // question never submits.
+  const trySubmit = () => {
     const trimmed = question.trim();
     if (trimmed) onSubmit?.(trimmed, depth);
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    trySubmit();
+  };
+
+  // Enter sends the question, matching every chat-style composer; Shift+Enter
+  // inserts a newline, which is the one case that must NOT submit.
+  const handleQuestionKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      trySubmit();
+    }
+  };
+
+  // Auto-grow: reset to the CSS min-height, then read the content's natural
+  // height and grow to it. The `maxHeight` in sx below still clamps this, so
+  // growth past six rows turns into an internal scrollbar rather than an
+  // ever-taller box.
+  const resizeQuestionField = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
   };
 
   return (
@@ -173,9 +217,14 @@ export function HomeScreen({
           onSubmit={submit}
           sx={{
             display: "flex",
-            alignItems: "center",
+            // Top-aligned, not centred: the icon sits at the top-left of the
+            // box (`SearchIcon` below) and the Search button sets its own
+            // `alignSelf: "flex-end"` so it stays anchored to the bottom-right
+            // corner rather than floating mid-height once the box grows past
+            // one line.
+            alignItems: "flex-start",
             gap: 1.25,
-            maxWidth: 620,
+            maxWidth: 720,
             mx: "auto",
             mb: 2.25,
             bgcolor: designTokens.surface,
@@ -190,22 +239,33 @@ export function HomeScreen({
             "&:focus-within": { borderColor: designTokens.link },
           }}
         >
-          <SearchIcon />
+          <Box sx={{ pt: 0.5 }}>
+            <SearchIcon />
+          </Box>
           <Box
-            component="input"
-            type="text"
+            component="textarea"
+            ref={textareaRef}
             aria-label="Your question"
             placeholder="Which diseases are associated with BRCA1?"
             value={question}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-              setQuestion(event.target.value)
-            }
+            maxLength={QUESTION_MAX_LENGTH}
+            rows={QUESTION_MIN_ROWS}
+            onKeyDown={handleQuestionKeyDown}
+            onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {
+              setQuestion(event.target.value);
+              resizeQuestionField(event.target);
+            }}
             sx={{
               flex: 1,
               border: 0,
               outline: 0,
+              resize: "none",
               font: "inherit",
-              fontSize: 15.5,
+              fontSize: QUESTION_FONT_SIZE,
+              lineHeight: QUESTION_LINE_HEIGHT,
+              minHeight: QUESTION_MIN_HEIGHT,
+              maxHeight: QUESTION_MAX_HEIGHT,
+              overflowY: "auto",
               color: designTokens.ink,
               bgcolor: "transparent",
               py: 0.75,
@@ -233,7 +293,7 @@ export function HomeScreen({
             type="submit"
             variant="contained"
             aria-label="Search the knowledge graph"
-            sx={{ px: 2.25, py: 1.1, fontSize: 14, gap: 0.75 }}
+            sx={{ px: 2.25, py: 1.1, fontSize: 14, gap: 0.75, alignSelf: "flex-end", flex: "none" }}
           >
             Search
             <ArrowIcon />

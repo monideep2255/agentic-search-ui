@@ -206,6 +206,30 @@ Built: ✅ · Live: · Approved:
 
 Pushed as commit `cbb04cc`, live on develop on 2026-09-12 and checked by screenshot at 1280px and 390px.
 
+### 2.12 A bigger search box on the home page (retest feedback)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the home page search box is big enough to write a full question.
+- What you noted: "on the home page, can we increase the size of the search box? It should be at least big as a tweet box 240 characters? or the appropriate size"
+- What's expected: a multi-line box that shows about 240 characters without scrolling and grows as you type. Enter searches, and Shift+Enter starts a new line.
+
+### 2.13 NCBI design system: the changes possible today (retest feedback)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the app follows the NCBI design system as far as it can without NCBI's internal packages.
+- What you noted: "is there a design system that we can use? at least minimum the color scheme?", then "Can we implement the NCBI design system changes that are possible?"
+- What's expected: nothing changes on screen, because our colours are already the USWDS values NCBI is built on. Done on 2026-09-12: the colour card now lists every colour the code uses, including the three logo colours, and says the footer is blue and the home page is light. Four text size and spacing values differ between the design card and the code (h1 size and letter-spacing, h2 size, body line height); both sides are working values, so they wait for your decision. The design system cards are corrected to match the theme code (Stage 0 in `docs/build/design/NCBI_design_system_migration_assessment.md`). Installing the public USWDS package (Stage 1) adds a dependency, so it waits for your yes.
+
+### 2.14 A favicon (retest feedback)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the browser tab shows the app's own icon and name.
+- What you noted: "have a background agent add a favicon please"
+- What's expected: the helix logo on the header blue in the browser tab, with the tab title "NCBI Agentic Search". Every colour in the icon already exists in the theme.
+
 ## Set 3: refusals and Stop
 
 Batch: screens and pages.

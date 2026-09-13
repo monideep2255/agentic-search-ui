@@ -1,6 +1,6 @@
 # NCBI design system migration assessment
 
-An assessment, not a build plan. It answers four questions: what design system this app has today, what the NCBI design system actually is, which parts of one can become the other, and whether any of that work can be done on a personal computer away from the NCBI network. Every claim below was verified by reading a file or making a request on 2026-09-08, and the evidence is recorded in the appendix. Nothing here has been implemented.
+An assessment, not a build plan. It answers four questions: what design system this app has today, what the NCBI design system actually is, which parts of one can become the other, and whether any of that work can be done on a personal computer away from the NCBI network. Every claim below was verified by reading a file or making a request on 2026-09-08, and the evidence is recorded in the appendix. Stage 0 of the staged plan, the drift fixes that need no new dependency and no change to `frontend/src/theme.ts`, was implemented on 2026-09-12; see "Stage 0 status" below. Every other stage remains unimplemented.
 
 ## Table of contents
 
@@ -89,6 +89,29 @@ Five places where `theme.ts` and the foundations cards disagree. These are defec
 | navyDeep `#0B2138` | absent from every foundations file | present in designTokens |
 
 A sixth: `12.5px` is used twice in `theme.ts`, for caption and tooltip, and appears nowhere in `type.html`.
+
+### Stage 0 status, resolved and open, 2026-09-12
+
+Stage 0 from the staged plan below was implemented on 2026-09-12, editing only the foundations cards under `docs/build/design/design-system/foundations/`. `frontend/src/theme.ts` was not touched, by scope: any change to it needs the product owner's explicit approval under the repository's `design-consistency` rule, and a separate agent was editing the frontend at the same time.
+
+Resolved by adding a card entry, since the code's value was correct and only the documentation was missing:
+
+- `navyDeep` (`#0B2138`): added to `foundations/colors.html` as its own swatch. It carries no shipped use today, so the card says so rather than inventing one.
+- `12.5px` caption size: added to `foundations/type.html` as its own row, matching `theme.ts`'s caption and tooltip size exactly.
+- `canvasDeep` (`#E4E6E8`), `surfaceSunk` (`#F7F8F9`), `lineStrong` (`#A9AEB1`), `inkFaint` (`#666B70`): all four already lived in the card's own CSS token block, used to style the card itself, but had no swatch and no use note. Added swatches for all four, with use notes taken from `frontend/src` (`surfaceSunk` and `lineStrong` are read in `FollowUp.tsx`, `HomeScreen.tsx`, `AnswerScreen.tsx`, `RunScreen.tsx`, `AuthGate.tsx`, `GuestAllowance.tsx` and more; `inkFaint` is read in the same files, with its own accessibility note in `FollowUp.tsx` about which surface keeps it AA-safe).
+- The three logo rung tokens, `logoRungOnBlue1` (`#CFE1F5`), `logoRungOnBlue2` (`#9FD3A8`), `logoRungOnBlue3` (`#C3B2E6`), added to `theme.ts` on 2026-09-12 for the logo mark on the blue app bar and footer, had no card entry at all. Added as three swatches.
+- Two product-owner decisions from 2026-09-12 that the colour card stated the opposite of: the footer is now the same blue as the app bar (`AppShell.tsx`, "Set 2, R9 and R11"), not navy, and the home page sits on the canvas ground (`HomeScreen.tsx`), not a navy hero. `foundations/colors.html`'s card note and the Navy and Canvas use notes were updated to match what ships.
+
+Still open, reported rather than fixed, because both sides are a genuine value and only the product owner can pick one:
+
+| Property | Foundations card | theme.ts | File and line |
+|---|---|---|---|
+| h1 letter-spacing | -2.8% | -0.034em (-3.4%) | `docs/build/design/design-system/foundations/type.html:39`, `frontend/src/theme.ts:160` |
+| h1 size | 38px fixed | `clamp(32px, 4.8vw, 52px)` | `type.html:39`, `theme.ts:160` |
+| h2 size | 26px fixed | `clamp(24px, 3.1vw, 33px)` | `type.html:40`, `theme.ts:161` |
+| body1 line-height | 1.6 | 1.65 | `type.html:41`, `theme.ts:164` |
+
+Neither card nor code was edited for these four. Each pair is a real, working value on its own side, so changing either one is a decision, not a typo fix.
 
 ### Coverage, and one asset worth protecting
 
@@ -208,7 +231,7 @@ Four stages, ordered so that everything doable from home comes first:
 
 | Stage | Where | What | Blocked by network |
 |---|---|---|---|
-| 0 | Home | Fix the six drifts between `theme.ts` and the foundations cards | No |
+| 0 | Home | Fix the six drifts between `theme.ts` and the foundations cards | No, and partially done: see "Stage 0 status" above. Four of six items are open value mismatches awaiting a product-owner decision, not implementation work |
 | 1 | Home | Install public `@uswds/uswds`, source tokens from it instead of hand-copied hex values | No |
 | 2 | Home | Rebuild the seven missing generic primitives on USWDS markup and styles | No |
 | 3 | NCBI network | Swap chrome to `@ncbi-design-system/react`, starting with Header and Footer | Yes |
@@ -288,4 +311,6 @@ Every check was run on 2026-09-08 from an NCBI network machine unless noted.
 | Component inventory | Read all 19 shipped component files | 15 import MUI, 6 MUI components genuinely rendered, 17 primitives needed |
 | Accessibility gate | Read `frontend/e2e/design-system-audit.spec.ts` | Axe against every card, WCAG 2.1 AA, currently zero violations |
 
-Last updated: 2026-09-08
+The evidence above was gathered on 2026-09-08. The Stage 0 status section above records a later change, on 2026-09-12.
+
+Last updated: 2026-09-12
