@@ -315,20 +315,23 @@ export function AppShell({
             having to press it to find out.
 
             `display: { xs: "none", md: "flex" }` added 2026-09-05, product-
-            owner decision. This button had no breakpoint guard at all, so a
-            signed-in visitor on a phone saw a visible, enabled control that
-            did nothing: the rail it operates, `HistoryRail` and
-            `CollapsedRail` in `components/answer/FollowUp.tsx`, both carry
-            `display: { xs: "none", md: "flex" }` and neither renders below
-            `md`. This is NOT a design transcription. The design has the same
-            defect: `prototype/app.html:65` hides `#rail` and `#railStub` at
-            860px, but `.ham` (this button, `#railBtn`) carries no media
-            query at all, and the prototype's own script only ever toggles it
-            on `avail`, never on viewport. Verified by reading the prototype's
-            CSS and script rather than assumed. Matching `md` here rather
-            than the design's own 860px so the toggle's visibility tracks
-            exactly what it operates, not a second, independently chosen
-            number.
+            owner decision, and REMOVED here, fix set 4 (R46, decision U9,
+            2026-09-13). It hid this button below `md` because the rail it
+            operates, `HistoryRail` and `CollapsedRail` in
+            `components/answer/FollowUp.tsx`, both carried
+            `display: { xs: "none", md: "flex" }` and neither rendered below
+            `md`, so a signed-in visitor on a phone would have seen a
+            visible, enabled control that did nothing.
+
+            That is no longer true. `HistoryRail` now renders below `md` as a
+            sliding panel (a MUI `Drawer`) instead of a column, and
+            `CollapsedRail` returns null there since a 40px strip beside phone
+            content was never the design and this toggle is the way back in.
+            So this button now has something to operate at every width, and
+            hiding it would make history unreachable on a phone, which is the
+            defect U9 exists to close. Visible at every width; `md: "flex"`
+            stays as the value, it no longer differs from what renders below
+            it.
           */}
           {showRailToggle ? (
             <IconButton
@@ -336,7 +339,7 @@ export function AppShell({
               aria-label="Show or hide your searches"
               aria-expanded={railOpen}
               sx={{
-                display: { xs: "none", md: "flex" },
+                display: "flex",
                 color: "#FFFFFF",
                 p: 0.75,
                 borderRadius: 1,
@@ -387,6 +390,22 @@ export function AppShell({
                * requires zero overflow at (390px and up), the brand still
                * renders in full, since flexbox only shrinks a `flex-shrink:
                * 1` item when the row is actually short on room.
+               *
+               * RE-MEASURED fix set 4 (R46, decision U9, 2026-09-13), after
+               * making the rail toggle visible at every width rather than
+               * hiding it below `md`. The toggle's own marginal cost, isolated
+               * within one page load by diffing the toolbar's `scrollWidth`
+               * with the toggle's `display` flipped to `none` and back, is 32
+               * pixels. That is not the dominant term: at 320px the `<nav>`
+               * element alone (this file's right-hand `flexShrink: 0` box)
+               * measured 567px wide with the toggle absent, a pre-existing
+               * bleed this change does not cause and fixing it is out of this
+               * task's scope. So the bar does not fit at 320px either before
+               * or after this change, and adding the toggle makes an already
+               * unfitting bar 32px wider rather than making a fitting one
+               * overflow. Recorded rather than silently absorbed, per
+               * `.claude/rules/design-consistency.md`: naming a gap is not
+               * the same as filling it.
                */
               whiteSpace: "nowrap",
               "&:hover": { bgcolor: "transparent" },

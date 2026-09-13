@@ -65,7 +65,7 @@ Expected:
 
 Testing: one Log in button creates an account for a new email, and logging out goes to the home page.
 
-Steps: click "Log in" at the top right → enter a new email and a password → Log in → run test 1's query → click "Integrations" in the top bar → click your email at the top right → Log out → click "Log in" → enter the same email and password → Log in (or press Enter)
+Steps: click "Log in" at the top right → enter a new email and a password → Log in → reload the page → run test 1's query → click "Integrations" in the top bar → click your email at the top right → Log out → click "Log in" → enter the same email and password → Log in (or press Enter)
 
 Expected:
 
@@ -75,6 +75,7 @@ Expected:
 - Search and follow-ups work the same as tests 1 and 2.
 - Log out, even from the Integrations page, lands on the search home page, with the previous conversation gone.
 - Logging back in with the same email and password shows your email at the top right again.
+- After a reload you stay signed in: your initials and email are still at the top right, and your searches are still listed on the left.
 
 ## 4. Guest limit of 5 searches (removed)
 
@@ -104,6 +105,7 @@ Expected:
 - Clicking one runs that question again. It is a fresh run, not a saved copy.
 - The panel hides and comes back.
 - Guests see no history panel.
+- Reload the page: you stay signed in and both searches are still listed, without logging in again.
 
 ## 7. Answer depth
 
@@ -169,13 +171,14 @@ Expected:
 
 Testing: navigation works, including on a phone.
 
-Steps: click Integrations → About → Docs → press the browser back button → on Integrations, click a copy button → make the window phone-narrow, or open the site on your phone → open "More pages"
+Steps: click Integrations → About → Docs → press the browser back button → on Integrations, click a copy button → make the window phone-narrow, or open the site on your phone → open "More pages" → log in → tap the searches button at the top right
 
 Expected:
 
 - Each page opens, and back returns to the previous page.
 - The copy button copies the snippet.
 - At phone width nothing scrolls sideways, and the other pages are reachable from "More pages".
+- At phone width, while logged in, the searches button at the top right opens your searches as a panel sliding in from the left. Tapping outside it, pressing Escape, or its close button closes it.
 
 ## 12. Trust signals and sources
 
@@ -304,6 +307,4 @@ Found by the browser run on 2026-09-12. Full report with screenshots: `../Develo
 - After sign-up, your guest searches do appear in your history, but no message says so.
 - Answers sometimes take more than 25 seconds.
 - An answer's first sentence can come out garbled, for example "BRCA1 (gene symbol BRCA1 [1]. These are…". Seen 2026-09-12.
-- Reloading the page logs you out.
 - A returning guest cannot see how many searches are left until they run one.
-- At phone width, the button that shows or hides your searches does nothing.

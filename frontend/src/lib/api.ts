@@ -553,6 +553,25 @@ export interface LoginResponse {
   token_type: string;
 }
 
+/**
+ * `POST /auth/refresh`'s body. Mirrors `auth/schemas.py`'s `RefreshRequest`
+ * field for field, including its `extra="forbid"`: an unknown field is a
+ * 422, so nothing else may be added here without the schema moving first.
+ */
+export interface RefreshRequestBody {
+  refresh_token: string;
+}
+
+/** `POST /auth/logout`'s body. Mirrors `auth/schemas.py`'s `LogoutRequest`. */
+export interface LogoutRequestBody {
+  refresh_token: string;
+}
+
+/** `POST /auth/logout`'s response. Mirrors `auth/schemas.py`'s `LogoutResponse`. */
+export interface LogoutResponse {
+  status: string;
+}
+
 // ---------------------------------------------------------------------------
 // Feedback (T-4.6-09). Mirrors `src/system_03_search_agent/feedback/
 // contracts.py`'s `FeedbackPayload` field for field, and
@@ -681,4 +700,70 @@ export async function login(
   });
   await throwIfNotOk(response, "login");
   return (await response.json()) as LoginResponse;
+}
+
+/**
+ * `POST /auth/refresh`: exchanges a refresh token for a fresh access token
+ * and a fresh refresh token (fix set 4, requirement R46, decision U8).
+ *
+ * THIS CALL IS DESTRUCTIVE TO ITS OWN ARGUMENT, which is the single most
+ * important thing a caller has to know. `router.py`'s `refresh` revokes the
+ * presented token in the same transaction that mints its replacement, so
+ * the token passed in is dead the moment this resolves and the returned
+ * `refresh_token` is the only live one. Presenting a revoked token again
+ * revokes every session in that family and answers 401
+ * (`_revoke_family_on_reuse`, finding F-1.1-07), so a caller must never
+ * send the same value twice: read it, clear it, send it, and store what
+ * comes back. `lib/authSession.ts` holds that value and `App.tsx`'s restore
+ * and keep-alive effects are the two callers.
+ *
+ * Carries no `Authorization` header, the same as `login` and `signup`: the
+ * refresh token in the body IS the credential, and the access token it
+ * replaces has usually already expired.
+ *
+ * Throws the ordinary `ApiError` on a non-2xx status. 401 is the expected,
+ * ordinary outcome for a token that has expired, been revoked, or been
+ * replayed, and a caller should treat it as "this visitor is signed out",
+ * never as an error worth showing.
+ */
+export async function refreshSession(
+  refreshToken: string,
+  options: ApiCallOptions = {},
+): Promise<LoginResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const body: RefreshRequestBody = { refresh_token: refreshToken };
+  const response = await fetch(`${baseUrl}/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "refreshSession");
+  return (await response.json()) as LoginResponse;
+}
+
+/**
+ * `POST /auth/logout`: revokes one refresh token server-side.
+ *
+ * Called on log out so the credential this browser was holding cannot be
+ * used again by anyone who later reads the stored value. Best-effort at the
+ * call site: `App.tsx` clears its own state and storage whether or not this
+ * resolves, because a network failure must never leave a person apparently
+ * still signed in after they pressed Log out. A 401 here means the token
+ * was already dead, which is the desired end state anyway.
+ */
+export async function logoutSession(
+  refreshToken: string,
+  options: ApiCallOptions = {},
+): Promise<LogoutResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const body: LogoutRequestBody = { refresh_token: refreshToken };
+  const response = await fetch(`${baseUrl}/auth/logout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "logoutSession");
+  return (await response.json()) as LogoutResponse;
 }

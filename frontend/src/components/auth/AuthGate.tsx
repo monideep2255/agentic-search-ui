@@ -6,7 +6,8 @@ import { designTokens } from "../../theme";
 
 interface AuthGateProps {
   /**
-   * Called once with the access token and the account's email address.
+   * Called once with the access token, the account's email address, and the
+   * refresh token.
    *
    * The email is passed alongside the token because the rail's footer names the
    * signed-in account (`prototype/app.html`'s `.rfoot`), and this is the one
@@ -14,8 +15,15 @@ interface AuthGateProps {
    * the server has just authenticated. Sourcing it here rather than from a
    * follow-up `GET /auth/me` avoids a second round trip for a value already in
    * hand, and keeps it real data rather than a stub.
+   *
+   * The refresh token joined this signature for fix set 4, requirement R46
+   * (decision U8): `POST /auth/login` has returned one since build phase 1.1
+   * and this component used to read `access_token` and drop the rest of the
+   * response, which is why a reload signed the account out. The parent
+   * persists it (`lib/authSession.ts`); this component stores nothing itself,
+   * so there is exactly one owner of that value.
    */
-  onAuthenticated: (token: string, email: string) => void;
+  onAuthenticated: (token: string, email: string, refreshToken: string) => void;
   /**
    * A guest session this tab is holding, if any (T-4.10-06, design
    * decision 4). Passed through to `signup`/`login` as the optional
@@ -75,7 +83,7 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
         if (!(caught instanceof ApiError && caught.status === 409)) throw caught;
       }
       const result = await login(created ? plain : withGuest);
-      onAuthenticated(result.access_token, email);
+      onAuthenticated(result.access_token, email, result.refresh_token);
       // No reset of `pending` on the success path: the parent stops
       // rendering this component once it holds a token (see `App.tsx`).
     } catch (caught) {

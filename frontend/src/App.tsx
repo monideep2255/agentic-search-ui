@@ -55,7 +55,9 @@ import {
   fetchMe,
   fetchPersona,
   getAllowance,
+  logoutSession,
   mintGuest,
+  refreshSession,
   stopRun,
 } from "./lib/api";
 import type { AllowanceResponse, HistoryItem } from "./lib/api";
@@ -66,6 +68,11 @@ import {
   loadPersistedGuestToken,
   persistGuestToken,
 } from "./lib/guestSession";
+import {
+  clearPersistedRefreshToken,
+  loadPersistedRefreshToken,
+  persistRefreshToken,
+} from "./lib/authSession";
 import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { AuthGate } from "./components/auth/AuthGate";
@@ -257,6 +264,28 @@ function mergeServerHistory(current: HistoryEntry[], serverItems: HistoryItem[])
   return [...current, ...restored];
 }
 
+/**
+ * Whether the stored-searches rail starts open.
+ *
+ * Open by default at `md` and above, matching the prototype's
+ * `railOpen:true`. Below `md` the rail is a temporary drawer (fix set 4,
+ * decision U9, `HistoryRail` in `components/answer/FollowUp.tsx`), and a
+ * drawer that opens itself the moment sign-in lands is a modal sitting on
+ * top of the search box with everything behind it `aria-hidden`, measured
+ * by the drawer's own browser spec. So on a phone it starts closed and the
+ * app bar toggle opens it. 900px is MUI's `md` breakpoint, the same value
+ * `useMediaQuery(theme.breakpoints.down("md"))` reads in the rail.
+ * Guarded because jsdom has no `matchMedia`; there the desktop default
+ * holds, which is what every existing rail test assumes.
+ */
+function railOpenByDefault(): boolean {
+  try {
+    return typeof window.matchMedia !== "function" || window.matchMedia("(min-width:900px)").matches;
+  } catch {
+    return true;
+  }
+}
+
 export function App() {
   // T-4.16-05. Was `useState<ScreenName>("search")`, which is why every
   // page served at `/` and the URL never changed. `useScreenRoute` is the
@@ -319,7 +348,38 @@ export function App() {
    * 4.8's judge round filed. `null` before any fetch has resolved.
    */
   const [allowance, setAllowance] = useState<AllowanceResponse | null>(null);
+  /**
+   * The account's 15-minute access token, in memory only, never persisted.
+   *
+   * Starting `null` on every mount used to mean every reload signed the
+   * account out. It still starts `null`, and the difference fix set 4
+   * (requirement R46, decision U8) makes is that a persisted REFRESH token
+   * can now re-mint it: the restore effect below reads that token on load,
+   * exchanges it, and sets this. So this value is still short-lived and
+   * still never written to storage, while the session it belongs to
+   * survives a reload. See `lib/authSession.ts` for what is persisted, why
+   * `localStorage` adds no new exposure class here, and why an httpOnly
+   * cookie was rejected for now.
+   */
   const [token, setToken] = useState<string | null>(null);
+  /**
+   * Whether the one restore attempt this mount is allowed has already been
+   * started (fix set 4, R46).
+   *
+   * A ref rather than state because nothing renders from it and it must be
+   * readable and writable synchronously, before any await.
+   *
+   * IT EXISTS FOR ONE REASON: a refresh token is single-use. `POST
+   * /auth/refresh` revokes the token it is given in the same transaction
+   * that mints the replacement, and presenting a revoked token revokes the
+   * whole family and answers 401 (F-1.1-07). React StrictMode invokes a
+   * mount effect, cleans it up, and invokes it again, so without this guard
+   * a development load would send the same token twice and the second send
+   * would destroy the session the first one had just restored. The guard
+   * makes "at most one refresh per stored token" a property of the code
+   * rather than a hope about the renderer.
+   */
+  const restoreStarted = useRef(false);
   /** The signed-in account, named in the rail's footer (the prototype's `.rfoot`). */
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
@@ -379,7 +439,7 @@ export function App() {
    * rail unmounting: the app bar's toggle and the collapsed strip both need it,
    * and a collapse the user chose must outlive the next question.
    */
-  const [railOpen, setRailOpen] = useState(true);
+  const [railOpen, setRailOpen] = useState(railOpenByDefault);
 
   /**
    * The conversation id sent with every question.
@@ -564,6 +624,213 @@ export function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Everything a signed-out visitor must not be holding, cleared in one
+   * place.
+   *
+   * Factored out of the account menu's Log out handler for fix set 4
+   * (requirement R46) so the keep-alive effect below can reach the SAME end
+   * state when a session dies on its own. A session that cannot be renewed
+   * is a session that has ended, and the two paths differing would be the
+   * bug: one of them would leave the previous account's questions, answers
+   * and rail on screen.
+   *
+   * Log out still calls `stop()` itself immediately before calling this,
+   * which is deliberate rather than an omission. `stop` comes from
+   * `useAgentRun`, which is initialised further down this file and is
+   * therefore not in scope here; and it is not needed for correctness,
+   * because `useAgentRun` aborts its in-flight stream whenever `runId` or
+   * `token` changes and this function clears both.
+   *
+   * `[]` dependencies: every value it touches is either a `useState` setter
+   * (stable by contract), a ref, or `newSessionId`, which reads nothing
+   * from the render it was created in.
+   */
+  const clearAccountState = useCallback(() => {
+    // F-4.8-A-11, A-12 and A-13. Signing out previously left the previous
+    // account's answer, source cards, trust pills and history rail on
+    // screen, and the NEXT account inherited that history. Worse,
+    // `runId` survived, so `useAgentRun` refired the old run's event
+    // stream with the new account's bearer token, producing a 403 that
+    // nothing surfaced. On a shared workstation that is a colleague's
+    // research queries and results.
+    //
+    // Everything session-scoped is cleared here, in one place, so a new
+    // sign-in starts from nothing. That claim was false for `thread`:
+    // this handler cleared the run and the rail but left the previous
+    // turns rendered by AnswerScreen on screen, so on a shared
+    // workstation the next person to sign in saw the last person's
+    // collapsed questions, claims, sources and trust verdicts.
+    // `setThread([])` below closes it, so the claim is something this
+    // handler actually does rather than something its comment merely
+    // asserted.
+    askSeq.current += 1;
+    setToken(null);
+    setAccountEmail(null);
+    // Fix set 4 (R46): the persisted credential goes with the state it
+    // belongs to. Log out revokes it server-side as well (see the handler);
+    // this line is what stops the NEXT load from restoring a session the
+    // person has just left.
+    clearPersistedRefreshToken();
+    // The guard belongs to the session that just ended, so it is released
+    // with it. This changes nothing today, and the honest reason to keep it
+    // is stated rather than dressed up: the restore effect has `[]`
+    // dependencies, so it runs once per mount and a reload remounts with a
+    // fresh ref anyway. It is here so that if the effect is ever re-keyed to
+    // run again within one mount, a flag left `true` by a previous session
+    // cannot silently refuse the restore.
+    restoreStarted.current = false;
+    setRunId(null);
+    setStopped(false);
+    setThread([]);
+    setHistory([]);
+    setFlagged([]);
+    setDispatchError(null);
+    // T-4.10-08: the allowance belonged to the account that just
+    // signed out; the next caller (signed in or anonymous) gets its
+    // own, fetched fresh, never a stale number inherited across the
+    // sign-out.
+    setAllowance(null);
+    // R-02: a new conversation, not the previous account's.
+    setSessionId(newSessionId());
+    // R-11: the next person at this workstation has not read the
+    // disclaimer, and has not chosen a depth. The modal's own docstring
+    // argues session scope precisely so a notice one person dismissed is
+    // not treated as read by the next.
+    setAccepted(false);
+    setDepth("researcher");
+    // P-03: the next person at this workstation did not collapse the
+    // rail, so they do not inherit a collapsed one.
+    setRailOpen(railOpenByDefault());
+    // Set 1 (R6): Log out lands on the search home page from any screen,
+    // including Integrations, Docs and About.
+    setScreen("search");
+    setSearchView({ name: "home" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Restore the signed-in session on load, fix set 4, requirement R46,
+   * product-owner decision U8 (2026-09-12): "keep people signed in across a
+   * reload, with history where they left it."
+   *
+   * The mechanism, in order: read the persisted refresh token, exchange it
+   * at `POST /auth/refresh` for a fresh access token plus a fresh refresh
+   * token, store the ROTATED one, then read `GET /auth/me` for the email
+   * the app bar and the rail footer name. Setting `token` is also what
+   * makes the history rail refill: the `GET /v1/history` seeding effect
+   * above is keyed on `token`, so it runs the moment this resolves, with no
+   * user action. That effect's own comment used to say it "does not yet
+   * reach a person who reloads while still signed in"; this is the change
+   * that makes it reach them.
+   *
+   * FAILURE IS SILENT, BY DESIGN. A 401 (expired, revoked, or replayed
+   * token), a network failure, and a malformed response all land in the
+   * same place: the stored value is dropped and the visitor is an ordinary
+   * guest looking at the landing screen. There is nothing for them to act
+   * on, and an error banner about a credential they never knew existed
+   * would be noise. This is `production-standards`' graceful-degradation
+   * gate: the page renders, the product works, one convenience is absent.
+   *
+   * THE STORED TOKEN IS READ AND CLEARED BEFORE THE REQUEST IS SENT, not
+   * after it succeeds. The server revokes the presented token as part of
+   * rotating it, so the value stops being usable the instant it is sent;
+   * clearing first means no second code path, and no second React
+   * invocation, can find it and send it again. A replay would revoke the
+   * entire family (F-1.1-07), which would sign the person out of every
+   * device rather than merely failing here.
+   *
+   * NO `AbortController` CLEANUP, and this effect deliberately differs from
+   * its neighbours above on that point. Aborting a rotation is not a
+   * cancellation, it is a loss: the server has already revoked the old
+   * token by the time the response is discarded, so the browser ends up
+   * holding nothing and the session is gone. Under StrictMode, whose
+   * mount-cleanup-mount sequence runs the cleanup while this request is
+   * still in flight, an abort here would sign the account out on every
+   * development load. The `restoreStarted` guard is what bounds this
+   * instead: at most one request, ever, per mount.
+   */
+  useEffect(() => {
+    if (restoreStarted.current) return;
+    restoreStarted.current = true;
+    const stored = loadPersistedRefreshToken();
+    if (stored === null) return;
+    clearPersistedRefreshToken();
+    void (async () => {
+      try {
+        const rotated = await refreshSession(stored);
+        // Truthiness-checked rather than assumed, the same reasoning the
+        // allowance effect above gives: a stubbed or malformed response
+        // degrades to "nothing to restore" instead of writing a broken
+        // value into state.
+        if (!rotated?.access_token || !rotated.refresh_token) return;
+        // Stored BEFORE any state write, so the one live credential is
+        // never lost to whatever happens next in this function.
+        persistRefreshToken(rotated.refresh_token);
+        setToken(rotated.access_token);
+        const me = await fetchMe(rotated.access_token);
+        if (me?.email) setAccountEmail(me.email);
+      } catch {
+        // Silent, per this effect's docstring. The token was already
+        // cleared above, so there is nothing left to clean up.
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Keep the session alive while the tab stays open (fix set 4, R46).
+   *
+   * The access token lives 15 minutes (`auth/tokens.py`), so without this a
+   * person reading one long answer would find their next question rejected
+   * with a 401. Rotating every 12 minutes leaves a three-minute margin for
+   * a slow round trip, and each rotation carries the 30-day idle window
+   * forward, so a tab left open does not quietly expire either. The 90-day
+   * absolute ceiling is carried forward unchanged by the server and is
+   * never renewed by rotation (`router.py`'s `refresh`), so this cannot
+   * extend a session indefinitely.
+   *
+   * Read-and-clear before sending, for the same single-use reason the
+   * restore effect gives. A failure ends the session through
+   * `clearAccountState`, the same end state as pressing Log out, rather
+   * than leaving the app looking signed in with a credential that no longer
+   * works.
+   *
+   * If storage is unreachable there is nothing to read, so this does
+   * nothing and the session simply expires with the access token, exactly
+   * as it did before this fix. That is the degradation `lib/authSession.ts`
+   * describes, not a new failure.
+   */
+  useEffect(() => {
+    if (token === null) return undefined;
+    // Twelve minutes, under the access token's 15-minute lifetime. Declared
+    // inside the effect so it is not a reactive value the dependency list
+    // has to carry.
+    const ROTATE_EVERY_MS = 12 * 60 * 1000;
+    const timer = window.setInterval(() => {
+      const stored = loadPersistedRefreshToken();
+      // Nothing stored means nothing to rotate: a sign-in that happened
+      // while storage was unreachable, most realistically. Leave the
+      // session alone rather than signing a working tab out.
+      if (stored === null) return;
+      clearPersistedRefreshToken();
+      void (async () => {
+        try {
+          const rotated = await refreshSession(stored);
+          if (!rotated?.access_token || !rotated.refresh_token) {
+            clearAccountState();
+            return;
+          }
+          persistRefreshToken(rotated.refresh_token);
+          setToken(rotated.access_token);
+        } catch {
+          clearAccountState();
+        }
+      })();
+    }, ROTATE_EVERY_MS);
+    return () => window.clearInterval(timer);
+  }, [token, clearAccountState]);
 
   const signedIn = token !== null;
   /**
@@ -913,9 +1180,19 @@ export function App() {
         return (
           <AuthGate
             guestToken={guestToken}
-            onAuthenticated={(next: string, email: string) => {
+            onAuthenticated={(next: string, email: string, refresh: string) => {
               setToken(next);
               setAccountEmail(email);
+              // Fix set 4 (R46, decision U8): the refresh token
+              // `POST /auth/login` returned is persisted here, and it is the
+              // only thing that lets the next load restore this session. The
+              // access token stays in memory.
+              persistRefreshToken(refresh);
+              // Same release as `clearAccountState`, for the same reason
+              // stated there: no effect today, and it keeps the flag
+              // meaning "no restore has been attempted for the session this
+              // tab is now holding" rather than something older.
+              restoreStarted.current = false;
               setSearchView({ name: "home" });
               // T-4.10-06: a guest session held at sign-in is migrated and
               // revoked server-side in the same request (the backend's
@@ -1148,53 +1425,35 @@ export function App() {
           setSearchView({ name: "signin" });
         }}
         onSignOut={() => {
-          // F-4.8-A-11, A-12 and A-13. Signing out previously left the previous
-          // account's answer, source cards, trust pills and history rail on
-          // screen, and the NEXT account inherited that history. Worse,
-          // `runId` survived, so `useAgentRun` refired the old run's event
-          // stream with the new account's bearer token, producing a 403 that
-          // nothing surfaced. On a shared workstation that is a colleague's
-          // research queries and results.
+          // Fix set 4 (R46, decision U8): revoke the refresh token this
+          // browser is holding, so a value left in storage by any earlier
+          // write cannot be exchanged for a session after the person has
+          // left. `POST /auth/logout` revokes exactly the token it is given
+          // (`router.py`'s `logout`).
           //
-          // Everything session-scoped is cleared here, in one place, so a new
-          // sign-in starts from nothing. That claim was false for `thread`:
-          // this handler cleared the run and the rail but left the previous
-          // turns rendered by AnswerScreen on screen, so on a shared
-          // workstation the next person to sign in saw the last person's
-          // collapsed questions, claims, sources and trust verdicts.
-          // `setThread([])` below closes it, so the claim is something this
-          // handler actually does rather than something its comment merely
-          // asserted.
-          askSeq.current += 1;
+          // FIRE AND FORGET, deliberately. The local state below is cleared
+          // whether or not the request lands: a person who presses Log out
+          // on a flaky connection must end up signed out on this machine,
+          // never left looking signed in while a revocation retries. A 401
+          // here means the token was already dead, which is the end state
+          // this call was asking for anyway. Read BEFORE `clearAccountState`,
+          // which clears the stored value.
+          const storedRefresh = loadPersistedRefreshToken();
+          if (storedRefresh !== null) {
+            void logoutSession(storedRefresh).catch(() => undefined);
+          }
+          // `stop()` stays here rather than moving into `clearAccountState`:
+          // it comes from `useAgentRun`, which is initialised after that
+          // function is defined. Aborting immediately rather than at the next
+          // render is the only thing this adds, since clearing `runId` and
+          // `token` aborts the stream regardless.
           stop();
-          setToken(null);
-          setAccountEmail(null);
-          setRunId(null);
-          setStopped(false);
-          setThread([]);
-          setHistory([]);
-          setFlagged([]);
-          setDispatchError(null);
-          // T-4.10-08: the allowance belonged to the account that just
-          // signed out; the next caller (signed in or anonymous) gets its
-          // own, fetched fresh, never a stale number inherited across the
-          // sign-out.
-          setAllowance(null);
-          // R-02: a new conversation, not the previous account's.
-          setSessionId(newSessionId());
-          // R-11: the next person at this workstation has not read the
-          // disclaimer, and has not chosen a depth. The modal's own docstring
-          // argues session scope precisely so a notice one person dismissed is
-          // not treated as read by the next.
-          setAccepted(false);
-          setDepth("researcher");
-          // P-03: the next person at this workstation did not collapse the
-          // rail, so they do not inherit a collapsed one.
-          setRailOpen(true);
-          // Set 1 (R6): Log out lands on the search home page from any screen,
-          // including Integrations, Docs and About.
-          setScreen("search");
-          setSearchView({ name: "home" });
+          // Every piece of session-scoped state this handler used to clear
+          // inline now lives in `clearAccountState` above, unchanged, so the
+          // keep-alive effect reaches the identical end state when a session
+          // dies on its own. The reasoning for each line, F-4.8-A-11 through
+          // A-13, R-02, R-11, P-03 and set 1's R6, moved with the code.
+          clearAccountState();
         }}
       >
         {screen === "search" ? (

@@ -19,7 +19,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Drawer, Typography, useMediaQuery, useTheme } from "@mui/material";
 
 import { designTokens } from "../../theme";
 
@@ -293,6 +293,17 @@ export interface CollapsedRailProps {
  * the page into a different shape than expanding restores.
  */
 export function CollapsedRail({ count, onExpand }: CollapsedRailProps) {
+  const theme = useTheme();
+  // Fix set 4 (R46, decision U9, 2026-09-13). A 40px strip beside phone
+  // content is not the design, only this component's own desktop fallback,
+  // and the app bar's rail toggle (now visible at every width, see
+  // `AppShell.tsx`) is the way back in below `md`. Returning null here
+  // rather than continuing to rely on the `display: { xs: "none" }` below
+  // matches what the mounting side in `App.tsx` now expects: a phone never
+  // renders this strip at all.
+  const isNarrow = useMediaQuery(theme.breakpoints.down("md"));
+  if (isNarrow) return null;
+
   return (
     <Box
       component="button"
@@ -312,7 +323,7 @@ export function CollapsedRail({ count, onExpand }: CollapsedRailProps) {
         bgcolor: designTokens.surface,
         color: designTokens.inkMuted,
         cursor: "pointer",
-        display: { xs: "none", md: "flex" },
+        display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: 1.75,
@@ -379,7 +390,21 @@ export function HistoryRail({
   accountEmail,
   searchLimitLabel,
 }: HistoryRailProps) {
-  return (
+  const theme = useTheme();
+  // Fix set 4 (R46, decision U9, 2026-09-13): history reachable on a phone.
+  //
+  // NO PHONE DESIGN EXISTS FOR THIS RAIL. `docs/build/design/README.md`
+  // records `prototype/app.html:65` simply hiding `#rail` at 860px and
+  // calling that a known defect, not a design. So this is built from the
+  // rail itself, unchanged, plus the nearest designed phone-pattern
+  // neighbour this app already has: `NavOverflowMenu` in
+  // `components/shell/AppShell.tsx`, a control that opens to reach content
+  // a narrow bar has no room for inline. The product owner's instruction
+  // (U9) was a panel that slides in and closes, which is what a MUI
+  // `Drawer` gives the same rail content without restyling it.
+  const isNarrow = useMediaQuery(theme.breakpoints.down("md"));
+
+  const rail = (
     <Box
       component="aside"
       aria-label="Your searches"
@@ -394,7 +419,13 @@ export function HistoryRail({
         // `display:flex;flex-direction:column` is what lets `.rfoot`'s
         // `margin-top:auto` push the footer to the bottom of a full-height
         // rail, so it is structural rather than cosmetic.
-        display: { xs: "none", md: "flex" },
+        //
+        // Unconditionally flex, not the old `{ xs: "none", md: "flex" }`.
+        // Below `md` this element now renders only inside the `Drawer`
+        // below, built by the `isNarrow` branch, which already decides
+        // whether this tree mounts at all; a second, CSS-level hide here
+        // would just fight that decision.
+        display: "flex",
         flexDirection: "column",
         overflowY: "auto",
       }}
@@ -607,6 +638,44 @@ export function HistoryRail({
         </Box>
       ) : null}
     </Box>
+  );
+
+  if (!isNarrow) return rail;
+
+  // Below `md`: the same rail, sliding in over the page rather than sitting
+  // beside it. `open` is always true while this component is mounted;
+  // `App.tsx` decides whether `HistoryRail` mounts at all (the same
+  // `railOpen` state the desktop column already used), so the Drawer only
+  // ever needs to reflect that one decision, never track a second copy of
+  // it. `onClose` fires on a backdrop tap or Escape and runs through the
+  // same `onCollapse` the rail's own `.rtop` control already calls, so
+  // there is exactly one way to close this panel, not two competing ones.
+  return (
+    <Drawer
+      anchor="left"
+      variant="temporary"
+      open
+      onClose={onCollapse}
+      ModalProps={{ keepMounted: false }}
+      // `slotProps.paper`, not the deprecated `PaperProps`: this MUI major
+      // version stopped forwarding `PaperProps` to the paper slot at all
+      // (it already sets `role="dialog"` itself for a temporary drawer,
+      // which is how this panel gets that role), so `PaperProps` here would
+      // silently do nothing rather than merely being old-fashioned.
+      slotProps={{
+        paper: {
+          "aria-label": "Your searches",
+          sx: {
+            width: 280,
+            maxWidth: "85vw",
+            bgcolor: designTokens.surface,
+            borderRight: `1px solid ${designTokens.line}`,
+          },
+        },
+      }}
+    >
+      {rail}
+    </Drawer>
   );
 }
 

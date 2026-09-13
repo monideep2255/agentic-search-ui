@@ -61,7 +61,13 @@ describe("AuthGate", () => {
     render(<AuthGate onAuthenticated={onAuthenticated} guestToken="guest-abc" />);
     await fillAndSubmit("new@example.com", "correct horse battery staple");
 
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "new@example.com"));
+    await waitFor(() =>
+      expect(onAuthenticated).toHaveBeenCalledWith(
+        "test-token",
+        "new@example.com",
+        "test-refresh",
+      ),
+    );
     expect(signupMock).toHaveBeenCalledWith({
       email: "new@example.com",
       password: "correct horse battery staple",
@@ -74,6 +80,32 @@ describe("AuthGate", () => {
     });
   });
 
+  // Fix set 4, requirement R46 (decision U8): the refresh token is what
+  // keeps the account signed in across a reload, and this component is the
+  // only place it is ever in hand.
+  it("hands the parent the refresh token from the login response, not only the access token", async () => {
+    // Mutation: calling `onAuthenticated(result.access_token, email)` with
+    // the third argument dropped, or passing `result.access_token` twice,
+    // turns this red. Both are how a reload started signing people out.
+    signupMock.mockRejectedValue(EMAIL_TAKEN);
+    loginMock.mockResolvedValue({
+      access_token: "access-xyz",
+      refresh_token: "refresh-xyz",
+      token_type: "bearer",
+    });
+    const onAuthenticated = vi.fn();
+
+    render(<AuthGate onAuthenticated={onAuthenticated} />);
+    await fillAndSubmit("person@example.com", "correct horse battery staple");
+
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalled());
+    const [access, email, refresh] = onAuthenticated.mock.calls[0] as [string, string, string];
+    expect(access).toBe("access-xyz");
+    expect(email).toBe("person@example.com");
+    expect(refresh).toBe("refresh-xyz");
+    expect(refresh).not.toBe(access);
+  });
+
   it("logs a registered email in when signup answers 409, carrying the guest token on login", async () => {
     signupMock.mockRejectedValue(EMAIL_TAKEN);
     loginMock.mockResolvedValue(TOKENS);
@@ -82,7 +114,13 @@ describe("AuthGate", () => {
     render(<AuthGate onAuthenticated={onAuthenticated} guestToken="guest-abc" />);
     await fillAndSubmit("person@example.com", "correct horse battery staple");
 
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
+    await waitFor(() =>
+      expect(onAuthenticated).toHaveBeenCalledWith(
+        "test-token",
+        "person@example.com",
+        "test-refresh",
+      ),
+    );
     expect(loginMock).toHaveBeenCalledWith({
       email: "person@example.com",
       password: "correct horse battery staple",
@@ -170,6 +208,12 @@ describe("AuthGate", () => {
     // On success this component intentionally never resets `pending`: the
     // parent stops rendering `AuthGate` once it holds a token.
     resolveLogin?.();
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
+    await waitFor(() =>
+      expect(onAuthenticated).toHaveBeenCalledWith(
+        "test-token",
+        "person@example.com",
+        "test-refresh",
+      ),
+    );
   });
 });

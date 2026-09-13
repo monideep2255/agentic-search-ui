@@ -61,7 +61,7 @@ WHERE TO LOOK, in the order a fresh session should read them:
 ### Process lessons from the fix-loop sessions, already applied
 
 - Commit `ff80814` pushed with the web build failing on Railway: the pre-push type check skipped `e2e/`, and a chained command piped a failing check through `tail`, so the push went out on a false green. Fixed in `3e1ee64`: `npm run build` now runs before every frontend push, and each check gates the push on its own exit code.
-- Commit `d72256b`'s message claims 252 frontend unit tests passed; that specific run had one load-related timeout (`railCollapsePremise`), which passed when run alone. Frontend tests can flake under machine load (see the "load-dependent test flakiness" row in "Open items" below): re-run a failing frontend spec alone before concluding it is a real regression.
+- Commit `d72256b`'s message claims every frontend unit test passed (the suite had 252 at the time); that specific run had one load-related timeout (`railCollapsePremise`), which passed when run alone. Frontend tests can flake under machine load (see the "load-dependent test flakiness" row in "Open items" below): re-run a failing frontend spec alone before concluding it is a real regression.
 
 WHAT SHIPPED IN PR #93, in the terms a person notices rather than by ticket:
 

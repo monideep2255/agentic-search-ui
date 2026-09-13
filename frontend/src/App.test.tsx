@@ -60,16 +60,26 @@ vi.mock("./lib/api", async () => {
     // seeding effect and takes the whole render down, the same reasoning
     // the comment above `fetchPersona` already gives.
     fetchHistory: vi.fn(),
+    // Fix set 4, R46 (decision U8): App now restores a session on load and
+    // revokes the refresh token on log out. An api mock that omits an export
+    // App actually calls throws inside a useEffect or a handler and takes
+    // the render down, the same reasoning `fetchPersona` above already
+    // carries.
+    refreshSession: vi.fn(),
+    logoutSession: vi.fn(async () => ({ status: "ok" })),
   };
 });
 
 import {
   createRun,
   fetchHistory,
+  fetchMe,
   getAllowance,
   login,
+  logoutSession,
   mintGuest,
   openEventStream,
+  refreshSession,
 } from "./lib/api";
 
 const loginMock = vi.mocked(login);
@@ -78,6 +88,9 @@ const openEventStreamMock = vi.mocked(openEventStream);
 const mintGuestMock = vi.mocked(mintGuest);
 const getAllowanceMock = vi.mocked(getAllowance);
 const fetchHistoryMock = vi.mocked(fetchHistory);
+const fetchMeMock = vi.mocked(fetchMe);
+const refreshSessionMock = vi.mocked(refreshSession);
+const logoutSessionMock = vi.mocked(logoutSession);
 
 const mainArea = () => within(screen.getByRole("main"));
 const navArea = () => within(screen.getByRole("navigation", { name: /main/i }));
@@ -1268,5 +1281,212 @@ describe("a guest hitting a shared daily ceiling sees the true reason", () => {
     const failure = await screen.findByTestId("answer-failure");
     expect(failure.textContent).toMatch(/this network has used its guest searches for today/i);
     expect(failure.textContent).not.toMatch(/could not be sent/i);
+  });
+});
+
+/**
+ * Fix set 4, requirement R46, product-owner decision U8 (2026-09-12):
+ * "keep people signed in across a reload, with history where they left
+ * it."
+ *
+ * A reload is not directly reproducible in jsdom, so what these clauses
+ * exercise is the thing a reload actually produces: a FRESH mount with a
+ * refresh token already sitting in `localStorage` and no React state at
+ * all. That is exactly the state `App` wakes up in after `page.reload()`,
+ * and `e2e/history-reload.spec.ts` drives the real reload in a real
+ * browser against the real backend.
+ */
+describe("R46: a reload keeps the account signed in", () => {
+  const REFRESH_KEY = "agentic-search-ui.refresh-token.v1";
+  const STORED = "stored-refresh";
+  const ROTATED = "rotated-refresh";
+  const RESTORED_ACCESS = "restored-access";
+  const LOGIN_REFRESH = "login-refresh";
+
+  /** What `POST /auth/refresh` answers on the happy path. */
+  const rotatedPair = {
+    access_token: RESTORED_ACCESS,
+    refresh_token: ROTATED,
+    token_type: "bearer",
+  };
+
+  /** Sign in through the real gate, the way a user does. */
+  async function signInThroughGate(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(navArea().getByRole("button", { name: /log in/i }));
+    await user.type(screen.getByLabelText(/email/i), "person@example.com");
+    await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: /^log in$/i }));
+    await waitFor(() => expect(window.localStorage.getItem(REFRESH_KEY)).toBe(LOGIN_REFRESH));
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    refreshSessionMock.mockReset();
+    logoutSessionMock.mockReset();
+    fetchMeMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: LOGIN_REFRESH,
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+    logoutSessionMock.mockResolvedValue({ status: "ok" });
+    fetchMeMock.mockResolvedValue({
+      id: "u-1",
+      email: "restored@example.com",
+      audience_depth: "researcher",
+      persona_name: "Mendel",
+    });
+  });
+
+  it("restores the session from a persisted refresh token, with no sign-in", async () => {
+    // Mutation: removing the restore effect, or gating it on anything other
+    // than the stored token, leaves the app bar showing Log in and turns
+    // this red. This is the whole of R46 in one assertion: nobody typed a
+    // password in this test.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    expect(
+      await navArea().findByRole("button", { name: /restored@example\.com/i }),
+    ).toBeInTheDocument();
+    expect(navArea().queryByRole("button", { name: /log in/i })).toBeNull();
+    expect(screen.queryByLabelText(/password/i)).toBeNull();
+  });
+
+  it("sends the stored token exactly once and stores the rotated replacement", async () => {
+    // Mutation: persisting the token that was SENT rather than the one that
+    // came back, or sending the stored value twice, turns this red. Both are
+    // fatal against the real backend: `POST /auth/refresh` revokes the token
+    // it is given, and presenting a revoked one revokes the whole family
+    // (F-1.1-07), so a second send would sign the person out of every
+    // device.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    await waitFor(() => expect(refreshSessionMock).toHaveBeenCalledTimes(1));
+    expect(refreshSessionMock).toHaveBeenCalledWith(STORED);
+    await waitFor(() => expect(window.localStorage.getItem(REFRESH_KEY)).toBe(ROTATED));
+  });
+
+  it("reads the account's email with the restored access token", async () => {
+    // Mutation: calling `fetchMe` with the refresh token, or with the token
+    // that was stored rather than the one just minted, turns this red.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    await waitFor(() => expect(fetchMeMock).toHaveBeenCalled());
+    expect(fetchMeMock.mock.calls.some((call) => call[0] === RESTORED_ACCESS)).toBe(true);
+  });
+
+  it("refills the history rail from the server on the restored token, with no user action", async () => {
+    // Mutation: this is the half of R46 the decision calls "with history
+    // where they left it". The seeding effect is keyed on `token`, so a
+    // restore that never sets `token` leaves the rail empty and turns this
+    // red.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+
+    render(<App />);
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(
+      await within(rail).findByRole("button", { name: /what is brca1\?/i }),
+    ).toBeInTheDocument();
+    expect(fetchHistoryMock.mock.calls.some((call) => call[0] === RESTORED_ACCESS)).toBe(true);
+  });
+
+  it("stays a guest and clears the dead token when the refresh is refused", async () => {
+    // Mutation: surfacing the failure, retrying it, or leaving the rejected
+    // token in storage turns this red. A dead token left in storage is sent
+    // again on the next load, and a replay revokes the family, so clearing
+    // it is a correctness requirement rather than tidiness.
+    const { ApiError } = await import("./lib/api");
+    window.localStorage.setItem(REFRESH_KEY, "expired-refresh");
+    refreshSessionMock.mockRejectedValue(
+      new ApiError(401, "refreshSession failed with 401: invalid or expired refresh token"),
+    );
+
+    render(<App />);
+
+    await waitFor(() => expect(refreshSessionMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(window.localStorage.getItem(REFRESH_KEY)).toBeNull());
+    expect(navArea().getByRole("button", { name: /log in/i })).toBeInTheDocument();
+    // No error surface anywhere: the visitor never knew a credential
+    // existed, so there is nothing for them to act on.
+    expect(screen.queryByTestId("answer-failure")).toBeNull();
+  });
+
+  it("attempts no restore at all when nothing is stored", async () => {
+    // Mutation: calling `refreshSession` unconditionally on mount turns this
+    // red, and in the product it fires an unauthenticated write on every
+    // first visit.
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /ask a biomedical question/i });
+    expect(refreshSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("persists the refresh token at sign-in through the real gate", async () => {
+    // Mutation: dropping `persistRefreshToken` from the `onAuthenticated`
+    // handler, or persisting the access token instead, turns this red. This
+    // is the write the restore effect above reads back.
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signInThroughGate(user);
+
+    expect(window.localStorage.getItem(REFRESH_KEY)).not.toBe("test-token");
+  });
+
+  it("revokes the refresh token server-side on log out and clears it locally", async () => {
+    // Mutation: clearing local state without calling `POST /auth/logout`
+    // leaves a live 30-day credential in the browser after the person
+    // pressed Log out, which is the shared-workstation case the sign-out
+    // handler already exists for.
+    const user = userEvent.setup();
+    render(<App />);
+    await signInThroughGate(user);
+
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+
+    expect(logoutSessionMock).toHaveBeenCalledWith(LOGIN_REFRESH);
+    expect(window.localStorage.getItem(REFRESH_KEY)).toBeNull();
+    expect(navArea().getByRole("button", { name: /log in/i })).toBeInTheDocument();
+  });
+
+  it("signs out cleanly even when the revocation call fails", async () => {
+    // Mutation: awaiting the revocation, or letting its rejection escape,
+    // leaves the person apparently still signed in on a flaky connection.
+    logoutSessionMock.mockRejectedValue(new Error("network down"));
+    const user = userEvent.setup();
+    render(<App />);
+    await signInThroughGate(user);
+
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+
+    expect(window.localStorage.getItem(REFRESH_KEY)).toBeNull();
+    expect(navArea().getByRole("button", { name: /log in/i })).toBeInTheDocument();
   });
 });

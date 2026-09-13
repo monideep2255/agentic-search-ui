@@ -32,7 +32,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
 | 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
 | 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | ✅ | 🚀 | 👍 | Tests 8, 9, 13, 19 |
-| 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
+| 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | ✅ | | | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
 | 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | | | | Nothing |
 | 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen | | | | Tests 2, 13 |
@@ -284,7 +284,7 @@ What you will see: a reload keeps you signed in. On a phone, the history button 
 
 ### 4.1 Stay signed in on reload, and history on phones (R46)
 
-Built: · Live: · Approved:
+Built: ✅ · Live: · Approved:
 
 - Feature being tested: reloading the page does not sign you out, and the history panel works at phone width.
 - What you noted: from decisions U8 and U9. U8, on reloading the page signing you out: keep people signed in across a reload, with history and the conversation where they left them. U9, on the phone history button doing nothing: make history reachable on a phone as a panel that slides in and closes.
