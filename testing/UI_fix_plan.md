@@ -30,7 +30,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | Set | What you will see | Built | Live | Approved | You retest |
 |---|---|---|---|---|---|
 | 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
-| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 2.1 to 2.14, except the 2.12 alignment follow-up | Tests 1, 2, 3, 9, 11 |
+| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 2.1 to 2.14, except the 2.12 up-arrow button | Tests 1, 2, 3, 9, 11 |
 | 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | | | | Tests 8, 9, 13, 19 |
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
@@ -208,7 +208,7 @@ Pushed as commit `cbb04cc`, live on develop on 2026-09-12 and checked by screens
 
 ### 2.12 A bigger search box on the home page (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved: 👍 (size approved; the flexible button placement, option B, is live at commit `e52dd7b` and waiting for your retest)
+Built: ✅ · Live: · Approved: 👍 (size approved; the icon-only button at the bottom right is built and waiting to go live, then for your retest)
 
 - Feature being tested: the home page search box is big enough to write a full question.
 - What you noted: "on the home page, can we increase the size of the search box? It should be at least big as a tweet box 240 characters? or the appropriate size"
@@ -216,7 +216,9 @@ Built: ✅ · Live: 🚀 · Approved: 👍 (size approved; the flexible button p
 - Follow-up you noted: "The search box increase looks good but the 2 things -> search button placement and the text placement and icon need to be adjusted (magnifying glass Which diseases are associated with BRCA1?)"
 - Follow-up expected: the magnifying glass sits level with the first line of text, and the Search button sits in the bottom right corner with even spacing from the box edges. Done in commit `d72256b`, measured live: icon level with the first line, button 8px from the right and bottom edges.
 - Second follow-up you chose: option B, flexible: "Lets go with B but a flexible one if the search box increases the search box goes to bottom right"
-- Second follow-up expected: with an empty box or a one-line question, the Search button sits top right, level with the magnifying glass and the text. Once the question wraps to a second line, the button moves to the bottom right. On phones the button stays a full-width row under the text.
+- Second follow-up expected: with an empty box or a one-line question, the Search button sits top right, level with the magnifying glass and the text. Once the question wraps to a second line, the button moves to the bottom right. On phones the button stays a full-width row under the text. Built at commit `e52dd7b`.
+- Third follow-up you noted, on retesting the flexible button: "actually it looked better at the bottom only. Also instead of the Search button with text, why not replace it with an icon, and have it at the bottom right. It can be the up arrow, how we have for Claude Code right now."
+- Third follow-up expected: the word Search is gone. A square blue button with a white up arrow sits in the bottom right corner of the box, 8px from the right and bottom edges, at every width. On phones it sits in the same corner rather than taking its own row, so the text box keeps its full height. Screen readers still announce it as "Search the knowledge graph".
 
 ### 2.13 NCBI design system: the changes possible today (retest feedback)
 

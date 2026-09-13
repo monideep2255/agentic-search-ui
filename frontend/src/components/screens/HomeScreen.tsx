@@ -62,19 +62,29 @@ export interface HomeScreenProps {
   onDepthChange?: (depth: AudienceDepth) => void;
 }
 
-/** The prototype's `button.go` arrow, from `#s-landing`. */
-function ArrowIcon() {
+/**
+ * The submit icon: an up arrow, the shape every chat-style composer uses
+ * for "send". Product-owner decision 2026-09-13, replacing the prototype's
+ * "Search" text plus right arrow (`button.go` in `#s-landing`) with an
+ * icon-only button. The design system has no icon-only submit, so this is
+ * built from its nearest designed neighbours: the `.go` button's fill,
+ * radius and weight, and the icon-only `aria-label` buttons in
+ * `components/feedback.html`.
+ */
+function ArrowUpIcon() {
   return (
     <svg
-      width={13}
-      height={13}
+      width={18}
+      height={18}
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M2 8h11M9 4l4 4-4 4" />
+      <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" />
     </svg>
   );
 }
@@ -102,15 +112,6 @@ const QUESTION_MAX_ROWS_NARROW = 10;
 const QUESTION_MAX_HEIGHT_NARROW = QUESTION_LINE_HEIGHT_PX * QUESTION_MAX_ROWS_NARROW;
 /** The server truncates `text` at 2000 characters; the field matches it. */
 const QUESTION_MAX_LENGTH = 2000;
-/**
- * Product-owner decision, 2026-09-13, option B ("flexible"): the Search
- * button sits top-right, level with the icon, while the question is one
- * visual line, and drops to bottom-right once it wraps. A small tolerance
- * absorbs sub-pixel rounding in `scrollHeight` so the state does not flap
- * right at the boundary.
- */
-const MULTILINE_TOLERANCE_PX = 2;
-
 function SearchIcon() {
   return (
     <svg
@@ -138,13 +139,6 @@ export function HomeScreen({
   const [question, setQuestion] = useState("");
   const [localDepth, setLocalDepth] = useState<AudienceDepth>("researcher");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  // Whether the question currently occupies more than one visual line.
-  // Empty or placeholder-only, and a question that fits on one line, are
-  // both "false": the Search button then sits top-right, level with the
-  // icon (option B, product-owner decision 2026-09-13). Anything that
-  // wraps flips this to "true" and the button drops to bottom-right.
-  const [isMultiline, setIsMultiline] = useState(false);
-
   // Controlled when the parent supplies a value, uncontrolled otherwise. One
   // `depth` and one `setDepth` below, so no call site has to know which mode
   // it is in and the two can never be read from different places.
@@ -176,52 +170,24 @@ export function HomeScreen({
     }
   };
 
-  // Whether the question's own content, not the 3-row minimum the box is
-  // held to, spans more than one visual line. Two separate things hold the
-  // box at 3 rows even for one line of text, and both have to be lifted for
-  // the instant of measurement, or `scrollHeight` reports "multiline" for a
-  // one-line or empty box: the CSS `minHeight` floor (cleared via the
-  // inline style), and the `rows` HTML attribute, which drives the
-  // browser's own intrinsic sizing independently of any CSS height rule
-  // (measured: with only `minHeight` cleared, `scrollHeight` still read the
-  // 3-row height; setting `rows` to 1 as well brought it down to the true
-  // one-line content height).
-  const measureIsMultiline = (el: HTMLTextAreaElement): boolean => {
-    const previousMinHeight = el.style.minHeight;
-    const previousRows = el.rows;
-    el.style.minHeight = "0px";
-    el.rows = 1;
-    const style = window.getComputedStyle(el);
-    const paddingTop = parseFloat(style.paddingTop) || 0;
-    const paddingBottom = parseFloat(style.paddingBottom) || 0;
-    const contentHeight = el.scrollHeight - paddingTop - paddingBottom;
-    el.style.minHeight = previousMinHeight;
-    el.rows = previousRows;
-    return contentHeight > QUESTION_LINE_HEIGHT_PX + MULTILINE_TOLERANCE_PX;
-  };
-
   // Auto-grow: reset to the CSS min-height, then read the content's natural
   // height and grow to it. The `maxHeight` in sx below still clamps this, so
   // growth past six rows turns into an internal scrollbar rather than an
-  // ever-taller box. The multiline check reuses the same "reset height,
-  // read scrollHeight" measurement rather than a second layout pass.
+  // ever-taller box.
   const resizeQuestionField = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
     el.style.height = "auto";
-    setIsMultiline(measureIsMultiline(el));
     el.style.height = `${el.scrollHeight}px`;
   };
 
-  // Recompute on mount (in case the initial render already differs from the
-  // `false` default, e.g. restored state) and on window resize, since the
-  // line count is width-dependent: the same text wraps at 720px and does
-  // not at 1280px.
+  // Recompute on mount, in case the initial render already differs from the
+  // 3-row minimum (e.g. restored state), and on window resize, since the
+  // same text wraps at 720px and does not at 1280px.
   useEffect(() => {
     resizeQuestionField(textareaRef.current);
     const handleResize = () => resizeQuestionField(textareaRef.current);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -277,16 +243,9 @@ export function HomeScreen({
           sx={{
             display: "flex",
             // Top-aligned, not centred: the icon sits at the top-left of the
-            // box (`SearchIcon` below) and the Search button's own slot Box
-            // sets its `alignSelf` per line count, top-right level with the
-            // icon on one line, bottom-right once the box grows past one
-            // (see the slot Box's comment further down).
+            // box (`SearchIcon` below) and the submit button pins itself to
+            // the bottom-right with its own `alignSelf` (see below).
             alignItems: "flex-start",
-            // Wraps only below 720px, where the Search button takes its own
-            // full-width row (see its sx) and the question field keeps the
-            // whole width. Measured 2026-09-12: beside the button at 390px the
-            // field was 176px wide and a 240-character question scrolled.
-            flexWrap: "wrap",
             gap: 1.25,
             maxWidth: 720,
             mx: "auto",
@@ -299,12 +258,6 @@ export function HomeScreen({
             pl: 2,
             pr: 0.75,
             py: 0.75,
-            // Below 720px the button drops to its own full-width row (see its
-            // sx). `search-bar.html`'s 16px/6px split exists to clear the
-            // icon on one line; once the button is on its own row, a left
-            // inset of 16px against a right inset of 6px reads as off-centre,
-            // so both sides match here.
-            "@media (max-width:720px)": { pl: 0.75 },
             textAlign: "left",
             "&:focus-within": { borderColor: designTokens.link },
           }}
@@ -363,77 +316,39 @@ export function HomeScreen({
             }}
           />
           {/*
-            "Search", with the prototype's right arrow: `button.go` in
-            `#s-landing`.
+            Product-owner decision 2026-09-13, after trying the text button
+            top-right, bottom-right and flexible between the two: an icon-only
+            submit, always at the bottom-right corner, at every width. On
+            phones it no longer takes a full-width row of its own, since a
+            36px square leaves the field its width (measured 2026-09-12 it was
+            the 100px-plus text button that squeezed the field to 176px).
 
-            This read "Ask" until 2026-08-14. The reason was real (F-4.8-L-03):
-            the nav already has a destination called Search, and two visible
-            controls sharing an accessible name is a genuine problem for anyone
-            navigating by control list, which `e2e/accessibility.spec.ts`
-            enforces. The reasoning was sound and the remedy overshot, changing
-            what the user SEES to fix a problem that lives in the accessible
-            name.
-
-            So the visible label is the design's, and the collision is resolved
-            on the accessible name instead. WCAG 2.5.3 (Label in Name) requires
-            that name to CONTAIN the visible text, or a speech-input user
-            saying "Search" cannot operate the control, which is why it is not
-            renamed to something unrelated.
+            Accessible name: this read "Ask" until 2026-08-14 because the nav
+            already has a destination called Search, and two controls sharing
+            an accessible name is a real problem for anyone navigating by
+            control list, which `e2e/accessibility.spec.ts` enforces. With no
+            visible text, WCAG 2.5.3 (Label in Name) no longer constrains the
+            name, but it keeps "Search" in it so a speech-input user who reads
+            the page as a search box can still say the obvious word.
           */}
-          {/*
-            Product-owner decision 2026-09-13, option B ("flexible"): one
-            line, the button sits top-right level with the icon; wrapped,
-            it drops to bottom-right as before. The slot Box below matches
-            the icon box's own `mt` and height exactly in the one-line case,
-            so `alignItems: "center"` centers the button on the identical
-            line box the icon is centered on, regardless of the button's
-            own rendered height. In the wrapped case the slot just hugs the
-            button and pins it to the row's bottom-right corner, the same
-            effect `alignSelf: "flex-end"` gave the button directly before
-            this box existed. Below 720px both collapse to the same
-            full-width row as always.
-          */}
-          <Box
+          <Button
+            type="submit"
+            variant="contained"
+            aria-label="Search the knowledge graph"
             sx={{
+              // A square: the `.go` button's 36px rendered height, with
+              // `minWidth` cleared so MUI's 64px text-button floor does not
+              // widen it.
+              width: 36,
+              height: 36,
+              minWidth: 0,
+              p: 0,
               flex: "none",
-              display: "flex",
-              justifyContent: "flex-end",
-              ...(isMultiline
-                ? { alignSelf: "flex-end", alignItems: "flex-end", height: "auto", mt: 0 }
-                : {
-                    alignSelf: "flex-start",
-                    alignItems: "center",
-                    height: `${QUESTION_LINE_HEIGHT_PX}px`,
-                    mt: 0.75,
-                  }),
-              "@media (max-width:720px)": {
-                width: "100%",
-                height: "auto",
-                mt: 0,
-                alignSelf: "stretch",
-                alignItems: "stretch",
-              },
+              alignSelf: "flex-end",
             }}
           >
-            <Button
-              type="submit"
-              variant="contained"
-              aria-label="Search the knowledge graph"
-              sx={{
-                px: 2.25,
-                py: 1.1,
-                fontSize: 14,
-                gap: 0.75,
-                flex: "none",
-                // prototype/app.html's 720px breakpoint: below it the button
-                // takes its own row, so the question field gets the full width.
-                "@media (max-width:720px)": { width: "100%" },
-              }}
-            >
-              Search
-              <ArrowIcon />
-            </Button>
-          </Box>
+            <ArrowUpIcon />
+          </Button>
         </Box>
 
         {/* `.depthwrap` sits BELOW the search bar in the prototype. */}
