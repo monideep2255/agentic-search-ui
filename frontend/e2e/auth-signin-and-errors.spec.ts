@@ -1,5 +1,5 @@
 /**
- * W-identity-1 and W-identity-2, `testing/Product_workflows.md`'s Tier 1
+ * W-identity-1 and W-identity-2, `testing/Developer/Developer_workflows.md`'s Tier 1
  * rows: "Let someone create an account and sign in" and "Never echo a
  * backend error into the sign-in screen, and never say which emails
  * exist."

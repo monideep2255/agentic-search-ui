@@ -1,0 +1,361 @@
+<title>Agentic Search Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --ground: #F0F0F0;
+    --surface: #FFFFFF;
+    --sunk: #F7F8F9;
+    --line: #D6D7D9;
+    --ink: #1B1B1B;
+    --ink-muted: #565C65;
+    --navy: #112F4E;
+    --navy-ink: #F3F6F9;
+    --navy-mute: #A9C3DC;
+    --blue: #205493;
+    --link: #0071BC;
+    --ok: #276E34;
+    --ok-wash: #E6F2E8;
+    --risk: #981B1E;
+    --risk-wash: #F8E9E9;
+    --warn: #7A5900;
+    --warn-wash: #FDF3D9;
+    --shot-edge: #C9CDD1;
+    --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A2B;
+      --surface: #112436;
+      --sunk: #0E1F31;
+      --line: #274259;
+      --ink: #EEF2F6;
+      --ink-muted: #A7B6C5;
+      --navy: #08131F;
+      --navy-ink: #F3F6F9;
+      --navy-mute: #8FAAC4;
+      --blue: #7FB0E6;
+      --link: #8CC4F2;
+      --ok: #86CF95;
+      --ok-wash: #173524;
+      --risk: #F2A3A6;
+      --risk-wash: #3A1A1D;
+      --warn: #E7C66A;
+      --warn-wash: #352B10;
+      --shot-edge: #33506A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A2B;
+    --surface: #112436;
+    --sunk: #0E1F31;
+    --line: #274259;
+    --ink: #EEF2F6;
+    --ink-muted: #A7B6C5;
+    --navy: #08131F;
+    --navy-ink: #F3F6F9;
+    --navy-mute: #8FAAC4;
+    --blue: #7FB0E6;
+    --link: #8CC4F2;
+    --ok: #86CF95;
+    --ok-wash: #173524;
+    --risk: #F2A3A6;
+    --risk-wash: #3A1A1D;
+    --warn: #E7C66A;
+    --warn-wash: #352B10;
+    --shot-edge: #33506A;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--link); }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  code, .q { font-family: var(--mono); font-size: 0.86em; }
+
+  .bar { background: var(--navy); color: var(--navy-ink); padding-inline: 20px; }
+  .bar-in { max-width: 1000px; margin: 0 auto; padding-block: 14px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .mark { font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+  .bar-in span { color: var(--navy-mute); font-size: 14px; }
+
+  .wrap { max-width: 1000px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 72px; display: grid; gap: 56px; }
+
+  header h1 {
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.08;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  header p { margin: 0; max-width: 66ch; color: var(--ink-muted); font-size: 17px; }
+  .tally { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .tally div { display: grid; }
+  .tally b { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .tally small { font-size: 13px; color: var(--ink-muted); }
+  .tally .bad b { color: var(--risk); }
+  .tally .good b { color: var(--ok); }
+  .tally .warn b { color: var(--warn); }
+
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.015em; margin: 0 0 6px; text-wrap: balance; }
+  .lede { margin: 0 0 22px; color: var(--ink-muted); max-width: 66ch; }
+  .eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); }
+
+  .issues { display: grid; gap: 18px; }
+  .issue {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--warn);
+    border-radius: 4px;
+    padding: 22px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .issue.major { border-left-color: var(--risk); }
+  .issue.nosh { grid-template-columns: minmax(0, 1fr); }
+  .issue h3 { margin: 6px 0 10px; font-size: 19px; line-height: 1.3; font-weight: 700; text-wrap: balance; }
+  .issue p { margin: 0 0 10px; }
+  .issue dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 14px 0 0; font-size: 14.5px; }
+  .issue dt { color: var(--ink-muted); }
+  .issue dd { margin: 0; }
+  .sev { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
+  .sev.major { color: var(--risk); background: var(--risk-wash); }
+  .sev.minor { color: var(--warn); background: var(--warn-wash); }
+  .sev.known { color: var(--ink-muted); background: var(--sunk); }
+
+  figure { margin: 0; display: grid; gap: 8px; }
+  figure a { display: block; line-height: 0; }
+  figure img { width: 100%; max-width: 100%; height: auto; border: 1px solid var(--shot-edge); border-radius: 3px; background: #fff; }
+  figcaption { font-size: 13px; color: var(--ink-muted); line-height: 1.45; }
+  .shots2 { display: grid; gap: 14px; }
+
+  .works { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-bottom: 26px; }
+  .works figure { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 10px; }
+  .checks { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; }
+  .checks li { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 12px; padding: 11px 16px; border-top: 1px solid var(--line); font-size: 15px; }
+  .checks li:first-child { border-top: 0; }
+  .ok { color: var(--ok); font-weight: 700; font-size: 13px; }
+  .checks .what { font-weight: 600; }
+  .checks .how { color: var(--ink-muted); }
+
+  .plain { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 20px 22px; }
+  .plain ul { margin: 8px 0 0; padding-left: 20px; }
+  .plain li { margin: 4px 0; }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .two h3 { margin: 0 0 4px; font-size: 16px; }
+
+  @media (max-width: 780px) {
+    .issue { grid-template-columns: minmax(0, 1fr); padding: 18px; }
+    .works { grid-template-columns: minmax(0, 1fr); }
+    .two { grid-template-columns: minmax(0, 1fr); }
+    .checks li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  }
+</style>
+
+<div class="bar"><div class="bar-in"><div class="mark">NCBI Agentic Search</div><span>develop app, tested in a real browser on 12 September 2026</span></div></div>
+
+<main class="wrap">
+  <header>
+    <div class="eyebrow">Test walkthrough</div>
+    <h1>The screens work. The answers do not hold up yet.</h1>
+    <p>I drove a real Chromium browser through every workflow in <code>testing/Product/Product_workflows.md</code> on the live develop app, as a guest, at phone width, and as a new account. Everything below is judged from the screenshots, not from what a script reported.</p>
+    <div class="tally">
+      <div class="good"><b>18</b><small>checks working</small></div>
+      <div class="bad"><b>2</b><small>major problems</small></div>
+      <div class="warn"><b>6</b><small>smaller problems</small></div>
+      <div><b>7 of 12</b><small>real questions refused</small></div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Needs fixing</h2>
+    <p class="lede">Most serious first. The two major ones are about the answers themselves, which is the product's reason to exist.</p>
+
+    <div class="issues">
+      <article class="issue major">
+        <div>
+          <span class="sev major">Major</span>
+          <h3>Follow-up questions do not work</h3>
+          <p>Asking a follow-up after an answer gets refused. The product's own suggested chip, "What variants cause it?", was refused as off-topic the first time and as "no grounded evidence" the second.</p>
+          <p>The second screenshot shows why: the NCBI fallback link searches for the words <span class="q">What variants cause it?</span> literally. "It" was never connected to BRCA1.</p>
+          <dl>
+            <dt>Query</dt><dd><span class="q">What variants cause it?</span> after a BRCA1 answer</dd>
+            <dt>How often</dt><dd>3 of 3 follow-ups refused, including one that named BRCA1</dd>
+            <dt>Workflow</dt><dd>Test 2</dd>
+          </dl>
+        </div>
+        <div class="shots2">
+          <figure>
+            <a href="shots/followup-refused.png"><img src="shots/followup-refused.png" alt="Follow-up question What variants cause it? refused with the message This looks outside biomedical research" loading="lazy"></a>
+            <figcaption>First try: refused as "outside biomedical research", right after a good BRCA1 answer.</figcaption>
+          </figure>
+          <figure>
+            <a href="shots/followup-it-unresolved.png"><img src="shots/followup-it-unresolved.png" alt="Follow-up refused, fallback link searching for the literal phrase What variants cause it" loading="lazy"></a>
+            <figcaption>Second try: the fallback search is for the literal words, so "it" was lost.</figcaption>
+          </figure>
+        </div>
+      </article>
+
+      <article class="issue major">
+        <div>
+          <span class="sev major">Major</span>
+          <h3>The flagship question is refused about one time in three</h3>
+          <p>"Which diseases are associated with BRCA1?" sometimes answers in 8 to 12 seconds with four cited diseases, and sometimes says "I could not find grounded evidence for this." Same question, same depth, minutes apart. Depth is not the cause: Clinical brief answered once and refused on the very next try.</p>
+          <p>The GCK question from the home page was refused for a signed-in user too.</p>
+          <dl>
+            <dt>Queries</dt><dd><span class="q">Which diseases are associated with BRCA1?</span>, <span class="q">Variants in GCK causing MODY</span></dd>
+            <dt>How often</dt><dd>BRCA1 refused 3 of 8 times. GCK refused 1 of 1</dd>
+            <dt>Workflows</dt><dd>Tests 1, 6 and 7</dd>
+          </dl>
+        </div>
+        <div class="shots2">
+          <figure>
+            <a href="shots/brca1-refused.png"><img src="shots/brca1-refused.png" alt="BRCA1 question refused with I could not find grounded evidence for this" loading="lazy"></a>
+            <figcaption>BRCA1 chip, Researcher depth: refused after 7.1 seconds, 2 tools, 0 sources.</figcaption>
+          </figure>
+          <figure>
+            <a href="shots/gck-refused-account-menu.png"><img src="shots/gck-refused-account-menu.png" alt="GCK MODY question refused for a signed-in user, account menu open" loading="lazy"></a>
+            <figcaption>GCK question as a signed-in user: refused. The account menu on the right works.</figcaption>
+          </figure>
+        </div>
+      </article>
+
+      <article class="issue">
+        <div>
+          <span class="sev minor">Smaller</span>
+          <h3>An answer can start mid-thought, with a note that looks broken</h3>
+          <p>This answer opens with "These include…" and never says what "these" are. Earlier today the same answer opened with a garbled "BRCA1 (gene symbol BRCA1 [1]." Two other answers opened properly, so it comes and goes.</p>
+          <p>Below it, "Note: one further gene record was found…" is shown as a grey sentence marked as having no source, and a red "high risk claim" pill sits beside "Grounded · every claim cited". Disease names also read awkwardly: "Breast-ovarian cancer, familial, susceptibility to, 1".</p>
+          <dl>
+            <dt>How often</dt><dd>2 of 4 answers read had a broken opening</dd>
+            <dt>Workflows</dt><dd>Tests 1 and 13</dd>
+          </dl>
+        </div>
+        <figure>
+          <a href="shots/answer-brca1.png"><img src="shots/answer-brca1.png" alt="BRCA1 answer starting with These include, with an uncited note below" loading="lazy"></a>
+          <figcaption>Diseases are named in words and every link goes to NCBI, which is right. The opening sentence and the note are not.</figcaption>
+        </figure>
+      </article>
+
+      <article class="issue">
+        <div>
+          <span class="sev minor">Smaller</span>
+          <h3>Refusals carry a red warning pill and a link you cannot click</h3>
+          <p>Every refusal shows a red pill, "Not verified · no grounding check was recorded" or "Not fully grounded". Refusing is the product working correctly, so red reads like an error.</p>
+          <p>The "Try NCBI's cross-database search" address is plain text, not a link.</p>
+          <dl>
+            <dt>Query</dt><dd><span class="q">What is the capital of France?</span></dd>
+            <dt>Workflows</dt><dd>Tests 8 and 19</dd>
+          </dl>
+        </div>
+        <figure>
+          <a href="shots/offtopic-refusal.png"><img src="shots/offtopic-refusal.png" alt="Off-topic question refused, with a red Not verified pill" loading="lazy"></a>
+          <figcaption>The refusal itself is right. The red pill beneath it is the problem.</figcaption>
+        </figure>
+      </article>
+
+      <article class="issue">
+        <div>
+          <span class="sev known">Already known</span>
+          <h3>Stop works, but the screen just freezes</h3>
+          <p>Pressing Stop halted the search, and no answer arrived in the next 20 seconds. The screen stays on the Guard step with Stop greyed out and no message saying the search was stopped.</p>
+          <dl><dt>Workflow</dt><dd>Test 9</dd></dl>
+        </div>
+        <figure>
+          <a href="shots/stop-frozen.png"><img src="shots/stop-frozen.png" alt="Stopped search frozen on the Guard step" loading="lazy"></a>
+          <figcaption>20 seconds after Stop: frozen, with no confirmation.</figcaption>
+        </figure>
+      </article>
+
+      <article class="issue nosh">
+        <div>
+          <span class="sev minor">Smaller</span>
+          <h3>Three more, without screenshots</h3>
+          <dl>
+            <dt>Reload</dt><dd>Reloading the page logs you out. Already known.</dd>
+            <dt>Sign-up</dt><dd>Guest searches do move into the new account's history, but no message says so. Test 16 expects one.</dd>
+            <dt>Flag a source</dt><dd>Not tested. The flag sits inside the Sources section, and the one run that tried it got a refusal, which has no sources.</dd>
+          </dl>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Working</h2>
+    <p class="lede">Checked in the browser and confirmed from the screenshots.</p>
+
+    <div class="works">
+      <figure>
+        <a href="shots/history-carried-over.png"><img src="shots/history-carried-over.png" alt="New account with email top right and the guest search in the history panel" loading="lazy"></a>
+        <figcaption>Sign-up: email top right, and the guest's BRCA1 search already in "Your searches".</figcaption>
+      </figure>
+      <figure>
+        <a href="shots/wrong-password.png"><img src="shots/wrong-password.png" alt="Sign-in screen showing Could not log in with that email and password" loading="lazy"></a>
+        <figcaption>Wrong password: a plain error that does not reveal whether the email exists.</figcaption>
+      </figure>
+      <figure>
+        <a href="shots/history-after-relogin.png"><img src="shots/history-after-relogin.png" alt="History still listing both searches after logging back in" loading="lazy"></a>
+        <figcaption>Logging back in with Enter: both earlier searches still listed.</figcaption>
+      </figure>
+      <figure>
+        <a href="shots/guest-wall.png"><img src="shots/guest-wall.png" alt="Sign in to keep searching card after free searches used" loading="lazy"></a>
+        <figcaption>Guest limit: a clear "Sign in to keep searching" card, not a broken page.</figcaption>
+      </figure>
+      <figure>
+        <a href="shots/phone-menu.png"><img src="shots/phone-menu.png" alt="Home page at 390 pixels wide with the More pages menu open" loading="lazy"></a>
+        <figcaption>Phone width, 390px: no sideways scroll, and "More pages" reaches the other pages.</figcaption>
+      </figure>
+      <figure>
+        <a href="shots/feedback-thanks.png"><img src="shots/feedback-thanks.png" alt="Feedback sent, showing Thanks. This goes to the review queue." loading="lazy"></a>
+        <figcaption>Feedback: reasons appear after thumbs down, and sending confirms.</figcaption>
+      </figure>
+    </div>
+
+    <ul class="checks">
+      <li><span class="ok">Works</span><span><span class="what">Disclaimer.</span> <span class="how">Continue stays disabled until the box is ticked, Escape does not close it, and it returns after Log out.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Progress screen.</span> <span class="how">Five steps and Stop appear while a search runs.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">When an answer comes back.</span> <span class="how">Diseases named in words, citation chips on each claim, and all 4 links point to ncbi.nlm.nih.gov.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Off-topic refusal.</span> <span class="how">"What is the capital of France?" is refused instantly and never mentions Paris.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">New search.</span> <span class="how">Clears the conversation and returns to the home page.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Mistyped address.</span> <span class="how"><code>/nonsense</code> shows the Search page, not a blank one.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Integrations, About, Docs.</span> <span class="how">Each opens, the copy button copies its snippet, and the back button works.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Account menu.</span> <span class="how">Email, "Signed in · no search limit in effect yet", API key and integrations, Documentation, and a red Log out.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">History panel.</span> <span class="how">Hides and comes back.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Log out.</span> <span class="how">Email and the whole conversation disappear from the screen.</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Duplicate sign-up.</span> <span class="how">"Could not create that account. That email may already be registered."</span></span></li>
+      <li><span class="ok">Works</span><span><span class="what">Answer depth.</span> <span class="how">When Clinical brief answers, it uses plain wording with no advice. Deep technical answered with 5 sources.</span></span></li>
+    </ul>
+  </section>
+
+  <section class="two">
+    <div class="plain">
+      <h3>Is your checklist comprehensive?</h3>
+      <p>Yes, for everything a person can do by hand. I checked it against all 50 developer workflows and added three that were missing: a question with no data, too many guest attempts, and feedback when the connection drops. That makes 21 tests.</p>
+      <p>Three workflows cannot be triggered by hand, and they stay on the developer side:</p>
+      <ul>
+        <li>a citation pointing outside NCBI</li>
+        <li>the shared daily guest limit</li>
+        <li>how the answer text arrives on screen</li>
+      </ul>
+    </div>
+    <div class="plain">
+      <h3>How this was tested</h3>
+      <ul>
+        <li>Local automated suite: 60 passed, 0 failed, and 13 live tests skipped on purpose. The AI model is faked there.</li>
+        <li>Live browser run on develop: 30 steps as a guest, at 390px, and as an account, plus two retests of the answer problems.</li>
+        <li>About 20 real searches were spent, as guests.</li>
+        <li>One throwaway account was created on develop: <code>s3-walkthrough-1789253328511@example.com</code>. Production was not touched.</li>
+      </ul>
+    </div>
+  </section>
+</main>

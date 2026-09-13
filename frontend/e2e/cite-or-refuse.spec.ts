@@ -1,5 +1,5 @@
 /**
- * W-thread-3, `testing/Product_workflows.md`'s Tier 1 row: "Tie every claim
+ * W-thread-3, `testing/Developer/Developer_workflows.md`'s Tier 1 row: "Tie every claim
  * to a source, or refuse and say so. No answering from model priors." This
  * repository's own `production-standards` rule calls cite-or-refuse "the
  * single highest-leverage correctness gate" in the system, and a confident
@@ -253,7 +253,7 @@ test.describe("cite or refuse", () => {
 
     // THE WHOLE POINT: no claim, cited or uncited, exists on the spine.
     // Before the 2026-09-05 fix this exact token rendered as an ordinary
-    // uncited claim, per `testing/Product_workflows.md`'s defect #5.
+    // uncited claim, per `testing/Developer/Developer_workflows.md`'s defect #5.
     await expect(page.getByTestId(/^spine-segment-/)).toHaveCount(0);
     await expect(page.getByTestId(/^claim-text-/)).toHaveCount(0);
     await expect(page.getByTestId(/^citation-\d+$/)).toHaveCount(0);

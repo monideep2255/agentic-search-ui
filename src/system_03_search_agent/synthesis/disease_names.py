@@ -27,7 +27,7 @@ Layer 2 fact that it is.
 
 ## Two calls, not one, and not two per id
 
-`testing/UI_feedback.md` and the phase 6 continuation prompt both said `ncbi_efetch`
+`docs/build/UI_feedback.md` and the phase 6 continuation prompt both said `ncbi_efetch`
 already resolves these, so the fix was "closer to wiring than to building",
 and both told the reader to verify before promising it. Verified 2026-09-01:
 

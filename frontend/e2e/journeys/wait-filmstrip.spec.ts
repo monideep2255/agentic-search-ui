@@ -1,7 +1,7 @@
 /**
  * Journey 2: the wait itself, as a per-second filmstrip.
  *
- * Build phase 6.2, T-6.2-11. `testing/UI_feedback.md` names this as the journey to
+ * Build phase 6.2, T-6.2-11. `docs/build/UI_feedback.md` names this as the journey to
  * build FIRST, and gives the reason: the fragmentation complaint is
  * currently described in prose, and a filmstrip of the twelve-second wait
  * turns it into something anyone can look at and immediately agree or
@@ -10,7 +10,7 @@
  * It earned that billing on its first working run. Against develop it showed
  * fifteen consecutive seconds in which NOTHING on screen changed, the same
  * live step and the same two tool chips throughout, with no answer at
- * twenty-five seconds where `testing/UI_feedback.md` had measured twelve to fourteen
+ * twenty-five seconds where `docs/build/UI_feedback.md` had measured twelve to fourteen
  * (F-6.2-07).
  *
  * ## Three defects this file hit, which `_capture.ts` now owns for everyone

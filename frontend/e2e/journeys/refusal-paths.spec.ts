@@ -1,7 +1,7 @@
 /**
  * Journey 6: refusal and error paths.
  *
- * `testing/UI_feedback.md` lists this as UNTESTED ENTIRELY, and it is the journey
+ * `docs/build/UI_feedback.md` lists this as UNTESTED ENTIRELY, and it is the journey
  * most likely to matter for trust. This system's whole position is that it
  * refuses rather than guesses, so what a refusal LOOKS like is a product
  * surface in its own right, and nobody has looked at it in a browser.

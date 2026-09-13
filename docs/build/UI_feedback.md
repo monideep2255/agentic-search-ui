@@ -171,7 +171,7 @@ That is internal accounting. It tells a researcher nothing they can act on, and 
 
 ## Seen in a real browser, not inferred
 
-Playwright drove Chromium against live production on 2026-08-31 and captured the answer screen. Screenshot: `testing/evidence/2026-08-31_live_answer_brca1.png`.
+Playwright drove Chromium against live production on 2026-08-31 and captured the answer screen. Screenshot: `frontend/e2e/evidence/2026-08-31_live_answer_brca1.png`.
 
 The picture settles the argument more cleanly than any API probing did. THE INTERFACE IS NOT THE PROBLEM.
 
@@ -484,7 +484,7 @@ Build these as `frontend/e2e/journeys/`, gated behind an environment variable li
 
 ### What makes them useful rather than decorative
 
-- Each ends in a named screenshot committed under `testing/evidence/`, dated, so a change can be compared against the last run rather than against memory.
+- Each ends in a named screenshot committed under `frontend/e2e/evidence/`, dated, so a change can be compared against the last run rather than against memory.
 - Each captures INTERMEDIATE states, not just the end. The complaint in this file is about the experience during the wait, and a final screenshot cannot show it.
 - Each runs against develop by default and takes its target from an environment variable.
 - None of them assert. They CAPTURE. A journey that fails a strict assertion stops and tells you nothing about the other seven steps, and the point here is to see the whole flow.

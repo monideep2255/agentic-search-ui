@@ -4018,7 +4018,7 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     #     the 2 not reported are absent from the citations as well as from
     #     the text above
     #
-    # A researcher hit that on the live site (`testing/UI_feedback.md`) and it told
+    # A researcher hit that on the live site (`docs/build/UI_feedback.md`) and it told
     # them nothing they could act on. "Findings prepared for it" is this
     # system's internal unit, the reader never saw a list of five, and
     # reporting a shortfall against a denominator they cannot inspect reads
@@ -4068,7 +4068,7 @@ def _build_next_step_offer(
 
     ## Built in code, never generated
 
-    `testing/UI_feedback.md` names the generated version as the easy and dangerous
+    `docs/build/UI_feedback.md` names the generated version as the easy and dangerous
     path, and the reasoning is worth restating rather than referencing: an
     offer to go deeper is a CLAIM that there is something deeper. A model
     asked to write one will happily propose a follow-up about data this

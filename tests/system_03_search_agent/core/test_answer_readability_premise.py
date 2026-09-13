@@ -64,7 +64,7 @@ A4 pins its honest-failure direction.
 
 ## The correction to the brief, verified rather than inherited
 
-`testing/UI_feedback.md` and `requirements/phase_6/Continuation_prompt.md` both
+`docs/build/UI_feedback.md` and `requirements/phase_6/Continuation_prompt.md` both
 state that `ncbi_efetch` already reaches MedGen in that query, so the fix
 "looks closer to wiring than to building", and both instructed the reader
 to verify it. Verified 2026-09-01, and it is half true.
@@ -183,7 +183,7 @@ _BARE_MEDGEN_CURIE = re.compile(r"MedGen:CN?\d+")
 
 _EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
-# The internal accounting sentence from `testing/UI_feedback.md`, which reached a
+# The internal accounting sentence from `docs/build/UI_feedback.md`, which reached a
 # real user on 2026-08-31: "this answer reports 3 of the 5 findings
 # prepared for it". A5 matches its shape rather than that literal string,
 # so a reworded version of the same disclosure is still caught.

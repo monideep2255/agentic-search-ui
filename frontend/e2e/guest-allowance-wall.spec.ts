@@ -1,5 +1,5 @@
 /**
- * W-GUEST-6, `testing/Product_workflows.md`'s Tier 1 row: "Stop a guest at
+ * W-GUEST-6, `testing/Developer/Developer_workflows.md`'s Tier 1 row: "Stop a guest at
  * five answers with an honest wall, not a broken page."
  *
  * WHY THIS WAS UNCOVERED AT LAYER A. The only existing coverage is
@@ -9,7 +9,7 @@
  * and its own docstring calls this "the entire allowance of one guest
  * identity plus the refusal... run it deliberately and rarely." A Tier 1
  * workflow with no free, deterministic, always-on check is exactly the gap
- * `testing/README.md`'s three-layer split exists to avoid.
+ * `testing/Developer/Developer_workflows.md`'s three-layer split exists to avoid.
  *
  * WHY THIS SPEC DOES NOT DO WHAT ITS TITLE SAYS YET. The plan was to spend
  * five REAL, free, cap-exceeded runs against the mock backend (which

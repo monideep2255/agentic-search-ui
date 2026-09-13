@@ -1,4 +1,4 @@
-# Product workflows
+# Developer workflows
 
 What this product must be able to do, derived from what is actually built, ranked so you can stop reading anywhere and still have covered the things that matter most.
 
@@ -15,15 +15,16 @@ This is a product specification first and a test plan second. Each workflow stat
 - [Defects this exercise found](#defects-this-exercise-found)
 - [Decisions waiting on the product owner](#decisions-waiting-on-the-product-owner)
 - [Coverage against UI feedback](#coverage-against-ui-feedback)
+- [How to run the automated tests](#how-to-run-the-automated-tests)
 
 ## How to read this
 
-Fifty workflows, in three tiers, written by four workers each owning one area. The full detail for each lives in `testing/drafts/`, one file per area, and is merged here by id.
+Fifty workflows, in three tiers, written by four workers each owning one area. The four per-area drafts were merged here by id, then deleted on 2026-09-12; they remain in git history under `testing/drafts/`.
 
 Every workflow carries three fields.
 
 - Status: BUILT, PARTLY BUILT or NOT BUILT, each citing a file and line. A status without a citation was not accepted.
-- Layer: which of the three testing layers verifies it. `testing/README.md` defines them.
+- Layer: which of the three testing layers verifies it, defined under [How to run the automated tests](#how-to-run-the-automated-tests).
 - Cost: real model answers consumed. Layer A is always zero.
 
 The distribution is the useful number: 46 of 50 workflows are Layer A and cost NOTHING. Only the three depth workflows and one live resolution check need a real answer. Proven rather than claimed: `frontend/e2e/second-turn.spec.ts` already drives sign-up, an answer, a follow-up producing a second answer, the thread collapsing and New search resetting, in 16.5 seconds against a real FastAPI, real Postgres, real auth, real SSE and the real five-node loop, with only the outbound model call faked.
@@ -152,8 +153,34 @@ Four, none of which an assistant should settle.
 
 ## Coverage against UI feedback
 
-Every item in `testing/UI_feedback.md` is carried, per the product owner's instruction of 2026-09-05 that nothing in it be dropped. The three headline findings, the five complaints, the four known-not-fixed items and the four never-checked items map to workflows above. Three resolve differently than that document states, and each is worth knowing.
+Every item in `docs/build/UI_feedback.md` is carried, per the product owner's instruction of 2026-09-05 that nothing in it be dropped. The three headline findings, the five complaints, the four known-not-fixed items and the four never-checked items map to workflows above. Three resolve differently than that document states, and each is worth knowing.
 
 - Complaint 4, the integrations page as a placeholder: the premise does not match the code. There are no controls on any of the three informational screens, and the stale claim about a dead KGX button lives in `frontend/src/stubs/registry.ts`, not in the page.
 - Complaint 1, the 8px horizontal bleed at 390px: that was the measurement, not the defect. The app bar overlapped itself.
 - `total_cost_usd` reporting `0.0` is a deliberate redaction for non-operators (`harness/cost_control.py:696-731`), not an unverified value. The control is working.
+
+## How to run the automated tests
+
+For developers. Moved here from `testing/README.md` on 2026-09-12, when that README became a short note for the product owner.
+
+| Layer | What it checks | Cost |
+|-------|-----------------|------|
+| A, mechanism | Deterministic assertions against the real stack: real FastAPI, real SSE, real cost caps, the real five-node loop. Only the outbound model call is faked, by `tests/e2e_support/mock_llm_backend.py` | Free, about a minute |
+| B, live product | Capture, not assertion, against the deployed develop app | Real money and real guest allowance |
+| C, answer quality | Whether an answer is complete, well cited and readable | A person's time. No script |
+
+Layer A:
+
+```bash
+cd frontend && npx playwright test e2e/
+```
+
+Layer B, gated so it never runs by accident:
+
+```bash
+cd frontend && RUN_LIVE_JOURNEYS=1 npx playwright test e2e/journeys/
+```
+
+Without `RUN_LIVE_JOURNEYS=1`, `frontend/e2e/journeys/_capture.ts` disables the live journeys. With it, they target the develop app unless `S3_LIVE_WEB_URL` or `S3_LIVE_API_URL` overrides it, and an override must be `https://` or loopback. Screenshots land in `frontend/e2e/evidence/`.
+
+The Playwright specs stay under `frontend/e2e/` because `frontend/playwright.config.ts` sets `testDir: "./e2e"`, `.github/gates/gate10_accessibility.sh` names `e2e/accessibility.spec.ts`, and `frontend/e2e/live-target.spec.ts` walks `e2e/` to forbid hardcoded deployed URLs.

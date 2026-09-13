@@ -1,5 +1,5 @@
 /**
- * W-thread-5, `testing/Product_workflows.md`'s Tier 1 row: "Never link a
+ * W-thread-5, `testing/Developer/Developer_workflows.md`'s Tier 1 row: "Never link a
  * citation to a host outside the allowed NCBI set, and say so when it
  * cannot." Built as `isLinkableCitationUrl` in `AnswerScreen.tsx:198-215`,
  * checked against `ALLOWED_CITATION_HOSTS` (the NCBI and ClinicalTrials.gov

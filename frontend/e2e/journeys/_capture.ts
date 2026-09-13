@@ -20,7 +20,7 @@
  *
  * ## The rule for everything in this directory
  *
- * From `testing/UI_feedback.md`: "None of them assert. They CAPTURE. A journey that
+ * From `docs/build/UI_feedback.md`: "None of them assert. They CAPTURE. A journey that
  * fails a strict assertion stops and tells you nothing about the other seven
  * steps, and the point here is to see the whole flow."
  *
@@ -43,7 +43,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 export const EVIDENCE_ROOT = path.resolve(
   HERE,
-  "../../../testing/evidence",
+  "../evidence",
 );
 
 /** Gate for every journey. They reach the internet and spend real budget. */

@@ -1,7 +1,7 @@
 /**
  * Journey 4: what the fifth and sixth guest questions look like.
  *
- * `testing/UI_feedback.md` lists this as UNTESTED ENTIRELY. The server-side guest
+ * `docs/build/UI_feedback.md` lists this as UNTESTED ENTIRELY. The server-side guest
  * allowance shipped in build phase 4.10 and carries five findings that are
  * about its PRESENTATION rather than its enforcement, all merged open:
  * `blocked_reason` is unread by the UI (F-4.10-05), the concurrent-run cap

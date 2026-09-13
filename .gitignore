@@ -131,9 +131,6 @@ logs/
 # Feedback screenshots: local only, never committed. The README and any .md
 # notes in feedback/ ARE tracked; only the image drops are ignored. Reason and
 # the deliberate-commit escape hatch: feedback/README.md.
-testing/feedback/inbox/*
-!testing/feedback/inbox/.gitkeep
-!testing/feedback/inbox/*.md
-testing/feedback/processed/*
-!testing/feedback/processed/.gitkeep
-!testing/feedback/processed/*.md
+testing/Product/feedback/inbox/*
+!testing/Product/feedback/inbox/.gitkeep
+!testing/Product/feedback/inbox/*.md

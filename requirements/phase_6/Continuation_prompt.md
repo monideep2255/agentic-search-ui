@@ -32,15 +32,28 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WAIT. It is the product owner's turn. PR #93 MERGED to `develop` on 2026-09-05 with all four CI gates green, the branch is deleted on both sides, and the develop app has redeployed. They are testing it against `testing/Product_workflows.md` and will drop screenshots into `testing/feedback/inbox/`. Do not open new work against that spec until they have.
+- WAIT. It is the product owner's turn, as of 2026-09-12. The assistant ran a live browser walkthrough of develop (report: `testing/Developer/reports/2026-09-12_walkthrough/index.html`), and the product owner recorded first impressions in `testing/Product/feedback/inbox/2026-09-12_first_impressions.md`. They tested by hand against `testing/Product/Product_workflows.md` the same day and finished their first round. Every finding, decision and open question is in `testing/Product/reports/2026-09-12_consistency_and_test_1.md`: read its summary and section 10 first, and keep that report updated as work proceeds. All open questions are settled. Next: batch 1, the screen and page fixes listed in section 10, then batch 2, the answer work, both through the UI fix loop below. When they drop something in, reply with a short triage and decide together; do not process it at length.
+
+THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-phase cadence for UI fixes, and it overrides `.claude/rules/git-workflow.md`'s branch requirement and the judge and adversary rounds for this work only:
+
+1. The product owner tests develop against `testing/Product/Product_workflows.md` and drops screenshots or notes into `testing/Product/feedback/inbox/`.
+2. They say "check the inbox". Reply with a short triage per item: what it is, whether it is already known, and a one-line fix. Agree together what gets fixed.
+3. Fix it immediately. No build phase, no multi-day plan, no judge or adversary agents. The product owner's testing is the verification.
+4. Work directly on `develop`. No branch and no pull request.
+5. Before pushing, run only the quick checks for what changed: the affected tests and lint, in minutes rather than hours.
+6. Commit with a Conventional Commit subject and push to `develop`. The develop app redeploys on its own.
+7. Confirm the new code is live on develop, then tell the product owner what changed and which tests to re-run.
+8. Repeat from step 1 until the product owner approves develop.
+9. Once they approve, run the release workflow in `docs/build/Release_flow.md`: cut `release/<version>` and merge it into `production`.
 
 WHERE TO LOOK, in the order a fresh session should read them:
 
 | Question | File |
 |---|---|
-| What must the product do, and what is broken | `testing/Product_workflows.md`, 50 workflows in three tiers |
-| How do I run any of it | `testing/README.md`, the three layers and the run commands |
-| What did the product owner say | `testing/feedback/inbox/`, any file in it |
+| What the product owner tests by hand | `testing/Product/Product_workflows.md`, 21 tests in plain steps |
+| What must the product do, and what is broken | `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers |
+| How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
+| What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
 | Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05 |
 
@@ -73,7 +86,7 @@ TWO PROCESS FAILURES FROM THIS SESSION, recorded because both will recur:
 THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong by a session that reads only the old instructions below. Product-owner decision, in `DECISIONS.md`:
 
 - The assistant fixes the frontend and the backend.
-- The assistant writes the test workflow into `testing/UI_feedback.md`.
+- The assistant writes the test workflow into `docs/build/UI_feedback.md`.
 - The PRODUCT OWNER runs it on develop and records what they saw.
 - Feedback comes back, it gets discussed, and the cycle repeats.
 
@@ -87,7 +100,7 @@ REWRITTEN 2026-09-01, not appended to. This spot held three sections written on 
 
 Each fact now has exactly one owner:
 
-- Why the disease names were the constraint, and what the fix turned out to be: `tracker/phase_6.2.md`, and `testing/UI_feedback.md`'s headline finding.
+- Why the disease names were the constraint, and what the fix turned out to be: `tracker/phase_6.2.md`, and `docs/build/UI_feedback.md`'s headline finding.
 - What build phase 6.0 delivered and what merged open with it: CLAUDE.md's Build phase history table, and `tracker/phase_6.0.md`.
 - Why build phase 6.1 should be split rather than opened, with the security scan and F-1.2-04 pulled out as their own small tickets: `requirements/Plan.md` Phase 7.
 
@@ -123,13 +136,13 @@ Nothing is blocked. THE NEXT ACTION IS NOT WORK, it is waiting, and that is deli
 
 | Next | What it is | Where it is tracked | Gated on |
 |---|---|---|---|
-| 1 | Wait for the product owner's verdict on workflows W1 to W9 | `testing/UI_feedback.md`, "Manual test workflows", the "What I saw" column | Nothing. It is their turn |
+| 1 | Wait for the product owner's verdict on workflows W1 to W9 | `docs/build/UI_feedback.md`, "Manual test workflows", the "What I saw" column | Nothing. It is their turn |
 | 2 | Whatever that verdict asks for, plus the six tickets build phase 6.2 merged with open | `tracker/phase_6.2.md` | Item 1 |
 | 3 | The answer can exceed 25 SECONDS on develop, and no ticket owns it | F-6.2-07 in `tracker/phase_6.2.md` | Nothing technically. It is the largest unowned problem in the product |
 | 4 | The security scan, and F-1.2-04's signup enumeration leak, pulled out of build phase 6.1 as their own small tickets | `requirements/Plan.md` Phase 7 | Nothing technically. Worth doing once real people are using it |
 | 5 | Build phase 6.0's eight open judge findings, and what remains of 6.1 | `requirements/Plan.md` Phase 7 | User feedback |
 
-SO: wait for the verdict, and do not open new work against `testing/UI_feedback.md` until those cells are filled in.
+SO: wait for the verdict, and do not open new work against `docs/build/UI_feedback.md` until those cells are filled in.
 
 ### Build phase 6.2, merged, and what merged open with it
 
@@ -157,11 +170,11 @@ SIX TICKETS MERGE OPEN: the 8px horizontal bleed at 390px (F-6.2-08), the latenc
 
 ### The unit of work is no longer a build phase
 
-Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and `testing/UI_feedback.md`, not from Section 25's build order.
+Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and `docs/build/UI_feedback.md`, not from Section 25's build order.
 
 Section 25 has run its course as a driver. Every numbered phase has merged or moved to `requirements/Plan.md` Phase 7, and `tracker/BOARD.md` carries NO open phase at all. What remains is of two kinds and neither is phase-shaped: findings attached to code, which are conditional and become work only when someone touches that code; and defects a real person hit on the live site.
 
-Build phase 6.0 is the argument for the change rather than an aside. It was opened because the board said it was next. It delivered contention protection that is invisible with one user, and measuring its own specification section first showed five of its eight requirements were already built. Meanwhile the defect that makes every disease answer unreadable sat in `testing/UI_feedback.md` the whole time. A phase number is a poor proxy for value once the specification is mostly built.
+Build phase 6.0 is the argument for the change rather than an aside. It was opened because the board said it was next. It delivered contention protection that is invisible with one user, and measuring its own specification section first showed five of its eight requirements were already built. Meanwhile the defect that makes every disease answer unreadable sat in `docs/build/UI_feedback.md` the whole time. A phase number is a poor proxy for value once the specification is mostly built.
 
 WHAT DOES NOT CHANGE, and do not let this be quietly lost: the premise gate written before the code and watched failing, the judge round, the write-first rule for findings, and a goal contract before any autonomous run. Those apply to a piece of work whatever it is called. `docs/build/Build_workflow_cadence.md` is scoped to a build phase and now needs a smaller sibling for flag-sized work. That sibling is NOT yet written, which is recorded here rather than assumed to exist.
 
@@ -319,4 +332,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-05.
+Last updated: 2026-09-12.

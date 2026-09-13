@@ -267,7 +267,7 @@ export function AppShell({
             Search" broke across three lines and OVERLAPPED the Search nav
             item, with "Log in" clipped at the right edge. Journey 7's
             evidence from 2026-09-01 shows the same collision, and
-            `testing/UI_feedback.md` records the viewport as an "8px
+            `docs/build/UI_feedback.md` records the viewport as an "8px
             horizontal bleed", which was the measurement rather than the
             defect.
 

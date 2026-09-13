@@ -1,7 +1,7 @@
 /**
  * Journey 8: sign up, sign out, sign in, and whether history survives.
  *
- * `testing/UI_feedback.md` lists this as UNTESTED ENTIRELY, and build phase 4.13
+ * `docs/build/UI_feedback.md` lists this as UNTESTED ENTIRELY, and build phase 4.13
  * merged with known open items on exactly this path, all recorded as
  * product-owner decisions at the time:
  *
