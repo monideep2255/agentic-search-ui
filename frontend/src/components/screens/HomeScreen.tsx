@@ -127,25 +127,37 @@ export function HomeScreen({
     // content-height and the landing shows a grey void below it, which only
     // became visible once the rail beside it ran full height.
     <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      {/*
+        Product-owner decision, 2026-09-12, overruling the design system's
+        navy landing hero (`screens/home.html`): "The home page contrast is
+        horrible. Lets have consistency." The home page now sits on the same
+        light `canvas` ground as every other screen, between the same blue
+        header and footer, with ink text and white controls.
+      */}
       <Box
         data-testid="home-hero"
         sx={{
           flex: 1,
-          bgcolor: designTokens.navy,
-          backgroundImage:
-            "radial-gradient(900px 340px at 50% -10%, rgba(32,84,147,.6), transparent 70%)",
+          bgcolor: designTokens.canvas,
           px: 3,
-          pt: { xs: 6, sm: 8 },
-          pb: { xs: 5, sm: 7 },
+          py: { xs: 5, sm: 6 },
           textAlign: "center",
+          // Product-owner feedback, 2026-09-12: centred between the header
+          // and footer, the same as the log-in screen. The inner wrapper
+          // below takes the full width, so its children keep their own
+          // `maxWidth` and `mx: auto` centring.
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
         }}
       >
-        <Typography variant="h1" component="h1" sx={{ color: "#FFFFFF", mb: 1.75 }}>
+        <Box sx={{ width: "100%" }}>
+        <Typography variant="h1" component="h1" sx={{ color: designTokens.ink, mb: 1.75 }}>
           Ask a biomedical question
         </Typography>
         <Typography
           sx={{
-            color: designTokens.inkOnNavyMute,
+            color: designTokens.inkMuted,
             maxWidth: "46ch",
             mx: "auto",
             mb: 3.75,
@@ -167,7 +179,9 @@ export function HomeScreen({
             mx: "auto",
             mb: 2.25,
             bgcolor: designTokens.surface,
-            border: "2px solid transparent",
+            // `search-bar.html`: a 2px `line-strong` border, so a white bar
+            // holds its own on the light ground.
+            border: `2px solid ${designTokens.lineStrong}`,
             borderRadius: 1,
             pl: 2,
             pr: 0.75,
@@ -228,7 +242,7 @@ export function HomeScreen({
 
         {/* `.depthwrap` sits BELOW the search bar in the prototype. */}
         <Box sx={{ mb: 2.5 }}>
-          <DepthControl value={depth} onChange={setDepth} variant="onNavy" />
+          <DepthControl value={depth} onChange={setDepth} variant="onLight" />
         </Box>
 
         <Box
@@ -256,10 +270,10 @@ export function HomeScreen({
                   py: 0.75,
                   borderRadius: 999,
                   cursor: "pointer",
-                  color: "#FFFFFF",
-                  border: "1px solid rgba(255,255,255,.35)",
-                  bgcolor: "rgba(255,255,255,.08)",
-                  "&:hover": { bgcolor: "rgba(255,255,255,.18)" },
+                  color: designTokens.ink,
+                  border: `1px solid ${designTokens.line}`,
+                  bgcolor: designTokens.surface,
+                  "&:hover": { borderColor: designTokens.lineStrong, bgcolor: designTokens.surfaceSunk },
                 }}
               >
                 {seed.text}
@@ -279,13 +293,13 @@ export function HomeScreen({
             mx: "auto",
             mt: 4.25,
             pt: 2.5,
-            borderTop: "1px solid rgba(255,255,255,.18)",
+            borderTop: `1px solid ${designTokens.line}`,
             display: "flex",
             flexWrap: "wrap",
             gap: "10px 28px",
             justifyContent: "center",
             fontSize: 12.5,
-            color: designTokens.inkOnNavyMute,
+            color: designTokens.inkMuted,
           }}
         >
           {[
@@ -294,12 +308,13 @@ export function HomeScreen({
             ["Literature and trials", "layered on top"],
           ].map(([label, detail]) => (
             <Box component="span" key={label}>
-              <Box component="b" sx={{ color: "#FFFFFF", fontWeight: 700 }}>
+              <Box component="b" sx={{ color: designTokens.ink, fontWeight: 700 }}>
                 {label}
               </Box>{" "}
               {detail}
             </Box>
           ))}
+        </Box>
         </Box>
       </Box>
 

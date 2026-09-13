@@ -621,7 +621,14 @@ export function App() {
    * into a hook other screens share.
    */
   const view = runId === null ? EMPTY_RUN_VIEW : streamed;
-  const step: StepName | null = view.activeStep;
+  // Product-owner feedback, 2026-09-12: "2-3 seconds of staring at the
+  // screen and nothing happens". The server reports a step only once it has
+  // FINISHED, so before the first event `activeStep` was null and the run
+  // screen showed no pulse, no counter and no caption while Guard was
+  // running. Guard is what is happening from the moment a question is sent,
+  // so it is shown live until the stream says otherwise.
+  const step: StepName | null =
+    view.activeStep ?? (searchView.name === "run" && !view.landed ? "Guard" : null);
 
   useEffect(() => {
     if ((view.landed || status === "error") && searchView.name === "run") {

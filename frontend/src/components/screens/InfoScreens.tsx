@@ -36,7 +36,10 @@ const mono = { fontFamily: "ui-monospace, monospace" } as const;
 
 function Page({ title, lede, children }: { title: string; lede: string; children?: React.ReactNode }) {
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 5 }}>
+    // Centred between the header and footer, product-owner feedback
+    // 2026-09-12, the same as the log-in screen. `width: 100%` keeps the
+    // 900 frame when `my: auto` sits inside the shell's flex column.
+    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: 3, py: 5 }}>
       <Typography variant="h2" component="h1" sx={{ mb: 1.5 }}>
         {title}
       </Typography>

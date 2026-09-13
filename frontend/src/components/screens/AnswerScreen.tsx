@@ -312,7 +312,10 @@ export function AnswerScreen({
   return (
     // Set 2, R8: full width up to 900, the same as the run screen, so the box
     // keeps one size from progress to answer.
-    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
+    // `my: auto` centres a short answer vertically, product-owner feedback
+    // 2026-09-12. A tall one starts at the top, since auto margins collapse
+    // to zero when the content is taller than the space.
+    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: 3, py: 3.5 }}>
       <Box
         sx={{
           bgcolor: designTokens.surface,

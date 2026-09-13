@@ -169,7 +169,9 @@ export function RunScreen({
     // Set 2, R8: `width: 100%` because `mx: auto` in a flex column stops the
     // box stretching, which made this card shrink to its content and grow
     // when the answer screen replaced it. Both screens are now the full 900.
-    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
+    // `my: auto` centres the card vertically, product-owner feedback
+    // 2026-09-12, the same as the log-in screen.
+    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: 3, py: 3.5 }}>
       <Box
         sx={{
           bgcolor: designTokens.surface,

@@ -482,12 +482,12 @@ Four items were not in the summary's fix list and are added here: R24 (a mode in
 | R4 | Keep the per-search cost cap, and keep the anonymous daily cap raised from 200 to 1,000 searches a day, since it is the only working limit on total anonymous spend. The system-wide daily cap stays configured but does not fire today. Removing the ten-attempt limit in R3 drops one of three abuse bounds; the per-connection daily share stays and still limits any single caller | Section 2, decision X4 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
 | R5 | One Log in button, with Sign up removed. A new email creates the account and signs in. An existing email still needs its own password | Sections 5 and 6 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
 | R6 | Log out returns to the home page | Section 5 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
-| R7 | Sign-in box centred between header and footer | Section 5 | ✅ 🚀 Built in set 2, live on develop 2026-09-12, waiting for your retest |
-| R8 | The white box keeps one width from progress to answer, across every search | Sections 3 and 6 | ✅ 🚀 Built in set 2, live on develop 2026-09-12, waiting for your retest |
-| R9 | Header and footer fixed in place, with a stable content area, so the footer no longer jumps | Section 4 | ✅ 🚀 Built in set 2, live on develop 2026-09-12, waiting for your retest |
-| R10 | Smooth transitions between home, progress and answer | Section 4 | ✅ 🚀 Built in set 2, live on develop 2026-09-12, waiting for your retest |
-| R11 | Header and footer both in the lighter NCBI blue | Section 10, question 1 | ✅ 🚀 Built in set 2, live on develop 2026-09-12, waiting for your retest |
-| R12 | New search as a filled blue button with white text, distinct from Stop | Section 7 | ✅ 🚀 Built in set 2, live on develop 2026-09-12, waiting for your retest |
+| R7 | Sign-in box centred between header and footer | Section 5 | ✅ 🚀 👍 Done in set 2, live on develop and approved on 2026-09-12 |
+| R8 | The white box keeps one width from progress to answer, across every search | Sections 3 and 6 | ✅ 🚀 👍 Done in set 2, live on develop and approved on 2026-09-12 |
+| R9 | Header and footer fixed in place, with a stable content area, so the footer no longer jumps | Section 4 | ✅ 🚀 👍 Done in set 2, live on develop and approved on 2026-09-12 |
+| R10 | Smooth transitions between home, progress and answer | Section 4 | ✅ 🚀 👍 Done in set 2, live on develop and approved on 2026-09-12 |
+| R11 | Header and footer both in the lighter NCBI blue | Section 10, question 1 | ✅ 🚀 👍 Done in set 2, live on develop and approved on 2026-09-12 |
+| R12 | New search as a filled blue button with white text, distinct from Stop | Section 7 | ✅ 🚀 👍 Done in set 2, live on develop and approved on 2026-09-12 |
 | R13 | Refusals: remove the red "Not verified" and "Not fully grounded" pills | Sections 5 and 8 | Not started |
 | R14 | Refusals: the NCBI search address becomes a clickable link | Section 8 | Not started |
 | R15 | Integrations page rebuilt from the reference layout in our own colours and typeface: summary line and chips, equal-height cards, round icon, title, description, buttons pinned to the bottom, and an access notice | Sections 5 and 6, question 2 | Not started |

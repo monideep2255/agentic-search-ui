@@ -30,7 +30,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | Set | What you will see | Built | Live | Approved | You retest |
 |---|---|---|---|---|---|
 | 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
-| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens | ✅ | 🚀 | | Tests 1, 2, 3, 9, 11 |
+| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
 | 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | | | | Tests 8, 9, 13, 19 |
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
@@ -118,7 +118,7 @@ What you will see: the white box stays one width from progress to answer. The he
 
 ### 2.1 Centre the sign-in box (R7)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the log-in form sits in the middle of the screen, not tucked under the header.
 - What you noted: "The sign-in box is way too close to the header; I would like it much more centred."
@@ -126,7 +126,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.2 One box width from progress to answer (R8)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the white content box does not change size as a search moves from progress to answer.
 - What you noted: "The white box should stay the size it is when the answer is actually shown."
@@ -134,7 +134,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.3 Fix the header and footer in place (R9)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the header and footer stay still while the content in between changes.
 - What you noted: "The transitions are very weird. The footer moves all over the place. The header and footer should stay consistent, including going from the home page to the search page."
@@ -142,7 +142,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.4 Smooth transitions between screens (R10)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: moving between home, progress and answer feels like one continuous app.
 - What you noted: "It needs to be a much smoother experience. Right now it looks very static and clunky."
@@ -150,7 +150,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.5 Header and footer in the same blue (R11)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the header and footer use one colour, not two.
 - What you noted: "The header and footer should be the same colour." Decided in section 10, question 1: the lighter NCBI blue, for both.
@@ -158,7 +158,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.6 New search as a distinct blue button (R12)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: New search and Stop no longer look like the same button.
 - What you noted: "The New search and Stop buttons are the same colour. New search should be a different colour, a blue background with white text, so it looks distinct."
@@ -166,7 +166,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.7 Add the three missing logo colours to the theme (X9)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the new blue header has every colour it needs, approved for the theme file.
 - What you noted: decision X9, the product owner's approval to change `frontend/src/theme.ts`.
