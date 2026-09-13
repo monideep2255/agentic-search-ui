@@ -1168,7 +1168,7 @@ export function AboutScreen({ onNavigateToSearch }: AboutScreenProps = {}) {
         <JourneyStop index={3} title="The search goes out">
           <StopText>
             Act runs the tools Plan chose, across three layers of data. Each call carries its own
-            time limit, 30 seconds for a graph query and 15 seconds for a live NCBI call, and one
+            time limit, 90 seconds for a graph query and 15 seconds for a live NCBI call, and one
             question may make at most 20 live calls in total. A call that would exceed either of
             those fails fast and says which limit it hit, rather than leaving you waiting. This is
             the part you watch on the progress screen.
