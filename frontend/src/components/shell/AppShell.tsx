@@ -33,7 +33,7 @@ import { AccountMenu } from "./AccountMenu";
  * to Integrations, so an existing link is not broken (see `lib/routing.ts`'s
  * `LEGACY_PATHS`).
  */
-export type ScreenName = "search" | "integrations" | "about";
+export type ScreenName = "search" | "integrations" | "about" | "architecture";
 
 const NAV: { key: ScreenName; label: string }[] = [
   // Order transcribed from the prototype's `.nav` (F-4.8-D-09). Docs and About
@@ -42,6 +42,14 @@ const NAV: { key: ScreenName; label: string }[] = [
   { key: "search", label: "Search" },
   { key: "integrations", label: "Integrations" },
   { key: "about", label: "About" },
+  // Added 2026-09-13 on the product owner's request for a page showing where
+  // the data itself comes from. It sits AFTER About because About is the
+  // gentler read of the two: one question followed through the running
+  // system, no counts or hostnames. Architecture is the deeper page behind
+  // it. A fourth item needs no new responsive work: the 720px rule below
+  // already hides every non-current item inline and `NavOverflowMenu`
+  // already carries whatever is hidden.
+  { key: "architecture", label: "Architecture" },
 ];
 
 export interface AppShellProps {

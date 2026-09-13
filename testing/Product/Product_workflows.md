@@ -174,14 +174,17 @@ Expected:
 
 Testing: navigation works, including on a phone.
 
-Steps: click Integrations → About → press the browser back button → on Integrations, click a copy button → make the window phone-narrow, or open the site on your phone → open "More pages" → log in → tap the searches button at the top right
+Steps: click Integrations → About → Architecture → press the browser back button → on Integrations, click a copy button → back on About, scroll to the bottom and click "Open Architecture" → make the window phone-narrow, or open the site on your phone → open "More pages" → log in → tap the searches button at the top right
 
 Expected:
 
-- Each page opens, and back returns to the previous page. There is no Docs tab; the top bar shows Search, Integrations and About.
+- Each page opens, and back returns to the previous page. There is no Docs tab; the top bar shows Search, Integrations, About and Architecture.
 - Integrations shows one title, four chips reading 115M nodes, 693M edges, 3 data layers and 7 tools, then four cards of the same height: REST and SSE, GraphQL, MCP server, and Command line tools. Each card has a round icon, a title, a short description, and buttons lined up along the bottom.
 - Below the cards, a short access notice, then an API documentation section.
 - About opens with "What happens to your question": seven numbered stops that follow one BRCA1 question from typing it, through the three model tiers, the search, the records coming back, the streamed answer, what you get, and what the system will not do. The closing line's "open Search" link returns to the home page.
+- About ends with a short "Where the data comes from" block: the knowledge graph is a snapshot finished on 22 April 2026, built from Gene, PubMed, ClinVar, Taxonomy and MedGen, holding 115,406,761 nodes and 693,295,991 edges, with layers 2 and 3 called live. Under it, "Open Architecture" goes to the Architecture page without reloading, so you stay logged in.
+- Architecture opens with the title "Architecture" and three numbered sections: System 1 the data pipelines, System 2 the knowledge graph, System 3 the search agent. Section 1 shows the five pipeline steps, the four snapshot figures, and one card per source database with its node count. Section 2 shows an example query and says a graph query gets 90 seconds and at most 500 rows. Section 3 shows three coloured layer cards, L1, L2 and L3, each listing its tools and their time limits.
+- The closing line on Architecture, "open About", goes back to About.
 - The copy button copies the snippet.
 - At phone width nothing scrolls sideways, and the other pages are reachable from "More pages".
 - At phone width, while logged in, the searches button at the top right opens your searches as a panel sliding in from the left. Tapping outside it, pressing Escape, or its close button closes it.

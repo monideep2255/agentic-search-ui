@@ -84,6 +84,7 @@ import { RunProgress } from "./components/screens/RunProgress";
 import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import type { PreviousTurn } from "./components/screens/AnswerScreen";
+import { ArchitectureScreen } from "./components/screens/ArchitectureScreen";
 import { AboutScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
@@ -1375,8 +1376,14 @@ export function App() {
             setScreen("search");
             setSearchView({ name: "home" });
           }}
+          onNavigateToArchitecture={() => setScreen("architecture")}
         />
       );
+    // The two info pages cross-link to each other through the same screen
+    // switch the nav uses, so nothing reloads and the in-memory access token
+    // survives the move.
+    if (screen === "architecture")
+      return <ArchitectureScreen onNavigateToAbout={() => setScreen("about")} />;
 
     switch (searchView.name) {
       case "signin":

@@ -33,6 +33,11 @@ const ROUTES = [
   { path: "/", nav: "Search", heading: null },
   { path: "/integrations", nav: "Integrations", heading: /^Integrations$/ },
   { path: "/about", nav: "About", heading: /How an answer is built/i },
+  // Added 2026-09-13 with the page itself. Its nav label and its <h1> are the
+  // same word, which is the exception on this list rather than the rule, so
+  // the heading is pinned with anchors: a substring match for /architecture/
+  // would also find the About page's strip.
+  { path: "/architecture", nav: "Architecture", heading: /^Architecture$/ },
 ] as const;
 
 /**

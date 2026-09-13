@@ -164,7 +164,10 @@ test.describe("accessibility", () => {
   // "Docs" left this list with the tab itself, fix set 5 (R18, 2026-09-13).
   // Its content is now the "API documentation" section of the Integrations
   // screen, so the Integrations run below covers it.
-  for (const screen of ["Integrations", "About"] as const) {
+  // "Architecture" joined this list with the page itself (2026-09-13). A
+  // screen the suite never visits has not been checked, however green the run
+  // looks, which is the lesson the sign-in arm below already records.
+  for (const screen of ["Integrations", "About", "Architecture"] as const) {
     test(`the ${screen.toLowerCase()} screen is clean`, async ({ page }) => {
       await enterApp(page);
       // `exact: true` (2026-09-13): the persona chip's info button carries

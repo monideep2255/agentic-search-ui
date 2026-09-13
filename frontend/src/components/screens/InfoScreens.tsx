@@ -66,11 +66,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, Chip, Typography } from "@mui/material";
 
+import {
+  EDGE_COUNT,
+  NODE_COUNT,
+  SNAPSHOT_DATE,
+  SOURCE_DATABASE_NAMES,
+} from "../../lib/architectureFacts";
 import { designTokens, layerColour } from "../../theme";
 
-const mono = { fontFamily: "ui-monospace, monospace" } as const;
+export const mono = { fontFamily: "ui-monospace, monospace" } as const;
 
-function Page({ title, lede, children }: { title: string; lede: string; children?: React.ReactNode }) {
+export function Page({ title, lede, children }: { title: string; lede: string; children?: React.ReactNode }) {
   return (
     // Centred between the header and footer, product-owner feedback
     // 2026-09-12, the same as the log-in screen. `width: 100%` keeps the
@@ -832,20 +838,25 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
   {
     n: 2,
     name: "Live NCBI APIs",
-    tools: "ncbi_efetch, ncbi_dbsnp",
+    // `pathogen_detection` is a Layer 2 tool by its own declaration
+    // (`tools/pathogen_detection.py`, `layer="layer_2_api"`, an NCBI-native
+    // bulk source rather than an enrichment API); it sat under layer 3 here
+    // until 2026-09-13, when the Architecture page, built from the tool code,
+    // disagreed with this walk.
+    tools: "ncbi_efetch, ncbi_dbsnp, pathogen_detection",
     body: "Fetched while you wait, so they are current. Used for anything the graph cannot name, such as turning a concept id into a disease name.",
   },
   {
     n: 3,
     name: "Enrichment",
-    tools: "pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search",
+    tools: "pubtator_annotate, litvar2_lookup, clinicaltrials_search",
     body: "Literature and trial evidence, added when the question asks for it rather than by default.",
   },
 ];
 
 /** One stop on the spine: a numbered node, the line down to the next stop,
  *  and the stop's own heading and prose. */
-function JourneyStop({
+export function JourneyStop({
   index,
   last,
   title,
@@ -916,7 +927,7 @@ function JourneyStop({
 
 /** Body prose inside a stop. One place to set the measure and the colour, so
  *  seven stops cannot drift apart. */
-function StopText({ children }: { children: React.ReactNode }) {
+export function StopText({ children }: { children: React.ReactNode }) {
   return (
     <Typography variant="body2" sx={{ color: designTokens.inkMuted, maxWidth: "62ch", mb: 1.5 }}>
       {children}
@@ -926,7 +937,7 @@ function StopText({ children }: { children: React.ReactNode }) {
 
 /** A small caption naming what the thing beside it is, in the mock and above
  *  the grouped lists. The design system's own eyebrow treatment. */
-function StopLabel({ children }: { children: React.ReactNode }) {
+export function StopLabel({ children }: { children: React.ReactNode }) {
   return (
     <Typography variant="overline" component="p" sx={{ color: designTokens.inkFaint, m: 0 }}>
       {children}
@@ -1061,9 +1072,18 @@ export interface AboutScreenProps {
    * sentence naming the tab. Optional so the screen still renders standalone.
    */
   onNavigateToSearch?: () => void;
+  /**
+   * Takes the reader to the Architecture page, wired by `App`, so the strip
+   * at the foot of this page is a real link through the same screen switch
+   * the nav uses. Optional, so the screen still renders standalone.
+   */
+  onNavigateToArchitecture?: () => void;
 }
 
-export function AboutScreen({ onNavigateToSearch }: AboutScreenProps = {}) {
+export function AboutScreen({
+  onNavigateToSearch,
+  onNavigateToArchitecture,
+}: AboutScreenProps = {}) {
   const layers: { n: 1 | 2 | 3; name: string; body: string; colour: string }[] = [
     {
       n: 1,
@@ -1367,6 +1387,81 @@ export function AboutScreen({ onNavigateToSearch }: AboutScreenProps = {}) {
         so and stops rather than answering from memory. The track beside each answer shows one
         segment per claim, coloured by its layer, so an uncited claim is visible before you read a
         word.
+      </Typography>
+
+      {/*
+        THE STRIP, product-owner request of 2026-09-13. The walk above says
+        which layer a fact came from; it never says where the graph itself
+        came from, how big it is, or how old. Four lines here, and the page
+        that answers it properly is `/architecture`.
+
+        DELIBERATELY AT THE FOOT rather than above the walk. The walk is this
+        page's subject and the product owner asked for it by name; putting a
+        counts-and-dates block in front of it would have been the "convolutes
+        the about page" outcome the same request warned against. Every figure
+        is read from `lib/architectureFacts.ts`, the module the Architecture
+        page itself renders from, so the two pages cannot state different
+        numbers.
+      */}
+      <Typography variant="h2" component="h2" sx={{ mt: 5, mb: 1.5 }}>
+        Where the data comes from
+      </Typography>
+      <Box
+        component="ul"
+        data-testid="about-data-strip"
+        sx={{
+          listStyle: "none",
+          m: 0,
+          mb: 2,
+          p: 0,
+          display: "grid",
+          gap: 0.75,
+          maxWidth: "66ch",
+        }}
+      >
+        {[
+          `The knowledge graph is a snapshot, finished on ${SNAPSHOT_DATE}.`,
+          `It is built from five NCBI databases: ${SOURCE_DATABASE_NAMES.slice(0, -1).join(", ")} and ${SOURCE_DATABASE_NAMES[SOURCE_DATABASE_NAMES.length - 1]}.`,
+          `It holds ${NODE_COUNT} nodes and ${EDGE_COUNT} edges.`,
+          "Layers 2 and 3 are stored nowhere. They are called live while you wait, so what they return is current.",
+        ].map((line) => (
+          <Typography
+            key={line}
+            component="li"
+            variant="body2"
+            sx={{
+              color: designTokens.inkMuted,
+              borderLeft: `4px solid ${designTokens.layer1}`,
+              pl: 1.5,
+            }}
+          >
+            {line}
+          </Typography>
+        ))}
+      </Box>
+      <Typography sx={{ color: designTokens.inkMuted, maxWidth: "66ch" }}>
+        {onNavigateToArchitecture ? (
+          <Box
+            component="button"
+            type="button"
+            onClick={onNavigateToArchitecture}
+            sx={{
+              font: "inherit",
+              p: 0,
+              border: 0,
+              bgcolor: "transparent",
+              color: designTokens.link,
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+          >
+            Open Architecture
+          </Box>
+        ) : (
+          "Open Architecture in the bar above"
+        )}{" "}
+        for the pipelines behind that snapshot, what each database contributes, and every API the
+        two live layers call.
       </Typography>
     </Page>
   );

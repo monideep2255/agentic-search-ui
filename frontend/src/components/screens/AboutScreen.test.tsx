@@ -47,7 +47,7 @@
  */
 
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { AboutScreen } from "./InfoScreens";
 
@@ -163,5 +163,46 @@ describe("AboutScreen: what happens to your question", () => {
     }
 
     expect(screen.getByRole("heading", { name: "Cite or refuse" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * The "Where the data comes from" strip, product-owner request of
+ * 2026-09-13. Four lines and a link to `/architecture`.
+ *
+ * The counts are pinned as literals here as well as on the Architecture
+ * page's own test. Both surfaces read the same module, so an arm written as
+ * `toHaveTextContent(NODE_COUNT)` would move with a typo instead of catching
+ * one. A literal cannot.
+ */
+describe("AboutScreen: where the data comes from", () => {
+  it("states the snapshot date, the five databases and the exact counts", () => {
+    render(<AboutScreen />);
+
+    expect(
+      screen.getByRole("heading", { name: "Where the data comes from", level: 2 }),
+    ).toBeInTheDocument();
+
+    const strip = screen.getByTestId("about-data-strip");
+    expect(strip).toHaveTextContent("22 April 2026");
+    expect(strip).toHaveTextContent("Gene, PubMed, ClinVar, Taxonomy and MedGen");
+    expect(strip).toHaveTextContent("115,406,761 nodes");
+    expect(strip).toHaveTextContent("693,295,991 edges");
+    expect(strip).toHaveTextContent(/Layers 2 and 3 are stored nowhere/);
+  });
+
+  it("links to the Architecture page when wired, and names the tab when it is not", () => {
+    const onNavigateToArchitecture = vi.fn();
+    const { unmount } = render(
+      <AboutScreen onNavigateToArchitecture={onNavigateToArchitecture} />,
+    );
+
+    screen.getByRole("button", { name: "Open Architecture" }).click();
+    expect(onNavigateToArchitecture).toHaveBeenCalledTimes(1);
+    unmount();
+
+    render(<AboutScreen />);
+    expect(screen.queryByRole("button", { name: "Open Architecture" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Open Architecture in the bar above/)).toBeInTheDocument();
   });
 });

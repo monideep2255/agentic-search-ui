@@ -8,7 +8,13 @@
  *     Home          /
  *     Integrations  /integrations
  *     About         /about
+ *     Architecture  /architecture   (added 2026-09-13, see below)
  *     Docs          /docs      (removed as a screen, R18; now an alias)
+ *
+ * UPDATED 2026-09-13, the product owner's architecture request. `/architecture`
+ * is a fourth REAL screen, so it joins `PATH_BY_SCREEN` rather than
+ * `LEGACY_PATHS`: navigating to it must put `/architecture` in the address
+ * bar, which is exactly the direction a one-way legacy entry cannot serve.
  *
  * UPDATED 2026-09-13, fix set 5 (R18). Docs is no longer a screen: its
  * content is the "API documentation" section inside Integrations. `/docs`
@@ -22,7 +28,7 @@
  * this adds none. `production-standards.md` requires a security review for
  * every new dependency and `system-design-patterns` puts that in the ASK
  * bucket, which would be the right thing to pay for a routing library that
- * earned it. This does not: there are three static paths, one alias, no
+ * earned it. This does not: there are four static paths, one alias, no
  * parameters, no
  * nested layouts, no loaders, and one already-existing piece of state
  * (`App.tsx`'s `screen`) that a router would only end up mirroring. The
@@ -52,6 +58,7 @@ export const PATH_BY_SCREEN: Record<ScreenName, string> = {
   search: "/",
   integrations: "/integrations",
   about: "/about",
+  architecture: "/architecture",
 };
 
 /**
