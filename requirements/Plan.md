@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-05.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0 on 2026-08-31, 6.2 on 2026-09-01 as PR #92, and PR #93 on 2026-09-05. PR #93 IS NOT A NUMBERED BUILD PHASE: work is now picked from open flags and from the product owner's own testing rather than from Section 25, which has run its course. It delivered the sign-in screen, chrome reduction, a usable integrations page, one shape for every refusal, a session-state privacy leak fix, and `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers derived from what is built. THE NEXT ACTION IS NOT WORK, IT IS WAITING: the product owner is testing develop against that spec and drops screenshots into `testing/Product/feedback/inbox/`. Authoritative state: `tracker/BOARD.md`; what to do next: `requirements/phase_6/Continuation_prompt.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 490 (DECISIONS.md).
+Decisions logged: 493 (DECISIONS.md).
 
 Deliverables produced:
 

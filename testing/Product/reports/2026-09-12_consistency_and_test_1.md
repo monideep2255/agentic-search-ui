@@ -476,12 +476,12 @@ Four items were not in the summary's fix list and are added here: R24 (a mode in
 
 | ID | Requirement | From | Status |
 |---|---|---|---|
-| R1 | Remove the five-search guest limit and its counter | Sections 2 and 6 | Not started |
-| R2 | Remove the "You have used your free searches" and "moved into an account" walls | Section 2 | Not started |
-| R3 | Remove the ten-attempt guest limit | Sections 2 and 9 | Not started |
-| R4 | Keep the three spending caps: per search, system-wide per day, and anonymous per day | Section 2 | Not started |
-| R5 | One Log in button, with Sign up removed. A new email creates the account and signs in. An existing email still needs its own password | Sections 5 and 6 | Not started |
-| R6 | Log out returns to the home page | Section 5 | Not started |
+| R1 | Remove the five-search guest limit and its counter | Sections 2 and 6 | ✅ Built in set 1, not pushed yet |
+| R2 | Remove the "You have used your free searches" and "moved into an account" walls | Section 2 | ✅ Built in set 1, not pushed yet |
+| R3 | Remove the ten-attempt guest limit | Sections 2 and 9 | ✅ Built in set 1, not pushed yet |
+| R4 | Keep the per-search cost cap, and keep the anonymous daily cap raised from 200 to 1,000 searches a day, since it is the only working limit on total anonymous spend. The system-wide daily cap stays configured but does not fire today. Removing the ten-attempt limit in R3 drops one of three abuse bounds; the per-connection daily share stays and still limits any single caller | Section 2, decision X4 | ✅ Caps kept in code in set 1, not pushed yet. Raising the anonymous daily cap to 1,000 on develop waits for your yes at push |
+| R5 | One Log in button, with Sign up removed. A new email creates the account and signs in. An existing email still needs its own password | Sections 5 and 6 | ✅ Built in set 1, not pushed yet |
+| R6 | Log out returns to the home page | Section 5 | ✅ Built in set 1, not pushed yet |
 | R7 | Sign-in box centred between header and footer | Section 5 | Not started |
 | R8 | The white box keeps one width from progress to answer, across every search | Sections 3 and 6 | Not started |
 | R9 | Header and footer fixed in place, with a stable content area, so the footer no longer jumps | Section 4 | Not started |
@@ -522,7 +522,7 @@ Four items were not in the summary's fix list and are added here: R24 (a mode in
 
 | ID | Requirement | From | Status |
 |---|---|---|---|
-| R37 | Update `Product_workflows.md` once tests change: tests 4, 16 and 20 removed, tests 3 and 5 rewritten for one Log in, and test 7 rewritten for two modes | Sections 5, 6 and 7 | Not started |
+| R37 | Update `Product_workflows.md` once tests change: tests 4, 16 and 20 removed, tests 3 and 5 rewritten for one Log in, and test 7 rewritten for two modes | Sections 5, 6 and 7 | Partly done: tests 3, 4, 5, 16 and 20 ✅ in set 1, not pushed yet. Test 7 waits for the two modes |
 | R38 | Consistency run: each of the 50 golden questions 3 times on develop, with a per-question result, repeated after each fix | Section 1 | Not started |
 | R39 | Judge answer quality with the grader or a domain expert, once questions answer reliably | Section 1 | Not started |
 
@@ -537,6 +537,7 @@ Four items were not in the summary's fix list and are added here: R24 (a mode in
 | R44 | A refusal shows a neutral grey label matched to its reason, such as "No answer found in NCBI records" or "Outside biomedical research" | U6 | Not started |
 | R45 | After Stop, show "Search stopped" with "Run again" and "New search" buttons, instead of a frozen screen | U7 | Not started |
 | R46 | Stay signed in across a page reload, and make search history work on phones as a panel that slides in and closes | U8 and U9 | Not started |
+| R47 | Plain language answers end with one small grey line, "Research information, not medical advice." Researcher answers do not | Decision X5 | Not started |
 
 ### Known, but not asked to fix
 
@@ -577,13 +578,19 @@ These are about the build, spending, housekeeping, and two older UI items that p
 
 | # | Decision | Answer |
 |---|---|---|
-| X1 | Commit and push today's work to `develop` | DECIDED: commit and push now |
-| X2 | The go-ahead to start batch 1 | Not yet asked |
-| X3 | Accept that one Log in button reveals whether an email is registered, R5 | Not yet asked |
-| X4 | Keep the three spending caps while the guest limit goes, R4 | Not yet asked |
-| X5 | Whether answers carry a medical-advice notice, now that the warning band is gone. Older UI item | Not yet asked |
-| X6 | Whether hiding the navigation below 720px is right, now that "More pages" exists. Older UI item | Not yet asked |
-| X7 | Approve the consistency run of about 150 real searches, R38 | Not yet asked |
+| X1 | Commit and push today's work to `develop` | DECIDED: commit and push now. Done as `08f4576`, 107 files, confirmed on the remote |
+| X2 | The go-ahead to start batch 1 | Asked for a plan first: one ordered list of UI work built from everything in `testing/Developer/` and `testing/Product/`, before any fix starts |
+| X3 | Accept that one Log in button reveals whether an email is registered, R5 | DECIDED: accepted for the prototype |
+| X4 | Keep the three spending caps while the guest limit goes, R4 | Re-asked. The first answer, remove the anonymous daily cap, was given on a wrong description from the assistant: it said the whole-system daily cap would still apply. The code says it cannot. `SYSTEM_DAILY_CAP_USD` sums a record that is not being written, so it reads $0.00 and never fires, and `ANON_DAILY_RUN_CAP`, 200 a day, is the only bound on total anonymous spend (`harness/cost_control.py`, `anon_daily_run_cap`). An earlier adversary round used all 200 in 1.84 seconds. DECIDED after the correction: keep the anonymous daily cap and raise it from 200 to 1,000 searches a day. The per-search cost cap also stays. Setting the new value on develop changes an environment variable, so it is confirmed at the time it is applied |
+| X5 | Whether answers carry a medical-advice notice, now that the warning band is gone. Older UI item | DECIDED: one small grey line under Plain language answers only, "Research information, not medical advice." Researcher answers do not show it. Added as R47 |
+| X6 | Whether hiding the navigation below 720px is right, now that "More pages" exists. Older UI item | DECIDED: keep it as develop does today, the current page plus a "More pages" button. With Docs folded into Integrations, the menu holds only Integrations and About |
+| X7 | Approve the consistency run of about 150 real searches, R38 | DECIDED: run a baseline now, before any answer fix, then again after sets 7, 8 and 9, so each fix shows as a change in the number. Results go to `testing/Developer/reports/` |
 | X8 | Raise the per-search cost cap, only if full-page answers start getting cut short | Not yet asked |
-| X9 | Add the three missing on-navy layer colours to the theme file | Not yet asked |
-| X10 | Keep or delete the test account on develop, and the online copy of the walkthrough report | Not yet asked |
+| X9 | Add the three missing on-navy layer colours to the theme file | DECIDED: fix it in set 2. When the header turns the lighter NCBI blue, add three approved logo colours to `frontend/src/theme.ts`, checked for contrast against that blue, so the design token check reports zero problems. This is the product owner's approval to change the theme file |
+| X10 | Keep or delete the test account on develop, and the online copy of the walkthrough report | DECIDED: keep the test account, which the consistency runs and browser checks use. Delete the online copy of the walkthrough report, since `testing/Developer/reports/2026-09-12_walkthrough/` is the one source |
+
+All ten are settled except X8, raising the per-search cost cap, which is only asked if full-page answers start getting cut short.
+
+## 13. The fix plan
+
+Written 2026-09-12 at the product owner's request, and stored at `../../UI_fix_plan.md`. It turns requirements R1 to R46, plus four open items found only in `Developer_workflows.md`, into ten ordered fix sets: five for screens and pages, then five for answers. Each set lists what you will see, the requirements it closes, the likely files, the checks before push, and which tests to redo. Its status table is the place to see progress.
