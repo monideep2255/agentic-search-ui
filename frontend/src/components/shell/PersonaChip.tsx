@@ -239,6 +239,12 @@ export function PersonaChip({ name, variant = "onNavy", about = null, wikipedia 
             p: "12px 14px",
             color: designTokens.ink,
             textAlign: "left",
+            // The chip sets `whiteSpace: "nowrap"` so the label never
+            // breaks, and this card sits inside it, so it inherited that
+            // and the about line ran off the right edge of the page
+            // (measured live at 1280px: 1555px of scroll width). Reset
+            // here so the card wraps like ordinary text.
+            whiteSpace: "normal",
           }}
         >
           <Typography
