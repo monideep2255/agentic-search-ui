@@ -31,7 +31,7 @@ The ordered work list for fixing the product after the first testing round on 20
 |---|---|---|---|---|---|
 | 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
 | 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
-| 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | ✅ | 🚀 | | Tests 8, 9, 13, 19 |
+| 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | ✅ | 🚀 | 👍 | Tests 8, 9, 13, 19 |
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
 | 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | | | | Nothing |
@@ -246,7 +246,7 @@ Pushed as commit `4026282`, live on develop on 2026-09-13 and checked on the liv
 
 ### 3.1 Remove the red refusal pills (R13)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: a refusal no longer looks like a system error.
 - What you noted: from decision U6: a refusal should not carry a red "Not verified" or "Not fully grounded" pill.
@@ -254,7 +254,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 3.2 Make the NCBI search address a clickable link (R14)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the suggestion inside a refusal can actually be followed.
 - What you noted: "The messaging is there, telling me to try something, but it should be a clickable link."
@@ -262,7 +262,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 3.3 A grey label matched to the refusal reason (R44)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: different refusal reasons read differently from each other.
 - What you noted: decision U6, a neutral grey label matched to the reason, such as "No answer found in NCBI records" or "Outside biomedical research".
@@ -270,7 +270,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 3.4 "Search stopped" with Run again and New search (R45)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: pressing Stop gives a clear end state instead of a frozen screen.
 - What you noted: decision U7, replacing the frozen progress screen with a "Search stopped" message and two buttons.
