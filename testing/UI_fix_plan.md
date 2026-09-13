@@ -172,6 +172,32 @@ Built: ✅ · Live: 🚀 · Approved: 👍
 - What you noted: decision X9, the product owner's approval to change `frontend/src/theme.ts`.
 - What's expected: when the header turns the lighter NCBI blue, three approved logo colours are added and checked for contrast, so the design token check reports zero problems.
 
+### 2.8 A light home page (retest feedback)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the home page uses the same light background as every other screen.
+- What you noted: "The home page contrast is horrible. Lets have concistency. same color of header and footer everywhere and same white background, adjuat the home screen colors"
+- What's expected: the home page sits on the light grey background between the blue header and footer, with dark text, a bordered white search bar and white chips. Recorded in DECISIONS.md, since the design system had a navy home page.
+
+### 2.9 Screens centred between header and footer (retest feedback)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: every screen sits in the middle of the page, like the log-in screen.
+- What you noted: "on the home screen and actually all the screens, please have everything centered, everything is very close to header. Just like how the login page was fixed"
+- What's expected: the home, progress, answer, Integrations, About and Docs screens are centred vertically. An answer taller than the screen starts at the top, so nothing is cut off.
+
+### 2.10 No idle wait after pressing Search (retest feedback)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the progress screen shows activity the moment a question is sent.
+- What you noted: "ok the box size stays the same but weird 2-3 seconds of staring at the screen and nothing happens"
+- What's expected: the first step, Guard, pulses and the seconds counter starts as soon as you press Search.
+
+Pushed as commit `cbb04cc`.
+
 ## Set 3: refusals and Stop
 
 Batch: screens and pages.
