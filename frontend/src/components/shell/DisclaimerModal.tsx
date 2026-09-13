@@ -12,6 +12,20 @@
  * work: it is the one thing that should feel like it sits above the page.
  *
  * Not a stub. The gate is real and it blocks the app until accepted.
+ *
+ * Size and structure, product-owner decision U4 (2026-09-12): the design
+ * system's 520px card at
+ * docs/build/design/design-system/flows/disclaimer-modal.html is overridden
+ * for this component. The product owner tested the 520px version and asked
+ * for the reference disclaimer's size and structure instead, in this
+ * product's own colours and typeface. The layout source is the reference
+ * disclaimer dialog in
+ * reference/agentic-search-data-engineering/reference/ncbi_ai_agents-ncbi-kg/frontend/src/App.tsx
+ * (roughly lines 170 to 240): a wide card, a large title with the warning
+ * icon, a bold opening claim, a physician-referral paragraph, a titled
+ * notice box, the checkbox, and a full-width continue button. Every colour
+ * below still comes from `designTokens`, never from the reference file's
+ * own hex values.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -130,39 +144,46 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
         sx={{
           bgcolor: designTokens.surface,
           borderRadius: 1,
-          maxWidth: 520,
-          width: "100%",
-          overflow: "hidden",
+          maxWidth: 900,
+          width: "calc(100% - 32px)",
+          maxHeight: "calc(100vh - 32px)",
+          overflowY: "auto",
+          overflowX: "hidden",
           // The only shadow in the product.
           boxShadow: "0 1px 2px rgba(17,47,78,.1), 0 20px 50px rgba(17,47,78,.3)",
         }}
       >
         <Box
           sx={{
-            px: 2.5,
-            py: 2,
+            px: 3,
+            py: 2.5,
             borderBottom: `1px solid ${designTokens.line}`,
             display: "flex",
             alignItems: "center",
-            gap: 1.25,
+            gap: 1.5,
           }}
         >
-          <svg width={18} height={18} viewBox="0 0 16 16" fill={designTokens.warn} aria-hidden="true">
+          <svg width={28} height={28} viewBox="0 0 16 16" fill={designTokens.warn} aria-hidden="true">
             <path d="M8 1.2 15 14H1L8 1.2Zm0 4.3a.8.8 0 0 0-.8.8v3a.8.8 0 0 0 1.6 0v-3a.8.8 0 0 0-.8-.8Zm0 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z" />
           </svg>
-          <Typography id="disclaimer-title" variant="h4" component="h2">
-            Before you start
+          <Typography id="disclaimer-title" variant="h2" component="h2">
+            Important medical disclaimer
           </Typography>
         </Box>
 
-        <Box sx={{ px: 2.5, py: 2.25, display: "flex", flexDirection: "column", gap: 1.5 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
-            This tool answers research questions. It does not give medical advice, diagnosis, or
-            treatment recommendations.
+        <Box sx={{ px: 3, py: 2.5, display: "flex", flexDirection: "column", gap: 1.75 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 16 }}>
+            This tool assembles cited evidence from NCBI records for research. It is not medical
+            advice and does not diagnose, treat or replace a clinician.
           </Typography>
           <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-            Answers are assembled from NCBI records and cited back to them. Always speak to a
-            qualified health professional about a medical condition.
+            Always seek the advice of your physician or another qualified health professional with
+            any question about a medical condition. Never disregard professional medical advice or
+            delay seeking it because of information from this tool.
+          </Typography>
+          <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+            Answers come from the NCBI knowledge graph and live NCBI APIs. Every claim carries its
+            source, and the system refuses to answer rather than guess.
           </Typography>
           <Box
             sx={{
@@ -170,13 +191,17 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
               borderLeftWidth: 4,
               borderRadius: 0.5,
               bgcolor: designTokens.warnWash,
-              px: 1.6,
-              py: 1.4,
-              fontSize: 13,
+              px: 1.75,
+              py: 1.5,
             }}
           >
-            Prototype. Coverage varies by organism and database. Treat every answer as a starting
-            point for verification, not an endpoint.
+            <Typography variant="h4" component="p" sx={{ mb: 0.5 }}>
+              Prototype
+            </Typography>
+            <Typography variant="body2">
+              This is a prototype under active development. Answers may be incomplete or wrong.
+              Nothing here should be relied on for clinical decisions.
+            </Typography>
           </Box>
 
           <Box component="label" sx={{ display: "flex", gap: 1.25, alignItems: "flex-start", fontSize: 13.5, cursor: "pointer" }}>
@@ -195,7 +220,7 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
           </Box>
         </Box>
 
-        <Box sx={{ px: 2.5, pb: 2.5 }}>
+        <Box sx={{ px: 3, pb: 3 }}>
           <Button
             variant="contained"
             fullWidth
@@ -206,7 +231,7 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
             }}
             sx={{ py: 1.25 }}
           >
-            Continue
+            I understand, continue to the research tool
           </Button>
         </Box>
       </Box>

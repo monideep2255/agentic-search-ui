@@ -33,8 +33,18 @@ const ROUTES = [
   { path: "/", nav: "Search", heading: null },
   { path: "/integrations", nav: "Integrations", heading: /^Integrations$/ },
   { path: "/about", nav: "About", heading: /How an answer is built/i },
-  { path: "/docs", nav: "Docs", heading: /^Documentation$/ },
 ] as const;
+
+/**
+ * Paths with no nav item, which therefore appear only in the deep-link arm.
+ *
+ * `/docs` was the fourth screen until fix set 5 (R18, 2026-09-13) folded the
+ * Docs content into the Integrations page. The path is kept as an alias rather
+ * than dropped, so an existing bookmark still lands somewhere useful, and this
+ * arm is what proves it does. `lib/routing.ts`'s `LEGACY_PATHS` is the
+ * mechanism.
+ */
+const LEGACY_ROUTES = [{ path: "/docs", heading: /^Integrations$/ }] as const;
 
 async function enterApp(page: Page, path = "/"): Promise<void> {
   await page.goto(path);
@@ -76,6 +86,21 @@ test.describe("client-side routing", () => {
         `${route.path} did not render its own screen`,
       ).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`${route.path.replace("/", "\\/")}$`));
+    }
+  });
+
+  test("a retired path still lands on the page that holds its content", async ({ page }) => {
+    // R18. `/docs` had a screen of its own and now has an alias. A reader who
+    // bookmarked it must not get the landing screen, which is what deleting
+    // the route without the alias would have given them: `screenForPath`
+    // falls back to `search` for anything it does not recognise, so the
+    // failure would have been silent and plausible rather than a 404.
+    for (const route of LEGACY_ROUTES) {
+      await enterApp(page, route.path);
+      await expect(
+        page.getByRole("main").getByRole("heading", { name: route.heading }),
+        `${route.path} did not land on the page holding its content`,
+      ).toBeVisible();
     }
   });
 

@@ -30,6 +30,9 @@ from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
+from system_03_search_agent.adapters.mcp.server import (
+    transport_security_settings as mcp_transport_security_settings,
+)
 from system_03_search_agent.auth.dependencies import (
     _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
     _GUEST_SESSION_REVOKED_REASON,
@@ -124,7 +127,26 @@ logger = logging.getLogger(__name__)
 # Full account of both findings below: `LEARNINGS.md`'s 2026-08-11 entry
 # "Mounting the mcp==2.0.0 SDK's streamable_http_app into FastAPI silently
 # fails three separate ways".
-_mcp_asgi_app = mcp_server.streamable_http_app(stateless_http=True, streamable_http_path="/")
+#
+# `transport_security=` is a FOURTH way this mount fails silently, on top of
+# the three that entry records, and it was found live on develop on
+# 2026-09-12 (R17) rather than by any gate here: leaving it None
+# while `host` also stays at its default `127.0.0.1` makes the SDK
+# auto-enable DNS-rebinding protection with a LOCALHOST-ONLY `Host`
+# allowlist, so every request to the deployed endpoint was refused `421
+# Invalid Host header` before reaching any handler. The protection stays on
+# and the allowlist is now configured from `MCP_ALLOWED_HOSTS`; the full
+# argument, the SDK lines it rests on and the unset-fails-closed default all
+# live at `transport_security_settings` in `adapters/mcp/server.py`.
+#
+# A malformed value raises `MCPTransportSecurityConfigError` from this line,
+# at import, so the process refuses to start instead of serving with an
+# allowlist nobody intended.
+_mcp_asgi_app = mcp_server.streamable_http_app(
+    stateless_http=True,
+    streamable_http_path="/",
+    transport_security=mcp_transport_security_settings(),
+)
 
 
 @asynccontextmanager

@@ -23,16 +23,25 @@ import { Logo } from "../brand/Logo";
 import { PersonaChip } from "./PersonaChip";
 import { AccountMenu } from "./AccountMenu";
 
-/** The screens reachable from the bar. */
-export type ScreenName = "search" | "integrations" | "docs" | "about";
+/**
+ * The screens reachable from the bar.
+ *
+ * `docs` is GONE, fix set 5 (R18, 2026-09-13). The product owner could not
+ * tell what the Docs tab was for, and its content was a short technical
+ * reference for the integration surfaces, so it is now the "API
+ * documentation" section inside `IntegrationsScreen`. `/docs` still routes,
+ * to Integrations, so an existing link is not broken (see `lib/routing.ts`'s
+ * `LEGACY_PATHS`).
+ */
+export type ScreenName = "search" | "integrations" | "about";
 
 const NAV: { key: ScreenName; label: string }[] = [
   // Order transcribed from the prototype's `.nav` (F-4.8-D-09). Docs and About
   // were the other way round, which every membership assertion accepted.
+  // Docs itself was removed by R18; the remaining three keep that order.
   { key: "search", label: "Search" },
   { key: "integrations", label: "Integrations" },
   { key: "about", label: "About" },
-  { key: "docs", label: "Docs" },
 ];
 
 export interface AppShellProps {
@@ -115,9 +124,11 @@ function MoreIcon() {
  * OVERRULES `prototype/app.html:403`, product-owner decision, 2026-09-05. The
  * design hides every nav item but the current page below 720px and provides
  * no way to reach the others, which is what shipped first here, transcribed
- * faithfully. The product owner overruled it: it made Integrations, About
- * and Docs unreachable on a phone with no path back to them. This menu is
+ * faithfully. The product owner overruled it: it made Integrations and About
+ * unreachable on a phone with no path back to them. This menu is
  * the fix, and a future reader must not "correct" it back to the design.
+ * Since R18 removed the Docs tab it holds two items rather than three, which
+ * is what decision X6 records.
  *
  * No design exists for this control at all, so its wiring is copied from
  * `AccountMenu.tsx`, the nearest working precedent in this product: the same
@@ -292,7 +303,7 @@ export function AppShell({
             UPDATED 2026-09-05, product-owner decision, OVERRULING
             `prototype/app.html:403`. The consequence named above stopped
             being a flagged product question and became a defect to fix:
-            below 720px, Integrations, About and Docs were unreachable, with
+            below 720px, Integrations and About were unreachable, with
             no menu to reach them from, on a phone. The design's own choice
             still drops those items from the inline row below 720px, and
             that part is unchanged below. What changed is that they no

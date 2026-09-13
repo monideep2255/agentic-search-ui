@@ -161,7 +161,10 @@ test.describe("accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 
-  for (const screen of ["Integrations", "Docs", "About"] as const) {
+  // "Docs" left this list with the tab itself, fix set 5 (R18, 2026-09-13).
+  // Its content is now the "API documentation" section of the Integrations
+  // screen, so the Integrations run below covers it.
+  for (const screen of ["Integrations", "About"] as const) {
     test(`the ${screen.toLowerCase()} screen is clean`, async ({ page }) => {
       await enterApp(page);
       await page.getByRole("navigation", { name: /main/i }).getByRole("button", { name: screen }).click();

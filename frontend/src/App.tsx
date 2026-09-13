@@ -83,7 +83,7 @@ import { RunScreen } from "./components/screens/RunScreen";
 import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import type { PreviousTurn } from "./components/screens/AnswerScreen";
-import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
+import { AboutScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
@@ -724,7 +724,7 @@ export function App() {
     // rail, so they do not inherit a collapsed one.
     setRailOpen(railOpenByDefault());
     // Set 1 (R6): Log out lands on the search home page from any screen,
-    // including Integrations, Docs and About.
+    // including Integrations and About (Docs folded into Integrations, fix set 5).
     setScreen("search");
     setSearchView({ name: "home" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1192,7 +1192,6 @@ export function App() {
 
   const body = () => {
     if (screen === "integrations") return <IntegrationsScreen />;
-    if (screen === "docs") return <DocsScreen />;
     if (screen === "about") return <AboutScreen />;
 
     switch (searchView.name) {

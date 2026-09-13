@@ -322,13 +322,20 @@ describe("clause 3: assembly", () => {
     render(<App />);
     // Scoped to the main navigation landmark rather than the whole document.
     // This is STRICTER, not looser: it now requires the landmark to exist as
-    // well as to hold all four. The unscoped version was ambiguous because the
-    // home screen's own submit button is also called "Search", which is itself
-    // a real accessibility problem and is why the landmark is now labelled.
+    // well as to hold all of them. The unscoped version was ambiguous because
+    // the home screen's own submit button is also called "Search", which is
+    // itself a real accessibility problem and is why the landmark is now
+    // labelled.
+    //
+    // `/docs/i` LEFT THE LOOP, fix set 5 (R18, 2026-09-13): the Docs screen no
+    // longer exists, its content is a section inside Integrations, and its tab
+    // is gone from the bar. Asserting its ABSENCE below rather than deleting
+    // the expectation, so a tab reappearing is a failure rather than a silence.
     const nav = screen.getByRole("navigation", { name: /main/i });
-    for (const name of [/search/i, /integrations/i, /docs/i, /about/i]) {
+    for (const name of [/search/i, /integrations/i, /about/i]) {
       expect(within(nav).getByRole("button", { name })).toBeInTheDocument();
     }
+    expect(within(nav).queryByRole("button", { name: /^docs$/i })).not.toBeInTheDocument();
   });
 });
 

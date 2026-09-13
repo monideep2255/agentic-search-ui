@@ -235,7 +235,12 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
 
     // ORDER, not membership. The app had all four and the last two swapped,
     // which every membership assertion in this repository accepted.
-    expect(labels.slice(0, 4)).toEqual(["Search", "Integrations", "About", "Docs"]);
+    //
+    // THREE, not four, since fix set 5 (R18, 2026-09-13) removed the Docs tab
+    // and folded its content into the Integrations page. The surviving three
+    // keep the prototype's own order, which is what this arm exists to pin.
+    expect(labels.slice(0, 3)).toEqual(["Search", "Integrations", "About"]);
+    expect(labels).not.toContain("Docs");
   });
 
   // ---------------------------------------------------------------- F-4.8-D-05

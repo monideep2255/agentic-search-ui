@@ -56,7 +56,8 @@ test.describe(
           );
         }
 
-        for (const screen of ["integrations", "about", "docs"]) {
+        // "docs" removed with the tab itself, fix set 5 (R18, 2026-09-13).
+        for (const screen of ["integrations", "about"]) {
           await page
             .getByRole("navigation", { name: /main/i })
             .getByRole("link", { name: new RegExp(screen, "i") })

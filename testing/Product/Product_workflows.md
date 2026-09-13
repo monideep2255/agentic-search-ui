@@ -171,11 +171,13 @@ Expected:
 
 Testing: navigation works, including on a phone.
 
-Steps: click Integrations → About → Docs → press the browser back button → on Integrations, click a copy button → make the window phone-narrow, or open the site on your phone → open "More pages" → log in → tap the searches button at the top right
+Steps: click Integrations → About → press the browser back button → on Integrations, click a copy button → make the window phone-narrow, or open the site on your phone → open "More pages" → log in → tap the searches button at the top right
 
 Expected:
 
-- Each page opens, and back returns to the previous page.
+- Each page opens, and back returns to the previous page. There is no Docs tab; the top bar shows Search, Integrations and About.
+- Integrations shows one title, four chips reading 115M nodes, 693M edges, 3 data layers and 7 tools, then four cards of the same height: REST and SSE, GraphQL, MCP server, and Command line tools. Each card has a round icon, a title, a short description, and buttons lined up along the bottom.
+- Below the cards, a short access notice, then an API documentation section.
 - The copy button copies the snippet.
 - At phone width nothing scrolls sideways, and the other pages are reachable from "More pages".
 - At phone width, while logged in, the searches button at the top right opens your searches as a panel sliding in from the left. Tapping outside it, pressing Escape, or its close button closes it.
@@ -229,7 +231,10 @@ Steps: open the site as a guest → try to click past the disclaimer, or press E
 
 Expected:
 
-- Continue stays greyed out until the box is ticked, and Escape does not close it.
+- The disclaimer is a wide box, about twice the width of the old one, titled "Important medical disclaimer".
+- It has a bold opening sentence, a paragraph that says to seek the advice of your physician, and a notice box titled "Prototype".
+- The continue button runs the full width of the box and reads "I understand, continue to the research tool". It stays greyed out until the box is ticked.
+- Escape does not close it.
 - After ticking and Continue, the product opens.
 - It does not come back while you use the site, and it appears again after Log out.
 
@@ -296,6 +301,7 @@ Three workflows cannot be triggered by hand, so they are tested on the developer
 - A citation that points outside NCBI, which should be refused rather than linked.
 - The shared daily limit for all guests on one network.
 - How the answer text arrives on screen, sentence by sentence or all at once.
+- The GraphQL and MCP integrations, which need a developer's tools to call. They are checked on the developer side after every change to the Integrations page.
 
 ## Already known, no need to report
 
