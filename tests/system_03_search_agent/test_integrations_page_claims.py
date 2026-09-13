@@ -88,8 +88,17 @@ def page_source() -> str:
     first, reporting "comment stripping removed the page body" about a page
     that was intact, and masked all four real failures. A fixture check
     must never assert the thing its arms assert, or a genuine defect
-    surfaces as a broken harness. It now counts `<Card` occurrences, which
-    is structural and cannot be changed by a wrong command string.
+    surfaces as a broken harness. It now counts `<IntegrationCard`
+    occurrences, which is structural and cannot be changed by a wrong
+    command string.
+
+    The marker was `<Card` until 2026-09-13. UI fix set 5 rebuilt the page
+    in the reference layout (commit 20a8688) with four `IntegrationCard`
+    elements and no bare `Card`, so this check reported "comment stripping
+    removed the page body" about an intact page for eight days, during
+    which no full Python run happened. The check was wrong, not the page:
+    it named a component the page no longer uses. Fixed here by naming the
+    component it does use, so the count stays structural.
     """
     assert _PAGE.is_file(), f"the integrations page moved: {_PAGE}"
     raw = _PAGE.read_text(encoding="utf-8")
@@ -107,7 +116,7 @@ def page_source() -> str:
     # empty string and passing, which is the exact vacuity this repository
     # keeps shipping. So the thing the arms actually read must be shown to
     # still contain the surfaces they are about to look for.
-    assert "IntegrationsScreen" in text and text.count("<Card") >= 4, (
+    assert "IntegrationsScreen" in text and text.count("<IntegrationCard") >= 4, (
         "populate-check failed: comment stripping removed the page body, so "
         "every arm below would search an empty string."
     )
@@ -164,12 +173,34 @@ def test_every_http_path_the_page_prints_is_a_real_route(page_source: str) -> No
     """The `POST /v1/export/kgx` defect: a route advertised, never built."""
     from system_03_search_agent.adapters.web_sse.app import app
 
+    # Walk INCLUDED routers as well as the top-level table. On the FastAPI
+    # this repository now resolves, `app.include_router(...)` leaves an
+    # `_IncludedRouter` entry on `app.routes` with no `path` of its own and
+    # the real `APIRoute`s under its `.routes`, so a flat read of
+    # `app.routes` saw none of the `/auth/*` or GraphQL paths and this arm
+    # reported `/auth/login`, a route the app has served since build phase
+    # 1.1, as fabricated (2026-09-13). The check was wrong, not the page.
     real: set[str] = set()
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        if isinstance(path, str):
-            real.add(path)
+
+    def collect(routes: list[object]) -> None:
+        for route in routes:
+            path = getattr(route, "path", None)
+            if isinstance(path, str):
+                real.add(path)
+            # `_IncludedRouter` keeps the router it wraps on
+            # `original_router`; a plain `Mount` keeps its children on
+            # `routes`. Either way the paths live one level down.
+            original = getattr(route, "original_router", None)
+            nested = getattr(original, "routes", None) or getattr(route, "routes", None)
+            if isinstance(nested, list) and not isinstance(path, str):
+                collect(nested)
+
+    collect(list(app.routes))
     assert real, "populate-check failed: the app exposes no routes to compare against."
+    assert "/auth/login" in real, (
+        "populate-check failed: the walk did not reach the auth router, so "
+        "every real route under an included router would read as fabricated."
+    )
 
     printed = set(re.findall(r"(?:POST|GET|PUT|DELETE)\s+(?:https?://[^\s/]+)?(/[\w/{}.-]+)", page_source))
     assert printed, (
@@ -214,13 +245,30 @@ def test_the_page_names_every_shipped_delivery_surface(page_source: str) -> None
         ("MCP server", "4.1"),
         ("Command line", "4.2"),
         ("GraphQL", "4.3"),
-        ("KGX export", "4.4"),
     ]:
-        assert f'title="{surface}"' in page_source, (
+        # A prefix rather than the closed literal: UI fix set 5 (2026-09-13)
+        # retitled the CLI card "Command line tools", which is the same
+        # surface, findable, under a fuller name. The closing quote was
+        # dropped so a longer title still counts, while the opening
+        # `title="` still rejects the renamed-or-misspelled card the
+        # mutation above caught.
+        assert f'title="{surface}' in page_source, (
             f"the integrations page has no card titled {surface!r}, which shipped in "
             f"build phase {phase}. A delivery surface nobody can find is not "
             "delivered."
         )
+    # KGX export (build phase 4.4) is a console script, and UI fix set 5
+    # (2026-09-13, commit 20a8688) folded it into the "Command line tools"
+    # card beside `s3` rather than keeping a card of its own, by product-
+    # owner decision on the reference layout. The surface is findable when
+    # the page prints its command, which is what a reader copies, so that is
+    # what this arm now pins. Deleting the KGX text from the card turns it
+    # red; a card titled "KGX export" with no command would not satisfy it.
+    assert "s3-kgx-export" in page_source, (
+        "the integrations page never prints the s3-kgx-export command, which "
+        "shipped in build phase 4.4. A delivery surface nobody can find is not "
+        "delivered."
+    )
 
 
 def test_the_page_never_prints_an_elided_placeholder_url(page_source: str) -> None:
