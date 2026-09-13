@@ -1359,43 +1359,64 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # resolved by this pass is ever named to the model (see
     # `_build_think_messages`'s `already_resolved` block).
     exact_matches = resolve_exact_identifiers(query.text)
+    think_messages = _build_think_messages(
+        query.text, exact_matches, _memory_suffix(state, "plan")
+    )
 
-    try:
-        response = await _dispatch_tier_call(
-            harness,
-            trace_id,
-            # T-4.7-04, Section 17: "Think still makes this call, via the
-            # Plan-tier model, on every query." The `step="think"` argument
-            # below still selects `think`'s own per-step timeout budget
-            # (`_STEP_TIER["think"]` now resolves to the plan tier's budget,
-            # `harness.harness.py`), independent of which tier answers the
-            # call.
-            "plan",
-            "think",
-            # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after the
-            # question, never spliced into the system block.
-            #
-            # F-4.5-A-09's gap CLOSES here: this call's response is READ,
-            # not discarded, as of T-4.7-04/T-4.7-05. The memory block goes
-            # live for the first time, which is this phase's own job per
-            # `_memory_suffix`'s docstring ("This block goes live when a
-            # later phase gives Think real work. That is build phase 4.7's
-            # job").
-            _build_think_messages(
-                query.text, exact_matches, _memory_suffix(state, "plan")
-            ),
-            budget_s=budget_for_step("think", "lookup"),
-        )
-    except cost_control.QueryCapExceededError:
-        return {"cap_exceeded": True}
-    except HarnessCallError as exc:
-        return {"step_error": _step_error_kwargs("think", exc)}
+    # Product-owner decision, 2026-09-12: about 1 search in 7 on develop
+    # ended with "the plan tier did not return valid JSON for query
+    # classification", and nothing recorded what the model had sent. So an
+    # unusable reply is now asked for ONCE more, and a bounded excerpt of it
+    # is logged so the cause can be found. The second call goes through the
+    # same harness, so the per-query cost cap and the step budget still apply
+    # to it. A second unusable reply fails exactly as before: never a
+    # fabricated or defaulted classification (T-4.7-04).
+    classification: _ThinkClassification | None = None
+    parse_error: ThinkClassificationUnavailableError | None = None
+    for attempt in (1, 2):
+        try:
+            response = await _dispatch_tier_call(
+                harness,
+                trace_id,
+                # T-4.7-04, Section 17: "Think still makes this call, via the
+                # Plan-tier model, on every query." The `step="think"`
+                # argument below still selects `think`'s own per-step timeout
+                # budget, independent of which tier answers the call.
+                "plan",
+                "think",
+                # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after
+                # the question, never spliced into the system block.
+                think_messages,
+                budget_s=budget_for_step("think", "lookup"),
+            )
+        except cost_control.QueryCapExceededError:
+            return {"cap_exceeded": True}
+        except HarnessCallError as exc:
+            return {"step_error": _step_error_kwargs("think", exc)}
 
-    try:
-        classification = _parse_think_classification(response.content)
-    except ThinkClassificationUnavailableError as exc:
-        # The model answered, and the answer was unusable. A step error,
-        # not a fabricated classification: T-4.7-04 requires a value
+        try:
+            classification = _parse_think_classification(response.content)
+            break
+        except ThinkClassificationUnavailableError as exc:
+            parse_error = exc
+            content = response.content if isinstance(response.content, str) else ""
+            # Bounded and escaped: the length, and the first 200 characters
+            # as a repr, so a newline or control character in the reply
+            # cannot forge a second log line. Model output only, never a
+            # credential or an account field.
+            logger.warning(
+                "think classification unusable (attempt %d of 2, trace %s): "
+                "%s; reply length %d, starts %r",
+                attempt,
+                trace_id,
+                exc,
+                len(content),
+                content[:200],
+            )
+
+    if classification is None:
+        # The model answered twice, and both answers were unusable. A step
+        # error, not a fabricated classification: T-4.7-04 requires a value
         # outside the five shapes to be REJECTED, never coerced to a
         # default, and an unparseable response is the same failure one
         # layer earlier. Mirrors `guardrail_node`'s identical handling of
@@ -1406,7 +1427,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 "scope": "step",
                 "source": "think",
                 "error_class": "recoverable",
-                "message": str(exc)[:256],
+                "message": str(parse_error)[:256],
                 "retry_after_s": 0,
             }
         }

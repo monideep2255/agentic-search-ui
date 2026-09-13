@@ -30,7 +30,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | Set | What you will see | Built | Live | Approved | You retest |
 |---|---|---|---|---|---|
 | 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
-| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
+| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 2.1 to 2.7. Waiting: 2.8 to 2.11 | Tests 1, 2, 3, 9, 11 |
 | 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | | | | Tests 8, 9, 13, 19 |
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
@@ -195,6 +195,14 @@ Built: ✅ · Live: 🚀 · Approved:
 - Feature being tested: the progress screen shows activity the moment a question is sent.
 - What you noted: "ok the box size stays the same but weird 2-3 seconds of staring at the screen and nothing happens"
 - What's expected: the first step, Guard, pulses and the seconds counter starts as soon as you press Search.
+
+### 2.11 Searches that fail at the Think step (retest feedback)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: a search no longer ends with "This run could not be completed" because one AI model reply could not be read.
+- What you noted: "Sure fix it and then we close for the day", approving the fix for about 1 search in 7 failing at the Think step.
+- What's expected: searches finish normally. When the model reply cannot be read, the app asks once more, and the unreadable reply is saved to the server log so the cause can be found. Nothing changes on screen.
 
 Pushed as commit `cbb04cc`, live on develop on 2026-09-12 and checked by screenshot at 1280px and 390px.
 
