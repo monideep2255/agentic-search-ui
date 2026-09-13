@@ -208,13 +208,15 @@ Pushed as commit `cbb04cc`, live on develop on 2026-09-12 and checked by screens
 
 ### 2.12 A bigger search box on the home page (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved: 👍 (size approved; the icon, text and button alignment fix is live and waiting for your retest)
+Built: ✅ · Live: 🚀 · Approved: 👍 (size approved; the flexible button placement, option B, is built and checked locally, not yet live)
 
 - Feature being tested: the home page search box is big enough to write a full question.
 - What you noted: "on the home page, can we increase the size of the search box? It should be at least big as a tweet box 240 characters? or the appropriate size"
 - What's expected: a multi-line box that shows about 240 characters without scrolling and grows as you type. Enter searches, and Shift+Enter starts a new line. Also on phones: the Search button takes its own row so the box keeps its full width (commit `254763b`, after 240 characters scrolled at 390px).
 - Follow-up you noted: "The search box increase looks good but the 2 things -> search button placement and the text placement and icon need to be adjusted (magnifying glass Which diseases are associated with BRCA1?)"
-- Follow-up expected: the magnifying glass sits level with the first line of text, and the Search button sits in the bottom right corner with even spacing from the box edges.
+- Follow-up expected: the magnifying glass sits level with the first line of text, and the Search button sits in the bottom right corner with even spacing from the box edges. Done in commit `d72256b`, measured live: icon level with the first line, button 8px from the right and bottom edges.
+- Second follow-up you chose: option B, flexible: "Lets go with B but a flexible one if the search box increases the search box goes to bottom right"
+- Second follow-up expected: with an empty box or a one-line question, the Search button sits top right, level with the magnifying glass and the text. Once the question wraps to a second line, the button moves to the bottom right. On phones the button stays a full-width row under the text.
 
 ### 2.13 NCBI design system: the changes possible today (retest feedback)
 

@@ -32,7 +32,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WAIT. It is the product owner's turn, as of 2026-09-12. The assistant ran a live browser walkthrough of develop (report: `testing/Developer/reports/2026-09-12_walkthrough/index.html`), and the product owner recorded first impressions in `testing/Product/feedback/inbox/2026-09-12_first_impressions.md`. They tested by hand against `testing/Product/Product_workflows.md` the same day and finished their first round. Every finding, decision and open question is in `testing/Product/reports/2026-09-12_consistency_and_test_1.md`: read its summary and section 10 first, and keep that report updated as work proceeds. All product UI questions are settled. The ordered work is `testing/UI_fix_plan.md`: ten fix sets, worked in order through the UI fix loop below. Set 1 waits on decisions X3 and X4 in section 12 of the report. When they drop something in, reply with a short triage and decide together; do not process it at length.
+- FINISH ITEM 2.12, THEN KEEP BUILDING. As of commit `d72256b` on develop (2026-09-13), the UI fix loop has closed fix set 1, fix set 2, and eight retest follow-ups (items 2.8 to 2.14) from `testing/UI_fix_plan.md`, all approved by the product owner, except one thing still in flight: item 2.12's Search button placement. The box size is approved and the first alignment follow-up is live and approved at `d72256b`. The product owner then chose a second follow-up, option B, flexible: with an empty box or a one-line question, the Search button sits top right, level with the magnifying glass and the text; once the question wraps to a second line, the button moves to the bottom right; on phones it stays a full-width row under the text. That is being built now and is not yet pushed. The next action is: finish and push the flexible button placement, the product owner retests it, then open fix set 3, refusals and Stop (R13, R14, R44, R45), through the same loop. `testing/UI_fix_plan.md` is the single owner of per-item status: read its "Progress at a glance" table for what is built, live, and approved, and its "Developer detail" section for which files and checks belong to each set.
 
 THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-phase cadence for UI fixes, and it overrides `.claude/rules/git-workflow.md`'s branch requirement and the judge and adversary rounds for this work only:
 
@@ -40,9 +40,9 @@ THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-pha
 2. They say "check the inbox". Reply with a short triage per item: what it is, whether it is already known, and a one-line fix. Agree together what gets fixed.
 3. Fix it immediately. No build phase, no multi-day plan, no judge or adversary agents. The product owner's testing is the verification.
 4. Work directly on `develop`. No branch and no pull request.
-5. Before pushing, run only the quick checks for what changed: the affected tests and lint, in minutes rather than hours.
+5. Before pushing, run the quick checks for what changed: the affected tests and lint, in minutes rather than hours. A frontend change always runs `npm run build` before push, since Railway's own build is the thing that can fail silently otherwise. Each check gates the push on its own exit code, never through a pipe: a chained command that pipes a failing check through `tail` or `grep` can report success on a check that actually failed, which is exactly what happened on commit `ff80814` (see "Process lessons this session" below).
 6. Commit with a Conventional Commit subject and push to `develop`. The develop app redeploys on its own.
-7. Confirm the new code is live on develop, then tell the product owner what changed and which tests to re-run.
+7. Confirm the new code is live: the Railway deployment for that commit shows SUCCESS, and the served app actually contains the change, not just that the push succeeded. Then tell the product owner what changed and which tests to re-run.
 8. Repeat from step 1 until the product owner approves develop.
 9. Once they approve, run the release workflow in `docs/build/Release_flow.md`: cut `release/<version>` and merge it into `production`.
 
@@ -50,12 +50,18 @@ WHERE TO LOOK, in the order a fresh session should read them:
 
 | Question | File |
 |---|---|
+| Per-item status: built, live, approved, what to retest | `testing/UI_fix_plan.md`, the single owner of this fact |
 | What the product owner tests by hand | `testing/Product/Product_workflows.md`, 21 tests in plain steps |
 | What must the product do, and what is broken | `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers |
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
 | What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
-| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05 |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, plus the UI-fix-loop rows dated 2026-09-12 and 2026-09-13 |
+
+### Process lessons from the fix-loop sessions, already applied
+
+- Commit `ff80814` pushed with the web build failing on Railway: the pre-push type check skipped `e2e/`, and a chained command piped a failing check through `tail`, so the push went out on a false green. Fixed in `3e1ee64`: `npm run build` now runs before every frontend push, and each check gates the push on its own exit code.
+- Commit `d72256b`'s message claims 252 frontend unit tests passed; that specific run had one load-related timeout (`railCollapsePremise`), which passed when run alone. Frontend tests can flake under machine load (see the "load-dependent test flakiness" row in "Open items" below): re-run a failing frontend spec alone before concluding it is a real regression.
 
 WHAT SHIPPED IN PR #93, in the terms a person notices rather than by ticket:
 
@@ -90,9 +96,9 @@ THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong
 - The PRODUCT OWNER runs it on develop and records what they saw.
 - Feedback comes back, it gets discussed, and the cycle repeats.
 
-Two consequences for whoever picks this up. THE ASSISTANT DOES NOT DRIVE THE BROWSER unless explicitly asked, so the eight journeys under `frontend/e2e/journeys/` stay gated behind `RUN_LIVE_JOURNEYS=1` and are run on request rather than on initiative. And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
+Two consequences for whoever picks this up. THE ASSISTANT DRIVES THE BROWSER WHEN ASKED, and on 2026-09-12 the product owner asked it to: every push in the UI fix loop is checked on develop with Playwright screenshots and measurements at 1280px and 390px. The eight journeys under `frontend/e2e/journeys/` still stay gated behind `RUN_LIVE_JOURNEYS=1`, since they spend real model calls, and run on request. And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
 
-Everything else on this page is context for that one line, and it describes the state AFTER build phase 6.2 merged. The three sections that described the state before it are gone rather than left below, for the reason the next section gives.
+Everything else on this page is context for that one line, and it describes the state after fix sets 1 and 2 of the UI fix loop, on 2026-09-13. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
 
 ### What the sections below used to say, and where that content lives now
 
@@ -132,45 +138,15 @@ This section is DERIVED FROM `tracker/BOARD.md`. If the two disagree, the board 
 
 ### The next action
 
-Nothing is blocked. THE NEXT ACTION IS NOT WORK, it is waiting, and that is deliberate rather than an oversight.
+"Start here", Step 2 is the single owner of the next action. Read it there.
 
-| Next | What it is | Where it is tracked | Gated on |
-|---|---|---|---|
-| 1 | Wait for the product owner's verdict on workflows W1 to W9 | `docs/build/UI_feedback.md`, "Manual test workflows", the "What I saw" column | Nothing. It is their turn |
-| 2 | Whatever that verdict asks for, plus the six tickets build phase 6.2 merged with open | `tracker/phase_6.2.md` | Item 1 |
-| 3 | The answer can exceed 25 SECONDS on develop, and no ticket owns it | F-6.2-07 in `tracker/phase_6.2.md` | Nothing technically. It is the largest unowned problem in the product |
-| 4 | The security scan, and F-1.2-04's signup enumeration leak, pulled out of build phase 6.1 as their own small tickets | `requirements/Plan.md` Phase 7 | Nothing technically. Worth doing once real people are using it |
-| 5 | Build phase 6.0's eight open judge findings, and what remains of 6.1 | `requirements/Plan.md` Phase 7 | User feedback |
+### Earlier merged work, and where it is recorded
 
-SO: wait for the verdict, and do not open new work against `docs/build/UI_feedback.md` until those cells are filled in.
-
-### Build phase 6.2, merged, and what merged open with it
-
-MERGED as PR #92 on 2026-09-01, all four CI gates green, branch deleted both sides. It is the sixth stated exception on `tracker/BOARD.md`: Section 25 has no row for defects a live user hits, the same gap build phase 4.16 was inserted to fill.
-
-WHAT A PERSON WILL NOTICE, which is the only summary that matters for a phase like this:
-
-- An answer names diseases in words rather than as `MedGen:C0346153`, each cited to the MedGen record the name was read from.
-- The wait shows continuous motion, a counter ticking every second and a pulsing step.
-- A follow-up carries the whole thread forward, bounded, as retrieval guidance only.
-- An answer may offer one honest next step, or stay quiet.
-- A sentence that loses a clause from its middle is dropped whole rather than shown broken.
-- The incompleteness note speaks to the reader instead of reporting internal bookkeeping.
-
-MEASURING BEFORE BUILDING CHANGED THE WORK TWICE, and both are the transferable results:
-
-- The brief said `ncbi_efetch` already resolves these CURIEs and told the reader to verify before promising it. Verified, and half wrong: NCBI rejects an ESummary keyed on a concept id outright. Resolution takes ESearch on `[ConceptId]` then ESummary on the returned UID, two calls TOTAL for any number of diseases, mapped back by MedGen's own `conceptid` rather than result ordering.
-- "The whole thread" was mostly already built. `compressed_findings` and `resolved_entities` already flowed to Think and Plan; the one missing piece was the QUESTION. `open_threads` had sat on the contract with no producer since build phase 4.5, which had written down that whoever added one must replace its docstring paragraph in the same change. Both obligations were honoured.
-
-WHAT IT COST, and this is the number worth carrying forward: NINE findings, FOUR of them defects in the lead's own instruments rather than in the product. Three of those four reported a plausible value instead of erroring, and one nearly became a confident wrong conclusion about the agent. Recorded as a single `LEARNINGS.md` entry rather than four, because the pattern is the point: each NAMED SOMETHING THAT DID NOT EXIST, and the harness reported absence as an ordinary value.
-
-NO JUDGE ROUND WAS RUN, by product-owner decision, and this is a change to the harness rather than a skipped step. The product owner testing on develop is now the verification step, so tickets merge at `in-review` and reach `done` on their verdict. `DECISIONS.md`, 2026-09-01.
-
-SIX TICKETS MERGE OPEN: the 8px horizontal bleed at 390px (F-6.2-08), the latency itself (F-6.2-07, no ticket owns it), `total_cost_usd` reporting `0.0`, design fidelity against the prototype, the reference-build comparison, and the integrations page, which journey 5 suggests may already be fine on develop and whose premise is therefore in doubt (F-6.2-09).
+Build phase 6.2 (PR #92, 2026-09-01) and PR #93 (2026-09-05) are recorded in CLAUDE.md's Build phase history table, `tracker/phase_6.2.md` and `requirements/Plan.md`'s Revision history, including the six tickets that merged open with 6.2. The UI fix loop that followed is recorded item by item in `testing/UI_fix_plan.md`.
 
 ### The unit of work is no longer a build phase
 
-Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and `docs/build/UI_feedback.md`, not from Section 25's build order.
+Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and, since 2026-09-12, from `testing/UI_fix_plan.md`, the ordered fix sets built from the product owner's testing, not from Section 25's build order.
 
 Section 25 has run its course as a driver. Every numbered phase has merged or moved to `requirements/Plan.md` Phase 7, and `tracker/BOARD.md` carries NO open phase at all. What remains is of two kinds and neither is phase-shaped: findings attached to code, which are conditional and become work only when someone touches that code; and defects a real person hit on the live site.
 
@@ -251,6 +227,15 @@ One decision below is still waiting on the product owner: whether `security/` st
 
 | Item | Description | Owner |
 |------|-------------|-------|
+| NCBI design system stage 1 dependency | Installing the public `@uswds/uswds` package and reading colour values from it instead of hand-typed hex. Adds a dependency, changes nothing on screen. Needs a yes from the product owner. Detailed in `docs/build/design/NCBI_design_system_migration_assessment.md` | Product owner |
+| Four type value mismatches, design card vs. `theme.ts` | h1 letter-spacing (card -2.8%, code -0.034em), h1 size (card 38px, code clamp 32 to 52px), h2 size (card 26px, code clamp 24 to 33px), body1 line-height (card 1.6, code 1.65). Both work; the product owner picks. Recorded in `docs/build/design/NCBI_design_system_migration_assessment.md` | Product owner |
+| NCBI design system stages 2 and 3 blocked | `@ncbi-design-system/base` and `@ncbi-design-system/react` are internal to NCBI and 404 on public npm, so stages 2 and 3 cannot run from outside the NCBI network | Whoever next has NCBI-network access |
+| Consistency baseline, paused | Run on 2026-09-12: 150 planned searches, only 85 really ran (65 refused by the signed-in daily limit of 100 because every run used one account). Of the 85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run (14%, likely the Think JSON failure item 2.11 has since fixed), 6 refused off-topic; 15 of 32 questions gave different outcomes across runs, only 2 answered every time, no Layer 3 call seen. Paused by the product owner so screen fixes come first. Results in `testing/Developer/reports/2026-09-12_consistency_baseline/` (untracked) | Rerun before fix set 6, across fresh test accounts |
+| Account menu overclaims "no search limit" | The account menu says "no search limit in effect yet" while the signed-in daily limit of 100 does refuse searches (it counts now) | Whoever next touches the account menu copy |
+| Only 2 of 7 tools run, no Layer 3 reached | Live queries reach only `cypher_query` and `ncbi_efetch`. Fix set 8 owns wiring in the rest | Fix set 8 |
+| MCP rejects every request, "Invalid Host header" | On develop, MCP calls fail outright with this error. Fix set 5 owns it | Fix set 5 |
+| Load-dependent test flakiness (D4) | Frontend tests fail under machine load rather than from a real regression: `railCollapsePremise` timed out once in a full run on 2026-09-13 and passed 20 of 20 alone three times; rail-collapse and query-stream end-to-end specs failed 4 while a second agent's test run shared the machine, then passed 14 of 14 alone. Re-run a failing spec alone before concluding it is a real defect | Whoever next hits a flaky frontend run |
+| Think step retry, and a remaining transient timeout | Item 2.11 (commit `e67323a`) makes the Think step retry once when the model's classification reply is not valid JSON. Measured live after deploy: 5 of 6 guest searches finished; the one failure was a different, transient timeout, not the JSON failure the retry fixes | Whoever next investigates Think-step reliability |
 | `GCK` resolves locally and is refused on the deployed API | Recorded as an unproven HYPOTHESIS rather than a finding, because its traceback could not be read: Railway's log stream returns container startup and `/health` lines and no request-level logs. The behaviour differs on IDENTICAL code, which is what makes it worth keeping. `tracker/phase_4.12.md` names what would settle it. Lifted here 2026-08-30 from the superseded "Read before opening the next phase" section before that section was archived | Whichever phase next touches entity resolution |
 | F-3.1-41: stopword list vs. real gene symbols | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` DECIDED 2026-08-15: folded into build phase 4.7's entity-resolution design, because the stopword list it turns on is the heuristic 4.7 replaces | Build phase 4.7 |
 | F-3.1-42: lowercase gene mentions fall through silently | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` DECIDED 2026-08-15 with F-3.1-41, same reason | Build phase 4.7 |
@@ -332,4 +317,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-12.
+Last updated: 2026-09-13.

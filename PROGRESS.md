@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-05.
+Last updated: 2026-09-13.
 
 ## Table of contents
 
@@ -51,6 +51,16 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
 
+NEW ON 13 SEPTEMBER, from the product owner's first round of hands-on testing:
+
+- You can search as a guest with no limit and no wall stopping you after a handful of tries, and nothing asks you to sign in partway through.
+- Signing in takes one button. If the email is new, it creates the account. If the password is wrong for an existing account, it tells you the password does not match, rather than a vague error.
+- Logging out takes you straight to the search home page from wherever you were.
+- The screen holds still while you use it: the blue header and footer stay put instead of jumping, the answer box keeps one steady width as you move from the waiting screen to the finished answer, screens fade in and sit centred rather than snapping into place, and the home page is a light background rather than the dark one used elsewhere.
+- The progress screen shows something happening the moment you press Search, instead of a blank pause first.
+- The search box is bigger, so a long question no longer scrolls out of sight as you type it, and this works on a phone screen as well as a full-size one.
+- The browser tab now shows an icon for the product instead of a blank page icon.
+
 NEW ON 1 SEPTEMBER, and this is the sprint a person will actually notice:
 
 - Answers name things. Ask which diseases are linked to BRCA1 and you get "breast-ovarian cancer, familial, susceptibility to, 1", not a reference code. Each name carries a link to the medical record it was read from, so you can check it.
@@ -73,7 +83,7 @@ Concretely, and from earlier sprints:
 - It understands what your question is asking. This sounds like it should always have been true and it was not. Until this week the system read your question by looking for words written in capital letters and guessing each one was a gene name. Mention a database in passing, the way people naturally do, and it grabbed that instead, found no gene by that name, and refused to answer at all. Four of the seven questions this product exists to answer were being turned away exactly that way, and had been for twelve sprints. It now works out what kind of question you asked, picks out what the question is genuinely about, and checks each one against the real records before relying on it. If it cannot confirm something, it uses nothing rather than guessing.
 - It knows which species you mean. Asking about a mouse gene used to get you a confident, fully sourced answer about the human one. Now the animal you name is carried through to the lookup, and if we cannot honour it, you get a refusal rather than an answer about the wrong creature.
 - Two people can run the weekly review routine at the same moment without corrupting the file of approved example questions. Proven by actually running eight of them at once, twice over, with nothing lost.
-- You can use it without an account at all. A first-time visitor gets five free searches, and the count is kept by our server rather than by the browser, so it is a real number rather than one the page can be talked out of. Signing in afterwards carries that visit's searches across.
+- You can use it without an account at all, and as of 13 September there is no longer a five-search wall stopping you partway through. Signing in afterwards carries that visit's searches across.
 - Another program can now ask it questions, in a format built for software rather than for people. A developer writes down exactly which parts of the answer they want (just the answer text, or the answer plus every source, or only the sources) and gets back that and nothing else. This needs an account; there is no anonymous version of it.
 - You can now take a slice of our biomedical database away with you as a file. You name a starting point, say a gene, and how far out from it to walk, and you get back two spreadsheet-style files, one listing the things and one listing the connections between them, plus a short note recording exactly what was asked for and what actually came back. Other researchers' tools read this format directly. It is a batch job you run rather than something you click, and it will refuse to write into a folder that already has files in it unless you tell it to go ahead, because quietly mixing two exports together is how you end up with a file that looks complete and is not.
 - You can use it from a terminal instead of a web page. `s3 ask "your question"` prints the answer as it is written, with the list of sources underneath, and you can send that straight into a file. Progress messages go to the screen rather than into the file, so the file holds the answer and nothing else.
@@ -107,7 +117,7 @@ All six live-government-API connections the plan called for are now built. That 
 - A conversation nobody is actually watching now stops itself after a short wait, instead of quietly running to completion and burning resources on an answer nobody will ever read. This closes a real gap found earlier: an abandoned browser tab used to let the system keep working, unseen, until it finished on its own.
 - You can now ask for the full list of sources behind a finished answer as a single request, rather than only ever seeing them appear one at a time while the answer streams.
 - The web page now looks like a finished product rather than an unstyled form. There is a proper landing page, a live view of the five thinking steps as they happen, an answer page where every sentence sits beside a coloured stripe showing which of the three data sources backed it, expandable source cards, a page explaining how answers are built, and developer documentation. A grey stripe means a sentence nobody could back with a source, which is visible before you read a word.
-- You can now try the system without an account. You get five free searches before being asked to sign in, and the page tells you plainly how many you have left.
+- You can now try the system without an account, and (as described above under 13 September) that no longer stops after a handful of searches.
 - Every answer now carries the name of a historical scientist working on your question, shown as a plain label rather than a cartoon, and a control that lets you ask for a clinical summary, a researcher-level answer, or a deeply technical one.
 - You can rate an answer, say what was wrong with it from a list drawn from mistakes this system has genuinely made before, and flag an individual source as not supporting the sentence it is attached to. That last one is the most useful thing a person can tell us, because it identifies exactly which link was wrong rather than just that the answer felt off. This line described a button that looked real and quietly threw your rating away until the most recent sprint. It is now genuinely saved, against your own record and nobody else's, and the button was proved to work by starting the real product in a browser and clicking it rather than by any test.
 - The system now keeps a record of every question it is asked: what was asked, which sources it used, whether it answered or refused, how much it cost and how long it took. Nothing looked at these records before, so the daily spending limits had been counting against an empty book since the very first sprint and had never once been able to stop anything. They work now.
@@ -118,7 +128,15 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 5 SEPTEMBER: the product is much easier on the eye than it was, and the biggest remaining problem is still that answers are SLOW. Nothing done this week made them faster.
+THE HONEST HEADLINE AS OF 13 SEPTEMBER: the screens are steadier now, and the biggest remaining problem is the answers themselves. Most real questions are still refused or answered thinly, only two of our seven lookup tools are actually being used, and the literature and clinical-trials tools are never reached at all.
+
+A few more things worth saying plainly, from the product owner's first round of testing:
+
+- The same question can get a different outcome on different tries. Ask it twice and you may get an answer once and a refusal the next time.
+- The account menu tells you there is no search limit in effect, which is wrong: a signed-in account is actually held to a limit of 100 searches a day, and that limit does fire.
+- Connecting an AI tool to this product through the link meant for that purpose does not work on the practice site right now; every attempt is rejected.
+
+THE HONEST HEADLINE AS OF 5 SEPTEMBER, kept for the record: the product is much easier on the eye than it was, and the biggest remaining problem is still that answers are SLOW. Nothing done that week made them faster.
 
 Two things are worth saying about the week, because they are the kind of thing a progress note usually leaves out.
 
@@ -457,14 +475,11 @@ One more thing happened at the very end, and it is recorded because a reader lea
 
 Where the finished work sits against what is still ahead:
 
-THE IMMEDIATE NEXT STEP IS NOT WORK. It is waiting, and that is deliberate.
+THE IMMEDIATE NEXT STEP IS ALREADY UNDERWAY. The product owner is testing the product directly against a written plan, and their findings are what decide the order below, rather than a number on an old list.
 
-1. Someone has to actually use it. There is now a proper list: fifty things the product must be able to do, ranked into three groups so a tester can stop anywhere and still have covered what matters most. The top group is the ten the product would have no reason to exist without. Nothing on the list has been looked at by a person yet, so until it has we are guessing about whether this week's fixes landed. The nine-question checklist this replaced could never have been finished in one sitting anyway: it needed about seven searches, and a visitor without an account only gets five.
-2. Whatever that tells us, plus the things this week knowingly left undone.
-3. Make it faster. An answer can take over twenty-five seconds and NOBODY IS ASSIGNED TO THIS, which is the most honest thing on this page. We made the wait visible; we did not make it shorter.
-4. Teach the test system to stand in for the medical databases as well as for the writing model. It currently pretends to be one but not the other, which is why our tests still cannot check a real, finished answer from end to end.
-5. Two safety items, worth doing once real people are using it: a security scan that is overdue, since the site has been public since 24 August, and a small flaw where the sign-up page reveals whether an email address is already registered.
-6. Everything else: the problems the reviewer found earlier, and the rest of the safety and quality review.
+1. Finish the search box adjustment already in progress, then the next screen fixes. Right now the Search button always sits in the same spot; the change being built puts it beside the question for a short one and moves it below the question once it wraps onto a second line. After that: calmer refusal messages that carry a clickable link to the real NCBI record, and a clear "Search stopped" screen with a Run again button, for when a search is stopped on purpose.
+2. The rest of the screen work: staying signed in after you reload the page, so your search history does not vanish behind a sign-in wall (and making that history usable on a phone), a properly finished Integrations page, and a bigger, clearer disclaimer notice.
+3. The answer work, which is the bigger prize: follow-up questions that remember what you already asked, searching all three of our data sources instead of mostly two, better-written answers, and getting our most important test questions to answer reliably every single time.
 
 The previous first step, "make the answers readable", is done and merged, which is why it has left this list.
 
@@ -629,16 +644,14 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | A conversation id that the new back door accepts from a calling program is not yet checked against who that program actually is. Harmless today, since nothing reads it yet, but it will need a real ownership check the moment a future sprint starts using it to remember someone's conversation history | Whichever future sprint first starts using that id for real |
 | One narrow error message on the new back door still describes a real internal failure in developer-facing terms rather than fully plain language, though nothing sensitive leaks through it today by coincidence rather than by design | The hardening sprint near the end, or whichever sprint next touches that error-handling code |
 | The new back door's honesty signal, for the rare case where nothing at all could be confirmed one way or the other, currently always reports itself as "low risk" rather than "we do not know." Every other case is handled correctly; only reaches this narrow case with no attempted answer at all | Whenever the product owner decides, or whichever sprint next revisits how that signal is set |
+| The account menu tells a signed-in person that no search limit is in effect, when a daily limit of 100 searches actually does apply and does refuse searches once reached | Whenever the wording is next touched. The limit itself works correctly; only the message is wrong |
+| Some of our automated checks fail only when the computer running them is busy with something else at the same time, and pass cleanly when run alone. This makes a real new problem hard to tell apart from ordinary machine noise | Not yet scheduled, raised this sprint |
+| The link meant to let an AI tool connect to this product does not work on the practice site right now: every attempt to connect is rejected | Owned by a later piece of work still to come |
+| About one guest search in seven used to fail at one particular step. A fix now tries that step a second time when it first comes back malformed, and that catches most of the failures, but a different, separate kind of slow timeout is still seen from time to time | The retry is live. The remaining timeout is not yet scheduled |
 
 That last row is the important one. None of these can affect a real person while the project runs only on a laptop with no outside users. The moment that changes, several of them stop being optional.
 
-| Problem, in plain terms | When it gets fixed |
-|-------------------------|--------------------|
-| Someone with many internet connections can still use up the day's free searches for strangers, leaving other newcomers to wait until the next morning. Anyone signed in is unaffected, and the money stays capped either way | When proper traffic limiting is built, near the end of the project |
-| A first-time visitor never sees the five dots showing how many free searches they have, because the dots only appear after the first question is asked. The offer is invisible until it has been partly taken | Waiting on a decision about whether they should appear sooner |
-| If the day's free searches run out, the page can still show a visitor searches remaining until they actually try one. The refusal itself is honest when it comes | The next piece of web page work |
-| A search that is stopped part-way still costs one of the five. This is deliberate: the answer was already on screen, so giving the search back would be a way to read answers for free | Not planned to change |
-
+The four problems that used to sit here were all about the five-free-search wall for guests. As of 13 September that wall is gone, so those rows are gone with it.
 
 ### Sprint: a budget on how much the system may ask of others (31 August, merged)
 
@@ -704,6 +717,18 @@ One person used the deployed site for an afternoon. These are their words, kept 
 ### The gap underneath all of the above
 
 Nothing automatically checks our work before it goes live. We have nearly four thousand automated checks, and they only run when a person remembers to run them. As of this week, anything merged goes straight to the public site. We have been bitten by this before: a broken build once sat unnoticed for weeks, and a broken browser test suite sat unnoticed for five rounds of work. Fixing this is now its own scheduled piece of work rather than a good intention.
+
+### Sprint: the first round of testing, and fixing the screens (12 to 13 September)
+
+This is the first sprint where the product owner actually sat down and tried the product against a written plan, rather than us guessing what to fix next. Two rounds of fixes went out: the first let people in properly, with no five-search wall and a working sign in and sign out. The second made the screen itself hold still: a fixed header and footer, one steady width for the answer box, screens that fade in instead of snapping, a lighter home page, and a bigger search box that also works on a phone. Both rounds, plus eight small follow-ups the product owner asked for after retesting, are now live and approved.
+
+Three things went wrong along the way, and they are worth keeping rather than smoothing over.
+
+One site update went out broken. A check meant to catch a failing build had a gap in it, and a change that should never have shipped reached the practice site with the page failing to build. It was caught and fixed within minutes, and the previous, working version of the site kept running for visitors the whole time, so nobody saw a broken page.
+
+A long test of 150 questions, meant to measure how often the system actually answers well, turned out to be only half useful. It was run from a single account, and that account hit its own daily limit partway through, so only 85 of the 150 questions really ran. The test was paused on purpose. The product owner's call was that the screen fixes above should come first, and the test should be run again later from several fresh accounts so one shared limit cannot cut it short a second time.
+
+And about one guest search in seven was failing at one particular step before this sprint. A fix now tries that step a second time when the first attempt comes back malformed, and that catches most of the failures. It does not catch all of them: one different, separate kind of slow timeout is still seen from time to time.
 
 ## How we work
 

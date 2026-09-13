@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-05.
+Kick-off: 2026-05-06. Last updated: 2026-09-13.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-09-05.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0 on 2026-08-31, 6.2 on 2026-09-01 as PR #92, and PR #93 on 2026-09-05. PR #93 IS NOT A NUMBERED BUILD PHASE: work is now picked from open flags and from the product owner's own testing rather than from Section 25, which has run its course. It delivered the sign-in screen, chrome reduction, a usable integrations page, one shape for every refusal, a session-state privacy leak fix, and `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers derived from what is built. THE NEXT ACTION IS NOT WORK, IT IS WAITING: the product owner is testing develop against that spec and drops screenshots into `testing/Product/feedback/inbox/`. Authoritative state: `tracker/BOARD.md`; what to do next: `requirements/phase_6/Continuation_prompt.md` |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR: fix sets 1 and 2 plus eight retest follow-ups are built, live and approved as of commit d72256b, except item 2.12's flexible Search button placement, which is being built. THE NEXT ACTION is finishing that item, then fix set 3, refusals and Stop. Item-level status: `testing/UI_fix_plan.md`; authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 494 (DECISIONS.md).
+Decisions logged: 499 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,14 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-12 to 2026-09-13, THE FIRST PRODUCT-OWNER TESTING ROUND, AND THE UI FIX LOOP IT OPENED ON `develop`. Not a numbered build phase and not a pull request: the loop is fix on develop, quick checks, push, confirm live, product owner retests, by product-owner decision logged in DECISIONS.md.
+
+- WHAT SHIPPED: fix set 1, let people in, all 8 items, commit 7766ebf. Fix set 2, a steady frame, items 2.1 to 2.14, commits ff80814, 3e1ee64, cbb04cc, e67323a, c8bcbbe, 254763b and d72256b. The retest follow-ups inside set 2 cover a light home page, every screen centred between header and footer, no idle wait after pressing Search, a Think-step retry when the model's classification reply is not valid JSON, a bigger multi-line search box, NCBI design system stage 0 (documentation only, `theme.ts` untouched), and a favicon. All of it is live and approved on `develop` as of commit d72256b, except item 2.12's flexible Search button placement (top right on one line, bottom right once the question wraps), chosen by the product owner on 2026-09-13 and being built. Item-level detail and marks live in `testing/UI_fix_plan.md`, which owns per-item status; this entry does not restate the list.
+- EVIDENCE: live checks on `develop` at 1280px and 390px; 5 of 6 live guest searches finished after the Think-step retry, the one failure a separate transient timeout; frontend suite 252 tests; Python suite 4741 tests; doc drift clean.
+- WHAT WENT WRONG, stated plainly rather than smoothed over. Commit ff80814 went out with the Railway web build failing, because the pre-push type check skipped `e2e/` and a piped command hid the failure; fixed in 3e1ee64, and `npm run build` now runs before every frontend push. Commit d72256b's own message claims 252 frontend unit tests passed, but that run carried one load-related timeout (`railCollapsePremise`), which passed when run alone; the message is wrong for that run. The consistency baseline run on 2026-09-12 was only half valid: all 150 planned searches used one account, so 65 were refused by the signed-in daily limit and only 85 actually ran; the product owner paused it until fresh test accounts are available.
+- OPEN, waiting on the product owner: NCBI design system stage 1 (installing the public `@uswds/uswds` package) needs a yes; four type values differ between the design card and `theme.ts` and both work, so the product owner picks; NCBI's own internal packages 404 on public npm and block design system stages 2 and 3 until reachable from the NCBI network; the consistency baseline reruns across fresh accounts before fix set 6.
+- Pointers: `testing/UI_fix_plan.md` for item status, `testing/Product/reports/2026-09-12_consistency_and_test_1.md` for the testing round itself.
 
 2026-09-05, PR #93 merged to `develop`, all four CI gates green, branch deleted both sides. NOT a numbered build phase: Section 25 has run its course as a driver, and this work was picked from a defect the product owner hit plus everything deriving a specification then turned up.
 
