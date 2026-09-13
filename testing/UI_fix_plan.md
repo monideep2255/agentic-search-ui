@@ -244,4 +244,4 @@ Stale or no longer relevant, so not carried into this plan:
 | 8. Search every layer, with the scientists | Answers | Not started |
 | 9. Answers worth reading | Answers | Not started |
 | 10. Reliable flagship answers, and saved history | Answers | Not started |
-| Consistency baseline | Before any answer fix | Running, restarted 2026-09-12 after a fix to the run script: the first attempt read no events, because the server ends stream lines with CRLF |
+| Consistency baseline | Before any answer fix | Paused by the product owner on 2026-09-12 so screen fixes come first; rerun before set 6. Partly valid, rerun needed. Finished 2026-09-12, but only 85 of 150 runs really ran: 65 were refused before starting, most or all by the signed-in daily limit of 100, because all runs used one account. Of the 85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run (14%), 6 refused as off-topic. 15 of 32 questions gave different outcomes across runs, and only 2 answered every time. No Layer 3 call was seen. Next: rerun the 65 across fresh test accounts, recording each error's message |
