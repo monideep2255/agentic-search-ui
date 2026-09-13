@@ -225,6 +225,17 @@ export interface RunView {
    * identically and the `?? null` below is what guarantees that.
    */
   nextStep: string | null;
+  /**
+   * UI fix set 7 (R21). The question to ASK when the offer is accepted, or
+   * null.
+   *
+   * Separate from `nextStep`, which is the sentence the offer is WORDED in.
+   * Accepting used to send that sentence to the agent, so a yes/no question
+   * about the interface was searched for as if it were a question about
+   * biology. Null when the backend does not send one, in which case the
+   * surface falls back to `nextStep` and behaves exactly as it did before.
+   */
+  nextStepQuery: string | null;
   /** How the outcome word should read: a success, a caution, or a refusal. */
   outcomeTone: "good" | "warn" | "risk" | null;
   /**
@@ -314,6 +325,7 @@ export const EMPTY_RUN_VIEW: RunView = {
   outcome: null,
   elapsedMs: null,
   nextStep: null,
+  nextStepQuery: null,
   outcomeTone: null,
   layerCount: 0,
   landed: false,
@@ -814,6 +826,23 @@ export function useRunView(events: AgentEvent[]): RunView {
       done && done.type === "done" && typeof done.payload.next_step === "string"
         ? (done.payload.next_step ?? null)
         : null;
+    /*
+     * UI fix set 7 (R21). Read on the same terms as `next_step` above, and
+     * for the same reason: absent and null must collapse to one thing, so a
+     * backend that predates the field leaves this null and the surface
+     * falls back to the offer text, which is what it sent before.
+     *
+     * The type check is what makes an empty string fall through as well: a
+     * blank query is not a searchable question and would dispatch a run
+     * with nothing in it.
+     */
+    const nextStepQuery =
+      done &&
+      done.type === "done" &&
+      typeof done.payload.next_step_query === "string" &&
+      done.payload.next_step_query.trim() !== ""
+        ? done.payload.next_step_query
+        : null;
 
     /*
      * Counted from the SOURCES, not the tool calls (F-4.9-A-05, F-4.9-A-06).
@@ -1004,6 +1033,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       outcomeTone: isRefusal ? null : outcomeTone,
       elapsedMs,
       nextStep,
+      nextStepQuery,
       layerCount,
       landed,
       failure,

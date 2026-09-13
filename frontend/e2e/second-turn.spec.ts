@@ -22,6 +22,14 @@ import { expect, test, type Page } from "@playwright/test";
 const TEST_PASSWORD = "Str0ngPassw0rd!";
 const freshEmail = () => `e2e-second-turn-${randomUUID()}@example.com`;
 
+/**
+ * Matches `mock_llm_backend.py`'s `_SLOW_QUERY_MARKER`, which makes every
+ * model call sleep two seconds. Used by the width arms below so a run is
+ * genuinely in flight while the page is measured, rather than racing a
+ * backend that answers in about a second.
+ */
+const SLOW_QUERY_MARKER = "E2E_SLOW_STOP_TEST";
+
 async function enterApp(page: Page): Promise<void> {
   await page.goto("/");
   const dialog = page.getByTestId("disclaimer-modal");
@@ -147,6 +155,14 @@ test.describe("a conversation continues past the first turn", () => {
    * So the property is not "a second answer appears", which the arms above
    * already cover. It is "the first one is still there".
    *
+   * UI FIX SET 7 (R22) EXTENDED IT TO "still there THE WHOLE TIME", and
+   * moved the thread above the current turn. The earlier version of this
+   * arm was satisfied by a thread that reappeared once the second run
+   * landed, which is exactly what the old code did, so the product owner
+   * still met a screen with no conversation on it for the ten or twenty
+   * seconds that matter most. The in-flight assertions below are what
+   * close that.
+   *
    * MUTATION-PROVEN, and the asymmetry IS the finding. Disabling the
    * archive turns this arm and the one below red, and leaves BOTH arms
    * above GREEN. Those two are the ones that asked "can a second turn be
@@ -176,6 +192,37 @@ test.describe("a conversation continues past the first turn", () => {
     const followUp = page.getByTestId("follow-up");
     await followUp.getByRole("textbox").fill("What diseases are associated with it?");
     await followUp.getByRole("textbox").press("Enter");
+
+    /*
+     * UI FIX SET 7 (R22). CHANGED HERE, deliberately, and this is the half
+     * of the property that did not exist before.
+     *
+     * This arm used to wait for the second answer and only then look for
+     * the thread, which was the strongest statement available while a
+     * follow-up still swapped the whole screen for the run screen: the
+     * thread genuinely WAS off the page for the length of the second run,
+     * and that is exactly what the product owner then complained about
+     * ("it goes to a new page, which it should not").
+     *
+     * So the thread is now asserted WHILE the second run is in flight, not
+     * merely after it lands. `data-tour="answer"` is on the answer screen's
+     * card and nowhere else, so its presence beside a live stepper is the
+     * direct proof that no full-screen run replaced this screen.
+     */
+    await expect(
+      page.getByTestId("step-Guard"),
+      "the follow-up shows no progress at all",
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByTestId("previous-turn-0"),
+      "the earlier turn left the page while the follow-up was running, " +
+        "which is the 'new page' defect R22 exists to close",
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-tour="answer"]'),
+      "a full-screen run screen replaced the answer screen",
+    ).toBeVisible();
+
     await answerLanded(page);
 
     const previous = page.getByTestId("previous-turn-0");
@@ -193,6 +240,76 @@ test.describe("a conversation continues past the first turn", () => {
     await previous.getByRole("group").or(previous).locator("summary").click();
     await expect(previous).toHaveAttribute("open", /.*/);
   });
+
+  /**
+   * UI fix set 7 (R22): the conversation fits the answer column at both
+   * ends of the range, mid-run as well as after.
+   *
+   * Two elements arrived on this screen in this change and both are wider
+   * than they look: the collapsed thread rows, which carry a question and a
+   * meta line on one baseline, and the inline progress, whose stepper lays
+   * five labelled nodes across the full card. At 390px either can push the
+   * page sideways, and a page that scrolls sideways on a phone is how the
+   * nav overflow defect presented on 2026-09-05.
+   *
+   * MEASURED ON THE DOCUMENT, not on the card. A card that fits inside a
+   * body that has already overflowed is the shape of every false pass here:
+   * the question is whether the PAGE scrolls, so the page is what is
+   * measured. One pixel of slack for sub-pixel rounding, which Chromium
+   * produces on fractional layouts and is not a scrollbar.
+   *
+   * THE SLOW MARKER AND THE ATOMIC MEASUREMENT ARE BOTH LOAD-BEARING, and
+   * the first draft had neither. It asserted `step-Guard` visible and then
+   * measured in a second round trip, which is two observations of a page
+   * that is changing between them: this backend answers in about a second,
+   * so the measurement could land on the finished answer instead. Mutation
+   * caught it. Forcing a 2000px stepper turned the 390px arm red and left
+   * the 1280px arm GREEN, not because 1280px is safe but because that arm
+   * happened to measure after the run had landed and the stepper it was
+   * sent to measure no longer existed.
+   *
+   * So the follow-up now carries `E2E_SLOW_STOP_TEST`, which makes the
+   * backend sleep in every model call, and presence and width are read in
+   * ONE `evaluate` so the page cannot change between them. Re-run against
+   * the same 2000px mutation, both arms go red.
+   */
+  for (const width of [390, 1280]) {
+    test(`the thread and the inline run fit the page at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await enterApp(page);
+
+      await askFromHome(page, "What gene is BRCA1?");
+      await answerLanded(page);
+
+      const followUp = page.getByTestId("follow-up");
+      await followUp
+        .getByRole("textbox")
+        .fill(`${SLOW_QUERY_MARKER} what diseases are associated with it?`);
+      await followUp.getByRole("textbox").press("Enter");
+
+      await expect(page.getByTestId("step-Guard")).toBeVisible({ timeout: 10_000 });
+
+      const during = await page.evaluate(() => ({
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        stepper: document.querySelector('[data-testid="step-Guard"]') !== null,
+        thread: document.querySelector('[data-testid="previous-turn-0"]') !== null,
+      }));
+      // POPULATE-CHECKS, read in the same frame as the width. Both new
+      // elements must be on the page AT THE MOMENT it was measured, or this
+      // arm measured a page that has neither and passed for it.
+      expect(during.stepper, "the run had already landed when the page was measured").toBe(true);
+      expect(during.thread, "the earlier turn was not on the page when it was measured").toBe(true);
+      expect(during.overflow, "the page scrolls sideways while the follow-up runs").toBeLessThanOrEqual(1);
+
+      await answerLanded(page);
+      const after = await page.evaluate(() => ({
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        thread: document.querySelector('[data-testid="previous-turn-0"]') !== null,
+      }));
+      expect(after.thread, "the earlier turn left the page once the follow-up landed").toBe(true);
+      expect(after.overflow, "the page scrolls sideways once the follow-up lands").toBeLessThanOrEqual(1);
+    });
+  }
 
   test("New search starts a fresh conversation rather than extending one", async ({
     page,

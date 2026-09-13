@@ -24,12 +24,12 @@
  * `components/source-card.html`.
  */
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 
 import { designTokens, layerColour } from "../../theme";
-import type { ReasoningStep } from "./RunScreen";
+import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
 import { FeedbackSurface } from "../feedback/FeedbackSurface";
 
@@ -145,6 +145,30 @@ export interface AnswerScreenProps {
    * the prototype's own `.prev` and `.thread` rules rather than invented.
    */
   previousTurns?: PreviousTurn[];
+  /**
+   * The in-flight run's progress, rendered in place of the answer body.
+   *
+   * UI FIX SET 7 (R22), the product owner's words: "it goes to a new page,
+   * which it should not. The first answer should minimise and the chat
+   * should continue on the same screen. That is one of the most important
+   * things."
+   *
+   * Before this, a follow-up swapped the whole screen for `RunScreen`, so
+   * the conversation vanished for the length of the second run and came
+   * back afterwards. Now the answer screen stays mounted: the finished turn
+   * collapses into `previousTurns` above, this node renders the same
+   * stepper, elapsed counter and Stop control underneath the new question,
+   * and the answer replaces it in place when it lands.
+   *
+   * A NODE rather than a set of run props, because the run's state belongs
+   * to `App` and this screen has no business deriving it. `App` builds a
+   * `RunProgress` with exactly the values it would have given `RunScreen`.
+   *
+   * While it is present, the follow-up field and the feedback surface are
+   * not rendered: both act on an answer, and there is not one yet. That is
+   * the same thing the full-screen run does, for the same reason.
+   */
+  progress?: React.ReactNode;
   /**
    * Start a fresh search.
    *
@@ -411,6 +435,7 @@ export function AnswerScreen({
   authToken = null,
   followUp,
   previousTurns = [],
+  progress = null,
   onNewSearch,
   refusal = null,
   refusalLabel = null,
@@ -423,6 +448,37 @@ export function AnswerScreen({
 }: AnswerScreenProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
+  /*
+   * UI fix set 7 (R22). Bring the new turn's heading into view when a
+   * follow-up starts.
+   *
+   * The thread above grows by one collapsed row per turn, so by the third
+   * question the heading of the turn just asked for can sit below the fold
+   * on a short laptop screen. On the old full-screen run there was nothing
+   * above it and nothing to scroll to; keeping the conversation is what
+   * creates this obligation.
+   *
+   * Keyed on the QUESTION as well as on whether a run is in flight, so a
+   * re-render during the run does not keep yanking the page, and a second
+   * follow-up scrolls again.
+   *
+   * Both guards are real rather than defensive noise: `scrollIntoView` is
+   * not implemented in jsdom, and `matchMedia` is absent there too, so an
+   * unguarded call would take the whole test render down. The reduced-motion
+   * check is the same courtesy the screen fade in `App.tsx` already extends.
+   */
+  const headingRef = useRef<HTMLDivElement | null>(null);
+  const running = progress !== null && progress !== undefined;
+  useEffect(() => {
+    if (!running) return;
+    const node = headingRef.current;
+    if (!node || typeof node.scrollIntoView !== "function") return;
+    const reduced =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false;
+    node.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+  }, [running, question]);
   /*
    * Source disclosure state, F-4.8-D-01.
    *
@@ -474,7 +530,120 @@ export function AnswerScreen({
           p: { xs: 2.5, sm: 3.25 },
         }}
       >
-        <Box sx={{ pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}>
+        {/*
+          T-4.16-02. The conversation thread: every earlier turn of THIS
+          search, collapsed, still on the page.
+
+          POSITION CHANGED IN UI FIX SET 7 (R22), and the change is a
+          deliberate departure from the prototype rather than a drift from
+          it. The prototype's answer section orders the tail `sources`,
+          `verdict`, `thread`, then the follow-up form, so earlier turns sit
+          BELOW the current answer. The product owner asked for the opposite
+          on 2026-09-13: "The first answer should minimise and the chat
+          should continue on the same screen", the earlier answer shrinking
+          above and the new answer growing below, which is how a conversation
+          reads everywhere else. So the thread now sits at the top of the
+          card, above the current question, and the current turn, whether it
+          is an answer or a run still in flight, is the thing at the bottom
+          where a reader's eye ends up.
+
+          The argument the old position had, that a growing thread pushes the
+          thing just asked for off screen, is real and is answered rather
+          than ignored: each earlier turn is one collapsed row, and the
+          effect above scrolls the new turn's heading into view when a
+          follow-up starts.
+
+          NEWEST LAST, matching `archiveCurrent()`'s `appendChild`, so the
+          rows read oldest first downward into the current turn. Each entry
+          is a real `<details>`, so it is keyboard reachable and announced as
+          a disclosure without any ARIA of its own, the same mechanism the
+          sources list already uses.
+        */}
+        {previousTurns.length > 0 ? (
+          <Box
+            data-testid="thread"
+            sx={{ display: "flex", flexDirection: "column", gap: 1.75, mt: 3.25 }}
+          >
+            {previousTurns.map((turn, index) => (
+              <Box
+                key={`${turn.question}-${index}`}
+                component="details"
+                data-testid={`previous-turn-${index}`}
+                sx={{
+                  border: `1px solid ${designTokens.line}`,
+                  borderRadius: 0.5,
+                  bgcolor: designTokens.surfaceSunk,
+                  "& > summary": {
+                    cursor: "pointer",
+                    listStyle: "none",
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 1.25,
+                    px: 1.75,
+                    py: 1.5,
+                  },
+                  "& > summary::-webkit-details-marker": { display: "none" },
+                }}
+              >
+                <Box component="summary">
+                  <Box
+                    component="span"
+                    aria-hidden="true"
+                    sx={{ fontSize: 10, color: designTokens.inkFaint }}
+                  >
+                    ▶
+                  </Box>
+                  <Typography
+                    component="span"
+                    sx={{ fontWeight: 700, fontSize: 14.5, color: designTokens.ink }}
+                  >
+                    {turn.question}
+                  </Typography>
+                  <Typography
+                    component="span"
+                    sx={{ fontSize: 12, color: designTokens.inkFaint }}
+                  >
+                    {turn.meta}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    px: 1.75,
+                    pt: 0.5,
+                    pb: 2,
+                    bgcolor: designTokens.surface,
+                    borderTop: `1px solid ${designTokens.line}`,
+                  }}
+                >
+                  {turn.claims.map((claim, claimIndex) => (
+                    <Typography
+                      key={claimIndex}
+                      sx={{ fontSize: 16, mt: claimIndex === 0 ? 2 : 1.5, maxWidth: "64ch" }}
+                    >
+                      {claim.text}
+                    </Typography>
+                  ))}
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 1.75, color: designTokens.inkMuted }}
+                  >
+                    {turn.sources.length === 1
+                      ? "1 source"
+                      : `${turn.sources.length} sources`}
+                    {turn.trust.length > 0
+                      ? ` · ${turn.trust.map((signal) => signal.label).join(" · ")}`
+                      : ""}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        ) : null}
+
+        {/* `ref` for the scroll-into-view above: this block is the top of
+            the current turn, so bringing it into view brings the question
+            and everything under it with it. */}
+        <Box ref={headingRef} sx={{ pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}>
           <Box sx={{ display: "flex", gap: 1.75, alignItems: "flex-start" }}>
             <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
               {question}
@@ -607,550 +776,470 @@ export function AnswerScreen({
         </Box>
 
         {/*
-          Rendered on EITHER field, not on `refusal` alone. A refusal whose
-          `message` arrives empty still has a label, and a refusal a reader
-          can see is the whole requirement; gating on the sentence alone
-          would reproduce the silent blank page F-4.8-J-02 closed.
+          UI fix set 7 (R22). One of two things stands here: the answer,
+          or the run that is still producing it.
+
+          `progress` is the SAME `RunProgress` the full-screen run renders,
+          passed down by `App` rather than rebuilt, so an inline follow-up
+          cannot grow a second visual language for the wait. When the run
+          lands, `App` stops passing it and the answer takes its place with
+          the thread above unchanged, which is what "the chat continues on
+          the same screen" means in DOM terms: this screen never unmounts.
         */}
-        {refusal || refusalLabel ? (
-          <RefusalBlock label={refusalLabel} text={refusal} link={refusalLink} />
-        ) : null}
-        {failure ? <Notice testId="answer-failure" tone="risk" text={failure} /> : null}
-        {capMessage ? <Notice testId="answer-cap" tone="warn" text={capMessage} /> : null}
-        {systemNotes.map((note, i) => (
-          <Notice key={i} testId={`answer-note-${i}`} tone="warn" text={note} />
-        ))}
-
-        {/*
-          The provenance spine runs beside the prose, one segment per claim.
-
-          Segment and claim are two cells of the SAME grid row rather than two
-          independently laid out columns, so a segment's height is driven by
-          the claim it describes and the two cannot drift apart. The earlier
-          form gave each segment `flex: 1` and a `minHeight` in a column of its
-          own, which held only while every claim happened to be one line long:
-          a two-line claim pushed the prose down while the track kept its own
-          rhythm, and by the third claim the grey uncited segment sat beside
-          the wrong sentence. A spine that points at the wrong claim is worse
-          than no spine, because it asserts a provenance that is not there.
-
-          Found by opening the application and looking at it, the same way the
-          `#root` width defect was, and for the same reason: every test here
-          asserts segment COUNT, colour and order, and none of them can see
-          that two boxes are no longer level with each other.
-        */}
-        <Box
-          data-tour="citations"
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "14px 1fr",
-            columnGap: 2.25,
-            rowGap: 1.9,
-            alignItems: "stretch",
-          }}
-        >
-          {claims.map((claim, index) => (
-            <Fragment key={index}>
-              {/*
-                F-4.8-A-16. This was `aria-hidden`, so the provenance spine,
-                which this product's own documentation calls "visible before
-                you read a word", did not exist for assistive technology at
-                all. Axe reported zero violations the whole time, because axe
-                cannot check whether the one signal a product exists to convey
-                is conveyed.
-
-                The visual track stays decorative; the MEANING is carried in
-                text on each claim instead, so a cited and an uncited claim are
-                distinguishable without colour. That is WCAG 1.4.1 (use of
-                colour), which no automated rule was ever going to flag here.
-              */}
-              <Box
-                aria-hidden="true"
-                data-testid={`spine-segment-${index}`}
-                data-layer={claim.layer ?? "none"}
-                sx={{
-                  width: 6,
-                  mx: "auto",
-                  borderRadius: 1,
-                  alignSelf: "stretch",
-                  bgcolor: layerColour(claim.layer).main,
-                }}
-              />
-
-              <Typography data-testid={`claim-text-${index}`} sx={{ maxWidth: "64ch" }}>
-                {claim.text}{" "}
-                {/*
-                  F-4.9-A-04. This announced one layer for the whole list,
-                  taken from the claim's FIRST citation, so a sentence citing a
-                  graph edge and a PubTator co-mention told a screen reader
-                  that both were layer 1. Each source now names its own.
-                */}
-                <Box component="span" sx={visuallyHidden}>
-                  {claim.citations.length === 0
-                    ? "This sentence has no source."
-                    : claim.citations
-                        .map((n) => `Source ${n}, layer ${sourceByIndex.get(n)?.layer ?? claim.layer}`)
-                        .join("; ") + "."}
-                </Box>
-                {claim.citations.map((n, position) => (
-                  <Box
-                    key={n}
-                    component="span"
-                    data-testid={`citation-${n}`}
-                    data-claim={index}
-                    // The CITATION's own layer, not the claim's (F-4.9-A-04).
-                    // `claim.layer` is the first citation's, which is right for
-                    // the spine segment (one per claim) and wrong for a chip
-                    // (one per source): chip 2 of a graph-plus-literature claim
-                    // was painted navy while its own card read "L3 · literature".
-                    data-layer={sourceByIndex.get(n)?.layer ?? claim.layer}
-                    aria-label={`Source ${n}`}
-                    role="note"
-                    sx={{
-                      ...mono,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.6,
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      lineHeight: 1.7,
-                      px: 0.75,
-                      borderRadius: 0.5,
-                      border: `1px solid ${designTokens.lineStrong}`,
-                      borderLeft: `4px solid ${layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).main}`,
-                      bgcolor: layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).wash,
-                      ml: position === 0 ? 0 : 0.5,
-                    }}
-                  >
-                    {n}
-                    {shortLabel(n) ? (
-                      <Box
-                        component="span"
-                        sx={{ color: designTokens.inkMuted, fontWeight: 400 }}
-                      >
-                        {shortLabel(n)}
-                      </Box>
-                    ) : null}
-                  </Box>
-                ))}
-              </Typography>
-            </Fragment>
+        {running ? (
+          progress
+        ) : (
+          <>
+          {/*
+            Rendered on EITHER field, not on `refusal` alone. A refusal whose
+            `message` arrives empty still has a label, and a refusal a reader
+            can see is the whole requirement; gating on the sentence alone
+            would reproduce the silent blank page F-4.8-J-02 closed.
+          */}
+          {refusal || refusalLabel ? (
+            <RefusalBlock label={refusalLabel} text={refusal} link={refusalLink} />
+          ) : null}
+          {failure ? <Notice testId="answer-failure" tone="risk" text={failure} /> : null}
+          {capMessage ? <Notice testId="answer-cap" tone="warn" text={capMessage} /> : null}
+          {systemNotes.map((note, i) => (
+            <Notice key={i} testId={`answer-note-${i}`} tone="warn" text={note} />
           ))}
-        </Box>
 
-        {/*
-          F-4.8-D-01. The sources were always expanded, every field of every
-          card at once, so a six-source answer became a wall and the sources
-          stopped being scannable. The prototype collapses them behind one
-          disclosure carrying the count, and collapses each card inside it.
-        */}
-        {sources.length > 0 ? (
-        <Box
-          component="details"
-          data-testid="sources-disclosure"
-          data-tour="sources"
-          open={sourcesOpen}
-          sx={{ mt: 3.5 }}
-        >
+          {/*
+            The provenance spine runs beside the prose, one segment per claim.
+
+            Segment and claim are two cells of the SAME grid row rather than two
+            independently laid out columns, so a segment's height is driven by
+            the claim it describes and the two cannot drift apart. The earlier
+            form gave each segment `flex: 1` and a `minHeight` in a column of its
+            own, which held only while every claim happened to be one line long:
+            a two-line claim pushed the prose down while the track kept its own
+            rhythm, and by the third claim the grey uncited segment sat beside
+            the wrong sentence. A spine that points at the wrong claim is worse
+            than no spine, because it asserts a provenance that is not there.
+
+            Found by opening the application and looking at it, the same way the
+            `#root` width defect was, and for the same reason: every test here
+            asserts segment COUNT, colour and order, and none of them can see
+            that two boxes are no longer level with each other.
+          */}
           <Box
-            component="summary"
-            onClick={(event: React.MouseEvent) => {
-              event.preventDefault();
-              setSourcesOpen((open) => !open);
-            }}
+            data-tour="citations"
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              cursor: "pointer",
-              listStyle: "none",
-              mb: 1.25,
-              "&::-webkit-details-marker": { display: "none" },
+              display: "grid",
+              gridTemplateColumns: "14px 1fr",
+              columnGap: 2.25,
+              rowGap: 1.9,
+              alignItems: "stretch",
             }}
           >
-            <Box
-              component="span"
-              aria-hidden="true"
-              sx={{
-                fontSize: 10,
-                color: designTokens.inkFaint,
-                transform: sourcesOpen ? "rotate(90deg)" : "none",
-                transition: "transform .12s ease",
-              }}
-            >
-              ▶
-            </Box>
-            <Typography
-              variant="overline"
-              component="span"
-              sx={{ color: designTokens.inkFaint }}
-            >
-              Sources
-            </Typography>
-            <Box
-              component="span"
-              data-testid="sources-count"
-              sx={{
-                ...mono,
-                fontSize: 11,
-                fontWeight: 700,
-                color: designTokens.inkMuted,
-                bgcolor: designTokens.surfaceSunk,
-                border: `1px solid ${designTokens.line}`,
-                borderRadius: 999,
-                px: 0.75,
-              }}
-            >
-              {sources.length}
-            </Box>
-          </Box>
-
-        {sources.map((source) => {
-          const colour = layerColour(source.layer);
-          return (
-            <Box
-              key={source.n}
-              component="details"
-              data-testid={`source-${source.n}`}
-              data-layer={source.layer}
-              open={openSources.includes(source.n)}
-              sx={{
-                border: `1px solid ${designTokens.line}`,
-                borderLeft: `4px solid ${colour.main}`,
-                borderRadius: 0.5,
-                bgcolor: designTokens.surface,
-                mb: 1,
-                px: 1.75,
-                py: 1.25,
-              }}
-            >
-              <Box
-                component="summary"
-                onClick={(event: React.MouseEvent) => {
-                  event.preventDefault();
-                  toggleSource(source.n);
-                }}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.25,
-                  flexWrap: "wrap",
-                  cursor: "pointer",
-                  listStyle: "none",
-                  "&::-webkit-details-marker": { display: "none" },
-                }}
-              >
-                <Box
-                  component="span"
-                  aria-hidden="true"
-                  sx={{
-                    fontSize: 9,
-                    color: designTokens.inkFaint,
-                    transform: openSources.includes(source.n) ? "rotate(90deg)" : "none",
-                    transition: "transform .12s ease",
-                  }}
-                >
-                  ▶
-                </Box>
-                <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12 }}>
-                  [{source.n}]
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {source.name}
-                </Typography>
+            {claims.map((claim, index) => (
+              <Fragment key={index}>
                 {/*
-                  F-4.8-D-02. This read "L1", which a reader has to already
-                  know how to decode. The prototype names the layer in words.
-                */}
-                <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}>
-                  L{source.layer} · {LAYER_WORD[source.layer] ?? "source"}
-                </Box>
-              </Box>
+                  F-4.8-A-16. This was `aria-hidden`, so the provenance spine,
+                  which this product's own documentation calls "visible before
+                  you read a word", did not exist for assistive technology at
+                  all. Axe reported zero violations the whole time, because axe
+                  cannot check whether the one signal a product exists to convey
+                  is conveyed.
 
-              {/*
-                The flag control sits in the card BODY, not the summary row.
-                The prototype used to put it in the summary, and axe rightly
-                calls that `nested-interactive`: a `<summary>` with a focusable
-                descendant, WCAG 4.1.2. This shipped as a deviation
-                (F-4.9-D-13); the design-system focus-nesting pass of
-                2026-08-14 moved it in the design too, so the two agree.
-              */}
-                {onFlagSource ? (
-                  <Box
-                    component="button"
-                    type="button"
-                    aria-pressed={flaggedSources.includes(source.n)}
-                    onClick={(event: React.MouseEvent) => {
-                      // It lives inside the summary, as it does in the
-                      // prototype, so without this a flag click also opens or
-                      // closes the card under the user's cursor.
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onFlagSource(source.n);
-                    }}
-                    sx={{
-                      font: "inherit",
-                      fontSize: 11.5,
-                      px: 1,
-                      py: 0.3,
-                      borderRadius: 0.5,
-                      cursor: "pointer",
-                      border: "1px solid",
-                      borderColor: flaggedSources.includes(source.n)
-                        ? designTokens.risk
-                        : designTokens.line,
-                      color: flaggedSources.includes(source.n)
-                        ? designTokens.risk
-                        : designTokens.inkFaint,
-                      bgcolor: flaggedSources.includes(source.n)
-                        ? designTokens.riskWash
-                        : designTokens.surface,
-                      "&:hover": { color: designTokens.risk, borderColor: designTokens.risk },
-                    }}
-                  >
-                    {flaggedSources.includes(source.n) ? "Flagged" : "Flag: does not support"}
+                  The visual track stays decorative; the MEANING is carried in
+                  text on each claim instead, so a cited and an uncited claim are
+                  distinguishable without colour. That is WCAG 1.4.1 (use of
+                  colour), which no automated rule was ever going to flag here.
+                */}
+                <Box
+                  aria-hidden="true"
+                  data-testid={`spine-segment-${index}`}
+                  data-layer={claim.layer ?? "none"}
+                  sx={{
+                    width: 6,
+                    mx: "auto",
+                    borderRadius: 1,
+                    alignSelf: "stretch",
+                    bgcolor: layerColour(claim.layer).main,
+                  }}
+                />
+
+                <Typography data-testid={`claim-text-${index}`} sx={{ maxWidth: "64ch" }}>
+                  {claim.text}{" "}
+                  {/*
+                    F-4.9-A-04. This announced one layer for the whole list,
+                    taken from the claim's FIRST citation, so a sentence citing a
+                    graph edge and a PubTator co-mention told a screen reader
+                    that both were layer 1. Each source now names its own.
+                  */}
+                  <Box component="span" sx={visuallyHidden}>
+                    {claim.citations.length === 0
+                      ? "This sentence has no source."
+                      : claim.citations
+                          .map((n) => `Source ${n}, layer ${sourceByIndex.get(n)?.layer ?? claim.layer}`)
+                          .join("; ") + "."}
                   </Box>
-                ) : null}
-              {/* Every field Section 9.1 requires. The licence is not optional.
-                  Inside the disclosure now, so a collapsed card is a header. */}
-              <Box
-                component="dl"
-                sx={{
-                  m: 0,
-                  display: "grid",
-                  gridTemplateColumns: "auto 1fr",
-                  gap: "7px 18px",
-                  fontSize: 13,
-                }}
-              >
-                {[
-                  ["Tool", source.tool, true],
-                  ["Evidence", source.evidence, false],
-                  ["Confidence", source.confidence, false],
-                  ["License", source.license, false],
-                  ["Record", source.url, true],
-                ].map(([label, value, isToken]) => (
-                  <Box key={label as string} sx={{ display: "contents" }}>
-                    <Typography
-                      component="dt"
-                      variant="overline"
-                      sx={{ fontSize: 10.5, letterSpacing: "0.1em", color: designTokens.inkFaint }}
-                    >
-                      {label as string}
-                    </Typography>
+                  {claim.citations.map((n, position) => (
                     <Box
-                      component="dd"
+                      key={n}
+                      component="span"
+                      data-testid={`citation-${n}`}
+                      data-claim={index}
+                      // The CITATION's own layer, not the claim's (F-4.9-A-04).
+                      // `claim.layer` is the first citation's, which is right for
+                      // the spine segment (one per claim) and wrong for a chip
+                      // (one per source): chip 2 of a graph-plus-literature claim
+                      // was painted navy while its own card read "L3 · literature".
+                      data-layer={sourceByIndex.get(n)?.layer ?? claim.layer}
+                      aria-label={`Source ${n}`}
+                      role="note"
                       sx={{
-                        m: 0,
-                        fontSize: isToken ? 12.5 : 13,
-                        ...(isToken ? mono : {}),
-                        wordBreak: isToken ? "break-all" : "normal",
+                        ...mono,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.6,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        lineHeight: 1.7,
+                        px: 0.75,
+                        borderRadius: 0.5,
+                        border: `1px solid ${designTokens.lineStrong}`,
+                        borderLeft: `4px solid ${layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).main}`,
+                        bgcolor: layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).wash,
+                        ml: position === 0 ? 0 : 0.5,
                       }}
                     >
-                      {label === "Record" && isLinkableCitationUrl(value as string) ? (
-                        // A-17: every citation must link back to its source.
-                        // Previously the URL was plain text and the answer
-                        // screen contained zero anchors, so verifying a claim
-                        // meant selecting and copying a URL by hand.
+                      {n}
+                      {shortLabel(n) ? (
                         <Box
-                          component="a"
-                          href={value as string}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{ color: designTokens.link }}
+                          component="span"
+                          sx={{ color: designTokens.inkMuted, fontWeight: 400 }}
                         >
-                          {value as string}
+                          {shortLabel(n)}
                         </Box>
-                      ) : (
-                        <>
-                          {value as string}
-                          {label === "Record" ? (
-                            <Box
-                              component="span"
-                              sx={{ display: "block", fontSize: 11.5, color: designTokens.risk }}
-                            >
-                              Not linked: this URL is not on a recognised NCBI host.
-                            </Box>
-                          ) : null}
-                        </>
-                      )}
+                      ) : null}
                     </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          );
-        })}
-        </Box>
-        ) : null}
-
-        {trust.length > 0 ? (
-          <Box
-            role="status"
-            aria-label="Trust signals"
-            sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2.5 }}
-          >
-            {trust.map((signal) => {
-              // The "good" pill's own design-system pair fails WCAG AA: ok
-              // (#2E8540) on layer2Wash (#E6F2E8) measures 4.01:1 against a
-              // 4.5:1 requirement. The risk pill passes at 7.05:1, so this is
-              // specific to the green, which is a lighter hue than the red.
-              //
-              // Fixed by reading the LABEL in ink while the border, the wash
-              // and the check mark keep carrying the green. No new colour is
-              // introduced and no token is changed, because the design system
-              // is frozen for this phase. Recorded as a finding for the next
-              // design pass, which should resolve it at the token level, since
-              // this pair is stated in the design system itself.
-              const palette =
-                signal.kind === "good"
-                  ? { fg: designTokens.ink, bg: designTokens.layer2Wash, border: designTokens.ok }
-                  : signal.kind === "risk"
-                    ? { fg: designTokens.risk, bg: designTokens.riskWash, border: designTokens.risk }
-                    : { fg: designTokens.inkMuted, bg: designTokens.surfaceSunk, border: designTokens.line };
-              return (
-                <Box
-                  key={signal.label}
-                  data-testid={`trust-${signal.kind}`}
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    borderRadius: 999,
-                    px: 1.5,
-                    py: 0.5,
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    color: palette.fg,
-                    bgcolor: palette.bg,
-                    border: `1px solid ${palette.border}`,
-                  }}
-                >
-                  {signal.label}
-                </Box>
-              );
-            })}
+                  ))}
+                </Typography>
+              </Fragment>
+            ))}
           </Box>
-        ) : null}
 
-        {/*
-          F-4.8-D-11. These were the other way round. The prototype's `#tail`
-          orders sources, verdict pills, the follow-up form, then the rating,
-          which asks "was that useful" AFTER offering the next question rather
-          than before it.
-        */}
-        {/*
-          T-4.16-02. The conversation thread: every earlier turn of THIS
-          search, collapsed, still on the page.
-
-          POSITION IS THE PROTOTYPE'S, not a choice made here. Its answer
-          section orders the tail `sources`, `verdict`, `thread`, then the
-          follow-up form, so the CURRENT answer stays at the top where a
-          reader lands, earlier turns sit beneath it, and the input that
-          continues the conversation comes last. Rendering the thread above
-          the current answer would push the thing just asked for off screen
-          as the conversation grew.
-
-          NEWEST LAST, matching `archiveCurrent()`'s `appendChild`. Each
-          entry is a real `<details>`, so it is keyboard reachable and
-          announced as a disclosure without any ARIA of its own, the same
-          mechanism the sources list already uses.
-        */}
-        {previousTurns.length > 0 ? (
+          {/*
+            F-4.8-D-01. The sources were always expanded, every field of every
+            card at once, so a six-source answer became a wall and the sources
+            stopped being scannable. The prototype collapses them behind one
+            disclosure carrying the count, and collapses each card inside it.
+          */}
+          {sources.length > 0 ? (
           <Box
-            data-testid="thread"
-            sx={{ display: "flex", flexDirection: "column", gap: 1.75, mt: 3.25 }}
+            component="details"
+            data-testid="sources-disclosure"
+            data-tour="sources"
+            open={sourcesOpen}
+            sx={{ mt: 3.5 }}
           >
-            {previousTurns.map((turn, index) => (
+            <Box
+              component="summary"
+              onClick={(event: React.MouseEvent) => {
+                event.preventDefault();
+                setSourcesOpen((open) => !open);
+              }}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                cursor: "pointer",
+                listStyle: "none",
+                mb: 1.25,
+                "&::-webkit-details-marker": { display: "none" },
+              }}
+            >
               <Box
-                key={`${turn.question}-${index}`}
-                component="details"
-                data-testid={`previous-turn-${index}`}
+                component="span"
+                aria-hidden="true"
                 sx={{
-                  border: `1px solid ${designTokens.line}`,
-                  borderRadius: 0.5,
-                  bgcolor: designTokens.surfaceSunk,
-                  "& > summary": {
-                    cursor: "pointer",
-                    listStyle: "none",
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: 1.25,
-                    px: 1.75,
-                    py: 1.5,
-                  },
-                  "& > summary::-webkit-details-marker": { display: "none" },
+                  fontSize: 10,
+                  color: designTokens.inkFaint,
+                  transform: sourcesOpen ? "rotate(90deg)" : "none",
+                  transition: "transform .12s ease",
                 }}
               >
-                <Box component="summary">
+                ▶
+              </Box>
+              <Typography
+                variant="overline"
+                component="span"
+                sx={{ color: designTokens.inkFaint }}
+              >
+                Sources
+              </Typography>
+              <Box
+                component="span"
+                data-testid="sources-count"
+                sx={{
+                  ...mono,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: designTokens.inkMuted,
+                  bgcolor: designTokens.surfaceSunk,
+                  border: `1px solid ${designTokens.line}`,
+                  borderRadius: 999,
+                  px: 0.75,
+                }}
+              >
+                {sources.length}
+              </Box>
+            </Box>
+
+          {sources.map((source) => {
+            const colour = layerColour(source.layer);
+            return (
+              <Box
+                key={source.n}
+                component="details"
+                data-testid={`source-${source.n}`}
+                data-layer={source.layer}
+                open={openSources.includes(source.n)}
+                sx={{
+                  border: `1px solid ${designTokens.line}`,
+                  borderLeft: `4px solid ${colour.main}`,
+                  borderRadius: 0.5,
+                  bgcolor: designTokens.surface,
+                  mb: 1,
+                  px: 1.75,
+                  py: 1.25,
+                }}
+              >
+                <Box
+                  component="summary"
+                  onClick={(event: React.MouseEvent) => {
+                    event.preventDefault();
+                    toggleSource(source.n);
+                  }}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.25,
+                    flexWrap: "wrap",
+                    cursor: "pointer",
+                    listStyle: "none",
+                    "&::-webkit-details-marker": { display: "none" },
+                  }}
+                >
                   <Box
                     component="span"
                     aria-hidden="true"
-                    sx={{ fontSize: 10, color: designTokens.inkFaint }}
+                    sx={{
+                      fontSize: 9,
+                      color: designTokens.inkFaint,
+                      transform: openSources.includes(source.n) ? "rotate(90deg)" : "none",
+                      transition: "transform .12s ease",
+                    }}
                   >
                     ▶
                   </Box>
-                  <Typography
-                    component="span"
-                    sx={{ fontWeight: 700, fontSize: 14.5, color: designTokens.ink }}
-                  >
-                    {turn.question}
+                  <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12 }}>
+                    [{source.n}]
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {source.name}
                   </Typography>
-                  <Typography
-                    component="span"
-                    sx={{ fontSize: 12, color: designTokens.inkFaint }}
-                  >
-                    {turn.meta}
-                  </Typography>
+                  {/*
+                    F-4.8-D-02. This read "L1", which a reader has to already
+                    know how to decode. The prototype names the layer in words.
+                  */}
+                  <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}>
+                    L{source.layer} · {LAYER_WORD[source.layer] ?? "source"}
+                  </Box>
                 </Box>
+
+                {/*
+                  The flag control sits in the card BODY, not the summary row.
+                  The prototype used to put it in the summary, and axe rightly
+                  calls that `nested-interactive`: a `<summary>` with a focusable
+                  descendant, WCAG 4.1.2. This shipped as a deviation
+                  (F-4.9-D-13); the design-system focus-nesting pass of
+                  2026-08-14 moved it in the design too, so the two agree.
+                */}
+                  {onFlagSource ? (
+                    <Box
+                      component="button"
+                      type="button"
+                      aria-pressed={flaggedSources.includes(source.n)}
+                      onClick={(event: React.MouseEvent) => {
+                        // It lives inside the summary, as it does in the
+                        // prototype, so without this a flag click also opens or
+                        // closes the card under the user's cursor.
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onFlagSource(source.n);
+                      }}
+                      sx={{
+                        font: "inherit",
+                        fontSize: 11.5,
+                        px: 1,
+                        py: 0.3,
+                        borderRadius: 0.5,
+                        cursor: "pointer",
+                        border: "1px solid",
+                        borderColor: flaggedSources.includes(source.n)
+                          ? designTokens.risk
+                          : designTokens.line,
+                        color: flaggedSources.includes(source.n)
+                          ? designTokens.risk
+                          : designTokens.inkFaint,
+                        bgcolor: flaggedSources.includes(source.n)
+                          ? designTokens.riskWash
+                          : designTokens.surface,
+                        "&:hover": { color: designTokens.risk, borderColor: designTokens.risk },
+                      }}
+                    >
+                      {flaggedSources.includes(source.n) ? "Flagged" : "Flag: does not support"}
+                    </Box>
+                  ) : null}
+                {/* Every field Section 9.1 requires. The licence is not optional.
+                    Inside the disclosure now, so a collapsed card is a header. */}
                 <Box
+                  component="dl"
                   sx={{
-                    px: 1.75,
-                    pt: 0.5,
-                    pb: 2,
-                    bgcolor: designTokens.surface,
-                    borderTop: `1px solid ${designTokens.line}`,
+                    m: 0,
+                    display: "grid",
+                    gridTemplateColumns: "auto 1fr",
+                    gap: "7px 18px",
+                    fontSize: 13,
                   }}
                 >
-                  {turn.claims.map((claim, claimIndex) => (
-                    <Typography
-                      key={claimIndex}
-                      sx={{ fontSize: 16, mt: claimIndex === 0 ? 2 : 1.5, maxWidth: "64ch" }}
-                    >
-                      {claim.text}
-                    </Typography>
+                  {[
+                    ["Tool", source.tool, true],
+                    ["Evidence", source.evidence, false],
+                    ["Confidence", source.confidence, false],
+                    ["License", source.license, false],
+                    ["Record", source.url, true],
+                  ].map(([label, value, isToken]) => (
+                    <Box key={label as string} sx={{ display: "contents" }}>
+                      <Typography
+                        component="dt"
+                        variant="overline"
+                        sx={{ fontSize: 10.5, letterSpacing: "0.1em", color: designTokens.inkFaint }}
+                      >
+                        {label as string}
+                      </Typography>
+                      <Box
+                        component="dd"
+                        sx={{
+                          m: 0,
+                          fontSize: isToken ? 12.5 : 13,
+                          ...(isToken ? mono : {}),
+                          wordBreak: isToken ? "break-all" : "normal",
+                        }}
+                      >
+                        {label === "Record" && isLinkableCitationUrl(value as string) ? (
+                          // A-17: every citation must link back to its source.
+                          // Previously the URL was plain text and the answer
+                          // screen contained zero anchors, so verifying a claim
+                          // meant selecting and copying a URL by hand.
+                          <Box
+                            component="a"
+                            href={value as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ color: designTokens.link }}
+                          >
+                            {value as string}
+                          </Box>
+                        ) : (
+                          <>
+                            {value as string}
+                            {label === "Record" ? (
+                              <Box
+                                component="span"
+                                sx={{ display: "block", fontSize: 11.5, color: designTokens.risk }}
+                              >
+                                Not linked: this URL is not on a recognised NCBI host.
+                              </Box>
+                            ) : null}
+                          </>
+                        )}
+                      </Box>
+                    </Box>
                   ))}
-                  <Typography
-                    variant="body2"
-                    sx={{ mt: 1.75, color: designTokens.inkMuted }}
-                  >
-                    {turn.sources.length === 1
-                      ? "1 source"
-                      : `${turn.sources.length} sources`}
-                    {turn.trust.length > 0
-                      ? ` · ${turn.trust.map((signal) => signal.label).join(" · ")}`
-                      : ""}
-                  </Typography>
                 </Box>
               </Box>
-            ))}
+            );
+          })}
           </Box>
-        ) : null}
+          ) : null}
 
-        {followUp}
-        {/*
-          T-4.6-09. `FeedbackSurface` is built here, not passed in as an
-          opaque node, so it can be given the real POST target (`runId`) and
-          bearer token (`authToken`) it needs. `key={question}` remounts it
-          per question, the same reset the old call site in `App.tsx`
-          achieved with `key={searchView.question}`, so a rating typed for
-          one answer can never linger onto the next.
-        */}
-        <FeedbackSurface
-          key={question}
-          runId={runId}
-          authToken={authToken}
-          flaggedSources={flaggedSources}
-        />
+          {trust.length > 0 ? (
+            <Box
+              role="status"
+              aria-label="Trust signals"
+              sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2.5 }}
+            >
+              {trust.map((signal) => {
+                // The "good" pill's own design-system pair fails WCAG AA: ok
+                // (#2E8540) on layer2Wash (#E6F2E8) measures 4.01:1 against a
+                // 4.5:1 requirement. The risk pill passes at 7.05:1, so this is
+                // specific to the green, which is a lighter hue than the red.
+                //
+                // Fixed by reading the LABEL in ink while the border, the wash
+                // and the check mark keep carrying the green. No new colour is
+                // introduced and no token is changed, because the design system
+                // is frozen for this phase. Recorded as a finding for the next
+                // design pass, which should resolve it at the token level, since
+                // this pair is stated in the design system itself.
+                const palette =
+                  signal.kind === "good"
+                    ? { fg: designTokens.ink, bg: designTokens.layer2Wash, border: designTokens.ok }
+                    : signal.kind === "risk"
+                      ? { fg: designTokens.risk, bg: designTokens.riskWash, border: designTokens.risk }
+                      : { fg: designTokens.inkMuted, bg: designTokens.surfaceSunk, border: designTokens.line };
+                return (
+                  <Box
+                    key={signal.label}
+                    data-testid={`trust-${signal.kind}`}
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      borderRadius: 999,
+                      px: 1.5,
+                      py: 0.5,
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      color: palette.fg,
+                      bgcolor: palette.bg,
+                      border: `1px solid ${palette.border}`,
+                    }}
+                  >
+                    {signal.label}
+                  </Box>
+                );
+              })}
+            </Box>
+          ) : null}
+
+          {/*
+            F-4.8-D-11. These were the other way round. The prototype's `#tail`
+            orders sources, verdict pills, the follow-up form, then the rating,
+            which asks "was that useful" AFTER offering the next question rather
+            than before it.
+          */}
+
+          {followUp}
+          {/*
+            T-4.6-09. `FeedbackSurface` is built here, not passed in as an
+            opaque node, so it can be given the real POST target (`runId`) and
+            bearer token (`authToken`) it needs. `key={question}` remounts it
+            per question, the same reset the old call site in `App.tsx`
+            achieved with `key={searchView.question}`, so a rating typed for
+            one answer can never linger onto the next.
+          */}
+          <FeedbackSurface
+            key={question}
+            runId={runId}
+            authToken={authToken}
+            flaggedSources={flaggedSources}
+          />
+          </>
+        )}
       </Box>
     </Box>
   );

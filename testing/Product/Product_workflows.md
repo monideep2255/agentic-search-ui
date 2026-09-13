@@ -54,12 +54,14 @@ Testing: the chat keeps context, so "it" means the gene from the last answer.
 
 Query: after test 1, ask `What variants cause it?`
 
-Steps: finish test 1 → type in "Ask a follow-up question", or click the "What variants cause it?" chip → submit → then click "New search"
+Steps: finish test 1 → type in "Ask a follow-up question", or click the "What variants cause it?" chip → submit → watch the search run → then click "New search"
 
 Expected:
 
-- A second answer about BRCA1, without you typing BRCA1 again.
-- Both questions and answers stay visible as one conversation.
+- You stay on the same screen. The first question and its answer fold into a collapsed row at the top, and the new search's progress (the steps, the scientist, the Stop button) appears below it in place of the answer. The page scrolls so the new question's heading is in view.
+- A second answer about BRCA1, without you typing BRCA1 again, grows where the progress was. It names ClinVar variants, each with a source. Sometimes the answer reads as a plain list of records with a note saying so; that is the honest form when the answer text could not be tied to its sources word for word, and it is still an answer, not a refusal.
+- Clicking the collapsed row at the top opens the earlier answer again.
+- Stop during the follow-up shows "Search stopped" in the same place, with "Run again".
 - "New search" clears the conversation and returns you to the home page.
 
 ## 3. Log in and log out
@@ -210,6 +212,7 @@ Steps: get each answer → read the end of the answer
 Expected:
 
 - Sometimes one suggested next step, which makes sense for your question. Sometimes none, which is also fine.
+- If there is one, "Yes, go deeper" runs a real follow-up on the same screen (the earlier answer folds up above) about the same gene, and the new answer lists records the earlier answer did not show. It never refuses just because you clicked it.
 - If the answer left something out, a plain note says so in everyday words, with no internal jargon.
 - If the answer is a refusal instead, it shows a grey label such as "No answer found in NCBI records", and the NCBI search address inside it is a clickable link that opens in a new tab on ncbi.nlm.nih.gov.
 - No note ever appears as a normal cited sentence.
@@ -327,7 +330,7 @@ Three workflows cannot be triggered by hand, so they are tested on the developer
 
 Found by the browser run on 2026-09-12. Full report with screenshots: `../Developer/reports/2026-09-12_walkthrough/index.html`, open it in a browser.
 
-- Follow-up questions get refused, including the suggested "What variants cause it?". Refused 3 times out of 3.
+- Follow-up questions used to get refused, including the suggested "What variants cause it?", 3 times out of 3. Fixed in set 7 on 2026-09-13; test 2 covers the retest.
 - "Which diseases are associated with BRCA1?" is refused with "I could not find grounded evidence" about one time in three. "Variants in GCK causing MODY" was refused too.
 - An answer can open with "These include…" without saying what "these" are, and a "one further gene record" note shows as a grey sentence with no source.
 - After sign-up, your guest searches do appear in your history, but no message says so.

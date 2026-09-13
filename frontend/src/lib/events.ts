@@ -216,6 +216,22 @@ export interface DonePayload {
    * actually find. See `DonePayload.next_step` in `contracts/events.py`.
    */
   next_step?: string | null;
+  /**
+   * UI fix set 7 (R21). The QUESTION to send if the reader accepts the
+   * offer, as opposed to `next_step` above, which is the sentence the offer
+   * is made in.
+   *
+   * The two were one field, and accepting sent the offer's own wording to
+   * the agent: "Yes, go deeper" dispatched "Would you like me to go through
+   * the 3 further disease records found for this question?", a yes/no
+   * sentence about the interface rather than a question about biology.
+   *
+   * OPTIONAL AND NULLABLE, on the same terms as `next_step`: a backend that
+   * predates this field omits it, and every consumer must treat absent and
+   * null identically by falling back to `next_step`, which is exactly what
+   * was sent before this field existed.
+   */
+  next_step_query?: string | null;
 }
 
 // ---------------------------------------------------------------------------

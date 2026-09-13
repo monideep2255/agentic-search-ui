@@ -189,7 +189,20 @@ test.describe("the stored-searches rail collapses", () => {
     const rail = (await page.getByTestId("history-rail").boundingBox())!;
     // The prototype's rail reaches the footer. The shipped rail stopped where
     // the answer card ended, leaving a torn edge down the left of the page.
-    expect(rail.height).toBeCloseTo(shell.height, -1);
+    //
+    // Since 2026-09-13 the rail is pinned to the viewport (product-owner
+    // feedback: the landing search bar sat low when signed in, because the
+    // rail's list stretched the row beside it). So "reaches the footer" is
+    // now measured as the space between the app bar and the footer, at
+    // every scroll position, rather than as the shell's whole height: on a
+    // page taller than the viewport the shell is taller than any one
+    // screenful, and a rail that filled it would be the defect again.
+    const viewport = page.viewportSize()!;
+    const header = (await page.getByRole("banner").boundingBox())!;
+    const footer = (await page.getByRole("contentinfo").boundingBox())!;
+    expect(rail.height).toBeCloseTo(viewport.height - header.height - footer.height, -1);
+    expect(rail.y).toBeCloseTo(header.height, -1);
+    await expect(page.getByTestId("history-rail")).toHaveCSS("position", "sticky");
 
     await toggle(page).click();
     const strip = (await page.getByTestId("collapsed-rail").boundingBox())!;

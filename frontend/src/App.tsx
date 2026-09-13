@@ -80,6 +80,7 @@ import { AppShell } from "./components/shell/AppShell";
 import { useScreenRoute } from "./lib/routing";
 import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
+import { RunProgress } from "./components/screens/RunProgress";
 import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import type { PreviousTurn } from "./components/screens/AnswerScreen";
@@ -100,7 +101,21 @@ import type { TourOutcome, TourRunState } from "./components/tour/OnboardingTour
 type SearchView =
   | { name: "home" }
   | { name: "run"; question: string }
-  | { name: "answer"; question: string }
+  /**
+   * The answer screen.
+   *
+   * `continued` is true when this view was reached by asking a follow-up
+   * from the answer screen itself, which is the one case where the screen
+   * must NOT be swapped for the run screen (UI fix set 7, R22): the earlier
+   * turn collapses into the thread above and the new run's progress renders
+   * inline underneath, on the same screen.
+   *
+   * A flag on the view rather than a separate piece of state, because it is
+   * a property of WHICH SCREEN IS SHOWING and must be cleared by every
+   * transition that leaves it. Held separately it would have to be reset in
+   * five places and would eventually be missed in one.
+   */
+  | { name: "answer"; question: string; continued?: boolean }
   | { name: "signin" };
 
 /** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real.
@@ -967,14 +982,42 @@ export function App() {
    * the stopped block's own "Run again" is the way forward there, and the
    * tour's step 7 card still offers "Run it for me".
    */
+  /**
+   * Whether the answer screen is currently showing a RUN rather than an
+   * answer (UI fix set 7, R22).
+   *
+   * True from the moment a follow-up is dispatched until its run terminates,
+   * which is the window in which `AnswerScreen` renders `RunProgress` in
+   * place of the answer body.
+   *
+   * `runId` is deliberately NOT part of this. It is null for the few
+   * hundred milliseconds between the ask and `createRun` returning, and
+   * requiring it would render an empty answer under the new question for
+   * exactly that long, which is the blank-frame class F-4.8-J-03 was filed
+   * for, arrived at from the other side.
+   *
+   * A stopped run keeps this true on purpose: `stop()` leaves `status` at
+   * `done` and never lands the view, so `RunProgress` shows its own
+   * "Search stopped" block inline, the same as the full-screen run does.
+   * The two exits are a terminal event (`view.landed`) and a stream that
+   * failed to open at all (`status === "error"`, or a dispatch that never
+   * reached the server), and both put the answer body back with its own
+   * failure notice.
+   */
+  const inlineRunActive =
+    searchView.name === "answer" &&
+    searchView.continued === true &&
+    !view.landed &&
+    status !== "error" &&
+    dispatchError === null;
   const tourRunState: TourRunState =
-    searchView.name === "run" && !stopped
+    (searchView.name === "run" || inlineRunActive) && !stopped
       ? "running"
       : searchView.name === "answer"
         ? "answered"
         : "idle";
   const tourOutcome: TourOutcome | null =
-    searchView.name !== "answer"
+    searchView.name !== "answer" || inlineRunActive
       ? null
       : view.refusal !== null || view.refusalLabel !== null
         ? "refusal"
@@ -988,7 +1031,8 @@ export function App() {
   // running. Guard is what is happening from the moment a question is sent,
   // so it is shown live until the stream says otherwise.
   const step: StepName | null =
-    view.activeStep ?? (searchView.name === "run" && !view.landed ? "Guard" : null);
+    view.activeStep ??
+    ((searchView.name === "run" && !view.landed) || inlineRunActive ? "Guard" : null);
 
   useEffect(() => {
     if ((view.landed || status === "error") && searchView.name === "run") {
@@ -1134,7 +1178,31 @@ export function App() {
       setRunId(null);
       setStopped(false);
       setRunStartedAt(Date.now());
-      setSearchView({ name: "run", question });
+      /*
+       * UI FIX SET 7 (R22). The product owner: "it goes to a new page, which
+       * it should not. The first answer should minimise and the chat should
+       * continue on the same screen. That is one of the most important
+       * things."
+       *
+       * This line is where that went wrong. A follow-up moved to the `run`
+       * view, which swaps the WHOLE screen for `RunScreen`, so the
+       * conversation, the thread archived two lines above included, left the
+       * page for the length of the second run and came back afterwards.
+       *
+       * A continuation now STAYS on the answer screen and marks itself
+       * `continued`, which is what makes the render below pass the run's
+       * progress to `AnswerScreen` as an inline node instead of rendering a
+       * second screen. The first question from the landing, a question
+       * reopened from the history rail, "Run again" and the tour all pass
+       * `continuesThread` false and still get the full-screen run: they
+       * start a conversation rather than continue one, so there is nothing
+       * on screen to keep.
+       */
+      setSearchView(
+        continuesThread
+          ? { name: "answer", question, continued: true }
+          : { name: "run", question },
+      );
 
       try {
         let runToken: string;
@@ -1267,6 +1335,37 @@ export function App() {
     [signedIn, token, guestToken, sessionId, view, searchView],
   );
 
+  /**
+   * Abort the run in flight, wherever its Stop button is rendered.
+   *
+   * Extracted for UI fix set 7 (R22): there are now two places a Stop can be
+   * pressed, the full-screen run and the inline continuation, and two copies
+   * of this would be two chances for one of them to stop the browser without
+   * stopping the server.
+   *
+   * A-10. `deriveStopEnabled` only goes false on a terminal event, and
+   * stopping ABORTS the stream so no terminal event ever arrives: Stop
+   * stayed enabled forever and the stepper kept asserting live work.
+   * `StopButton` solved this with local `hasStopped` state; reusing its
+   * derive helper without its state reused half the answer. This latches
+   * the other half.
+   */
+  const stopCurrentRun = () => {
+    setStopped(true);
+    stop();
+    if (runId && authToken) void stopRun(runId, authToken).catch(() => undefined);
+  };
+
+  /**
+   * T-4.16-02: a new search is a new conversation, so the thread does not
+   * carry across. The follow-up field is the control that continues one;
+   * this is the control that does not, and they sit on the same screen.
+   */
+  const startNewSearch = () => {
+    setThread([]);
+    setSearchView({ name: "home" });
+  };
+
   const body = () => {
     if (screen === "integrations") return <IntegrationsScreen />;
     if (screen === "about")
@@ -1340,32 +1439,54 @@ export function App() {
               // the next event, the same as a fresh ask.
               void ask(searchView.question, depth);
             }}
-            onStop={() => {
-              // A-10. `deriveStopEnabled` only goes false on a terminal event,
-              // and stopping ABORTS the stream so no terminal event ever
-              // arrives: Stop stayed enabled forever and the stepper kept
-              // asserting live work. `StopButton` solved this with local
-              // `hasStopped` state; reusing its derive helper without its state
-              // reused half the answer. This latches the other half.
-              setStopped(true);
-              stop();
-              if (runId && authToken) void stopRun(runId, authToken).catch(() => undefined);
-            }}
-            onNewSearch={() => {
-              // T-4.16-02: a new search is a new conversation, so the
-              // thread does not carry across. The follow-up field is the
-              // control that continues one; this is the control that does
-              // not, and they sit on the same screen.
-              setThread([]);
-              setSearchView({ name: "home" });
-            }}
+            onStop={stopCurrentRun}
+            onNewSearch={startNewSearch}
           />
         );
-      case "answer":
+      case "answer": {
+        // UI fix set 7 (R22). The SAME component the full-screen run
+        // renders, given the SAME values, so the inline wait and the
+        // full-screen wait cannot look or behave differently. Built here
+        // rather than inside `AnswerScreen` because every value it needs is
+        // this component's state and the answer screen has no business
+        // deriving a run's progress.
+        //
+        // Neither `question` nor `onNewSearch` is passed: `AnswerScreen`'s
+        // own header already renders the question as the page's `h1` and
+        // carries New search beside it, and a second copy of either would
+        // be a duplicate heading and a duplicate control on one screen.
+        const inlineProgress = inlineRunActive ? (
+          <RunProgress
+            activeStep={stopped ? null : step}
+            startedAt={stopped ? null : runStartedAt}
+            reachedSteps={view.reachedSteps}
+            toolCalls={view.toolCalls}
+            steps={view.steps}
+            personaName={persona?.name ?? null}
+            personaAbout={persona?.about ?? null}
+            personaWikipedia={persona?.wikipedia ?? null}
+            stopEnabled={view.stopEnabled && !stopped}
+            refusal={view.refusal}
+            capMessage={view.capMessage}
+            failure={streamError}
+            stopped={stopped}
+            showNewSearch={false}
+            onStop={stopCurrentRun}
+            onRunAgain={() => {
+              // `true` for the third argument, unlike the full-screen run's
+              // Run again: re-running a stopped follow-up must stay in the
+              // conversation rather than throwing the thread away. Nothing
+              // is archived by it, because `ask` only archives a run that
+              // LANDED and a stopped one never did.
+              void ask(searchView.question, depth, true);
+            }}
+          />
+        ) : null;
         return (
           <AnswerScreen
             question={searchView.question}
             previousTurns={thread}
+            progress={inlineProgress}
             claims={view.claims}
             sources={view.sources}
             trust={view.trust}
@@ -1415,6 +1536,18 @@ export function App() {
                 // this feature: an offer the system makes and then forgets
                 // making is worse than no offer.
                 nextStep={view.nextStep}
+                /*
+                 * UI fix set 7 (R21). What the offer SAYS and what accepting
+                 * it ASKS are two different strings, and conflating them is
+                 * the defect: "Yes, go deeper" used to send the offer's own
+                 * yes/no wording ("Would you like me to go through the 3
+                 * further disease records found for this question?") to the
+                 * agent as if it were a question about biology. The backend
+                 * now sends the searchable question alongside the offer;
+                 * absent, `FollowUp` falls back to the offer text, which is
+                 * exactly today's behaviour and what an older backend gives.
+                 */
+                nextStepQuery={view.nextStepQuery}
                 onAsk={(next) => void ask(next, depth, true)}
               />
             }
@@ -1424,16 +1557,10 @@ export function App() {
                 current.includes(n) ? current.filter((x) => x !== n) : [...current, n],
               )
             }
-            onNewSearch={() => {
-              // T-4.16-02: a new search is a new conversation, so the
-              // thread does not carry across. The follow-up field is the
-              // control that continues one; this is the control that does
-              // not, and they sit on the same screen.
-              setThread([]);
-              setSearchView({ name: "home" });
-            }}
+            onNewSearch={startNewSearch}
           />
         );
+      }
       default:
         return (
           <HomeScreen

@@ -54,6 +54,62 @@ describe("the next-step offer", () => {
     expect(onAsk).toHaveBeenCalledWith(OFFER);
   });
 
+  /*
+   * UI fix set 7, R21. The product owner: "Yes, go deeper" must send a real
+   * question, not the offer's yes/no wording.
+   *
+   * The offer above is addressed to a reader and reads as a yes/no
+   * question about the interface. Sending it to the agent verbatim ran a
+   * biomedical search on "Would you like me to go through the 3 further
+   * disease records found for this question?", which is not a question
+   * about biology and cannot be answered as one.
+   */
+  const OFFER_QUERY = "What are the 3 further diseases associated with BRCA1?";
+
+  it("sends the backend's searchable question, not the offer's wording", async () => {
+    const onAsk = vi.fn();
+    render(<FollowUp nextStep={OFFER} nextStepQuery={OFFER_QUERY} onAsk={onAsk} />);
+
+    await userEvent.click(screen.getByTestId("next-step-accept"));
+
+    expect(onAsk).toHaveBeenCalledTimes(1);
+    expect(onAsk).toHaveBeenCalledWith(OFFER_QUERY);
+    // Stated as its own assertion rather than left to the equality above,
+    // because this is the defect: the old code passed `nextStep` here and
+    // an equality that merely happened to differ would not say why.
+    expect(onAsk).not.toHaveBeenCalledWith(OFFER);
+  });
+
+  it("still shows the offer's own wording on screen, unchanged", () => {
+    // The two strings have different audiences. Sending the query must not
+    // start showing the reader the query: an offer that reads like a search
+    // box entry is not an offer.
+    render(<FollowUp nextStep={OFFER} nextStepQuery={OFFER_QUERY} />);
+
+    const offer = screen.getByTestId("next-step-offer");
+    expect(offer).toHaveTextContent("3 further disease records");
+    expect(offer).not.toHaveTextContent(OFFER_QUERY);
+  });
+
+  it("falls back to the offer text when the backend sends no query", async () => {
+    // A backend predating R21 sends neither the field nor a value, and both
+    // must behave exactly as they did before the field existed. Without
+    // this arm, a fallback that dispatched nothing at all would leave the
+    // button dead against every older backend and every test above would
+    // still pass, since they all supply the offer alone.
+    const onAsk = vi.fn();
+    const { rerender } = render(
+      <FollowUp nextStep={OFFER} nextStepQuery={null} onAsk={onAsk} />,
+    );
+    await userEvent.click(screen.getByTestId("next-step-accept"));
+    expect(onAsk).toHaveBeenLastCalledWith(OFFER);
+
+    rerender(<FollowUp nextStep={OFFER} onAsk={onAsk} />);
+    await userEvent.click(screen.getByTestId("next-step-accept"));
+    expect(onAsk).toHaveBeenLastCalledWith(OFFER);
+    expect(onAsk).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps the offer separate from the fixed hint menu", () => {
     // The hints are the same three on every answer. The offer is one
     // sentence about THIS answer, earned from what this retrieval left out.

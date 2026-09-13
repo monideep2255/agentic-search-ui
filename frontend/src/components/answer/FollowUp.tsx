@@ -42,9 +42,29 @@ export interface FollowUpProps {
    * makes and then forgets making is worse than no offer.
    */
   nextStep?: string | null;
+  /**
+   * UI fix set 7 (R21). The question accepting the offer actually ASKS.
+   *
+   * The offer above is written to a reader: "Would you like me to go through
+   * the 3 further disease records found for this question?". Pressing "Yes,
+   * go deeper" used to send that sentence to the agent verbatim, so the
+   * search was run on a yes/no question about the interface rather than on
+   * anything about biology. The two strings have different jobs and are now
+   * two fields.
+   *
+   * Null or omitted means the backend sent no separate query, and the offer
+   * text is sent instead. That is exactly the behaviour before this field
+   * existed, so an older backend loses nothing.
+   */
+  nextStepQuery?: string | null;
 }
 
-export function FollowUp({ hints = [], onAsk, nextStep = null }: FollowUpProps) {
+export function FollowUp({
+  hints = [],
+  onAsk,
+  nextStep = null,
+  nextStepQuery = null,
+}: FollowUpProps) {
   const [text, setText] = useState("");
 
   const submit = (event: FormEvent) => {
@@ -155,12 +175,17 @@ export function FollowUp({ hints = [], onAsk, nextStep = null }: FollowUpProps) 
             A real button, not a chip styled like one. Accepting an offer is
             the same action as typing the question, so it goes through the
             same `onAsk` and therefore continues the thread.
+
+            WHAT IS SENT is the searchable question, falling back to the
+            offer's own wording only when the backend sent no separate one
+            (R21). The visible text above never changes with it: the offer is
+            addressed to a reader and the query is addressed to the agent.
           */}
           <Box
             component="button"
             type="button"
             data-testid="next-step-accept"
-            onClick={() => onAsk?.(nextStep)}
+            onClick={() => onAsk?.(nextStepQuery ?? nextStep)}
             sx={{
               font: "inherit",
               fontSize: 13.5,
@@ -439,17 +464,21 @@ export function HistoryRail({
         // bar and footer already are (set 2, R9 and R11), lets the row keep
         // the viewport's height whatever the list holds, so the hero is
         // centred exactly as it is with no rail at all, and the list
-        // scrolls inside the rail. 54px is the app bar's `minHeight`, 44px
-        // the footer's rendered height (12px padding each side around a
-        // 20px caption line). Not applied inside the phone drawer, which
-        // already gives the rail the full height on its own.
+        // scrolls inside the rail. The height is the space between the two
+        // bars, measured live on develop at 1280px: 64px is the app bar
+        // (MUI's regular toolbar at `sm` and up; the `minHeight: 54` on it
+        // is a floor, not the rendered height) and 51px the footer. An
+        // explicit height rather than a maximum, so the rail still reaches
+        // the footer when the list is short, which is the prototype's
+        // full-height rail and what `rail-collapse.spec.ts` pins. Not
+        // applied inside the phone drawer, which already gives the rail
+        // the full height on its own.
         ...(isNarrow
           ? {}
           : {
               position: "sticky",
-              top: 54,
-              alignSelf: "flex-start",
-              maxHeight: "calc(100dvh - 54px - 44px)",
+              top: 64,
+              height: "calc(100dvh - 64px - 51px)",
             }),
       }}
     >
