@@ -30,7 +30,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | Set | What you will see | Built | Live | Approved | You retest |
 |---|---|---|---|---|---|
 | 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
-| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 2.1 to 2.7. Waiting: 2.8 to 2.11 | Tests 1, 2, 3, 9, 11 |
+| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 2.1 to 2.14, except the 2.12 alignment follow-up | Tests 1, 2, 3, 9, 11 |
 | 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | | | | Tests 8, 9, 13, 19 |
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
@@ -174,7 +174,7 @@ Built: ✅ · Live: 🚀 · Approved: 👍
 
 ### 2.8 A light home page (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the home page uses the same light background as every other screen.
 - What you noted: "The home page contrast is horrible. Lets have concistency. same color of header and footer everywhere and same white background, adjuat the home screen colors"
@@ -182,7 +182,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.9 Screens centred between header and footer (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: every screen sits in the middle of the page, like the log-in screen.
 - What you noted: "on the home screen and actually all the screens, please have everything centered, everything is very close to header. Just like how the login page was fixed"
@@ -190,7 +190,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.10 No idle wait after pressing Search (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the progress screen shows activity the moment a question is sent.
 - What you noted: "ok the box size stays the same but weird 2-3 seconds of staring at the screen and nothing happens"
@@ -198,7 +198,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.11 Searches that fail at the Think step (retest feedback)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: a search no longer ends with "This run could not be completed" because one AI model reply could not be read.
 - What you noted: "Sure fix it and then we close for the day", approving the fix for about 1 search in 7 failing at the Think step.
@@ -208,7 +208,7 @@ Pushed as commit `cbb04cc`, live on develop on 2026-09-12 and checked by screens
 
 ### 2.12 A bigger search box on the home page (retest feedback)
 
-Built: · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (size approved; the icon, text and button alignment follow-up is still being fixed)
 
 - Feature being tested: the home page search box is big enough to write a full question.
 - What you noted: "on the home page, can we increase the size of the search box? It should be at least big as a tweet box 240 characters? or the appropriate size"
@@ -218,7 +218,7 @@ Built: · Live: · Approved:
 
 ### 2.13 NCBI design system: the changes possible today (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the app follows the NCBI design system as far as it can without NCBI's internal packages.
 - What you noted: "is there a design system that we can use? at least minimum the color scheme?", then "Can we implement the NCBI design system changes that are possible?"
@@ -226,7 +226,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 2.14 A favicon (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the browser tab shows the app's own icon and name.
 - What you noted: "have a background agent add a favicon please"
