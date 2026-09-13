@@ -361,6 +361,7 @@ def build_synth_findings(
     findings: list[Finding],
     pick_representative_field: Any,
     max_findings: int = MAX_FINDINGS_PER_PROMPT,
+    defer_source_urls: frozenset[str] = frozenset(),
 ) -> tuple[list[SynthFinding], bool]:
     """Compress this query's `"ok"` tool results into the Section 8.1 list.
 
@@ -386,59 +387,79 @@ def build_synth_findings(
     value was the CURIE the row already carried, so the same fact was
     offered to Synth twice under two numbers and came back as two chips on
     one claim.
+
+    `defer_source_urls` (UI fix set 7, item 7.2, 2026-09-13) is the set of
+    records an earlier answer in the session already showed. Rows whose
+    `source_url` is in it are visited AFTER every other row, by a stable
+    sort over the concatenated row list, so that on a go-deeper turn the
+    cap admits the records the reader has not seen before the ones they
+    have. Ordering rather than exclusion: when fewer unseen records exist
+    than the cap allows, the seen ones still fill the answer, and the
+    disclosure notes stay true. Empty, the default, leaves the order
+    exactly as the tool returned it.
     """
     collected: list[SynthFinding] = []
     seen: set[tuple[str, str, str]] = set()
     total_citable = 0
 
+    rows_in_order: list[tuple[Finding, dict[str, Any]]] = []
     for finding in findings:
         fields = finding.structured_fields
         if fields is None or fields.get("status") != "ok":
             continue
         for row in fields.get("rows", []):
-            source_url = str(row.get("source_url") or "")
-            if not source_url:
-                continue
-            field_name, field_value, is_suspect, curie_fallback = _citable_value_for_row(
-                row,
-                pick_representative_field,
-                # T-3.4-05 (F-3.4-T05-03): the MedGen ETL vocabulary-
-                # artifact check is a Layer 1 ETL-defect detector; a
-                # Layer 2/3 tool's own field can never carry that specific
-                # defect, and applying the same shape rule to one (e.g. a
-                # 5-character gene symbol like "BRCA1") produces a false
-                # positive the check's own author never intended it to
-                # catch. See `core.graph._pick_representative_field`'s
-                # docstring for the live-reproduced failure this closes.
-                apply_vocabulary_artifact_check=(finding.layer == "layer_1_graph"),
-            )
-            if not field_name or not field_value:
-                continue
+            rows_in_order.append((finding, row))
+    if defer_source_urls:
+        # A stable sort on one boolean key: rows already shown sink to the
+        # back, everything else keeps the tool's own order.
+        rows_in_order.sort(
+            key=lambda pair: str(pair[1].get("source_url") or "") in defer_source_urls
+        )
 
-            identity = (source_url, field_name, field_value)
-            if identity in seen:
-                continue
-            seen.add(identity)
-            total_citable += 1
-            if len(collected) >= max_findings:
-                continue
+    for finding, row in rows_in_order:
+        source_url = str(row.get("source_url") or "")
+        if not source_url:
+            continue
+        field_name, field_value, is_suspect, curie_fallback = _citable_value_for_row(
+            row,
+            pick_representative_field,
+            # T-3.4-05 (F-3.4-T05-03): the MedGen ETL vocabulary-
+            # artifact check is a Layer 1 ETL-defect detector; a
+            # Layer 2/3 tool's own field can never carry that specific
+            # defect, and applying the same shape rule to one (e.g. a
+            # 5-character gene symbol like "BRCA1") produces a false
+            # positive the check's own author never intended it to
+            # catch. See `core.graph._pick_representative_field`'s
+            # docstring for the live-reproduced failure this closes.
+            apply_vocabulary_artifact_check=(finding.layer == "layer_1_graph"),
+        )
+        if not field_name or not field_value:
+            continue
 
-            ref_index = len(collected) + 1
-            collected.append(
-                SynthFinding(
-                    ref_index=ref_index,
-                    citation_id=_clip(f"{finding.call_id}-{ref_index}", MAX_CITATION_ID_CHARS),
-                    layer=finding.layer,
-                    tool=finding.tool,
-                    field=_clip(field_name, MAX_FIELD_NAME_CHARS),
-                    field_value=_clip(field_value, MAX_FIELD_VALUE_CHARS),
-                    source_url=_clip(source_url, MAX_SOURCE_URL_CHARS),
-                    value_is_suspect=is_suspect,
-                    curie_fallback=curie_fallback,
-                    entity_type=_clip(str(row.get("node_or_edge_type") or ""), 64),
-                    curie=_clip(str(row.get("curie") or ""), 128),
-                )
+        identity = (source_url, field_name, field_value)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        total_citable += 1
+        if len(collected) >= max_findings:
+            continue
+
+        ref_index = len(collected) + 1
+        collected.append(
+            SynthFinding(
+                ref_index=ref_index,
+                citation_id=_clip(f"{finding.call_id}-{ref_index}", MAX_CITATION_ID_CHARS),
+                layer=finding.layer,
+                tool=finding.tool,
+                field=_clip(field_name, MAX_FIELD_NAME_CHARS),
+                field_value=_clip(field_value, MAX_FIELD_VALUE_CHARS),
+                source_url=_clip(source_url, MAX_SOURCE_URL_CHARS),
+                value_is_suspect=is_suspect,
+                curie_fallback=curie_fallback,
+                entity_type=_clip(str(row.get("node_or_edge_type") or ""), 64),
+                curie=_clip(str(row.get("curie") or ""), 128),
             )
+        )
 
     return collected, total_citable > len(collected)
 
@@ -554,8 +575,14 @@ supports it, written as [N] where N is that finding's number. Put the \
 marker at the end of the clause it supports, before the punctuation.
 2. One marker per fact. A sentence that uses two findings carries two \
 markers, [1][2]. Never let one marker cover two facts.
-3. State a finding's value as it is written in the finding. Do not \
-rephrase an identifier, a name, or a number.
+3. State a finding's value as it is written in the finding, in full and \
+exactly, and quote each cited value in its own sentence. Do not rephrase, \
+shorten or abbreviate an identifier, a name, or a number. When several \
+values share a prefix, such as a transcript in front of each variant \
+name, repeat the whole value every time rather than writing the prefix \
+once and listing the remainders, and never pack several findings' values \
+into one sentence: a value that is not quoted whole is deleted by the \
+code check, and so is every other value in the same sentence.
 4. Use only the identifiers the question and the findings give you. Never \
 substitute a name you happen to know for an identifier you were given: if \
 the question says NCBIGene:672, write NCBIGene:672, not the gene symbol \
@@ -628,50 +655,85 @@ def render_findings_block(
     lines: list[str] = []
     used = 0
     for finding in synth_findings:
-        label = f"{finding.entity_type} " if finding.entity_type else ""
-        if finding.curie_fallback:
-            # The value IS the identifier, so naming the field as well
-            # ("curie: MedGen:...") adds a word and no information.
-            body = f"{label}record {finding.field_value}"
-        elif finding.name_resolved:
-            # Build phase 6.2, T-6.2-02, and this branch is the whole reason
-            # `name_resolved` reaches the prompt at all.
-            #
-            # Measured, not predicted. With the resolution wired up but this
-            # branch absent, the finding fell through to the `elif
-            # finding.curie` case below and rendered as
-            # "Disease MedGen:C0346153, name: Familial cancer of breast".
-            # The live answer became:
-            #
-            #     BRCA1 ... is associated with familial cancer of breast
-            #     (MedGen:C0346153) [2], breast-ovarian cancer, familial,
-            #     susceptibility to, 1 (MedGen:C2676676) [3], ...
-            #
-            # Readable, and still carrying four identifiers the reader did
-            # not ask for. THE MODEL WAS NOT WRONG: the system instruction
-            # tells it to state a finding's value as written and to use the
-            # identifiers the findings give it, so printing an identifier it
-            # was handed is the obedient answer. `attack-the-constraint`'s
-            # rule applies exactly as written, one layer up from where the
-            # symptom appeared: the assembly step feeding the model is
-            # upstream of it, so the assembly step is the constraint.
-            #
-            # The identifier is not lost, and this is the load-bearing half
-            # of the argument. It is still on the finding, still on the
-            # citation, and still on the chip the reader clicks, which is
-            # where a reader who wants to verify goes. It is removed only
-            # from the prose, where it displaced the thing they asked for.
-            body = f"{label}{finding.field}: {finding.field_value}"
-        elif finding.curie:
-            body = f"{label}{finding.curie}, {finding.field}: {finding.field_value}"
-        else:
-            body = f"{label}{finding.field}: {finding.field_value}"
-        line = f"[{finding.ref_index}] {body}".strip()
+        line = f"[{finding.ref_index}] {render_finding_body(finding)}".strip()
         if used + len(line) + 1 > max_chars:
             break
         lines.append(line)
         used += len(line) + 1
     return "\n".join(lines)
+
+
+def render_finding_body(finding: SynthFinding) -> str:
+    """One finding as the text Synth reads for it, without its marker.
+
+    Factored out of `render_findings_block` on 2026-09-13 (UI fix set 7) so
+    that `build_structured_fallback_narrative` renders a finding EXACTLY as
+    the model was shown it. The two must agree: the fallback exists because
+    the model's restatement of this text failed grounding, so the fallback
+    must be the text itself, and a second renderer would be a second place
+    for the two to drift apart.
+    """
+    label = f"{finding.entity_type} " if finding.entity_type else ""
+    if finding.curie_fallback:
+        # The value IS the identifier, so naming the field as well
+        # ("curie: MedGen:...") adds a word and no information.
+        return f"{label}record {finding.field_value}"
+    if finding.name_resolved:
+        # Build phase 6.2, T-6.2-02, and this branch is the whole reason
+        # `name_resolved` reaches the prompt at all.
+        #
+        # Measured, not predicted. With the resolution wired up but this
+        # branch absent, the finding fell through to the `elif
+        # finding.curie` case below and rendered as
+        # "Disease MedGen:C0346153, name: Familial cancer of breast".
+        # The live answer became:
+        #
+        #     BRCA1 ... is associated with familial cancer of breast
+        #     (MedGen:C0346153) [2], breast-ovarian cancer, familial,
+        #     susceptibility to, 1 (MedGen:C2676676) [3], ...
+        #
+        # Readable, and still carrying four identifiers the reader did
+        # not ask for. THE MODEL WAS NOT WRONG: the system instruction
+        # tells it to state a finding's value as written and to use the
+        # identifiers the findings give it, so printing an identifier it
+        # was handed is the obedient answer. `attack-the-constraint`'s
+        # rule applies exactly as written, one layer up from where the
+        # symptom appeared: the assembly step feeding the model is
+        # upstream of it, so the assembly step is the constraint.
+        #
+        # The identifier is not lost, and this is the load-bearing half
+        # of the argument. It is still on the finding, still on the
+        # citation, and still on the chip the reader clicks, which is
+        # where a reader who wants to verify goes. It is removed only
+        # from the prose, where it displaced the thing they asked for.
+        return f"{label}{finding.field}: {finding.field_value}"
+    if finding.curie:
+        return f"{label}{finding.curie}, {finding.field}: {finding.field_value}"
+    return f"{label}{finding.field}: {finding.field_value}"
+
+
+def build_structured_fallback_narrative(synth_findings: list[SynthFinding]) -> str:
+    """A narrative built in code, one sentence per finding, for grounding.
+
+    UI fix set 7, item 7.1 (2026-09-13). `core.graph.write_node` calls this
+    when the model's answer grounded nothing although findings reached it,
+    then runs the result through `run_grounding_pass` exactly as it would a
+    model answer. Each sentence is the finding's own rendered body, the text
+    the model was shown, followed by that finding's marker. Because the
+    claim text IS the field value with its type and field label, and every
+    content token in it comes from the finding, `ground_claim`,
+    `numbers_are_supported` and `claim_introduces_no_new_content` all hold
+    by construction for a well-formed value. A value that breaks one of them
+    (for example one containing a sentence boundary) is stripped by the pass
+    like any other claim, so nothing here bypasses the gate.
+
+    Sentences are joined with a space and each ends with a period, which is
+    the boundary `run_grounding_pass` splits on.
+    """
+    return " ".join(
+        f"{render_finding_body(finding)} [{finding.ref_index}]."
+        for finding in synth_findings
+    )
 
 
 # T-4.5-07, Section 14.5. The depth directives live in the DYNAMIC SUFFIX,

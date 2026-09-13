@@ -34,6 +34,7 @@
     "src/system_03_search_agent/contracts/query.py": "9d0b199bd41b1289a9f8967b1105424f3d0bff64f6b01ebb3b4247c226ddb73a",
     "src/system_03_search_agent/core/__init__.py": "dd653147b6b294170bb8b95e5732ae2f2930ee638f56635532ced0c28bf43afd",
     "src/system_03_search_agent/core/graph.py": "9b0fe028e88a2779a1c4af312120e2b99245455ae846d1f0f5976d91ceaf0883",
+    "src/system_03_search_agent/core/next_step.py": "f002af90ff2114cc7644bb908626f252261a23714ca88ee1502a1340a657eb97",
     "src/system_03_search_agent/core/persona.py": "2691222aa551ba0dcd0faa2f9ef9c44e9cce6a8bd697994857dac831e9f6f2ff",
     "src/system_03_search_agent/core/run.py": "32b6be617527f0a55bf1e51a296e317d449331df0af866059a277b1309fbd298",
     "src/system_03_search_agent/core/run_registry.py": "f6282dbcac832637f59c5b4ae6b62177efe37070bdf089c2d56a47e204281986",

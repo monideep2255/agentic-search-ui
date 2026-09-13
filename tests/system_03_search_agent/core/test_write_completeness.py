@@ -579,3 +579,208 @@ def test_the_completeness_correction_stays_in_the_dynamic_suffix() -> None:
     )
     assert _CORRECTION_MARKER in user_content
     assert system_content == SYNTH_SYSTEM_INSTRUCTION
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.1 (2026-09-13): the structured fallback and the
+# refusal message that names the right cause.
+# ---------------------------------------------------------------------------
+
+
+def _events_of(events: list, event_type: str) -> list:
+    return [event for event in events if event.type == event_type]
+
+
+@pytest.mark.asyncio
+async def test_the_structured_fallback_answers_when_the_model_grounds_nothing(
+    synth_pair,
+) -> None:
+    """Twelve live runs measured this: correct prose, every value shortened,
+    zero grounded claims, refusal. The fallback builds the answer from the
+    findings themselves and runs it through the SAME grounding pass.
+
+    `synth_pair(set(), set())` makes both Synth calls, the first and the
+    completeness repair, return the refusal text with no marker, so the real
+    `run_grounding_pass` grounds nothing twice. Nothing here hands in the
+    fallback: the shipped code decides to fire it, builds it, and grounds it.
+
+    MUTATION PROOF: changing `if fallback_grounding.claims:` to `if False:`
+    in `write_node` turns this arm red: the run refuses, `error` is emitted,
+    and no citation exists.
+    """
+    mock = synth_pair(first=set(), repaired=set())
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    assert mock.await_count >= 1, "the model was never asked, so nothing was grounded"
+    assert not _events_of(events, "error"), [e.payload for e in _events_of(events, "error")]
+    done = _events_of(events, "done")[0].payload
+    assert done["trust_outcome"] == "ask", done
+
+    citations = _events_of(events, "citation")
+    assert len(citations) == len(_ROWS), "every finding must be cited, one sentence each"
+    cited_urls = {c.payload["source_url"] for c in citations}
+    assert cited_urls == {row["source_url"] for row in _ROWS}
+
+    narrative = _narrative(events)
+    for row in _ROWS:
+        assert row["fields"]["name"] in narrative, narrative
+    assert graph_module._build_structured_fallback_note() in narrative, narrative
+    assert "I could not find information on this." not in narrative
+
+
+@pytest.mark.asyncio
+async def test_the_structured_fallback_stays_out_of_a_grounded_answer(
+    synth_pair,
+) -> None:
+    """The negative control: when the model's own prose grounds, nothing
+    about this answer changes. No note, no `ask` floor."""
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    done = _events_of(events, "done")[0].payload
+    assert done["trust_outcome"] == "answer", done
+    assert graph_module._build_structured_fallback_note() not in _narrative(events)
+    assert len(_events_of(events, "citation")) == len(_ROWS)
+
+
+@pytest.mark.asyncio
+async def test_a_grounding_refusal_is_never_reported_as_a_truncation(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The shipped branch order tested the truncation flag first, so a cut
+    result whose twenty citeable findings reached Synth and then failed
+    grounding told the operator the cut "left no row with a citeable
+    source_url". Every clause of that was false.
+
+    To reach the refusal with findings present, the fallback has to fail too,
+    and no real row value defeats it, so the fallback builder is stubbed to
+    return the refusal text. That is the seam; the branch under test is the
+    error-message selection after it.
+
+    MUTATION PROOF: restoring `elif truncated_ok_finding and trust_outcome ==
+    "refuse"` ahead of the findings check turns this arm red on the message
+    assertion.
+    """
+    synth_pair(first=set(), repaired=set())
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda findings: "I could not find information on this.",
+    )
+    state = _write_state(total_available=500)
+    state["findings"][0].structured_fields["truncated"] = True
+
+    result = await graph_module.write_node(state)
+    events = result["events"]
+    errors = _events_of(events, "error")
+    assert len(errors) == 1, [e.payload for e in errors]
+    error = errors[0].payload
+    assert error["message"] == graph_module._UNGROUNDED_SYNTHESIS_REFUSAL_MESSAGE, error
+    assert error["message"] != graph_module._TRUNCATED_REFUSAL_MESSAGE
+    assert error["source"] == "write" and error["scope"] == "step", error
+    assert _events_of(events, "done")[0].payload["trust_outcome"] == "refuse"
+
+
+@pytest.mark.asyncio
+async def test_a_truncation_that_left_nothing_citeable_is_still_reported_as_one(
+    synth_pair,
+) -> None:
+    """The truncation message keeps its one honest case: the cut happened
+    and no surviving row carried a `source_url`, so no finding reached
+    Synth. Here every row lacks a URL and the flag is set."""
+    synth_pair(first=set(), repaired=set())
+    state = _write_state(total_available=500)
+    fields = state["findings"][0].structured_fields
+    fields["truncated"] = True
+    fields["rows"] = [
+        {key: value for key, value in row.items() if key != "source_url"} for row in _ROWS
+    ]
+
+    result = await graph_module.write_node(state)
+    errors = _events_of(result["events"], "error")
+    assert len(errors) == 1, [e.payload for e in errors]
+    assert errors[0].payload["message"] == graph_module._TRUNCATED_REFUSAL_MESSAGE
+    assert errors[0].payload["source"] == "cypher_query"
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.2 (2026-09-13): the go-deeper follow-up.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_next_step_query_is_set_with_the_offer_and_names_the_entity(
+    synth_pair,
+) -> None:
+    """`next_step` is a yes/no question for the reader. `next_step_query` is
+    the real question the surface sends, built from the same omitted
+    findings plus the entity label `plan_node` recorded.
+
+    MUTATION PROOF: dropping `next_step_query=` from the `DonePayload` in
+    `write_node` turns this arm red (the field reads None).
+    """
+    from system_03_search_agent.core.next_step import is_go_deeper_query
+
+    synth_pair(first={1, 2}, repaired={1, 2})
+    state = _write_state()
+    state["next_step_entity_label"] = "BRCA1"
+    result = await graph_module.write_node(state)
+    done = _events_of(result["events"], "done")[0].payload
+
+    assert done["next_step"] is not None, done
+    assert done["next_step_query"] == "Which other disease records are linked to BRCA1?", done
+    assert is_go_deeper_query(done["next_step_query"])
+    assert not is_go_deeper_query(done["next_step"]), (
+        "the offer text itself must never be what gets searched"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_complete_answer_offers_neither_field(synth_pair) -> None:
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    state = _write_state()
+    state["next_step_entity_label"] = "BRCA1"
+    done = _events_of((await graph_module.write_node(state))["events"], "done")[0].payload
+    assert done["next_step"] is None and done["next_step_query"] is None, done
+
+
+@pytest.mark.asyncio
+async def test_a_go_deeper_turn_puts_the_records_not_yet_shown_first(
+    synth_pair,
+) -> None:
+    """`deferred_record_ids` (set by `plan_node` only on a go-deeper turn)
+    sends the already-shown records to the back of the queue before the
+    citation cap bites, so the reader sees new records rather than the same
+    twenty again.
+
+    Rows 1 to 3 are marked as already shown. With the model reporting every
+    finding it is handed, the first citation must be row 4.
+
+    MUTATION PROOF: dropping `defer_source_urls=` from the
+    `build_synth_findings` call in `write_node` turns this arm red: the first
+    citation is row 1 again.
+    """
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    state = _write_state()
+    state["deferred_record_ids"] = [row["source_url"] for row in _ROWS[:3]]
+    result = await graph_module.write_node(state)
+
+    citations = sorted(
+        _events_of(result["events"], "citation"), key=lambda e: e.payload["display_index"]
+    )
+    urls = [c.payload["source_url"] for c in citations]
+    assert urls[:2] == [_ROWS[3]["source_url"], _ROWS[4]["source_url"]], urls
+    assert set(urls[2:]) == {row["source_url"] for row in _ROWS[:3]}, urls
+
+
+@pytest.mark.asyncio
+async def test_an_ordinary_turn_keeps_the_tools_own_order(synth_pair) -> None:
+    """No deferral on a turn that is not the go-deeper follow-up."""
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    result = await graph_module.write_node(_write_state())
+    citations = sorted(
+        _events_of(result["events"], "citation"), key=lambda e: e.payload["display_index"]
+    )
+    assert [c.payload["source_url"] for c in citations] == [r["source_url"] for r in _ROWS]

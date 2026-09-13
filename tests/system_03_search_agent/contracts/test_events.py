@@ -789,6 +789,36 @@ class TestDonePayload:
                 trust_outcome="answer",
             )
 
+    # UI fix set 7, item 7.2 (2026-09-13). Additive and optional within v1.
+    def test_next_step_query_is_optional_and_defaults_to_none(self) -> None:
+        payload = DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=0, trust_outcome="ask"
+        )
+        assert payload.next_step_query is None
+        assert payload.model_dump()["next_step_query"] is None
+
+    def test_next_step_query_is_carried_when_given(self) -> None:
+        payload = DonePayload(
+            total_cost_usd=0.0,
+            total_tool_calls=1,
+            elapsed_ms=1,
+            trust_outcome="ask",
+            next_step="Would you like me to go through the 3 further disease records found for this question?",
+            next_step_query="Which other disease records are linked to BRCA1?",
+        )
+        assert payload.next_step_query == "Which other disease records are linked to BRCA1?"
+
+    def test_next_step_query_is_bounded_like_query_text(self) -> None:
+        DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=0, trust_outcome="ask",
+            next_step_query="q" * 2000,
+        )
+        with pytest.raises(ValidationError):
+            DonePayload(
+                total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=0, trust_outcome="ask",
+                next_step_query="q" * 2001,
+            )
+
 
 class TestEventPayloadBoundToDeclaredType:
     """F-1.0-01: Event.payload must conform to the model matching Event.type.

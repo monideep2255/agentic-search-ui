@@ -180,3 +180,16 @@ class GraphState(TypedDict, total=False):
     guard_refused: bool
     unresolved_entity_symbols: list[str]
     layer2_raw_outputs: dict[str, Any]
+    # UI fix set 7, item 7.2 (2026-09-13). Both set by `plan`, both read by
+    # `write`, both plain data so that `write` never reads session memory
+    # itself (Section 14.4, asserted by the personalization premise gate's
+    # call-site walk). `deferred_record_ids` is the `source_url` of every
+    # record an earlier answer in this session already showed, populated
+    # ONLY when the query is the go-deeper follow-up
+    # (`core.next_step.is_go_deeper_query`) and empty otherwise, so an
+    # ordinary question is never reordered. `next_step_entity_label` is the
+    # mention the turn's first target entity was resolved from ("BRCA1", or
+    # the CURIE when no mention is known), which `write` puts into
+    # `DonePayload.next_step_query`.
+    deferred_record_ids: list[str]
+    next_step_entity_label: str

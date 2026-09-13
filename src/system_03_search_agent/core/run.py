@@ -505,6 +505,18 @@ async def _remember_turn(query: Query, events: list[Event]) -> None:
         for c in citations
         if c.get("claim_text")
     ]
+    # UI fix set 7, item 7.2 (2026-09-13). Which records this answer SHOWED,
+    # by the citation's `source_url`, so the next go-deeper turn can put the
+    # not-yet-shown ones first. Read off the emitted citation events, the
+    # same events the reader's chips were built from, so memory records
+    # exactly what was displayed and nothing that was merely retrieved.
+    reported_record_ids: list[str] = []
+    seen_urls: set[str] = set()
+    for c in citations:
+        url = str(c.get("source_url") or "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            reported_record_ids.append(url)
     if not resolved and not findings:
         return
 
@@ -525,6 +537,7 @@ async def _remember_turn(query: Query, events: list[Event]) -> None:
         # entities a turn resolved and the facts it established, but not the
         # sentence the user actually typed.
         question=query.text,
+        reported_record_ids=reported_record_ids,
     )
 
 

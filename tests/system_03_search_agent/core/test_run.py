@@ -632,3 +632,72 @@ async def test_run_streaming_crash_mid_stream_keeps_seq_monotonic_with_real_even
     assert len(seqs) == len(set(seqs))
     for event in events:
         PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+
+@pytest.mark.asyncio
+async def test_remember_turn_records_the_citations_the_answer_showed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """UI fix set 7, item 7.2 (2026-09-13). The end-of-run write hands memory
+    the `source_url` of every citation emitted, deduplicated, in order, so
+    the next go-deeper turn knows what the reader has already seen.
+
+    Read off the citation EVENTS, the same ones the chips were built from,
+    never off retrieval. MUTATION PROOF: dropping
+    `reported_record_ids=reported_record_ids` from the
+    `remember_turn_for_caller` call in `core/run.py` turns this arm red
+    (`KeyError: 'reported_record_ids'`).
+    """
+    from datetime import UTC, datetime
+
+    from system_03_search_agent.core import run as run_module
+    from system_03_search_agent.core import session_memory as session_memory_module
+
+    captured: dict[str, object] = {}
+
+    async def _fake_remember(**kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(session_memory_module, "remember_turn_for_caller", _fake_remember)
+
+    now = datetime.now(UTC)
+    url_a = "https://www.ncbi.nlm.nih.gov/clinvar/variation/1/"
+    url_b = "https://www.ncbi.nlm.nih.gov/clinvar/variation/2/"
+
+    def _event(seq: int, kind: str, payload: dict) -> Event:
+        return Event(type=kind, version="v1", trace_id="t-remember", seq=seq, ts=now, payload=payload)
+
+    def _citation(index: int, url: str, claim: str) -> dict:
+        from system_03_search_agent.contracts.events import CitationPayload
+
+        return CitationPayload(
+            citation_id=f"c-{index}",
+            display_index=index,
+            source="clinvar",
+            source_id=f"ClinVar:{index}",
+            source_url=url,
+            layer="layer_1_graph",
+            field="name",
+            claim_text=claim,
+            evidence_kind="graph_edge",
+            assertion_confidence="asserted",
+            license="public_domain",
+        ).model_dump(mode="json")
+
+    events = [
+        _event(0, "plan", {
+            "narrative": "selected cypher_query",
+            "tool_calls": [],
+            "resolved_entities": [{"text": "BRCA1", "curie": "NCBIGene:672", "confidence": 1.0}],
+        }),
+        _event(1, "citation", _citation(1, url_a, "a")),
+        _event(2, "citation", _citation(2, url_a, "a again")),
+        _event(3, "citation", _citation(3, url_b, "b")),
+    ]
+    query = Query(text="What variants cause it?", session_id="s", trace_id="t-remember",
+                  owner_id="guest:remember-test")
+
+    await run_module._remember_turn(query, events)
+
+    assert captured["reported_record_ids"] == [url_a, url_b], captured
+    assert captured["question"] == "What variants cause it?"

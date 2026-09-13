@@ -1863,6 +1863,14 @@ _MEMORY_READERS_ALLOWED = {
     # `write_node`, because memory must never become a citable source.
     "think_node",
     "plan_node",
+    # Added 2026-09-13 (UI fix set 7, item 7.1): the Guard-tier classifier
+    # receives the same labelled data block for CLASSIFICATION only, so a
+    # pronoun follow-up is judged against the entity it points at rather than
+    # refused as off topic on five bare words. `core/session_memory.py`'s
+    # `_INJECTED_STEPS` declares the same three steps. The two forbidden
+    # steps are unchanged, and the two assertions below still hold that
+    # neither `act_node` nor `write_node` reads memory.
+    "guardrail_node",
     # The helpers, which are the memory accessors themselves.
     "_memory_curies",
     "_memory_suffix",

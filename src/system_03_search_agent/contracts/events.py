@@ -370,6 +370,33 @@ class DonePayload(BaseModel):
     next step and a system that always asks something will pad.
     """
 
+    next_step_query: Annotated[str | None, Field(default=None, max_length=2000)] = None
+    """The question a surface sends when the reader accepts `next_step`.
+
+    UI fix set 7, item 7.2, 2026-09-13. `next_step` is a yes/no question
+    addressed to the reader ("Would you like me to go through the 10
+    further sequence variant records found for this question?"), and the
+    web UI used to send that sentence verbatim as the next query when the
+    reader clicked "Yes, go deeper". Think then classified it as a
+    meta-question with no entities, Synth answered a yes/no question, and
+    the grounding pass stripped every word of it, so accepting the offer
+    refused. The offer text is for the reader; this field is for the
+    system.
+
+    ADDITIVE and OPTIONAL like `next_step`, so it stays inside v1 under
+    `system-design-patterns` pattern 10. It is `None` exactly when
+    `next_step` is `None`, and it is built in code by
+    `core.next_step.build_next_step_query` from the omitted findings'
+    record type and the turn's resolved entity, never by a model, for the
+    same reason `next_step` is not: a generated follow-up is a claim about
+    what the graph holds. Its shape is the one `core.next_step.
+    is_go_deeper_query` recognises on the next turn, which is how that
+    turn knows to put the not-yet-reported records first.
+
+    `max_length=2000` matches `Query.text`, because this string becomes the
+    next `Query.text` unchanged.
+    """
+
 
 # Binds each envelope `type` value to the Section 2.3 payload model that
 # `payload` must conform to. Keyed by the same eleven-member taxonomy as

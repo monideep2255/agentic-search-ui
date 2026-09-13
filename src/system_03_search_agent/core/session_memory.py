@@ -78,6 +78,8 @@ from system_03_search_agent.contracts.query import (
     MAX_COMPRESSED_FINDINGS,
     MAX_OPEN_THREAD_LENGTH,
     MAX_OPEN_THREADS,
+    MAX_REPORTED_RECORD_ID_LENGTH,
+    MAX_REPORTED_RECORD_IDS,
     MAX_RESOLVED_ENTITIES,
     SESSION_MEMORY_TOKEN_BUDGET,
     CompressedFinding,
@@ -90,7 +92,17 @@ from system_03_search_agent.harness.tiers import Tier, resolve_model
 #: tuple is the declaration, not a comment: `injected_steps` returns it and
 #: the premise gate asserts on it, so adding "act" here is a visible change
 #: that turns a gate arm red rather than a quiet one-line edit in a caller.
-_INJECTED_STEPS: tuple[str, ...] = ("think", "plan")
+#:
+#: "guardrail" was added on 2026-09-13 (UI fix set 7, item 7.1) and is a
+#: deliberate widening of Section 14.4's "Think and Plan", recorded here
+#: rather than slipped in: the Guard-tier classifier was judging the bare
+#: text of a follow-up such as "What variants cause it?" and refusing it as
+#: off topic about one run in three, because nothing told it the session
+#: had already resolved a gene for "it" to point at. The block reaches the
+#: guardrail as labelled data for CLASSIFICATION only, exactly as it reaches
+#: Think. The two steps the section forbids are unchanged: never Act, never
+#: Write.
+_INJECTED_STEPS: tuple[str, ...] = ("guardrail", "think", "plan")
 
 #: The model tiers those steps actually resolve to. `core/graph.py` dispatches
 #: Think at the guard tier and Plan at the plan tier, so a summary written now
@@ -779,6 +791,7 @@ def merge_turn(
     resolved: list[ResolvedEntity],
     findings: list[CompressedFinding],
     question: str = "",
+    reported_record_ids: list[str] | None = None,
 ) -> SessionMemorySummary:
     """Fold one finished turn into the session's memory (T-4.5-04).
 
@@ -872,12 +885,27 @@ def merge_turn(
     if trimmed and (not threads or threads[-1] != trimmed):
         threads.append(trimmed)
 
+    # UI fix set 7, item 7.2 (2026-09-13). The records this turn's answer
+    # SHOWED, so a later go-deeper turn can put the ones not yet shown
+    # first. Keyed by `source_url`, deduplicated against what is already
+    # remembered, newest last, FIFO past the ceiling, and never rendered
+    # into a prompt (`_render` does not read it). Bounded per item by the
+    # contract's own validator.
+    reported = list(base.reported_record_ids)
+    seen_reported = set(reported)
+    for record_id in reported_record_ids or []:
+        record_id = record_id[:MAX_REPORTED_RECORD_ID_LENGTH]
+        if record_id and record_id not in seen_reported:
+            reported.append(record_id)
+            seen_reported.add(record_id)
+
     return compact(
         SessionMemorySummary(
             session_id=session_id,
             resolved_entities=entities[-MAX_RESOLVED_ENTITIES:],
             compressed_findings=merged_findings[-MAX_COMPRESSED_FINDINGS:],
             open_threads=threads[-MAX_OPEN_THREADS:],
+            reported_record_ids=reported[-MAX_REPORTED_RECORD_IDS:],
             token_budget=base.token_budget,
             last_updated=now,
         )
@@ -941,6 +969,7 @@ async def remember_turn_for_caller(
     resolved: list[ResolvedEntity],
     findings: list[CompressedFinding],
     question: str = "",
+    reported_record_ids: list[str] | None = None,
     store: SessionMemoryStore | None = None,
 ) -> SessionMemorySummary | None:
     """Load, fold one turn in, and save, as a single locked operation.
@@ -976,6 +1005,7 @@ async def remember_turn_for_caller(
             resolved=resolved,
             findings=findings,
             question=question,
+            reported_record_ids=reported_record_ids,
         )
         return written.model_dump(mode="json")
 

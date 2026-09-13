@@ -46,6 +46,7 @@ from pydantic import ValidationError
 from system_03_search_agent.contracts.query import (
     MAX_CITATION_ID_LENGTH,
     MAX_CITATION_IDS_PER_FINDING,
+    MAX_REPORTED_RECORD_IDS,
     SESSION_MEMORY_TOKEN_BUDGET,
     CompressedFinding,
     ResolvedEntity,
@@ -1108,5 +1109,59 @@ class TestInjectionSurface:
         decide whether to inject. That gap is F-4.5-J-04 and it belongs to
         `core/graph.py`, which this file does not own.
         """
-        assert sm.injected_steps(_summary()) == ("think", "plan")
+        # "guardrail" joined the declaration on 2026-09-13 (UI fix set 7,
+        # item 7.1), for classification only. The two steps that may never
+        # read memory are the ones asserted absent below.
+        assert sm.injected_steps(_summary()) == ("guardrail", "think", "plan")
         assert "act" not in sm.injected_steps(_summary())
+        assert "write" not in sm.injected_steps(_summary())
+
+
+class TestReportedRecords:
+    """UI fix set 7, item 7.2 (2026-09-13): memory records which records an
+    answer showed, so a go-deeper turn can show the others first."""
+
+    _URL = "https://www.ncbi.nlm.nih.gov/clinvar/variation/{}/"
+
+    def test_merge_turn_records_what_the_answer_showed(self, char_counter: None) -> None:
+        """MUTATION PROOF: dropping `reported_record_ids=reported[...]` from
+        the `SessionMemorySummary(...)` `merge_turn` builds turns this red."""
+        written = sm.merge_turn(
+            None,
+            session_id="s-1",
+            now=_now(),
+            resolved=[ResolvedEntity(mention="BRCA1", curie="NCBIGene:672", entity_type="Gene")],
+            findings=[],
+            reported_record_ids=[self._URL.format(1), self._URL.format(2)],
+        )
+        assert written.reported_record_ids == [self._URL.format(1), self._URL.format(2)]
+
+    def test_reported_records_accumulate_without_duplicates(self, char_counter: None) -> None:
+        first = sm.merge_turn(
+            None, session_id="s-1", now=_now(), resolved=[], findings=[],
+            reported_record_ids=[self._URL.format(1), self._URL.format(2)],
+        )
+        second = sm.merge_turn(
+            first, session_id="s-1", now=_now(), resolved=[], findings=[],
+            reported_record_ids=[self._URL.format(2), self._URL.format(3), ""],
+        )
+        assert second.reported_record_ids == [self._URL.format(i) for i in (1, 2, 3)]
+
+    def test_reported_records_are_fifo_capped(self, char_counter: None) -> None:
+        base = _summary(reported_record_ids=[self._URL.format(i) for i in range(100)])
+        written = sm.merge_turn(
+            base, session_id="s-1", now=_now(), resolved=[], findings=[],
+            reported_record_ids=[self._URL.format(100)],
+        )
+        assert len(written.reported_record_ids) == MAX_REPORTED_RECORD_IDS
+        assert written.reported_record_ids[-1] == self._URL.format(100)
+        assert self._URL.format(0) not in written.reported_record_ids
+
+    def test_reported_records_never_reach_the_rendered_block(self, char_counter: None) -> None:
+        """Orchestration data only: it costs nothing against the token budget
+        and can never be read by a model."""
+        summary = _summary(reported_record_ids=[self._URL.format(7)])
+        block = sm.build_session_context(summary, tier="plan")
+        assert block, "the block must still render the entity"
+        assert self._URL.format(7) not in block
+        assert "clinvar" not in block

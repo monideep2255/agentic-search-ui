@@ -474,6 +474,12 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
+from system_03_search_agent.core.next_step import (
+    build_next_step_query,
+    entity_type_noun,
+    is_go_deeper_query,
+    shared_record_type,
+)
 from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
@@ -499,6 +505,7 @@ from system_03_search_agent.synthesis.findings import (
     SynthFinding,
     apply_resolved_disease_names,
     build_completeness_directive,
+    build_structured_fallback_narrative,
     build_synth_findings,
     build_synth_messages,
     unreported_findings,
@@ -815,37 +822,69 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     # the step timeout, and `cache_prefix=_STABLE_PREFIX` like every other
     # model call in the loop. `guardrail/classifier.py` deliberately exposes
     # no wrapper that would let a caller skip this.
-    try:
-        response = await _dispatch_tier_call(
-            harness,
-            trace_id,
-            "guard",
-            "guardrail",
-            classifier.build_messages(query.text),
-            budget_s=budget_for_step("guardrail", "lookup"),
-        )
-    except cost_control.QueryCapExceededError:
-        return {"cap_exceeded": True}
-    except HarnessCallError as exc:
-        return {"step_error": _step_error_kwargs("guardrail", exc)}
+    # UI fix set 7, item 7.1 (2026-09-13): the session's remembered entities
+    # reach the classifier as labelled DATA, through the same `_memory_suffix`
+    # Think and Plan use, so "What variants cause it?" is judged against the
+    # gene "it" resolves to rather than against five bare words. Empty on a
+    # first turn, which leaves the messages byte-identical to before.
+    guard_messages = classifier.build_messages(query.text, _memory_suffix(state, "guard"))
 
-    try:
-        classifier_verdict = classifier.verdict_for(
-            classifier.parse_classification(response.content)
-        )
-    except classifier.ClassificationUnavailableError as exc:
-        # The model answered, and the answer was unusable. Deliberately a
-        # step error rather than a refusal: the classifier reached no verdict
-        # about this query, so reporting one would tell the user something
-        # false. What matters for safety is that this path does not admit,
-        # and it does not.
+    # Two attempts, not one, mirroring `think_node`'s handling of the same
+    # failure. Measured 2026-09-13 across thirteen live Guard calls carrying
+    # the session block: twelve parsed, one came back as something other
+    # than the JSON object the instruction demands, and that one run
+    # refused a question the other twelve admitted. A second attempt on an
+    # UNUSABLE reply is not a second opinion on a verdict: a reply that
+    # parsed, whatever it said, is final on the first attempt, and two
+    # unusable replies still end in the fail-closed step error below.
+    classifier_verdict: GuardVerdict | None = None
+    parse_error: classifier.ClassificationUnavailableError | None = None
+    for attempt in (1, 2):
+        try:
+            response = await _dispatch_tier_call(
+                harness,
+                trace_id,
+                "guard",
+                "guardrail",
+                guard_messages,
+                budget_s=budget_for_step("guardrail", "lookup"),
+            )
+        except cost_control.QueryCapExceededError:
+            return {"cap_exceeded": True}
+        except HarnessCallError as exc:
+            return {"step_error": _step_error_kwargs("guardrail", exc)}
+
+        try:
+            classifier_verdict = classifier.verdict_for(
+                classifier.parse_classification(response.content)
+            )
+            break
+        except classifier.ClassificationUnavailableError as exc:
+            parse_error = exc
+            content = response.content if isinstance(response.content, str) else ""
+            logger.warning(
+                "guard classification unusable (attempt %d of 2, trace %s): "
+                "%s; reply length %d, starts %r",
+                attempt,
+                trace_id,
+                exc,
+                len(content),
+                content[:200],
+            )
+
+    if classifier_verdict is None:
+        # The model answered twice, and neither answer was usable.
+        # Deliberately a step error rather than a refusal: the classifier
+        # reached no verdict about this query, so reporting one would tell
+        # the user something false. What matters for safety is that this
+        # path does not admit, and it does not.
         return {
             "step_error": {
                 "fatal": True,
                 "scope": "step",
                 "source": "guardrail",
                 "error_class": "recoverable",
-                "message": str(exc)[:256],
+                "message": str(parse_error)[:256],
                 "retry_after_s": 0,
             }
         }
@@ -2446,7 +2485,8 @@ def _memory_suffix(state: GraphState, tier: Tier) -> str:
     nothing.
 
     `injected_steps` is not consulted here to decide WHETHER to inject; the
-    two call sites are Think and Plan by construction and there is no third.
+    call sites are Guardrail, Think and Plan by construction (the Guardrail
+    site added 2026-09-13, UI fix set 7, item 7.1, for classification only).
     It exists as the single declaration those call sites are checked against.
 
     ## What this block does and does not do today (F-4.5-A-09)
@@ -2798,9 +2838,53 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             ],
         )
 
+    # UI fix set 7, item 7.2 (2026-09-13). Two plain values Write will read
+    # so that it never has to read session memory itself.
+    #
+    # The entity label is what `DonePayload.next_step_query` names: the
+    # mention Think resolved the first target entity from, else the mention
+    # memory holds for a memory-bound antecedent, else the CURIE itself,
+    # which Think's exact-identifier pre-pass resolves deterministically.
+    #
+    # The deferred set is populated ONLY when this turn IS the go-deeper
+    # follow-up. An ordinary question in a session that has shown records
+    # before is never reordered: a reader asking a fresh question about a
+    # gene expects the same answer they would get in a fresh session.
+    memory = _session_memory(state)
+    next_step_entity_label = ""
+    deferred_record_ids: list[str] = []
+    if isinstance(planned, _PlannedToolCall) and planned.cypher_input.target_entities:
+        first_curie = planned.cypher_input.target_entities[0]
+        next_step_entity_label = _mention_by_curie.get(first_curie) or (
+            _remembered_mention_for(memory, first_curie) or first_curie
+        )
+    if memory is not None and is_go_deeper_query(query.text):
+        deferred_record_ids = list(memory.reported_record_ids)
+
     sink.emit("plan", plan_payload)
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "plan"))
-    return sink.result(tool_calls=planned_tool_calls)
+    return sink.result(
+        tool_calls=planned_tool_calls,
+        next_step_entity_label=next_step_entity_label,
+        deferred_record_ids=deferred_record_ids,
+    )
+
+
+def _remembered_mention_for(
+    memory: SessionMemorySummary | None, curie: str
+) -> str | None:
+    """The free-text mention memory recorded for `curie`, if any.
+
+    Takes the summary as an argument rather than reading it from state, so
+    this stays a pure lookup and `plan_node` remains the one memory reader
+    on this path (the premise gate's call-site walk counts readers by name).
+    """
+    if memory is None:
+        return None
+    for entity in memory.resolved_entities:
+        if entity.curie == curie and entity.mention.strip():
+            return entity.mention.strip()
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -4059,12 +4143,12 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     # For the same reason there is no semicolon in this sentence, since the
     # grounding pass treats `;` as a sentence boundary too, and a second
     # sentence here would read as an uncited factual claim.
-    types = {
-        entity_type.strip().lower()
-        for finding in omitted
-        if (entity_type := str(getattr(finding, "entity_type", "") or ""))
-    }
-    label = f"{types.pop()} record" if len(types) == 1 else "record"
+    # UI fix set 7 (2026-09-13): one shared derivation for the note, the
+    # offer and the follow-up query, which ignores `derived` projection rows
+    # and spells a BioLink category as plain words ("sequence variant", not
+    # "sequencevariant"). See `core.next_step.shared_record_type`.
+    record_type = shared_record_type(omitted)
+    label = f"{entity_type_noun(record_type)} record" if record_type else "record"
 
     # Singular and plural are handled rather than left as "1 records are",
     # because this string is shown to a reader in a clinical context and a
@@ -4077,6 +4161,25 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     return (
         f"Note: {count} further {label}s were found for this question and "
         "are not described above"
+    )
+
+
+def _build_structured_fallback_note() -> str:
+    """Tell the reader this answer is a list of records, not a summary.
+
+    UI fix set 7, item 7.1 (2026-09-13). Emitted only when `write_node` has
+    discarded the model's prose for grounding nothing and shipped the
+    code-built, per-finding narrative in its place. The reader sees values
+    quoted as stored and one citation each rather than sentences, and a
+    caveat that does not say why reads as a defect.
+
+    One sentence, opening "Note:", no interior period or semicolon, for the
+    reason every other note here carries that shape: the coverage grader
+    splits on those and counts an unmarked continuation as an uncited claim.
+    """
+    return (
+        "Note: the written summary of these records could not be verified "
+        "against them, so this answer lists the records found instead"
     )
 
 
@@ -4126,17 +4229,14 @@ def _build_next_step_offer(
     if refused or trust_outcome == "refuse" or not omitted:
         return None
 
-    types = {
-        entity_type.strip().lower()
-        for finding in omitted
-        if (entity_type := str(getattr(finding, "entity_type", "") or ""))
-    }
-    if len(types) != 1:
-        # Either nothing usable, or a mixed bag whose only honest phrasing
-        # is too vague to be worth showing.
+    # Either nothing usable, or a mixed bag whose only honest phrasing is
+    # too vague to be worth showing. `derived` projection rows do not count
+    # as a type of their own: see `core.next_step.shared_record_type`.
+    record_type = shared_record_type(omitted)
+    if record_type is None:
         return None
 
-    label = types.pop()
+    label = entity_type_noun(record_type)
     count = len(omitted)
     noun = f"{label} record" if count == 1 else f"{label} records"
     return (
@@ -5599,7 +5699,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # exceeded by construction. Build phase 2.1's cap is not weakened by
     # this phase's rewrite of how citations are built.
     synth_findings, findings_capped = build_synth_findings(
-        findings, _pick_representative_field, max_findings=_MAX_CITATIONS_PER_ANSWER
+        findings,
+        _pick_representative_field,
+        max_findings=_MAX_CITATIONS_PER_ANSWER,
+        # UI fix set 7, item 7.2: on a go-deeper turn, the records an earlier
+        # answer already showed go to the back of the queue so the cap
+        # admits the ones the reader has not seen. Empty on every other
+        # turn, and `plan_node` is the only place that fills it.
+        defer_source_urls=frozenset(state.get("deferred_record_ids") or []),
     )
 
     # Build phase 6.2, T-6.2-02. A `curie_fallback` finding is one whose own
@@ -5817,6 +5924,44 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                         reported_after, synth_findings
                     )
 
+    # UI fix set 7, item 7.1 (2026-09-13). THE STRUCTURED FALLBACK.
+    #
+    # Measured twelve times with the real models: "What variants cause it?"
+    # with BRCA1 remembered retrieved about 100 ClinVar rows, every one with
+    # a `source_url`, twenty reached Synth, the prose was correct, and the
+    # grounding pass grounded ZERO claims in several runs, because the model
+    # shortened the values. The stored value was
+    # "NM_007294.4(BRCA1):c.190T>G (p.Cys64Gly)" and the sentence read
+    # "c.190T>G (p.Cys64Gly) [1][2]" with the transcript factored out once
+    # and ten variants packed into one sentence. `ground_claim` is substring
+    # containment after normalization, deterministic and never fuzzy, so
+    # nothing matched and a question the graph had plainly answered refused.
+    #
+    # The fix does NOT loosen the gate. It builds a second narrative IN CODE,
+    # one sentence per finding carrying that finding's value as stored and
+    # its own marker, and runs it through the SAME `run_grounding_pass`. So
+    # every sentence that ships was still checked against the field it
+    # cites; the only thing removed from the path is the model's phrasing.
+    # Fires only when the tool outcome is ok, findings reached Synth, and
+    # nothing the model wrote survived. `trust_outcome` is floored at `ask`
+    # below because the reader is getting a list rather than a summary, and
+    # `_build_structured_fallback_note` says so in the answer.
+    structured_fallback_used = False
+    if tool_outcome == "ok" and synth_findings and not grounding.claims:
+        fallback_grounding = run_grounding_pass(
+            build_structured_fallback_narrative(synth_findings),
+            synth_findings,
+            core_ask_required=True,
+            question=query.text,
+        )
+        if fallback_grounding.claims:
+            grounding = fallback_grounding
+            structured_fallback_used = True
+            omitted_findings = unreported_findings(
+                {claim.finding.citation_id for claim in grounding.claims},
+                synth_findings,
+            )
+
     if tool_outcome == "no_tool":
         # No tool was selected at all, so there is nothing to ground
         # against and nothing to refuse about. Preserved from 2.1
@@ -5840,6 +5985,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             claim_trusts, citations, _finding_by_citation_id(grounding.claims)
         )
         trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
+        if structured_fallback_used and trust_outcome != "refuse":
+            trust_outcome = aggregate([trust_outcome, "ask"])
+
+    structured_fallback_note: str | None = None
+    if structured_fallback_used and trust_outcome != "refuse":
+        structured_fallback_note = _build_structured_fallback_note()
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may
@@ -5934,40 +6085,38 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         truncation_note = _build_truncated_answer_note(
             shown=len(citations), total_available=_known_total_available(findings)
         )
-    elif truncated_ok_finding and trust_outcome == "refuse":
-        sink.emit(
-            "error",
-            ErrorPayload(
-                fatal=False,
-                scope="tool",
-                source="cypher_query",
-                error_class="recoverable",
-                message=_TRUNCATED_REFUSAL_MESSAGE,
-                retry_after_s=0,
-            ),
-        )
     elif tool_outcome == "ok" and trust_outcome == "refuse":
-        # F-2.1-J4-06: a status="ok" tool result that still refuses must
-        # not look identical to a genuinely empty tool result. F-2.1-C07
-        # splits this branch in two, because build phase 2.2 makes the two
-        # causes genuinely different things an operator would act on
-        # differently. `synth_findings` is the discriminator, and it is the
-        # right one: it is non-empty exactly when at least one row was
-        # citeable, so an empty list means the rows were uncitable and a
-        # non-empty list means the rows were fine and the answer was not.
-        ungrounded_synthesis = bool(synth_findings)
+        # UI fix set 7, item 7.1 (2026-09-13). WHICH refusal this is, decided
+        # by what actually happened rather than by which flag happens to be
+        # set. The shipped order tested `truncated_ok_finding` FIRST, so a
+        # query whose rows were cut at the row limit, every one of which
+        # kept a `source_url`, and twenty of which reached Synth, reported
+        # "cut to fit the response size limit before any row kept a
+        # citeable source_url" when the answer failed grounding. Every
+        # clause of that sentence was false for that run.
+        #
+        # The order now follows the evidence. Findings reached Synth: the
+        # retrieval succeeded and the synthesis did not, whatever the
+        # truncation flag says. No findings and a cut: the cut is why.
+        # No findings and no cut: no row carried a citeable URL.
+        if synth_findings:
+            scope, source, message = (
+                "step",
+                "write",
+                _UNGROUNDED_SYNTHESIS_REFUSAL_MESSAGE,
+            )
+        elif truncated_ok_finding:
+            scope, source, message = "tool", "cypher_query", _TRUNCATED_REFUSAL_MESSAGE
+        else:
+            scope, source, message = "tool", "cypher_query", _UNCITED_OK_REFUSAL_MESSAGE
         sink.emit(
             "error",
             ErrorPayload(
                 fatal=False,
-                scope="step" if ungrounded_synthesis else "tool",
-                source="write" if ungrounded_synthesis else "cypher_query",
+                scope=scope,
+                source=source,
                 error_class="recoverable",
-                message=(
-                    _UNGROUNDED_SYNTHESIS_REFUSAL_MESSAGE
-                    if ungrounded_synthesis
-                    else _UNCITED_OK_REFUSAL_MESSAGE
-                ),
+                message=message,
                 retry_after_s=0,
             ),
         )
@@ -6054,6 +6203,8 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         if truncation_note is not None:
             sink.emit("token", TokenPayload(text=truncation_note, marker_ids=[]))
 
+        if structured_fallback_note is not None:
+            sink.emit("token", TokenPayload(text=structured_fallback_note, marker_ids=[]))
         if partial_answer_note is not None:
             sink.emit("token", TokenPayload(text=partial_answer_note, marker_ids=[]))
         if incomplete_answer_note is not None:
@@ -6093,6 +6244,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 ),
             )
 
+    next_step_offer = _build_next_step_offer(omitted_findings, trust_outcome, refused=False)
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "synth"))
     sink.emit(
         "done",
@@ -6104,8 +6256,16 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             # T-6.2-08. Computed from the SAME `omitted_findings` the
             # incompleteness disclosure is built from, so an answer can never
             # offer to show more while its own note says there is no more.
-            next_step=_build_next_step_offer(
-                omitted_findings, trust_outcome, refused=False
+            next_step=next_step_offer,
+            # Set together with `next_step` or not at all, and built in code
+            # from the same omitted findings plus the entity label `plan_node`
+            # recorded. See `DonePayload.next_step_query`.
+            next_step_query=(
+                build_next_step_query(
+                    omitted_findings, state.get("next_step_entity_label") or ""
+                )
+                if next_step_offer is not None
+                else None
             ),
         ),
     )

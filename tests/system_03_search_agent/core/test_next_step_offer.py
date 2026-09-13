@@ -124,3 +124,108 @@ def test_the_offer_is_not_model_generated() -> None:
             f"the next-step offer must be built in code, never generated. "
             f"Found {forbidden!r} in its source."
         )
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.2 (2026-09-13): the query an accepted offer sends.
+# ---------------------------------------------------------------------------
+
+from system_03_search_agent.core.next_step import (
+    GO_DEEPER_TEMPLATE,
+    build_next_step_query,
+    entity_type_noun,
+    is_go_deeper_query,
+)
+
+
+def test_the_follow_up_query_names_the_record_type_and_the_entity() -> None:
+    query = build_next_step_query(_omitted(3, "SequenceVariant"), "BRCA1")
+    assert query == "Which other sequence variant records are linked to BRCA1?", query
+
+
+def test_every_query_the_builder_produces_is_one_the_detector_accepts() -> None:
+    """The round trip is the whole point of keeping both halves in one
+    module: a wording change that breaks it is caught here.
+
+    MUTATION PROOF: editing `GO_DEEPER_TEMPLATE` without editing the pattern
+    turns this arm red.
+    """
+    for entity_type in ("Disease", "SequenceVariant", "Publication", "Gene"):
+        for entity in ("BRCA1", "NCBIGene:672", "TP53"):
+            query = build_next_step_query(_omitted(2, entity_type), entity)
+            assert query is not None
+            assert is_go_deeper_query(query), query
+    assert "{noun}" in GO_DEEPER_TEMPLATE and "{entity}" in GO_DEEPER_TEMPLATE
+
+
+def test_the_detector_rejects_the_offer_text_and_ordinary_questions() -> None:
+    offer = _build_next_step_offer(_omitted(3), trust_outcome="ask", refused=False)
+    assert offer is not None
+    assert not is_go_deeper_query(offer), offer
+    assert not is_go_deeper_query("Which diseases are associated with BRCA1?")
+    assert not is_go_deeper_query("What variants cause it?")
+    assert not is_go_deeper_query("Which other disease records are linked to BRCA1")
+    assert not is_go_deeper_query(
+        "Tell me: which other disease records are linked to BRCA1? And more."
+    )
+
+
+def test_the_record_type_noun_is_plain_words() -> None:
+    assert entity_type_noun("SequenceVariant") == "sequence variant"
+    assert entity_type_noun("Disease") == "disease"
+    assert entity_type_noun("ClinicalTrial") == "clinical trial"
+
+
+def test_the_query_declines_exactly_when_the_offer_declines() -> None:
+    """The two `DonePayload` fields are set together or not at all."""
+    assert build_next_step_query([], "BRCA1") is None
+    mixed = _omitted(2, "Disease") + _omitted(2, "Gene")
+    assert build_next_step_query(mixed, "BRCA1") is None
+    untyped = _omitted(2, entity_type="")
+    assert build_next_step_query(untyped, "BRCA1") is None
+    assert _build_next_step_offer(untyped, trust_outcome="ask", refused=False) is None
+
+
+def test_the_query_declines_with_no_entity_to_name() -> None:
+    """A follow-up that names nothing is the pronoun form this replaces."""
+    assert build_next_step_query(_omitted(3), "") is None
+    assert build_next_step_query(_omitted(3), "   ") is None
+
+
+def test_the_query_is_not_model_generated() -> None:
+    import inspect
+
+    from system_03_search_agent.core import next_step
+
+    source = inspect.getsource(next_step)
+    assert "litellm" not in source and "acompletion" not in source
+
+
+def test_derived_projection_rows_do_not_count_as_a_record_type() -> None:
+    """Measured live 2026-09-13: `RETURN v, v.name` yields every variant twice,
+    as a `SequenceVariant` row and a `derived` projection row of the same
+    record. Built from the bare type set, the offer read "10 further derived
+    records" when the omitted rows were all projections, and declined when
+    they mixed. Both halves are wrong about what the records are.
+
+    MUTATION PROOF: removing the `!= _DERIVED_ROW_TYPE` clause in
+    `shared_record_type` turns both assertions red (mixed gives None, all
+    derived gives "derived").
+    """
+    from system_03_search_agent.core.next_step import shared_record_type
+
+    mixed = _omitted(2, "SequenceVariant") + _omitted(2, "derived")
+    assert shared_record_type(mixed) == "SequenceVariant"
+    offer = _build_next_step_offer(mixed, trust_outcome="ask", refused=False)
+    assert offer == (
+        "Would you like me to go through the 4 further sequence variant records "
+        "found for this question?"
+    ), offer
+    assert build_next_step_query(mixed, "BRCA1") == (
+        "Which other sequence variant records are linked to BRCA1?"
+    )
+
+    only_projections = _omitted(3, "derived")
+    assert shared_record_type(only_projections) is None
+    assert _build_next_step_offer(only_projections, trust_outcome="ask", refused=False) is None
+    assert build_next_step_query(only_projections, "BRCA1") is None
