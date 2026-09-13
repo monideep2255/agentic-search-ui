@@ -212,7 +212,9 @@ Built: · Live: · Approved:
 
 - Feature being tested: the home page search box is big enough to write a full question.
 - What you noted: "on the home page, can we increase the size of the search box? It should be at least big as a tweet box 240 characters? or the appropriate size"
-- What's expected: a multi-line box that shows about 240 characters without scrolling and grows as you type. Enter searches, and Shift+Enter starts a new line.
+- What's expected: a multi-line box that shows about 240 characters without scrolling and grows as you type. Enter searches, and Shift+Enter starts a new line. Also on phones: the Search button takes its own row so the box keeps its full width (commit `254763b`, after 240 characters scrolled at 390px).
+- Follow-up you noted: "The search box increase looks good but the 2 things -> search button placement and the text placement and icon need to be adjusted (magnifying glass Which diseases are associated with BRCA1?)"
+- Follow-up expected: the magnifying glass sits level with the first line of text, and the Search button sits in the bottom right corner with even spacing from the box edges.
 
 ### 2.13 NCBI design system: the changes possible today (retest feedback)
 
