@@ -554,16 +554,33 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
 ) -> None:
     """F-2.0-03 fix: build_stable_prefix() has a real caller, not zero.
 
-    No-tool-selected path: all four calls (guardrail, think, plan, write)
+    No-tool-selected path: the think, plan and write calls (three of the
+    four; the guardrail is the documented exception below)
     reach litellm.acompletion with graph_module._STABLE_PREFIX prepended
     as a leading system-role message, proving the prompt-cache scaffold
     T-2.0-06 built is actually wired into the loop, not merely
     unit-tested in isolation. See the `_when_a_tool_runs` sibling below
     for the tool path, restored per the judge's T-2.1 rework finding.
     """
+    # Since 2026-09-13 (UI fix set 7, item 7.1) the GUARDRAIL call is the
+    # one deliberate exception: it carries the classifier's own instruction
+    # first and no stable prefix, because the prefix ahead of that
+    # instruction made the Guard model answer the question instead of
+    # classifying it (see `_dispatch_tier_call`). Section 4.2 names Think,
+    # Plan and Write as the prefix sharers. So: four calls, the first one
+    # (the guardrail) leads with `GUARD_SYSTEM_INSTRUCTION`, the other
+    # three with the prefix.
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
     await _run_graph(_valid_query(), _valid_context())
     assert _mock_litellm.call_count == 4
-    for call in _mock_litellm.call_args_list:
+    guard_call, *loop_calls = _mock_litellm.call_args_list
+    assert guard_call.kwargs["messages"][0] == {
+        "role": "system",
+        "content": GUARD_SYSTEM_INSTRUCTION,
+    }
+    assert len(loop_calls) == 3
+    for call in loop_calls:
         leading_message = call.kwargs["messages"][0]
         assert leading_message["role"] == "system"
         assert leading_message["content"] == graph_module._STABLE_PREFIX
@@ -597,9 +614,17 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    assert len(prefixed_calls) == 4
+    # Three since 2026-09-13, not four: the guardrail call deliberately
+    # carries no prefix (see the no-tool sibling above), and it is asserted
+    # present separately so a missing guard call cannot hide in the count.
+    assert len(prefixed_calls) == 3
     for call in prefixed_calls:
         assert call.kwargs["messages"][0]["role"] == "system"
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+    assert _mock_litellm.call_args_list[0].kwargs["messages"][0]["content"] == (
+        GUARD_SYSTEM_INSTRUCTION
+    )
 
 
 @pytest.mark.asyncio
@@ -1896,7 +1921,10 @@ async def test_stable_prefix_still_reaches_every_graph_node_call_when_a_tool_run
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    assert len(node_level_calls) == 4
+    # Think, plan and write. The guardrail call stopped carrying the prefix
+    # on 2026-09-13 (UI fix set 7, item 7.1; see `_dispatch_tier_call`) and
+    # is pinned by its own arm in the guardrail integration tests.
+    assert len(node_level_calls) == 3
 
 
 @pytest.mark.asyncio

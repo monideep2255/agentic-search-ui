@@ -675,9 +675,22 @@ async def _dispatch_tier_call(
     messages: list[Message],
     budget_s: float,
     max_tokens: int | None = None,
+    cache_prefix: str | None = _STABLE_PREFIX,
 ) -> Any:
     """The shared cap-check-then-call-then-timeout sequence every model-
     calling node uses, in the fixed order the module docstring states.
+
+    `cache_prefix` is the loop's stable prefix for every call but the
+    guardrail's, which passes None. Section 4.2 names Think, Plan and Write
+    as the calls that share the prefix; the guardrail is a classifier with
+    its own single system instruction. Measured 2026-09-13 (UI fix set 7,
+    item 7.1): with the agent's prefix prepended ahead of that instruction,
+    the Guard model sometimes acted as the agent and ANSWERED the question
+    ("I'll query the knowledge graph for diseases associated with BRCA1"),
+    returning no JSON, one probe in ten locally and worse on develop, where
+    it failed first questions as well as follow-ups. Without the prefix the
+    same probe parsed ten of ten. A 128-token classification gains nothing
+    from a cached prefix it must not read.
 
     Raises:
         cost_control.QueryCapExceededError: the pre-flight per-query cap
@@ -689,7 +702,7 @@ async def _dispatch_tier_call(
     return await harness.enforce_timeout(
         step,
         harness.call_tier(  # type: ignore[arg-type]
-            tier, messages, cache_prefix=_STABLE_PREFIX, max_tokens=max_tokens
+            tier, messages, cache_prefix=cache_prefix, max_tokens=max_tokens
         ),
         budget_s,
     )
@@ -818,9 +831,9 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
 
     # Step 3, Section 10.4. The first and only model call this node makes.
     # Dispatched through `_dispatch_tier_call` rather than calling the
-    # classifier's own helper, so this call gets the per-query cap pre-flight,
-    # the step timeout, and `cache_prefix=_STABLE_PREFIX` like every other
-    # model call in the loop. `guardrail/classifier.py` deliberately exposes
+    # classifier's own helper, so this call gets the per-query cap pre-flight
+    # and the step timeout like every other model call in the loop, but NOT
+    # the stable prefix (see `_dispatch_tier_call`). `guardrail/classifier.py` deliberately exposes
     # no wrapper that would let a caller skip this.
     # The guard prompt carries the query and NOTHING about the session. UI
     # fix set 7, item 7.1 (2026-09-13) tried a memory block here twice and
@@ -848,6 +861,9 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
                 "guardrail",
                 guard_messages,
                 budget_s=budget_for_step("guardrail", "lookup"),
+                # No stable prefix ahead of the classifier's instruction:
+                # see `_dispatch_tier_call`.
+                cache_prefix=None,
             )
         except cost_control.QueryCapExceededError:
             return {"cap_exceeded": True}

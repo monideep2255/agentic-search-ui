@@ -322,6 +322,29 @@ async def test_an_off_topic_verdict_on_a_pronoun_follow_up_is_set_aside_when_mem
 
 
 @pytest.mark.asyncio
+async def test_the_guard_call_carries_no_stable_prefix_ahead_of_its_instruction(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Measured 2026-09-13: with the loop's stable prefix prepended as a
+    system message ahead of the classifier's instruction, the Guard model
+    sometimes acted as the agent and answered the question instead of
+    classifying it, one probe in ten locally and more on develop. The
+    classifier's instruction must be the FIRST and only system message.
+
+    MUTATION PROOF: passing `_STABLE_PREFIX` (or omitting `cache_prefix`)
+    at the guardrail's dispatch turns the first arm red.
+    """
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+    await _run_guardrail("Which diseases are associated with BRCA1?")
+    messages = _mock_litellm.call_args.kwargs["messages"]
+    assert messages[0] == {"role": "system", "content": GUARD_SYSTEM_INSTRUCTION}, messages[0]
+    assert len(messages) == 2 and messages[1]["role"] == "user", messages
+    # Populate-check: the prefix this arm guards against is real and non-empty.
+    assert graph_module._STABLE_PREFIX and "cypher_query" in graph_module._STABLE_PREFIX
+
+
+@pytest.mark.asyncio
 async def test_an_off_topic_verdict_stands_with_no_memory(
     _mock_litellm: AsyncMock,
 ) -> None:
