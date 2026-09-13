@@ -429,6 +429,28 @@ export function HistoryRail({
         display: "flex",
         flexDirection: "column",
         overflowY: "auto",
+        // Product-owner feedback, 2026-09-13: signed in, the search bar sat
+        // low on the landing screen while a signed-out visitor saw it
+        // centred. The rail was the cause. Its history list is longer than
+        // the viewport, and a flex row is as tall as its tallest child, so
+        // the hero beside it grew to the list's height and centred its
+        // content halfway down a page that scrolled behind the sticky
+        // footer. Pinning the rail to the viewport, the same way the app
+        // bar and footer already are (set 2, R9 and R11), lets the row keep
+        // the viewport's height whatever the list holds, so the hero is
+        // centred exactly as it is with no rail at all, and the list
+        // scrolls inside the rail. 54px is the app bar's `minHeight`, 44px
+        // the footer's rendered height (12px padding each side around a
+        // 20px caption line). Not applied inside the phone drawer, which
+        // already gives the rail the full height on its own.
+        ...(isNarrow
+          ? {}
+          : {
+              position: "sticky",
+              top: 54,
+              alignSelf: "flex-start",
+              maxHeight: "calc(100dvh - 54px - 44px)",
+            }),
       }}
     >
       {/* `.rtop`: the New search action and the collapse control, one row. */}
