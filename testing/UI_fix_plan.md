@@ -208,7 +208,7 @@ Pushed as commit `cbb04cc`, live on develop on 2026-09-12 and checked by screens
 
 ### 2.12 A bigger search box on the home page (retest feedback)
 
-Built: ✅ · Live: · Approved: 👍 (size approved; the icon-only button at the bottom right is built and waiting to go live, then for your retest)
+Built: ✅ · Live: 🚀 · Approved: 👍 (size approved; the icon-only up-arrow button at the bottom right is live at commit `79607bd` and waiting for your retest)
 
 - Feature being tested: the home page search box is big enough to write a full question.
 - What you noted: "on the home page, can we increase the size of the search box? It should be at least big as a tweet box 240 characters? or the appropriate size"
