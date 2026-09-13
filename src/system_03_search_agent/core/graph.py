@@ -822,12 +822,12 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     # the step timeout, and `cache_prefix=_STABLE_PREFIX` like every other
     # model call in the loop. `guardrail/classifier.py` deliberately exposes
     # no wrapper that would let a caller skip this.
-    # UI fix set 7, item 7.1 (2026-09-13): the session's remembered entities
-    # reach the classifier as labelled DATA, through the same `_memory_suffix`
-    # Think and Plan use, so "What variants cause it?" is judged against the
-    # gene "it" resolves to rather than against five bare words. Empty on a
-    # first turn, which leaves the messages byte-identical to before.
-    guard_messages = classifier.build_messages(query.text, _memory_suffix(state, "guard"))
+    # The guard prompt carries the query and NOTHING about the session. UI
+    # fix set 7, item 7.1 (2026-09-13) tried a memory block here twice and
+    # measured the Guard model drifting out of its schema both times; see
+    # `_is_memory_bound_follow_up`, which applies the follow-up rule to the
+    # verdict instead.
+    guard_messages = classifier.build_messages(query.text)
 
     # Two attempts, not one, mirroring `think_node`'s handling of the same
     # failure. Measured 2026-09-13 across thirteen live Guard calls carrying
@@ -890,7 +890,23 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
         }
 
     if not classifier_verdict.admitted:
-        return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
+        if classifier_verdict.category == "off_topic" and _is_memory_bound_follow_up(
+            query.text, state
+        ):
+            # UI fix set 7, item 7.1: "What variants cause it?" after a BRCA1
+            # turn was refused as off topic about one run in three, on five
+            # bare words. Its subject is the remembered gene, so the verdict
+            # is set aside and the question continues to the forbidden
+            # screen and to Think, where memory binds "it". Only an
+            # off-topic verdict is ever set aside; an injection verdict is
+            # final.
+            logger.info(
+                "guard off-topic verdict set aside for a memory-bound follow-up "
+                "(trace %s)",
+                trace_id,
+            )
+        else:
+            return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.
     forbidden_verdict = forbidden.screen(query.text)
@@ -2477,6 +2493,43 @@ def _strip_prompt_delimiters(text: str) -> str:
     return text.replace("<", "").replace(">", "")
 
 
+#: Words a short follow-up uses to point back at something already discussed.
+#: Lowercased whole tokens; "its" and "their" are possessive references.
+_REFERRING_WORDS: frozenset[str] = frozenset(
+    {"it", "its", "this", "that", "these", "those", "they", "them", "their", "one", "ones"}
+)
+
+
+def _is_memory_bound_follow_up(text: str, state: GraphState) -> bool:
+    """True when a question refers back to an entity the session remembers.
+
+    UI fix set 7, item 7.1, second cut (2026-09-13). The first cut handed the
+    Guard model a memory block to judge "What variants cause it?" against;
+    against the REAL stored memory on develop the model stopped classifying
+    and answered the question in prose, then, with an entity-only block,
+    replied with a Think-shaped schema instead of the classification
+    schema, in three of five local runs. Text in the guard prompt that
+    describes the conversation destabilises the one model call that must
+    stay simple, so the guard prompt is now byte-identical to what it was
+    before set 7 and this rule is applied in code AFTER the verdict.
+
+    The rule: the guard's OFF-TOPIC verdict on a question is set aside when
+    the session has resolved at least one entity and the question contains
+    a referring word ("it", "this", "those", ...), because such a question's
+    subject is the remembered biomedical entity, which is on topic by the
+    guard's own definition. It is a rule about which SUBJECT a pronoun points
+    at, never about safety: an injection verdict is never set aside, the
+    prefilter and the forbidden screen still run, and `plan_node` still binds
+    the antecedent deterministically. Off topic questions with no referring
+    word ("Tell me a joke") stay refused whatever the memory holds.
+    """
+    memory = _session_memory(state)
+    if memory is None or not memory.resolved_entities:
+        return False
+    tokens = {token.strip("?.,;:!\"'()") for token in text.lower().split()}
+    return bool(tokens & _REFERRING_WORDS)
+
+
 def _memory_suffix(state: GraphState, tier: Tier) -> str:
     """The session-memory block to append to a Think or Plan prompt.
 
@@ -2485,9 +2538,11 @@ def _memory_suffix(state: GraphState, tier: Tier) -> str:
     nothing.
 
     `injected_steps` is not consulted here to decide WHETHER to inject; the
-    call sites are Guardrail, Think and Plan by construction (the Guardrail
-    site added 2026-09-13, UI fix set 7, item 7.1, for classification only).
-    It exists as the single declaration those call sites are checked against.
+    call sites are Think and Plan by construction. The guardrail never
+    receives this block: it reads memory only through
+    `_is_memory_bound_follow_up`, a deterministic rule applied after its
+    verdict (UI fix set 7, item 7.1, 2026-09-13). It exists as the single
+    declaration those call sites are checked against.
 
     ## What this block does and does not do today (F-4.5-A-09)
 

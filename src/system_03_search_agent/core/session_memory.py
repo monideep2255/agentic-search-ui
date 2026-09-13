@@ -93,16 +93,13 @@ from system_03_search_agent.harness.tiers import Tier, resolve_model
 #: the premise gate asserts on it, so adding "act" here is a visible change
 #: that turns a gate arm red rather than a quiet one-line edit in a caller.
 #:
-#: "guardrail" was added on 2026-09-13 (UI fix set 7, item 7.1) and is a
-#: deliberate widening of Section 14.4's "Think and Plan", recorded here
-#: rather than slipped in: the Guard-tier classifier was judging the bare
-#: text of a follow-up such as "What variants cause it?" and refusing it as
-#: off topic about one run in three, because nothing told it the session
-#: had already resolved a gene for "it" to point at. The block reaches the
-#: guardrail as labelled data for CLASSIFICATION only, exactly as it reaches
-#: Think. The two steps the section forbids are unchanged: never Act, never
-#: Write.
-_INJECTED_STEPS: tuple[str, ...] = ("guardrail", "think", "plan")
+#: Think and Plan only, as Section 14.4 states. UI fix set 7, item 7.1
+#: (2026-09-13) briefly added "guardrail" here while a memory block was
+#: injected into the Guard prompt; both cuts of that block were measured
+#: destabilising the Guard model, so the guardrail no longer receives one.
+#: It reads memory only for a deterministic rule applied after its verdict
+#: (`core.graph._is_memory_bound_follow_up`), which is not an injection.
+_INJECTED_STEPS: tuple[str, ...] = ("think", "plan")
 
 #: The model tiers those steps actually resolve to. `core/graph.py` dispatches
 #: Think at the guard tier and Plan at the plan tier, so a summary written now

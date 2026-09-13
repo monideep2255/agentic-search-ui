@@ -1109,10 +1109,11 @@ class TestInjectionSurface:
         decide whether to inject. That gap is F-4.5-J-04 and it belongs to
         `core/graph.py`, which this file does not own.
         """
-        # "guardrail" joined the declaration on 2026-09-13 (UI fix set 7,
-        # item 7.1), for classification only. The two steps that may never
-        # read memory are the ones asserted absent below.
-        assert sm.injected_steps(_summary()) == ("guardrail", "think", "plan")
+        # "guardrail" joined the declaration for a few hours on 2026-09-13
+        # (UI fix set 7, item 7.1) and left it the same day: the guard
+        # prompt carries no memory block. The two steps that may never read
+        # memory are the ones asserted absent below.
+        assert sm.injected_steps(_summary()) == ("think", "plan")
         assert "act" not in sm.injected_steps(_summary())
         assert "write" not in sm.injected_steps(_summary())
 

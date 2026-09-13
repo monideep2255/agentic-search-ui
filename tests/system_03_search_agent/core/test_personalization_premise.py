@@ -1863,14 +1863,15 @@ _MEMORY_READERS_ALLOWED = {
     # `write_node`, because memory must never become a citable source.
     "think_node",
     "plan_node",
-    # Added 2026-09-13 (UI fix set 7, item 7.1): the Guard-tier classifier
-    # receives the same labelled data block for CLASSIFICATION only, so a
-    # pronoun follow-up is judged against the entity it points at rather than
-    # refused as off topic on five bare words. `core/session_memory.py`'s
-    # `_INJECTED_STEPS` declares the same three steps. The two forbidden
-    # steps are unchanged, and the two assertions below still hold that
-    # neither `act_node` nor `write_node` reads memory.
+    # Added 2026-09-13 (UI fix set 7, item 7.1): the guardrail reads memory
+    # through `_is_memory_bound_follow_up`, a deterministic rule that sets
+    # aside an OFF-TOPIC verdict on a pronoun follow-up when the session has
+    # resolved an entity. Nothing from memory enters the guard PROMPT (two
+    # cuts that injected a block were measured destabilising the model).
+    # The two forbidden steps are unchanged, and the two assertions below
+    # still hold that neither `act_node` nor `write_node` reads memory.
     "guardrail_node",
+    "_is_memory_bound_follow_up",
     # The helpers, which are the memory accessors themselves.
     "_memory_curies",
     "_memory_suffix",
