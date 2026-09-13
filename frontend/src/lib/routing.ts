@@ -15,6 +15,9 @@
  * is a fourth REAL screen, so it joins `PATH_BY_SCREEN` rather than
  * `LEGACY_PATHS`: navigating to it must put `/architecture` in the address
  * bar, which is exactly the direction a one-way legacy entry cannot serve.
+ * It has NO item in the app bar (product-owner decision the same evening):
+ * it is reached from About's "Explore the architecture" link and by its
+ * address, and this table is what makes the address work.
  *
  * UPDATED 2026-09-13, fix set 5 (R18). Docs is no longer a screen: its
  * content is the "API documentation" section inside Integrations. `/docs`

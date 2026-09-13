@@ -5,6 +5,25 @@
  * core of information being pulled from like the 115M etc, then the system 2
  * and 3, Databases in kg, pull from api layer 2 and 3."
  *
+ * THE NUMBERING IS THE PRODUCT OWNER'S, taken twice from their own words
+ * after they read the page live on 2026-09-13. First: "Make system 1 the data
+ * pipelines and knowledge graph. System 2 is Live NCBI APIs ... System 3 is
+ * Enrichment ... all feed into the search agent." Then, minutes later: "I
+ * meant layers, wrong to use system." So the page numbers the three DATA
+ * LAYERS, which is what the `L1`, `L2` and `L3` badges have always meant, and
+ * the word "system" appears nowhere on it.
+ *
+ * THAT IS NOT HOW THE REPOSITORY'S OWN DOCUMENTS NUMBER THINGS, and the
+ * difference is deliberate rather than an error to correct. `CLAUDE.md` and
+ * `reference/agentic-search-data-engineering/CLAUDE.md` number three SYSTEMS:
+ * system 1 is the pipelines, system 2 is the graph, system 3 is the search
+ * agent. Those documents are not edited to match, because they are describing
+ * which repository owns which code, while this page describes where a fact in
+ * front of a reader came from. A visitor never sees a repository boundary;
+ * they see a citation carrying `L1`, `L2` or `L3`, and this page is the one
+ * that explains those three marks. The orchestrator logs the convention in
+ * DECISIONS.md.
+ *
  * WHY A PAGE OF ITS OWN rather than more About. The same request offered the
  * choice and named the condition: "if it convolutes the about page too much,
  * can create another page /architecture to show the deep architecture on how
@@ -133,6 +152,84 @@ function Figure({ value, label }: { value: string; label: string }) {
   );
 }
 
+/**
+ * One layer card: its name, its `L1` / `L2` / `L3` mark, its one-line
+ * description, and one row per tool.
+ *
+ * LIFTED OUT OF THE PAGE on 2026-09-13, when the product owner renumbered the
+ * systems after seeing the page live. The three cards used to sit together
+ * inside one `.map()` at the foot of the page. They now sit one per system,
+ * which is the whole point of the renumbering: the `L1` badge belongs beside
+ * the graph it names rather than three sections away from it. A component is
+ * what lets the three stay identical while living apart.
+ */
+function LayerCard({ layer }: { layer: (typeof LAYERS)[number] }) {
+  const { main, wash } = layerColour(layer.n);
+  return (
+    <Box
+      data-testid={`architecture-layer-${layer.n}`}
+      sx={{
+        bgcolor: wash,
+        border: `1px solid ${designTokens.line}`,
+        borderLeft: `4px solid ${main}`,
+        borderRadius: 0.5,
+        px: 1.75,
+        py: 1.25,
+        maxWidth: 620,
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap", mb: 0.5 }}>
+        <Typography variant="h4" component="p">
+          {layer.name}
+        </Typography>
+        {/*
+          The mark reads in ink rather than in the layer colour, copying the
+          About walk's own measured decision for the identical card: axe put
+          `layer2` on `layer2Wash` at 4.01:1 for an 11px bold mark, against
+          WCAG 1.4.3's 4.5:1. The colour is carried by the left border and the
+          wash instead.
+        */}
+        <Box
+          component="span"
+          sx={{ ...mono, ml: "auto", fontSize: 11, fontWeight: 700, color: designTokens.ink }}
+        >
+          L{layer.n}
+        </Box>
+      </Box>
+      <Typography variant="body2" sx={{ color: designTokens.inkMuted, mb: 1 }}>
+        {layer.summary}
+      </Typography>
+      <Box sx={{ display: "grid", gap: 0.75 }}>
+        {layer.tools.map((tool) => (
+          <Box
+            key={tool.name}
+            sx={{
+              bgcolor: designTokens.surface,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 0.5,
+              px: 1.25,
+              py: 0.75,
+            }}
+          >
+            <Box component="p" sx={{ ...mono, fontSize: 12.5, fontWeight: 700, m: 0 }}>
+              {tool.name}
+            </Box>
+            <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+              Calls {tool.calls}.
+            </Typography>
+            <Box
+              component="p"
+              sx={{ ...mono, fontSize: 11.5, color: designTokens.inkFaint, m: 0 }}
+            >
+              {tool.budget}
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
 export interface ArchitectureScreenProps {
   /**
    * Takes the reader to About, wired by `App`, so the closing line is a real
@@ -146,15 +243,15 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
   return (
     <Page
       title="Architecture"
-      lede="Three systems stand behind every answer: the pipelines that build the knowledge graph, the graph itself, and the search agent that reads it alongside live NCBI APIs. This page names what each one holds and where it is pulled from."
+      lede="Three data layers feed one search agent: the pipelines and the knowledge graph they build, the live NCBI APIs, and the enrichment APIs. This page names what each layer holds, where it is pulled from, and what the agent is allowed to spend reading it."
     >
       <Box
         component="ol"
         role="list"
-        data-testid="architecture-systems"
+        data-testid="architecture-layers"
         sx={{ listStyle: "none", m: 0, mb: 5, p: 0 }}
       >
-        <JourneyStop index={1} title="System 1, the data pipelines">
+        <JourneyStop index={1} title="Layer 1, the data pipelines and the knowledge graph">
           <StopText>
             Five NCBI databases are downloaded in full from NCBI's FTP servers, parsed, mapped to
             the BioLink 4.x model, validated against that schema, and written out as KGX files.
@@ -285,9 +382,7 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
             five databases above, plus a small number of stub records the merge left behind where
             an edge pointed at something no pipeline had produced.
           </StopText>
-        </JourneyStop>
 
-        <JourneyStop index={2} title="System 2, the knowledge graph">
           <StopText>
             Those KGX files are merged and loaded into one graph, named ncbi_kg, running on
             PostgreSQL 15 with the Apache AGE extension on a single Hetzner server. This app reads
@@ -347,113 +442,53 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
             The search agent gives one graph query 90 seconds and accepts at most 500 rows back. A
             query that would exceed either says so rather than leaving you waiting.
           </StopText>
+
+          <StopLabel>What the search agent calls to read it</StopLabel>
+          <Box sx={{ mt: 0.75 }}>
+            <LayerCard layer={LAYERS[0]} />
+          </Box>
         </JourneyStop>
 
-        <JourneyStop index={3} last title="System 3, the search agent">
+        <JourneyStop index={2} title="Layer 2, live NCBI APIs">
           <StopText>
-            This is the part you use. It reads the graph above as its first layer, and reaches two
-            further layers live while you wait. Seven tools cover the three, each one reaching
-            exactly one layer and one access path within it, and each carrying its own time limit
-            in code rather than one the model chooses.
+            Not everything belongs in a snapshot. A record that has changed since April, and every
+            NCBI database the graph deliberately leaves out, is fetched from NCBI at the moment you
+            ask. Three tools cover that, and what they return is current by definition.
+          </StopText>
+          <Box sx={{ mt: 0.75 }}>
+            <LayerCard layer={LAYERS[1]} />
+          </Box>
+        </JourneyStop>
+
+        <JourneyStop index={3} title="Layer 3, enrichment">
+          <StopText>
+            Once a fact is established, three further tools add evidence around it: which papers
+            mention the entity, which variants the literature ties to it, and which clinical trials
+            name it. These run when the question asks for that evidence, never by default, and
+            ClinicalTrials.gov is the one source here that is not an NCBI host.
+          </StopText>
+          <Box sx={{ mt: 0.75 }}>
+            <LayerCard layer={LAYERS[2]} />
+          </Box>
+        </JourneyStop>
+
+        <JourneyStop index={4} last title="All three layers feed the search agent">
+          <StopText>
+            The agent reads layer 1 first, because one query over the snapshot returns a stored
+            link in milliseconds, and it reaches layers 2 and 3 live while you wait for whatever
+            the snapshot cannot answer or cannot keep current. Seven tools cover the three layers,
+            each one reaching exactly one of them and one access path within it, and each carrying
+            its own time limit in code rather than one the model chooses.
           </StopText>
 
-          <Box data-testid="architecture-layers" sx={{ display: "grid", gap: 1.75, maxWidth: 620 }}>
-            {LAYERS.map((layer) => {
-              const { main, wash } = layerColour(layer.n);
-              return (
-                <Box
-                  key={layer.n}
-                  data-testid={`architecture-layer-${layer.n}`}
-                  sx={{
-                    bgcolor: wash,
-                    border: `1px solid ${designTokens.line}`,
-                    borderLeft: `4px solid ${main}`,
-                    borderRadius: 0.5,
-                    px: 1.75,
-                    py: 1.25,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1.25,
-                      flexWrap: "wrap",
-                      mb: 0.5,
-                    }}
-                  >
-                    <Typography variant="h4" component="p">
-                      {layer.name}
-                    </Typography>
-                    {/*
-                      The mark reads in ink rather than in the layer colour,
-                      copying the About walk's own measured decision for the
-                      identical card: axe put `layer2` on `layer2Wash` at
-                      4.01:1 for an 11px bold mark, against WCAG 1.4.3's
-                      4.5:1. The colour is carried by the left border and the
-                      wash instead.
-                    */}
-                    <Box
-                      component="span"
-                      sx={{
-                        ...mono,
-                        ml: "auto",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: designTokens.ink,
-                      }}
-                    >
-                      L{layer.n}
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" sx={{ color: designTokens.inkMuted, mb: 1 }}>
-                    {layer.summary}
-                  </Typography>
-                  <Box sx={{ display: "grid", gap: 0.75 }}>
-                    {layer.tools.map((tool) => (
-                      <Box
-                        key={tool.name}
-                        sx={{
-                          bgcolor: designTokens.surface,
-                          border: `1px solid ${designTokens.line}`,
-                          borderRadius: 0.5,
-                          px: 1.25,
-                          py: 0.75,
-                        }}
-                      >
-                        <Box
-                          component="p"
-                          sx={{ ...mono, fontSize: 12.5, fontWeight: 700, m: 0 }}
-                        >
-                          {tool.name}
-                        </Box>
-                        <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-                          Calls {tool.calls}.
-                        </Typography>
-                        <Box
-                          component="p"
-                          sx={{ ...mono, fontSize: 11.5, color: designTokens.inkFaint, m: 0 }}
-                        >
-                          {tool.budget}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              );
-            })}
-          </Box>
-
-          <Box sx={{ mt: 2.5 }}>
-            <StopText>
-              Whichever layer a fact came from, it arrives with a link to the record behind it. A
-              graph row carries the source URL that was stored on the node or edge when the
-              pipeline wrote it, so it opens the NCBI record the pipeline read. A live result links
-              to the record page for the identifier it just came back with, such as the NCBI Gene
-              page for gene 672. A claim with no such link is not cited, and an answer with nothing
-              citeable behind it is refused rather than written.
-            </StopText>
-          </Box>
+          <StopText>
+            Whichever layer a fact came from, it arrives with a link to the record behind it. A
+            graph row carries the source URL that was stored on the node or edge when the pipeline
+            wrote it, so it opens the NCBI record the pipeline read. A live result links to the
+            record page for the identifier it just came back with, such as the NCBI Gene page for
+            gene 672. A claim with no such link is not cited, and an answer with nothing citeable
+            behind it is refused rather than written.
+          </StopText>
         </JourneyStop>
       </Box>
 

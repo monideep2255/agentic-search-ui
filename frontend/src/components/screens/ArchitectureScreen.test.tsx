@@ -17,13 +17,23 @@
  *
  * COVERAGE STATEMENT, per `goal-contracts`:
  *
- *   Exercised:      the three system headings and their order, the five
- *                   source database names with the node count and graph label
- *                   of each, the snapshot date, the node and edge counts, the
+ *   Exercised:      the four stop headings and their order, the five source
+ *                   database names with the node count and graph label of
+ *                   each, the snapshot date, the node and edge counts, the
  *                   label counts, the five pipeline steps in order, the three
- *                   layers with every tool name and per-call budget, the
- *                   example Cypher, and that the closing cross-link calls
- *                   back when wired and degrades to prose when it is not.
+ *                   layer cards with every tool name and per-call budget, the
+ *                   PLACEMENT of the L1 card inside layer 1 rather than in a
+ *                   block of its own, the example Cypher, and that the closing
+ *                   cross-link calls back when wired and degrades to prose
+ *                   when it is not.
+
+ *
+ *   ALSO EXERCISED, and it is the arm the 2026-09-13 restructure exists for:
+ *   that the layer 1 card appears BEFORE the layer 2 heading in DOM order. The
+ *   product owner's whole instruction was that the `L1` badge belongs beside
+ *   the graph it names. Every other arm on this page passes just as happily
+ *   with all three cards piled at the foot, which is the shape they were in
+ *   before, so presence assertions cannot see the change at all. Order can.
  *
  *   NOT exercised:  that any figure is TRUE of the running system. No unit
  *                   test can know that; each was read out of a named document
@@ -52,24 +62,45 @@ import {
 } from "../../lib/architectureFacts";
 import { ArchitectureScreen } from "./ArchitectureScreen";
 
-/** The three systems, in the order the page must present them. */
-const SYSTEMS = [
-  "System 1, the data pipelines",
-  "System 2, the knowledge graph",
-  "System 3, the search agent",
+/**
+ * The four stops, in the order the page must present them.
+ *
+ * The wording is the product owner's own, twice over (2026-09-13): they
+ * renumbered the page after reading it live, then corrected "system" to
+ * "layer" minutes later. Both corrections are pinned here, so a revert to
+ * either earlier shape fails rather than passing quietly.
+ */
+const STOPS = [
+  "Layer 1, the data pipelines and the knowledge graph",
+  "Layer 2, live NCBI APIs",
+  "Layer 3, enrichment",
+  "All three layers feed the search agent",
 ] as const;
 
 describe("ArchitectureScreen", () => {
-  it("renders the page title and the three systems in order", () => {
+  it("renders the page title and the four stops in order", () => {
     render(<ArchitectureScreen />);
 
     expect(screen.getByRole("heading", { name: "Architecture", level: 1 })).toBeInTheDocument();
 
-    const systems = screen.getByTestId("architecture-systems");
-    const headings = within(systems)
+    const stack = screen.getByTestId("architecture-layers");
+    const headings = within(stack)
       .getAllByRole("heading", { level: 3 })
       .map((node) => node.textContent);
-    expect(headings).toEqual([...SYSTEMS]);
+    expect(headings).toEqual([...STOPS]);
+  });
+
+  it("never calls the three layers systems", () => {
+    // The product owner's correction of 2026-09-13, "I meant layers, wrong to
+    // use system". `CLAUDE.md` and the data-engineering repository both number
+    // three SYSTEMS and are deliberately left alone, so the word is one
+    // copy-paste away from coming back here. An arm is cheaper than noticing.
+    render(<ArchitectureScreen />);
+    const stack = screen.getByTestId("architecture-layers");
+    // POPULATE-CHECK. An empty element contains no "system" either, so
+    // without this the arm would pass against a page that rendered nothing.
+    expect(stack.textContent).toMatch(/Layer 1, the data pipelines/);
+    expect(stack.textContent).not.toMatch(/system/i);
   });
 
   it("states the snapshot date and the exact node and edge counts", () => {
@@ -144,11 +175,11 @@ describe("ArchitectureScreen", () => {
   it("describes the graph itself: where it runs, what a query looks like, and its budget", () => {
     render(<ArchitectureScreen />);
 
-    const systems = screen.getByTestId("architecture-systems");
-    expect(systems).toHaveTextContent("PostgreSQL 15 with the Apache AGE extension");
-    expect(systems).toHaveTextContent("read-only credential");
-    expect(systems).toHaveTextContent("90 seconds");
-    expect(systems).toHaveTextContent("500 rows");
+    const stack = screen.getByTestId("architecture-layers");
+    expect(stack).toHaveTextContent("PostgreSQL 15 with the Apache AGE extension");
+    expect(stack).toHaveTextContent("read-only credential");
+    expect(stack).toHaveTextContent("90 seconds");
+    expect(stack).toHaveTextContent("500 rows");
 
     const cypher = screen.getByTestId("architecture-cypher");
     expect(cypher).toHaveTextContent("MATCH (g:Gene {id: 'NCBIGene:672'})");
@@ -161,6 +192,7 @@ describe("ArchitectureScreen", () => {
     const layers = screen.getByTestId("architecture-layers");
 
     const one = within(layers).getByTestId("architecture-layer-1");
+
     expect(one).toHaveTextContent("Knowledge graph");
     expect(one).toHaveTextContent("L1");
     expect(one).toHaveTextContent("cypher_query");
@@ -187,12 +219,44 @@ describe("ArchitectureScreen", () => {
     expect(three).toHaveTextContent("ClinicalTrials.gov API v2");
   });
 
+  it("puts the layer 1 card inside layer 1, before the layer 2 heading", () => {
+    // THE ARM THE 2026-09-13 RESTRUCTURE EXISTS FOR. The three cards used to
+    // sit together at the foot of the page, three sections away from the
+    // graph the `L1` badge names. Every other arm in this file passes just as
+    // happily against that shape, because they only ask whether each card is
+    // present. This one asks where it is.
+    render(<ArchitectureScreen />);
+
+    const card = screen.getByTestId("architecture-layer-1");
+    const layerTwoHeading = screen.getByRole("heading", {
+      name: "Layer 2, live NCBI APIs",
+      level: 3,
+    });
+
+    // `DOCUMENT_POSITION_FOLLOWING` on the card means the heading comes after
+    // it, which is the whole claim: the card is inside layer 1's stop.
+    expect(
+      card.compareDocumentPosition(layerTwoHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      "the layer 1 card is not inside layer 1: the layer 2 heading comes before it",
+    ).toBeTruthy();
+
+    // And the mirror, so an arm that would pass with the card at the very top
+    // of the page fails too: the card must come after layer 1's own heading.
+    const layerOneHeading = screen.getByRole("heading", {
+      name: "Layer 1, the data pipelines and the knowledge graph",
+      level: 3,
+    });
+    expect(
+      layerOneHeading.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("says how each layer's facts are cited", () => {
     render(<ArchitectureScreen />);
 
-    const systems = screen.getByTestId("architecture-systems");
-    expect(systems).toHaveTextContent(/source URL that was stored on the node or edge/);
-    expect(systems).toHaveTextContent(/links to the record page for the identifier/);
+    const stack = screen.getByTestId("architecture-layers");
+    expect(stack).toHaveTextContent(/source URL that was stored on the node or edge/);
+    expect(stack).toHaveTextContent(/links to the record page for the identifier/);
   });
 
   it("links back to About when wired, and names the tab when it is not", () => {

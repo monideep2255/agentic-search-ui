@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-13.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR: fix sets 1 and 2 plus eight retest follow-ups are built, live and approved as of commit d72256b, except item 2.12's flexible Search button placement, which is being built. THE NEXT ACTION is finishing that item, then fix set 3, refusals and Stop. Item-level status: `testing/UI_fix_plan.md`; authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 515 (DECISIONS.md).
+Decisions logged: 516 (DECISIONS.md).
 
 Deliverables produced:
 
