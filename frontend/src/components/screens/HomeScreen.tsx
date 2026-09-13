@@ -93,6 +93,13 @@ const QUESTION_MAX_ROWS = 6;
 const QUESTION_LINE_HEIGHT_PX = QUESTION_FONT_SIZE * QUESTION_LINE_HEIGHT;
 const QUESTION_MIN_HEIGHT = QUESTION_LINE_HEIGHT_PX * QUESTION_MIN_ROWS;
 const QUESTION_MAX_HEIGHT = QUESTION_LINE_HEIGHT_PX * QUESTION_MAX_ROWS;
+/**
+ * Phones get more rows before the box scrolls, measured on develop at 390px:
+ * with six rows a 240-character question scrolled, because the field is far
+ * narrower than on desktop.
+ */
+const QUESTION_MAX_ROWS_NARROW = 10;
+const QUESTION_MAX_HEIGHT_NARROW = QUESTION_LINE_HEIGHT_PX * QUESTION_MAX_ROWS_NARROW;
 /** The server truncates `text` at 2000 characters; the field matches it. */
 const QUESTION_MAX_LENGTH = 2000;
 
@@ -223,6 +230,11 @@ export function HomeScreen({
             // corner rather than floating mid-height once the box grows past
             // one line.
             alignItems: "flex-start",
+            // Wraps only below 720px, where the Search button takes its own
+            // full-width row (see its sx) and the question field keeps the
+            // whole width. Measured 2026-09-12: beside the button at 390px the
+            // field was 176px wide and a 240-character question scrolled.
+            flexWrap: "wrap",
             gap: 1.25,
             maxWidth: 720,
             mx: "auto",
@@ -265,6 +277,8 @@ export function HomeScreen({
               lineHeight: QUESTION_LINE_HEIGHT,
               minHeight: QUESTION_MIN_HEIGHT,
               maxHeight: QUESTION_MAX_HEIGHT,
+              minWidth: 0,
+              "@media (max-width:720px)": { maxHeight: QUESTION_MAX_HEIGHT_NARROW },
               overflowY: "auto",
               color: designTokens.ink,
               bgcolor: "transparent",
@@ -293,7 +307,17 @@ export function HomeScreen({
             type="submit"
             variant="contained"
             aria-label="Search the knowledge graph"
-            sx={{ px: 2.25, py: 1.1, fontSize: 14, gap: 0.75, alignSelf: "flex-end", flex: "none" }}
+            sx={{
+              px: 2.25,
+              py: 1.1,
+              fontSize: 14,
+              gap: 0.75,
+              alignSelf: "flex-end",
+              flex: "none",
+              // prototype/app.html's 720px breakpoint: below it the button
+              // takes its own row, so the question field gets the full width.
+              "@media (max-width:720px)": { width: "100%" },
+            }}
           >
             Search
             <ArrowIcon />
