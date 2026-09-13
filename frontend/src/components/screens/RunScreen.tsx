@@ -387,8 +387,14 @@ export function RunScreen({
           aria-live="polite"
           sx={{
             position: "absolute",
-            width: 1,
-            height: 1,
+            // Explicit pixels, not bare numbers: in the sx prop a bare `1`
+            // on width or height means 100 PERCENT, so this region was the
+            // full viewport width from its own left offset and pushed the
+            // page to 1521px of scroll width at 1280px (measured live on
+            // 2026-09-13 while checking the scientist card). The standard
+            // visually-hidden recipe wants one pixel.
+            width: "1px",
+            height: "1px",
             overflow: "hidden",
             clip: "rect(0 0 0 0)",
             whiteSpace: "nowrap",
