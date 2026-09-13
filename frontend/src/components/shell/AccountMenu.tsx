@@ -103,6 +103,13 @@ export function AccountMenu({ email, onSignOut, onNavigate, limitCopy }: Account
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
+        // The accessible name is the email at every width, even below 720px
+        // where the visible email is hidden (see the span below), so a
+        // screen reader, a speech-input user and every browser spec that
+        // finds this control by the account's email keep working on a
+        // phone. The initials the phone still shows are the email's first
+        // two characters, so the visible text stays inside the name.
+        aria-label={email}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -145,7 +152,17 @@ export function AccountMenu({ email, onSignOut, onNavigate, limitCopy }: Account
         >
           {initialsOf(email)}
         </Box>
-        {email}
+        {/*
+          Fix set 4 (R46, 2026-09-13), measured on the live app at 390px
+          signed in: the full email in this pill pushed the bar to 465px
+          and the page scrolled sideways. Below 720px, the same breakpoint
+          the nav items and the overflow menu use, the pill shows the
+          initials and the chevron only; the email stays in the menu this
+          opens and in the control's accessible name above.
+        */}
+        <Box component="span" sx={{ "@media (max-width:720px)": { display: "none" } }}>
+          {email}
+        </Box>
         <Box component="span" aria-hidden="true" sx={{ fontSize: 10, opacity: 0.8 }}>
           ▾
         </Box>

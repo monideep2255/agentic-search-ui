@@ -1382,6 +1382,22 @@ describe("R46: a reload keeps the account signed in", () => {
     await waitFor(() => expect(window.localStorage.getItem(REFRESH_KEY)).toBe(ROTATED));
   });
 
+  it("fetches the restored account's search allowance with no user action", async () => {
+    // Measured on the live app the day the restore shipped: the rail footer
+    // sat on "Checking your search limit…" after a reload, because only the
+    // sign-in handler fetched the allowance and a restored session never
+    // passes through it. Mutation: keying the allowance fetch on the
+    // sign-in handler alone, or fetching it with the stored refresh token
+    // instead of the restored access token, turns this red.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    await waitFor(() => expect(getAllowanceMock).toHaveBeenCalled());
+    expect(getAllowanceMock.mock.calls.some((call) => call[0] === RESTORED_ACCESS)).toBe(true);
+  });
+
   it("reads the account's email with the restored access token", async () => {
     // Mutation: calling `fetchMe` with the refresh token, or with the token
     // that was stored rather than the one just minted, turns this red.

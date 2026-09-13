@@ -569,6 +569,26 @@ export function App() {
   }, [token]);
 
   /**
+   * The account's search allowance, keyed on the token rather than on the
+   * sign-in handler alone (fix set 4, R46). The sign-in handler already
+   * fetches it, but a session restored from the persisted refresh token
+   * never passes through that handler, so after a reload the rail footer
+   * sat on "Checking your search limit…" indefinitely, measured on the
+   * live app the day the restore shipped. Keying on the token also refetches
+   * after each 12-minute rotation, which is cheap and keeps the number
+   * honest. Never computed client-side: the value is whatever
+   * `GET /v1/allowance` returned, or null while nothing has.
+   */
+  useEffect(() => {
+    if (token === null) return undefined;
+    const controller = new AbortController();
+    getAllowance(token, { signal: controller.signal })
+      .then((fetched) => setAllowance(fetched))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [token]);
+
+  /**
    * Fetch a returning guest's own allowance once, at mount.
    *
    * Before this fix, `allowance` was seeded `null` on every mount and the
