@@ -68,18 +68,18 @@ From section 12 of the report. Everything else is decided.
 
 What you will see: no guest limit and no walls. One Log in button, where a new email creates the account. Log out goes to the home page.
 
-Progress, 2026-09-12. Marks: ✅ built and passing checks on this machine, 🚀 live on develop, 👍 you retested and approved. Nothing is live until the push after the consistency baseline.
+Progress, 2026-09-12. Marks: ✅ built and passing checks on this machine, 🚀 live on develop, 👍 you retested and approved. Pushed as commit 7766ebf and live on develop on 2026-09-12.
 
 | Requirement | What | Built | Live | Approved |
 |---|---|---|---|---|
-| R1 | No five-search guest limit | ✅ | | |
-| R2 | No "used your free searches" or "moved into an account" walls, no dots | ✅ | | |
-| R3 | No ten-attempt guest limit | ✅ | | |
-| R4 | Per-search cap, anonymous daily cap and per-connection share kept | ✅ code kept. Raising the daily cap to 1,000 on develop waits for your yes at push | | |
-| R5 | One Log in button: a new email creates the account, a wrong password says so | ✅ | | |
-| R6 | Log out lands on the search home page, from any screen | ✅ | | |
+| R1 | No five-search guest limit | ✅ | 🚀 | |
+| R2 | No "used your free searches" or "moved into an account" walls, no dots | ✅ | 🚀 | |
+| R3 | No ten-attempt guest limit | ✅ | 🚀 | |
+| R4 | Per-search cap, anonymous daily cap and per-connection share kept | ✅ code kept. Daily cap set to 1,000 on develop on 2026-09-12, confirmed by the product owner | 🚀 | |
+| R5 | One Log in button: a new email creates the account, a wrong password says so | ✅ | 🚀 | |
+| R6 | Log out lands on the search home page, from any screen | ✅ | 🚀 | |
 | D1 | The daily cap message reaches the screen | ✅ already worked, now also shown on the home page | | |
-| R37 | `Product_workflows.md` tests 3 and 5 rewritten, tests 4, 16 and 20 marked removed | ✅ | | |
+| R37 | `Product_workflows.md` tests 3 and 5 rewritten, tests 4, 16 and 20 marked removed | ✅ | 🚀 | |
 
 | | |
 |---|---|
@@ -234,7 +234,7 @@ Stale or no longer relevant, so not carried into this plan:
 
 | Set | Batch | Status |
 |---|---|---|
-| 1. Let people in | Screens | ✅ Built on 2026-09-12, 8 of 8 items. Not pushed yet: the push waits until the consistency baseline finishes, so a restart does not skew it |
+| 1. Let people in | Screens | ✅ Built and 🚀 live on develop on 2026-09-12, 8 of 8 items. Waiting for your retest of tests 1, 3 and 6 |
 | 2. A steady frame | Screens | Not started |
 | 3. Refusals and Stop | Screens | Not started |
 | 4. Stay signed in, history on phones | Screens | Not started |
