@@ -67,7 +67,7 @@ export interface HomeScreenProps {
    */
   tourInvite?: React.ReactNode;
   /**
-   * Adds "Take the tour" as a fourth item in the footer strip, so the tour
+   * Adds a standout "Take the tour" pill under the seed chips, so the tour
    * can be restarted at any time after the invite is gone. Absent by default,
    * which keeps the standalone design-system mounts unchanged.
    */
@@ -434,6 +434,46 @@ export function HomeScreen({
 
         {tourInvite}
 
+        {onTakeTour ? (
+          // Product-owner feedback 2026-09-13: "Take the tour" must stand out
+          // rather than hide in the footer strip. An outlined pill in the
+          // link colour, centred under the seed chips, with a small compass
+          // mark: it reads as an action, not as small print, and stays out
+          // of the way of the search box above it. Built from the seed chip
+          // pill and the design system's outlined button; no new colour.
+          <Box sx={{ mt: 2.25, display: "flex", justifyContent: "center" }}>
+            <Box
+              component="button"
+              type="button"
+              onClick={onTakeTour}
+              data-testid="take-the-tour"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.9,
+                font: "inherit",
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: designTokens.link,
+                bgcolor: designTokens.surface,
+                border: `2px solid ${designTokens.link}`,
+                borderRadius: 999,
+                px: 2,
+                py: 0.85,
+                cursor: "pointer",
+                "&:hover": { bgcolor: designTokens.layer1Wash },
+                "&:focus-visible": { outline: `2px solid ${designTokens.navy}`, outlineOffset: 2 },
+              }}
+            >
+              <svg width={15} height={15} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true">
+                <circle cx={8} cy={8} r={6.3} />
+                <path d="M10.6 5.4 9.2 9.2 5.4 10.6 6.8 6.8z" fill="currentColor" stroke="none" />
+              </svg>
+              Take the tour
+            </Box>
+          </Box>
+        ) : null}
+
         <Box
           sx={{
             maxWidth: 900,
@@ -461,29 +501,6 @@ export function HomeScreen({
               {detail}
             </Box>
           ))}
-          {onTakeTour ? (
-            // The fourth item: a text button in the strip's own muted voice,
-            // underlined so it reads as the one item here that does something.
-            <Box
-              component="button"
-              type="button"
-              onClick={onTakeTour}
-              sx={{
-                font: "inherit",
-                fontSize: "inherit",
-                color: designTokens.inkMuted,
-                background: "none",
-                border: 0,
-                p: 0,
-                cursor: "pointer",
-                textDecoration: "underline",
-                textUnderlineOffset: "3px",
-                "&:hover": { color: designTokens.link },
-              }}
-            >
-              Take the tour
-            </Box>
-          ) : null}
         </Box>
         </Box>
       </Box>

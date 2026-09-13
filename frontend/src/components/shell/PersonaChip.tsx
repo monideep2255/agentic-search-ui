@@ -59,7 +59,7 @@ function PersonIcon({ size = 12 }: { size?: number }) {
 }
 
 /** A 14px circled "i", the chip's info affordance. Inherits `currentColor`. */
-function InfoIcon({ size = 14 }: { size?: number }) {
+export function InfoIcon({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="8" r="6.3" stroke="currentColor" strokeWidth="1.2" />

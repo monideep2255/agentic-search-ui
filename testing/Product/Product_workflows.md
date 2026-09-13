@@ -302,7 +302,7 @@ Expected:
 
 Testing: a first-time visitor can take a tour of every feature that ends with a real answer.
 
-Steps: open the site in a private window → tick the disclaimer → Continue → on the home page, under the suggested questions, click "Start the tour" → read each card and press Next → on step 7, click "Run it for me" → wait for the answer → press Next to the end → Done → click "Take the tour" in the small print at the bottom of the home page
+Steps: open the site in a private window → tick the disclaimer → Continue → on the home page, under the suggested questions, click "Start the tour" → read each card and press Next → on step 7, click "Run it for me" → wait for the answer → press Next to the end → Done → click the "Take the tour" button under the suggested questions on the home page
 
 Expected:
 
@@ -311,7 +311,7 @@ Expected:
 - Step 7 fills the question box with the BRCA1 question. "Run it for me" runs it, and a small note follows the five steps while it runs; Stop stays reachable.
 - On the answer, step 8 points at the citation chips and step 9 at the sources and the follow-up field. Done closes the tour.
 - If the system refuses the question, the tour says so, explains that it refused rather than guess, and ends with Done.
-- Escape closes the tour at any point. "Take the tour" at the bottom of the home page starts it again any time.
+- Escape closes the tour at any point. The "Take the tour" button under the suggested questions starts it again any time.
 - At phone width the card sits at the bottom of the screen and nothing scrolls sideways.
 
 ## What this list does not cover

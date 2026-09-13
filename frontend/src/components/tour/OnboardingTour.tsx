@@ -62,11 +62,13 @@
  * it the card docks to the bottom edge at full width.
  */
 
+import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Box, Button, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens } from "../../theme";
+import { InfoIcon } from "../shell/PersonaChip";
 
 /** The per-browser flag that hides the first-visit invite for good. */
 export const TOUR_SEEN_KEY = "agentic-search-ui.tour-seen.v1";
@@ -107,10 +109,44 @@ export type TourOutcome = "answer" | "refusal" | "failure";
 export interface TourStep {
   id: string;
   title: string;
-  /** Two or three plain sentences, one paragraph each. */
+  /**
+   * Two or three plain sentences, one paragraph each. The token `{{info}}`
+   * renders as the circled "i" icon the chip itself uses, so a sentence can
+   * point at the control by showing it rather than by spelling it.
+   */
   body: string[];
   /** `data-tour` values, in preference order. Empty means no ring. */
   targets: string[];
+}
+
+/**
+ * A sentence with its `{{info}}` tokens swapped for the chip's own circled
+ * "i", drawn inline at text size. Anything else renders as written.
+ */
+function renderSentence(sentence: string): React.ReactNode {
+  const parts = sentence.split("{{info}}");
+  if (parts.length === 1) return sentence;
+  return parts.flatMap((part, index) =>
+    index === 0
+      ? [part]
+      : [
+          <Box
+            key={`info-${index}`}
+            component="span"
+            aria-label="circled i"
+            role="img"
+            sx={{
+              display: "inline-flex",
+              verticalAlign: "-2px",
+              color: designTokens.ink,
+              mx: "1px",
+            }}
+          >
+            <InfoIcon size={14} />
+          </Box>,
+          part,
+        ],
+  );
 }
 
 /** Index of the step that runs a question. Everything before it is reading. */
@@ -161,8 +197,8 @@ export const TOUR_STEPS: TourStep[] = [
     id: "persona",
     title: "Your scientist",
     body: [
-      "Each session works as a scientist from the history of genetics. It is decoration only and changes nothing about the answer.",
-      "The small i beside the name tells you who they were, with a link to read more. On a phone the name sits behind the bar's menu.",
+      "Each session works as a scientist from the history of biomedical science. It is decoration only and changes nothing about the answer.",
+      "The {{info}} beside the name tells you who they were, with a link to read more. On a phone the name sits behind the bar's menu.",
     ],
     targets: ["persona"],
   },
@@ -636,7 +672,7 @@ export function OnboardingTour({
               variant="body2"
               sx={{ color: designTokens.inkMuted, mb: 1, "&:last-of-type": { mb: 0 } }}
             >
-              {sentence}
+              {renderSentence(sentence)}
             </Typography>
           ))}
         </Box>
