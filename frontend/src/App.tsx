@@ -87,6 +87,15 @@ import { AboutScreen, IntegrationsScreen } from "./components/screens/InfoScreen
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
+import {
+  OnboardingTour,
+  RUN_STEP_INDEX,
+  TOUR_QUESTION,
+  TourInvite,
+  hasSeenTour,
+  markTourSeen,
+} from "./components/tour/OnboardingTour";
+import type { TourOutcome, TourRunState } from "./components/tour/OnboardingTour";
 
 type SearchView =
   | { name: "home" }
@@ -440,6 +449,31 @@ export function App() {
    * and a collapse the user chose must outlive the next question.
    */
   const [railOpen, setRailOpen] = useState(railOpenByDefault);
+
+  /**
+   * The onboarding tour (2026-09-13 product-owner request), see
+   * `components/tour/OnboardingTour.tsx` for the design. `tourOpen` and
+   * `tourStep` live here because step 7 has to reach `ask` and because the
+   * tour reads the same `searchView` and `view` every screen renders from.
+   * `tourSeen` mirrors the per-browser flag so the invite disappears the
+   * moment it is dismissed, without a re-read of storage.
+   */
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+  const [tourSeen, setTourSeen] = useState(hasSeenTour);
+  const startTour = useCallback(() => {
+    setTourStep(0);
+    setTourOpen(true);
+  }, []);
+  const endTour = useCallback(() => {
+    setTourOpen(false);
+    markTourSeen();
+    setTourSeen(true);
+  }, []);
+  const dismissTourInvite = useCallback(() => {
+    markTourSeen();
+    setTourSeen(true);
+  }, []);
 
   /**
    * The conversation id sent with every question.
@@ -925,6 +959,28 @@ export function App() {
    * into a hook other screens share.
    */
   const view = runId === null ? EMPTY_RUN_VIEW : streamed;
+
+  /*
+   * What the tour is told about the run it is watching, derived from the
+   * same two values the screens render from so it can never describe a
+   * different run than the one on screen. A stopped run reads as `idle`:
+   * the stopped block's own "Run again" is the way forward there, and the
+   * tour's step 7 card still offers "Run it for me".
+   */
+  const tourRunState: TourRunState =
+    searchView.name === "run" && !stopped
+      ? "running"
+      : searchView.name === "answer"
+        ? "answered"
+        : "idle";
+  const tourOutcome: TourOutcome | null =
+    searchView.name !== "answer"
+      ? null
+      : view.refusal !== null || view.refusalLabel !== null
+        ? "refusal"
+        : (dispatchError ?? view.failure ?? streamError)
+          ? "failure"
+          : "answer";
   // Product-owner feedback, 2026-09-12: "2-3 seconds of staring at the
   // screen and nothing happens". The server reports a step only once it has
   // FINISHED, so before the first event `activeStep` was null and the run
@@ -1213,7 +1269,15 @@ export function App() {
 
   const body = () => {
     if (screen === "integrations") return <IntegrationsScreen />;
-    if (screen === "about") return <AboutScreen />;
+    if (screen === "about")
+      return (
+        <AboutScreen
+          onNavigateToSearch={() => {
+            setScreen("search");
+            setSearchView({ name: "home" });
+          }}
+        />
+      );
 
     switch (searchView.name) {
       case "signin":
@@ -1383,6 +1447,17 @@ export function App() {
              */
             depth={depth}
             onDepthChange={setDepth}
+            // The tour's three touch points on this screen. The invite shows
+            // until it is dismissed or the tour finishes, and never while
+            // the tour itself is up; the footer link is always there; the
+            // prefill is step 7's question, and only while step 7 shows.
+            tourInvite={
+              !tourSeen && !tourOpen ? (
+                <TourInvite onStart={startTour} onDismiss={dismissTourInvite} />
+              ) : null
+            }
+            onTakeTour={startTour}
+            prefillQuestion={tourOpen && tourStep === RUN_STEP_INDEX ? TOUR_QUESTION : null}
             /*
              * Set 1 (R2, 2026-09-12): no guest dots. There is no per-guest
              * allowance to show. When the anonymous daily cap is reached,
@@ -1568,6 +1643,24 @@ export function App() {
       </div>
       {/* Rendered OUTSIDE the inert subtree, or it would disable itself. */}
       {!accepted ? <DisclaimerModal onAccept={() => setAccepted(true)} /> : null}
+      {/*
+        Also outside the inert subtree, and only once the disclaimer is
+        accepted: the tour can only be opened from the home screen, which is
+        inert until then, so this is belt and braces rather than a gate.
+        "Run it for me" goes through the SAME `ask` as the arrow button and
+        the seed chips, at the depth the visitor has chosen.
+      */}
+      {accepted ? (
+        <OnboardingTour
+          open={tourOpen}
+          step={tourStep}
+          onStepChange={setTourStep}
+          onClose={endTour}
+          runState={tourRunState}
+          outcome={tourOutcome}
+          onRunForMe={() => void ask(TOUR_QUESTION, depth)}
+        />
+      ) : null}
     </ThemeProvider>
   );
 }

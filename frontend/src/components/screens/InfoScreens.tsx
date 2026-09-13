@@ -66,7 +66,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, Chip, Typography } from "@mui/material";
 
-import { designTokens } from "../../theme";
+import { designTokens, layerColour } from "../../theme";
 
 const mono = { fontFamily: "ui-monospace, monospace" } as const;
 
@@ -703,7 +703,7 @@ export function IntegrationsScreen() {
         />
         <NoteCard
           title="The event stream"
-          body="A run emits ten kinds of event: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, error and done. Each SSE frame carries the sequence number as its id, the event type as its name, and the whole envelope as its data. A refusal is a normal outcome with a reason attached, not an error."
+          body="A run emits eleven kinds of event: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error and done. Each SSE frame carries the sequence number as its id, the event type as its name, and the whole envelope as its data. A refusal is a normal outcome with a reason attached, not an error."
           code={EVENT_STREAM_EXAMPLE}
           copy={{
             label: "Copy frame",
@@ -721,7 +721,349 @@ export function IntegrationsScreen() {
   );
 }
 
-export function AboutScreen() {
+// ---------------------------------------------------------------------------
+// "What happens to your question": the guided walk, product-owner request of
+// 2026-09-13.
+//
+// WHERE THIS LAYOUT COMES FROM, stated rather than assumed.
+// `docs/build/design/README.md`'s coverage table says "Integrations, docs and
+// about | NO", so the About page has NO design in the design system, and
+// neither does a guided walk anywhere else in it.
+// `.claude/rules/design-consistency.md` requires that gap to be NAMED out loud
+// rather than filled silently, and this is the naming. Nothing below is
+// invented: every treatment is copied from a designed neighbour.
+//
+//   - The spine, its numbered nodes and the line joining them, from the run
+//     screen's stepper (`screens/RunScreen.tsx`) and the card it implements,
+//     `design-system/components/pipeline-stepper.html`: a 2px `blue`
+//     connector, a node with a 2px border filled `blue` once its step is done,
+//     and the node's label in `ink`. Turned on its side here, because seven
+//     stops carrying two to four sentences each cannot sit in a five-across
+//     row, and because one column at every width is what this page needs.
+//   - The layer badges, from the layer cards already on this screen below: a
+//     square of the layer colour, the name, and the `L1`/`L2`/`L3` mark in
+//     mono at the end of the row.
+//   - The annotated answer mock in stop 6, from the real components'
+//     treatments in `screens/AnswerScreen.tsx`: the citation chip's mono
+//     numeral with a 4px left border in its layer colour over that layer's
+//     wash, the trust pill's 999px radius, and the source card's 4px
+//     layer-coloured left border.
+//
+// Every colour reads a `designTokens` entry. No hex literal appears below.
+//
+// EVERY CLAIM THE WALK MAKES WAS READ OUT OF THE CODE, not written from
+// memory of how the system probably works, which is the same discipline
+// T-4.16-04 imposed on the Integrations page's commands. Where each one was
+// verified, on 2026-09-13:
+//
+//   - Five steps, in order: `core/graph.py`'s `add_node` calls for
+//     guardrail, think, plan, act and write, with `set_entry_point("guardrail")`.
+//   - Which tier runs which step: `core/graph.py`'s `_dispatch_tier_call`
+//     sites pass "guard" for guardrail, "plan" for think AND for plan, and
+//     "synth" for write.
+//   - A tier's model is resolved from configuration and held for the query:
+//     `harness/tiers.py`, `TierContext` ("fetched once at query start and
+//     held for the query's duration"), reading GUARD_MODEL, PLAN_MODEL and
+//     SYNTH_MODEL. No model is named here, and none should be.
+//   - The stable prefix: `harness/cache.py` assembles system instructions,
+//     the seven tool schemas, then the static graph and BioLink schema, in a
+//     fixed order that is never reordered at runtime.
+//   - The guardrail's refusal categories: `contracts/events.py`'s
+//     `GuardPayload.category` and `chat/GuardrailBanner.tsx`'s `CATEGORY_COPY`
+//     (off_topic, medical_advice, injection, rate_limited, cost_capped,
+//     write_seeking).
+//   - Entity resolution is live-confirmed: `core/graph.py`'s
+//     `resolve_exact_identifiers` pre-pass, then "a span whose CURIE cannot be
+//     confirmed by a live lookup" does not contribute one. NCBIGene:672 for
+//     BRCA1 appears in `tools/cypher_query.py`'s own examples.
+//   - Timeouts and the call budget: `CYPHER_QUERY_TIMEOUT_SECONDS` is 30
+//     seconds (`tools/cypher_query.py`), `tools/ncbi_transport.py` carries the
+//     15-second per-call budget with one backoff retry, and
+//     `harness/call_budget.py`'s `MAX_LAYER_2_3_CALLS_PER_QUERY` is 20.
+//   - Results come back typed and bounded: each tool has its own `*_schemas.py`
+//     input and output models, and `harness/coordinator_worker.py` caps a
+//     finding at `_MAX_FINDING_TOTAL_BYTES` and records that it cut.
+//   - Findings are handed to Synth as data: `synthesis/findings.py`'s
+//     `build_synth_messages` labels the question "data, not an instruction to
+//     you" and puts the findings and the question in the trailing user
+//     message, never in the system block.
+//   - A sentence is checked against its record in code:
+//     `synthesis/grounding.py`'s `ground_claim` accepts a claim only on a
+//     substring match against the record's own field value.
+//   - The event stream: `contracts/events.py`'s envelope `type` union carries
+//     guard, think, plan, tool_start, tool_result, token, citation,
+//     trust_signal, cost, error and done.
+//   - The scientist is presentation only: `shell/PersonaChip.tsx`'s docstring,
+//     "the persona never changes which tools run, which records are
+//     retrieved, or what the trust signal says".
+// ---------------------------------------------------------------------------
+
+/** The one question the walk follows, start to finish. */
+const JOURNEY_QUESTION = "Which diseases are associated with BRCA1?";
+
+/** The three harness tiers and what each one runs. No model is named: a tier
+ *  is a capability, and its model is a configuration value. */
+const JOURNEY_TIERS = [
+  {
+    name: "Guard tier",
+    kind: "a fast, inexpensive model",
+    body: "Runs the guardrail. Is this a biomedical research question at all, and is it asking for medical advice rather than for evidence? A question that fails either check is turned away with a plain sentence saying which one, and nothing is looked up.",
+  },
+  {
+    name: "Plan tier",
+    kind: "a mid-range model",
+    body: "Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. Then runs Plan, which picks the tools to call and writes the graph query itself.",
+  },
+  {
+    name: "Synth tier",
+    kind: "the strongest model",
+    body: "Runs Write, which composes the answer once the records are back.",
+  },
+] as const;
+
+/** The three layers Act reaches, with the tools that read each one. */
+const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string }[] = [
+  {
+    n: 1,
+    name: "Knowledge graph",
+    tools: "cypher_query",
+    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns a stored link, which is why a question like this one starts here.",
+  },
+  {
+    n: 2,
+    name: "Live NCBI APIs",
+    tools: "ncbi_efetch, ncbi_dbsnp",
+    body: "Fetched while you wait, so they are current. Used for anything the graph cannot name, such as turning a concept id into a disease name.",
+  },
+  {
+    n: 3,
+    name: "Enrichment",
+    tools: "pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search",
+    body: "Literature and trial evidence, added when the question asks for it rather than by default.",
+  },
+];
+
+/** One stop on the spine: a numbered node, the line down to the next stop,
+ *  and the stop's own heading and prose. */
+function JourneyStop({
+  index,
+  last,
+  title,
+  children,
+}: {
+  index: number;
+  last?: boolean;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box component="li" sx={{ display: "flex", gap: { xs: 1.5, sm: 2 }, alignItems: "stretch" }}>
+      <Box
+        sx={{
+          position: "relative",
+          width: 26,
+          flex: "none",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        {/* The connector, drawn from this node's centre down to the next
+            one. Omitted on the last stop, so the spine ends at stop 7
+            rather than trailing past it. */}
+        {last ? null : (
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: "absolute",
+              top: 26,
+              bottom: 0,
+              width: 2,
+              bgcolor: designTokens.blue,
+            }}
+          />
+        )}
+        <Box
+          sx={{
+            width: 26,
+            height: 26,
+            borderRadius: "50%",
+            flex: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            zIndex: 1,
+            border: `2px solid ${designTokens.blue}`,
+            bgcolor: designTokens.blue,
+            color: designTokens.surface,
+            ...mono,
+            fontSize: 12,
+            fontWeight: 700,
+          }}
+        >
+          {index}
+        </Box>
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0, pb: last ? 0 : 3.5 }}>
+        <Typography variant="h3" component="h3" sx={{ mb: 1 }}>
+          {title}
+        </Typography>
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+/** Body prose inside a stop. One place to set the measure and the colour, so
+ *  seven stops cannot drift apart. */
+function StopText({ children }: { children: React.ReactNode }) {
+  return (
+    <Typography variant="body2" sx={{ color: designTokens.inkMuted, maxWidth: "62ch", mb: 1.5 }}>
+      {children}
+    </Typography>
+  );
+}
+
+/** A small caption naming what the thing beside it is, in the mock and above
+ *  the grouped lists. The design system's own eyebrow treatment. */
+function StopLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Typography variant="overline" component="p" sx={{ color: designTokens.inkFaint, m: 0 }}>
+      {children}
+    </Typography>
+  );
+}
+
+/**
+ * Stop 6's annotated mock of the finished answer.
+ *
+ * Built from the real components' treatments rather than from a screenshot,
+ * so it cannot go stale in a way nobody can see: the citation chip, the trust
+ * pill, the source card and the follow-up field each copy the shape their own
+ * component renders in `AnswerScreen.tsx`.
+ *
+ * `aria-hidden` is deliberately NOT used. Everything here is real text a
+ * reader should hear, and the small labels beside each part say what it is,
+ * which is the whole point of an annotated mock.
+ */
+function AnswerMock() {
+  return (
+    <Box
+      data-testid="about-answer-mock"
+      sx={{
+        bgcolor: designTokens.surface,
+        border: `1px solid ${designTokens.line}`,
+        borderRadius: 1,
+        p: 2,
+        maxWidth: 560,
+      }}
+    >
+      <StopLabel>A cited sentence</StopLabel>
+      <Typography variant="body2" sx={{ mt: 0.5, mb: 2 }}>
+        BRCA1 is associated with hereditary breast and ovarian cancer syndrome.{" "}
+        <Box
+          component="span"
+          sx={{
+            ...mono,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.6,
+            fontSize: 11.5,
+            fontWeight: 600,
+            px: 0.75,
+            borderRadius: 0.5,
+            border: `1px solid ${designTokens.lineStrong}`,
+            borderLeft: `4px solid ${designTokens.layer1}`,
+            bgcolor: designTokens.layer1Wash,
+          }}
+        >
+          1
+          <Box component="span" sx={{ color: designTokens.inkMuted, fontWeight: 400 }}>
+            MedGen C0677776
+          </Box>
+        </Box>
+      </Typography>
+
+      <StopLabel>The trust line</StopLabel>
+      <Box sx={{ mt: 0.5, mb: 2 }}>
+        <Box
+          component="span"
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            borderRadius: 999,
+            px: 1.5,
+            py: 0.5,
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: designTokens.ink,
+            bgcolor: designTokens.layer2Wash,
+            border: `1px solid ${designTokens.ok}`,
+          }}
+        >
+          Grounded · every claim cited
+        </Box>
+      </Box>
+
+      <StopLabel>One source, opening on the record it came from</StopLabel>
+      <Box
+        sx={{
+          mt: 0.5,
+          mb: 2,
+          border: `1px solid ${designTokens.line}`,
+          borderLeft: `4px solid ${designTokens.layer1}`,
+          borderRadius: 0.5,
+          px: 1.5,
+          py: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.25,
+          flexWrap: "wrap",
+        }}
+      >
+        <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12 }}>
+          [1]
+        </Box>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          Hereditary breast and ovarian cancer syndrome
+        </Typography>
+        <Box
+          component="span"
+          sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}
+        >
+          L1 · knowledge graph
+        </Box>
+      </Box>
+
+      <StopLabel>The follow-up field</StopLabel>
+      <Box
+        sx={{
+          mt: 0.5,
+          border: `2px solid ${designTokens.line}`,
+          borderRadius: 1,
+          px: 1.5,
+          py: 1,
+          color: designTokens.inkFaint,
+          fontSize: 13.5,
+          bgcolor: designTokens.surfaceSunk,
+        }}
+      >
+        Ask a follow-up
+      </Box>
+    </Box>
+  );
+}
+
+export interface AboutScreenProps {
+  /**
+   * Takes the reader to the search home page, wired by `App` so the closing
+   * "follow the same question live" line is a real link rather than a
+   * sentence naming the tab. Optional so the screen still renders standalone.
+   */
+  onNavigateToSearch?: () => void;
+}
+
+export function AboutScreen({ onNavigateToSearch }: AboutScreenProps = {}) {
   const layers: { n: 1 | 2 | 3; name: string; body: string; colour: string }[] = [
     {
       n: 1,
@@ -748,6 +1090,248 @@ export function AboutScreen() {
       title="How an answer is built"
       lede="Every question crosses up to three data layers. The colour on a citation tells you which layer it came from, and therefore how fresh it is and how it was established."
     >
+      <Typography variant="h2" component="h2" sx={{ mb: 1.5 }}>
+        What happens to your question
+      </Typography>
+      <Typography sx={{ color: designTokens.inkMuted, maxWidth: "66ch", mb: 3 }}>
+        One real question, followed from the moment you press send to the answer on your screen.
+        Seven stops, each naming who is acting.
+      </Typography>
+
+      <Box
+        component="ol"
+        role="list"
+        data-testid="about-journey"
+        sx={{ listStyle: "none", m: 0, mb: 5, p: 0 }}
+      >
+        <JourneyStop index={1} title="You ask">
+          <StopText>
+            You type a question and pick how deep the answer should go: clinical brief, researcher
+            or deep technical. That is the whole of your part. Everything after it happens on the
+            server, and your question is carried through as data rather than as an instruction the
+            system obeys.
+          </StopText>
+          <StopLabel>The question this walk follows</StopLabel>
+          <Box
+            data-testid="about-journey-question"
+            sx={{
+              mt: 0.5,
+              bgcolor: designTokens.surface,
+              border: `2px solid ${designTokens.line}`,
+              borderRadius: 1,
+              px: 1.75,
+              py: 1.25,
+              maxWidth: 560,
+            }}
+          >
+            {JOURNEY_QUESTION}
+          </Box>
+        </JourneyStop>
+
+        <JourneyStop index={2} title="The model steps, tier by tier">
+          <StopText>
+            Four of the five steps ask a language model something, and the harness decides which
+            model each one gets. There are three tiers, matched to how hard the step is. A tier's
+            model is read from configuration once at the start of your question and held there, so
+            it cannot change partway through a run.
+          </StopText>
+          <Box sx={{ display: "grid", gap: 1.5, mb: 1.5, maxWidth: 620 }}>
+            {JOURNEY_TIERS.map((tier) => (
+              <Box
+                key={tier.name}
+                sx={{
+                  bgcolor: designTokens.surface,
+                  border: `1px solid ${designTokens.line}`,
+                  borderLeft: `4px solid ${designTokens.blue}`,
+                  borderRadius: 0.5,
+                  px: 1.75,
+                  py: 1.25,
+                }}
+              >
+                <Typography variant="h4" component="p" sx={{ mb: 0.5 }}>
+                  {tier.name}, {tier.kind}
+                </Typography>
+                <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+                  {tier.body}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+          <StopText>
+            All of these calls open with the same unchanging block of text: the system
+            instructions, the descriptions of the seven tools, and the graph's own schema. Reusing
+            it exactly is what keeps the cost of a question bounded, so it is fixed in code and
+            never reordered between calls.
+          </StopText>
+        </JourneyStop>
+
+        <JourneyStop index={3} title="The search goes out">
+          <StopText>
+            Act runs the tools Plan chose, across three layers of data. Each call carries its own
+            time limit, 30 seconds for a graph query and 15 seconds for a live NCBI call, and one
+            question may make at most 20 live calls in total. A call that would exceed either of
+            those fails fast and says which limit it hit, rather than leaving you waiting. This is
+            the part you watch on the progress screen.
+          </StopText>
+          <Box
+            data-testid="about-journey-layers"
+            sx={{ display: "grid", gap: 1.5, maxWidth: 620 }}
+          >
+            {JOURNEY_LAYERS.map((layer) => {
+              const { main, wash } = layerColour(layer.n);
+              return (
+                <Box
+                  key={layer.n}
+                  data-testid={`about-journey-layer-${layer.n}`}
+                  sx={{
+                    bgcolor: wash,
+                    border: `1px solid ${designTokens.line}`,
+                    borderLeft: `4px solid ${main}`,
+                    borderRadius: 0.5,
+                    px: 1.75,
+                    py: 1.25,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.25,
+                      flexWrap: "wrap",
+                      mb: 0.5,
+                    }}
+                  >
+                    <Typography variant="h4" component="p">
+                      {layer.name}
+                    </Typography>
+                    {/*
+                      The mark reads in INK, not in the layer colour, and the
+                      colour is carried by the 4px left border and the wash
+                      behind it instead. MEASURED, not preferred: axe put
+                      `layer2` (#2E8540) on `layer2Wash` at 4.01:1 for an 11px
+                      bold mark, against WCAG 1.4.3's 4.5:1. This is exactly
+                      the resolution `AnswerScreen.tsx`'s trust pill already
+                      documents for the same pair, "reading the LABEL in ink
+                      while the border, the wash and the check mark keep
+                      carrying the green", so it copies a decision rather than
+                      inventing one. The layer cards further down this page
+                      keep the coloured mark because their ground is `surface`,
+                      where the same pair passes.
+                    */}
+                    <Box
+                      component="span"
+                      sx={{
+                        ...mono,
+                        ml: "auto",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: designTokens.ink,
+                      }}
+                    >
+                      L{layer.n}
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+                    {layer.body}
+                  </Typography>
+                  <Box
+                    component="p"
+                    sx={{ ...mono, fontSize: 11.5, color: designTokens.inkFaint, mt: 0.75, mb: 0 }}
+                  >
+                    {layer.tools}
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
+        </JourneyStop>
+
+        <JourneyStop index={4} title="The records come back">
+          <StopText>
+            Every tool returns typed data checked against its own schema, never loose text. A long
+            result is cut to a bounded size and the cut is recorded rather than hidden. Each record
+            arrives with its provenance attached: the source, the record id, the link to it, and
+            the layer it came from.
+          </StopText>
+          <StopText>
+            That bundle is handed to the Synth tier as material to read, labelled as data rather
+            than as instructions. So a sentence buried inside a fetched abstract is something the
+            model can quote, never something it can be told to obey, and the model may only state
+            what the records in front of it support.
+          </StopText>
+        </JourneyStop>
+
+        <JourneyStop index={5} title="The answer is written, then streamed to you">
+          <StopText>
+            Write composes the answer from those records alone. Each sentence is then checked in
+            code against the record it points at, and a sentence that record does not support is
+            dropped rather than reworded. If nothing citeable survives, the system says it could
+            not find an answer and stops instead of answering from memory. That rule is called cite
+            or refuse.
+          </StopText>
+          <StopText>
+            What reaches your browser is a stream of small events rather than one finished page:
+            each step as it completes, each tool call, the answer text as it is written, each
+            citation, a trust signal, then done. The progress screen and the answer screen are both
+            just that stream being drawn as it arrives.
+          </StopText>
+        </JourneyStop>
+
+        <JourneyStop index={6} title="What you get">
+          <StopText>
+            A paragraph you can check line by line. Every sentence carries a numbered chip pointing
+            at the record behind it, a trust line says whether the whole answer was grounded, and
+            each source opens as a card with a link to the NCBI record it came from. Below the
+            answer, a follow-up field carries the conversation forward, and if you are signed in
+            the question is kept in your history.
+          </StopText>
+          <AnswerMock />
+        </JourneyStop>
+
+        <JourneyStop index={7} last title="What it will not do">
+          <StopText>
+            It will not tell you what to do about a diagnosis or a treatment. It assembles cited
+            evidence, and a clinician makes that call. It will not answer from memory when the
+            search comes back empty, and it will not ship a sentence with no source behind it.
+          </StopText>
+          <StopText>
+            The scientist's name beside a run is presentation only. It never changes which tools
+            run, which records are read, or what the trust line says.
+          </StopText>
+        </JourneyStop>
+      </Box>
+
+      {/*
+        The closing line is a real link when `App` wires `onNavigateToSearch`
+        (it does), through the same screen switch the nav uses, so nothing
+        reloads and the in-memory access token survives. Standalone, with no
+        callback, the sentence names the tab instead.
+      */}
+      <Typography sx={{ color: designTokens.inkMuted, maxWidth: "66ch", mb: 5 }}>
+        Follow the same question live:{" "}
+        {onNavigateToSearch ? (
+          <Box
+            component="button"
+            type="button"
+            onClick={onNavigateToSearch}
+            sx={{
+              font: "inherit",
+              p: 0,
+              border: 0,
+              bgcolor: "transparent",
+              color: designTokens.link,
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+          >
+            open Search
+          </Box>
+        ) : (
+          "open Search in the bar above"
+        )}{" "}
+        and ask "{JOURNEY_QUESTION}".
+      </Typography>
+
       <Box sx={GRID}>
         {layers.map((layer) => (
           <Box

@@ -318,6 +318,39 @@ describe("App", () => {
       "guest-token-1",
     );
   });
+
+  it("the tour's 'Run it for me' sends the BRCA1 question through the real ask", async () => {
+    // 2026-09-13 onboarding tour. Step 7 offers to run a question for the
+    // visitor; the assertion is that it reaches `createRun` with the tour's
+    // own question and the caller's real (guest) token, i.e. through the
+    // same `ask` every other surface uses, never a demo path.
+    window.sessionStorage.setItem("medicalDisclaimerAccepted", "true");
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Start the tour" }));
+    const tour = () => within(screen.getByRole("dialog"));
+    for (let index = 0; index < 6; index += 1) {
+      await user.click(tour().getByRole("button", { name: "Next" }));
+    }
+    await user.click(tour().getByRole("button", { name: "Run it for me" }));
+
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: "Which diseases are associated with BRCA1?",
+        audience_depth: "researcher",
+      }),
+      "guest-token-1",
+    );
+    // The run screen took over, and the tour is now watching it rather than
+    // covering it with a card.
+    expect(
+      screen.getByRole("heading", { name: "Which diseases are associated with BRCA1?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("tour-watching")).toBeInTheDocument();
+    window.sessionStorage.removeItem("medicalDisclaimerAccepted");
+  });
 });
 
 describe("T-4.13-03: durable history", () => {

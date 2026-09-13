@@ -466,6 +466,7 @@ export function AnswerScreen({
     // to zero when the content is taller than the space.
     <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: 3, py: 3.5 }}>
       <Box
+        data-tour="answer"
         sx={{
           bgcolor: designTokens.surface,
           border: `1px solid ${designTokens.line}`,
@@ -639,6 +640,7 @@ export function AnswerScreen({
           that two boxes are no longer level with each other.
         */}
         <Box
+          data-tour="citations"
           sx={{
             display: "grid",
             gridTemplateColumns: "14px 1fr",
@@ -746,6 +748,7 @@ export function AnswerScreen({
         <Box
           component="details"
           data-testid="sources-disclosure"
+          data-tour="sources"
           open={sourcesOpen}
           sx={{ mt: 3.5 }}
         >

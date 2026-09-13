@@ -213,6 +213,11 @@ export function RunScreen({
             display: "flex",
             gap: 1.75,
             alignItems: "flex-start",
+            // Wraps below 720px so the counter, Stop and New search drop under
+            // the question instead of pushing the card past the screen edge:
+            // measured 2026-09-13 at 390px, New search sat at 461px on a
+            // 390px viewport while the page scrolled sideways.
+            flexWrap: "wrap",
             pb: 2,
             mb: 2.5,
             borderBottom: `1px solid ${designTokens.line}`,

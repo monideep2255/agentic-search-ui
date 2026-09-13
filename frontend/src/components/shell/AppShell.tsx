@@ -445,6 +445,7 @@ export function AppShell({
           <Box
             component="nav"
             aria-label="Main"
+            data-tour="nav"
             sx={{
               ml: "auto",
               display: "flex",
@@ -485,7 +486,7 @@ export function AppShell({
 
             <NavOverflowMenu items={NAV.filter(({ key }) => key !== current)} onNavigate={onNavigate} />
 
-            <Box sx={{ ml: 1, display: { xs: "none", md: "block" } }}>
+            <Box data-tour="persona" sx={{ ml: 1, display: { xs: "none", md: "block" } }}>
               <PersonaChip
                 name={personaName}
                 about={personaAbout}
@@ -508,6 +509,7 @@ export function AppShell({
             ) : (
               <Button
                 onClick={onSignIn}
+                data-tour="login"
                 sx={{
                   ml: 1,
                   fontSize: 13,

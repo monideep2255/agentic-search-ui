@@ -29,6 +29,7 @@ Tip: use a private or incognito window whenever a test says "as a guest". It giv
 - [19. A question with no data](#19-a-question-with-no-data)
 - [20. Too many guest attempts (removed)](#20-too-many-guest-attempts-removed)
 - [21. Feedback when the connection drops](#21-feedback-when-the-connection-drops)
+- [22. The guided tour](#22-the-guided-tour)
 - [What this list does not cover](#what-this-list-does-not-cover)
 - [Already known, no need to report](#already-known-no-need-to-report)
 
@@ -178,6 +179,7 @@ Expected:
 - Each page opens, and back returns to the previous page. There is no Docs tab; the top bar shows Search, Integrations and About.
 - Integrations shows one title, four chips reading 115M nodes, 693M edges, 3 data layers and 7 tools, then four cards of the same height: REST and SSE, GraphQL, MCP server, and Command line tools. Each card has a round icon, a title, a short description, and buttons lined up along the bottom.
 - Below the cards, a short access notice, then an API documentation section.
+- About opens with "What happens to your question": seven numbered stops that follow one BRCA1 question from typing it, through the three model tiers, the search, the records coming back, the streamed answer, what you get, and what the system will not do. The closing line's "open Search" link returns to the home page.
 - The copy button copies the snippet.
 - At phone width nothing scrolls sideways, and the other pages are reachable from "More pages".
 - At phone width, while logged in, the searches button at the top right opens your searches as a panel sliding in from the left. Tapping outside it, pressing Escape, or its close button closes it.
@@ -295,6 +297,22 @@ Expected:
 
 - Your reason and comment stay on screen with a Retry button.
 - Retry sends it once you are back online.
+
+## 22. The guided tour
+
+Testing: a first-time visitor can take a tour of every feature that ends with a real answer.
+
+Steps: open the site in a private window → tick the disclaimer → Continue → on the home page, under the suggested questions, click "Start the tour" → read each card and press Next → on step 7, click "Run it for me" → wait for the answer → press Next to the end → Done → click "Take the tour" in the small print at the bottom of the home page
+
+Expected:
+
+- A card under the suggested questions reads "New here? Take the two-minute tour" with "Start the tour" and "Not now". "Not now" removes it for good on this browser.
+- The tour has nine steps with a "Step n of 9" counter. Each card explains one thing and highlights it with a blue ring: the question box, the answer depth, the suggested questions, the scientist name, the top bar, and Log in.
+- Step 7 fills the question box with the BRCA1 question. "Run it for me" runs it, and a small note follows the five steps while it runs; Stop stays reachable.
+- On the answer, step 8 points at the citation chips and step 9 at the sources and the follow-up field. Done closes the tour.
+- If the system refuses the question, the tour says so, explains that it refused rather than guess, and ends with Done.
+- Escape closes the tour at any point. "Take the tour" at the bottom of the home page starts it again any time.
+- At phone width the card sits at the bottom of the screen and nothing scrolls sideways.
 
 ## What this list does not cover
 

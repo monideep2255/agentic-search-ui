@@ -60,6 +60,25 @@ export interface HomeScreenProps {
   depth?: AudienceDepth;
   /** Called instead of the internal setter when `depth` is supplied. */
   onDepthChange?: (depth: AudienceDepth) => void;
+  /**
+   * The onboarding tour's first-visit invite (2026-09-13 product-owner
+   * request), rendered under the seed chips. `App` decides whether it shows;
+   * this screen only gives it a place. Null or undefined renders nothing.
+   */
+  tourInvite?: React.ReactNode;
+  /**
+   * Adds "Take the tour" as a fourth item in the footer strip, so the tour
+   * can be restarted at any time after the invite is gone. Absent by default,
+   * which keeps the standalone design-system mounts unchanged.
+   */
+  onTakeTour?: () => void;
+  /**
+   * A question the tour asks this screen to put in the box (its step 7,
+   * `OnboardingTour.tsx`). Applied ONLY when the box is empty, so a question
+   * the visitor has already typed is never overwritten; the tour's copy is
+   * written for both cases. Null or undefined leaves the box alone.
+   */
+  prefillQuestion?: string | null;
 }
 
 /**
@@ -135,6 +154,9 @@ export function HomeScreen({
   footer,
   depth: controlledDepth,
   onDepthChange,
+  tourInvite = null,
+  onTakeTour,
+  prefillQuestion = null,
 }: HomeScreenProps) {
   const [question, setQuestion] = useState("");
   const [localDepth, setLocalDepth] = useState<AudienceDepth>("researcher");
@@ -190,6 +212,16 @@ export function HomeScreen({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // The tour's step 7 fills the box, only while it is empty (see the prop).
+  useEffect(() => {
+    if (!prefillQuestion) return;
+    setQuestion((current) => (current.trim() === "" ? prefillQuestion : current));
+    // The auto-grow above reads the rendered textarea, so it runs after the
+    // state write has painted rather than in the same tick.
+    const frame = window.setTimeout(() => resizeQuestionField(textareaRef.current), 0);
+    return () => window.clearTimeout(frame);
+  }, [prefillQuestion]);
+
   return (
     // A flex column that claims the shell's remaining height, so the hero can
     // run to the footer the way the prototype's does. Without this the hero is
@@ -240,6 +272,7 @@ export function HomeScreen({
         <Box
           component="form"
           onSubmit={submit}
+          data-tour="search-box"
           sx={{
             display: "flex",
             // Top-aligned, not centred: the icon sits at the top-left of the
@@ -352,11 +385,12 @@ export function HomeScreen({
         </Box>
 
         {/* `.depthwrap` sits BELOW the search bar in the prototype. */}
-        <Box sx={{ mb: 2.5 }}>
+        <Box data-tour="depth" sx={{ mb: 2.5, display: "inline-block" }}>
           <DepthControl value={depth} onChange={setDepth} variant="onLight" />
         </Box>
 
         <Box
+          data-tour="seeds"
           sx={{
             display: "flex",
             flexWrap: "wrap",
@@ -398,6 +432,8 @@ export function HomeScreen({
           })}
         </Box>
 
+        {tourInvite}
+
         <Box
           sx={{
             maxWidth: 900,
@@ -425,6 +461,29 @@ export function HomeScreen({
               {detail}
             </Box>
           ))}
+          {onTakeTour ? (
+            // The fourth item: a text button in the strip's own muted voice,
+            // underlined so it reads as the one item here that does something.
+            <Box
+              component="button"
+              type="button"
+              onClick={onTakeTour}
+              sx={{
+                font: "inherit",
+                fontSize: "inherit",
+                color: designTokens.inkMuted,
+                background: "none",
+                border: 0,
+                p: 0,
+                cursor: "pointer",
+                textDecoration: "underline",
+                textUnderlineOffset: "3px",
+                "&:hover": { color: designTokens.link },
+              }}
+            >
+              Take the tour
+            </Box>
+          ) : null}
         </Box>
         </Box>
       </Box>

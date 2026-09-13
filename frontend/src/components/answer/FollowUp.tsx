@@ -59,6 +59,7 @@ export function FollowUp({ hints = [], onAsk, nextStep = null }: FollowUpProps) 
   return (
     <Box
       data-testid="follow-up"
+      data-tour="followup"
       sx={{ mt: 3, pt: 2.25, borderTop: `1px solid ${designTokens.line}` }}
     >
       {/*
