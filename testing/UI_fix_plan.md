@@ -72,14 +72,14 @@ Progress, 2026-09-12. Marks: ✅ built and passing checks on this machine, 🚀 
 
 | Requirement | What | Built | Live | Approved |
 |---|---|---|---|---|
-| R1 | No five-search guest limit | ✅ | 🚀 | |
-| R2 | No "used your free searches" or "moved into an account" walls, no dots | ✅ | 🚀 | |
-| R3 | No ten-attempt guest limit | ✅ | 🚀 | |
-| R4 | Per-search cap, anonymous daily cap and per-connection share kept | ✅ code kept. Daily cap set to 1,000 on develop on 2026-09-12, confirmed by the product owner | 🚀 | |
-| R5 | One Log in button: a new email creates the account, a wrong password says so | ✅ | 🚀 | |
-| R6 | Log out lands on the search home page, from any screen | ✅ | 🚀 | |
-| D1 | The daily cap message reaches the screen | ✅ already worked, now also shown on the home page | | |
-| R37 | `Product_workflows.md` tests 3 and 5 rewritten, tests 4, 16 and 20 marked removed | ✅ | 🚀 | |
+| R1 | No five-search guest limit | ✅ | 🚀 | 👍 |
+| R2 | No "used your free searches" or "moved into an account" walls, no dots | ✅ | 🚀 | 👍 |
+| R3 | No ten-attempt guest limit | ✅ | 🚀 | 👍 |
+| R4 | Per-search cap, anonymous daily cap and per-connection share kept | ✅ code kept. Daily cap set to 1,000 on develop on 2026-09-12, confirmed by the product owner | 🚀 | 👍 |
+| R5 | One Log in button: a new email creates the account, a wrong password says so | ✅ | 🚀 | 👍 |
+| R6 | Log out lands on the search home page, from any screen | ✅ | 🚀 | 👍 |
+| D1 | The daily cap message reaches the screen | ✅ already worked, now also shown on the home page | 🚀 | 👍 |
+| R37 | `Product_workflows.md` tests 3 and 5 rewritten, tests 4, 16 and 20 marked removed | ✅ | 🚀 | 👍 |
 
 | | |
 |---|---|
@@ -234,7 +234,7 @@ Stale or no longer relevant, so not carried into this plan:
 
 | Set | Batch | Status |
 |---|---|---|
-| 1. Let people in | Screens | ✅ Built and 🚀 live on develop on 2026-09-12, 8 of 8 items. Waiting for your retest of tests 1, 3 and 6 |
+| 1. Let people in | Screens | ✅ 🚀 👍 Done: built, live on develop and approved by the product owner on 2026-09-12, 8 of 8 items |
 | 2. A steady frame | Screens | Not started |
 | 3. Refusals and Stop | Screens | Not started |
 | 4. Stay signed in, history on phones | Screens | Not started |

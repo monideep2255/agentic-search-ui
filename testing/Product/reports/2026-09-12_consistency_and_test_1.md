@@ -476,12 +476,12 @@ Four items were not in the summary's fix list and are added here: R24 (a mode in
 
 | ID | Requirement | From | Status |
 |---|---|---|---|
-| R1 | Remove the five-search guest limit and its counter | Sections 2 and 6 | ✅ Built in set 1, not pushed yet |
-| R2 | Remove the "You have used your free searches" and "moved into an account" walls | Section 2 | ✅ Built in set 1, not pushed yet |
-| R3 | Remove the ten-attempt guest limit | Sections 2 and 9 | ✅ Built in set 1, not pushed yet |
-| R4 | Keep the per-search cost cap, and keep the anonymous daily cap raised from 200 to 1,000 searches a day, since it is the only working limit on total anonymous spend. The system-wide daily cap stays configured but does not fire today. Removing the ten-attempt limit in R3 drops one of three abuse bounds; the per-connection daily share stays and still limits any single caller | Section 2, decision X4 | ✅ Caps kept in code in set 1, not pushed yet. Raising the anonymous daily cap to 1,000 on develop waits for your yes at push |
-| R5 | One Log in button, with Sign up removed. A new email creates the account and signs in. An existing email still needs its own password | Sections 5 and 6 | ✅ Built in set 1, not pushed yet |
-| R6 | Log out returns to the home page | Section 5 | ✅ Built in set 1, not pushed yet |
+| R1 | Remove the five-search guest limit and its counter | Sections 2 and 6 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
+| R2 | Remove the "You have used your free searches" and "moved into an account" walls | Section 2 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
+| R3 | Remove the ten-attempt guest limit | Sections 2 and 9 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
+| R4 | Keep the per-search cost cap, and keep the anonymous daily cap raised from 200 to 1,000 searches a day, since it is the only working limit on total anonymous spend. The system-wide daily cap stays configured but does not fire today. Removing the ten-attempt limit in R3 drops one of three abuse bounds; the per-connection daily share stays and still limits any single caller | Section 2, decision X4 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
+| R5 | One Log in button, with Sign up removed. A new email creates the account and signs in. An existing email still needs its own password | Sections 5 and 6 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
+| R6 | Log out returns to the home page | Section 5 | ✅ 🚀 👍 Done in set 1, live on develop and approved on 2026-09-12 |
 | R7 | Sign-in box centred between header and footer | Section 5 | Not started |
 | R8 | The white box keeps one width from progress to answer, across every search | Sections 3 and 6 | Not started |
 | R9 | Header and footer fixed in place, with a stable content area, so the footer no longer jumps | Section 4 | Not started |
@@ -522,7 +522,7 @@ Four items were not in the summary's fix list and are added here: R24 (a mode in
 
 | ID | Requirement | From | Status |
 |---|---|---|---|
-| R37 | Update `Product_workflows.md` once tests change: tests 4, 16 and 20 removed, tests 3 and 5 rewritten for one Log in, and test 7 rewritten for two modes | Sections 5, 6 and 7 | Partly done: tests 3, 4, 5, 16 and 20 ✅ in set 1, not pushed yet. Test 7 waits for the two modes |
+| R37 | Update `Product_workflows.md` once tests change: tests 4, 16 and 20 removed, tests 3 and 5 rewritten for one Log in, and test 7 rewritten for two modes | Sections 5, 6 and 7 | Partly done: tests 3, 4, 5, 16 and 20 ✅ 🚀 👍 in set 1, approved 2026-09-12. Test 7 waits for the two modes |
 | R38 | Consistency run: each of the 50 golden questions 3 times on develop, with a per-question result, repeated after each fix | Section 1 | Not started |
 | R39 | Judge answer quality with the grader or a domain expert, once questions answer reliably | Section 1 | Not started |
 
