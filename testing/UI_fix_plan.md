@@ -33,7 +33,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
 | 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | ✅ | 🚀 | 👍 | Tests 8, 9, 13, 19 |
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | ✅ | 🚀 | 👍 | Tests 3, 6, 11 (phone width) |
-| 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | | | Tests 11, 15 |
+| 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | 🚀 | | Tests 11, 15 |
 | 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | | | | Nothing |
 | 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen | | | | Tests 2, 13 |
 | 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | | | | Tests 1, 7, 12 |
@@ -298,9 +298,11 @@ Batch: screens and pages.
 
 What you will see: an Integrations page in the reference layout with four equal cards, summary chips and API documentation below. The Docs tab is gone. A larger disclaimer with fuller wording. The GraphQL example works as printed, and MCP accepts connections.
 
+Pushed as commit `20a8688`, live on develop on 2026-09-13 and checked on the live app at 1280px and 390px: the disclaimer shows the new title, wording and full-width button and stays greyed out until ticked; the top bar reads Search, Integrations, About; `/docs` lands on Integrations; four chips and four cards render with no sideways scroll; the MCP endpoint answers an initialize request with 200 where it answered 421 before the deploy, with `MCP_ALLOWED_HOSTS` set on the develop API service; the GraphQL example was run as printed against develop and returned a BRCA1 answer with five citations.
+
 ### 5.1 Rebuild the Integrations page from the reference layout (R15)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: every Integrations card looks and behaves the same way.
 - What you noted: "On the Integrations tab, the REST and SSE formatting and how those things are structured is not uniform. Something's up, something's down. I want it to be very consistent."
@@ -308,7 +310,7 @@ Built: ✅ · Live: · Approved:
 
 ### 5.2 Correct the GraphQL example (R16)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the GraphQL example on the page actually works if you copy it.
 - What you noted: checked live on develop, the example fails three ways: it is written as a query instead of a mutation, it uses `question` where the field is `text`, and it leaves out a required session id.
@@ -316,7 +318,7 @@ Built: ✅ · Live: · Approved:
 
 ### 5.3 Fix the MCP server rejecting every request (R17)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: an AI tool can actually connect to the MCP server.
 - What you noted: checked live on develop, every MCP request is rejected with "Invalid Host header", signed in or not.
@@ -324,7 +326,7 @@ Built: ✅ · Live: · Approved:
 
 ### 5.4 Fold Docs into Integrations (R18)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the navigation bar no longer has an unexplained Docs tab.
 - What you noted: "And on the navigation bar I see Docs, and I have no idea what its purpose is. Is it for the integrations, or for streaming?"
@@ -332,7 +334,7 @@ Built: ✅ · Live: · Approved:
 
 ### 5.5 Rebuild the disclaimer at the reference size (R19)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the disclaimer reads as seriously as it should before someone continues.
 - What you noted: your test notes, summarised rather than quoted: make the disclaimer as big as the one on the reference site.
@@ -340,7 +342,7 @@ Built: ✅ · Live: · Approved:
 
 ### 5.6 Four Integrations cards with real summary chips (R41)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the Integrations page shows exactly the surfaces that work, with true numbers above them.
 - What you noted: decision U3, four cards: REST and SSE, GraphQL, MCP server, and one "Command line tools" card covering the command line and KGX export, with summary chips for 115M nodes, 693M edges, 3 data layers and 7 tools.
@@ -348,7 +350,7 @@ Built: ✅ · Live: · Approved:
 
 ### 5.7 Disclaimer wording from the reference structure (R42)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the disclaimer reads like a real medical disclaimer, in this product's own voice.
 - What you noted: decision U4, "Important Medical Disclaimer" as the title, a bold opening sentence, the paragraph about seeking a physician's advice, a "Prototype" notice box in place of the reference's own wording, and a full-width continue button.
