@@ -56,6 +56,13 @@
  *                   where it is true. The two clauses that DRIVE a migrated
  *                   browser now read the copy as well as the testid, which
  *                   is the specific gap that let the false sentence ship.
+ *                   Set 1 (2026-09-12, `testing/UI_fix_plan.md`) REMOVED the
+ *                   allowance, its dots and every sign-in wall. The clauses
+ *                   that pinned them are replaced: no dots or count render,
+ *                   a shared daily cap is stated in words, a migrated or
+ *                   revoked browser mints a fresh identity rather than being
+ *                   walled, Log out lands on the search home page, and the
+ *                   guest token reaches signup or login under one Log in.
  *   NOT exercised:  the wall's copy against a server that refuses with a
  *                   reason string this client does not know; an unknown
  *                   `reason` reaches `setDispatchError` rather than the
@@ -126,16 +133,11 @@ async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
 }
 
 /** Signs in through the real gate, from the nav bar's "Log in" action. */
-async function signInFromNav(
-  user: ReturnType<typeof userEvent.setup>,
-  action: "log in" | "sign up" = "log in",
-) {
+async function signInFromNav(user: ReturnType<typeof userEvent.setup>) {
   await user.click(navArea().getByRole("button", { name: /log in/i }));
   await user.type(screen.getByLabelText(/email/i), "person@example.com");
   await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
-  await user.click(
-    screen.getByRole("button", { name: action === "log in" ? /^log in$/i : /^sign up$/i }),
-  );
+  await user.click(screen.getByRole("button", { name: /^log in$/i }));
 }
 
 describe("build phase 4.10: the anonymous run path and the guest allowance", () => {
@@ -199,77 +201,47 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
     });
   });
 
-  describe("the dots read the server's own count, never a client guess", () => {
-    it("renders GuestAllowance from GET /v1/allowance's used/total, after returning to the landing", async () => {
+  describe("set 1: no guest allowance on screen", () => {
+    /**
+     * Set 1, R1 and R2 (2026-09-12, `testing/UI_fix_plan.md`): the
+     * five-search allowance and its dots are gone. This replaces the build
+     * phase 4.10 clauses that pinned the dots to the server's count, because
+     * the requirement they pinned was removed, not because they failed.
+     */
+    it("shows no dots and no search count to a guest, after an ask and back on the landing", async () => {
       mintGuestMock.mockResolvedValue({
         guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
       });
       createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
-      // The SERVER's count after this run, 3 of 5 spent: 2 left. If the
-      // dots were still a client counter incremented once per ask, a
-      // single ask would show "4 searches left" (5 - 1), not this value;
-      // asserting the SERVER's number is what makes this a real check of
-      // the source, not just of the widget rendering at all.
       getAllowanceMock.mockResolvedValue({ kind: "guest", used: 3, total: 5, counted: true });
       const user = userEvent.setup();
       render(<App />);
 
       await ask(user, "What gene is BRCA1?");
       await waitFor(() => expect(getAllowanceMock).toHaveBeenCalledWith("guest-token-1"));
-
       await user.click(screen.getByRole("button", { name: "New search" }));
 
-      const widget = await screen.findByTestId("guest-allowance");
-      expect(within(widget).getByText(/2 searches left/i)).toBeInTheDocument();
-      // The unblocked arm of the dot-state assertion below: with nothing
-      // blocking, the dots still report the guest's own true count. Without
-      // this, a change that marked every dot spent unconditionally would
-      // satisfy the blocked clauses and destroy the widget.
-      expect(widget.querySelectorAll('[data-dot-state="spent"]')).toHaveLength(3);
-      expect(widget.querySelectorAll('[data-dot-state="available"]')).toHaveLength(2);
+      await screen.findByRole("textbox", { name: /question/i });
+      expect(screen.queryByTestId("guest-allowance")).not.toBeInTheDocument();
+      expect(screen.queryByText(/\d+ searches? left/i)).not.toBeInTheDocument();
     });
 
     /**
-     * F-4.10-V-03, and the coverage hole that finding named.
-     *
-     * `blocked_reason` was on the wire and honest from the moment the server
-     * learned to send it, and nothing in `frontend/src/` branched on it, so
-     * the gate could assert the endpoint was truthful and still leave a
-     * visitor looking at unspent dots while every query came back refused.
-     * The attempt-ceiling case is the one that made carrying it untenable:
-     * `attempts_used` never decreases, so those dots stay wrong for the
-     * remaining life of a 7-day token with no event that would ever make
-     * them true.
-     *
-     * Each reason is asserted with its OWN sentence and with the other two
-     * absent, the same discipline the wall-copy clauses use, because a
-     * single hedged caption covering all three would pass a looser check
-     * while telling a visitor behind a busy office address that the whole
-     * product is down.
-     *
-     * NOT exercised here: that the refusal itself is handled, which is the
-     * wall clauses below and is a different path (a 403 or 429 on `ask`,
-     * not a field on the allowance read).
+     * The shared daily caps still exist (R4), so when the server reports one
+     * as reached the landing says so in words. Each reason keeps its own
+     * sentence, since one means the product is paused for everyone and the
+     * other means only this network has had its share.
      */
     it.each([
-      ["guest_attempt_limit_reached", /no guest searches left/i],
       ["anon_daily_cap_reached", /guest searches are paused for today/i],
-      [
-        "anon_source_daily_cap_reached",
-        /this network has used its guest searches for today/i,
-      ],
+      ["anon_source_daily_cap_reached", /this network has used its guest searches for today/i],
     ] as const)(
-      "stops promising a search when the server reports blocked_reason %s",
+      "states the daily cap in words when the server reports blocked_reason %s",
       async (reason, expectedCopy) => {
         mintGuestMock.mockResolvedValue({
           guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
         });
         createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
-        // `used: 0` deliberately. This is exactly the shape F-4.10-V-03
-        // measured: the guest's own numbers are true and untouched (their
-        // answers were refunded), and the NEXT query is refused anyway. A
-        // fixture with `used: 5` would pass even with the field ignored,
-        // because `5 - 5` already renders zero left.
         getAllowanceMock.mockResolvedValue({
           kind: "guest", used: 0, total: 5, counted: true, blocked_reason: reason,
         });
@@ -280,50 +252,17 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
         await waitFor(() => expect(getAllowanceMock).toHaveBeenCalledWith("guest-token-1"));
         await user.click(screen.getByRole("button", { name: "New search" }));
 
-        const widget = await screen.findByTestId("guest-allowance");
-        expect(within(widget).getByText(expectedCopy)).toBeInTheDocument();
-        // The COUNT is what promised a search, so the count is what must be
-        // gone. Matched on the digit rather than on the words, because "No
-        // guest searches left" legitimately contains "searches left" and a
-        // check that forbade the phrase would forbid the honest caption too.
-        expect(within(widget).queryByText(/\d+ searches? left/i)).not.toBeInTheDocument();
-        // The dots are the affordance, and they promise independently of the
-        // caption: four blue dots beside "No guest searches left" restates
-        // the same contradiction one element to the left of where it was
-        // fixed. Asserted on state rather than colour so the check can
-        // actually fail.
-        expect(widget.querySelectorAll('[data-dot-state="available"]')).toHaveLength(0);
-        expect(widget.querySelectorAll('[data-dot-state="spent"]')).toHaveLength(5);
+        expect(await screen.findByText(expectedCopy)).toBeInTheDocument();
+        expect(screen.queryByTestId("guest-allowance")).not.toBeInTheDocument();
       },
     );
   });
 
-  describe("the wall: only the server's own refusal, never a client prediction", () => {
-    it("shows the sign-in wall on a 403 carrying guest_allowance_exhausted", async () => {
-      mintGuestMock.mockResolvedValue({
-        guest_token: "guest-token-1", guest_id: "guest-1", used: 5, total: 5,
-      });
-      createRunMock.mockRejectedValueOnce(
-        new ApiError(
-          403,
-          "createRun failed with 403: you have used all of your free searches",
-          "guest_allowance_exhausted",
-        ),
-      );
-      const user = userEvent.setup();
-      render(<App />);
-
-      await ask(user, "What gene is BRCA1?");
-
-      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
-    });
-
-    it("does not show the wall on a 429 concurrent-run-cap refusal, a transient failure", async () => {
-      // design decision 5: 403 and 429 mean different things. A 429 here is
-      // `concurrent_run_cap_exceeded` (F-4.0-A-10), which is genuinely
-      // transient (finishing or stopping a run frees a slot); showing the
-      // sign-in wall for it would tell the visitor "sign in to keep going"
-      // when signing in does nothing to fix the actual condition.
+  describe("a transient refusal is an error on the answer screen, never a wall", () => {
+    it("shows the failure banner on a 429 concurrent-run-cap refusal", async () => {
+      // design decision 5: a 429 here is `concurrent_run_cap_exceeded`
+      // (F-4.0-A-10), which is genuinely transient (finishing or stopping a
+      // run frees a slot).
       mintGuestMock.mockResolvedValue({
         guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
       });
@@ -369,8 +308,11 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
     });
   });
 
-  describe("migration: the held guest token reaches signup and login", () => {
-    it("passes the guest token as the guest_token body field on signup and login", async () => {
+  describe("migration: the held guest token reaches the account", () => {
+    it("sends the guest token to signup when Log in creates a new account, and not again to login", async () => {
+      // Set 1, R5: one Log in button that tries signup first. Signup
+      // migrates and revokes the guest session when it creates the account,
+      // so the token goes to signup only.
       mintGuestMock.mockResolvedValue({
         guest_token: "guest-token-1", guest_id: "guest-1", used: 1, total: 5,
       });
@@ -386,15 +328,37 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       await ask(user, "What gene is BRCA1?");
       await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
 
-      await signInFromNav(user, "sign up");
+      await signInFromNav(user);
+
+      await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1));
+      expect(signupMock).toHaveBeenCalledWith(
+        expect.objectContaining({ guest_token: "guest-token-1" }),
+      );
+      expect(loginMock.mock.calls[0][0]).not.toHaveProperty("guest_token");
+    });
+
+    it("sends the guest token to login when the email is already registered", async () => {
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-1", guest_id: "guest-1", used: 1, total: 5,
+      });
+      createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+      getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+      signupMock.mockRejectedValue(new ApiError(409, "signup failed with 409"));
+      loginMock.mockResolvedValue({
+        access_token: "test-token", refresh_token: "r", token_type: "bearer",
+      });
+      const user = userEvent.setup();
+      render(<App />);
+
+      await ask(user, "What gene is BRCA1?");
+      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
+
+      await signInFromNav(user);
 
       await waitFor(() =>
-        expect(signupMock).toHaveBeenCalledWith(
+        expect(loginMock).toHaveBeenCalledWith(
           expect.objectContaining({ guest_token: "guest-token-1" }),
         ),
-      );
-      expect(loginMock).toHaveBeenCalledWith(
-        expect.objectContaining({ guest_token: "guest-token-1" }),
       );
     });
 
@@ -406,7 +370,7 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       const user = userEvent.setup();
       render(<App />);
 
-      await signInFromNav(user, "log in");
+      await signInFromNav(user);
 
       await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1));
       expect(loginMock.mock.calls[0][0]).not.toHaveProperty("guest_token");
@@ -437,7 +401,7 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       const user = userEvent.setup();
       render(<App />);
 
-      await signInFromNav(user, "log in");
+      await signInFromNav(user);
       await ask(user, "What gene is BRCA1?");
       await screen.findByTestId("history-rail");
 
@@ -455,237 +419,74 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
     });
   });
 
-  describe("the sign-in wall promises only what the server delivers (F-4.10-A-07)", () => {
-    it("states the free searches are spent and makes no claim about history", async () => {
-      // The wall appears on the SIXTH search, so by construction the visitor
-      // has already run five. Migration reaches only runs the in-memory
-      // `RunRegistry` still holds, and it evicts anything finished more than
-      // `DEFAULT_RETENTION_SECONDS` (300) ago, so a promise about "the ones
-      // from this visit" covers none of the searches this screen is shown
-      // after. Nothing in the UI would show a migrated run either way: the
-      // browser's history list is React state that survives sign-in in the
-      // same tab regardless.
-      //
-      // The negative assertions are the point of this clause. A promise about
-      // carrying searches across sign-in must not come back in a third
-      // wording, so both the original ("your history moves with you") and its
-      // narrowed successor ("the ones from this visit") are named here, and
-      // so is the general shape they share.
-      mintGuestMock.mockResolvedValue({
-        guest_token: "guest-token-1", guest_id: "guest-1", used: 5, total: 5,
-      });
-      createRunMock.mockRejectedValueOnce(
-        new ApiError(
-          403,
-          "createRun failed with 403: you have used all of your free searches",
-          "guest_allowance_exhausted",
-        ),
-      );
-      const user = userEvent.setup();
-      render(<App />);
-
-      await ask(user, "What gene is BRCA1?");
-
-      const wall = await screen.findByTestId("sign-in-wall");
-      expect(within(wall).getByText(/you have used your free searches/i)).toBeInTheDocument();
-      expect(wall.textContent ?? "").not.toMatch(/move[sd]? with you/i);
-      expect(wall.textContent ?? "").not.toMatch(/your history/i);
-      expect(wall.textContent ?? "").not.toMatch(/from this visit/i);
-    });
-
-    it("does not tell a migrated browser it used searches it may never have used", async () => {
-      // F-4.10-R-02. The clause above pins the sentence on the ONE trigger
-      // it is true for. This one drives a trigger the sign-out fix added,
-      // where it is false: this visitor asked once, signed up, signed out,
-      // and is being shown the wall having used one of five. The same wall
-      // is reachable at zero used, by a visitor who created an account
-      // without ever asking a question.
-      //
-      // The gate already drove this exact scenario ("walls a returning
-      // visitor whose guest identity was migrated") and asserted only that
-      // the wall appeared. Driving a screen without reading what it says is
-      // how three copy fixes in a row replaced one false statement with
-      // another.
-      mintGuestMock.mockResolvedValue({
-        guest_token: "guest-token-1", guest_id: "guest-1", used: 1, total: 5,
-      });
-      createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
-      getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
-      loginMock.mockResolvedValue({
-        access_token: "test-token", refresh_token: "r", token_type: "bearer",
-      });
-      const user = userEvent.setup();
-      render(<App />);
-
-      await ask(user, "What gene is BRCA1?");
-      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
-      await signInFromNav(user, "log in");
-      await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1));
-      await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
-      await user.click(screen.getByRole("menuitem", { name: /log out/i }));
-      await ask(user, "What variants cause it?");
-
-      const wall = await screen.findByTestId("sign-in-wall");
-      expect(wall.textContent ?? "").not.toMatch(/used your free searches/i);
-      expect(wall.textContent ?? "").not.toMatch(/free searches are (spent|finished)/i);
-      // And it still says something, and something actionable: an empty or
-      // silent wall would pass every negative assertion above.
-      expect(
-        within(wall).getByText(/guest session was moved into an account/i),
-      ).toBeInTheDocument();
-      expect(
-        within(wall).getByRole("button", { name: /create account or sign in/i }),
-      ).toBeInTheDocument();
-    });
-
-    it("does not tell a visitor at the attempt limit they used searches they never got", async () => {
-      // F-4.10-R-01's refusal reaching F-4.10-R-02's screen. This visitor
-      // asked ten questions, every one of which the guardrail refused, so
-      // every answer was refunded and they received none. "You have used
-      // your free searches" is false for them in the strongest possible
-      // sense: they used none and got none.
-      mintGuestMock.mockResolvedValue({
-        guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
-      });
-      createRunMock.mockRejectedValueOnce(
-        new ApiError(
-          403,
-          "createRun failed with 403: you have asked as many questions as a guest can",
-          "guest_attempt_limit_reached",
-        ),
-      );
-      const user = userEvent.setup();
-      render(<App />);
-
-      await ask(user, "What gene is BRCA1?");
-
-      const wall = await screen.findByTestId("sign-in-wall");
-      expect(wall.textContent ?? "").not.toMatch(/used your free searches/i);
-      expect(
-        within(wall).getByText(/asked as many questions as a guest can/i),
-      ).toBeInTheDocument();
-    });
-
-    it("shows the exhausted-allowance sentence only for the exhausted-allowance refusal", async () => {
-      // The arm that stops the fix from being made by weakening the copy to
-      // something vague enough to be true everywhere. "You have used your
-      // free searches" is the right thing to say to somebody who used their
-      // five free searches, and it must survive.
-      //
-      // Without this clause, deleting the sentence outright, or replacing
-      // all three with one hedged line, passes every negative assertion in
-      // the two clauses above.
-      mintGuestMock.mockResolvedValue({
-        guest_token: "guest-token-1", guest_id: "guest-1", used: 5, total: 5,
-      });
-      createRunMock.mockRejectedValueOnce(
-        new ApiError(
-          403,
-          "createRun failed with 403: you have used all of your free searches",
-          "guest_allowance_exhausted",
-        ),
-      );
-      const user = userEvent.setup();
-      render(<App />);
-
-      await ask(user, "What gene is BRCA1?");
-
-      const wall = await screen.findByTestId("sign-in-wall");
-      expect(within(wall).getByText(/you have used your free searches/i)).toBeInTheDocument();
-      expect(wall.textContent ?? "").not.toMatch(/moved into an account/i);
-      expect(wall.textContent ?? "").not.toMatch(/as many questions as a guest can/i);
-    });
-  });
-
-  describe("signing out does not hand out a fresh allowance (F-4.10-A-05)", () => {
+  describe("set 1: logging out returns this browser to an ordinary guest", () => {
     /**
-     * The measured hole: `App.tsx` cleared the guest token on sign-out AND
-     * on sign-in, so sign in, sign out, ask five more, repeat handed out an
-     * unlimited number of free allowances with no developer tools and no
-     * storage clearing involved. The 2026-08-14 product-owner decision
-     * accepted that a person who deliberately clears their token gets five
-     * more; it did not accept that the application clears it for them.
-     *
-     * BOTH ARMS, because this control has no safe direction of failure. An
-     * app that walls every anonymous visitor forever passes the refuse arm
-     * perfectly and destroys the product, and no attack test would ever
-     * catch it. So the second clause asserts that a visitor who never
-     * converted a guest identity is still admitted normally.
+     * Set 1, R1 to R3 and R6 (2026-09-12, `testing/UI_fix_plan.md`). The
+     * build phase 4.10 clauses here walled a browser whose guest identity had
+     * been moved into an account (F-4.10-A-05), and pinned the wall's copy on
+     * each trigger (F-4.10-A-07, F-4.10-R-02). The product owner removed the
+     * allowance and every wall, so those clauses are replaced by their
+     * opposite: a migrated browser is admitted and mints a fresh identity.
+     * What bounds anonymous spend now is the server's daily cap and
+     * per-connection share, asserted in the backend premise gate.
      */
     const signedInAllowance = { kind: "user" as const, used: 0, total: 100, counted: false };
 
-    it("walls a returning visitor whose guest identity was migrated, instead of minting a new one", async () => {
-      mintGuestMock.mockResolvedValue({
-        guest_token: "guest-token-1", guest_id: "guest-1", used: 1, total: 5,
-      });
+    it("mints a fresh identity for a migrated browser after Log out, and lands on the search home page", async () => {
+      mintGuestMock
+        .mockResolvedValueOnce({ guest_token: "guest-token-1", guest_id: "guest-1", used: 1, total: 5 })
+        .mockResolvedValueOnce({ guest_token: "guest-token-2", guest_id: "guest-2", used: 0, total: 5 });
       createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
       getAllowanceMock.mockResolvedValue(signedInAllowance);
+      signupMock.mockRejectedValue(new ApiError(409, "signup failed with 409"));
       loginMock.mockResolvedValue({
         access_token: "test-token", refresh_token: "r", token_type: "bearer",
       });
       const user = userEvent.setup();
-      const { unmount } = render(<App />);
+      render(<App />);
 
       // Ask once anonymously, so a real guest identity exists to migrate.
       await ask(user, "What gene is BRCA1?");
       await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
 
-      // Sign in: the server migrates and REVOKES that guest session.
-      await signInFromNav(user, "log in");
+      await signInFromNav(user);
       await waitFor(() =>
         expect(loginMock).toHaveBeenCalledWith(
           expect.objectContaining({ guest_token: "guest-token-1" }),
         ),
       );
 
-      // Sign out, the ordinary way, from the account menu.
+      // R6: Log out from a screen other than Search still lands on the
+      // search home page.
+      await user.click(navArea().getByText(/^integrations$/i));
       await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
       await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+      expect(await mainArea().findByRole("textbox", { name: /question/i })).toBeInTheDocument();
 
       await ask(user, "What variants cause it?");
 
-      const wall = await screen.findByTestId("sign-in-wall");
-      expect(wall).toBeInTheDocument();
-      // F-4.10-R-02: this clause DROVE the false sentence and never read it.
-      // Every assertion it already made is unchanged and still required;
-      // this one is added, so a wall that appears with the wrong sentence
-      // can no longer satisfy the clause that creates the state.
-      expect(wall.textContent ?? "").not.toMatch(/used your free searches/i);
-      expect(mintGuestMock).toHaveBeenCalledTimes(1);
-      expect(createRunMock).toHaveBeenCalledTimes(1);
-
-      // THE SAME THING AFTER A RELOAD, and this half is not decoration.
-      // Mutation-tested: with only the in-tab assertions above, restoring the
-      // old sign-out clear (drop the token, drop the marker) still passed,
-      // because React state carried the fact across the sign-out on its own
-      // and nothing forced the persisted half to be read. Remounting is what
-      // makes what sign-out wrote to storage load-bearing.
-      unmount();
-      render(<App />);
-      await ask(user, "Which trials are recruiting?");
-
-      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
-      expect(mintGuestMock).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(2));
+      expect(createRunMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ text: "What variants cause it?" }),
+        "guest-token-2",
+      );
+      expect(screen.queryByTestId("sign-in-wall")).not.toBeInTheDocument();
     });
 
     it("still admits a visitor who signed in without ever holding a guest identity", async () => {
-      // The admit arm. Signing in from the nav bar before ever asking a
-      // question migrates nothing, so signing out must leave this browser
-      // exactly as anonymous as it was, free to mint its first guest
-      // identity. Without this, the fix above could wall everyone who ever
-      // touched the login screen and every refusal test would still pass.
       mintGuestMock.mockResolvedValue({
         guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
       });
       createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
       getAllowanceMock.mockResolvedValue(signedInAllowance);
+      signupMock.mockRejectedValue(new ApiError(409, "signup failed with 409"));
       loginMock.mockResolvedValue({
         access_token: "test-token", refresh_token: "r", token_type: "bearer",
       });
       const user = userEvent.setup();
       render(<App />);
 
-      await signInFromNav(user, "log in");
+      await signInFromNav(user);
       await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1));
       expect(loginMock.mock.calls[0][0]).not.toHaveProperty("guest_token");
 
@@ -698,50 +499,42 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       expect(screen.queryByTestId("sign-in-wall")).not.toBeInTheDocument();
     });
 
-    it("walls, rather than re-minting, when the server reports the guest session revoked", async () => {
-      // The second, independent path the adversary named: `ask`'s error
-      // branch cleared the guest token on ANY 401 while signed out, and
-      // `POST /v1/query` answers 401 for a revoked session, so the very
-      // refusal that ends a migrated guest's allowance caused the next ask
-      // to mint a brand-new one. The reason string is what separates this
-      // from an ordinary expired token (the clause below).
+    it("drops a revoked guest token with a plain message, and mints a fresh identity on the next ask", async () => {
       window.localStorage.setItem(GUEST_TOKEN_STORAGE_KEY, "revoked-token");
-      createRunMock.mockRejectedValueOnce(
-        new ApiError(
-          401,
-          "createRun failed with 401: this guest session is no longer valid",
-          "guest_session_revoked",
-        ),
-      );
+      createRunMock
+        .mockRejectedValueOnce(
+          new ApiError(
+            401,
+            "createRun failed with 401: this guest session is no longer valid",
+            "guest_session_revoked",
+          ),
+        )
+        .mockResolvedValue({ run_id: "run-2", persona_name: "Mendel" });
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-2", guest_id: "guest-2", used: 0, total: 5,
+      });
+      getAllowanceMock.mockResolvedValue({ kind: "guest", used: 0, total: 5, counted: true });
       const user = userEvent.setup();
-      const { unmount } = render(<App />);
+      render(<App />);
 
       await ask(user, "What gene is BRCA1?");
 
-      const revokedWall = await screen.findByTestId("sign-in-wall");
-      expect(revokedWall).toBeInTheDocument();
-      // The third trigger, and the third place the old single sentence was
-      // false: a revoked session says nothing about how many searches were
-      // used (F-4.10-R-02).
-      expect(revokedWall.textContent ?? "").not.toMatch(/used your free searches/i);
-      expect(mintGuestMock).not.toHaveBeenCalled();
+      const failure = await screen.findByTestId("answer-failure");
+      expect(failure.textContent).toMatch(/send the question again/i);
+      expect(screen.queryByTestId("sign-in-wall")).not.toBeInTheDocument();
+      expect(window.localStorage.getItem(GUEST_TOKEN_STORAGE_KEY)).toBeNull();
 
-      // And it survives a reload. A marker that lived only in React state
-      // would be forgotten by the next page load, which is the same hole one
-      // refresh later.
-      unmount();
-      render(<App />);
+      await user.click(mainArea().getByRole("button", { name: /new search/i }));
       await ask(user, "What variants cause it?");
 
-      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
-      expect(mintGuestMock).not.toHaveBeenCalled();
+      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
+      expect(createRunMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ text: "What variants cause it?" }),
+        "guest-token-2",
+      );
     });
 
-    it("mints a fresh identity when the guest token merely expired, rather than walling", async () => {
-      // The other admit arm, and the reason the backend carries a
-      // machine-readable reason at all. A guest token past its 7-day TTL is
-      // not about the allowance, and a returning visitor must not be walled
-      // for it. A 401 with no reason is exactly that case.
+    it("mints a fresh identity when the guest token merely expired", async () => {
       window.localStorage.setItem(GUEST_TOKEN_STORAGE_KEY, "expired-token");
       createRunMock
         .mockRejectedValueOnce(

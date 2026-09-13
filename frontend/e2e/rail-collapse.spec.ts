@@ -53,7 +53,7 @@ async function signInAndAsk(page: Page): Promise<void> {
     .click();
   await page.getByLabel("Email").fill(`rail-${randomUUID()}@example.com`);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
 
   const main = page.getByRole("main");
   await main
@@ -254,7 +254,7 @@ test.describe("the stored-searches rail collapses", () => {
       .click();
     await page.getByLabel("Email").fill(`rail-${randomUUID()}@example.com`);
     await page.getByLabel("Password").fill(TEST_PASSWORD);
-    await page.getByRole("button", { name: "Sign up" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
     await expect(page.getByTestId("history-rail")).toBeVisible({ timeout: 30_000 });
 
     /*

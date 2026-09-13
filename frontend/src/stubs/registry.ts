@@ -72,13 +72,13 @@ export const STUB_REGISTRY: StubEntry[] = [
   {
     surface: "guest-allowance",
     rendersToday:
-      "REAL as of build phase 4.10 (T-4.10-08): an anonymous visitor mints a " +
-      "guest identity on the first question asked, gets a real, server-counted " +
-      "five-search allowance (guest_sessions.runs_used, spent by one atomic " +
-      "UPDATE), and the five dots render that server count, never a client " +
-      "guess. The sign-in wall now appears only when the server refuses a run " +
-      "with the reason guest_allowance_exhausted, never merely because the " +
-      "visitor has no account. What is NOT real yet: durable history across a " +
+      "REMOVED in set 1 (2026-09-12, testing/UI_fix_plan.md): there is no " +
+      "guest allowance, no dots and no sign-in wall. An anonymous visitor still " +
+      "mints a guest identity on the first question asked, and the server still " +
+      "counts its runs, but only the shared anonymous daily cap and the " +
+      "per-connection share can refuse one; the landing states either in words. " +
+      "Build phase 4.10 history: a five-search allowance with dots and a wall. " +
+      "What is NOT real yet: durable history across a " +
       "reload. Nothing persists a run today (the run registry is in-memory and " +
       "evicts, and the browser's history list is React state); signing in " +
       "while holding a guest token re-points that guest's LIVE runs to the new " +

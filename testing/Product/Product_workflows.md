@@ -4,15 +4,15 @@ Tests to run by hand on the develop app: <https://search-agent-web-develop-2aeb.
 
 Each test says what it checks, what to do, and what should happen. If something does not match, drop a screenshot in `feedback/inbox/`. Put the test number in the filename if you like.
 
-Tip: use a private or incognito window whenever a test says "as a guest". It gives you a fresh visitor with 5 free searches.
+Tip: use a private or incognito window whenever a test says "as a guest". It gives you a fresh visitor who is not signed in.
 
 ## Table of contents
 
 - [1. Basic search](#1-basic-search)
 - [2. Follow-up questions](#2-follow-up-questions)
-- [3. Sign up, log in, log out](#3-sign-up-log-in-log-out)
-- [4. Guest limit of 5 searches](#4-guest-limit-of-5-searches)
-- [5. Wrong password and duplicate account](#5-wrong-password-and-duplicate-account)
+- [3. Log in and log out](#3-log-in-and-log-out)
+- [4. Guest limit of 5 searches (removed)](#4-guest-limit-of-5-searches-removed)
+- [5. Wrong password](#5-wrong-password)
 - [6. Search history](#6-search-history)
 - [7. Answer depth](#7-answer-depth)
 - [8. Off-topic question](#8-off-topic-question)
@@ -23,11 +23,11 @@ Tip: use a private or incognito window whenever a test says "as a guest". It giv
 - [13. Suggested next step and missing-information notes](#13-suggested-next-step-and-missing-information-notes)
 - [14. The scientist name at the top](#14-the-scientist-name-at-the-top)
 - [15. The disclaimer](#15-the-disclaimer)
-- [16. Guest searches moving into a new account](#16-guest-searches-moving-into-a-new-account)
+- [16. Guest searches moving into a new account (removed)](#16-guest-searches-moving-into-a-new-account-removed)
 - [17. A page address that does not exist](#17-a-page-address-that-does-not-exist)
 - [18. Search limit shown to a signed-in user](#18-search-limit-shown-to-a-signed-in-user)
 - [19. A question with no data](#19-a-question-with-no-data)
-- [20. Too many guest attempts](#20-too-many-guest-attempts)
+- [20. Too many guest attempts (removed)](#20-too-many-guest-attempts-removed)
 - [21. Feedback when the connection drops](#21-feedback-when-the-connection-drops)
 - [What this list does not cover](#what-this-list-does-not-cover)
 - [Already known, no need to report](#already-known-no-need-to-report)
@@ -61,46 +61,35 @@ Expected:
 - Both questions and answers stay visible as one conversation.
 - "New search" clears the conversation and returns you to the home page.
 
-## 3. Sign up, log in, log out
+## 3. Log in and log out
 
-Testing: someone can create an account, see who they are signed in as, and log out.
+Testing: one Log in button creates an account for a new email, and logging out goes to the home page.
 
-Steps: click "Log in" at the top right → enter a new email and a password → Sign up → run test 1's query → click your email at the top right → Log out → click "Log in" → enter the same email and password → Log in (or press Enter)
+Steps: click "Log in" at the top right → enter a new email and a password → Log in → run test 1's query → click "Integrations" in the top bar → click your email at the top right → Log out → click "Log in" → enter the same email and password → Log in (or press Enter)
 
 Expected:
 
-- A designed sign-in screen that says "Log in to your account, or create one to keep going."
-- After signing up, the top right shows your initials and email instead of "Log in".
+- A sign-in screen titled "Log in" that says "Use your email and a password. A new email creates your account." It has one button, Log in, and no Sign up button.
+- After the first Log in, the top right shows your initials and email instead of "Log in".
 - Clicking your email opens a menu with your email, "Signed in", "API key and integrations", "Documentation" and a red "Log out".
 - Search and follow-ups work the same as tests 1 and 2.
-- Log out returns you to a clean screen, with the previous conversation gone.
-- Logging back in shows your email at the top right again.
+- Log out, even from the Integrations page, lands on the search home page, with the previous conversation gone.
+- Logging back in with the same email and password shows your email at the top right again.
 
-## 4. Guest limit of 5 searches
+## 4. Guest limit of 5 searches (removed)
 
-Testing: a guest gets 5 free answers, then a clear message rather than a broken page.
+Removed on 2026-09-12. Set 1 took away the guest limit, so there is nothing left to test here. Test 1 now covers searching as a guest, with no count and no sign-in card however many searches you run.
 
-Query: any 5 questions, for example the home page chips.
+## 5. Wrong password
 
-Steps: open the site as a guest → run 5 searches → try a sixth → click "Create account or sign in"
+Testing: a wrong password gives a clear message, and the form still works afterwards.
 
-Expected:
-
-- A visible count of searches left that goes down with each answer.
-- On the sixth try, a card saying "You have used your free searches. Sign in or create an account to keep going."
-- The button opens the sign-in screen.
-- After you sign in, the searches you ran as a guest come with you.
-
-## 5. Wrong password and duplicate account
-
-Testing: login errors are clear, and they do not reveal which emails have accounts.
-
-Steps: click "Log in" → enter your account's email with a wrong password → Log in → then enter that same email with any password → Sign up
+Steps: click "Log in" → enter your account's email with a wrong password → Log in → fix the password → Log in
 
 Expected:
 
-- A wrong password shows "Could not log in with that email and password."
-- Signing up with an existing email shows "Could not create that account. That email may already be registered."
+- A wrong password shows "That password does not match this email. Check it and try again."
+- Your email stays filled in, and the corrected password logs you in.
 - No raw error codes or technical messages.
 
 ## 6. Search history
@@ -227,16 +216,9 @@ Expected:
 - After ticking and Continue, the product opens.
 - It does not come back while you use the site, and it appears again after Log out.
 
-## 16. Guest searches moving into a new account
+## 16. Guest searches moving into a new account (removed)
 
-Testing: searches made as a guest carry over when that guest signs up.
-
-Steps: open the site as a guest → run 2 searches → click "Log in" → Sign up with a new email, within 5 minutes of those searches → look at "Your searches"
-
-Expected:
-
-- The 2 guest searches appear in your history.
-- A message explains that your guest searches moved into your account.
+Removed on 2026-09-12. With no guest limit, there is no guest allowance to move into an account.
 
 ## 17. A page address that does not exist
 
@@ -271,18 +253,9 @@ Expected:
 - A clear "could not find information" style answer.
 - No diseases listed, and no citations pointing at unrelated records.
 
-## 20. Too many guest attempts
+## 20. Too many guest attempts (removed)
 
-Testing: a guest who keeps asking questions that do not get answered is eventually stopped, with a message that differs from the 5-search wall.
-
-Query: `What is the capital of France?`, 10 times.
-
-Steps: open the site as a guest → ask the off-topic query → New search → repeat until something changes
-
-Expected:
-
-- Each attempt is refused. Refused questions do not use up your 5 searches.
-- After about 10 attempts, a message says you have made too many attempts. It is not the "You have used your free searches" card.
+Removed on 2026-09-12. Set 1 took away the ten-attempt guest limit. Test 8 still covers an off-topic question being refused.
 
 ## 21. Feedback when the connection drops
 

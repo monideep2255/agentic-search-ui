@@ -27,35 +27,28 @@ interface AuthGateProps {
   guestToken?: string | null;
 }
 
-type AuthMode = "login" | "signup";
-
 /**
- * T-1.2-08's minimal real auth entry point. No cookie-based session and no
- * login UI has ever existed in this codebase or the locked spec (Section
- * 12.1's component table names no auth/login component at all), so this
- * is the smallest real mechanism that gets a genuine `access_token` from
- * the real backend into `ChatPage`, not a finished auth product: no
- * password reset, no remember-me, no multi-account switching
- * (`v1-scope-boundary.md`, `boil-the-lake.md`'s lake-not-ocean
- * distinction for this ticket).
+ * The one sign-in entry point: an email, a password, and a single Log in
+ * button. No password reset, no remember-me, no multi-account switching
+ * (`v1-scope-boundary.md`).
  *
- * DOCUMENTED CHOICE, this ticket's prompt asks it to be an explicit call:
- * two buttons ("Log in", "Sign up") rather than trying login first and
- * falling back to signup on a failure that "looks like" a missing
- * account. `src/system_03_search_agent/auth/router.py`'s `login` endpoint
- * returns the identical 401 status and the identical
- * "invalid email or password" detail string for BOTH an unknown email and
- * a known email with the wrong password (`_INVALID_CREDENTIALS_DETAIL`,
- * confirmed by reading the router directly, not guessed). This is
- * deliberate: it is what stops the endpoint from disclosing which emails
- * are registered. It also means a login failure cannot be told apart from
- * a "no such account" case by status or by body, so a try-login-then-
- * fall-back-to-signup flow is not just harder to get right here, it would
- * have to weaken the backend's own anti-enumeration guarantee (by probing
- * differently, or by treating every failure as "maybe no account" and
- * signing up anyway, which would silently paper over a real wrong-
- * password case). Two explicit actions need no such disambiguation and
- * leave the backend's guarantee intact.
+ * ONE BUTTON, product-owner decisions R5 and X3 (2026-09-12,
+ * `testing/UI_fix_plan.md` set 1). This replaces the earlier two-button
+ * form, which existed to protect the login endpoint's anti-enumeration
+ * guarantee: `POST /auth/login` returns the same 401 for an unknown email
+ * and a wrong password. Log in now tries signup first, and signup already
+ * discloses registration with its 409, so the flow is:
+ *
+ * - signup 201: a new account was created, then log in.
+ * - signup 409: the email is registered, so log in with the password.
+ * - login 401 after a 409: the password is wrong for a registered email,
+ *   and the screen says so. Decision X3 accepted that this reveals which
+ *   emails are registered, in exchange for one button.
+ *
+ * The guest token goes to exactly one of the two calls. Signup migrates and
+ * revokes the guest session when it creates the account, so sending it again
+ * to login would only replay a no-op; when signup answers 409, nothing was
+ * migrated and login carries it instead.
  */
 export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) {
   const [email, setEmail] = useState("");
@@ -65,52 +58,38 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
   const emailId = useId();
   const passwordId = useId();
 
-  const runAuth = async (mode: AuthMode) => {
+  const logIn = async () => {
     setPending(true);
     setError(null);
+    // The `guest_token` field is omitted from the body entirely when this
+    // tab never minted one, rather than sent as an explicit `undefined`, so
+    // a visitor who never touched the guest path sends the plain payload.
+    const plain = { email, password };
+    const withGuest = guestToken ? { ...plain, guest_token: guestToken } : plain;
     try {
-      // The `guest_token` field is genuinely OPTIONAL, not merely typed
-      // that way: it is omitted from the body entirely when this tab
-      // never minted one, rather than sent as an explicit `undefined`, so
-      // a caller comparing the exact request body sent (as
-      // `AuthGate.test.tsx` does) sees byte-identical payloads for a
-      // visitor who never touched the guest path.
-      const credentials = guestToken
-        ? { email, password, guest_token: guestToken }
-        : { email, password };
-      if (mode === "signup") {
-        await signup(credentials);
+      let created = false;
+      try {
+        await signup(withGuest);
+        created = true;
+      } catch (caught) {
+        if (!(caught instanceof ApiError && caught.status === 409)) throw caught;
       }
-      // A successful signup carries no token of its own (`SignupResponse`
-      // has only `id`/`email`); both actions converge on the same
-      // token-acquisition call so there is exactly one path that ever
-      // calls `onAuthenticated`.
-      const result = await login(credentials);
+      const result = await login(created ? plain : withGuest);
       onAuthenticated(result.access_token, email);
-      // No `finally`/reset of `pending` on the success path: the parent
-      // stops rendering this component once it holds a token (see
-      // `App.tsx`), so there would be nothing left to update.
+      // No reset of `pending` on the success path: the parent stops
+      // rendering this component once it holds a token (see `App.tsx`).
     } catch (caught) {
-      // Never logs `password`. Never logs the raw caught value or its
-      // message (which, for a `login` 401, is literally the string
-      // "invalid email or password" and must not be echoed anywhere a
-      // reader could use to distinguish it from a network or server
-      // error); only the HTTP status, the same convention
-      // `StopButton.tsx`'s own `console.warn` call uses for its failure
-      // logging.
-      const status = caught instanceof ApiError ? String(caught.status) : "unknown";
-      console.warn(`auth request failed (mode=${mode}, status=${status})`);
-      // A single fixed sentence per mode, never the caught error's own
-      // message: even though `ApiError`'s message is this module's own
-      // constructed string today (safe), rendering a fixed sentence here
-      // means a future change to that message text can never leak
-      // backend-internal detail into the DOM, the same defense
-      // `GuardrailBanner.tsx` and `CapMessage.tsx` already use for their
-      // own fixed copy.
+      // Never logs `password` or the caught message, only the HTTP status.
+      const status = caught instanceof ApiError ? caught.status : null;
+      console.warn(`auth request failed (status=${status ?? "unknown"})`);
+      // Fixed sentences, never the caught error's own message, so a change
+      // to server detail text can never leak into the DOM.
       setError(
-        mode === "signup"
-          ? "Could not create that account. That email may already be registered."
-          : "Could not log in with that email and password.",
+        status === 401
+          ? "That password does not match this email. Check it and try again."
+          : status === 422
+            ? "Enter a valid email address and a password."
+            : "Could not log in right now. Check your connection and try again.",
       );
       setPending(false);
     }
@@ -118,14 +97,12 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
 
   const fieldsFilled = email.length > 0 && password.length > 0;
 
-  // The fields live in a real <form> so pressing Enter submits the default
-  // action, log in, the same way any browser form behaves. Sign up stays a
-  // plain type="button" outside the submit path: it is the secondary
-  // action here and Enter should not trigger it.
+  // The fields live in a real <form> so pressing Enter logs in, the same way
+  // any browser form behaves.
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending || !fieldsFilled) return;
-    void runAuth("login");
+    void logIn();
   };
 
   // The field label above each input matches the design system's micro-label
@@ -197,10 +174,10 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
         }}
       >
         <Typography id="auth-gate-title" variant="h2" component="h1" sx={{ fontSize: 22, mb: 1 }}>
-          Sign in to search
+          Log in
         </Typography>
         <Typography sx={{ color: designTokens.inkMuted, mb: 2.5, fontSize: 14.5 }}>
-          Log in to your account, or create one to keep going.
+          Use your email and a password. A new email creates your account.
         </Typography>
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2}>
@@ -229,12 +206,10 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                // "current-password" on both paths, including signup. One
-                // field serves both actions, and the browser has to guess
-                // before either button is pressed. A returning user logging
-                // in is the far more common case for that field, and
-                // "new-password" here would make the browser offer to save
-                // a fresh password on every ordinary login too.
+                // "current-password" even though a new email creates an
+                // account: a returning user logging in is the far more common
+                // case, and "new-password" would make the browser offer to
+                // save a fresh password on every ordinary login.
                 autoComplete="current-password"
                 fullWidth
                 sx={inputSx}
@@ -245,54 +220,20 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
                 {error}
               </Typography>
             ) : null}
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              {/*
-                Primary button: no colour override needed. The theme's
-                default `contained` button already IS the design system's
-                primary button (`.go` in search-bar.html): palette.primary
-                resolves to designTokens.blue with white contrast text,
-                MuiButton's own styleOverrides already sets borderRadius 4
-                (`--r-sm`) and disableElevation, and typography.button
-                already sets weight 600 and no uppercase transform. Only the
-                font size and padding are `.go`-specific and not part of the
-                theme default, so only those are set here.
-              */}
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={pending || !fieldsFilled}
-                sx={{ fontSize: "14px", padding: "9px 18px" }}
-              >
-                {pending ? "Working…" : "Log in"}
-              </Button>
-              {/*
-                Secondary button: the design system's only secondary-action
-                precedent is the "Not now" dismiss in guest-states.html's
-                soft-prompt state (`.mini.alt`): transparent background,
-                `ink-muted` text, `line` border. There is no designed
-                full-size secondary action button, so this scales that
-                same language up to this screen's button size rather than
-                inventing an unrelated one.
-              */}
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={() => void runAuth("signup")}
-                disabled={pending || !fieldsFilled}
-                sx={{
-                  fontSize: "14px",
-                  padding: "9px 18px",
-                  color: designTokens.inkMuted,
-                  borderColor: designTokens.line,
-                  "&:hover": {
-                    borderColor: designTokens.lineStrong,
-                    bgcolor: designTokens.surfaceSunk,
-                  },
-                }}
-              >
-                {pending ? "Working…" : "Sign up"}
-              </Button>
-            </Stack>
+            {/*
+              The theme's default `contained` button already IS the design
+              system's primary button (`.go` in search-bar.html): blue with
+              white text, radius `--r-sm`, weight 600. Only the `.go` font
+              size and padding are set here.
+            */}
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={pending || !fieldsFilled}
+              sx={{ fontSize: "14px", padding: "9px 18px", alignSelf: "flex-start" }}
+            >
+              {pending ? "Working…" : "Log in"}
+            </Button>
           </Stack>
         </Box>
       </Box>

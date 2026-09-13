@@ -51,7 +51,7 @@ async function signUpFreshAccount(page: Page, email: string): Promise<void> {
   await page.getByRole("navigation", { name: /main/i }).getByRole("button", { name: /log in/i }).click();
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
   await expect(
     page.getByRole("main").getByRole("textbox", { name: /question/i }),
   ).toBeVisible({ timeout: 20_000 });

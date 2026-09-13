@@ -57,7 +57,6 @@ from system_03_search_agent.core.run_registry import (
     default_registry,
 )
 from system_03_search_agent.data.guest_sessions import (
-    ATTEMPT_ALLOWANCE,
     FREE_RUN_ALLOWANCE,
     SpendState,
     refund_one_run,
@@ -728,18 +727,9 @@ def get_v1_allowance(
             # fix; both values are true of that caller, and both send them to
             # the same sign-in wall.
             blocked = "anon_source_daily_cap_reached"
-        elif int(row[2]) >= ATTEMPT_ALLOWANCE and int(row[1]) < FREE_RUN_ALLOWANCE:
-            # F-4.10-R-01, and the same constraint-4 argument one bound
-            # further out: this guest has started as many runs as a guest may
-            # start, so the next request is refused 403 no matter what the
-            # dots say. The `runs_used < FREE_RUN_ALLOWANCE` half mirrors the
-            # refusal ordering in `data.guest_sessions._apply_spend`, which
-            # reports a spent ANSWER allowance first because that is the more
-            # informative refusal; reporting the two in a different order
-            # here than the enforcement path uses is how the two paths start
-            # disagreeing again.
-            blocked = "guest_attempt_limit_reached"
         else:
+            # Set 1 (R3, 2026-09-12): `guest_attempt_limit_reached` is no
+            # longer reported, because the query path no longer enforces it.
             blocked = None
         return AllowanceResponse(
             kind="guest",
@@ -1154,41 +1144,9 @@ async def post_v1_query(
                 },
                 headers={"Retry-After": str(_seconds_until_utc_midnight())},
             )
-        if spend.state is SpendState.EXHAUSTED:
-            # design decision 5: 403, never 429. The allowance is SPENT,
-            # not rate limited: retrying later does not help, so a 429
-            # with a Retry-After would be a lie the UI would repeat to the
-            # user. `guest_allowance_exhausted` is the machine-readable
-            # reason the UI branches the sign-in wall on.
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "reason": "guest_allowance_exhausted",
-                    "message": (
-                        "you have used all of your free searches; sign in or "
-                        "create an account to keep going"
-                    ),
-                },
-            )
-        if spend.state is SpendState.ATTEMPTS_EXHAUSTED:
-            # F-4.10-R-01. 403 like the exhausted personal allowance above,
-            # and for design decision 5's reason: this ceiling is permanent
-            # for this identity, so a 429 with a Retry-After would be a lie
-            # the UI would repeat as "try again soon". A DISTINCT
-            # machine-readable reason, because the two mean different things
-            # to the person reading them and the sign-in wall has to say
-            # something true for each: "you have used your free searches" is
-            # false for a caller who never got an answer at all.
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "reason": "guest_attempt_limit_reached",
-                    "message": (
-                        "you have asked as many questions as a guest can; "
-                        "sign in or create an account to keep going"
-                    ),
-                },
-            )
+        # Set 1 (R1, R3, 2026-09-12): no 403 `guest_allowance_exhausted` and
+        # no 403 `guest_attempt_limit_reached`. `spend_one_anonymous_run` no
+        # longer enforces a per-guest ceiling, so neither state can occur.
         if spend.state is SpendState.REVOKED_OR_UNKNOWN:
             # This guest session was migrated (and revoked) at signup/
             # login, or never existed. The token still decodes, so

@@ -47,7 +47,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 
-import { theme } from "./theme";
+import { designTokens, theme } from "./theme";
 import {
   ApiError,
   createRun,
@@ -63,9 +63,7 @@ import {
   capitalizeFirst,
   clearPersistedGuestToken,
   dailyLimitPhrase,
-  guestSessionWasMigrated,
   loadPersistedGuestToken,
-  markGuestSessionMigrated,
   persistGuestToken,
 } from "./lib/guestSession";
 import { useAgentRun } from "./hooks/useAgentRun";
@@ -79,8 +77,6 @@ import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import type { PreviousTurn } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
-import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
-import type { SignInWallReason } from "./components/guest/GuestAllowance";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
@@ -89,11 +85,6 @@ type SearchView =
   | { name: "home" }
   | { name: "run"; question: string }
   | { name: "answer"; question: string }
-  // F-4.10-R-02: the wall has three triggers and they are not the same
-  // message. Carrying the reason in the view rather than deriving it at
-  // render time is what makes each sentence answerable to the state that
-  // produced it.
-  | { name: "wall"; reason: SignInWallReason }
   | { name: "signin" };
 
 /** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real.
@@ -320,7 +311,6 @@ export function App() {
    * argument, including why this is an honesty control rather than a
    * security one (the server's daily anonymous ceiling is the real bound).
    */
-  const [guestMigrated, setGuestMigrated] = useState<boolean>(guestSessionWasMigrated);
   /**
    * The caller's own search allowance, read ONLY from `GET /v1/allowance`
    * (or the equivalent fields on a fresh `POST /auth/guest` response).
@@ -688,28 +678,11 @@ export function App() {
       continuesThread = false,
     ) => {
       setDepth(chosenDepth);
-      // F-4.10-A-05. This browser already turned its guest allowance into an
-      // account, and the server revoked that guest session when it did.
-      // Minting a fresh identity here is the hole: it is how sign in, sign
-      // out, ask five more, repeat handed out unlimited free allowances with
-      // nobody clearing anything. Checked BEFORE any state is touched, so the
-      // question never reaches the history list or the run screen for a run
-      // that is not going to start.
-      //
-      // The wall rather than an error, because the wall is the one thing the
-      // visitor can act on: signing in works immediately and is exactly what
-      // it offers. A dead-credential 401 would be a message with no next
-      // step in it.
-      if (!signedIn && guestToken === null && guestMigrated) {
-        // `reason: "migrated"`, and this is the case F-4.10-R-02 named
-        // first. Nothing here says how many searches were used, because
-        // nothing here knows: this browser reaches the wall with anywhere
-        // between zero and five spent, including a visitor who created an
-        // account without ever asking a question. "You have used your free
-        // searches" was false exactly when it was shown.
-        setSearchView({ name: "wall", reason: "migrated" });
-        return;
-      }
+      // Set 1 (R1 to R3, 2026-09-12): there is no guest allowance and no
+      // sign-in wall any more. A browser whose guest session was moved into
+      // an account simply mints a fresh guest identity on its next signed-out
+      // question. What bounds anonymous spend is the server's anonymous daily
+      // cap and per-connection share, not a per-browser count.
       // F-4.8-J-01's rule survives unchanged (see the file docstring): no
       // answer content is ever rendered from anything but a real run's own
       // event stream. What changed in build phase 4.10 is that an
@@ -879,27 +852,6 @@ export function App() {
         }
       } catch (error) {
         if (seq !== askSeq.current) return;
-        if (error instanceof ApiError && error.status === 403 && error.reason === "guest_allowance_exhausted") {
-          // Design decision 5 (`tracker/phase_4.10.md`): the wall appears
-          // ONLY on an exact server refusal, never on a client prediction
-          // and never on the concurrent-run cap's 429, which is a transient
-          // "try again shortly" handled by the branch below.
-          //
-          // The one trigger the wall's original sentence was written for,
-          // and the one it is still true on: five answers delivered, five
-          // spent.
-          setSearchView({ name: "wall", reason: "allowance_exhausted" });
-          return;
-        }
-        if (error instanceof ApiError && error.status === 403 && error.reason === "guest_attempt_limit_reached") {
-          // F-4.10-R-01's refusal. Also a 403 and also permanent for this
-          // identity, so it is also the wall rather than a transient error,
-          // but a DIFFERENT sentence: this visitor may have had every one of
-          // their questions refused and received no answer at all, so
-          // telling them they used their free searches would be false.
-          setSearchView({ name: "wall", reason: "attempt_limit" });
-          return;
-        }
         if (
           error instanceof ApiError &&
           error.status === 429 &&
@@ -917,31 +869,15 @@ export function App() {
           return;
         }
         if (error instanceof ApiError && error.status === 401 && !signedIn) {
-          // The guest token this tab was holding did not work. It is dropped
-          // either way, so the same 401 does not repeat forever, but WHY it
-          // failed decides what happens next, and collapsing the two was the
-          // second, independent path to a free allowance the adversary named
-          // (F-4.10-A-05).
+          // The guest token this tab was holding did not work: revoked when
+          // another tab logged in, or past its 7-day TTL. Dropped so the same
+          // 401 does not repeat; the next ask mints a fresh identity, and the
+          // banner below tells the visitor to send the question again.
           setGuestToken(null);
           clearPersistedGuestToken();
-          if (error.reason === "guest_session_revoked") {
-            // The server revoked this session at migration, from this tab or
-            // another one. That means the allowance was already converted
-            // into an account, so the next ask must NOT mint a fresh identity
-            // with five more searches. Remember it and show the wall, which
-            // is the actionable surface: signing in works right now.
-            markGuestSessionMigrated();
-            setGuestMigrated(true);
-            // The same state as the pre-flight check above, reached from the
-            // server instead of from storage, so the same sentence
-            // (F-4.10-R-02). `runs_used` is equally unknown here.
-            setSearchView({ name: "wall", reason: "migrated" });
-            return;
-          }
-          // Anything else, most realistically a guest token past its 7-day
-          // TTL, is not about the allowance at all, and a returning visitor
-          // must not be walled for it. The next ask mints a fresh identity,
-          // which is the behaviour that was always correct for this case.
+          setDispatchError("Your guest session had ended. Send the question again to continue.");
+          setSearchView({ name: "answer", question });
+          return;
         }
         // F-4.8-J-12. This previously swallowed the exception and dropped the
         // user on an empty answer screen with no explanation. An error message
@@ -957,7 +893,7 @@ export function App() {
     // `view` and `searchView` joined the list when T-4.16-02 made `ask`
     // archive the turn on screen: a stale closure here would file away the
     // PREVIOUS conversation's last turn under this one's question.
-    [signedIn, token, guestToken, guestMigrated, sessionId, view, searchView],
+    [signedIn, token, guestToken, sessionId, view, searchView],
   );
 
   const body = () => {
@@ -978,19 +914,7 @@ export function App() {
               // revoked server-side in the same request (the backend's
               // `_migrate_guest_session`), so the token this tab was
               // holding can never spend another run and must be dropped.
-              //
-              // F-4.10-A-05 corrects what this used to do NEXT, which was
-              // nothing: dropping the token also forgot that there had been
-              // one, so the sign-out below minted a fresh identity with five
-              // fresh searches, every cycle, forever. The credential goes and
-              // the fact stays. Recorded only when a guest token was actually
-              // held, since a visitor who signed in without ever asking
-              // anonymously has migrated nothing and must not be walled for
-              // it.
-              if (guestToken !== null) {
-                markGuestSessionMigrated();
-                setGuestMigrated(true);
-              }
+              // After Log out, the next signed-out question mints a fresh one.
               setGuestToken(null);
               clearPersistedGuestToken();
               setAllowance(null);
@@ -1105,13 +1029,6 @@ export function App() {
             }}
           />
         );
-      case "wall":
-        return (
-          <SignInWall
-            reason={searchView.reason}
-            onSignIn={() => setSearchView({ name: "signin" })}
-          />
-        );
       default:
         return (
           <HomeScreen
@@ -1126,34 +1043,18 @@ export function App() {
             depth={depth}
             onDepthChange={setDepth}
             /*
-             * T-4.10-08. F-4.8-A-21 was about a CLIENT-SIDE counter that
-             * leaked the signed-in user's count to the next anonymous
-             * visitor after sign-out. There is no client-side count left to
-             * leak: `allowance` is set to `null` on sign-out and sign-in
-             * alike (see those handlers), and only ever repopulated from a
-             * fresh `GET /v1/allowance` or `POST /auth/guest` response for
-             * WHOEVER the caller currently is. The dots render only once a
-             * real guest allowance has been fetched (after the first ask,
-             * since minting is lazy); before that, or once signed in, the
-             * footer is simply absent rather than showing a guessed count.
+             * Set 1 (R2, 2026-09-12): no guest dots. There is no per-guest
+             * allowance to show. When the anonymous daily cap is reached,
+             * the home footer says so in words; otherwise nothing renders.
              */
             footer={
-              !signedIn && allowance?.kind === "guest" ? (
-                /*
-                 * F-4.10-V-03. `blocked_reason` was on the wire and honest
-                 * from the moment the server learned to send it, and
-                 * nothing read it, so the dots kept promising a search the
-                 * next request refused. Passed straight through rather than
-                 * re-derived here: the server owns which bound fires first,
-                 * and a second opinion computed in the client is how the
-                 * reporting path and the enforcement path start disagreeing
-                 * again (F-4.10-A-03).
-                 */
-                <GuestAllowance
-                  used={allowance.used}
-                  total={allowance.total}
-                  blockedReason={allowance.blocked_reason ?? null}
-                />
+              !signedIn &&
+              allowance?.kind === "guest" &&
+              (allowance.blocked_reason === "anon_daily_cap_reached" ||
+                allowance.blocked_reason === "anon_source_daily_cap_reached") ? (
+                <Box component="span" sx={{ fontSize: 12.5, color: designTokens.inkMuted }}>
+                  {DAILY_CAP_COPY[allowance.blocked_reason]}
+                </Box>
               ) : null
             }
           />
@@ -1232,20 +1133,6 @@ export function App() {
           // own, fetched fresh, never a stale number inherited across the
           // sign-out.
           setAllowance(null);
-          // F-4.10-A-05, product-owner decision 2026-08-15: the guest token
-          // and the migrated marker are deliberately NOT cleared here, and
-          // this is the one exception to this handler's "everything
-          // session-scoped is cleared here, in one place" rule. A guest
-          // identity is not scoped to an account session; it is scoped to
-          // the browser, and it outlives signing in and out of an account
-          // exactly as it outlives a reload. Clearing it unconditionally is
-          // what made the accepted "clearing the token gives you five more"
-          // tradeoff reachable without anyone clearing anything: sign in,
-          // sign out, ask five more, repeat. A visitor who signs out returns
-          // to the guest identity they already had, with whatever searches
-          // remained, and a visitor whose identity was migrated returns to
-          // the sign-in wall, which is the truthful answer for a session the
-          // server revoked.
           // R-02: a new conversation, not the previous account's.
           setSessionId(newSessionId());
           // R-11: the next person at this workstation has not read the
@@ -1257,6 +1144,9 @@ export function App() {
           // P-03: the next person at this workstation did not collapse the
           // rail, so they do not inherit a collapsed one.
           setRailOpen(true);
+          // Set 1 (R6): Log out lands on the search home page from any screen,
+          // including Integrations, Docs and About.
+          setScreen("search");
           setSearchView({ name: "home" });
         }}
       >

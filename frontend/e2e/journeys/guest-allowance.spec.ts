@@ -1,6 +1,12 @@
 /**
  * Journey 4: what the fifth and sixth guest questions look like.
  *
+ * SET 1 CHANGE, 2026-09-12 (`testing/UI_fix_plan.md`, R1 to R3). The guest
+ * allowance, its dots and the sign-in wall are removed, so this journey no
+ * longer films a refusal. It still films six guest questions in a row, which
+ * now shows that nothing stops or counts down. The history below describes
+ * the allowance it was written for.
+ *
  * `docs/build/UI_feedback.md` lists this as UNTESTED ENTIRELY. The server-side guest
  * allowance shipped in build phase 4.10 and carries five findings that are
  * about its PRESENTATION rather than its enforcement, all merged open:
@@ -51,7 +57,7 @@ test.describe(
   () => {
     test.skip(
       !JOURNEYS_ENABLED,
-      "spends a guest's ENTIRE five-answer allowance plus the refusal",
+      "spends six real answers on the deployed app",
     );
     test.describe.configure({ timeout: 600_000 });
 

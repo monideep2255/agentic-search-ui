@@ -567,17 +567,41 @@ def refund_one_run(
     return refunded_row is not None
 
 
+# The per-guest COUNT with no ceiling, product-owner decisions R1 and R3
+# (2026-09-12, `testing/UI_fix_plan.md` set 1): a guest no longer has a
+# five-answer allowance or a ten-attempt ceiling. Both counters still
+# advance, so usage stays measured and `refund_one_run` keeps working, and
+# the `revoked_at IS NULL` predicate still refuses a migrated session.
+# `_SPEND_STATEMENT` above keeps its ceilings for `spend_one_run`, the
+# primitive, which no production path calls any more.
+_COUNT_STATEMENT = text(
+    "UPDATE guest_sessions"
+    "   SET runs_used = runs_used + 1,"
+    "       attempts_used = attempts_used + 1,"
+    "       last_seen_at = now()"
+    " WHERE id = :guest_id AND revoked_at IS NULL"
+    " RETURNING runs_used, attempts_used"
+)
+
+
 def spend_one_anonymous_run(
     session: Session,
     guest_id: str | uuid.UUID,
     *,
-    cap: int = FREE_RUN_ALLOWANCE,
-    attempt_cap: int = ATTEMPT_ALLOWANCE,
     daily_cap: int,
     source_hash: str | None,
     source_cap: int,
 ) -> SpendResult:
-    """Spend one anonymous run against ALL FOUR bounds, in ONE transaction.
+    """Spend one anonymous run against the SHARED bounds, in ONE transaction.
+
+    SET 1 CHANGE, 2026-09-12. The per-guest allowance and attempt ceiling
+    are gone (R1, R3): the guest's counters are advanced with no ceiling, so
+    this function never returns EXHAUSTED or ATTEMPTS_EXHAUSTED. What still
+    bounds anonymous spend is `daily_cap` and `source_cap`, which is what
+    held the money all along: the per-guest bounds were keyed on identities
+    `POST /auth/guest` mints for free. The history below describes the
+    four-bound version and is kept for the reasoning behind the two shared
+    bounds that remain.
 
     This is what the query endpoint calls. `spend_one_run` above is the
     per-guest primitive and is NOT sufficient on its own for the production
@@ -688,20 +712,21 @@ def spend_one_anonymous_run(
     if source_hash is not None and not isinstance(source_hash, str):
         raise TypeError("source_hash must be a str or None")
     guest_uuid = _coerce_guest_id(guest_id)
-    validated_cap = _validate_cap(cap)
-    validated_attempt_cap = _validate_cap(attempt_cap)
     validated_daily_cap = _validate_cap(daily_cap)
     validated_source_cap = _validate_cap(source_cap)
 
-    guest_result = _apply_spend(
-        session, guest_uuid, cap=validated_cap, attempt_cap=validated_attempt_cap
-    )
-    if guest_result.state is not SpendState.SPENT:
-        # Nothing was written (the conditional UPDATE matched no row), so
-        # there is nothing to commit. Rolling back rather than committing
-        # ends the transaction without asserting that a write happened.
+    counted_row = session.execute(_COUNT_STATEMENT, {"guest_id": guest_uuid}).first()
+    if counted_row is None:
+        # Nothing was written: the session was revoked by migration or never
+        # existed. Rolling back rather than committing ends the transaction
+        # without asserting that a write happened.
         session.rollback()
-        return guest_result
+        return SpendResult(SpendState.REVOKED_OR_UNKNOWN)
+    guest_result = SpendResult(
+        SpendState.SPENT,
+        runs_used=int(counted_row[0]),
+        attempts_used=int(counted_row[1]),
+    )
 
     # UTC, never the server's local date. A ceiling that resets at an
     # operator's midnight is a ceiling whose window moves with a

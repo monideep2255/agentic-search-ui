@@ -116,7 +116,7 @@ async function signInAndScript(page: Page): Promise<void> {
   await page.getByRole("navigation", { name: /main/i }).getByRole("button", { name: /log in/i }).click();
   await page.getByLabel("Email").fill(`trust-${randomUUID()}@example.com`);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
 
   const main = page.getByRole("main");
   await main.getByRole("textbox", { name: /question/i }).fill("Which diseases are associated with BRCA1?");

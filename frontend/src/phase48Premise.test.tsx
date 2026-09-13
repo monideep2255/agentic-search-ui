@@ -352,6 +352,11 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
       refresh_token: "test-refresh",
       token_type: "bearer",
     } as never);
+    // Set 1, R5 (2026-09-12): Log in tries signup first, so signup must be
+    // mocked too. A 409 is the registered-email path, which goes on to login.
+    vi.spyOn(api, "signup").mockRejectedValue(
+      new api.ApiError(409, "signup failed with 409: email already registered"),
+    );
     vi.spyOn(api, "openEventStream").mockReturnValue(new Promise(() => {}) as never);
     // T-4.10-08/09: signing in now fetches the caller's real allowance
     // (`App.tsx`'s `onAuthenticated`) so the account menu can state the

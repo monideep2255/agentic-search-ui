@@ -69,7 +69,7 @@ async function signUpFreshAccount(page: Page): Promise<void> {
   await page.getByRole("navigation", { name: /main/i }).getByRole("button", { name: /log in/i }).click();
   await page.getByLabel("Email").fill(freshEmail());
   await page.getByLabel("Password").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
 
   /*
    * The landing's question field is the next real DOM after auth resolves, so

@@ -1171,7 +1171,9 @@ describe("a returning guest's allowance is fetched at mount", () => {
     fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
   });
 
-  it("shows the real count before the first ask, for a token restored from a prior visit", async () => {
+  // Set 1, R2 (2026-09-12): the allowance is still read at mount, so a
+  // shared daily cap can be stated, but no count or dots render.
+  it("reads the allowance at mount for a token restored from a prior visit, and shows no count", async () => {
     // `persistGuestToken` writes through the same key `guestToken`'s own
     // initializer reads (`loadPersistedGuestToken`), so this is exactly
     // what a prior visit's mint would have left behind, not a hand-built
@@ -1191,8 +1193,8 @@ describe("a returning guest's allowance is fetched at mount", () => {
       expect.anything(),
     );
 
-    const banner = await screen.findByTestId("guest-allowance");
-    expect(banner.textContent).toMatch(/3 searches left/i);
+    await waitFor(() => expect(screen.queryByTestId("guest-allowance")).not.toBeInTheDocument());
+    expect(screen.queryByText(/\d+ searches? left/i)).not.toBeInTheDocument();
     // Nothing was asked, so nothing should have minted a fresh identity or
     // started a run: this is purely the mount-time read of an existing one.
     expect(mintGuestMock).not.toHaveBeenCalled();

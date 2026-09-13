@@ -44,7 +44,7 @@ async function signIn(page: import("@playwright/test").Page) {
     .click();
   await page.getByLabel("Email").fill(`a11y-${randomUUID()}@example.com`);
   await page.getByLabel("Password").fill("Str0ngPassw0rd!");
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
   await expect(
     page.getByRole("main").getByRole("textbox", { name: /question/i }),
   ).toBeVisible();
