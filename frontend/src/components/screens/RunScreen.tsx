@@ -166,7 +166,10 @@ export function RunScreen({
   const running = startedAt !== null && activeStep !== null;
 
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
+    // Set 2, R8: `width: 100%` because `mx: auto` in a flex column stops the
+    // box stretching, which made this card shrink to its content and grow
+    // when the answer screen replaced it. Both screens are now the full 900.
+    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
       <Box
         sx={{
           bgcolor: designTokens.surface,
@@ -223,7 +226,8 @@ export function RunScreen({
           >
             Stop
           </Button>
-          <Button onClick={onNewSearch} sx={{ fontSize: 12.5, color: designTokens.inkMuted, border: `1px solid ${designTokens.line}`, px: 1.6, py: 0.6 }}>
+          {/* Set 2, R12: filled blue with white text, the design system's `.btn`, so it reads apart from Stop. */}
+          <Button variant="contained" onClick={onNewSearch} sx={{ fontSize: 12.5, px: 1.6, py: 0.6 }}>
             New search
           </Button>
         </Box>

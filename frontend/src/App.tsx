@@ -1062,6 +1062,31 @@ export function App() {
     }
   };
 
+  /*
+   * Set 2, R10 (2026-09-12): a short fade between home, progress, answer and
+   * the other pages, instead of a hard cut. Keyed on the view, so it plays
+   * once per screen change and never on a re-render within a screen. Off for
+   * anyone who asked for reduced motion.
+   */
+  const fadedBody = () => (
+    <Box
+      key={`${screen}:${searchView.name}`}
+      sx={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        "@keyframes screenFadeIn": {
+          from: { opacity: 0, transform: "translateY(4px)" },
+          to: { opacity: 1, transform: "none" },
+        },
+        animation: "screenFadeIn .2s ease-out",
+        "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+      }}
+    >
+      {body()}
+    </Box>
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -1208,11 +1233,11 @@ export function App() {
               can only claim that height if this box lays its children out.
             */}
             <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-              {body()}
+              {fadedBody()}
             </Box>
           </Box>
         ) : (
-          body()
+          fadedBody()
         )}
       </AppShell>
       </div>

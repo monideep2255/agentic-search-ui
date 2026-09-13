@@ -161,7 +161,9 @@ export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) 
       component="section"
       data-testid="auth-gate"
       aria-labelledby="auth-gate-title"
-      sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}
+      // Set 2, R7: `my: auto` centres the card vertically between the header
+      // and the footer, since the parent is a full-height flex column.
+      sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: 3, py: 3.5 }}
     >
       <Box
         sx={{

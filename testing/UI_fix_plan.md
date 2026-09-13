@@ -1,26 +1,518 @@
 # UI fix plan
 
-The ordered work list for fixing the product after the first testing round on 2026-09-12. It is built from everything in `testing/Developer/` and `testing/Product/`, and it is worked through the UI fix loop: fix on `develop`, run quick checks, push, confirm live, and the product owner retests.
+The ordered work list for fixing the product after the first testing round on 2026-09-12. Each set says what you will see, what was noted, and what to expect, so you can check progress without reading the code.
 
-Written for the product owner and for whoever does the fixing. Nothing in it is built yet.
+## How to read this
+
+- ✅ built and passing checks
+- 🚀 live on develop
+- 👍 you retested and approved
+- An empty mark means not yet.
 
 ## Table of contents
 
-- [How to use this plan](#how-to-use-this-plan)
-- [Where the list comes from](#where-the-list-comes-from)
-- [Decisions that block a fix set](#decisions-that-block-a-fix-set)
-- [Batch 1: screens and pages](#batch-1-screens-and-pages)
-- [Batch 2: answers](#batch-2-answers)
-- [Developer follow-through](#developer-follow-through)
-- [Dropped from the developer specification](#dropped-from-the-developer-specification)
-- [Status](#status)
+- [How to read this](#how-to-read-this)
+- [Progress at a glance](#progress-at-a-glance)
+- [Set 1: let people in](#set-1-let-people-in)
+- [Set 2: a steady frame](#set-2-a-steady-frame)
+- [Set 3: refusals and Stop](#set-3-refusals-and-stop)
+- [Set 4: stay signed in, history on phones](#set-4-stay-signed-in-history-on-phones)
+- [Set 5: Integrations and the disclaimer](#set-5-integrations-and-the-disclaimer)
+- [Set 6: let automated checks see a real answer](#set-6-let-automated-checks-see-a-real-answer)
+- [Set 7: a conversation that remembers](#set-7-a-conversation-that-remembers)
+- [Set 8: search every layer, with the scientists](#set-8-search-every-layer-with-the-scientists)
+- [Set 9: answers worth reading](#set-9-answers-worth-reading)
+- [Set 10: reliable flagship answers, and saved history](#set-10-reliable-flagship-answers-and-saved-history)
+- [Developer detail](#developer-detail)
 
-## How to use this plan
+## Progress at a glance
 
-- Work one fix set at a time, in order. A set is 1 to 6 related changes that ship together.
-- Each set says what you will see, which requirements it closes, the likely files, the checks run before pushing, and which tests in `Product/Product_workflows.md` to redo.
-- When a set ships, its status in the table at the end changes, and so do the matching requirements in section 11 of `Product/reports/2026-09-12_consistency_and_test_1.md`.
-- File lists are where the change most likely lives, from today's reading of the code. Treat them as a starting point, not a promise.
+| Set | What you will see | Built | Live | Approved | You retest |
+|---|---|---|---|---|---|
+| 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
+| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens | ✅ | | | Tests 1, 2, 3, 9, 11 |
+| 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | | | | Tests 8, 9, 13, 19 |
+| 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
+| 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
+| 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | | | | Nothing |
+| 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen | | | | Tests 2, 13 |
+| 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | | | | Tests 1, 7, 12 |
+| 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken | | | | Tests 1, 7, 12 |
+| 10. Reliable flagship answers, and saved history | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
+
+## Set 1: let people in
+
+Batch: screens and pages.
+
+What you will see: no guest limit and no walls. One Log in button, where a new email creates the account. Log out goes to the home page. Pushed as commit `7766ebf` and live on develop on 2026-09-12, approved by the product owner the same day.
+
+### 1.1 Remove the five-search guest limit (R1)
+
+Built: ✅ · Live: 🚀 · Approved: 👍
+
+- Feature being tested: a guest can search without hitting a five-search counter.
+- What you noted: "One thing we need to change for now is to get away with the five search concept, keep the login, and allow people to search, because this is just a prototype."
+- What's expected: test 1 now covers searching as a guest, with no count and no sign-in card however many searches you run.
+
+### 1.2 Remove the free-search and moved-into-an-account walls (R2)
+
+Built: ✅ · Live: 🚀 · Approved: 👍
+
+- Feature being tested: a guest reaches the search box with no wall in the way.
+- What you noted: "It tells me to sign in to keep searching, because this browser's guest session was moved into an account. This is a really bad experience, and it needs to be consistent."
+- What's expected: no "You have used your free searches" wall and no "moved into an account" wall, so test 1 can even start.
+
+### 1.3 Remove the ten-attempt guest limit (R3)
+
+Built: ✅ · Live: 🚀 · Approved: 👍
+
+- Feature being tested: a guest is not stopped after a fixed number of attempts.
+- What you noted: "For too many guest attempts, number twenty, I said just remove it."
+- What's expected: test 20 is removed, and test 8, the off-topic refusal, still covers a normal refusal.
+
+### 1.4 Keep the cost caps, raise the anonymous daily cap to 1,000 (R4)
+
+Built: ✅ code kept, cap set to 1,000 on develop on 2026-09-12, confirmed by the product owner · Live: 🚀 · Approved: 👍
+
+- Feature being tested: the caps that bound real cost, not guest behaviour, stay in place.
+- What you noted: from decision X4, after the assistant's first description was corrected: the system-wide daily cap does not fire today, so the anonymous daily cap is the only real bound on total anonymous spend. Kept and raised from 200 to 1,000 searches a day; the per-search cost cap and the per-connection share also stay.
+- What's expected: nobody hits a guest wall in normal use, and test 18 still shows no unlimited claim for a signed-in account.
+
+### 1.5 One Log in button (R5)
+
+Built: ✅ · Live: 🚀 · Approved: 👍
+
+- Feature being tested: a single button handles both a new email and an existing one.
+- What you noted: "For simplicity, remove the Sign up button and keep only Log in, so people type in any email address and password they want and go straight in, without the 'we don't recognise your email' process."
+- What's expected: test 3, one "Log in" button, a new email creates the account, a wrong password on an existing email says so.
+
+### 1.6 Log out returns to the home page (R6)
+
+Built: ✅ · Live: 🚀 · Approved: 👍
+
+- Feature being tested: signing out from anywhere lands on the search home page.
+- What you noted: "Then they can easily log out and go back to the home page."
+- What's expected: test 3, Log out from any screen, including Integrations, lands on the home page with the previous conversation gone.
+
+### 1.7 The daily cap message reaches the screen (D1)
+
+Built: ✅ already worked, and now also shown on the home page · Live: 🚀 · Approved: 👍
+
+- Feature being tested: when the shared anonymous daily cap is hit, its purpose-written message actually appears.
+- What you noted: from the developer specification, item D1 (W-GUEST-11 in `Developer_workflows.md`). Once the five-search limit is gone, the daily cap is the only limit a guest can hit, so its message has to be right.
+- What's expected: a guest who hits the daily cap sees the written message, not a blank or generic error.
+
+### 1.8 Update the test checklist for the new sign-in flow (R37)
+
+Built: ✅ · Live: 🚀 · Approved: 👍
+
+- Feature being tested: `Product/Product_workflows.md` matches what set 1 actually built.
+- What you noted: from the requirement list, section 11 of the report.
+- What's expected: tests 3 and 5 rewritten for one Log in button, and tests 4, 16 and 20 marked removed.
+
+## Set 2: a steady frame
+
+Batch: screens and pages.
+
+What you will see: the white box stays one width from progress to answer. The header and footer stay put, both in the lighter NCBI blue, with smooth changes between screens. New search is a filled blue button. The sign-in box is centred.
+
+### 2.1 Centre the sign-in box (R7)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the log-in form sits in the middle of the screen, not tucked under the header.
+- What you noted: "The sign-in box is way too close to the header; I would like it much more centred."
+- What's expected: the box sits centred vertically between the header and footer, checked in test 3 and test 11.
+
+### 2.2 One box width from progress to answer (R8)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the white content box does not change size as a search moves from progress to answer.
+- What you noted: "The white box should stay the size it is when the answer is actually shown."
+- What's expected: the box stays one width throughout a search, checked in tests 1, 6 and 9.
+
+### 2.3 Fix the header and footer in place (R9)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the header and footer stay still while the content in between changes.
+- What you noted: "The transitions are very weird. The footer moves all over the place. The header and footer should stay consistent, including going from the home page to the search page."
+- What's expected: a stable content area so the footer no longer jumps, checked in test 11.
+
+### 2.4 Smooth transitions between screens (R10)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: moving between home, progress and answer feels like one continuous app.
+- What you noted: "It needs to be a much smoother experience. Right now it looks very static and clunky."
+- What's expected: a smooth transition rather than a hard screen swap, checked in test 11.
+
+### 2.5 Header and footer in the same blue (R11)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the header and footer use one colour, not two.
+- What you noted: "The header and footer should be the same colour." Decided in section 10, question 1: the lighter NCBI blue, for both.
+- What's expected: both header and footer in the lighter NCBI blue, checked in tests 2, 3, 9 and 11.
+
+### 2.6 New search as a distinct blue button (R12)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: New search and Stop no longer look like the same button.
+- What you noted: "The New search and Stop buttons are the same colour. New search should be a different colour, a blue background with white text, so it looks distinct."
+- What's expected: New search is a filled blue button with white text, checked in test 9.
+
+### 2.7 Add the three missing logo colours to the theme (X9)
+
+Built: ✅ · Live: · Approved:
+
+- Feature being tested: the new blue header has every colour it needs, approved for the theme file.
+- What you noted: decision X9, the product owner's approval to change `frontend/src/theme.ts`.
+- What's expected: when the header turns the lighter NCBI blue, three approved logo colours are added and checked for contrast, so the design token check reports zero problems.
+
+## Set 3: refusals and Stop
+
+Batch: screens and pages.
+
+What you will see: refusals show a calm grey label naming the reason, and the NCBI search address is a link. Pressing Stop shows "Search stopped" with Run again and New search.
+
+### 3.1 Remove the red refusal pills (R13)
+
+Built: · Live: · Approved:
+
+- Feature being tested: a refusal no longer looks like a system error.
+- What you noted: from decision U6: a refusal should not carry a red "Not verified" or "Not fully grounded" pill.
+- What's expected: a neutral grey label instead of a red pill, checked in test 13.
+
+### 3.2 Make the NCBI search address a clickable link (R14)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the suggestion inside a refusal can actually be followed.
+- What you noted: "The messaging is there, telling me to try something, but it should be a clickable link."
+- What's expected: the NCBI search address in a refusal opens as a link, checked in test 13.
+
+### 3.3 A grey label matched to the refusal reason (R44)
+
+Built: · Live: · Approved:
+
+- Feature being tested: different refusal reasons read differently from each other.
+- What you noted: decision U6, a neutral grey label matched to the reason, such as "No answer found in NCBI records" or "Outside biomedical research".
+- What's expected: a "no data" refusal and an off-topic refusal read differently, checked in tests 13 and 19.
+
+### 3.4 "Search stopped" with Run again and New search (R45)
+
+Built: · Live: · Approved:
+
+- Feature being tested: pressing Stop gives a clear end state instead of a frozen screen.
+- What you noted: decision U7, replacing the frozen progress screen with a "Search stopped" message and two buttons.
+- What's expected: after Stop, "Search stopped" appears with "Run again" and "New search", checked in test 9.
+
+## Set 4: stay signed in, history on phones
+
+Batch: screens and pages.
+
+What you will see: a reload keeps you signed in. On a phone, the history button opens your searches in a panel that slides in.
+
+### 4.1 Stay signed in on reload, and history on phones (R46)
+
+Built: · Live: · Approved:
+
+- Feature being tested: reloading the page does not sign you out, and the history panel works at phone width.
+- What you noted: from decisions U8 and U9. U8, on reloading the page signing you out: keep people signed in across a reload, with history and the conversation where they left them. U9, on the phone history button doing nothing: make history reachable on a phone as a panel that slides in and closes.
+- What's expected: a reload keeps you signed in, checked in tests 3, 6 and 11 at phone width, and the history button opens a sliding panel on a phone.
+
+## Set 5: Integrations and the disclaimer
+
+Batch: screens and pages.
+
+What you will see: an Integrations page in the reference layout with four equal cards, summary chips and API documentation below. The Docs tab is gone. A larger disclaimer with fuller wording. The GraphQL example works as printed, and MCP accepts connections.
+
+### 5.1 Rebuild the Integrations page from the reference layout (R15)
+
+Built: · Live: · Approved:
+
+- Feature being tested: every Integrations card looks and behaves the same way.
+- What you noted: "On the Integrations tab, the REST and SSE formatting and how those things are structured is not uniform. Something's up, something's down. I want it to be very consistent."
+- What's expected: equal-height cards with a round icon, title, description and buttons pinned to the bottom, plus a summary line and an access notice, checked in test 11.
+
+### 5.2 Correct the GraphQL example (R16)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the GraphQL example on the page actually works if you copy it.
+- What you noted: checked live on develop, the example fails three ways: it is written as a query instead of a mutation, it uses `question` where the field is `text`, and it leaves out a required session id.
+- What's expected: the corrected example returns a real BRCA1 answer with citations, checked in test 11.
+
+### 5.3 Fix the MCP server rejecting every request (R17)
+
+Built: · Live: · Approved:
+
+- Feature being tested: an AI tool can actually connect to the MCP server.
+- What you noted: checked live on develop, every MCP request is rejected with "Invalid Host header", signed in or not.
+- What's expected: MCP accepts connections, checked in test 11.
+
+### 5.4 Fold Docs into Integrations (R18)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the navigation bar no longer has an unexplained Docs tab.
+- What you noted: "And on the navigation bar I see Docs, and I have no idea what its purpose is. Is it for the integrations, or for streaming?"
+- What's expected: Docs becomes an "API documentation" section inside Integrations, corrected to match the real event stream, with the Docs tab removed, checked in test 11.
+
+### 5.5 Rebuild the disclaimer at the reference size (R19)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the disclaimer reads as seriously as it should before someone continues.
+- What you noted: your test notes, summarised rather than quoted: make the disclaimer as big as the one on the reference site.
+- What's expected: about 900px wide, a large titled heading, fuller body text, a titled notice box, and a full-width continue button, checked in test 15.
+
+### 5.6 Four Integrations cards with real summary chips (R41)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the Integrations page shows exactly the surfaces that work, with true numbers above them.
+- What you noted: decision U3, four cards: REST and SSE, GraphQL, MCP server, and one "Command line tools" card covering the command line and KGX export, with summary chips for 115M nodes, 693M edges, 3 data layers and 7 tools.
+- What's expected: four cards and correct chips, with API documentation below them, checked in test 11.
+
+### 5.7 Disclaimer wording from the reference structure (R42)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the disclaimer reads like a real medical disclaimer, in this product's own voice.
+- What you noted: decision U4, "Important Medical Disclaimer" as the title, a bold opening sentence, the paragraph about seeking a physician's advice, a "Prototype" notice box in place of the reference's own wording, and a full-width continue button.
+- What's expected: the new wording appears while keeping this product's own colours and typeface, checked in test 15.
+
+## Set 6: let automated checks see a real answer
+
+Batch: answers.
+
+What you will see: nothing on screen. It lets the answer fixes be checked automatically, not only by hand.
+
+### 6.1 Let the automated test harness see a real knowledge-graph answer (D3)
+
+Built: · Live: · Approved:
+
+- Feature being tested: an automated end-to-end run can check a real answer body, not only that the screen rendered.
+- What you noted: from the developer specification, item D3. The automated test harness fakes the AI model but not the knowledge graph, so no automated test can see a real answer today, and batch 2 changes answers.
+- What's expected: an end-to-end run that asserts on a real answer body. Nothing changes on screen, and there is nothing for the product owner to retest.
+
+## Set 7: a conversation that remembers
+
+Batch: answers.
+
+What you will see: "What variants cause it?" answers about BRCA1. "Yes, go deeper" continues the same search. A follow-up stays on the same screen, with the earlier answer shrinking above.
+
+### 7.1 Follow-ups keep the earlier context (R20)
+
+Built: · Live: · Approved:
+
+- Feature being tested: "it" in a follow-up question resolves to the gene from the previous answer.
+- What you noted: "With a different question, I don't see any answers being produced. With diseases linked to BRCA1, I tried the follow-up 'What variants cause it?' and it refuses to answer, which means it is not retaining the previous context."
+- What's expected: a second answer about BRCA1 without retyping BRCA1, checked in test 2.
+
+### 7.2 "Yes, go deeper" continues the same search (R21)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the go-deeper button uses what the previous answer already found.
+- What you noted: "When it asks me 'do you want me to go deeper?', I clicked on it and it completely refused. What was the purpose? Have you not set up the context that gets fed into it?"
+- What's expected: clicking "go deeper" continues the same search rather than starting a new, unrelated one, checked in test 2.
+
+### 7.3 A follow-up stays on the same screen (R22)
+
+Built: · Live: · Approved:
+
+- Feature being tested: asking a follow-up feels like a conversation, not a new page.
+- What you noted: "Secondly, it goes to a new page, which it should not. The first answer should minimise and the chat should continue on the same screen. That is one of the most important things."
+- What's expected: the earlier answer shrinks above and the new answer grows below, on one screen, checked in test 2.
+
+## Set 8: search every layer, with the scientists
+
+Batch: answers.
+
+What you will see: every question searches the knowledge graph, live NCBI records, and literature and trials at the same time. The progress screen shows a lead scientist handing off to three random scientists, with steps like "Franklin is searching…".
+
+### 8.1 Search all three layers at the same time (R29)
+
+Built: · Live: · Approved:
+
+- Feature being tested: every question reaches the knowledge graph, live NCBI records, and literature and trials together.
+- What you noted: "Ideally all 3. Can we not have the 3 different searches being spawned? Will it be a lot of work?"
+- What's expected: an answer with sources from more than one layer, checked in test 12.
+
+### 8.2 A lead scientist hands off to three named scientists (R30)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the progress screen shows the three-layer search as a handoff between scientists.
+- What you noted: "What we can show is some fun work: one scientist picks up the question and asks 3 different scientists every time to help find the answer, and then the original scientist synthesizes the answer."
+- What's expected: a lead scientist, three named helper scientists on screen, and one coordinator writing the answer underneath, checked in tests 1 and 14.
+
+### 8.3 Progress steps named for the scientist (R31)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the progress screen reads like a person working, not a generic spinner.
+- What you noted: from first-impressions points 1 and 2.
+- What's expected: steps such as "Franklin is searching…", and some character in the writing that never changes the facts, checked in tests 1 and 14.
+
+### 8.4 Scientists stay random on every visit (R43)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the scientist shown, and the three helpers, can differ between visits without changing the answer.
+- What you noted: decision U5, random every visit, as develop does today, with the three helpers also picked at random.
+- What's expected: two separate visits can show different scientists but the same answer content, checked in test 14.
+
+## Set 9: answers worth reading
+
+Batch: answers.
+
+What you will see: two modes, Plain language and Researcher, with an info button. Plain language answers run about 250 words in three paragraphs. Researcher answers run a full page with short topic headings. Answers stream in sentence by sentence and never open broken. One plain trust line replaces the pills, and the depth cannot change mid-search.
+
+### 9.1 Two answer modes, Plain language and Researcher (R23)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the three old depths become two modes that match how people actually read.
+- What you noted: "The researcher and deep technical modes can be combined into one."
+- What's expected: two buttons, "Plain language" and "Researcher", checked in test 7, with the internal names `clinical_brief` and `deep_technical` still accepted by GraphQL, the command line and MCP.
+
+### 9.2 An info button explaining the two modes (R24)
+
+Built: · Live: · Approved:
+
+- Feature being tested: a reader can find out what each mode means before choosing it.
+- What you noted: from first-impressions point 4.
+- What's expected: a small info icon that explains "Plain language" and "Researcher", checked in test 7.
+
+### 9.3 Plain language: about 250 words in three paragraphs (R25)
+
+Built: · Live: · Approved:
+
+- Feature being tested: a plain-language answer is short enough to actually read.
+- What you noted: decided as question A3, three short paragraphs, about 250 words: the answer, what it means, and background from first principles for a reader starting from zero.
+- What's expected: a Plain language answer of about 250 words in three short paragraphs, checked in test 7.
+
+### 9.4 Researcher: a full page organised by topic (R26)
+
+Built: · Live: · Approved:
+
+- Feature being tested: a Researcher answer gives a full, structured review rather than one sentence.
+- What you noted: decided as question A4, a full page, about 700 words or more, organised by topic, for someone doing a deep review.
+- What's expected: a full-page Researcher answer, checked in test 7.
+
+### 9.5 Short paragraphs of prose with citations inline (R27)
+
+Built: · Live: · Approved:
+
+- Feature being tested: an answer reads as flowing prose rather than a sparse list.
+- What you noted: decided as question A2, short paragraphs of flowing prose, with citations inline.
+- What's expected: readable paragraphs with numbered citations inline, checked in tests 1 and 12.
+
+### 9.6 The answer streams in sentence by sentence (R28)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the answer builds up on screen instead of appearing all at once.
+- What you noted: "I also thought we were going to stream the answer, and I don't see streaming. It just shows the answer, and it is very sparse."
+- What's expected: each sentence appears as it is ready, one of the three workflows `Product_workflows.md` notes cannot be triggered by hand and is checked on the developer side.
+
+### 9.7 Fix answers that open broken or garbled (R32)
+
+Built: · Live: · Approved:
+
+- Feature being tested: an answer's first sentence always reads as a complete sentence.
+- What you noted: from the browser walkthrough, "An answer's first sentence can come out garbled, for example 'BRCA1 (gene symbol BRCA1 [1]. These are…'."
+- What's expected: no answer opens with "These include…" and no subject, or a broken first sentence, checked in test 1.
+
+### 9.8 Fix the uncited note and awkward disease names (R33)
+
+Built: · Live: · Approved:
+
+- Feature being tested: an added note about further records does not look like an uncited claim, and disease names read naturally.
+- What you noted: from the browser walkthrough, a "one further gene record" note shows as a grey sentence with no source.
+- What's expected: notes about extra records are clearly not claims, and disease names read naturally rather than "susceptibility to, 1", checked in test 1.
+
+### 9.9 Trust signals become one plain line (R36)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the trust signal on a real answer says something useful in one line, instead of contradicting pills.
+- What you noted: decision U1, one plain line on real answers only, such as "Confirmed by 2 independent sources" or "Based on 1 source, not yet confirmed", with an info icon that explains it.
+- What's expected: one plain trust line, with no pill contradicting another, checked in test 12.
+
+### 9.10 Researcher headings, Plain language without them (R40)
+
+Built: · Live: · Approved:
+
+- Feature being tested: a Researcher answer is easy to scan without becoming a bulleted list.
+- What you noted: decision U2, a few short plain topic headings, each followed by short paragraphs of prose with citations inline. Plain language answers stay without headings.
+- What's expected: Researcher answers show short topic headings, Plain language answers do not, checked in test 7.
+
+### 9.11 A small medical-advice line on Plain language answers (R47)
+
+Built: · Live: · Approved:
+
+- Feature being tested: a Plain language answer carries a light reminder that it is not medical advice.
+- What you noted: decision X5, one small grey line under Plain language answers only, "Research information, not medical advice." Researcher answers do not show it.
+- What's expected: the grey line under Plain language answers only, checked in test 7.
+
+### 9.12 The depth cannot change mid-search (D2)
+
+Built: · Live: · Approved:
+
+- Feature being tested: choosing a different mode while a search is running does not corrupt the answer.
+- What you noted: from the developer specification, item D2 (W-CTRL-05), relevant once there are two modes with very different answers.
+- What's expected: the mode selector is locked once a search starts, checked alongside test 7.
+
+## Set 10: reliable flagship answers, and saved history
+
+Batch: answers.
+
+What you will see: BRCA1 and GCK answer every time. Clicking a history item shows the saved answer at once, with Run again.
+
+### 10.1 Stop the flagship questions from refusing (R34)
+
+Built: · Live: · Approved:
+
+- Feature being tested: the two questions the product is judged on answer reliably every time.
+- What you noted: from the developer walkthrough, not your words: "Which diseases are associated with BRCA1?" answered 5 times and was refused 3 times, at different depths, minutes apart.
+- What's expected: BRCA1 and GCK answer every time, checked in tests 1 and 13.
+
+### 10.2 History shows the saved answer instantly (R35)
+
+Built: · Live: · Approved:
+
+- Feature being tested: clicking a past search does not cost a fresh search just to see it again.
+- What you noted: decided as question A6, show the saved answer instantly, with a "Run again" button for a fresh one.
+- What's expected: clicking a history item shows its saved answer at once, with a Run again option, checked in test 6.
+
+### 10.3 The consistency run, three tries per golden question (R38)
+
+Built: · Live: · Approved:
+
+- Feature being tested: every one of the 50 golden questions is measured for how often it actually answers.
+- What you noted: "Consistency run, done by the assistant on the developer side. Ask each of the 50 golden questions 3 times on develop, signed in, and record for each run: answered or refused, how long it took, and how many sources and layers it used."
+- What's expected: a per-question result such as "BRCA1 diseases: answered 2 of 3", repeated after sets 7, 8 and 9. This is a developer check, not a hand test.
+
+### 10.4 Judge answer quality once answering is reliable (R39)
+
+Built: · Live: · Approved:
+
+- Feature being tested: answer quality is judged only once the product answers consistently.
+- What you noted: "Only once questions answer reliably, judge answer quality: the grader, or a domain expert reading the answers."
+- What's expected: a quality pass with the grader or a domain expert, once R38's consistency run shows reliable answering. This is a developer check, not a hand test.
+
+## Developer detail
+
+Everything below is for whoever does the fixing, moved from earlier versions of this plan rather than dropped. This plan is built from everything in `testing/Developer/` and `testing/Product/`, and it is worked through the UI fix loop: fix on `develop`, run quick checks, push, confirm live, and the product owner retests.
+
+Work one fix set at a time, in order. A set is 1 to 6 related changes that ship together. Each set below says the likely files, the checks run before pushing, and which tests in `Product/Product_workflows.md` to redo. File lists are where the change most likely lives, from the reading of the code on 2026-09-12. Treat them as a starting point, not a promise. When a set ships, its status changes above, and so do the matching requirements in section 11 of `Product/reports/2026-09-12_consistency_and_test_1.md`.
 
 ```mermaid
 flowchart LR
@@ -30,7 +522,7 @@ flowchart LR
     D --> E[Next fix set]
 ```
 
-## Where the list comes from
+### Where the list comes from
 
 | Source | What it contributed |
 |---|---|
@@ -38,18 +530,18 @@ flowchart LR
 | `Product/feedback/inbox/2026-09-12_first_impressions.md` | Loading feel, scientist character, answer formatting, the mode info button, all three layers. Already folded into R24, R27, R29 and R31 |
 | `Developer/reports/2026-09-12_walkthrough/` | Refusal rates, the broken first sentence, the uncited note, frozen Stop. Already folded into R32 to R34 and R45 |
 | `Developer/reports/2026-09-12_reference_comparison/` | The Integrations layout and disclaimer size. Already in R15, R19, R41 and R42 |
-| `Developer/Developer_workflows.md` | Four open items the requirement list did not have, added below as D1 to D4, plus stale items dropped at the end |
+| `Developer/Developer_workflows.md` | Four open items the requirement list did not have, added as D1 to D4 below, plus stale items dropped further down |
 
-The four additions from the developer specification:
+### D1 to D4, developer-only items found outside the requirement list
 
-| ID | Item | Why it matters now |
-|---|---|---|
-| D1 | When the shared daily cap on anonymous searches is hit, the purpose-written message never reaches the screen (W-GUEST-11) | Once the five-search limit is gone, that cap is the only limit a guest can hit, so its message has to be right. Verify first: it may have changed since the specification was written |
-| D2 | The answer depth can be changed while a search is running (W-CTRL-05) | Relevant once there are two modes with very different answers |
-| D3 | The automated test harness fakes the AI model but not the knowledge graph, so no automated test can see a real answer | Batch 2 changes answers, and without this only hand testing can check them |
-| D4 | The frontend test suite gives different results depending on machine load, and journey 7 selects navigation items the wrong way inside a `.catch()`, so it has probably never navigated | Quick checks before each push need to be trustworthy |
+| ID | Item | Why it matters now | Assigned to |
+|---|---|---|---|
+| D1 | When the shared daily cap on anonymous searches is hit, the purpose-written message never reaches the screen (W-GUEST-11) | Once the five-search limit is gone, that cap is the only limit a guest can hit, so its message has to be right. Verify first: it may have changed since the specification was written | Set 1 |
+| D2 | The answer depth can be changed while a search is running (W-CTRL-05) | Relevant once there are two modes with very different answers | Set 9 |
+| D3 | The automated test harness fakes the AI model but not the knowledge graph, so no automated test can see a real answer | Batch 2 changes answers, and without this only hand testing can check them | Set 6 |
+| D4 | The frontend test suite gives different results depending on machine load, and journey 7 selects navigation items the wrong way inside a `.catch()`, so it has probably never navigated | Quick checks before each push need to be trustworthy | Developer follow-through, best done during set 2 |
 
-## Decisions that block a fix set
+### Decisions that block a fix set
 
 From section 12 of the report. Everything else is decided.
 
@@ -62,24 +554,7 @@ From section 12 of the report. Everything else is decided.
 | X7: approve the consistency run of about 150 real searches | Set 10 | DECIDED: a baseline run now, before any answer fix, then again after sets 7, 8 and 9 |
 | X8: raise the per-search cost cap, only if full-page answers are cut short | Set 9, only if it happens | Decide when measured |
 
-## Batch 1: screens and pages
-
-### Set 1: let people in
-
-What you will see: no guest limit and no walls. One Log in button, where a new email creates the account. Log out goes to the home page.
-
-Progress, 2026-09-12. Marks: ✅ built and passing checks on this machine, 🚀 live on develop, 👍 you retested and approved. Pushed as commit 7766ebf and live on develop on 2026-09-12.
-
-| Requirement | What | Built | Live | Approved |
-|---|---|---|---|---|
-| R1 | No five-search guest limit | ✅ | 🚀 | 👍 |
-| R2 | No "used your free searches" or "moved into an account" walls, no dots | ✅ | 🚀 | 👍 |
-| R3 | No ten-attempt guest limit | ✅ | 🚀 | 👍 |
-| R4 | Per-search cap, anonymous daily cap and per-connection share kept | ✅ code kept. Daily cap set to 1,000 on develop on 2026-09-12, confirmed by the product owner | 🚀 | 👍 |
-| R5 | One Log in button: a new email creates the account, a wrong password says so | ✅ | 🚀 | 👍 |
-| R6 | Log out lands on the search home page, from any screen | ✅ | 🚀 | 👍 |
-| D1 | The daily cap message reaches the screen | ✅ already worked, now also shown on the home page | 🚀 | 👍 |
-| R37 | `Product_workflows.md` tests 3 and 5 rewritten, tests 4, 16 and 20 marked removed | ✅ | 🚀 | 👍 |
+### Set 1 developer notes
 
 | | |
 |---|---|
@@ -98,9 +573,7 @@ Implementation notes, from scouting the code on 2026-09-12, before any edit:
 - D1: the 429 `anon_daily_cap_reached` path in `App.tsx` needs checking, to confirm it reaches its written message.
 - Tests that will change, because the requirement changed rather than to make them pass: `tests/system_03_search_agent/data/test_guest_sessions.py`, `adapters/web_sse/test_phase_4_10_premise.py`, `adapters/web_sse/test_streaming_endpoints.py`, `auth/test_router.py`, `frontend/src/App.test.tsx`, `frontend/src/phase410Premise.test.tsx`, `frontend/src/components/auth/AuthGate.test.tsx`, `frontend/e2e/guest-allowance-wall.spec.ts` and `frontend/e2e/auth-signin-and-errors.spec.ts`. Each change gets named in the commit message.
 
-### Set 2: a steady frame
-
-What you will see: the white box stays one width from progress to answer. The header and footer stay put, both in the lighter NCBI blue, with smooth changes between screens. New search is a filled blue button. The sign-in box is centred.
+### Set 2 developer notes
 
 | | |
 |---|---|
@@ -110,9 +583,7 @@ What you will see: the white box stays one width from progress to answer. The he
 | You retest | Tests 1, 2, 3, 9 and 11 |
 | Blocked by | Nothing. X6 is decided: the phone navigation keeps "More pages" |
 
-### Set 3: refusals and Stop
-
-What you will see: refusals show a calm grey label naming the reason, and the NCBI search address is a link. Pressing Stop shows "Search stopped" with Run again and New search.
+### Set 3 developer notes
 
 | | |
 |---|---|
@@ -122,9 +593,7 @@ What you will see: refusals show a calm grey label naming the reason, and the NC
 | You retest | Tests 8, 9, 13 and 19 |
 | Blocked by | Nothing |
 
-### Set 4: stay signed in, history on phones
-
-What you will see: a reload keeps you signed in. On a phone, the history button opens your searches in a panel that slides in.
+### Set 4 developer notes
 
 | | |
 |---|---|
@@ -134,9 +603,7 @@ What you will see: a reload keeps you signed in. On a phone, the history button 
 | You retest | Tests 3, 6 and 11 at phone width |
 | Blocked by | Nothing. How the session survives a reload is an implementation choice, and it is stated in the push note |
 
-### Set 5: Integrations and the disclaimer
-
-What you will see: an Integrations page in the reference layout with four equal cards, summary chips and API documentation below. The Docs tab is gone. A larger disclaimer with fuller wording. The GraphQL example works as printed, and MCP accepts connections.
+### Set 5 developer notes
 
 | | |
 |---|---|
@@ -146,11 +613,7 @@ What you will see: an Integrations page in the reference layout with four equal 
 | You retest | Tests 11 and 15 |
 | Blocked by | X5, which only decides whether answers also need a notice |
 
-## Batch 2: answers
-
-### Set 6: let automated checks see a real answer
-
-What you will see: nothing on screen. It lets the answer fixes be checked automatically, not only by hand.
+### Set 6 developer notes
 
 | | |
 |---|---|
@@ -160,9 +623,7 @@ What you will see: nothing on screen. It lets the answer fixes be checked automa
 | You retest | Nothing |
 | Blocked by | Nothing |
 
-### Set 7: a conversation that remembers
-
-What you will see: "What variants cause it?" answers about BRCA1. "Yes, go deeper" continues the same search. A follow-up stays on the same screen, with the earlier answer shrinking above.
+### Set 7 developer notes
 
 | | |
 |---|---|
@@ -172,9 +633,7 @@ What you will see: "What variants cause it?" answers about BRCA1. "Yes, go deepe
 | You retest | Tests 2 and 13 |
 | Blocked by | Nothing. First step: trace exactly where the earlier turn is lost |
 
-### Set 8: search every layer, with the scientists
-
-What you will see: every question searches the knowledge graph, live NCBI records, and literature and trials at the same time. The progress screen shows a lead scientist handing off to three random scientists, with steps like "Franklin is searching…".
+### Set 8 developer notes
 
 | | |
 |---|---|
@@ -184,9 +643,7 @@ What you will see: every question searches the knowledge graph, live NCBI record
 | You retest | Tests 1, 7 and 12 |
 | Blocked by | Nothing |
 
-### Set 9: answers worth reading
-
-What you will see: two modes, Plain language and Researcher, with an info button. Plain language answers run about 250 words in three paragraphs. Researcher answers run a full page with short topic headings. Answers stream in sentence by sentence and never open broken. One plain trust line replaces the pills, and the depth cannot change mid-search.
+### Set 9 developer notes
 
 | | |
 |---|---|
@@ -196,9 +653,7 @@ What you will see: two modes, Plain language and Researcher, with an info button
 | You retest | Tests 1, 7 and 12 |
 | Blocked by | X8, only if full pages start getting cut short |
 
-### Set 10: reliable flagship answers, and saved history
-
-What you will see: BRCA1 and GCK answer every time. Clicking a history item shows the saved answer at once, with Run again.
+### Set 10 developer notes
 
 | | |
 |---|---|
@@ -208,16 +663,16 @@ What you will see: BRCA1 and GCK answer every time. Clicking a history item show
 | You retest | Tests 1, 6 and 13 |
 | Blocked by | Nothing. X7 is decided |
 
-## Developer follow-through
+### Developer follow-through
 
 Done alongside the sets above, not as sets of their own:
 
 - D4: fix the load-dependent frontend tests and journey 7's navigation before relying on them in quick checks. Best done during set 2.
 - R37: update `Product/Product_workflows.md` in the same push as each set that changes a test.
 - Any file added, renamed or repurposed under `src/` updates `docs/build/Debugging_guide.md` in the same commit, which CI enforces.
-- Each set updates section 11 of the report and the status table below.
+- Each set updates section 11 of the report and the progress table above.
 
-## Dropped from the developer specification
+### Dropped from the developer specification
 
 Stale or no longer relevant, so not carried into this plan:
 
@@ -230,18 +685,6 @@ Stale or no longer relevant, so not carried into this plan:
 | Defect 11, undesigned surfaces | Decided on 2026-09-05: designed one at a time as each is built |
 | Clarifying questions for ambiguous queries | Not built, and not asked for in this round |
 
-## Status
+### Consistency baseline
 
-| Set | Batch | Status |
-|---|---|---|
-| 1. Let people in | Screens | ✅ 🚀 👍 Done: built, live on develop and approved by the product owner on 2026-09-12, 8 of 8 items |
-| 2. A steady frame | Screens | Not started |
-| 3. Refusals and Stop | Screens | Not started |
-| 4. Stay signed in, history on phones | Screens | Not started |
-| 5. Integrations and the disclaimer | Screens | Not started |
-| 6. Automated checks see a real answer | Answers | Not started |
-| 7. A conversation that remembers | Answers | Not started |
-| 8. Search every layer, with the scientists | Answers | Not started |
-| 9. Answers worth reading | Answers | Not started |
-| 10. Reliable flagship answers, and saved history | Answers | Not started |
-| Consistency baseline | Before any answer fix | Paused by the product owner on 2026-09-12 so screen fixes come first; rerun before set 6. Partly valid, rerun needed. Finished 2026-09-12, but only 85 of 150 runs really ran: 65 were refused before starting, most or all by the signed-in daily limit of 100, because all runs used one account. Of the 85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run (14%), 6 refused as off-topic. 15 of 32 questions gave different outcomes across runs, and only 2 answered every time. No Layer 3 call was seen. Next: rerun the 65 across fresh test accounts, recording each error's message |
+Before any answer fix. Paused by the product owner on 2026-09-12 so screen fixes come first; rerun before set 6. Partly valid, rerun needed. Finished 2026-09-12, but only 85 of 150 runs really ran: 65 were refused before starting, most or all by the signed-in daily limit of 100, because all runs used one account. Of the 85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run (14%), 6 refused as off-topic. 15 of 32 questions gave different outcomes across runs, and only 2 answered every time. No Layer 3 call was seen. Next: rerun the 65 across fresh test accounts, recording each error's message.

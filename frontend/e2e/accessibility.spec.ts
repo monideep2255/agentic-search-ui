@@ -54,6 +54,14 @@ const analyse = (page: import("@playwright/test").Page) =>
   new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
 
 test.describe("accessibility", () => {
+  // Set 2, R10 (2026-09-12) added a 0.2s fade between screens. axe measures
+  // contrast at one instant, so a scan taken mid-fade read partly transparent
+  // text as low contrast: 3 of 3 repeated runs failed with the fade, 3 of 3
+  // passed with it switched off. The app turns the fade off for reduced
+  // motion, so scanning with that preference checks the settled colours a
+  // reader actually sees. Not covered: contrast during the 0.2s fade itself.
+  test.use({ reducedMotion: "reduce" });
+
   test("the disclaimer gate is clean before anything else renders", async ({ page }) => {
     await page.goto("/");
     const results = await analyse(page);

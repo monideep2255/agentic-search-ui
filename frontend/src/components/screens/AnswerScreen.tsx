@@ -310,7 +310,9 @@ export function AnswerScreen({
   };
 
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
+    // Set 2, R8: full width up to 900, the same as the run screen, so the box
+    // keeps one size from progress to answer.
+    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
       <Box
         sx={{
           bgcolor: designTokens.surface,
@@ -329,18 +331,21 @@ export function AnswerScreen({
                 component="button"
                 type="button"
                 onClick={onNewSearch}
+                // Set 2, R12: filled blue with white text, the design system's
+                // `.btn`, hovering to navy like `.go`.
                 sx={{
                   font: "inherit",
                   fontSize: 12.5,
+                  fontWeight: 600,
                   px: 1.6,
                   py: 0.6,
                   flex: "none",
                   borderRadius: 0.5,
                   cursor: "pointer",
-                  color: designTokens.inkMuted,
-                  bgcolor: designTokens.surface,
-                  border: `1px solid ${designTokens.line}`,
-                  "&:hover": { borderColor: designTokens.lineStrong, color: designTokens.ink },
+                  color: designTokens.surface,
+                  bgcolor: designTokens.blue,
+                  border: `1px solid ${designTokens.blue}`,
+                  "&:hover": { bgcolor: designTokens.navy, borderColor: designTokens.navy },
                 }}
               >
                 New search

@@ -33,7 +33,7 @@ export function Logo({ size = 21, variant = "onNavy" }: LogoProps) {
   const onNavy = variant === "onNavy";
   const strand = onNavy ? "#FFFFFF" : designTokens.navy;
   const rungs = onNavy
-    ? ["#CFE1F5", "#9FD3A8", "#C3B2E6"]
+    ? [designTokens.logoRungOnBlue1, designTokens.logoRungOnBlue2, designTokens.logoRungOnBlue3]
     : [designTokens.layer1, designTokens.layer2, designTokens.layer3];
 
   return (

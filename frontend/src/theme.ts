@@ -67,6 +67,14 @@ export const designTokens = {
   layer2Wash: "#E6F2E8",
   layer3Wash: "#EEEAF6",
 
+  // The logo's three rungs on the blue app bar and footer, product-owner
+  // decision X9 (2026-09-12). Values from `brand/logo.html`'s on-blue mark.
+  // Contrast against `blue` (#205493), WCAG 1.4.11 needs 3:1 for graphics:
+  // 5.72, 4.49 and 3.94.
+  logoRungOnBlue1: "#CFE1F5",
+  logoRungOnBlue2: "#9FD3A8",
+  logoRungOnBlue3: "#C3B2E6",
+
   // semantic, never used as an accent
   risk: "#981B1E",
   riskWash: "#F8E9E9",

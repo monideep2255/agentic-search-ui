@@ -257,7 +257,8 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: designTokens.canvas }}>
-      <AppBar position="static" component="header">
+      {/* Set 2, R9 (2026-09-12): the bar stays put while the page scrolls. */}
+      <AppBar position="sticky" component="header">
         {/*
             THE MOBILE BAR FOLLOWS THE PROTOTYPE, and the first attempt at
             this did not, which is the correction worth recording.
@@ -509,11 +510,20 @@ export function AppShell({
         {children}
       </Box>
 
+      {/*
+        Set 2, R9 and R11 (2026-09-12). The same blue as the app bar, product-
+        owner decision Q1, with `inkOnNavy` text: `inkOnNavyMute` is too faint
+        on blue for 12px text. Sticky at the bottom so it no longer jumps as
+        the screen above it changes height.
+      */}
       <Box
         component="footer"
         sx={{
-          bgcolor: designTokens.navy,
-          color: designTokens.inkOnNavyMute,
+          position: "sticky",
+          bottom: 0,
+          zIndex: 1,
+          bgcolor: designTokens.blue,
+          color: designTokens.inkOnNavy,
           textAlign: "center",
           py: 1.5,
         }}
