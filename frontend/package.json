@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:real-answer": "S3_E2E_REAL_MODEL=1 playwright test e2e/real-answer.spec.ts",
     "serve": "serve -s dist -l ${PORT:-3000}"
   },
   "dependencies": {

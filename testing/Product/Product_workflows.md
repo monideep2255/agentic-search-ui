@@ -314,5 +314,6 @@ Found by the browser run on 2026-09-12. Full report with screenshots: `../Develo
 - An answer can open with "These include…" without saying what "these" are, and a "one further gene record" note shows as a grey sentence with no source.
 - After sign-up, your guest searches do appear in your history, but no message says so.
 - Answers sometimes take more than 25 seconds.
+- A citation chip can read as a code such as `MedGen:C0346153` even though the sentence beside it names the disease in words. Found by the automated real-answer check on 2026-09-13.
 - An answer's first sentence can come out garbled, for example "BRCA1 (gene symbol BRCA1 [1]. These are…". Seen 2026-09-12.
 - A returning guest cannot see how many searches are left until they run one.

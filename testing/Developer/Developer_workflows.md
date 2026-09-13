@@ -183,4 +183,20 @@ cd frontend && RUN_LIVE_JOURNEYS=1 npx playwright test e2e/journeys/
 
 Without `RUN_LIVE_JOURNEYS=1`, `frontend/e2e/journeys/_capture.ts` disables the live journeys. With it, they target the develop app unless `S3_LIVE_WEB_URL` or `S3_LIVE_API_URL` overrides it, and an override must be `https://` or loopback. Screenshots land in `frontend/e2e/evidence/`.
 
+### Run a real-answer check
+
+Added 2026-09-13, fix set 6 item 6.1. Layer A fakes the model, so until this existed no automated run had ever asserted on an answer a model wrote, and every answer fix could only be checked by hand.
+
+```bash
+cd frontend && npm run test:real-answer
+```
+
+What it needs: the credentials in the repository root `.env`. The mode refuses to start and names the missing variable names when any of GUARD_MODEL, PLAN_MODEL, SYNTH_MODEL, OPENROUTER_API_KEY, GRAPH_QUERY_URL, GRAPH_QUERY_TOKEN or PER_QUERY_COST_CAP_USD is unset. It also needs the local `search_agent_users` database, the same as every other Layer A run.
+
+What it costs: real model budget on one question, two at the most, since a refusal is retried once. The backend reaches the configured provider, the graph query service and live NCBI endpoints, so this is not free and not offline.
+
+What it asserts: shape and grounding only. At least one claim, at least one citation chip, a source card linking to an NCBI record, a disease named in words with no raw `MedGen:` code, and a source count on the meta strip. It never checks whether a stated fact is true.
+
+One trap worth knowing: `S3_E2E_REAL_MODEL=1` alone does not guarantee a real backend, because `reuseExistingServer` reuses a mock backend already listening on port 8931. The spec asks the backend `/__e2e__/mode` before it asks a question and fails loudly rather than passing against the fake, so stop any stray backend on that port first.
+
 The Playwright specs stay under `frontend/e2e/` because `frontend/playwright.config.ts` sets `testDir: "./e2e"`, `.github/gates/gate10_accessibility.sh` names `e2e/accessibility.spec.ts`, and `frontend/e2e/live-target.spec.ts` walks `e2e/` to forbid hardcoded deployed URLs.
