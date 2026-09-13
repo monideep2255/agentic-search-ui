@@ -30,7 +30,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | Set | What you will see | Built | Live | Approved | You retest |
 |---|---|---|---|---|---|
 | 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
-| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 2.1 to 2.14, except the 2.12 up-arrow button | Tests 1, 2, 3, 9, 11 |
+| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
 | 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | | | | Tests 8, 9, 13, 19 |
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | | | | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | | | | Tests 11, 15 |
@@ -208,7 +208,7 @@ Pushed as commit `cbb04cc`, live on develop on 2026-09-12 and checked by screens
 
 ### 2.12 A bigger search box on the home page (retest feedback)
 
-Built: ✅ · Live: 🚀 · Approved: 👍 (size approved; the icon-only up-arrow button at the bottom right is live at commit `79607bd` and waiting for your retest)
+Built: ✅ · Live: 🚀 · Approved: 👍 (size, then the icon-only up-arrow button at the bottom right, live at commit `79607bd`, approved 2026-09-13)
 
 - Feature being tested: the home page search box is big enough to write a full question.
 - What you noted: "on the home page, can we increase the size of the search box? It should be at least big as a tweet box 240 characters? or the appropriate size"
