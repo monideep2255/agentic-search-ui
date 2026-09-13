@@ -13,7 +13,7 @@
  * Source of truth: `docs/build/design/design-system/screens/home.html`.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { Box, Button, Typography } from "@mui/material";
 
@@ -102,6 +102,14 @@ const QUESTION_MAX_ROWS_NARROW = 10;
 const QUESTION_MAX_HEIGHT_NARROW = QUESTION_LINE_HEIGHT_PX * QUESTION_MAX_ROWS_NARROW;
 /** The server truncates `text` at 2000 characters; the field matches it. */
 const QUESTION_MAX_LENGTH = 2000;
+/**
+ * Product-owner decision, 2026-09-13, option B ("flexible"): the Search
+ * button sits top-right, level with the icon, while the question is one
+ * visual line, and drops to bottom-right once it wraps. A small tolerance
+ * absorbs sub-pixel rounding in `scrollHeight` so the state does not flap
+ * right at the boundary.
+ */
+const MULTILINE_TOLERANCE_PX = 2;
 
 function SearchIcon() {
   return (
@@ -130,6 +138,12 @@ export function HomeScreen({
   const [question, setQuestion] = useState("");
   const [localDepth, setLocalDepth] = useState<AudienceDepth>("researcher");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  // Whether the question currently occupies more than one visual line.
+  // Empty or placeholder-only, and a question that fits on one line, are
+  // both "false": the Search button then sits top-right, level with the
+  // icon (option B, product-owner decision 2026-09-13). Anything that
+  // wraps flips this to "true" and the button drops to bottom-right.
+  const [isMultiline, setIsMultiline] = useState(false);
 
   // Controlled when the parent supplies a value, uncontrolled otherwise. One
   // `depth` and one `setDepth` below, so no call site has to know which mode
@@ -162,15 +176,53 @@ export function HomeScreen({
     }
   };
 
+  // Whether the question's own content, not the 3-row minimum the box is
+  // held to, spans more than one visual line. Two separate things hold the
+  // box at 3 rows even for one line of text, and both have to be lifted for
+  // the instant of measurement, or `scrollHeight` reports "multiline" for a
+  // one-line or empty box: the CSS `minHeight` floor (cleared via the
+  // inline style), and the `rows` HTML attribute, which drives the
+  // browser's own intrinsic sizing independently of any CSS height rule
+  // (measured: with only `minHeight` cleared, `scrollHeight` still read the
+  // 3-row height; setting `rows` to 1 as well brought it down to the true
+  // one-line content height).
+  const measureIsMultiline = (el: HTMLTextAreaElement): boolean => {
+    const previousMinHeight = el.style.minHeight;
+    const previousRows = el.rows;
+    el.style.minHeight = "0px";
+    el.rows = 1;
+    const style = window.getComputedStyle(el);
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    const contentHeight = el.scrollHeight - paddingTop - paddingBottom;
+    el.style.minHeight = previousMinHeight;
+    el.rows = previousRows;
+    return contentHeight > QUESTION_LINE_HEIGHT_PX + MULTILINE_TOLERANCE_PX;
+  };
+
   // Auto-grow: reset to the CSS min-height, then read the content's natural
   // height and grow to it. The `maxHeight` in sx below still clamps this, so
   // growth past six rows turns into an internal scrollbar rather than an
-  // ever-taller box.
+  // ever-taller box. The multiline check reuses the same "reset height,
+  // read scrollHeight" measurement rather than a second layout pass.
   const resizeQuestionField = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
     el.style.height = "auto";
+    setIsMultiline(measureIsMultiline(el));
     el.style.height = `${el.scrollHeight}px`;
   };
+
+  // Recompute on mount (in case the initial render already differs from the
+  // `false` default, e.g. restored state) and on window resize, since the
+  // line count is width-dependent: the same text wraps at 720px and does
+  // not at 1280px.
+  useEffect(() => {
+    resizeQuestionField(textareaRef.current);
+    const handleResize = () => resizeQuestionField(textareaRef.current);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     // A flex column that claims the shell's remaining height, so the hero can
@@ -225,10 +277,10 @@ export function HomeScreen({
           sx={{
             display: "flex",
             // Top-aligned, not centred: the icon sits at the top-left of the
-            // box (`SearchIcon` below) and the Search button sets its own
-            // `alignSelf: "flex-end"` so it stays anchored to the bottom-right
-            // corner rather than floating mid-height once the box grows past
-            // one line.
+            // box (`SearchIcon` below) and the Search button's own slot Box
+            // sets its `alignSelf` per line count, top-right level with the
+            // icon on one line, bottom-right once the box grows past one
+            // (see the slot Box's comment further down).
             alignItems: "flex-start",
             // Wraps only below 720px, where the Search button takes its own
             // full-width row (see its sx) and the question field keeps the
@@ -328,25 +380,60 @@ export function HomeScreen({
             saying "Search" cannot operate the control, which is why it is not
             renamed to something unrelated.
           */}
-          <Button
-            type="submit"
-            variant="contained"
-            aria-label="Search the knowledge graph"
+          {/*
+            Product-owner decision 2026-09-13, option B ("flexible"): one
+            line, the button sits top-right level with the icon; wrapped,
+            it drops to bottom-right as before. The slot Box below matches
+            the icon box's own `mt` and height exactly in the one-line case,
+            so `alignItems: "center"` centers the button on the identical
+            line box the icon is centered on, regardless of the button's
+            own rendered height. In the wrapped case the slot just hugs the
+            button and pins it to the row's bottom-right corner, the same
+            effect `alignSelf: "flex-end"` gave the button directly before
+            this box existed. Below 720px both collapse to the same
+            full-width row as always.
+          */}
+          <Box
             sx={{
-              px: 2.25,
-              py: 1.1,
-              fontSize: 14,
-              gap: 0.75,
-              alignSelf: "flex-end",
               flex: "none",
-              // prototype/app.html's 720px breakpoint: below it the button
-              // takes its own row, so the question field gets the full width.
-              "@media (max-width:720px)": { width: "100%" },
+              display: "flex",
+              justifyContent: "flex-end",
+              ...(isMultiline
+                ? { alignSelf: "flex-end", alignItems: "flex-end", height: "auto", mt: 0 }
+                : {
+                    alignSelf: "flex-start",
+                    alignItems: "center",
+                    height: `${QUESTION_LINE_HEIGHT_PX}px`,
+                    mt: 0.75,
+                  }),
+              "@media (max-width:720px)": {
+                width: "100%",
+                height: "auto",
+                mt: 0,
+                alignSelf: "stretch",
+                alignItems: "stretch",
+              },
             }}
           >
-            Search
-            <ArrowIcon />
-          </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              aria-label="Search the knowledge graph"
+              sx={{
+                px: 2.25,
+                py: 1.1,
+                fontSize: 14,
+                gap: 0.75,
+                flex: "none",
+                // prototype/app.html's 720px breakpoint: below it the button
+                // takes its own row, so the question field gets the full width.
+                "@media (max-width:720px)": { width: "100%" },
+              }}
+            >
+              Search
+              <ArrowIcon />
+            </Button>
+          </Box>
         </Box>
 
         {/* `.depthwrap` sits BELOW the search bar in the prototype. */}
