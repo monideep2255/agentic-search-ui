@@ -247,11 +247,36 @@ export function HomeScreen({
             pl: 2,
             pr: 0.75,
             py: 0.75,
+            // Below 720px the button drops to its own full-width row (see its
+            // sx). `search-bar.html`'s 16px/6px split exists to clear the
+            // icon on one line; once the button is on its own row, a left
+            // inset of 16px against a right inset of 6px reads as off-centre,
+            // so both sides match here.
+            "@media (max-width:720px)": { pl: 0.75 },
             textAlign: "left",
             "&:focus-within": { borderColor: designTokens.link },
           }}
         >
-          <Box sx={{ pt: 0.5 }}>
+          {/*
+            Centred on the QUESTION_LINE_HEIGHT_PX line box, with the same
+            top inset (0.75, matching the textarea's own `py`) so the glass
+            sits level with the first line of text, at 3 rows or grown, not
+            just nudged down by a fixed padding guess.
+          */}
+          <Box
+            sx={{
+              // `mt`, not `pt`: padding on a border-box element eats into the
+              // fixed height below, shrinking the centred area and pulling
+              // the icon 3px above the text's first line. A margin pushes
+              // the whole line box down instead, so it lands exactly where
+              // the textarea's own padding puts its first line.
+              mt: 0.75,
+              height: `${QUESTION_LINE_HEIGHT_PX}px`,
+              flex: "none",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <SearchIcon />
           </Box>
           <Box
