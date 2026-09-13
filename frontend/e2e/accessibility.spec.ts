@@ -60,7 +60,7 @@ test.describe("accessibility", () => {
   // passed with it switched off. The app turns the fade off for reduced
   // motion, so scanning with that preference checks the settled colours a
   // reader actually sees. Not covered: contrast during the 0.2s fade itself.
-  test.use({ reducedMotion: "reduce" });
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
 
   test("the disclaimer gate is clean before anything else renders", async ({ page }) => {
     await page.goto("/");
