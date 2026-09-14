@@ -91,6 +91,24 @@ class _FakeHarness:
         return SimpleNamespace(content=content)
 
 
+@pytest.fixture(autouse=True)
+def _model_path_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test in this file exercises the GENERATED path: the fake
+    harness's scripted Cypher, the one repair retry, the cap check before
+    each generation call. UI fix set 10, item 10.1 put a code-chosen
+    template in front of that path for known question shapes, and
+    `_gene_lookup_input`'s default ("gene lookup for BRCA1", class lookup,
+    one gene CURIE) is exactly the record-lookup shape it catches, so nine
+    of these tests stopped reaching the harness at all and asserted on
+    outputs the model never produced. Rather than reword nine inputs into
+    shapes no template matches, which the next template would silently
+    undo, this fixture names the intent: templates are off here. The
+    template path has its own file, `test_cypher_query_templates.py`,
+    which asserts the opposite property, that the harness is NOT called.
+    """
+    monkeypatch.setattr(cypher_query_module, "select_template", lambda *_: None)
+
+
 def _gene_lookup_input(**overrides: object) -> CypherQueryInput:
     base: dict[str, object] = {
         "query_intent": "gene lookup for BRCA1",

@@ -568,11 +568,12 @@ What you will see: BRCA1 and GCK answer every time. Clicking a history item show
 
 ### 10.1 Stop the flagship questions from refusing (R34)
 
-Built: · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the two questions the product is judged on answer reliably every time.
 - What you noted: from the developer walkthrough, not your words: "Which diseases are associated with BRCA1?" answered 5 times and was refused 3 times, at different depths, minutes apart.
 - What's expected: BRCA1 and GCK answer every time, checked in tests 1 and 13.
+- Built 2026-09-13, first cut: for the known question shapes (a gene's diseases, variants, orthologs, processes, activities, components, organism and papers; a disease's genes and phenotypes; a paper's MeSH terms; the record itself; counts; several genes at once) the graph query is a code template with a stable ordering, chosen deterministically from the bound entities and the question's words, never a model draft, and it makes no model call. Measured locally: the BRCA1 disease question ran the identical query and returned the identical four MedGen records five times out of five; the variant follow-up returned the identical first twenty ClinVar records five of five. Before, on develop, the same questions returned two to four different source sets in five runs. What still varies is which of those records the answer text mentions, which the next cut settles.
 
 ### 10.2 History shows the saved answer instantly (R35)
 

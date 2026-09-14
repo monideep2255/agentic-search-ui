@@ -104,6 +104,7 @@
     "src/system_03_search_agent/tools/cypher_provenance.py": "8afb2981ff5fd68f7e2f6b4ac17a67b9acaa8550b652b156095d1c5f3539ea75",
     "src/system_03_search_agent/tools/cypher_query.py": "ba4a0abcc5e0109715a13a3cfa3b17b17b90ae9b4fe02f926b5ae914c95a44a3",
     "src/system_03_search_agent/tools/cypher_schemas.py": "9fa84cca39fa2aef8d00479380b3775eca7d138a78b570c18d0f8939a3c8b511",
+    "src/system_03_search_agent/tools/cypher_templates.py": "29b209a6ae824c24fe3f17ca6c16766214c62b67cfcbc082c906536297dc5121",
     "src/system_03_search_agent/tools/cypher_validator.py": "4dd276305445592d4a43bfdc67a543fc0c0a7897949451a957c22d262538c7f5",
     "src/system_03_search_agent/tools/graph_connection.py": "c7fdd5b01ae3a9afc1456efa92aa58217b024ad7f26b117a6b1007e2c3b200cf",
     "src/system_03_search_agent/tools/graph_http_transport.py": "7f178e13693a1ebe225c94c592ed8471f1893acddb50da90fbc9e963ea809443",

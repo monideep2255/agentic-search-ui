@@ -20,6 +20,20 @@ validator's error text back into a second `generate_cypher` call as
 `prior_error`. A second failure returns `status: "error"`; there is never
 a third attempt.
 
+UI fix set 10, item 10.1 (R34), the template path in front of step 2: for
+a question shape `cypher_templates.select_template` can name from the
+bound CURIEs' prefixes, their count and a conservative keyword test on
+`query_intent` (a gene's diseases, its variants, the record itself,
+several genes' diseases, and the other single-hop shapes the 14 edge
+labels admit), the Cypher is a code-chosen template with an ORDER BY on
+the record id, and NO plan-tier call is made. It passes through the same
+`validate_cypher` and `_check_entity_binding` gate and the same execution
+and row shaping as a generated query; `CypherQueryOutput.template` names
+the template used, None on the model path. This is what makes the same
+question return the same sources every run: the product owner measured
+"Which diseases are associated with BRCA1?" returning 4 sources on one run
+and 5 on the next while the model wrote a different query each time.
+
 The main agent never sees raw Cypher. The generated string appears only
 in `CypherQueryOutput.cypher_executed`, an audit-trail field, and this
 module never places it anywhere else: not in `error`, not in a row, not
@@ -158,6 +172,8 @@ Depends on:
       CypherGenerationError, HarnessLike)
     - system_03_search_agent.tools.cypher_validator (validate_cypher,
       ValidationResult)
+    - system_03_search_agent.tools.cypher_templates (select_template, the
+      code-chosen query for a known question shape; UI fix set 10, 10.1)
     - system_03_search_agent.tools.cypher_provenance (to_output_rows)
     - system_03_search_agent.tools.agtype (parse_agtype, used only to read
       back the scalar `total_count` value from the count-only query)
@@ -208,6 +224,7 @@ from system_03_search_agent.tools.cypher_schemas import (
     CypherQueryOutput,
     CypherQueryRow,
 )
+from system_03_search_agent.tools.cypher_templates import select_template
 from system_03_search_agent.tools.cypher_validator import ValidationResult, validate_cypher
 from system_03_search_agent.tools.graph_connection import GraphError, execute_cypher
 from system_03_search_agent.tools.graph_schema_constants import (
@@ -1253,6 +1270,24 @@ async def _generate_and_validate(
         )
 
     result = validate_cypher(raw_cypher, tool_input.row_limit)
+    return _check_entity_binding(raw_cypher, result, entity_bindings)
+
+
+def _check_entity_binding(
+    raw_cypher: str, result: ValidationResult, entity_bindings: dict[str, str]
+) -> tuple[str | None, ValidationResult]:
+    """The three static binding checks that run on every Cypher after
+    `validate_cypher` passes it: no invented parameter, at least one bound
+    entity referenced, every returned variable anchored to one.
+
+    UI fix set 10, item 10.1: split out of `_generate_and_validate` so the
+    template path in `_run_pipeline` runs the identical checks on a
+    code-chosen query. A template is written by hand and these should
+    never fire on it, which is exactly why they still run: a gate that is
+    skipped for trusted input is a gate with a hole the next edit falls
+    through, and the unit test that mutates a template into an unanchored
+    shape is what proves the hole is not there.
+    """
     if not result.ok:
         return raw_cypher, result
 
@@ -1421,7 +1456,9 @@ def _cap_shaped_row(shaped: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _error_output(cypher_executed: str | None, error: str) -> CypherQueryOutput:
+def _error_output(
+    cypher_executed: str | None, error: str, template: str | None = None
+) -> CypherQueryOutput:
     capped_cypher = cypher_executed[:_MAX_CYPHER_EXECUTED_CHARS] if cypher_executed else None
     return CypherQueryOutput(
         status="error",
@@ -1431,6 +1468,7 @@ def _error_output(cypher_executed: str | None, error: str) -> CypherQueryOutput:
         truncated=False,
         cypher_executed=capped_cypher,
         error=error[:_MAX_ERROR_CHARS],
+        template=template,
     )
 
 
@@ -1790,19 +1828,47 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             "build phase 3.1 adds. Retrying this query unchanged will not help.",
         )
 
-    raw_cypher, validation = await _generate_and_validate(
-        harness, tool_input, schema_slice, None, entity_bindings
-    )
-    if not validation.ok:
-        # Exactly one repair retry, informed by the first attempt's error.
-        raw_cypher, validation = await _generate_and_validate(
-            harness, tool_input, schema_slice, validation.message, entity_bindings
+    # UI fix set 10, item 10.1 (R34): for a question shape that can be
+    # named from the graph's own edge labels and the bound CURIEs' prefixes,
+    # the Cypher is a TEMPLATE chosen in code, never a model draft. The
+    # same question then runs the same query with the same ORDER BY every
+    # time, which is what makes its sources consistent run to run. No
+    # plan-tier call is made on this path, so it is faster and cheaper and
+    # the per-query cap is untouched. The template still passes through
+    # `validate_cypher` and `_check_entity_binding`, the same gate as a
+    # generated query; a template that fails them is a code defect and is
+    # reported as an error rather than silently handed to the model, so it
+    # cannot hide. When no template matches, the model path below runs
+    # exactly as before.
+    template = select_template(tool_input, entity_bindings)
+    template_name: str | None = None
+    if template is not None:
+        template_name = template.name
+        raw_cypher, validation = _check_entity_binding(
+            template.cypher, validate_cypher(template.cypher, tool_input.row_limit), entity_bindings
         )
         if not validation.ok:
             return _error_output(
                 raw_cypher,
-                validation.message or "Cypher generation failed after one repair retry.",
+                f"query template '{template.name}' was rejected by the validator, "
+                "which is a code defect rather than a graph fault; retrying will "
+                "not help. " + (validation.message or ""),
+                template=template_name,
             )
+    else:
+        raw_cypher, validation = await _generate_and_validate(
+            harness, tool_input, schema_slice, None, entity_bindings
+        )
+        if not validation.ok:
+            # Exactly one repair retry, informed by the first attempt's error.
+            raw_cypher, validation = await _generate_and_validate(
+                harness, tool_input, schema_slice, validation.message, entity_bindings
+            )
+            if not validation.ok:
+                return _error_output(
+                    raw_cypher,
+                    validation.message or "Cypher generation failed after one repair retry.",
+                )
 
     normalized_cypher = validation.normalized_cypher
     if normalized_cypher is None:
@@ -1814,6 +1880,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
         return _error_output(
             raw_cypher,
             "internal error: Cypher validation reported success with no normalized query",
+            template=template_name,
         )
 
     params = _build_params(normalized_cypher, entity_bindings)
@@ -1845,7 +1912,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             as_clause=as_clause,
         )
     except GraphError as exc:
-        return _error_output(normalized_cypher, str(exc))
+        return _error_output(normalized_cypher, str(exc), template=template_name)
 
     if not rows:
         return CypherQueryOutput(
@@ -1855,6 +1922,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             total_available=returned_total,
             truncated=False,
             cypher_executed=normalized_cypher[:_MAX_CYPHER_EXECUTED_CHARS],
+            template=template_name,
             error=None,
         )
 
@@ -2079,6 +2147,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
                     total_available=0,
                     truncated=False,
                     cypher_executed=normalized_cypher[:_MAX_CYPHER_EXECUTED_CHARS],
+                    template=template_name,
                     error=None,
                 )
             # `present is None` means the check itself could not run. That
@@ -2116,6 +2185,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
         total_available=total_available,
         truncated=truncated,
         cypher_executed=normalized_cypher[:_MAX_CYPHER_EXECUTED_CHARS],
+        template=template_name,
         error=None,
     )
 

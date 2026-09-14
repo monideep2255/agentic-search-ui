@@ -135,6 +135,25 @@ premise_gate = pytest.mark.skipif(
     ),
 )
 
+# Captured at import, after `_graph_is_reachable()` above loaded `.env`.
+# This directory's `conftest.py` (F-4.11-07) clears GRAPH_QUERY_URL before
+# EVERY test so that a test states its transport rather than inheriting
+# one, and nothing in this file ever stated it. Measured 2026-09-13 while
+# building UI fix set 10, item 10.1, and confirmed at HEAD in a separate
+# worktree: under RUN_PREMISE_GATE=1 every arm that reached the graph ran
+# over psycopg2 against the deleted tunnel's local port and failed with
+# "graph connection refused or unreachable", 6 of 9 arms, on a machine
+# where the HTTPS service answered. The gate had been certifying nothing
+# about the live graph since the transport cut over. The fixture below
+# restates the transport the product ships, so the arms exercise it.
+_GRAPH_QUERY_URL_FROM_ENV = os.environ.get("GRAPH_QUERY_URL", "")
+
+
+@pytest.fixture(autouse=True)
+def _state_the_shipped_transport(monkeypatch: pytest.MonkeyPatch) -> None:
+    if _GRAPH_QUERY_URL_FROM_ENV:
+        monkeypatch.setenv("GRAPH_QUERY_URL", _GRAPH_QUERY_URL_FROM_ENV)
+
 
 async def _ask(question: str, row_limit: int = 100) -> Any:
     """Run one real question exactly the way the agent loop would.
