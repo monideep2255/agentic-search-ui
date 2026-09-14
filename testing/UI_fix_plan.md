@@ -38,7 +38,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | 👍 | Tests 2, 13 |
 | 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | | | | Tests 1, 7, 12 |
 | 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken | | | | Tests 1, 7, 12 |
-| 10. Reliable flagship answers, and saved history | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
+| 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
 
 ## Set 1: let people in
 
