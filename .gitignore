@@ -134,3 +134,6 @@ logs/
 testing/Product/feedback/inbox/*
 !testing/Product/feedback/inbox/.gitkeep
 !testing/Product/feedback/inbox/*.md
+
+# The local loop runner's record of citations shown in earlier runs
+testing/Developer/scripts/reported_ids.json
