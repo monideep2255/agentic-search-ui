@@ -506,6 +506,15 @@ _RECORD_URL_TEMPLATES: Final[dict[str, str]] = {
     "gds": "https://www.ncbi.nlm.nih.gov/gds/{id}",
     "taxonomy": "https://www.ncbi.nlm.nih.gov/taxonomy/{id}",
     "mesh": "https://www.ncbi.nlm.nih.gov/mesh/{id}",
+    # UI fix set 11 (search breadth, 2026-09-14). A PMC uid from ESearch or
+    # ELink is the bare number; the record page prefixes it with `PMC`.
+    # Live-verified the same day: this exact shape answers HTTP 301 to
+    # `https://pmc.ncbi.nlm.nih.gov/articles/PMC{id}/`, NCBI's current PMC
+    # host. The `www.` form is kept rather than the `pmc.` host because
+    # `NCBI_EFETCH_RECORD_URL_PATTERN` is Section 6.2 line 921 copied
+    # verbatim and does not admit `pmc.`; widening a locked pattern is a
+    # Step 6.2 item, a same-host redirect is not.
+    "pmc": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC{id}/",
 }
 
 
@@ -1117,6 +1126,16 @@ async def fetch(params: NcbiEfetchFetchInput) -> NcbiEfetchOutput:
 # ---------------------------------------------------------------------------
 
 
+# The (dbfrom, db) pairs for which ONLY the direct `<dbfrom>_<db>` linkset
+# contributes, because the other same-dbto linknames were live-verified to
+# be computed sets rather than cross-references (review F-03, 2026-09-14).
+# (pubmed, pmc): `pubmed_pmc` is the article's own PMC copy;
+# `pubmed_pmc_refs` is the set of PMC articles citing it. Add a pair here
+# only after reading its live linknames; a pair absent from this table keeps
+# every matching linkset, and that is the safe default.
+_DIRECT_LINKNAME_PAIRS: Final[frozenset[tuple[str, str]]] = frozenset({("pubmed", "pmc")})
+
+
 async def link(params: NcbiEfetchLinkInput) -> NcbiEfetchOutput:
     """ELink: `dbfrom=<dbfrom>&db=<db>&id=<ids>`. `db` is always explicit (schema-required)."""
     request_params = {
@@ -1135,7 +1154,7 @@ async def link(params: NcbiEfetchLinkInput) -> NcbiEfetchOutput:
         return _empty_output("link")
 
     linksets = result.body.get("linksets") if isinstance(result.body, dict) else None
-    linked_ids: list[str] = []
+    matching: list[dict[str, Any]] = []
     if isinstance(linksets, list):
         for linkset in linksets:
             if not isinstance(linkset, dict):
@@ -1150,8 +1169,38 @@ async def link(params: NcbiEfetchLinkInput) -> NcbiEfetchOutput:
                 # appearing at all) is filtered out defensively here too.
                 if linksetdb.get("dbto") != params.db:
                     continue
-                for linked_id in linksetdb.get("links") or []:
-                    linked_ids.append(str(linked_id))
+                matching.append(linksetdb)
+
+    # UI fix set 11 (search breadth, 2026-09-14): trap 3's second half. ELink
+    # can answer the SAME target db under two linknames, and only one of them
+    # is the cross-reference the caller asked for. Live-verified the same
+    # day: `dbfrom=pubmed&db=pmc` returns `pubmed_pmc` (the article's own
+    # PMC copy, one id) beside `pubmed_pmc_refs` (every PMC article that
+    # CITES it, hundreds of ids), both with `dbto: "pmc"`. Merging them
+    # would ship a citing paper as if it were the article's full text.
+    #
+    # Review F-03 (2026-09-14): the first version preferred `<dbfrom>_<db>`
+    # for EVERY pair, and that dropped ids for pairs where the other
+    # linknames are real cross-references, not computed sets: live, gene
+    # 2645 to pubmed went from 477 ids to 357, losing all 120 from
+    # `gene_pubmed_citedinomim`. So the preference applies only to the
+    # pairs in `_DIRECT_LINKNAME_PAIRS`, each added after a live check of
+    # what the other linknames for that pair actually are. Every other
+    # pair keeps the original behaviour: every matching-dbto linksetdb
+    # contributes.
+    pair = (params.dbfrom, params.db)
+    contributing = matching
+    if pair in _DIRECT_LINKNAME_PAIRS:
+        direct_linkname = f"{params.dbfrom}_{params.db}"
+        direct = [
+            linksetdb for linksetdb in matching if linksetdb.get("linkname") == direct_linkname
+        ]
+        contributing = direct
+
+    linked_ids: list[str] = []
+    for linksetdb in contributing:
+        for linked_id in linksetdb.get("links") or []:
+            linked_ids.append(str(linked_id))
 
     seen: set[str] = set()
     deduped_ids: list[str] = []

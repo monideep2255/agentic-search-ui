@@ -162,9 +162,19 @@ NCBI_EFETCH_RECORD_URL_PATTERN: Final = (
 # enum makes that response unreachable, which is the stronger reading, since a
 # request never sent cannot be misclassified and cannot spend a rate-limit
 # token. Carried to Step 6.2 rather than resolved by loosening the schema.
+#
+# `pmc` is the fifteenth value, additive, UI fix set 11 (search breadth,
+# 2026-09-14). Section 6.2 printed fourteen; a new enum value is the
+# additive change `system-design-patterns` pattern 10 permits inside v1,
+# and it lets the `link` action's ELink from PubMed to PMC (live-verified
+# the same day: `dbfrom=pubmed&db=pmc` returns linkname `pubmed_pmc`) be
+# followed by a PMC search or cited as a record. `pmc` is deliberately NOT
+# added to `FetchDb` or `SummaryDb`: neither path has been live-verified
+# for PMC, and an unverified enum value is a silent outage rather than a
+# capability.
 SearchDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
-    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh",
+    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh", "pmc",
 ]
 FetchDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
@@ -178,8 +188,8 @@ SummaryDb = Literal[
 class NcbiEfetchSearchInput(BaseModel):
     """ESearch: `db=<db>&term=<term>`. Section 6.2, the `search` branch.
 
-    `db` is a bounded string, not the spec's printed 14-value enum. See
-    `db` is the spec's closed 14-value enum. See the SearchDb comment above.
+    `db` is the spec's closed 14-value enum plus the additive `pmc` value.
+    See the SearchDb comment above.
     """
 
     model_config = ConfigDict(extra="forbid")

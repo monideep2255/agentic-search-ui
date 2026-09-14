@@ -151,10 +151,11 @@ async def _noop_sleep(_seconds: float) -> None:
 class _FakeClock:
     """A monotonic clock that advances exactly when the limiter sleeps.
 
-    A2 and A3 drive twenty sequential calls through a 3 requests/second
-    pool. With `_noop_sleep` the clock never moves, so each call's
-    scheduled wait grows by a third of a second while its ceiling stays
-    fixed, and the sixth call is refused by the RATE ceiling before the
+    A2 and A3 drive twenty sequential calls through the default eutils
+    pool (3 requests/second when this was written, 10 since 2026-09-14).
+    With `_noop_sleep` the clock never moves, so each call's scheduled
+    wait grows by one pool interval while its ceiling stays fixed, and a
+    call partway through is refused by the RATE ceiling before the
     CALL ceiling those arms exist to test is ever reached. That is not an
     artifact: it is F-6.0-02, real behaviour, found by A2 failing this way
     and recorded in `tracker/phase_6.0.md` rather than tidied away here.

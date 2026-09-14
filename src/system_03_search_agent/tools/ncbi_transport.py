@@ -48,11 +48,20 @@ had not enumerated, fixed only by inverting to an allowlist).
 ## Rate limiting
 
 Per `.claude/rules/tool-call-budgets.md`, the E-utilities requests/second
-ceiling is an unresolved conflict (3 vs 10 vs 100, depending on source) and
-this module deliberately does NOT lock a specific constant into the
-"correct" one. `DEFAULT_EUTILS_REQUESTS_PER_SECOND` is the conservative,
-independently-verified floor (3/s), overridable via `NCBI_EUTILS_RPS`
-without a code change once the real ceiling is confirmed. Datasets v2 and
+ceiling was an unresolved conflict (3 vs 10 vs 100, depending on source)
+and this module shipped with the conservative, independently-verified
+floor (3/s) as its default. Settled 2026-09-14, UI fix set 11 (search
+breadth): the ceiling was read off NCBI's own rate-limit response header
+with the project's `NCBI_API_KEY` present and measured at 10 requests per
+second, and the product owner confirmed locking that figure, which is the
+rule's own "10 requests/second with an API key" row.
+`DEFAULT_EUTILS_REQUESTS_PER_SECOND` is therefore 10.0, still overridable
+via `NCBI_EUTILS_RPS` without a code change. A deployment that runs with
+NO `NCBI_API_KEY` is on NCBI's unauthenticated pool, whose ceiling is 3,
+and must set `NCBI_EUTILS_RPS=3` itself: the default states the
+keyed figure because every deployment of this product carries the key,
+and the bounded fail-fast queue (`RateLimiter`, queue depth 15) is
+unchanged either way. Datasets v2 and
 PubChem get the rule's provisional ~5 req/s throttle for undocumented
 interactive APIs, via `NCBI_DATASETS_RPS` / `NCBI_PUBCHEM_RPS`.
 
@@ -299,10 +308,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT_S: Final[float] = 15.0
 DEFAULT_BACKOFF_S: Final[float] = 1.0
 
-# See the module docstring's "Rate limiting" section: this is the
-# conservative, independently-verified floor, not a resolution of the
-# 3-vs-10-vs-100 conflict. Configurable via NCBI_EUTILS_RPS.
-DEFAULT_EUTILS_REQUESTS_PER_SECOND: Final[float] = 3.0
+# See the module docstring's "Rate limiting" section: the keyed E-utilities
+# ceiling, measured from NCBI's own rate-limit header with the project key
+# and confirmed by the product owner on 2026-09-14 (UI fix set 11). Was 3.0,
+# the unauthenticated floor, from build phase 3.1 until then. Configurable
+# via NCBI_EUTILS_RPS; a keyless deployment sets it to 3.
+DEFAULT_EUTILS_REQUESTS_PER_SECOND: Final[float] = 10.0
 # Datasets v2 and PubChem have no published numeric rate limit; both get
 # the rule's provisional ~5 req/s throttle for undocumented interactive
 # HTTPS APIs.
