@@ -4188,7 +4188,7 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
 _WRITE_REPAIR_MIN_BUDGET_S = 5.0
 
 
-def _build_repair_cap_note() -> str:
+def _build_repair_cap_note(omission_remains: bool = True) -> str:
     """F-4.5-A-04: disclose that a cost cap, not the model, is why this
     answer stayed incomplete.
 
@@ -4204,17 +4204,26 @@ def _build_repair_cap_note() -> str:
     splits on periods and counts any non-framing sentence with no marker as
     an uncited factual claim.
 
-    No `trust_outcome` floor is applied for this note. A cap hit here is
-    reachable only when `omitted_findings` is non-empty, and the incomplete-
-    answer note already floors at `ask`, which is more restrictive than the
-    `flag` a cap would contribute. Adding a second floor would change
-    nothing and would imply the two are independent.
+    No `trust_outcome` floor is applied for this note. When an omission
+    remains, the incomplete-answer note already floors at `ask`, which is
+    more restrictive than the `flag` a cap would contribute. When none
+    remains (UI fix set 10, item 10.1: the findings tail reported what the
+    repair could not), the answer is whole and the cap changed nothing about
+    what the reader sees, so a floor would punish a complete answer for an
+    optional call that did not run.
+
+    `omission_remains` picks the clause: the cap is disclosed either way,
+    because a safety-critical control that fires silently is not a control
+    (F-4.5-A-04), but the sentence must not claim an omission the tail has
+    since covered.
     """
-    return (
+    base = (
         "Note: this answer's completeness check could not run to the end "
-        "because the query reached its cost limit, so the omission described "
-        "above was not repaired"
+        "because the query reached its cost limit"
     )
+    if omission_remains:
+        return base + ", so the omission described above was not repaired"
+    return base + ", and the records it would have added are listed below as found"
 
 
 def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
@@ -4330,27 +4339,42 @@ def _build_structured_fallback_note() -> str:
 
 
 def _build_next_step_offer(
-    omitted: list[Any], trust_outcome: str, refused: bool
+    prepared: list[Any],
+    more_records_exist: bool,
+    remaining_count: int | None,
+    trust_outcome: str,
+    refused: bool,
 ) -> str | None:
     """Offer somewhere to go next, or None when there is nowhere honest.
 
     Build phase 6.2, T-6.2-08, on the product-owner decision of 2026-09-01.
+    Re-keyed by UI fix set 10, item 10.1 (2026-09-13).
 
     ## Built in code, never generated
 
-    `docs/build/UI_feedback.md` names the generated version as the easy and dangerous
-    path, and the reasoning is worth restating rather than referencing: an
-    offer to go deeper is a CLAIM that there is something deeper. A model
-    asked to write one will happily propose a follow-up about data this
-    graph does not hold, and that is a confident wrong answer wearing a
-    question mark. It would also bypass every control this system has,
-    because the grounding pass checks the ANSWER and would never see it.
+    `docs/build/UI_feedback.md` names the generated version as the easy and
+    dangerous path, and the reasoning is worth restating rather than
+    referencing: an offer to go deeper is a CLAIM that there is something
+    deeper. A model asked to write one will happily propose a follow-up
+    about data this graph does not hold, and that is a confident wrong
+    answer wearing a question mark. It would also bypass every control this
+    system has, because the grounding pass checks the ANSWER and would never
+    see it.
 
-    So the offer is derived from the one thing that is already known to
-    exist and already known to be absent from the answer: the findings
-    retrieval returned and the answer did not report. Those are the same
-    `omitted` rows `_build_incomplete_answer_note` discloses, so the offer
-    and the disclosure can never disagree about whether there is more.
+    ## What "deeper" means now
+
+    Until UI fix set 10 the offer was derived from the findings retrieval
+    returned and the answer did not report. The findings tail in
+    `write_node` now reports every prepared finding, so that set is empty on
+    the ordinary path and the offer would never fire. What is still known to
+    exist and known to be absent from the answer is the set of records
+    BEYOND the prepared list: `more_records_exist` is True when
+    `build_synth_findings` capped the list or the tool's own row limit cut
+    the graph result, the same two signals the truncation note reads, so the
+    offer and that note can never disagree about whether there is more.
+    `remaining_count` is the known total less what the answer cited, or
+    None when the total is unknown, in which case the offer names no
+    number rather than inventing one.
 
     ## When it declines, which is most of the time
 
@@ -4358,12 +4382,13 @@ def _build_next_step_offer(
     decision names it explicitly: an answer that always asks something will
     pad. Four cases decline:
 
-    - Nothing was omitted. There is no more, so there is nothing to offer.
+    - No records exist beyond what was prepared. There is no more.
     - The answer was refused. There is no answer to go deeper from.
     - `trust_outcome` is `refuse`, the same case reached by a different
       route.
-    - The omitted rows carry no usable entity type, so the offer would have
-      to be vague enough to be worthless ("would you like to see more?").
+    - The prepared rows carry no single usable entity type, so the offer
+      would have to be vague enough to be worthless ("would you like to
+      see more?").
 
     ## Why it names a TYPE and not the values
 
@@ -4372,23 +4397,51 @@ def _build_next_step_offer(
     full of periods, and inlining one fragments the sentence for anything
     downstream that splits on them. A type is a single word.
     """
-    if refused or trust_outcome == "refuse" or not omitted:
+    if refused or trust_outcome == "refuse" or not more_records_exist or not prepared:
         return None
-
     # Either nothing usable, or a mixed bag whose only honest phrasing is
     # too vague to be worth showing. `derived` projection rows do not count
     # as a type of their own: see `core.next_step.shared_record_type`.
-    record_type = shared_record_type(omitted)
+    record_type = shared_record_type(prepared)
     if record_type is None:
         return None
-
     label = entity_type_noun(record_type)
-    count = len(omitted)
-    noun = f"{label} record" if count == 1 else f"{label} records"
+    if remaining_count is not None and remaining_count > 0:
+        noun = f"{label} record" if remaining_count == 1 else f"{label} records"
+        return (
+            f"Would you like me to go through the {remaining_count} further {noun} "
+            f"found for this question?"
+        )
     return (
-        f"Would you like me to go through the {count} further {noun} "
+        f"Would you like me to go through the further {label} records "
         f"found for this question?"
     )
+
+
+# UI fix set 10, item 10.1, second cut. The sentence that separates the
+# model's summary from the code-built listing of the findings it left out.
+# One sentence, opening with "Note:", carrying no marker, the same shape as
+# every other system note `write_node` emits. The wording is a stable
+# prefix: `frontend/src/hooks/useRunView.ts` classifies system notes by
+# prefix and must list this one, so change the text here and there together.
+_FINDINGS_TAIL_NOTE = (
+    "Note: the records below were retrieved for this question and are "
+    "listed as found."
+)
+
+_MARKER_PATTERN = re.compile(r"\[(\d{1,3})\]")
+
+
+def _renumber_markers(narrative: str, offset: int) -> str:
+    """Shift every `[n]` marker in `narrative` by `offset`.
+
+    The findings tail is grounded on its own, so its markers are numbered
+    from 1. Merged after the model's claims it must continue the model's
+    numbering, because `display_index_by_citation_id` numbers findings by
+    first appearance in the merged claim list and `_narrative_chunks` looks
+    each printed number up in the citations built from that list.
+    """
+    return _MARKER_PATTERN.sub(lambda m: f"[{int(m.group(1)) + offset}]", narrative)
 
 
 def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
@@ -6140,6 +6193,73 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 synth_findings,
             )
 
+    # UI fix set 10, item 10.1, second cut (2026-09-13). THE FINDINGS TAIL.
+    #
+    # The first cut made retrieval deterministic: a code-chosen template
+    # with an ORDER BY returns the same rows in the same order every run.
+    # Measured five times each with the real models after that landed, the
+    # CITED set still varied, 4 versus 5 sources for the BRCA1 disease
+    # question and 19 versus 20 for its variants, because a citation exists
+    # only where the model's prose made a grounded claim, and the model
+    # mentions a different subset of the same twenty findings each time.
+    # The product owner's standard is "the exact words can be different but
+    # a user should get exact sources which must be consistent", so the
+    # words may stay the model's and the sources may not.
+    #
+    # This block reports every prepared finding the model did not. It reuses
+    # the structured fallback's mechanism exactly: one code-built sentence
+    # per finding carrying the finding's value as stored and its own marker,
+    # run through the SAME `run_grounding_pass` against the same findings.
+    # Nothing bypasses the gate; the only thing removed from the path for
+    # these findings is the model's choice not to mention them. The result
+    # is that the cited set equals the prepared set, which retrieval already
+    # made deterministic, so it is the same on every run.
+    #
+    # The tail is merged AFTER the model's grounded claims: its markers are
+    # renumbered by the model's slot count so `display_index_by_citation_id`,
+    # which numbers by first appearance in `claims`, agrees with the numbers
+    # printed in the merged narrative. A note sentence with no marker
+    # precedes it so a reader can see where the summary ends and the listing
+    # begins; `_narrative_chunks` emits that sentence with `marker_ids=[]`,
+    # the same shape as the truncation and incompleteness notes.
+    #
+    # Fires only when the model grounded SOMETHING and left findings out. It
+    # never runs on a refusal (a tail must not turn "nothing grounded" into
+    # an answer; the structured fallback owns the ok-but-nothing-grounded
+    # case and floors at `ask` for it) and never after the fallback (the
+    # fallback already listed every finding, so what it left unreported is
+    # exactly what the tail would fail on again).
+    if (
+        tool_outcome == "ok"
+        and omitted_findings
+        and grounding.claims
+        and not structured_fallback_used
+    ):
+        tail_grounding = run_grounding_pass(
+            build_structured_fallback_narrative(omitted_findings),
+            synth_findings,
+            core_ask_required=True,
+            question=query.text,
+        )
+        if tail_grounding.claims:
+            offset = len(display_index_by_citation_id(grounding))
+            grounding = GroundingResult(
+                narrative=(
+                    grounding.narrative.rstrip()
+                    + " "
+                    + _FINDINGS_TAIL_NOTE
+                    + " "
+                    + _renumber_markers(tail_grounding.narrative, offset)
+                ),
+                claims=list(grounding.claims) + list(tail_grounding.claims),
+                stripped_count=grounding.stripped_count + tail_grounding.stripped_count,
+                refused=False,
+            )
+            omitted_findings = unreported_findings(
+                {claim.finding.citation_id for claim in grounding.claims},
+                synth_findings,
+            )
+
     if tool_outcome == "no_tool":
         # No tool was selected at all, so there is nothing to ground
         # against and nothing to refuse about. Preserved from 2.1
@@ -6203,6 +6323,16 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # whole. Floors at `ask` through the same `aggregate` most-restrictive-
     # wins rule the entity-level check and the conflict check already use, so
     # it can tighten an outcome and never weaken a `refuse`.
+    #
+    # UI fix set 10, item 10.1, second cut: this is now RARE rather than
+    # structural. The findings tail above reports every prepared finding the
+    # model left out, so `omitted_findings` is non-empty here only for a
+    # finding the tail could not ground either, a value the grounding pass
+    # strips (one containing a sentence boundary, or one that fails the
+    # number check), or when the tail did not run at all (a refusal, or the
+    # structured fallback having already listed everything). The note and
+    # the `ask` floor stay for exactly those cases, and the repair cap note
+    # below says in its second clause whether an omission remained.
     incomplete_answer_note: str | None = None
     repair_cap_note: str | None = None
     if omitted_findings and trust_outcome != "refuse":
@@ -6210,8 +6340,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         incomplete_answer_note = _build_incomplete_answer_note(
             omitted_findings, len(synth_findings) - len(omitted_findings)
         )
-        if repair_cap_exceeded:
-            repair_cap_note = _build_repair_cap_note()
+    # F-4.5-A-04: a cap hit inside the repair is disclosed whether or not an
+    # omission remains. Before the findings tail the two always coincided;
+    # now the tail usually covers what the repair could not, and the note's
+    # second clause says which case this is.
+    if repair_cap_exceeded and trust_outcome != "refuse":
+        repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))
 
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
     # fewer facts than exist. Its two sources are now the findings cap
@@ -6422,7 +6556,25 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 ),
             )
 
-    next_step_offer = _build_next_step_offer(omitted_findings, trust_outcome, refused=False)
+    # UI fix set 10, item 10.1, second cut: the offer used to derive from
+    # `omitted_findings`, which the findings tail now empties on the ordinary
+    # path. "More to show" now means what it should have meant all along:
+    # records exist BEYOND what was prepared for this answer, either because
+    # `build_synth_findings` capped the list or because the tool's own row
+    # limit cut the graph result. The count is the known total less what
+    # this answer cited, when the total is known.
+    more_records_exist = findings_capped or _ok_finding_was_truncated(findings)
+    known_total = _known_total_available(findings)
+    remaining_records = (
+        known_total - len(citations) if known_total is not None else None
+    )
+    next_step_offer = _build_next_step_offer(
+        synth_findings,
+        more_records_exist,
+        remaining_records,
+        trust_outcome,
+        refused=False,
+    )
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "synth"))
     sink.emit(
         "done",
@@ -6431,16 +6583,17 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             total_tool_calls=total_tool_calls,
             elapsed_ms=elapsed_ms,
             trust_outcome=trust_outcome,
-            # T-6.2-08. Computed from the SAME `omitted_findings` the
-            # incompleteness disclosure is built from, so an answer can never
-            # offer to show more while its own note says there is no more.
+            # T-6.2-08, re-keyed by UI fix set 10, item 10.1: computed from
+            # the SAME capped-or-truncated signal the truncation note is
+            # built from, so an answer can never offer to show more while
+            # its own notes say there is no more.
             next_step=next_step_offer,
             # Set together with `next_step` or not at all, and built in code
-            # from the same omitted findings plus the entity label `plan_node`
-            # recorded. See `DonePayload.next_step_query`.
+            # from the prepared findings' shared record type plus the entity
+            # label `plan_node` recorded. See `DonePayload.next_step_query`.
             next_step_query=(
                 build_next_step_query(
-                    omitted_findings, state.get("next_step_entity_label") or ""
+                    synth_findings, state.get("next_step_entity_label") or ""
                 )
                 if next_step_offer is not None
                 else None

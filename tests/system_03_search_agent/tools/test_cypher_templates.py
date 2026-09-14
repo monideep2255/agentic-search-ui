@@ -13,12 +13,16 @@ more than once):
 - Selection per shape: the flagship shapes map to the named template.
   Mutation: swapping the `diseases` and `variants` rows of `_HOPS` turned
   every one of these red.
-- Fallback: an intent naming no shape on a non-lookup class, three shapes
-  at once, two shapes on a multi-hop question, an unknown CURIE prefix, or
-  a Gene mixed with an Article, all return None. Mutation: returning the
-  first matched shape unconditionally from `_resolve_shape` turned the
-  two-shape multi-hop arm red; dropping the `anchor_label is None` branch
-  turned the mixed-prefix arm red.
+- Fallback: an intent naming no shape on a non-lookup class, several
+  anchors with three shapes, or two shapes on a multi-hop question, an
+  unknown CURIE prefix, or a Gene mixed with an Article, all return None.
+  A SINGLE anchor with several shapes takes the first-named shape on any
+  class (the multi_hop "What variants cause disease in BRCA1?" arm).
+  Mutation: returning the first matched shape unconditionally from
+  `_resolve_shape` turned the several-anchor multi-hop arm red; gating the
+  single-anchor case on query class again turned the multi_hop variants
+  arm red; dropping the `anchor_label is None` branch turned the
+  mixed-prefix arm red.
 - ORDER BY: every record-returning template orders on the record id and
   the validator's injected LIMIT lands after it. Mutation: removing
   `ORDER BY` from `_hop_template` turned the arm red, and putting `LIMIT
@@ -119,6 +123,34 @@ def _select(
             "single_hop",
             "gene_variants_one",
             "is_sequence_variant_of",
+        ),
+        # Measured on develop 2026-09-13: Think classifies this question
+        # `multi_hop`, and the first cut declined two-shape questions on
+        # that class, so the model wrote a Cypher over a variant-to-disease
+        # edge the graph does not have and cited nine gene records. The
+        # query class is a model's guess; with one gene bound the first-named
+        # shape wins on every class.
+        (
+            "What variants cause disease in BRCA1?",
+            [BRCA1],
+            "multi_hop",
+            "gene_variants_one",
+            "is_sequence_variant_of",
+        ),
+        (
+            "What variants cause disease in BRCA1?",
+            [BRCA1],
+            "exploratory",
+            "gene_variants_one",
+            "is_sequence_variant_of",
+        ),
+        (
+            ("Give me everything NCBI knows about BRCA1: the gene record, associated "
+             "conditions, clinically significant variants, and key literature."),
+            [BRCA1],
+            "multi_hop",
+            "gene_diseases_one",
+            "gene_associated_with_condition",
         ),
         (
             "Which diseases are associated with BRCA1 variants?",
@@ -266,13 +298,11 @@ def test_the_mixed_variants_template_uses_only_the_gene_binding() -> None:
         ("Tell me about BRCA1", [BRCA1], "single_hop"),
         ("Tell me about BRCA1", [BRCA1], "exploratory"),
         (
-            ("Give me everything NCBI knows about BRCA1: the gene record, associated "
-            "conditions, clinically significant variants, and key literature."),
-            [BRCA1],
+            ("Which diseases are associated with BRCA1 and BRCA2 variants, and which "
+             "papers mention them?"),
+            [BRCA1, BRCA2],
             "multi_hop",
         ),
-        ("What variants cause disease in BRCA1?", [BRCA1], "multi_hop"),
-        ("What variants cause disease in BRCA1?", [BRCA1], "exploratory"),
         ("Which diseases are associated with rs334?", ["ClinVar:17661"], "single_hop"),
         ("Which diseases are associated with BRCA1?", [BRCA1, PMID], "single_hop"),
         ("How many variants does BRCA1 have compared with BRCA2?", [BRCA1, BRCA2], "aggregate"),

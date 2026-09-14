@@ -262,13 +262,29 @@ _FIRST_SHAPE_WINS_CLASSES: Final[frozenset[QueryClass]] = frozenset(
 )
 
 
-def _resolve_shape(tool_input: CypherQueryInput, shapes: list[str]) -> str | None:
+def _resolve_shape(
+    tool_input: CypherQueryInput, shapes: list[str], anchor_count: int = 1
+) -> str | None:
     """Pick the one shape a question asks for, or None when it is ambiguous.
 
-    One shape: that one. Two shapes on a lookup, single-hop or aggregate
-    question: the one named first. Anything else: None, the model path.
+    One shape: that one. Several shapes with exactly ONE anchor bound: the
+    one named first, on any query class. Measured on develop 2026-09-13
+    after the first cut: "What variants cause disease in BRCA1?" was
+    classified `multi_hop` by Think, named both the variants and the
+    diseases shapes, and so went to the model path, which wrote a Cypher
+    over a variant-to-disease edge the graph does not have, returned zero
+    rows, and cited nine gene-record sources on two runs of five. The
+    query class is a model's guess and does not gate selection: with one
+    gene bound and "variants" named, the only thing the graph can answer is
+    that gene's variants, whatever Think called the question.
+
+    Several anchors of one label with two shapes: the first named, on a
+    lookup, single-hop or aggregate question only. More than that: None,
+    the model path. Mixed anchor sets are declined before this is reached.
     """
     if len(shapes) == 1:
+        return shapes[0]
+    if anchor_count == 1:
         return shapes[0]
     if len(shapes) == 2 and tool_input.query_class in _FIRST_SHAPE_WINS_CLASSES:
         return shapes[0]
@@ -308,7 +324,7 @@ def _mixed_gene_disease_template(
     gene_params = [name for name, label in labels.items() if label == "Gene"]
     disease_params = [name for name, label in labels.items() if label == "Disease"]
     shapes = matched_shapes(tool_input.query_intent, "Gene")
-    shape = _resolve_shape(tool_input, shapes) if shapes else None
+    shape = _resolve_shape(tool_input, shapes, len(gene_params)) if shapes else None
     if shapes and shape is None:
         return None
     if shape == "variants":
@@ -408,10 +424,12 @@ def select_template(
        two narrow forms `_mixed_gene_disease_template` names; any other mix
        is None.
     2. The anchor's shapes are tested against the question. One match is
-       the shape. Two matches on a lookup, single-hop or aggregate question
-       resolve to the one named first in the question; two on a multi-hop
-       or exploratory question, or three or more anywhere, are ambiguous:
-       None. Zero falls through to step 3.
+       the shape. Several matches with exactly one anchor bound resolve to
+       the one named first in the question, on ANY query class (the class
+       is a model's guess and does not gate selection). Several anchors of
+       one label with two matches resolve to the first on a lookup,
+       single-hop or aggregate question; otherwise ambiguous: None. Zero
+       falls through to step 3.
     3. With no shape matched, a `lookup` question about the entity is the
        record itself. Any other class with no shape is None.
     4. A matched hop on a question asking "how many" (any class), or on an
@@ -433,7 +451,7 @@ def select_template(
         if tool_input.query_class is QueryClass.LOOKUP:
             return _record_template(anchor_label, param_names)
         return None
-    shape = _resolve_shape(tool_input, shapes)
+    shape = _resolve_shape(tool_input, shapes, len(param_names))
     if shape is None:
         return None
     hop = _HOPS[(anchor_label, shape)]

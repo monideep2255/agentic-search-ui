@@ -128,20 +128,28 @@ def shared_record_type(omitted: list[Any]) -> str | None:
     return types.pop()
 
 
-def build_next_step_query(omitted: list[Any], entity_label: str) -> str | None:
+def build_next_step_query(prepared: list[Any], entity_label: str) -> str | None:
     """The question to send when the reader accepts the offer, or None.
 
-    Declines under exactly the conditions `core.graph._build_next_step_offer`
-    declines for the offer text itself, so the two fields on `DonePayload`
-    are set together or not at all: nothing omitted, a mixed bag of record
+    Declines under the type conditions `core.graph._build_next_step_offer`
+    declines for the offer text itself: no findings, a mixed bag of record
     types, or rows with no usable type. It also declines when the turn has
     no entity label to name, because a follow-up that names nothing is the
-    pronoun form this module exists to replace.
+    pronoun form this module exists to replace. Whether more records EXIST
+    is the offer's own question; `write_node` only calls this when the
+    offer was made, so the two fields on `DonePayload` are set together or
+    not at all.
+
+    UI fix set 10, item 10.1 (2026-09-13): `prepared` is the findings handed
+    to synthesis rather than the ones the answer omitted, because the
+    findings tail now reports every prepared finding and the omitted set is
+    empty on the ordinary path. The record type is still the one type those
+    findings share.
     """
     label = " ".join(entity_label.split())[:_MAX_ENTITY_LABEL_CHARS]
-    if not omitted or not label:
+    if not prepared or not label:
         return None
-    record_type = shared_record_type(omitted)
+    record_type = shared_record_type(prepared)
     if record_type is None:
         return None
     noun = entity_type_noun(record_type)

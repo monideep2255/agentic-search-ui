@@ -1,9 +1,16 @@
 """Build phase 6.2, T-6.2-08: an answer may offer an honest next step.
 
 Product-owner decision, 2026-09-01. The offer is DERIVED from what
-retrieval actually returned and the answer did not report, never generated,
+retrieval actually returned and the answer could not show, never generated,
 because an offer to go deeper is a claim that there is something deeper and
 a model asked to write one will propose topics the graph does not hold.
+
+Re-keyed by UI fix set 10, item 10.1 (2026-09-13): the findings tail now
+reports every prepared finding, so "deeper" means records BEYOND the
+prepared list (the list was capped, or the tool truncated the graph
+result), with a count only when the total is known. The arms below pass
+that signal and the prepared findings explicitly; the count they pass is
+the number of prepared rows, so the wording assertions hold unchanged.
 
 MOST OF THIS FILE IS ABOUT DECLINING, and that is the right proportion. The
 decision named the failure mode explicitly: a system that always asks
@@ -42,7 +49,7 @@ def test_an_offer_names_what_was_actually_left_out() -> None:
     does not: a Layer 1 value is full of periods and inlining one fragments
     the sentence for anything that splits on them.
     """
-    offer = _build_next_step_offer(_omitted(3), trust_outcome="ask", refused=False)
+    offer = _build_next_step_offer(_omitted(3), True, 3, trust_outcome="ask", refused=False)
 
     assert offer is not None
     assert "3" in offer, offer
@@ -56,16 +63,34 @@ def test_singular_and_plural_are_both_grammatical() -> None:
     The same reasoning the incompleteness note already carries: this text is
     shown to a reader in a clinical context.
     """
-    one = _build_next_step_offer(_omitted(1), trust_outcome="ask", refused=False)
-    many = _build_next_step_offer(_omitted(4), trust_outcome="ask", refused=False)
+    one = _build_next_step_offer(_omitted(1), True, 1, trust_outcome="ask", refused=False)
+    many = _build_next_step_offer(_omitted(4), True, 4, trust_outcome="ask", refused=False)
 
     assert one is not None and "1 further disease record" in one, one
     assert many is not None and "4 further disease records" in many, many
 
 
-def test_nothing_omitted_means_no_offer() -> None:
-    """The commonest decline. A complete answer has nowhere deeper to go."""
-    assert _build_next_step_offer([], trust_outcome="answer", refused=False) is None
+def test_nothing_beyond_the_prepared_list_means_no_offer() -> None:
+    """The commonest decline. A complete answer has nowhere deeper to go:
+    neither capped nor truncated, so `more_records_exist` is False, however
+    many findings were prepared. And no prepared findings means no type to
+    name even when more exist."""
+    assert (
+        _build_next_step_offer(_omitted(5), False, None, trust_outcome="answer", refused=False)
+        is None
+    )
+    assert _build_next_step_offer([], True, 4, trust_outcome="answer", refused=False) is None
+
+
+def test_an_unknown_total_offers_without_a_number() -> None:
+    """When the true total is unknown the offer names no count rather than
+    inventing one, and a non-positive remainder is treated the same way."""
+    offer = _build_next_step_offer(_omitted(3), True, None, trust_outcome="ask", refused=False)
+    assert offer == (
+        "Would you like me to go through the further disease records found for this question?"
+    ), offer
+    assert not any(ch.isdigit() for ch in offer)
+    assert _build_next_step_offer(_omitted(3), True, 0, trust_outcome="ask", refused=False) == offer
 
 
 def test_a_refusal_never_offers() -> None:
@@ -76,9 +101,9 @@ def test_a_refusal_never_offers() -> None:
     `refused` flag and a `refuse` trust outcome are different signals and
     either alone must be enough.
     """
-    assert _build_next_step_offer(_omitted(3), trust_outcome="ask", refused=True) is None
+    assert _build_next_step_offer(_omitted(3), True, 3, trust_outcome="ask", refused=True) is None
     assert (
-        _build_next_step_offer(_omitted(3), trust_outcome="refuse", refused=False) is None
+        _build_next_step_offer(_omitted(3), True, 3, trust_outcome="refuse", refused=False) is None
     )
 
 
@@ -92,14 +117,14 @@ def test_a_mixed_bag_declines_rather_than_going_vague() -> None:
     padding the decision forbids.
     """
     mixed = _omitted(2, "Disease") + _omitted(2, "Gene")
-    assert _build_next_step_offer(mixed, trust_outcome="ask", refused=False) is None
+    assert _build_next_step_offer(mixed, True, 4, trust_outcome="ask", refused=False) is None
 
 
 def test_rows_with_no_entity_type_decline() -> None:
     """An omitted row carrying no type cannot be described, so it is not
     offered. Silence beats "would you like to see more of the 3 things?"."""
     untyped = _omitted(3, "")
-    assert _build_next_step_offer(untyped, trust_outcome="ask", refused=False) is None
+    assert _build_next_step_offer(untyped, True, 3, trust_outcome="ask", refused=False) is None
 
 
 def test_the_offer_is_not_model_generated() -> None:
@@ -159,7 +184,7 @@ def test_every_query_the_builder_produces_is_one_the_detector_accepts() -> None:
 
 
 def test_the_detector_rejects_the_offer_text_and_ordinary_questions() -> None:
-    offer = _build_next_step_offer(_omitted(3), trust_outcome="ask", refused=False)
+    offer = _build_next_step_offer(_omitted(3), True, 3, trust_outcome="ask", refused=False)
     assert offer is not None
     assert not is_go_deeper_query(offer), offer
     assert not is_go_deeper_query("Which diseases are associated with BRCA1?")
@@ -183,7 +208,7 @@ def test_the_query_declines_exactly_when_the_offer_declines() -> None:
     assert build_next_step_query(mixed, "BRCA1") is None
     untyped = _omitted(2, entity_type="")
     assert build_next_step_query(untyped, "BRCA1") is None
-    assert _build_next_step_offer(untyped, trust_outcome="ask", refused=False) is None
+    assert _build_next_step_offer(untyped, True, 3, trust_outcome="ask", refused=False) is None
 
 
 def test_the_query_declines_with_no_entity_to_name() -> None:
@@ -216,7 +241,7 @@ def test_derived_projection_rows_do_not_count_as_a_record_type() -> None:
 
     mixed = _omitted(2, "SequenceVariant") + _omitted(2, "derived")
     assert shared_record_type(mixed) == "SequenceVariant"
-    offer = _build_next_step_offer(mixed, trust_outcome="ask", refused=False)
+    offer = _build_next_step_offer(mixed, True, 4, trust_outcome="ask", refused=False)
     assert offer == (
         "Would you like me to go through the 4 further sequence variant records "
         "found for this question?"
@@ -227,5 +252,5 @@ def test_derived_projection_rows_do_not_count_as_a_record_type() -> None:
 
     only_projections = _omitted(3, "derived")
     assert shared_record_type(only_projections) is None
-    assert _build_next_step_offer(only_projections, trust_outcome="ask", refused=False) is None
+    assert _build_next_step_offer(only_projections, True, 3, trust_outcome="ask", refused=False) is None
     assert build_next_step_query(only_projections, "BRCA1") is None

@@ -154,7 +154,7 @@ def synth_pair(monkeypatch: pytest.MonkeyPatch):
     return _install
 
 
-def _write_state(total_available: int = 5) -> dict[str, object]:
+def _write_state(total_available: int = 5, truncated: bool = False) -> dict[str, object]:
     from system_03_search_agent.harness.coordinator_worker import Finding
 
     query = Query(
@@ -173,7 +173,7 @@ def _write_state(total_available: int = 5) -> dict[str, object]:
             "status": "ok",
             "row_count": len(_ROWS),
             "total_available": total_available,
-            "truncated": False,
+            "truncated": truncated,
             "rows": _ROWS,
             "error": None,
         },
@@ -248,8 +248,17 @@ async def test_a_repair_that_drops_a_reported_finding_is_discarded(
         "a repair that drops a reported finding must be discarded; "
         "'disease name number 1' is missing from the shipped answer"
     )
-    assert "disease name number 3" not in narrative, (
+    # UI fix set 10, item 10.1 (2026-09-13): finding 3 now reaches the
+    # answer, but through the code-built findings tail, never through the
+    # discarded repair. The tail is announced by its note sentence, so the
+    # discarded repair's content must appear ONLY after that note; before
+    # it, the model's first answer (findings 1 and 2) stands alone.
+    note_at = narrative.index(graph_module._FINDINGS_TAIL_NOTE)
+    assert "disease name number 3" not in narrative[:note_at], (
         "the discarded repair's own content must not leak into the answer"
+    )
+    assert "disease name number 3" in narrative[note_at:], (
+        "the findings tail must still report what the discarded repair had"
     )
 
 
@@ -402,7 +411,24 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
         "the grounded answer already in hand must survive the cap"
     )
     done = next(event for event in events if event.type == "done")
-    assert done.payload["trust_outcome"] == "ask"
+    # UI fix set 10, item 10.1 (2026-09-13): the findings tail reports what
+    # the capped repair could not, so the answer is whole, the disclosure
+    # says so in its second clause, and no `ask` floor applies. The floor
+    # is asserted below on the case the tail cannot cover.
+    assert "listed below as found" in narrative, narrative
+    assert "was not repaired" not in narrative, narrative
+    assert done.payload["trust_outcome"] == "answer", done.payload
+
+    synth_preflights["count"] = 0
+    monkeypatch.setattr(
+        graph_module, "build_structured_fallback_narrative", lambda findings: "nothing here."
+    )
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+    narrative = _narrative(events)
+    assert "cost limit" in narrative and "was not repaired" in narrative, narrative
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "ask", done.payload
 
 
 # ---------------------------------------------------------------------------
@@ -412,10 +438,17 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
 
 @pytest.mark.asyncio
 async def test_the_incomplete_note_counts_findings_handed_to_synthesis(
-    synth_pair,
+    synth_pair, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pins: the note's denominator is the findings PREPARED for the answer,
     and says so.
+
+    UI fix set 10, item 10.1 (2026-09-13): the findings tail now reports
+    every prepared finding the model left out, so on the ordinary path this
+    note no longer fires. The arm keeps its property by making the tail
+    unable to ground (its code-built narrative is replaced with a sentence
+    carrying no marker, the same outcome as a value the pass strips), which
+    is exactly the case the note still exists for.
 
     It read "of the {total} findings retrieved for it", where `total` is
     `len(synth_findings)`, capped at `_MAX_CITATIONS_PER_ANSWER` after
@@ -453,6 +486,9 @@ async def test_the_incomplete_note_counts_findings_handed_to_synthesis(
     """
     synth_pair(first={1, 2}, repaired={1, 2})
 
+    monkeypatch.setattr(
+        graph_module, "build_structured_fallback_narrative", lambda findings: "nothing here."
+    )
     result = await graph_module.write_node(_write_state(total_available=500))
     narrative = _narrative(result["events"])
 
@@ -715,8 +751,13 @@ async def test_next_step_query_is_set_with_the_offer_and_names_the_entity(
     synth_pair,
 ) -> None:
     """`next_step` is a yes/no question for the reader. `next_step_query` is
-    the real question the surface sends, built from the same omitted
-    findings plus the entity label `plan_node` recorded.
+    the real question the surface sends, built from the prepared findings'
+    shared record type plus the entity label `plan_node` recorded.
+
+    UI fix set 10, item 10.1 (2026-09-13): the offer keys on records beyond
+    the prepared list, so this state marks the tool result truncated with a
+    known total of 8 against 5 prepared and cited, and the offer names the
+    3 that remain.
 
     MUTATION PROOF: dropping `next_step_query=` from the `DonePayload` in
     `write_node` turns this arm red (the field reads None).
@@ -724,12 +765,13 @@ async def test_next_step_query_is_set_with_the_offer_and_names_the_entity(
     from system_03_search_agent.core.next_step import is_go_deeper_query
 
     synth_pair(first={1, 2}, repaired={1, 2})
-    state = _write_state()
+    state = _write_state(total_available=8, truncated=True)
     state["next_step_entity_label"] = "BRCA1"
     result = await graph_module.write_node(state)
     done = _events_of(result["events"], "done")[0].payload
 
     assert done["next_step"] is not None, done
+    assert "3 further disease records" in done["next_step"], done
     assert done["next_step_query"] == "Which other disease records are linked to BRCA1?", done
     assert is_go_deeper_query(done["next_step_query"])
     assert not is_go_deeper_query(done["next_step"]), (

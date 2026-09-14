@@ -56,6 +56,11 @@ const CAP_NOTE_PREFIX = "This query reached its resource limit";
 const SYSTEM_NOTE_PREFIXES = [
   CAP_NOTE_PREFIX,
   "Note: this result was truncated",
+  // UI fix set 10, item 10.1 (2026-09-13): the findings tail. The write
+  // step appends one cited sentence per retrieved record the model's prose
+  // left out, preceded by this note, so every retrieved source is cited on
+  // every run. Same wording as `_FINDINGS_TAIL_NOTE` in core/graph.py.
+  "Note: the records below were retrieved for this question and are listed as found",
   "Note: this answer does not address the following entities",
   // 2026-09-05 no-data-refusal fix. `_build_repair_cap_note`
   // (`core/graph.py`) is a fourth system note, the same DISCLOSURE shape as
