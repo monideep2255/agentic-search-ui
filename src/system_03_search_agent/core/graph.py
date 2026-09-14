@@ -680,10 +680,11 @@ async def _dispatch_tier_call(
     """The shared cap-check-then-call-then-timeout sequence every model-
     calling node uses, in the fixed order the module docstring states.
 
-    `cache_prefix` is the loop's stable prefix for every call but the
-    guardrail's, which passes None. Section 4.2 names Think, Plan and Write
-    as the calls that share the prefix; the guardrail is a classifier with
-    its own single system instruction. Measured 2026-09-13 (UI fix set 7,
+    `cache_prefix` is the loop's stable prefix for every call but the two
+    CLASSIFICATION calls, the guardrail's and Think's, which pass None.
+    Section 4.2 names Think, Plan and Write as the calls that share the
+    prefix; Think's classification call left it on 2026-09-13 for the same
+    measured reason as the guardrail below, and Plan and Write keep it. Measured 2026-09-13 (UI fix set 7,
     item 7.1): with the agent's prefix prepended ahead of that instruction,
     the Guard model sometimes acted as the agent and ANSWERED the question
     ("I'll query the knowledge graph for diseases associated with BRCA1"),
@@ -1459,6 +1460,16 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 # the question, never spliced into the system block.
                 think_messages,
                 budget_s=budget_for_step("think", "lookup"),
+                # No stable prefix ahead of the classification instruction
+                # (2026-09-13, UI fix set 7). Measured on develop after the
+                # guard's identical fix: with the agent's prefix first, the
+                # plan-tier model answered Think's call as the agent ("I'll
+                # research which diseases are associated with TP53 by
+                # querying the knowledge graph...", then tool-call blocks),
+                # no JSON, two attempts, on every turn that carried memory.
+                # `_THINK_SYSTEM_INSTRUCTION` names its own task, shapes and
+                # output in full; it reads nothing from the prefix.
+                cache_prefix=None,
             )
         except cost_control.QueryCapExceededError:
             return {"cap_exceeded": True}

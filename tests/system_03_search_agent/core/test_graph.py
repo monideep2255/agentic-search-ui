@@ -554,8 +554,9 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
 ) -> None:
     """F-2.0-03 fix: build_stable_prefix() has a real caller, not zero.
 
-    No-tool-selected path: the think, plan and write calls (three of the
-    four; the guardrail is the documented exception below)
+    No-tool-selected path: the plan and write calls (two of the four; the
+    guardrail and Think classification calls are the documented exceptions
+    below)
     reach litellm.acompletion with graph_module._STABLE_PREFIX prepended
     as a leading system-role message, proving the prompt-cache scaffold
     T-2.0-06 built is actually wired into the loop, not merely
@@ -574,12 +575,19 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
 
     await _run_graph(_valid_query(), _valid_context())
     assert _mock_litellm.call_count == 4
-    guard_call, *loop_calls = _mock_litellm.call_args_list
+    guard_call, think_call, *loop_calls = _mock_litellm.call_args_list
     assert guard_call.kwargs["messages"][0] == {
         "role": "system",
         "content": GUARD_SYSTEM_INSTRUCTION,
     }
-    assert len(loop_calls) == 3
+    # Think's classification call left the prefix the same day, for the
+    # same measured reason: the plan-tier model on develop answered it as
+    # the agent. Its own instruction is first and only.
+    assert think_call.kwargs["messages"][0] == {
+        "role": "system",
+        "content": graph_module._THINK_SYSTEM_INSTRUCTION,
+    }
+    assert len(loop_calls) == 2
     for call in loop_calls:
         leading_message = call.kwargs["messages"][0]
         assert leading_message["role"] == "system"
@@ -614,16 +622,20 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    # Three since 2026-09-13, not four: the guardrail call deliberately
-    # carries no prefix (see the no-tool sibling above), and it is asserted
-    # present separately so a missing guard call cannot hide in the count.
-    assert len(prefixed_calls) == 3
+    # Two since 2026-09-13, not four: the guardrail and Think classification
+    # calls deliberately carry no prefix (see the no-tool sibling above), and
+    # both are asserted present separately so a missing call cannot hide in
+    # the count.
+    assert len(prefixed_calls) == 2
     for call in prefixed_calls:
         assert call.kwargs["messages"][0]["role"] == "system"
     from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
 
     assert _mock_litellm.call_args_list[0].kwargs["messages"][0]["content"] == (
         GUARD_SYSTEM_INSTRUCTION
+    )
+    assert _mock_litellm.call_args_list[1].kwargs["messages"][0]["content"] == (
+        graph_module._THINK_SYSTEM_INSTRUCTION
     )
 
 
@@ -1921,10 +1933,10 @@ async def test_stable_prefix_still_reaches_every_graph_node_call_when_a_tool_run
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    # Think, plan and write. The guardrail call stopped carrying the prefix
-    # on 2026-09-13 (UI fix set 7, item 7.1; see `_dispatch_tier_call`) and
-    # is pinned by its own arm in the guardrail integration tests.
-    assert len(node_level_calls) == 3
+    # Plan and write. The guardrail and Think classification calls stopped
+    # carrying the prefix on 2026-09-13 (UI fix set 7, item 7.1; see
+    # `_dispatch_tier_call`) and are pinned by their own arms.
+    assert len(node_level_calls) == 2
 
 
 @pytest.mark.asyncio
