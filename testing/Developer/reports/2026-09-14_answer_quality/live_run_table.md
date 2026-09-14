@@ -1,0 +1,69 @@
+| Case | Mode | Run | Outcome | First sentence | Words | Headings | List rows | Sources (hash) | Markers ok | URL sentence | Synth first s / words | Synth repair s / words | Elapsed s | Errors |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| BRCA1 diseases | plain_language | 1 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 163 | 0 | 0 | 11 (b3e4ad3c) | yes | no | 2.0 / 133 | 2.2 / 170 | 8.6 | none |
+| BRCA1 diseases | plain_language | 2 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 166 | 0 | 0 | 11 (b3e4ad3c) | yes | no | 13.2 / 139 | 1.9 / 180 | 19.8 | none |
+| BRCA1 diseases | plain_language | 3 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 138 | 0 | 0 | 11 (b3e4ad3c) | yes | no | 1.9 / 166 | 2.9 / 169 | 10.4 | none |
+| BRCA1 diseases | plain_language | 4 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 136 | 0 | 0 | 11 (b3e4ad3c) | yes | no | 4.1 / 134 | 2.6 / 120 | 13.2 | none |
+| BRCA1 diseases | plain_language | 5 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 133 | 0 | 0 | 11 (b3e4ad3c) | yes | no | 1.9 / 129 | 2.0 / 152 | 7.8 | none |
+| BRCA1 diseases | researcher | 1 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 135 | 4 | 11 | 11 (b3e4ad3c) | yes | no | 2.3 / 210 | 26.7 / 0 | 47.4 | none |
+| BRCA1 diseases | researcher | 2 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 126 | 4 | 11 | 11 (b3e4ad3c) | yes | no | 3.2 / 184 | 2.6 / 266 | 9.9 | none |
+| BRCA1 diseases | researcher | 3 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 129 | 4 | 11 | 11 (b3e4ad3c) | yes | no | 2.3 / 176 | 2.0 / 178 | 8.0 | none |
+| BRCA1 diseases | researcher | 4 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 141 | 4 | 11 | 11 (b3e4ad3c) | yes | no | 5.0 / 191 | 2.1 / 212 | 16.2 | none |
+| BRCA1 diseases | researcher | 5 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian canc | 135 | 4 | 11 | 11 (b3e4ad3c) | yes | no | 2.2 / 207 | 2.2 / 184 | 10.6 | none |
+| GCK MODY variants | researcher | 1 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 (ede40e50) | yes | no | 2.7 / 195 | 3.2 / 220 | 13.7 | none |
+| GCK MODY variants | researcher | 2 | refuse | I could not identify that gene. NCBI has no record matching the name in your question, so  | 23 | 0 | 0 | 0 (e3b0c442) | NO | no | none | none | 8.9 | none |
+| GCK MODY variants | researcher | 3 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 (ede40e50) | yes | no | 9.5 / 247 | 7.3 / 211 | 24.2 | none |
+| GCK MODY variants | researcher | 4 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 (ede40e50) | yes | no | 5.1 / 247 | 4.4 / 203 | 17.6 | none |
+| GCK MODY variants | researcher | 5 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 (ede40e50) | yes | no | 4.1 / 284 | 22.4 / 0 | 40.4 | none |
+| GCK MODY variants (serial rerun) | researcher | 1 | refuse | I could not identify that gene. NCBI has no record matching the name in your question, so  | 23 | 0 | 0 | 0 (e3b0c442) | NO | no | none | none | 5.0 | none |
+| GCK MODY variants (serial rerun) | researcher | 2 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 114 | 4 | 20 | 20 (ede40e50) | yes | no | 3.5 / 234 | 3.3 / 234 | 17.2 | none |
+| GCK MODY variants (serial rerun) | researcher | 3 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 (ede40e50) | yes | no | 4.1 / 221 | 2.2 / 210 | 15.4 | none |
+| GCK MODY variants (serial rerun) | researcher | 4 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 (ede40e50) | yes | no | 2.7 / 172 | 4.1 / 288 | 16.2 | none |
+| GCK MODY variants (serial rerun) | researcher | 5 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 114 | 4 | 20 | 20 (ede40e50) | yes | no | 3.0 / 174 | 4.1 / 219 | 24.8 | none |
+| CFTR variants | researcher | 1 | answer | Found 13 sequence variant records for CFTR, of 6030 available. | 101 | 4 | 20 | 20 (5ca431b6) | yes | no | 11.7 / 233 | 9.0 / 186 | 30.2 | none |
+| CFTR variants | researcher | 2 | answer | Found 13 sequence variant records for CFTR, of 6030 available. | 130 | 5 | 20 | 20 (5ca431b6) | yes | no | 13.3 / 182 | 8.5 / 182 | 30.3 | none |
+| CFTR variants | researcher | 3 | ask | Found 13 sequence variant records for CFTR, of 6030 available. | 89 | 4 | 20 | 20 (5ca431b6) | yes | no | 36.8 / 0 | 8.2 / ? | 55.2 | none |
+| CFTR variants | researcher | 4 | answer | Found 13 sequence variant records for CFTR, of 6030 available. | 89 | 4 | 20 | 20 (5ca431b6) | yes | no | 6.1 / 181 | 7.6 / 274 | 21.5 | none |
+| CFTR variants | researcher | 5 | answer | Found 13 sequence variant records for CFTR, of 6030 available. | 113 | 5 | 20 | 20 (5ca431b6) | yes | no | 7.8 / 179 | 7.8 / 208 | 22.6 | none |
+| EGFR NSCLC and trials | researcher | 1 | answer | Found 5 clinical trial records and 13 sequence variant records for EGFR, of 3961 available | 93 | 4 | 20 | 20 (375ff71b) | yes | no | 13.0 / 241 | 32.0 / ? | 54.8 | none |
+| EGFR NSCLC and trials | researcher | 2 | answer | Found 5 clinical trial records and 13 sequence variant records for EGFR, of 3961 available | 147 | 4 | 20 | 20 (375ff71b) | yes | no | 14.2 / 195 | 17.3 / 325 | 41.1 | none |
+| EGFR NSCLC and trials | researcher | 3 | refuse |  | 0 | 0 | 0 | 0 (e3b0c442) | yes | no | 45.0 / ? | none | 54.9 | write/transient |
+| EGFR NSCLC and trials | researcher | 4 | answer | Found 5 clinical trial records and 13 sequence variant records for EGFR, of 3961 available | 103 | 5 | 20 | 20 (375ff71b) | yes | no | 10.3 / 242 | 34.7 / ? | 53.7 | none |
+| EGFR NSCLC and trials | researcher | 5 | ask | Found 5 clinical trial records and 13 sequence variant records for EGFR, of 3961 available | 93 | 4 | 20 | 20 (375ff71b) | yes | no | 16.1 / 183 | 12.4 / 294 | 37.7 | none |
+| BRCA1 and BRCA2 diseases | researcher | 1 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 138 | 4 | 20 | 20 (b279dd6e) | yes | no | 2.9 / 259 | 2.5 / 192 | 26.7 | none |
+| BRCA1 and BRCA2 diseases | researcher | 2 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 174 | 4 | 20 | 20 (b279dd6e) | yes | no | 3.4 / 306 | 22.8 / 52 | 38.3 | none |
+| BRCA1 and BRCA2 diseases | researcher | 3 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 122 | 4 | 20 | 20 (b279dd6e) | yes | no | 4.0 / 257 | 2.5 / 252 | 12.4 | none |
+| BRCA1 and BRCA2 diseases | researcher | 4 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 262 | 5 | 20 | 20 (b279dd6e) | yes | no | 3.9 / 252 | 2.6 / 337 | 15.5 | none |
+| BRCA1 and BRCA2 diseases | researcher | 5 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 157 | 4 | 20 | 20 (b279dd6e) | yes | no | 3.8 / 254 | 28.8 / 236 | 36.6 | none |
+| BRCA1 and BRCA2 diseases | plain_language | 1 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 175 | 0 | 0 | 20 (b279dd6e) | yes | no | 9.6 / 229 | 2.9 / 198 | 27.6 | none |
+| BRCA1 and BRCA2 diseases | plain_language | 2 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 180 | 0 | 0 | 20 (b279dd6e) | yes | no | 2.8 / 198 | 25.0 / 278 | 52.4 | none |
+| BRCA1 and BRCA2 diseases | plain_language | 3 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 173 | 0 | 0 | 20 (b279dd6e) | yes | no | 1.5 / 129 | 1.6 / 180 | 7.5 | none |
+| BRCA1 and BRCA2 diseases | plain_language | 4 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 173 | 0 | 0 | 20 (b279dd6e) | yes | no | 14.9 / 0 | 21.3 / 0 | 47.4 | none |
+| BRCA1 and BRCA2 diseases | plain_language | 5 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 246 | 0 | 0 | 20 (b279dd6e) | yes | no | 2.1 / 199 | 30.3 / 276 | 44.3 | none |
+| BRCA1 variants | researcher | 1 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 119 | 4 | 20 | 20 (0f97a498) | yes | no | 3.7 / 240 | 3.2 / 237 | 34.6 | none |
+| BRCA1 variants | researcher | 2 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 159 | 4 | 20 | 20 (0f97a498) | yes | no | 19.3 / 0 | 3.6 / 254 | 43.7 | none |
+| BRCA1 variants | researcher | 3 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 99 | 4 | 20 | 20 (0f97a498) | yes | no | 3.6 / 215 | 4.4 / 241 | 21.4 | none |
+| BRCA1 variants | researcher | 4 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 114 | 4 | 20 | 20 (0f97a498) | yes | no | 3.4 / 199 | 3.5 / 197 | 26.8 | none |
+| BRCA1 variants | researcher | 5 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 115 | 5 | 20 | 20 (0f97a498) | yes | no | 4.4 / 286 | 4.2 / 241 | 22.0 | none |
+| BRCA1 variants | plain_language | 1 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 149 | 0 | 0 | 20 (0f97a498) | yes | no | 17.5 / 168 | 3.3 / 196 | 34.8 | none |
+| BRCA1 variants | plain_language | 2 | ask | Found 13 sequence variant records for BRCA1, of 15310 available. | 158 | 0 | 0 | 20 (0f97a498) | yes | no | 3.4 / 173 | 2.7 / 181 | 28.5 | none |
+| BRCA1 variants | plain_language | 3 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 156 | 0 | 0 | 20 (0f97a498) | yes | no | 6.1 / 214 | 4.7 / 209 | 23.7 | none |
+| BRCA1 variants | plain_language | 4 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 145 | 0 | 0 | 20 (0f97a498) | yes | no | 9.6 / 177 | 9.4 / 213 | 25.2 | none |
+| BRCA1 variants | plain_language | 5 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 162 | 0 | 0 | 20 (0f97a498) | yes | no | 5.9 / 191 | 2.9 / 191 | 18.8 | none |
+
+Worst first Synth call: 45.0 s. Worst write step (first plus repair): 45.0 s.
+
+Source sets:
+- BRCA1 diseases / n_brca1_plain.jsonl: 11 ids: 672, @GENE_BRCA1, MedGen:C0346153, MedGen:C2676676, MedGen:C3280442, MedGen:C4554406, NCT00590109, NCT00597987, NCT00617656, NCT00673335, NCT00700778
+- BRCA1 diseases / n_brca1_researcher.jsonl: 11 ids: 672, @GENE_BRCA1, MedGen:C0346153, MedGen:C2676676, MedGen:C3280442, MedGen:C4554406, NCT00590109, NCT00597987, NCT00617656, NCT00673335, NCT00700778
+- GCK MODY variants / n_gck_researcher.jsonl: 20 ids: 2645, @GENE_GCK, ClinVar:1028584, ClinVar:1045215, ClinVar:1074406, ClinVar:1077171, ClinVar:1098819, ClinVar:1172675, ClinVar:1172895, ClinVar:1172896, ClinVar:1179956, ClinVar:1187444, ClinVar:1188508, ClinVar:1190030, ClinVar:1190681, NCT01029795, NCT01238380, NCT01247363, NCT01472809, NCT01960231
+- GCK MODY variants / n_gck_researcher.jsonl: 0 ids: 
+- GCK MODY variants (serial rerun) / n_gck_serial_researcher.jsonl: 20 ids: 2645, @GENE_GCK, ClinVar:1028584, ClinVar:1045215, ClinVar:1074406, ClinVar:1077171, ClinVar:1098819, ClinVar:1172675, ClinVar:1172895, ClinVar:1172896, ClinVar:1179956, ClinVar:1187444, ClinVar:1188508, ClinVar:1190030, ClinVar:1190681, NCT01029795, NCT01238380, NCT01247363, NCT01472809, NCT01960231
+- GCK MODY variants (serial rerun) / n_gck_serial_researcher.jsonl: 0 ids: 
+- CFTR variants / n_cftr_researcher.jsonl: 20 ids: 1080, @GENE_CFTR, ClinVar:1000823, ClinVar:1002760, ClinVar:1003660, ClinVar:1007213, ClinVar:1009171, ClinVar:1009391, ClinVar:1009463, ClinVar:1010196, ClinVar:1011536, ClinVar:1012571, ClinVar:1012572, ClinVar:1018653, ClinVar:1018890, NCT00179439, NCT00865904, NCT01078740, NCT01132482, NCT01348204
+- EGFR NSCLC and trials / n_egfr_researcher.jsonl: 0 ids: 
+- EGFR NSCLC and trials / n_egfr_researcher.jsonl: 20 ids: 1956, @GENE_EGFR, ClinVar:1000076, ClinVar:1000203, ClinVar:1000496, ClinVar:1000546, ClinVar:1000851, ClinVar:1000960, ClinVar:1001152, ClinVar:1001187, ClinVar:1001705, ClinVar:1001710, ClinVar:1001782, ClinVar:1002380, ClinVar:1002493, NCT01994057, NCT04324164, NCT05037331, NCT05257967, NCT05341492
+- BRCA1 and BRCA2 diseases / n_brca12_researcher.jsonl: 20 ids: 672, @GENE_BRCA1, MedGen:C0025149, MedGen:C0346153, MedGen:C1838457, MedGen:C2675520, MedGen:C2676676, MedGen:C2751641, MedGen:C2931456, MedGen:C3150546, MedGen:C3280442, MedGen:C4554406, MedGen:CN033288, NCBIGene:675, NCT00590109, NCT00597987, NCT00617656, NCT00673335, NCT00700778, unknown
+- BRCA1 and BRCA2 diseases / n_brca12_plain.jsonl: 20 ids: 672, @GENE_BRCA1, MedGen:C0025149, MedGen:C0346153, MedGen:C1838457, MedGen:C2675520, MedGen:C2676676, MedGen:C2751641, MedGen:C2931456, MedGen:C3150546, MedGen:C3280442, MedGen:C4554406, MedGen:CN033288, NCBIGene:675, NCT00590109, NCT00597987, NCT00617656, NCT00673335, NCT00700778, unknown
+- BRCA1 variants / n_brca1var_researcher.jsonl: 20 ids: 672, @GENE_BRCA1, ClinVar:1000183, ClinVar:1000551, ClinVar:1001081, ClinVar:1002154, ClinVar:1002750, ClinVar:1003072, ClinVar:1003150, ClinVar:1004428, ClinVar:1004775, ClinVar:1004786, ClinVar:1005082, ClinVar:1005528, ClinVar:1005598, NCT00590109, NCT00597987, NCT00617656, NCT00673335, NCT00700778
+- BRCA1 variants / n_brca1var_plain.jsonl: 20 ids: 672, @GENE_BRCA1, ClinVar:1000183, ClinVar:1000551, ClinVar:1001081, ClinVar:1002154, ClinVar:1002750, ClinVar:1003072, ClinVar:1003150, ClinVar:1004428, ClinVar:1004775, ClinVar:1004786, ClinVar:1005082, ClinVar:1005528, ClinVar:1005598, NCT00590109, NCT00597987, NCT00617656, NCT00673335, NCT00700778

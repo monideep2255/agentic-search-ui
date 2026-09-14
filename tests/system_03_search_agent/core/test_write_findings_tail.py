@@ -214,7 +214,13 @@ async def test_the_note_precedes_the_tail_and_carries_no_marker(model_reports) -
     assert tokens[note_at][1] == [], "the note must carry no marker"
     assert tokens[note_at][0].startswith(graph_module._FINDINGS_TAIL_NOTE)
 
-    before = [m for _, markers in tokens[:note_at] for m in markers]
+    # Answer quality fix (2026-09-14): the first token is the code-built
+    # summary sentence, which cites every answer record; the model's own
+    # prose follows it, and its markers are what this arm pins.
+    summary_text, summary_markers = tokens[0]
+    assert summary_text.startswith("Found 3 disease records"), summary_text
+    assert sorted(summary_markers) == sorted(citation_id_by_source.values()), summary_markers
+    before = [m for _, markers in tokens[1:note_at] for m in markers]
     after = [m for _, markers in tokens[note_at + 1 :] for m in markers]
     assert before == [citation_id_by_source["MedGen:C1"]], before
     assert after == [citation_id_by_source["MedGen:C2"], citation_id_by_source["MedGen:C3"]], after

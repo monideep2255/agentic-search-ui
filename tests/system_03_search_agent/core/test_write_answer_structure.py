@@ -123,13 +123,26 @@ def _state(depth: str, rows=None) -> dict[str, object]:
     }
 
 
+def _relates(line: str) -> str:
+    """A prose sentence that relates the record to the question's subject.
+
+    Answer quality fix (2026-09-14): a Researcher sentence that only restates
+    one record's rendered body is dropped, because the code-built list under
+    the prose already carries it. The reply here therefore adds the question's
+    own licensed words ("NCBIGene:672", "associated"), which is what a real
+    answer sentence does and what keeps it in the prose.
+    """
+    value = line.split("name: ", 1)[1] if "name: " in line else line
+    return f"NCBIGene:672 is associated with {value}"
+
+
 def _structured_reply(lines: dict[int, str]) -> str:
     return (
-        f"{lines[1]} [1].\n\n"
+        f"{_relates(lines[1])} [1].\n\n"
         "## Disease associations\n"
-        f"{lines[2]} [2].\n\n"
+        f"{_relates(lines[2])} [2].\n\n"
         "## Treatment options\n"
-        f"{lines[1]} [1]."
+        f"{_relates(lines[1])} [1]."
     )
 
 
@@ -160,9 +173,13 @@ async def test_researcher_carries_supported_headings_paragraphs_and_a_listing(mo
         else:
             assert token["marker_ids"] == [], token
     assert not any(t["kind"] == "note" and "medical advice" in t["text"] for t in tokens)
-    # Bold terms come from the run's own record names.
-    first_claim = next(t for t in tokens if t["kind"] == "claim")
-    assert first_claim["emphasis"] == ["disease name number 1"], first_claim
+    # Answer quality fix (2026-09-14): the answer opens on the code-built
+    # summary, then the model's prose. Bold terms come from the run's own
+    # record names on both.
+    claims = [t for t in tokens if t["kind"] == "claim"]
+    assert claims[0]["text"].startswith("Found 3 disease records for BRCA1: "), claims[0]
+    assert claims[0]["emphasis"] and "disease name number 1" in claims[0]["emphasis"], claims[0]
+    assert claims[1]["emphasis"] == ["disease name number 1"], claims[1]
 
 
 @pytest.mark.asyncio

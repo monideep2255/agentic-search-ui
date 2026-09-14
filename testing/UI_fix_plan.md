@@ -36,8 +36,8 @@ The ordered work list for fixing the product after the first testing round on 20
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | 🚀 | 👍 | Tests 11, 15 |
 | 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | ✅ | 🚀 | | Nothing |
 | 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | 👍 | Tests 2, 13 |
-| 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | | | Tests 1, 7, 12, 14 |
-| 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | | | Tests 1, 7, 12 |
+| 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | | Tests 1, 7, 12, 14 |
+| 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
 
 ## Set 1: let people in
@@ -430,7 +430,7 @@ Built 2026-09-13, overnight. A question that names a gene now plans four searche
 
 ### 8.1 Search all three layers at the same time (R29)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: every question reaches the knowledge graph, live NCBI records, and literature and trials together.
 - What you noted: "Ideally all 3. Can we not have the 3 different searches being spawned? Will it be a lot of work?"
@@ -438,7 +438,7 @@ Built: ✅ · Live: · Approved:
 
 ### 8.2 A lead scientist hands off to three named scientists (R30)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the progress screen shows the three-layer search as a handoff between scientists.
 - What you noted: "What we can show is some fun work: one scientist picks up the question and asks 3 different scientists every time to help find the answer, and then the original scientist synthesizes the answer."
@@ -446,7 +446,7 @@ Built: ✅ · Live: · Approved:
 
 ### 8.3 Progress steps named for the scientist (R31)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the progress screen reads like a person working, not a generic spinner.
 - What you noted: from first-impressions points 1 and 2.
@@ -454,7 +454,7 @@ Built: ✅ · Live: · Approved:
 
 ### 8.4 Scientists stay random on every visit (R43)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the scientist shown, and the three helpers, can differ between visits without changing the answer.
 - What you noted: decision U5, random every visit, as develop does today, with the three helpers also picked at random.
@@ -468,9 +468,13 @@ What you will see: two modes, Plain language and Researcher, with an info button
 
 Built 2026-09-13, overnight. Researcher answers follow your reference screenshot, which you chose over decision U2: an opening paragraph with key names in bold, short topic headings, then the records found as a bulleted list built in code, one citation per row. The screenshot's variant-to-disease table cannot be built, because the graph has no link from a variant to a disease; variants show as a list. Plain language answers have three paragraphs, no headings, and end with "This is a research summary, not medical advice." Answers stream in under the progress steps and Stop works mid-answer. The broken first sentence, notes that looked like claims, and inverted disease names are fixed by rules in code, never by rewording. One trust line replaces the pills. The tour and About page describe the two modes. GraphQL and the command line accept Plain language too; the MCP tool keeps its three depths, because the locked specification pins that list. Measured locally: every sentence and list row carried a citation, and the sources were identical across modes and runs. Two things for your decision rather than a fix: answers came out at 108 to 117 words in Plain language and 162 to 228 in Researcher, well short of the targets, because the citation check drops any sentence whose words no record carries; and the trust line reads "Based on 4 sources, not yet confirmed" on most answers. Full record: `testing/Developer/reports/2026-09-13_set_9/report.md`.
 
+Live on develop 2026-09-14 as commit `537377d`, checked at 1280 and 390 wide (`testing/Developer/reports/2026-09-14_live_check/findings.md`). The live check found two answer-quality defects on the flagship questions, now being fixed: the BRCA1 disease answer's prose talked about trials while the diseases sat only in the record lines below, and the GCK Researcher answer restated records one by one instead of opening with a summary.
+
+Fixed 2026-09-14, overnight, measured on 55 local runs with the real models (`testing/Developer/reports/2026-09-14_answer_quality/report.md`). Every answer now opens on one cited sentence built in code from the records, for example "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4].", and the model's own prose follows, diseases before trials. Researcher answers no longer restate a record in prose that the list already shows, and no sentence reads "has a source URL of". The modes now ask for what the citation check actually keeps: about 120 words in Plain language and about 200 in Researcher. Sources did not change. Still open, for your decision: about 1 run in 10 on develop ended with "A step in this query hit a temporary error" in the writing step. Measured cause: the answer-writing model's reasoning setting (`low`) sometimes spends its whole output allowance thinking and runs out the 45-second step limit; at `none`, 6 of 6 test calls finished in 5 to 7 seconds.
+
 ### 9.1 Two answer modes, Plain language and Researcher (R23)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the three old depths become two modes that match how people actually read.
 - What you noted: "The researcher and deep technical modes can be combined into one."
@@ -478,7 +482,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.2 An info button explaining the two modes (R24)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: a reader can find out what each mode means before choosing it.
 - What you noted: from first-impressions point 4.
@@ -486,7 +490,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.3 Plain language: about 250 words in three paragraphs (R25)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: a plain-language answer is short enough to actually read.
 - What you noted: decided as question A3, three short paragraphs, about 250 words: the answer, what it means, and background from first principles for a reader starting from zero.
@@ -494,7 +498,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.4 Researcher: a full page organised by topic (R26)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: a Researcher answer gives a full, structured review rather than one sentence.
 - What you noted: decided as question A4, a full page, about 700 words or more, organised by topic, for someone doing a deep review.
@@ -502,7 +506,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.5 Short paragraphs of prose with citations inline (R27)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: an answer reads as flowing prose rather than a sparse list.
 - What you noted: decided as question A2, short paragraphs of flowing prose, with citations inline.
@@ -510,7 +514,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.6 The answer streams in sentence by sentence (R28)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the answer builds up on screen instead of appearing all at once.
 - What you noted: "I also thought we were going to stream the answer, and I don't see streaming. It just shows the answer, and it is very sparse."
@@ -518,7 +522,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.7 Fix answers that open broken or garbled (R32)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: an answer's first sentence always reads as a complete sentence.
 - What you noted: from the browser walkthrough, "An answer's first sentence can come out garbled, for example 'BRCA1 (gene symbol BRCA1 [1]. These are…'."
@@ -526,7 +530,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.8 Fix the uncited note and awkward disease names (R33)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: an added note about further records does not look like an uncited claim, and disease names read naturally.
 - What you noted: from the browser walkthrough, a "one further gene record" note shows as a grey sentence with no source.
@@ -534,7 +538,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.9 Trust signals become one plain line (R36)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: the trust signal on a real answer says something useful in one line, instead of contradicting pills.
 - What you noted: decision U1, one plain line on real answers only, such as "Confirmed by 2 independent sources" or "Based on 1 source, not yet confirmed", with an info icon that explains it.
@@ -542,7 +546,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.10 Researcher headings, Plain language without them (R40)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: a Researcher answer is easy to scan without becoming a bulleted list.
 - What you noted: decision U2, a few short plain topic headings, each followed by short paragraphs of prose with citations inline. Plain language answers stay without headings.
@@ -550,7 +554,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.11 A small medical-advice line on Plain language answers (R47)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: a Plain language answer carries a light reminder that it is not medical advice.
 - What you noted: decision X5, one small grey line under Plain language answers only, "Research information, not medical advice." Researcher answers do not show it.
@@ -558,7 +562,7 @@ Built: ✅ · Live: · Approved:
 
 ### 9.12 The depth cannot change mid-search (D2)
 
-Built: ✅ · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: choosing a different mode while a search is running does not corrupt the answer.
 - What you noted: from the developer specification, item D2 (W-CTRL-05), relevant once there are two modes with very different answers.

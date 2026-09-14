@@ -46,12 +46,17 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from system_03_search_agent.core.next_step import entity_type_noun
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import (
+    _MARKER,
+    GroundedClaim,
+    GroundingResult,
     _canonicalize_relational,
     _licensed_question_content,
     _split_sentences,
     content_tokens,
+    display_index_by_citation_id,
 )
 
 BlockKind = Literal["heading", "paragraph"]
@@ -286,6 +291,16 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
     shown verbatim beside the citation of the record it came from, never a
     rewording. The grounded sentence and its marker are unchanged.
     """
+    # Answer quality fix (2026-09-14): a resolved MedGen title lives on the
+    # finding, not the row (whose own `name` is the vocabulary artifact
+    # F-2.1-B07 describes), so it is preferred over any row field. The row's
+    # `vocabulary_artifact_fields` list is deliberately NOT consulted here:
+    # measured live, it flags the intronic HGVS names this label exists to
+    # show, so skipping flagged fields listed "ClinVar:1179956" in place of
+    # "NM_000162.5(GCK):c.363+318G>A". The row's name is retrieved data
+    # shown verbatim.
+    if finding.name_resolved and finding.field_value.strip():
+        return finding.field_value.strip()[:500]
     for key in _LABEL_FIELDS:
         value = (row_fields or {}).get(key)
         if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
@@ -312,3 +327,179 @@ def table_second_cell(entity_type: str, row_fields: dict[str, Any] | None) -> st
     if not isinstance(value, str) or not value.strip():
         return None
     return value.strip()[:500]
+
+
+# ---------------------------------------------------------------------------
+# Answer quality fix (2026-09-14): a one-record restatement in Researcher
+# prose, and the code-built summary sentence that opens an answer.
+# ---------------------------------------------------------------------------
+
+
+def _record_support_tokens(finding: SynthFinding) -> set[str]:
+    """Every content token the record's own rendering carries: its value,
+    its field name in both spellings, its CURIE, its type as written and as
+    the plain noun a heading uses ("sequence variant")."""
+    return _canonicalize_relational(
+        content_tokens(
+            f"{finding.field_value} {finding.field} {finding.field.replace('_', ' ')} "
+            f"{finding.curie} {finding.entity_type} {entity_type_noun(finding.entity_type)}"
+        )
+    )
+
+
+def is_record_restatement(sentence: str, cited: list[SynthFinding]) -> bool:
+    """Whether a grounded prose sentence only restates one listed record.
+
+    Measured live on "Variants in GCK causing MODY" in Researcher: the
+    prose that survived the grounding pass was "The clinical trial named A
+    Study of LY2599506 (...) [3]." five times over, and the code-built list
+    under it then showed the same five trials again. A sentence is a
+    restatement when it cites exactly one finding and every content word
+    in it is already in that record's own rendering, so it adds nothing a
+    reader does not get from the list row. A sentence that relates the
+    record to the question's subject ("BRCA1 is associated with Familial
+    cancer of breast [1]") carries words from the question and is kept.
+
+    Deterministic containment over `content_tokens`, the same tokenizer the
+    gate uses; never a similarity score.
+    """
+    if len({finding.citation_id for finding in cited}) != 1:
+        return False
+    tokens = _canonicalize_relational(content_tokens(_MARKER.sub(" ", sentence)))
+    return tokens <= _record_support_tokens(cited[0])
+
+
+def drop_record_restatements(
+    grounding: GroundingResult, synth_findings: list[SynthFinding]
+) -> tuple[GroundingResult, int]:
+    """Remove one-record restatements from grounded prose, renumbering.
+
+    Only for a Researcher answer, whose code-built listing carries every
+    prepared record: the prose is for what the list cannot say, so a
+    sentence the list already says is dropped whole. Nothing is written
+    after the gate; sentences are only removed, and every record a dropped
+    sentence cited is still cited by its list row.
+
+    Returns the filtered result and how many sentences were dropped. The
+    input is returned unchanged when its sentence structure is not known
+    (a result built by hand) or when the one-claim-per-marker invariant
+    `run_grounding_pass` maintains does not hold, so this can only ever
+    remove what it can account for.
+    """
+    if not grounding.sentences or not grounding.claims:
+        return grounding, 0
+    claims = list(grounding.claims)
+    cursor = 0
+    kept: list[tuple[str, int, list[GroundedClaim]]] = []
+    dropped = 0
+    for sentence, origin in zip(grounding.sentences, grounding.sentence_origins, strict=False):
+        marker_count = len(_MARKER.findall(sentence))
+        if cursor + marker_count > len(claims):
+            return grounding, 0
+        own = claims[cursor : cursor + marker_count]
+        cursor += marker_count
+        if own and is_record_restatement(sentence, [claim.finding for claim in own]):
+            dropped += 1
+            continue
+        kept.append((sentence, origin, own))
+    if cursor != len(claims):
+        return grounding, 0
+    if not dropped:
+        return grounding, 0
+
+    old_slots = display_index_by_citation_id(grounding)
+    kept_claims = [claim for _, _, own in kept for claim in own]
+    filtered = GroundingResult(
+        narrative="", claims=kept_claims, stripped_count=grounding.stripped_count, refused=False
+    )
+    new_slots = display_index_by_citation_id(filtered)
+    citation_id_by_old = {slot: citation_id for citation_id, slot in old_slots.items()}
+
+    def renumber(match: re.Match[str]) -> str:
+        citation_id = citation_id_by_old.get(int(match.group(1)))
+        if citation_id is None or citation_id not in new_slots:
+            return match.group(0)
+        return f"[{new_slots[citation_id]}]"
+
+    sentences = tuple(_MARKER.sub(renumber, sentence) for sentence, _, _ in kept)
+    return (
+        GroundingResult(
+            narrative=" ".join(sentences).strip(),
+            claims=kept_claims,
+            stripped_count=grounding.stripped_count,
+            refused=False,
+            sentences=sentences,
+            sentence_origins=tuple(origin for _, origin, _ in kept),
+        ),
+        dropped,
+    )
+
+
+# Answer findings named inline in the summary sentence up to this many;
+# beyond it the sentence carries the count and the list carries the names.
+MAX_SUMMARY_NAMES = 6
+
+
+def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
+    """The name the summary sentence prints for one answer finding, from
+    the finding's own value when that value names the record, else the same
+    label the list row shows. `row` is the dumped tool row, or None."""
+    if finding.name_resolved or finding.field in _LABEL_FIELDS:
+        return finding.field_value.strip()[:500]
+    fields = (row or {}).get("fields")
+    return record_label(finding, fields if isinstance(fields, dict) else None)
+
+
+def answer_summary_sentence(
+    answer_findings: list[SynthFinding],
+    display_slots: dict[str, int],
+    entity_label: str,
+    total_available: int | None,
+    row_for: Any,
+) -> str | None:
+    """The code-built sentence that opens an answer (2026-09-14).
+
+    "Found 4 disease records for BRCA1: Familial cancer of breast [1],
+    ... and Fanconi anemia complementation group S [4]." or, past
+    `MAX_SUMMARY_NAMES`, "Found 13 sequence variant records for GCK, of
+    1333 available [1][2]...[13]."
+
+    Every part is retrieval bookkeeping the code knows, in the same class
+    as the truncation note and the listing headings: the count is the
+    number of answer findings the answer cites, the nouns are the records'
+    own types, the label is the entity the plan resolved, the total is the
+    graph's own `total_available`, and each name is a finding's value as
+    stored, with that finding's marker. It is not run through the grounding
+    pass, which is written for MODEL prose and would reject its own count;
+    it is instead built only from values the pass already accepted (every
+    finding here has a display slot, so its list row or a prose clause
+    grounded) and it cites every record it counts. None when no answer
+    finding was cited, so a summary can never open a refusal.
+    """
+    cited = [f for f in answer_findings if f.citation_id in display_slots]
+    if not cited:
+        return None
+    counts: dict[str, int] = {}
+    for finding in cited:
+        noun = entity_type_noun(finding.entity_type) if finding.entity_type else "record"
+        counts[noun] = counts.get(noun, 0) + 1
+
+    def plural(noun: str, count: int) -> str:
+        unit = "record" if count == 1 else "records"
+        return f"{count} {noun} {unit}" if noun != "record" else f"{count} {unit}"
+
+    parts = [plural(noun, count) for noun, count in counts.items()]
+    what = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+    subject = f" for {entity_label.strip()[:200]}" if entity_label and entity_label.strip() else ""
+    head = f"Found {what}{subject}"
+    markers = sorted(display_slots[f.citation_id] for f in cited)
+    if total_available is not None and total_available > len(cited):
+        head += f", of {total_available} available"
+    if len(cited) <= MAX_SUMMARY_NAMES:
+        named = [
+            f"{summary_label(f, row_for(f))} [{display_slots[f.citation_id]}]"
+            for f in sorted(cited, key=lambda f: display_slots[f.citation_id])
+        ]
+        listed = named[0] if len(named) == 1 else ", ".join(named[:-1]) + " and " + named[-1]
+        return f"{head}: {listed}."
+    return f"{head} " + "".join(f"[{slot}]" for slot in markers) + "."

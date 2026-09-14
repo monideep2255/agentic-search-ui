@@ -130,7 +130,8 @@ Expected:
 - The same sources appear in both modes. Compare the source count and the source list.
 - The mode cannot be changed while a search is running. A change applies to the next question.
 - Follow-up question: the handoff lines from test 1 appear again under the new question. The three helper scientists may differ from the first question's, and the lead stays the same.
-- Known limit, to note rather than fail: answers currently run shorter than the targets of about 250 words (Plain language) and a full page (Researcher), because every sentence must be tied to a retrieved record.
+- Both modes open with one sentence counting what was found and naming it, such as "Found 4 disease records for BRCA1: Familial cancer of breast [1], …". Plain language then runs about 120 words, Researcher about 200 plus the list, because every sentence must be tied to a retrieved record.
+- Researcher never repeats a record in the prose that the list below already shows, and no sentence reads "has a source URL of".
 
 ## 8. Off-topic question
 

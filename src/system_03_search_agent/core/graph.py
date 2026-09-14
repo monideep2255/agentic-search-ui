@@ -506,6 +506,8 @@ from system_03_search_agent.synthesis.answer_layout import (
     MAX_HEADINGS,
     TABLE_COLUMNS,
     GroundingInput,
+    answer_summary_sentence,
+    drop_record_restatements,
     emphasis_for,
     grounding_input,
     heading_is_supported,
@@ -6693,17 +6695,73 @@ def _renumber_markers_by_citation_id(
     return _MARKER_PATTERN.sub(replace, sentence)
 
 
-def _row_fields_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
-    """The raw row a prepared finding was built from, matched by source URL."""
+def _summary_subject(state: GraphState) -> str:
+    """The subject the summary sentence names: every mention Think resolved
+    this turn, as the user wrote them ("BRCA1 and BRCA2"), else the label
+    `plan_node` recorded for the first target entity (a remembered mention on
+    a follow-up, or the CURIE itself). Measured 2026-09-14: with the label
+    alone a two-gene question summarised "for BRCA1"."""
+    mentions: list[str] = []
+    for entity in state.get("resolved_entities") or []:
+        text = (getattr(entity, "text", "") or "").strip()
+        if text and text.lower() not in {m.lower() for m in mentions}:
+            mentions.append(text)
+    if not mentions:
+        return state.get("next_step_entity_label") or ""
+    if len(mentions) == 1:
+        return mentions[0]
+    return ", ".join(mentions[:-1]) + " and " + mentions[-1]
+
+
+def _row_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
+    """The dumped tool row a prepared finding was built from, matched by
+    source URL. Carries `fields` and, for a graph row, the
+    `vocabulary_artifact_fields` list `_dump_row_for_synthesis` attached."""
     for tool_finding in findings:
         fields = tool_finding.structured_fields or {}
         if fields.get("status") != "ok":
             continue
         for row in fields.get("rows", []):
             if str(row.get("source_url") or "") == finding.source_url:
-                row_fields = row.get("fields")
-                return row_fields if isinstance(row_fields, dict) else None
+                return row if isinstance(row, dict) else None
     return None
+
+
+def _row_fields_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
+    """The raw row's `fields` for a prepared finding, matched by source URL."""
+    row = _row_for(finding, findings)
+    row_fields = row.get("fields") if row is not None else None
+    return row_fields if isinstance(row_fields, dict) else None
+
+
+# Answer quality fix (2026-09-14). A Layer 3 trials call answers the question
+# only when the question asks about trials; otherwise it is context for the
+# gene. Deterministic on the question text, like the call's own input.
+_TRIALS_QUESTION_WORDS = ("trial",)
+
+
+def _answer_call_ids(planned_tool_calls: list[Any], question: str) -> frozenset[str]:
+    """The call ids whose findings answer the question's own shape.
+
+    The planned graph call always does: `plan_node` chose its template from
+    the question's shape and the resolved entities. A `clinicaltrials_search`
+    call does when the question names trials. Every other Layer 2/3 call
+    (the gene's live record, the literature index, a trials call the
+    question did not ask for) is context.
+    """
+    lowered = question.lower()
+    ids: set[str] = set()
+    for planned in planned_tool_calls:
+        call = getattr(planned, "tool_call", None)
+        if call is None:
+            continue
+        asks_for_trials = any(word in lowered for word in _TRIALS_QUESTION_WORDS)
+        answers = call.layer == "layer_1_graph" or (
+            call.tool == "clinicaltrials_search" and asks_for_trials
+        )
+        if answers:
+            ids.add(call.call_id)
+    return frozenset(ids)
 
 
 def _answer_tokens(
@@ -6720,6 +6778,7 @@ def _answer_tokens(
     findings: list[Finding],
     mentions: list[str],
     notes: list[str],
+    summary_sentence: str | None = None,
 ) -> list[TokenPayload]:
     """The answer as typed token chunks, in reading order.
 
@@ -6727,6 +6786,10 @@ def _answer_tokens(
     pass; this function adds structure around them and never adds, removes
     or rewrites a claim. Structure is:
 
+    - First, the code-built summary sentence when there is one (answer
+      quality fix, 2026-09-14, `answer_layout.answer_summary_sentence`), a
+      `claim` carrying the markers of every answer record it counts, in its
+      own paragraph.
     - A `paragraph_break` wherever the model's reply changed paragraph.
     - A `heading` before a paragraph, Researcher only, when the model wrote
       one and `heading_is_supported` accepts it, at most `MAX_HEADINGS`.
@@ -6780,14 +6843,21 @@ def _answer_tokens(
         )
 
     def listing(sentences: tuple[str, ...]) -> None:
+        # Grouped by the plain NOUN of the record type, not the raw type:
+        # the graph writes "Gene" and `ncbi_efetch` writes "gene", and
+        # keyed on the raw type a two-gene answer showed "Gene records
+        # found" twice (measured 2026-09-14).
         groups: dict[str, list[tuple[str, SynthFinding | None]]] = {}
+        type_for_group: dict[str, str] = {}
         for sentence in sentences:
             ids = marker_ids(sentence)
             finding = finding_by_citation_id.get(ids[0]) if ids else None
-            key = finding.entity_type if finding is not None else ""
+            raw_type = finding.entity_type if finding is not None else ""
+            key = entity_type_noun(raw_type) if raw_type else ""
             groups.setdefault(key, []).append((sentence, finding))
-        for entity_type, entries in groups.items():
-            noun = entity_type_noun(entity_type) if entity_type else ""
+            type_for_group.setdefault(key, raw_type)
+        for noun, entries in groups.items():
+            entity_type = type_for_group[noun]
             heading(f"{noun[:1].upper()}{noun[1:]} records found" if noun else "Records found")
             second_cells = [
                 table_second_cell(entity_type, _row_fields_for(finding, findings))
@@ -6809,17 +6879,16 @@ def _answer_tokens(
             for (sentence, finding), second in zip(entries, second_cells, strict=True):
                 if finding is None:
                     sentence_token(sentence)
-                elif as_table and second is not None:
-                    sentence_token(
-                        sentence, kind="table_row",
-                        cells=[record_label(finding, _row_fields_for(finding, findings)), second],
-                    )
+                    continue
+                label = record_label(finding, _row_fields_for(finding, findings))
+                if as_table and second is not None:
+                    sentence_token(sentence, kind="table_row", cells=[label, second])
                 else:
-                    sentence_token(
-                        sentence,
-                        kind="list_item",
-                        cells=[record_label(finding, _row_fields_for(finding, findings))],
-                    )
+                    sentence_token(sentence, kind="list_item", cells=[label])
+
+    if summary_sentence:
+        sentence_token(summary_sentence, emphasize=researcher)
+        paragraph_break()
 
     if fallback_sentences:
         if researcher:
@@ -7009,6 +7078,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # setting the two to different values would let the citation cap be
     # exceeded by construction. Build phase 2.1's cap is not weakened by
     # this phase's rewrite of how citations are built.
+    # Answer quality fix (2026-09-14). Which calls answer the question's own
+    # shape: the planned graph call, plus the trials call when the question
+    # asks about trials. Their findings are NUMBERED first in the prompt,
+    # the fallback and the tail, while admission to the cap keeps set 8's
+    # Layer 2, 3, 1 handoff order (see `build_synth_findings`).
+    answer_call_ids = _answer_call_ids(state.get("tool_calls", []), query.text)
     synth_findings, findings_capped = build_synth_findings(
         findings,
         _pick_representative_field,
@@ -7018,6 +7093,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # admits the ones the reader has not seen. Empty on every other
         # turn, and `plan_node` is the only place that fills it.
         defer_source_urls=frozenset(state.get("deferred_record_ids") or []),
+        lead_call_ids=answer_call_ids,
     )
 
     # Build phase 6.2, T-6.2-02. A `curie_fallback` finding is one whose own
@@ -7050,6 +7126,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
 
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 
+    # The findings that answer the question, after the resolved-name rewrite
+    # (which keeps `call_id`), so the prompt can say so and the summary can
+    # count them. Every finding when nothing is context.
+    answer_findings = [f for f in synth_findings if f.call_id in answer_call_ids]
+    if not answer_findings:
+        answer_findings = list(synth_findings)
+    answer_ref_indices = [f.ref_index for f in answer_findings]
+
     # F-4.5-A-04: ONE declared budget for the whole Write step, shared by
     # both of its model calls. Before this the repair was given a second,
     # full `budget_for_step("write", ...)`, so a step declaring 45 seconds
@@ -7070,7 +7154,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             # T-4.5-07: the depth the caller asked for reaches synthesis here
             # and nowhere else. It was carried on `Query` from build phase
             # 1.0 and dropped at this line until phase 4.5.
-            build_synth_messages(query.text, synth_findings, query.audience_depth),
+            build_synth_messages(
+                query.text,
+                synth_findings,
+                query.audience_depth,
+                answer_ref_indices=answer_ref_indices,
+            ),
             budget_s=write_budget_s,
         )
     except cost_control.QueryCapExceededError:
@@ -7187,6 +7276,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                         completeness_directive=build_completeness_directive(
                             omitted_findings
                         ),
+                        answer_ref_indices=answer_ref_indices,
                     ),
                     budget_s=repair_budget_s,
                 )
@@ -7327,14 +7417,28 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # over all prepared findings rather than only the omitted ones. So the
     # cited set is the prepared set in both modes, as item 10.1 requires, and
     # only its presentation differs. Every other depth keeps the tail.
+    tail_is_listing = query.audience_depth == "researcher"
+
+    # Answer quality fix (2026-09-14). In Researcher the list below carries
+    # every prepared record, so a prose sentence that only restates one
+    # record ("The clinical trial named X [3].") is dropped whole before the
+    # list is built; measured live, that was ALL the prose that survived
+    # for "Variants in GCK causing MODY", and the list then repeated it.
+    # Only removes, never writes (`answer_layout.drop_record_restatements`),
+    # and the prose before the drop is kept in hand so the answer can fall
+    # back to it if the listing below grounds nothing.
+    prose_before_drop = grounding
+    restatements_dropped = 0
+    if tail_is_listing and tool_outcome == "ok" and not structured_fallback_used and grounding.claims:
+        grounding, restatements_dropped = drop_record_restatements(grounding, synth_findings)
+
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()
-    tail_is_listing = query.audience_depth == "researcher"
     tail_findings = synth_findings if tail_is_listing else omitted_findings
     if (
         tool_outcome == "ok"
         and tail_findings
-        and grounding.claims
+        and (grounding.claims or restatements_dropped)
         and not structured_fallback_used
     ):
         tail_grounding = run_grounding_pass(
@@ -7368,6 +7472,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 {claim.finding.citation_id for claim in grounding.claims},
                 synth_findings,
             )
+    if restatements_dropped and not grounding.claims:
+        # The listing grounded nothing, so the restatements are all the
+        # answer has. Never make an answer worse: put them back.
+        grounding = prose_before_drop
+        model_grounding = prose_before_drop
+        restatements_dropped = 0
 
     if tool_outcome == "no_tool":
         # No tool was selected at all, so there is nothing to ground
@@ -7639,6 +7749,17 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         ]
         if query.audience_depth == "plain_language":
             notes.append(_MEDICAL_ADVICE_NOTE)
+        # Answer quality fix (2026-09-14): the code-built opening sentence,
+        # built from the answer findings this answer actually cites and the
+        # graph's own total, once the final numbering is known. See
+        # `answer_layout.answer_summary_sentence` for what it may contain.
+        summary_sentence = answer_summary_sentence(
+            answer_findings,
+            display_index_by_citation_id(grounding),
+            _summary_subject(state),
+            _known_total_available(findings) if _ok_finding_was_truncated(findings) else None,
+            lambda finding: _row_for(finding, findings),
+        )
         for token in _answer_tokens(
             audience_depth=query.audience_depth,
             question=query.text,
@@ -7656,6 +7777,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             ]
             + [state.get("next_step_entity_label") or ""],
             notes=notes,
+            summary_sentence=summary_sentence,
         ):
             sink.emit("token", token)
 

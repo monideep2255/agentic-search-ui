@@ -256,8 +256,15 @@ async def test_a_repair_that_drops_a_reported_finding_is_discarded(
     # discarded repair. The tail is announced by its note sentence, so the
     # discarded repair's content must appear ONLY after that note; before
     # it, the model's first answer (findings 1 and 2) stands alone.
+    # Answer quality fix (2026-09-14): the answer now OPENS on a code-built
+    # summary sentence that names every answer record the answer cites, so
+    # "disease name number 3" legitimately appears there, once, with its
+    # marker. The leak check therefore covers the model's prose region: from
+    # the end of the summary's own paragraph to the tail note.
     note_at = narrative.index(graph_module._FINDINGS_TAIL_NOTE)
-    assert "disease name number 3" not in narrative[:note_at], (
+    summary_end = narrative.index("\n\n") + 2
+    assert narrative.startswith("Found 5 disease records"), narrative[:80]
+    assert "disease name number 3" not in narrative[summary_end:note_at], (
         "the discarded repair's own content must not leak into the answer"
     )
     assert "disease name number 3" in narrative[note_at:], (

@@ -1,0 +1,8 @@
+6.1 words 671 finish stop completion 1267 reasoning_chars None sent {'effort': 'none'}
+6.5 words 675 finish stop completion 1335 reasoning_chars None sent {'effort': 'none'}
+7.2 words 656 finish stop completion 1497 reasoning_chars None sent {'effort': 'none'}
+7.1 words 606 finish stop completion 1227 reasoning_chars None sent {'effort': 'none'}
+5.9 words 605 finish stop completion 1244 reasoning_chars None sent {'effort': 'none'}
+5.2 words 588 finish stop completion 1149 reasoning_chars None sent {'effort': 'none'}
+
+[exited with code 0]

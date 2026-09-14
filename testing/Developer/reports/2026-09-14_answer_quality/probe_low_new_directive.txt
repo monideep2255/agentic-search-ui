@@ -1,0 +1,9 @@
+directive words ask: AUDIENCE DEPTH: researcher. Write for a working researcher, about 200 words, in 
+3.1 words 264 finish stop completion 651 reasoning_chars 222 sent {'effort': 'low'} 
+2.9 words 162 finish stop completion 609 reasoning_chars 239 sent {'effort': 'low'} 
+3.9 words 185 finish stop completion 621 reasoning_chars 279 sent {'effort': 'low'} 
+3.4 words 192 finish stop completion 630 reasoning_chars 348 sent {'effort': 'low'} 
+3.3 words 270 finish stop completion 758 reasoning_chars 314 sent {'effort': 'low'} 
+3.7 words 163 finish stop completion 995 reasoning_chars 1106 sent {'effort': 'low'} 
+
+[exited with code 0]
