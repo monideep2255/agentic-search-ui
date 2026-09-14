@@ -32,6 +32,7 @@ Same script, same questions, results and screenshots in `after_674b7b9/`.
 - Follow-up "What variants cause it?": opens "Found 13 sequence variant records for BRCA1, of 15310 available." with 20 sources from 3 layers. Remaining roughness: in Plain language the records the prose left out still read as "SequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)." lines, cited but stiff.
 - GCK, Researcher: opens "Found 13 sequence variant records for **GCK**, of 1333 available.", then grouped headings (sequence variant, gene, literature entity, clinical trial records found) with a cited bulleted list; every variant row reads as its HGVS name, none as a URL. This matches the reference screenshot's shape except for model-written topic prose, which grounding strips.
 - No "has a source URL of" sentence in any answer; 0 claims without a marker in all four.
+- `flagship_measure.py 5` against `674b7b9` (`after_674b7b9/flagship_measure_674b7b9.log`): 25 of 25 answered, one distinct source set per question (BRCA1 diseases 11, BRCA1 variants 20, GCK 20, BRCA1 and BRCA2 20, lowercase brca1 11), no write-step error, 13 to 71 seconds. Before the fix the same measurement was 22 of 25 with three write-step errors. The error is not proven gone: its measured cause (the Synth tier's reasoning effort "low" occasionally running out the 45-second step) is unchanged, and the shorter directives made each Synth call shorter, which is the likely reason none fired in these 25 runs.
 
 ## Disposition
 
