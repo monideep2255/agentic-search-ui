@@ -14,6 +14,7 @@ Written 2026-09-14 by the `detail` agent. Phase 1 was read-only in the repositor
 - [8. Phase 2 work list, files, tests](#8-phase-2-work-list-files-tests)
 - [9. Decisions for main or the product owner](#9-decisions-for-main-or-the-product-owner)
 - [10. Risks and blocked-stops](#10-risks-and-blocked-stops)
+- [11. Addendum: decisions received from main (2026-09-14)](#11-addendum-decisions-received-from-main-2026-09-14)
 
 ## 1. The claim was false: the graph links variants to diseases
 

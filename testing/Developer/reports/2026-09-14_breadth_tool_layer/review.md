@@ -8,6 +8,10 @@ This reviews the uncommitted tool-layer half of UI fix Set 11.21, "search broad,
 - [Gates](#gates)
 - [Findings](#findings)
 - [Verified versus read](#verified-versus-read)
+- [Fix round 1, by the builder](#fix-round-1-by-the-builder)
+- [Round 2 re-review](#round-2-re-review)
+- [Decision after round 2](#decision-after-round-2)
+- [F-09 follow-up, by the main agent](#f-09-follow-up-by-the-main-agent)
 
 ## Verdict
 

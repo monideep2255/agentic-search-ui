@@ -653,22 +653,41 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 
 ## Where we stopped
 
-The cutoff. It is updated at the end of every working session, so the next session starts here rather than reconstructing it. Last updated 2026-09-14, evening.
+The cutoff. It is updated at the end of every working session, so the next session starts here rather than reconstructing it. Last updated 2026-09-14, end of day. The product owner closed the session, and every agent and background check was stopped.
 
-### On develop now
+### On develop now, pushed and live
 
+- The remote `develop`, and both Railway develop services, are on commit `e5947e0`. This is what testers see.
 - Sets 1 to 9 are live, and Set 11's layout, writing banner, clean copy, detail tables, GCK fix and MODY genes answer are live and checked in a browser (the Set 11 table above).
-- Live record on commit `e5947e0`: 48 of 53 searches answered. About 1 in 10 fails with "could not be completed"; asking again works. The cause is not found: `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/findings.md`.
-- Being landed on develop in this session: 11.16 (the server sends "writing has started" and each checked sentence live) and 11.21's safe parts (10 per second NCBI rate, the gene summary, GO terms citeable only through a single-gene lookup, PMC, the OMIM filter, the fixed search plan). Neither changes what an answer contains yet; see "Next, in order".
+- Live record on `e5947e0`: 48 of 53 searches answered. About 1 in 10 fails with "could not be completed"; asking again works. The cause is not found: `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/findings.md`.
 
-### Still being built
+### Local only, not pushed
 
-- 11.27, less bold, and 11.28, a paced transition from searching to writing: a background agent in `.claude/worktrees/agent-a8393711bb57d579b`. Land it on develop when it finishes.
-- 11.16's independent review is still running. Its findings become follow-up fixes, since the product owner asked to land without waiting.
+- Local `develop` is ahead of the remote. See the commits with `git log --oneline origin/develop..develop`.
+- It holds four things:
+  - 11.21's tool layer, merged: 10 per second NCBI rate, the gene summary, GO terms citeable only through a single-gene lookup, PMC, the OMIM filter and the fixed search plan.
+  - 11.16's live write streaming, merged: a `step` event when writing starts, and each checked sentence sent live.
+  - The CI lint fix, `56fa973`.
+  - Today's docs.
+- Neither feature changes what an answer contains yet.
+- Why it was not pushed: the checks on the merged code were stopped part way. Lint, import order and compile passed. The test suites (tools, core, contracts, adapters) were 44% through with no failure seen. The drift check did finish. Its stale counts (5184 Python tests, 562 decisions) and three table-of-contents mismatches in report files were fixed before closing.
+
+### Stopped mid-work, kept on disk
+
+- 11.27 (less bold) and 11.28 (paced transition): the builder was stopped before it reported, so its verification state is unknown.
+  - Its uncommitted work is in `.claude/worktrees/agent-a8393711bb57d579b`, on branch `worktree-agent-a8393711bb57d579b`.
+  - Changed: `AnswerScreen.tsx`, `App.tsx` and `useAnswerReveal.ts`, plus several tests.
+  - New: `hooks/usePacedEvents.ts`, `answerBold.test.tsx`, `usePacedEvents.test.ts`, `e2e/bold-and-stagger.spec.ts` and `testing/Developer/reports/2026-09-14_bold_and_stagger/`.
+  - It also re-captured older answer-layout screenshots; check those before committing.
+- The independent review of 11.16 was stopped before it reported. The code is already merged. Its copy, `.claude/worktrees/agent-ad0b1a05272ac1d85`, can be removed once the review is rerun against `develop` or deliberately skipped.
 
 ### Next, in order
 
-1. Land 11.27 and 11.28, then check them live at 1280 and 390.
+1. Push local `develop`, then finish 11.27 and 11.28. In order:
+   - Rerun `python -m pytest tests/system_03_search_agent/tools tests/system_03_search_agent/core tests/system_03_search_agent/contracts tests/system_03_search_agent/adapters -q -p no:cacheprovider`.
+   - Run `python3 tracker/check_doc_drift.py --check` and fix any stale count.
+   - Push, and confirm Railway SUCCESS on both develop services.
+   - Finish 11.27 and 11.28 from their kept worktree: read the diff, run its tests, land it, and check it live at 1280 and 390.
 2. Wire 11.21 into the answer path in `core/graph.py`: run `breadth_plan.plan_first_stage` and its follow-ups beside the existing calls, keep the Datasets summary and GO terms as findings, and add a code-chosen single-gene GO template that passes `go_attribution_curie`. The contract is in `testing/Developer/reports/2026-09-14_breadth_tool_layer/review.md` and the builder's report.
 3. Set `NCBI_EUTILS_RPS=10` on the develop API service.
 4. Design how abstracts become findings. The quote check was removed: two review rounds showed a sentence rule accepts meaning-reversing fragments and cannot see a refutation in the next sentence (`DECISIONS.md`, 2026-09-14).
@@ -684,7 +703,8 @@ The cutoff. It is updated at the end of every working session, so the next sessi
 
 ### Known loose ends
 
-- CI on develop was red on the last six pushes because of 13 lint errors in probe scripts; fixed in commit `56fa973`.
+- CI on develop was red on the last six pushes because of 13 lint errors in probe scripts. They are fixed in local commit `56fa973`, which is not pushed yet, so CI stays red until the push.
+- Production was not released, by product-owner decision on 2026-09-14.
 - Review findings N-04 and N-06 are open and minor, with owners, in the 11.21 review file.
 - Set 10 is untouched. Its baseline folder `testing/Developer/reports/2026-09-12_consistency_baseline/` is uncommitted.
 - An empty `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/writetest.txt` is waiting for a yes to move it to the Trash.
