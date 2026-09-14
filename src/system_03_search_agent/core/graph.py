@@ -2498,15 +2498,11 @@ def _antecedent_curie(memory_curies: list[str]) -> str | None:
     slicing a list to a limit, which is what a second, differently-bounded
     caller would get wrong again.
 
-    What "most recent" means here, stated because the answer is not the
-    obvious one: `merge_turn` dedups by CURIE, so an entity mentioned again
-    on a later turn keeps its ORIGINAL position. "Most recent" is therefore
-    "most recently seen for the first time", not "most recently discussed".
-    That is the strongest ordering the stored summary can express: nothing
-    on `SessionMemorySummary` records which turn touched an entity last.
-    Recording per-entity recency belongs to the contract in
-    `contracts/query.py` and to `merge_turn`, neither of which this change
-    owns; it is handed off rather than guessed at here.
+    "Most recent" means most recently MENTIONED, since 2026-09-13 (UI fix
+    set 7): `merge_turn` moves a re-mentioned entity to the end of the list,
+    so a session that went BRCA1, then TP53, then back to BRCA1 by name binds
+    the next "it" to BRCA1. Before that date a re-mentioned entity kept its
+    original position and the same session bound "it" to TP53.
     """
     return memory_curies[-1] if memory_curies else None
 

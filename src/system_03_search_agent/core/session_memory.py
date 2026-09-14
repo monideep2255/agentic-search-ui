@@ -830,7 +830,19 @@ def merge_turn(
     """
     base = existing or SessionMemorySummary(session_id=session_id, last_updated=now)
 
-    entities = list(base.resolved_entities)
+    # A re-mentioned entity MOVES TO THE END rather than keeping its
+    # original place (UI fix set 7, 2026-09-13, the product owner's
+    # "if this is a discussion, it must flow"). `_antecedent_curie` binds a
+    # pronoun to the LAST entity here, so under the old rule a session that
+    # went BRCA1, then TP53, then back to BRCA1 by name still bound the next
+    # "it" to TP53, because BRCA1 had kept its first position. Now "most
+    # recent" means most recently mentioned. Still keyed by CURIE, still
+    # idempotent: replaying a turn moves the same entities to the same end.
+    entities = [
+        entity
+        for entity in base.resolved_entities
+        if entity.curie not in {mention.curie for mention in resolved}
+    ]
     seen_curies = {entity.curie for entity in entities}
     for entity in resolved:
         if entity.curie not in seen_curies:

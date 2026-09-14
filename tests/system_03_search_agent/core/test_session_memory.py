@@ -603,6 +603,29 @@ class TestMergeTurnIdempotence:
             "trace-2",
         }
 
+    def test_a_re_mentioned_entity_moves_to_the_end(self, char_counter: None) -> None:
+        """UI fix set 7 (2026-09-13): "most recent" means most recently
+        mentioned. BRCA1, then TP53, then BRCA1 again by name must leave
+        BRCA1 LAST, which is the position `_antecedent_curie` binds a
+        pronoun to. Under the old rule (keep the original position) the
+        list read BRCA1, TP53 and the next "it" meant TP53.
+
+        MUTATION PROOF: restoring the old `if not in seen: append` loop
+        without the filter turns the order arm red; the count arm is the
+        populate-check that dedup still holds.
+        """
+        now = datetime.now(UTC)
+        brca1 = ResolvedEntity(mention="BRCA1", curie="NCBIGene:672", entity_type="Gene")
+        tp53 = ResolvedEntity(mention="TP53", curie="NCBIGene:7157", entity_type="Gene")
+        first = sm.merge_turn(None, session_id="s", now=now, resolved=[brca1], findings=[])
+        second = sm.merge_turn(first, session_id="s", now=now, resolved=[tp53], findings=[])
+        third = sm.merge_turn(second, session_id="s", now=now, resolved=[brca1], findings=[])
+        assert [e.curie for e in second.resolved_entities] == ["NCBIGene:672", "NCBIGene:7157"]
+        assert [e.curie for e in third.resolved_entities] == ["NCBIGene:7157", "NCBIGene:672"]
+        # Replaying the third turn changes nothing: still idempotent.
+        again = sm.merge_turn(third, session_id="s", now=now, resolved=[brca1], findings=[])
+        assert [e.curie for e in again.resolved_entities] == ["NCBIGene:7157", "NCBIGene:672"]
+
     def test_entities_dedup_on_the_curie(self, char_counter: None) -> None:
         """The entity half of the natural key, unchanged and still asserted."""
         entity = ResolvedEntity(
