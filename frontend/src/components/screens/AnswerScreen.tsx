@@ -24,6 +24,7 @@
  * `components/source-card.html`.
  */
 
+import type React from "react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
@@ -1171,6 +1172,127 @@ export function AnswerBody({
   );
 }
 
+
+/**
+ * One folded earlier turn (item 7.4): a native disclosure whose summary row
+ * carries the question, its meta line and, on the right, a "Show answer" or
+ * "Hide answer" word that follows the disclosure's own open state.
+ */
+function FoldedTurn({ turn, index }: { turn: PreviousTurn; index: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+              <Box
+                component="details"
+                data-testid={`previous-turn-${index}`}
+                onToggle={(event: React.SyntheticEvent<HTMLDetailsElement>) =>
+                  setOpen(event.currentTarget.open)
+                }
+                sx={{
+                  border: `1px solid ${designTokens.line}`,
+                  borderRadius: 0.5,
+                  bgcolor: designTokens.surfaceSunk,
+                  "& > summary": {
+                    cursor: "pointer",
+                    listStyle: "none",
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 1.25,
+                    px: 1.75,
+                    py: 1.5,
+                  },
+                  "& > summary::-webkit-details-marker": { display: "none" },
+                }}
+              >
+                <Box component="summary">
+                  <Box
+                    component="span"
+                    aria-hidden="true"
+                    sx={{ fontSize: 10, color: designTokens.inkFaint }}
+                  >
+                    ▶
+                  </Box>
+                  <Typography
+                    component="span"
+                    sx={{ fontWeight: 700, fontSize: 14.5, color: designTokens.ink }}
+                  >
+                    {turn.question}
+                  </Typography>
+                  <Typography
+                    component="span"
+                    sx={{ fontSize: 12, color: designTokens.inkFaint }}
+                  >
+                    {turn.meta}
+                  </Typography>
+                  {/*
+                    Product-owner feedback, 2026-09-13, on the retest: "have a
+                    show answer and hide answer on the right hand side that
+                    controls the drop down. That way it is clear." The word
+                    changes with the disclosure's own state, read off the
+                    native `toggle` event, so the label can never disagree
+                    with what the row is doing. Link colour, the same as
+                    "Show work" beside the status line, which is the nearest
+                    designed neighbour for a text control on the right.
+                  */}
+                  <Typography
+                    component="span"
+                    data-testid={`previous-turn-${index}-toggle`}
+                    sx={{
+                      marginLeft: "auto",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: designTokens.link,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {open ? "Hide answer" : "Show answer"}
+                  </Typography>
+                </Box>
+                {/*
+                  THE WHOLE ANSWER, not a summary of it (item 7.4). This
+                  block used to render claim TEXT and a line reading "5
+                  sources · Grounded", so opening an earlier turn gave a
+                  reader the words back and took every record away. It is
+                  the same `AnswerBody` the live turn renders, under this
+                  turn's own test-id prefix, with no flag handler and no
+                  tour anchors: both of those act on the run in front of
+                  the reader, and this one is finished.
+
+                  `.prevbody{padding:4px 14px 16px}` is the prototype's,
+                  kept, except that the bottom padding grows to 20px because
+                  the body below it is now the full answer rather than two
+                  lines, and a source card ending flush against the card
+                  border is the "spacing is way off" complaint in miniature.
+                */}
+                <Box
+                  sx={{
+                    px: 1.75,
+                    pt: 0.5,
+                    pb: 2.5,
+                    bgcolor: designTokens.surface,
+                    borderTop: `1px solid ${designTokens.line}`,
+                  }}
+                >
+                  <AnswerBody
+                    testIdPrefix={`previous-turn-${index}-`}
+                    claims={turn.claims}
+                    sources={turn.sources}
+                    meta={turn.meta}
+                    outcome={turn.outcome}
+                    outcomeTone={turn.outcomeTone}
+                    elapsedMs={turn.elapsedMs}
+                    steps={turn.steps}
+                    trust={turn.trust}
+                    refusal={turn.refusal}
+                    refusalLabel={turn.refusalLabel}
+                    refusalLink={turn.refusalLink}
+                    capMessage={turn.capMessage}
+                    systemNotes={turn.systemNotes}
+                  />
+                </Box>
+              </Box>
+  );
+}
+
 export function AnswerScreen({
   question,
   claims,
@@ -1316,90 +1438,7 @@ export function AnswerScreen({
             sx={{ display: "flex", flexDirection: "column", gap: 1.75, mb: 3.25 }}
           >
             {previousTurns.map((turn, index) => (
-              <Box
-                key={`${turn.question}-${index}`}
-                component="details"
-                data-testid={`previous-turn-${index}`}
-                sx={{
-                  border: `1px solid ${designTokens.line}`,
-                  borderRadius: 0.5,
-                  bgcolor: designTokens.surfaceSunk,
-                  "& > summary": {
-                    cursor: "pointer",
-                    listStyle: "none",
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: 1.25,
-                    px: 1.75,
-                    py: 1.5,
-                  },
-                  "& > summary::-webkit-details-marker": { display: "none" },
-                }}
-              >
-                <Box component="summary">
-                  <Box
-                    component="span"
-                    aria-hidden="true"
-                    sx={{ fontSize: 10, color: designTokens.inkFaint }}
-                  >
-                    ▶
-                  </Box>
-                  <Typography
-                    component="span"
-                    sx={{ fontWeight: 700, fontSize: 14.5, color: designTokens.ink }}
-                  >
-                    {turn.question}
-                  </Typography>
-                  <Typography
-                    component="span"
-                    sx={{ fontSize: 12, color: designTokens.inkFaint }}
-                  >
-                    {turn.meta}
-                  </Typography>
-                </Box>
-                {/*
-                  THE WHOLE ANSWER, not a summary of it (item 7.4). This
-                  block used to render claim TEXT and a line reading "5
-                  sources · Grounded", so opening an earlier turn gave a
-                  reader the words back and took every record away. It is
-                  the same `AnswerBody` the live turn renders, under this
-                  turn's own test-id prefix, with no flag handler and no
-                  tour anchors: both of those act on the run in front of
-                  the reader, and this one is finished.
-
-                  `.prevbody{padding:4px 14px 16px}` is the prototype's,
-                  kept, except that the bottom padding grows to 20px because
-                  the body below it is now the full answer rather than two
-                  lines, and a source card ending flush against the card
-                  border is the "spacing is way off" complaint in miniature.
-                */}
-                <Box
-                  sx={{
-                    px: 1.75,
-                    pt: 0.5,
-                    pb: 2.5,
-                    bgcolor: designTokens.surface,
-                    borderTop: `1px solid ${designTokens.line}`,
-                  }}
-                >
-                  <AnswerBody
-                    testIdPrefix={`previous-turn-${index}-`}
-                    claims={turn.claims}
-                    sources={turn.sources}
-                    meta={turn.meta}
-                    outcome={turn.outcome}
-                    outcomeTone={turn.outcomeTone}
-                    elapsedMs={turn.elapsedMs}
-                    steps={turn.steps}
-                    trust={turn.trust}
-                    refusal={turn.refusal}
-                    refusalLabel={turn.refusalLabel}
-                    refusalLink={turn.refusalLink}
-                    capMessage={turn.capMessage}
-                    systemNotes={turn.systemNotes}
-                  />
-                </Box>
-              </Box>
+              <FoldedTurn key={`${turn.question}-${index}`} turn={turn} index={index} />
             ))}
           </Box>
         ) : null}

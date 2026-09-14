@@ -50,7 +50,7 @@
  *                 file pins. A spacing scale is not a layout.
  */
 
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -93,6 +93,29 @@ const TURN: PreviousTurn = {
 };
 
 describe("a folded turn keeps the whole answer it had (item 7.4)", () => {
+  it("says Show answer while folded and Hide answer once open", () => {
+    // Product-owner feedback, 2026-09-13: a word on the right of the folded
+    // row that says what clicking it does. Driven by the native toggle
+    // event, so this arm sets `open` and fires it the way a browser does.
+    // MUTATION PROOF: a constant label turns the second assertion red.
+    render(
+      <AnswerScreen
+        question="What variants cause it?"
+        previousTurns={[TURN]}
+        claims={[]}
+        sources={[]}
+      />,
+    );
+    const details = screen.getByTestId("previous-turn-0") as HTMLDetailsElement;
+    expect(screen.getByTestId("previous-turn-0-toggle")).toHaveTextContent("Show answer");
+    details.open = true;
+    fireEvent(details, new Event("toggle"));
+    expect(screen.getByTestId("previous-turn-0-toggle")).toHaveTextContent("Hide answer");
+    details.open = false;
+    fireEvent(details, new Event("toggle"));
+    expect(screen.getByTestId("previous-turn-0-toggle")).toHaveTextContent("Show answer");
+  });
+
   it("opens to a real record anchor and a trust pill, not a source count", async () => {
     const user = userEvent.setup();
     render(
