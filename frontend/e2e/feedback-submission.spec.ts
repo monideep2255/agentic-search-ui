@@ -76,15 +76,37 @@ async function ask(page: Page, question: string): Promise<void> {
   await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
 }
 
+/**
+ * WAIT FOR SOMETHING ONLY THE ANSWER SCREEN HAS.
+ *
+ * STRENGTHENED 2026-09-13, during UI fix set 7 item 7.4, after all three
+ * arms below failed on one loaded machine while the run was still on the
+ * stepper. Each waited for the "New search" button, which `RunScreen` and
+ * `AnswerScreen` BOTH render, so it was visible from the instant a question
+ * was dispatched: the wait returned immediately and the arms then passed
+ * only because this backend usually answers inside the 5-second default
+ * expect timeout. Under load they raced it and reported a missing feedback
+ * panel on a screen that had no answer on it yet.
+ *
+ * `second-turn.spec.ts`'s own `answerLanded` helper carries the full account
+ * of this exact trap, found the same way. `answer-meta` is on `AnswerScreen`
+ * alone and is written from the landed run's own event counts, so it cannot
+ * render before the run finishes.
+ *
+ * Nothing below is weakened by this: every assertion in all three arms is
+ * unchanged, and the wait they depend on now cannot pass before the thing
+ * it claims to wait for exists.
+ */
+const answerLanded = (page: Page) =>
+  expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 60_000 });
+
 test.describe("feedback submission", () => {
   test("the panel renders on a real landed answer and a rating is selectable", async ({
     page,
   }) => {
     await signUpFreshAccount(page);
     await ask(page, "What gene is BRCA1?");
-    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    await answerLanded(page);
 
     const panel = page.getByTestId("feedback");
     await expect(panel).toBeVisible();
@@ -127,9 +149,7 @@ test.describe("feedback submission", () => {
   test("both feedback thumbs render inside their own buttons", async ({ page }) => {
     await signUpFreshAccount(page);
     await ask(page, "What gene is BRCA1?");
-    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    await answerLanded(page);
 
     const panel = page.getByTestId("feedback");
     await expect(panel).toBeVisible();
@@ -222,9 +242,7 @@ test.describe("feedback submission", () => {
     async ({ page }) => {
       await signUpFreshAccount(page);
       await ask(page, "What gene is BRCA1?");
-      await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
-        timeout: 30_000,
-      });
+      await answerLanded(page);
 
       const feedbackPost = page.waitForRequest(
         (req) => /\/v1\/query\/[^/]+\/feedback$/.test(req.url()) && req.method() === "POST",

@@ -1165,6 +1165,27 @@ export function App() {
        */
       if (continuesThread && view.landed && searchView.name === "answer") {
         const finished = searchView.question;
+        /*
+         * UI FIX SET 7 ITEM 7.4. THE WHOLE BODY IS ARCHIVED, not a
+         * summary of it.
+         *
+         * This used to carry five fields, and `AnswerScreen` rendered
+         * what it could from them: claim text, and a line reading "5
+         * sources · Grounded". So a reader who opened an earlier turn got
+         * the words back and every record behind them was gone, on a
+         * product whose whole argument is that a claim is worth no more
+         * than the source under it. The product owner's words on
+         * 2026-09-13: "the previous answer with all sources must be
+         * retained."
+         *
+         * `view` is still read ONCE, here, before `setRunId(null)` makes
+         * it fall back to `EMPTY_RUN_VIEW`, and nothing below is
+         * recomputed later, so an archived turn reads as what it was when
+         * it landed. `PreviousTurn` names what is deliberately left out
+         * and why, `nextStep` above all: an offer is an action, and an
+         * archived action would ask this run's question from last turn's
+         * context.
+         */
         setThread((current) => [
           ...current,
           {
@@ -1173,6 +1194,15 @@ export function App() {
             claims: view.claims,
             sources: view.sources,
             trust: view.trust,
+            outcome: view.outcome,
+            outcomeTone: view.outcomeTone,
+            elapsedMs: view.elapsedMs,
+            steps: view.steps,
+            refusal: view.refusal,
+            refusalLabel: view.refusalLabel,
+            refusalLink: view.refusalLink,
+            capMessage: view.capMessage,
+            systemNotes: view.systemNotes,
           },
         ]);
       }
@@ -1514,6 +1544,14 @@ export function App() {
             // address nobody can click.
             refusalLabel={view.refusalLabel}
             refusalLink={view.refusalLink}
+            /*
+             * UI fix set 7 item 7.5. Whether what is showing is a question
+             * the reader can answer, which is the one thing `refusal` alone
+             * cannot say. When it is, `AnswerScreen` puts the cursor in the
+             * follow-up field below, so the discussion flows instead of
+             * stopping while the reader looks for the box.
+             */
+            clarifying={view.clarification !== null}
             /*
              * `view.failure` BEFORE `streamError` (F-4.9-A-01). The other
              * order put the raw stream error ahead of the curated string, so

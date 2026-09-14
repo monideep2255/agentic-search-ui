@@ -182,6 +182,23 @@ export const GUARD_REFUSAL_LABEL: Record<GuardPayload["category"], string> = {
  */
 export const ANSWER_REFUSAL_LABEL = "No answer found in NCBI records";
 
+/**
+ * The label for a clarification, UI fix set 7 item 7.5.
+ *
+ * The product owner on 2026-09-13: "the follow up must retain context or
+ * ask clarification if the question is not clear. Because if this is a
+ * discussion, it must flow."
+ *
+ * A clarification is a refusal to answer YET, so it renders through the
+ * same calm grey block as every other refusal rather than growing a second
+ * shape for "no answer this time". What the label has to do is say which
+ * kind it is: `ANSWER_REFUSAL_LABEL` reads as a dead end, and a question
+ * the reader can simply answer is not one. Fixed and interpolation-free,
+ * the same discipline as the two tables above, so no backend text and no
+ * cost figure can reach it.
+ */
+export const CLARIFICATION_LABEL = "One more detail needed";
+
 export interface RunView {
   /** The live step, or null when the run has reached a terminal event. */
   activeStep: StepName | null;
@@ -264,6 +281,18 @@ export interface RunView {
    */
   refusal: string | null;
   /**
+   * The question the agent asked back, or null (UI fix set 7 item 7.5).
+   *
+   * Read from the `think` payload's `clarifying_question`, a nullable
+   * string on the wire since the contract was written and, until now, read
+   * by nothing at all. It is exposed SEPARATELY from `refusal`, which also
+   * carries the text, because the two answer different questions: `refusal`
+   * is what to show, and this is whether what is showing is a question the
+   * reader can answer. Only the second one licenses putting the cursor in
+   * the follow-up field.
+   */
+  clarification: string | null;
+  /**
    * The refusal's short neutral label, or null (R13, R44).
    *
    * SEPARATE FROM `refusal` rather than prepended to it, because the two
@@ -331,6 +360,7 @@ export const EMPTY_RUN_VIEW: RunView = {
   landed: false,
   failure: null,
   refusal: null,
+  clarification: null,
   refusalLabel: null,
   refusalLink: null,
   capMessage: null,
@@ -948,21 +978,75 @@ export function useRunView(events: AgentEvent[]): RunView {
     // The three parts are now carried separately: the label a reader
     // scans, the sentence explaining it, and the address as an address.
     // Nothing is lost in the split, because the surface renders all three.
+    /*
+     * THE QUESTION THE AGENT ASKED BACK (UI fix set 7 item 7.5).
+     *
+     * `clarifying_question` has been a nullable string on `ThinkPayload`
+     * since the contract was written, validated by `isThinkPayload`, and
+     * read by NOTHING: a run that could not tell which of two readings of a
+     * question was meant asked its question into the void and then refused
+     * as though it had nothing to say. This is where that field starts
+     * mattering.
+     *
+     * READ FROM `think`, NOT FROM THE REFUSAL TEXT. The backend also puts
+     * the question into the refusal sentence, so the words would be
+     * recoverable from `refusal` by matching prose. That is the
+     * prefix-matching bet `SYSTEM_NOTE_PREFIXES` already demonstrates the
+     * cost of, and it would make every surface depend on a sentence nobody
+     * knows is load-bearing. The typed field is the contract; the sentence
+     * is copy.
+     *
+     * Trimmed and length-checked, so a backend sending `""` or whitespace
+     * is treated exactly as one sending `null`. Absent and empty must
+     * behave identically or a whitespace payload would put a blank label on
+     * the screen and move the cursor for nothing.
+     */
+    const clarifyingThink = events.find(
+      (event): event is Extract<AgentEvent, { type: "think" }> =>
+        event.type === "think" &&
+        typeof event.payload.clarifying_question === "string" &&
+        event.payload.clarifying_question.trim().length > 0,
+    );
+    const clarification =
+      clarifyingThink !== undefined
+        ? (clarifyingThink.payload.clarifying_question as string).trim()
+        : null;
+
+    /*
+     * PRECEDENCE, stated rather than left to the order of the ternaries.
+     *
+     *   A failed guardrail wins outright. The question never reached Think,
+     *   so any `clarifying_question` on this run would belong to a
+     *   different one, and the guardrail's own reviewed copy is what a
+     *   refused question must say.
+     *
+     *   A clarification beats the generic answer-level refusal. Both can be
+     *   present on the same run, because the backend emits the clarification
+     *   through the refusal path (`trust_outcome: "refuse"`), and showing
+     *   "No answer found in NCBI records" above a question the reader could
+     *   answer in one word is the defect item 7.5 exists to close.
+     *
+     *   The answer-level refusal is the remaining case, unchanged.
+     */
     const refusal =
       failedGuard && failedGuard.type === "guard"
         ? (CATEGORY_COPY[failedGuard.payload.category] ?? CATEGORY_COPY.ok)
-        : answerRefusalSignal && answerRefusalSignal.type === "trust_signal"
-          ? typeof answerRefusalSignal.payload.message === "string" &&
-            answerRefusalSignal.payload.message.length > 0
-            ? answerRefusalSignal.payload.message
-            : null
-          : null;
+        : clarification !== null
+          ? clarification
+          : answerRefusalSignal && answerRefusalSignal.type === "trust_signal"
+            ? typeof answerRefusalSignal.payload.message === "string" &&
+              answerRefusalSignal.payload.message.length > 0
+              ? answerRefusalSignal.payload.message
+              : null
+            : null;
     const refusalLabel =
       failedGuard && failedGuard.type === "guard"
         ? (GUARD_REFUSAL_LABEL[failedGuard.payload.category] ?? GUARD_REFUSAL_LABEL.ok)
-        : answerRefusalSignal
-          ? ANSWER_REFUSAL_LABEL
-          : null;
+        : clarification !== null
+          ? CLARIFICATION_LABEL
+          : answerRefusalSignal
+            ? ANSWER_REFUSAL_LABEL
+            : null;
     // Read only from the answer-level signal. A guardrail refusal has no
     // accepted search term, so there is nothing to point an NCBI search at.
     const refusalLink =
@@ -1038,6 +1122,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       landed,
       failure,
       refusal,
+      clarification,
       refusalLabel,
       refusalLink,
       capMessage,

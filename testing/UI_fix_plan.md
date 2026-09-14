@@ -406,7 +406,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 7.4 A folded turn keeps the whole earlier answer, with room between turns (R22 retest)
 
-Built: · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: opening a folded earlier turn shows everything that answer had: its status line, notes, every claim with its chips, the full source cards, the trust pills and Show work.
 - What you noted (retest of 2026-09-13): "The formatting and spacing between the answers is way off. Improve the spacing. Also in the folded answer the sources and everything else run previously must still be visible. Basically, the previous answer with all sources must be retained, think of threads that enter the drop down like structure."
@@ -414,7 +414,7 @@ Built: · Live: · Approved:
 
 ### 7.5 A follow-up that refers to nothing asks for the missing detail (R20 retest)
 
-Built: · Live: · Approved:
+Built: ✅ · Live: 🚀 · Approved:
 
 - Feature being tested: "What variants cause it?" with nothing earlier to point at asks which gene or condition you mean, instead of refusing.
 - What you noted (retest of 2026-09-13): "Also the follow up must retain context or ask clarification if the question is not clear. Because if this is a discussion, it must flow."
