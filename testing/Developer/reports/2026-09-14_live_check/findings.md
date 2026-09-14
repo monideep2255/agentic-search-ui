@@ -24,6 +24,15 @@ Raw `MedGen:C…` codes appear only inside citation chips (the record id), not i
 
 5. `flagship_measure.py 5` against `537377d` (log beside this file): 22 of 25 answered. Every question kept one distinct source set. Three runs ended in a fatal error with no answer: "What variants cause disease in BRCA1?" 1 of 5 and "Which diseases are associated with BRCA1 and BRCA2?" 2 of 5. A reproduction hit it 2 of 5 more times. All four tools returned `ok`, then the write step failed with `error_class: transient` at 49 to 53 seconds in total. The write step's budget is 45 seconds (`_TIER_STEP_BUDGET_S["synth"]`), and a killed step is reported as transient. Successful runs took 38 to 52 seconds, so the write step is running at its ceiling. Leading hypothesis: the Researcher directive asks for about 700 words while grounding keeps about 200, so most of the Synth time buys text that is then stripped. Railway's log stream shows no request-level logs, so the traceback could not be read remotely. Handed to the same fix agent, with raising the budget ruled out unless the product owner decides it.
 
+## After the answer-quality fix, commit `674b7b9`
+
+Same script, same questions, results and screenshots in `after_674b7b9/`.
+
+- BRCA1 diseases, Plain language, at 1280 and 390: the answer opens "Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S." with four citations, the model's disease sentence follows, and the trials come after the note. Every claim cited, trust line and medical-advice line present, no sideways scroll. Remaining roughness: the second sentence repeats the four names.
+- Follow-up "What variants cause it?": opens "Found 13 sequence variant records for BRCA1, of 15310 available." with 20 sources from 3 layers. Remaining roughness: in Plain language the records the prose left out still read as "SequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)." lines, cited but stiff.
+- GCK, Researcher: opens "Found 13 sequence variant records for **GCK**, of 1333 available.", then grouped headings (sequence variant, gene, literature entity, clinical trial records found) with a cited bulleted list; every variant row reads as its HGVS name, none as a URL. This matches the reference screenshot's shape except for model-written topic prose, which grounding strips.
+- No "has a source URL of" sentence in any answer; 0 claims without a marker in all four.
+
 ## Disposition
 
 Defects 1 and 2 went to a fix agent the same night, on the answer path, with five live runs per case required. Its report: `testing/Developer/reports/2026-09-14_answer_quality/report.md`.

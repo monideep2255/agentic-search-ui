@@ -1,0 +1,136 @@
+[
+  {
+    "width": 1280,
+    "case": "BRCA1 plain",
+    "default_mode_marker": "true",
+    "locked_marker_seen_during_run": 0,
+    "handoff": {
+      "lines": [
+        "Levi-Montalcini is handing off to Luria, Chain and Ehrlich",
+        "L1\n\nLuria is searching the knowledge graph\n\nL2\n\nChain is checking live NCBI records\n\nL3\n\nEhrlich is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": false
+    },
+    "elapsed_s": 42.9,
+    "answer": {
+      "headings": 0,
+      "list_items": 0,
+      "tables": 0,
+      "bold": 0,
+      "claims": 9,
+      "claims_without_marker": 0,
+      "citation_chips": 15,
+      "notes": 2,
+      "first_claim": "Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S. \nSource 1, layer 2; Source 2, ",
+      "opens_on_found_summary": true,
+      "source_url_sentence": false,
+      "words_in_answer_block": 344,
+      "trust_line": "Based on 4 sources, not yet confirmed",
+      "medical_note": true,
+      "raw_medgen_code": true,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered5.8s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\n\nFound 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ov"
+    }
+  },
+  {
+    "width": 1280,
+    "case": "follow-up: What variants cause it?",
+    "handoff": {
+      "lines": [
+        "Levi-Montalcini is handing off to Hodgkin, Koch and Pasteur",
+        "L1\n\nHodgkin is searching the knowledge graph\n\nL2\n\nKoch is checking live NCBI records\n\nL3\n\nPasteur is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": true
+    },
+    "elapsed_s": 174.5,
+    "answer": {
+      "headings": 0,
+      "list_items": 0,
+      "tables": 0,
+      "bold": 0,
+      "claims": 27,
+      "claims_without_marker": 0,
+      "citation_chips": 48,
+      "notes": 5,
+      "first_claim": "",
+      "opens_on_found_summary": false,
+      "source_url_sentence": false,
+      "words_in_answer_block": 515,
+      "trust_line": "Based on 4 sources",
+      "medical_note": true,
+      "raw_medgen_code": false,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "▶\nWhich diseases are associated with BRCA1?\n4 tools · 11 sources from 2 layers\nShow answer\nWhat variants cause it?\nNew search\n\n✓ Answered8.8s · 4 tools · 20 sources from 3 layers\n\nShow work ▾\n\nFound 1"
+    }
+  },
+  {
+    "width": 1280,
+    "case": "GCK researcher",
+    "handoff": {
+      "lines": [
+        "Levi-Montalcini is handing off to Nightingale, Perutz and Elion",
+        "L1\n\nNightingale is searching the knowledge graph\n\nL2\n\nPerutz is checking live NCBI records\n\nL3\n\nElion is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": false
+    },
+    "elapsed_s": 54.5,
+    "answer": {
+      "headings": 4,
+      "list_items": 20,
+      "tables": 0,
+      "bold": 3,
+      "claims": 22,
+      "claims_without_marker": 0,
+      "citation_chips": 35,
+      "notes": 1,
+      "first_claim": "Found 13 sequence variant records for GCK, of 1333 available. \nSource 3, layer 1; Source 4, layer 1; Source 5, layer 1; Source 6, layer 1; Source 7, layer 1; Source 8, layer 1; Source 9, layer 1; Source 10, layer 1; Sour",
+      "opens_on_found_summary": true,
+      "source_url_sentence": false,
+      "words_in_answer_block": 459,
+      "trust_line": "Based on 4 sources",
+      "medical_note": false,
+      "raw_medgen_code": false,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "Variants in GCK causing MODY\nNew search\n\n✓ Answered7.4s · 4 tools · 20 sources from 3 layers\n\nShow work ▾\n\nFound 13 sequence variant records for GCK, of 1333 available. \nSource 3, layer 1; Source 4, l"
+    }
+  },
+  {
+    "width": 390,
+    "case": "BRCA1 plain",
+    "handoff": {
+      "lines": [
+        "Ehrlich is handing off to Delbruck, Florey and Tsien",
+        "L1\n\nDelbruck is searching the knowledge graph\n\nL2\n\nFlorey is checking live NCBI records\n\nL3\n\nTsien is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": false
+    },
+    "elapsed_s": 44.9,
+    "answer": {
+      "headings": 0,
+      "list_items": 0,
+      "tables": 0,
+      "bold": 0,
+      "claims": 9,
+      "claims_without_marker": 0,
+      "citation_chips": 15,
+      "notes": 2,
+      "first_claim": "Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S. \nSource 1, layer 2; Source 2, ",
+      "opens_on_found_summary": true,
+      "source_url_sentence": false,
+      "words_in_answer_block": 345,
+      "trust_line": "Based on 4 sources, not yet confirmed",
+      "medical_note": true,
+      "raw_medgen_code": true,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered6.2s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\n\nFound 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ov"
+    }
+  }
+]

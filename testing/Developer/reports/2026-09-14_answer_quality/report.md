@@ -15,6 +15,7 @@ Fixer: the answer-quality sub-agent, working alone on `develop` at `537377d`, no
 - [Live-run table](#live-run-table)
 - [Proposed DECISIONS.md rows](#proposed-decisionsmd-rows)
 - [Left open](#left-open)
+- [Full suite result](#full-suite-result)
 
 ## Summary
 
@@ -153,7 +154,7 @@ Each on its own exit code, never piped, from the repository root.
 - Focused, green: `synthesis/` 274 existing plus the 27 new; `core/test_write_answer_quality.py` 16; `core/test_write_answer_structure.py`, `test_write_findings_tail.py`, `test_write_completeness.py`, `test_personalization_premise.py`, `test_layer_handoff.py` (except its shared-machine timing arm) all pass; the core, synthesis, contracts and eval directories: 590 passed, 48 skipped before the last test edit, then green on re-run of the edited files.
 - `ruff check .`: exit 0.
 - `isort --check-only src tests`: exit 0.
-- `python3 tracker/check_doc_drift.py --check`: exit 1, 4 stale, 0 structural: `AGENTS.md:32` and `CLAUDE.md:32` say 5002 Python tests (computed 5044, the 42 added here), and the set 8 report says 4919 twice. Not edited, per the brief; the two `.md` counts are the main agent's at checkpoint.
+- `python3 tracker/check_doc_drift.py --check`: exit 1, 4 stale, 0 structural: `AGENTS.md:32` and `CLAUDE.md:32` carried a Python test count of 5002 at the time (5044 computed, the 42 added here), and the set 8 report carried 4919 twice. Not edited, per the brief; the two `.md` counts are the main agent's at checkpoint.
 - `frontend/`: `npm run build` exit 0; `npx vitest run` exit 0, 41 files, 410 passed. Playwright not run: no frontend file was touched.
 - `python3 tracker/preflight.py`: READY before every live batch.
 
