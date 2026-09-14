@@ -1,0 +1,20 @@
+What diseases are caused by variants in the H run 1: answer      51.4s sources=18
+What diseases are caused by variants in the H run 2: answer      11.1s sources=18
+What diseases are caused by variants in the H run 3: error       64.1s sources=0
+What diseases are caused by variants in the H run 4: ask         13.3s sources=18
+What diseases are caused by variants in the H run 5: answer      16.8s sources=18
+What genes are associated with MODY? [researc run 1: ask         26.1s sources=13
+What genes are associated with MODY? [researc run 2: ask         24.8s sources=13
+What genes are associated with MODY? [researc run 3: ask         24.3s sources=13
+What genes are associated with MODY? [researc run 4: ask         21.7s sources=13
+What genes are associated with MODY? [researc run 5: ask         14.7s sources=13
+Which diseases are associated with BRCA1? [pl run 1: ask          9.6s sources=11
+Which diseases are associated with BRCA1? [pl run 2: ask         18.2s sources=11
+Which diseases are associated with BRCA1? [pl run 3: error       15.6s sources=0
+Which diseases are associated with BRCA1? [pl run 4: ask         10.8s sources=11
+Which diseases are associated with BRCA1? [pl run 5: ask         19.8s sources=11
+
+=== summary ===
+What diseases are caused by variants in the HNF1A  answered 4 of 5 | distinct source sets 1 | sizes [18]
+What genes are associated with MODY? [researcher]  answered 5 of 5 | distinct source sets 1 | sizes [13]
+Which diseases are associated with BRCA1? [plain_l answered 4 of 5 | distinct source sets 1 | sizes [11]
