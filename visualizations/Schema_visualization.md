@@ -140,7 +140,7 @@ One envelope carries every event on every surface. The envelope is versioned at 
 ```mermaid
 erDiagram
     Event {
-        string type "one of eleven"
+        string type "one of twelve"
         string version "v1"
         string trace_id "join key"
         int seq "ordering"
@@ -194,6 +194,10 @@ erDiagram
         string next_step "optional"
         string next_step_query "optional"
     }
+    StepPayload {
+        string step "write"
+        string status "started"
+    }
 
     Event ||--|| GuardPayload : "type guard"
     Event ||--|| ThinkPayload : "type think"
@@ -202,6 +206,7 @@ erDiagram
     Event ||--|| CitationPayload : "type citation"
     Event ||--|| TrustSignalPayload : "type trust_signal"
     Event ||--|| DonePayload : "type done"
+    Event ||--|| StepPayload : "type step"
 ```
 
 | Event type | Payload fields and bounds |
@@ -217,6 +222,7 @@ erDiagram
 | `cost` | `query_cost_usd`, `query_cap_usd`, `cap_fraction`, all at least 0. `model_tier` one of `guard`, `plan`, `synth` |
 | `error` | `fatal` bool. `scope` `tool`, `step` or `run`. `source` 64 chars. `error_class` one of `transient`, `recoverable`, `unexpected`, `cancelled`. `message` 256 chars. `retry_after_s` at least 0 |
 | `done` | `total_cost_usd`, `total_tool_calls`, `elapsed_ms`, all at least 0. `trust_outcome`. `next_step` optional, 200 chars. `next_step_query` optional, 2000 chars, the question a surface sends when the reader accepts `next_step` |
+| `step` | `step` is `write`, `status` is `started`. Sent live the moment the Write step begins, after the last refusal check and before the answer-writing model call. Added 2026-09-14 as an additive twelfth member within `v1`; the web client skips it by name |
 
 Three details in that table carry more weight than their size suggests:
 

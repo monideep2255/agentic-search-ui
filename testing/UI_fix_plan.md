@@ -24,6 +24,7 @@ The ordered work list for fixing the product after the first testing round on 20
 - [Set 9: answers worth reading](#set-9-answers-worth-reading)
 - [Set 10: reliable flagship answers, and saved history](#set-10-reliable-flagship-answers-and-saved-history)
 - [Set 11: live feedback of 2026-09-13 and 2026-09-14](#set-11-live-feedback-of-2026-09-13-and-2026-09-14)
+- [Where we stopped](#where-we-stopped)
 - [Developer detail](#developer-detail)
 
 ## Progress at a glance
@@ -649,6 +650,51 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.26 | The answers do not look like the approved mockup | Live | Commit `28aa805`. Checked live at 1280 and 390 against the mockup's structure |
 | 11.27 | Too much bold: only the title or main point should be bold | In progress | A background agent is building it in an isolated copy; it lands on develop when you say |
 | 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | In progress | Same background agent, same isolated copy |
+
+## Where we stopped
+
+The cutoff. It is updated at the end of every working session, so the next session starts here rather than reconstructing it. Last updated 2026-09-14, evening.
+
+### On develop now
+
+- Sets 1 to 9 are live, and Set 11's layout, writing banner, clean copy, detail tables, GCK fix and MODY genes answer are live and checked in a browser (the Set 11 table above).
+- Live record on commit `e5947e0`: 48 of 53 searches answered. About 1 in 10 fails with "could not be completed"; asking again works. The cause is not found: `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/findings.md`.
+- Being landed on develop in this session: 11.16 (the server sends "writing has started" and each checked sentence live) and 11.21's safe parts (10 per second NCBI rate, the gene summary, GO terms citeable only through a single-gene lookup, PMC, the OMIM filter, the fixed search plan). Neither changes what an answer contains yet; see "Next, in order".
+
+### Still being built
+
+- 11.27, less bold, and 11.28, a paced transition from searching to writing: a background agent in `.claude/worktrees/agent-a8393711bb57d579b`. Land it on develop when it finishes.
+- 11.16's independent review is still running. Its findings become follow-up fixes, since the product owner asked to land without waiting.
+
+### Next, in order
+
+1. Land 11.27 and 11.28, then check them live at 1280 and 390.
+2. Wire 11.21 into the answer path in `core/graph.py`: run `breadth_plan.plan_first_stage` and its follow-ups beside the existing calls, keep the Datasets summary and GO terms as findings, and add a code-chosen single-gene GO template that passes `go_attribution_curie`. The contract is in `testing/Developer/reports/2026-09-14_breadth_tool_layer/review.md` and the builder's report.
+3. Set `NCBI_EUTILS_RPS=10` on the develop API service.
+4. Design how abstracts become findings. The quote check was removed: two review rounds showed a sentence rule accepts meaning-reversing fragments and cannot see a refutation in the next sentence (`DECISIONS.md`, 2026-09-14).
+5. Capture the `error` event text on every measured run, so the 1 in 10 failures name their cause.
+
+### Waiting on the product owner
+
+- HNF1A shows 5 variant rows against the reference's 13, because an answer cites at most 20 sources.
+- The proposed provenance note under the mapping table (D4).
+- Whether the mode toggle moves into the status strip, and whether switching re-runs the question.
+- Trust-line wording ("not yet confirmed").
+- Production: no release for now, by product-owner decision on 2026-09-14; testers use develop. Before a release, confirm whether develop and production use separate NCBI keys (review finding F-09).
+
+### Known loose ends
+
+- CI on develop was red on the last six pushes because of 13 lint errors in probe scripts; fixed in commit `56fa973`.
+- Review findings N-04 and N-06 are open and minor, with owners, in the 11.21 review file.
+- Set 10 is untouched. Its baseline folder `testing/Developer/reports/2026-09-12_consistency_baseline/` is uncommitted.
+- An empty `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/writetest.txt` is waiting for a yes to move it to the Trash.
+
+### How to start the next session
+
+1. Read this section, then the Set 11 table above.
+2. Run `git status` and `git worktree list` to see what is uncommitted or still isolated.
+3. Read the newest reports under `testing/Developer/reports/2026-09-14_*`.
+4. Pick up "Next, in order" at the first item not done.
 
 ## Developer detail
 
