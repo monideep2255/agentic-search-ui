@@ -34,6 +34,8 @@ EVENT_TYPES = [
     "cost",
     "error",
     "done",
+    # UI fix set 11.16 (2026-09-14): the additive Write-started marker.
+    "step",
 ]
 
 
@@ -120,6 +122,7 @@ VALID_PAYLOAD_BY_TYPE: dict[str, dict[str, object]] = {
         "elapsed_ms": 6200,
         "trust_outcome": "answer",
     },
+    "step": {"step": "write", "status": "started"},
 }
 
 
@@ -155,8 +158,9 @@ class TestEventType:
         with pytest.raises(ValidationError):
             Event(**_envelope_kwargs(type="unknown_type"))
 
-    def test_eleven_taxonomy_values_exactly(self) -> None:
-        assert len(EVENT_TYPES) == 11
+    def test_twelve_taxonomy_values_exactly(self) -> None:
+        # Eleven from Section 2.3 plus the additive `step` marker (set 11.16).
+        assert len(EVENT_TYPES) == 12
 
 
 class TestEventVersion:
@@ -825,10 +829,10 @@ class TestEventPayloadBoundToDeclaredType:
 
     Regression coverage for the judge's two rejecting probes on ticket
     T-1.0-01, plus a positive check that a correctly-shaped payload for
-    every one of the eleven taxonomy members still validates.
+    every one of the twelve taxonomy members still validates.
     """
 
-    def test_eleven_valid_payloads_declared(self) -> None:
+    def test_twelve_valid_payloads_declared(self) -> None:
         assert set(VALID_PAYLOAD_BY_TYPE) == set(EVENT_TYPES)
 
     @pytest.mark.parametrize("event_type", EVENT_TYPES)

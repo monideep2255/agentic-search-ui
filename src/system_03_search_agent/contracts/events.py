@@ -1,6 +1,10 @@
-"""The event envelope and the eleven-member event payload taxonomy.
+"""The event envelope and the twelve-member event payload taxonomy.
 
-Sections 2.2 (envelope) and 2.3 (payload shapes), Technical_specification.md.
+Sections 2.2 (envelope) and 2.3 (payload shapes), Technical_specification.md,
+plus one additive member, `step` (UI fix set 11.16, 2026-09-14), a live
+progress marker that carries no answer content. Additive under
+system-design-patterns pattern 10: no existing member's fields or meaning
+changed, and every consumer that does not know it skips it by name.
 
 `Event.payload` is typed as a plain JSON object (`dict[str, Any]`), matching
 the envelope schema in Section 2.2 literally (`"payload": {"type": "object"}`).
@@ -455,8 +459,41 @@ class DonePayload(BaseModel):
     """
 
 
+class StepPayload(BaseModel):
+    """A live progress marker: a loop step has begun.
+
+    UI fix set 11.16 (2026-09-14). Measured on develop, every answer event
+    arrived in one burst after a silent gap of 1.9 to 22.6 seconds, because
+    `write_node` buffered them until it returned. The tokens themselves
+    cannot be sent before the grounding pass has run (production-standards'
+    cite-or-refuse gate), so the first thing a reader can honestly be told
+    is that the Write step has started. This event says exactly that and
+    nothing else: no text, no citation, no verdict, so no surface can read
+    it as a claim.
+
+    ADDITIVE under system-design-patterns pattern 10. It is the twelfth
+    envelope type; nothing about the other eleven changed. Every surface
+    that predates it skips it: the web client by name
+    (`useAgentRun.ts`'s `FORWARD_COMPATIBLE_EVENT_NAMES`, which anticipated
+    exactly this frame and this payload shape), the CLI renderer through
+    its `_handle_<type>` lookup with a `None` default, and the MCP and
+    GraphQL folds by matching no branch.
+
+    Only `step="write"` with `status="started"` is produced today, from
+    `core/graph.py`'s `write_node` at the start of its normal answer path
+    and never on a refusal decided before the synth call. Both Literals
+    are deliberately narrow: widening either later is additive, while a
+    value declared here that nothing emits would be a claim.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    step: Literal["write"] = Field(..., max_length=16)
+    status: Literal["started"] = Field(..., max_length=16)
+
+
 # Binds each envelope `type` value to the Section 2.3 payload model that
-# `payload` must conform to. Keyed by the same eleven-member taxonomy as
+# `payload` must conform to. Keyed by the same twelve-member taxonomy as
 # `Event.type` below; keep the two in sync if the taxonomy ever grows.
 PAYLOAD_MODEL_BY_TYPE: dict[str, type[BaseModel]] = {
     "guard": GuardPayload,
@@ -470,6 +507,7 @@ PAYLOAD_MODEL_BY_TYPE: dict[str, type[BaseModel]] = {
     "cost": CostPayload,
     "error": ErrorPayload,
     "done": DonePayload,
+    "step": StepPayload,
 }
 
 
@@ -488,6 +526,7 @@ class Event(BaseModel):
         "cost",
         "error",
         "done",
+        "step",
     ]
     version: Literal["v1"]
     trace_id: str = Field(..., max_length=64)
