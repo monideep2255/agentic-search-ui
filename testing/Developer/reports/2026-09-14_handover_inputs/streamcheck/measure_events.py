@@ -75,11 +75,11 @@ def run_once(question, audience_depth, label):
 def summarize(record):
     events = record["events"]
     token_events = [e for e in events if e["type"] == "token"]
-    write_step_events = [
+    [
         e for e in events if e["type"] in ("step", "trust_signal") and e.get("seq") is not None
     ]
     done_events = [e for e in events if e["type"] == "done"]
-    first_write_evidence = token_events[0] if token_events else None
+    token_events[0] if token_events else None
     summary = {
         "label": record["label"],
         "total_events": len(events),

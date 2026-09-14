@@ -32,7 +32,7 @@ os.environ["TOOL_AUDIT_LOG_PATH"] = str(HERE / "tool_audit_probe.jsonl")
 os.environ["LANGSMITH_TRACING"] = "false"
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
-from system_03_search_agent.tools.graph_connection import execute_cypher  # noqa: E402
+from system_03_search_agent.tools.graph_connection import execute_cypher
 
 OUT = HERE / "graph_probe.jsonl"
 GENES = {"BRCA1": "NCBIGene:672", "GCK": "NCBIGene:2645"}
@@ -120,8 +120,8 @@ SHAPES = {
     "variants (is_sequence_variant_of)":
         ("MATCH (x:SequenceVariant)-[:is_sequence_variant_of]->(a:Gene {id: $e}) RETURN x ORDER BY x.id", 100),
     "variant diseases fold (T1)":
-        ("MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(a:Gene {id: $e}) "
-         "MATCH (v)-[:has_phenotype]->(x:Disease) WITH v, collect(DISTINCT x) AS xs RETURN v, xs ORDER BY v.id", 100),
+        (("MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(a:Gene {id: $e}) "
+         "MATCH (v)-[:has_phenotype]->(x:Disease) WITH v, collect(DISTINCT x) AS xs RETURN v, xs ORDER BY v.id"), 100),
     "processes (participates_in)":
         ("MATCH (a:Gene {id: $e})-[:participates_in]->(x:BiologicalProcess) RETURN x ORDER BY x.id", 100),
     "activities (actively_involved_in)":
@@ -137,8 +137,8 @@ SHAPES = {
     "articles count":
         ("MATCH (a:Gene {id: $e})-[:mentioned_in]->(x:Article) RETURN count(DISTINCT x) AS articles_count", 1),
     "article mesh, 2 hops bounded 20":
-        ("MATCH (a:Gene {id: $e})-[:mentioned_in]->(x:Article) WITH x ORDER BY x.id LIMIT 5 "
-         "MATCH (x)-[:has_mesh_annotation]->(m:OntologyClass) RETURN x, m ORDER BY x.id, m.id", 20),
+        (("MATCH (a:Gene {id: $e})-[:mentioned_in]->(x:Article) WITH x ORDER BY x.id LIMIT 5 "
+         "MATCH (x)-[:has_mesh_annotation]->(m:OntologyClass) RETURN x, m ORDER BY x.id, m.id"), 20),
     "gene record":
         ("MATCH (a:Gene {id: $e}) RETURN a", 1),
 }

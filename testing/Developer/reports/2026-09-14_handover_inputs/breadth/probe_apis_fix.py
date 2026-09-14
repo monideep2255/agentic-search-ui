@@ -5,13 +5,12 @@ two ways of checking PMC open-access status. Same pacing. Output appended to
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import probe_apis as p  # noqa: E402
-from defusedxml import ElementTree as DET  # noqa: E402
+import probe_apis as p
+from defusedxml import ElementTree as DET
 
 EUTILS = p.EUTILS
 

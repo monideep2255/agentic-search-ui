@@ -20,6 +20,7 @@ import statistics
 import sys
 import time
 from pathlib import Path
+
 import httpx
 from defusedxml import ElementTree
 
@@ -33,10 +34,12 @@ for line in (REPO / ".env").read_text().splitlines():
     key, _, value = line.partition("=")
     os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
-from system_03_search_agent.tools.clinicaltrials_search_schemas import (  # noqa: E402
+from system_03_search_agent.tools.clinicaltrials_search_schemas import (
     CLINICALTRIALS_HOST as CLINICALTRIALS_RECORD_URL_PATTERN,
 )
-from system_03_search_agent.tools.ncbi_efetch_schemas import NCBI_EFETCH_RECORD_URL_PATTERN  # noqa: E402
+from system_03_search_agent.tools.ncbi_efetch_schemas import (
+    NCBI_EFETCH_RECORD_URL_PATTERN,
+)
 
 OUT = HERE / "api_probe.jsonl"
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
@@ -265,7 +268,7 @@ def run_case(symbol: str, c: dict) -> None:
     record(f"{symbol} ELink gene to pubmed (gene_pubmed, curated)", "eutils", EUTILS + "elink.fcgi",
            eutils_params(dbfrom="gene", db="pubmed", id=gid, linkname="gene_pubmed", retmode="json"), parse_elink_ids)
     pmids = (r2.get("ids") or r1.get("ids") or [])[:5]
-    r3 = record(f"{symbol} EFetch abstracts for top 5 PMIDs (rettype=abstract, retmode=xml)", "eutils", EUTILS + "efetch.fcgi",
+    record(f"{symbol} EFetch abstracts for top 5 PMIDs (rettype=abstract, retmode=xml)", "eutils", EUTILS + "efetch.fcgi",
                 eutils_params(db="pubmed", id=",".join(pmids), rettype="abstract", retmode="xml"), parse_pubmed_abstracts)
     # PMC availability
     r4 = record(f"{symbol} ELink pubmed to pmc for those 5 PMIDs", "eutils", EUTILS + "elink.fcgi",
