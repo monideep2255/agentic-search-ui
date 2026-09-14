@@ -117,14 +117,28 @@ describe("the conversation thread's position", () => {
 describe("a run in flight renders inside the answer screen", () => {
   const PROGRESS = <div data-testid="fake-progress">running</div>;
 
-  it("replaces the answer body with the progress, keeping the thread and heading", () => {
+  /*
+   * UI fix set 9, item 9.6 CHANGED THIS ARM'S REQUIREMENT, and it is named
+   * rather than quietly loosened. It used to assert that no claim renders
+   * while a run is in flight, because a claim beside a live stepper could be
+   * the previous run's text (F-4.8-J-03). The answer now streams in, so the
+   * in-flight run's own claims DO render under the progress. What keeps
+   * F-4.8-J-03 closed is upstream and unchanged: `App` renders
+   * `EMPTY_RUN_VIEW` until the new run's id exists, so the claims this screen
+   * is handed during a run are always that run's. The follow-up field, the
+   * sources and the trust line still wait for the run to land.
+   */
+  it("streams the run's own claims under the progress, keeping the thread and heading", () => {
     render(
       <AnswerScreen
         question="What variants cause it?"
         previousTurns={[turn("What gene is BRCA1?")]}
         progress={PROGRESS}
-        claims={[{ text: "A stale claim from the previous run.", layer: 1, citations: [] }]}
-        sources={[]}
+        claims={[{ text: "A claim from the run in flight.", layer: 1, citations: [1] }]}
+        sources={[
+          { n: 1, layer: 1, name: "MedGen C1", tool: "name", evidence: "e", confidence: "c", license: "l", url: "https://www.ncbi.nlm.nih.gov/medgen/1" },
+        ]}
+        trust={[{ kind: "plain", label: "Based on 1 source" }]}
         followUp={<div data-testid="fake-follow-up">follow up</div>}
       />,
     );
@@ -137,10 +151,13 @@ describe("a run in flight renders inside the answer screen", () => {
       screen.getByRole("heading", { name: "What variants cause it?" }),
     ).toBeInTheDocument();
 
-    // And the answer body is gone rather than sitting underneath. A claim
-    // rendered beside a live stepper would be the previous run's text under
-    // this run's question, which is the F-4.8-J-03 class exactly.
-    expect(screen.queryByTestId("claim-text-0")).toBeNull();
+    // The claim streams in under the progress, and nothing that belongs to a
+    // finished answer does.
+    expect(screen.getByTestId("streaming-answer")).toContainElement(
+      screen.getByTestId("claim-text-0"),
+    );
+    expect(screen.queryByTestId("sources-disclosure")).toBeNull();
+    expect(screen.queryByTestId("trust-line")).toBeNull();
     // The follow-up field goes with it: there is no answer to follow up on
     // yet, and offering one would let a third run start over a second.
     expect(screen.queryByTestId("fake-follow-up")).toBeNull();

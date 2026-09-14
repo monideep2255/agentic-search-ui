@@ -135,7 +135,10 @@ def _state(total_available: int | None = 3, truncated: bool = False) -> dict[str
         session_id="session-tail",
         trace_id="trace-tail",
         user_id=None,
-        audience_depth="researcher",
+        # UI fix set 9: a Researcher answer now lists every record in code in
+        # place of the findings-tail note (`test_write_answer_structure.py`),
+        # so the tail's own contract is pinned on a depth that still carries it.
+        audience_depth="clinical_brief",
     )
     finding = Finding(
         call_id="cq-tail",

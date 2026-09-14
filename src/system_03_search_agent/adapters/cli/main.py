@@ -629,7 +629,7 @@ def _parse_ask_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argpars
     # query".
     parser.add_argument(
         "--depth",
-        choices=["clinical_brief", "researcher", "deep_technical"],
+        choices=["clinical_brief", "researcher", "deep_technical", "plain_language"],
         default=None,
         help=(
             "the audience depth for the answer; omitted, the server uses the "

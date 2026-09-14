@@ -1,7 +1,10 @@
 """Run ONE memory-bound follow-up locally with the real model and graph, and
 print every event in full, so the Cypher, the rows and the refusal reason are
 visible. Memory is injected the way the premise gate injects it."""
-import asyncio, json, os, sys
+import asyncio
+import json
+import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,9 +19,16 @@ os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["TOOL_AUDIT_LOG_ENABLED"] = "false"
 sys.path.insert(0, str(root / "src"))
 
-from system_03_search_agent.contracts.query import CompressedFinding, Query, RequestContext, ResolvedEntity, SessionMemorySummary
-from system_03_search_agent.core.run import run
 import system_03_search_agent.tools.cypher_query as _cq
+from system_03_search_agent.contracts.query import (
+    CompressedFinding,
+    Query,
+    RequestContext,
+    ResolvedEntity,
+    SessionMemorySummary,
+)
+from system_03_search_agent.core.run import run
+
 _real = _cq.execute_cypher
 def _spy(cypher, *a, **kw):
     print("[CYPHER]", " ".join(cypher.split()))
@@ -31,6 +41,7 @@ def _spy(cypher, *a, **kw):
     return rows, total
 _cq.execute_cypher = _spy
 import system_03_search_agent.core.graph as _g
+
 _real_bsf = _g.build_synth_findings
 def _bsf_spy(findings, pick, *a, **kw):
     for f in findings:
@@ -51,7 +62,7 @@ def _gp_spy(text, findings, *a, **kw):
         print(f"[GROUNDING] claims={len(res.claims)} outcome={getattr(res,'outcome',None)} dropped={getattr(res,'dropped',None) and len(res.dropped)} attrs={[k for k in vars(res)] if hasattr(res,'__dict__') else type(res)}")
         for d in (getattr(res, "dropped", None) or [])[:5]:
             print("[DROPPED]", json.dumps(d if isinstance(d, str) else getattr(d, "__dict__", str(d)), default=str)[:300])
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001 - a diagnostic print of an unexpected result shape, never a control path
         print("[GROUNDING?]", type(res), ex)
     return res
 _g.run_grounding_pass = _gp_spy
@@ -90,19 +101,41 @@ memory = SessionMemorySummary(
 )
 print(f"[MEMORY] reported_record_ids injected={len(memory.reported_record_ids)} text={text!r}")
 query = Query(text=text, session_id="local-repro", trace_id="trace-local-repro", user_id=None, audience_depth="researcher")
-context = RequestContext(surface="rest_sse", session_memory=memory)
+# UI fix set 8: `--no-memory` runs the question as a first turn with no session
+# memory at all, so a gene that fails to resolve cannot silently bind to the
+# remembered BRCA1 antecedent and mask the failure. `--summary` appends one
+# JSON line, `[SUMMARY] {...}`, with the tools, layers and statuses that ran,
+# the elapsed seconds, the resolved entities and the citation source set with
+# each source's layer, so a runner can tabulate many runs.
+no_memory = "--no-memory" in sys.argv
+context = RequestContext(surface="rest_sse", session_memory=None if no_memory else memory)
 
 async def main():
+    import time as _time
     shown = []
+    summary = {"question": text, "tools": [], "citations": [], "resolved_entities": [], "trust_outcome": None}
+    started = _time.monotonic()
     async for e in run(query, context):
         p = e.payload if isinstance(e.payload, dict) else e.payload.model_dump()
         if e.type in ("guard", "think", "tool_result", "error", "token", "plan", "done"):
             print(f"[{e.type}]", json.dumps(p, default=str)[:1500])
         elif e.type == "citation":
             shown.append(p["source_url"])
+            summary["citations"].append({"source_url": p["source_url"], "layer": p["layer"], "source": p["source"], "source_id": p["source_id"], "license": p["license"], "evidence_kind": p["evidence_kind"]})
             print(f"[citation] {p['display_index']} {p['source_url']} :: {p['claim_text'][:120]}")
         else:
             print(f"[{e.type}]")
+        if e.type == "think":
+            summary["resolved_entities"] = [r["curie"] for r in p.get("resolved_entities", [])]
+        if e.type == "tool_result":
+            summary["tools"].append({"tool": p["tool"], "layer": p["layer"], "status": p["status"], "count": p["result_count"], "persona": p.get("persona")})
+        if e.type == "done":
+            summary["trust_outcome"] = p["trust_outcome"]
+        if e.type == "trust_signal" and p.get("scope") == "answer":
+            summary["answer_trust"] = {k: p.get(k) for k in ("outcome", "risk_tier", "grounded", "message", "summary")}
+    summary["elapsed_s"] = round(_time.monotonic() - started, 1)
+    if "--summary" in sys.argv:
+        print("[SUMMARY]", json.dumps(summary, default=str))
     new_ids = [u for u in shown if u not in reported_ids]
     print(f"[SHOWN] {len(shown)} citations, {len(new_ids)} not previously reported, "
           f"{len(shown) - len(new_ids)} previously reported")

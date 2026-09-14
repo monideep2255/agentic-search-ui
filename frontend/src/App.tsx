@@ -419,7 +419,8 @@ export function App() {
    * a deep_technical or clinical_brief selection the user had made on the
    * landing screen.
    */
-  const [depth, setDepth] = useState<AudienceDepth>("researcher");
+  // UI fix set 9, item 9.1: Plain language is the default mode (decision A3).
+  const [depth, setDepth] = useState<AudienceDepth>("plain_language");
   /**
    * Monotonic ask counter, for request sequencing (F-4.8-A-02).
    *
@@ -586,6 +587,7 @@ export function App() {
     fetchMe(token, { signal: controller.signal })
       .then((me) => {
         if (
+          me.audience_depth === "plain_language" ||
           me.audience_depth === "clinical_brief" ||
           me.audience_depth === "researcher" ||
           me.audience_depth === "deep_technical"
@@ -786,7 +788,7 @@ export function App() {
     // argues session scope precisely so a notice one person dismissed is
     // not treated as read by the next.
     setAccepted(false);
-    setDepth("researcher");
+    setDepth("plain_language");
     // P-03: the next person at this workstation did not collapse the
     // rail, so they do not inherit a collapsed one.
     setRailOpen(railOpenByDefault());
@@ -1449,6 +1451,50 @@ export function App() {
           />
         );
       case "run":
+        /*
+         * UI fix set 9, item 9.6 (R28). The product owner: "I also thought we
+         * were going to stream the answer, and I don't see streaming."
+         *
+         * The run's claims already arrive one sentence at a time and
+         * `useRunView` already derives them as events land; only this screen
+         * waited for `done`. Once the first claim exists and the run is still
+         * live, the SAME answer screen a follow-up uses renders the progress
+         * (with Stop) above the answer as it builds. The landed state is
+         * unchanged: the effect below still switches the view to "answer" on
+         * the terminal event. A stopped run falls back to `RunScreen`, whose
+         * "Search stopped" block says no answer was written, rather than
+         * leaving half an answer on screen as if it were one.
+         */
+        if (!stopped && !view.landed && view.claims.length > 0) {
+          return (
+            <AnswerScreen
+              question={searchView.question}
+              progress={
+                <RunProgress
+                  activeStep={step}
+                  startedAt={runStartedAt}
+                  reachedSteps={view.reachedSteps}
+                  toolCalls={view.toolCalls}
+                  steps={view.steps}
+                  personaName={persona?.name ?? null}
+                  personaAbout={persona?.about ?? null}
+                  personaWikipedia={persona?.wikipedia ?? null}
+                  stopEnabled={view.stopEnabled}
+                  refusal={view.refusal}
+                  capMessage={view.capMessage}
+                  failure={streamError}
+                  stopped={false}
+                  showNewSearch={false}
+                  onStop={stopCurrentRun}
+                  onRunAgain={() => void ask(searchView.question, depth)}
+                />
+              }
+              claims={view.claims}
+              sources={view.sources}
+              onNewSearch={startNewSearch}
+            />
+          );
+        }
         return (
           <RunScreen
             question={searchView.question}

@@ -162,7 +162,10 @@ def _write_state(total_available: int = 5, truncated: bool = False) -> dict[str,
         session_id="session-completeness",
         trace_id="trace-completeness",
         user_id=None,
-        audience_depth="researcher",
+        # UI fix set 9: a Researcher answer now lists every record in code in
+        # place of the findings-tail note, so the tail's own contract is
+        # pinned on a depth that still carries it.
+        audience_depth="clinical_brief",
     )
     finding = Finding(
         call_id="cq-completeness",

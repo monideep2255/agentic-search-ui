@@ -306,6 +306,30 @@ class TestCreateRun:
             await _drain_run_task(second_body["run_id"])
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "depth", ["plain_language", "researcher", "clinical_brief", "deep_technical"]
+    )
+    async def test_accepts_every_audience_depth(self, depth: str) -> None:
+        """UI fix set 9: `plain_language` is accepted, and so are the three
+        values GraphQL, the CLI and MCP still send."""
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            response = await client.post(
+                "/v1/query", json=_create_body(audience_depth=depth), headers=headers
+            )
+            assert response.status_code == 202, response.text
+            await _drain_run_task(response.json()["run_id"])
+
+    @pytest.mark.asyncio
+    async def test_an_unknown_audience_depth_returns_422(self) -> None:
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            response = await client.post(
+                "/v1/query", json=_create_body(audience_depth="simple"), headers=headers
+            )
+            assert response.status_code == 422
+
+    @pytest.mark.asyncio
     async def test_requires_auth(self) -> None:
         async with _client() as client:
             response = await client.post("/v1/query", json=_create_body())

@@ -1,0 +1,7 @@
+The gene symbol is BRCA1 [1], and the literature entity name is BRCA1 [2]. 
+One is called Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [3]. Another is named BRCA1 Haploinsufficiency and Gene Expression [4]. A third is titled Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [5]. A fourth is called Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [6]. A fifth is named Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [7]. 
+
+(Note: the records below were retrieved for this question and are listed as found.)Disease name: Familial cancer of breast [8]. Disease name: Familial breast-ovarian cancer susceptibility 1 [9]. Disease name: Pancreatic cancer susceptibility 4 [10]. Disease name: Fanconi anemia complementation group S [11]. 
+
+(This is a research summary, not medical advice.)
+{"depth": "plain_language", "question": "Which diseases are associated with BRCA1?", "outcome": "ask", "words": 117, "paragraphs": 3, "headings": 0, "list_items": 0, "table_rows": 0, "unmarked_claims": 0, "trust_line": "Based on 4 sources, not yet confirmed", "sources": ["672", "MedGen:C0346153", "MedGen:C2676676", "MedGen:C3280442", "MedGen:C4554406", "unknown"], "notes": ["Note: the records below were retrieved for this question and are listed as found.", "This is a research summary, not medical advice."], "errors": []}

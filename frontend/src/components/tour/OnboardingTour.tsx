@@ -177,10 +177,12 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "depth",
-    title: "Answer depth",
+    // UI fix set 9 (2026-09-14): two modes, worded as the mode control's own
+    // info card (`ANSWER_MODE_EXPLAINER` in `controls/DepthControl.tsx`).
+    title: "Answer mode",
     body: [
-      "Choose who the answer is written for: a clinical brief, a researcher, or a deep technical read.",
-      "The facts and the sources stay the same at every depth. Only the wording changes.",
+      "Plain language, the default, is a short answer of about 250 words in three paragraphs, in everyday words. Researcher is a full page under short topic headings, with the records found listed.",
+      "The sources stay the same in both modes, and every claim is cited. A change applies to your next question.",
     ],
     targets: ["depth"],
   },

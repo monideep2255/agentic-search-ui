@@ -185,6 +185,13 @@ class GraphState(TypedDict, total=False):
     # `write` asks the question instead of refusing or guessing.
     clarification_needed: str
     layer2_raw_outputs: dict[str, Any]
+    # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
+    # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
+    # clinicaltrials_search call, keyed by call_id, for the same reason
+    # `layer2_raw_outputs` exists: a per-tool citation builder needs the
+    # real record, not the flattened pseudo-row. Read by the write side's
+    # Layer 3 citation branch once it lands; empty when no such tool ran.
+    layer3_raw_outputs: dict[str, Any]
     # UI fix set 7, item 7.2 (2026-09-13). Both set by `plan`, both read by
     # `write`, both plain data so that `write` never reads session memory
     # itself (Section 14.4, asserted by the personalization premise gate's

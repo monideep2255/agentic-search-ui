@@ -109,7 +109,12 @@ from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["MEDGEN_CONCEPT_ID", "reset_cache_for_tests", "resolve_concept_ids"]
+__all__ = [
+    "MEDGEN_CONCEPT_ID",
+    "readable_disease_name",
+    "reset_cache_for_tests",
+    "resolve_concept_ids",
+]
 
 # A MedGen local id: `C` or `CN` then digits. Deliberately the same shape
 # `tools/cypher_provenance.py` already enforces for this prefix, derived
@@ -311,3 +316,77 @@ async def resolve_concept_ids(
             resolved[raw] = title
 
     return resolved
+
+
+# UI fix set 9, item 9.8 (2026-09-13). MedGen carries many titles in the
+# inverted OMIM form, "Breast-ovarian cancer, familial, susceptibility to, 1",
+# which a reader sees in prose as "susceptibility to, 1". The product owner
+# asked for names that read naturally, and the brief bounds how: a readable
+# form is allowed only as a DETERMINISTIC transformation of the record's own
+# title, never a model's rewording.
+#
+# So this is a closed set of reorderings, and every word of the result is a
+# word of the title. A title with any comma-separated part this table does not
+# recognise is returned UNCHANGED, because guessing at an unknown inversion is
+# how a disease name would acquire a meaning its record does not give it.
+_PREFIX_QUALIFIERS = frozenset(
+    {
+        "familial",
+        "hereditary",
+        "juvenile",
+        "congenital",
+        "autosomal dominant",
+        "autosomal recessive",
+        "x-linked",
+        "early-onset",
+        "late-onset",
+        "adult-onset",
+    }
+)
+_SUSCEPTIBILITY_PART = "susceptibility to"
+_SUSCEPTIBILITY_NUMBER = re.compile(r"^\d{1,3}[A-Za-z]?$")
+_SUFFIX_PART = re.compile(r"^(?:type|complementation group|group)\s+\S{1,8}$", re.IGNORECASE)
+
+
+def readable_disease_name(title: str) -> str:
+    """Reorder an inverted MedGen title into reading order, or return it as is.
+
+    "Breast-ovarian cancer, familial, susceptibility to, 1" becomes
+    "Familial breast-ovarian cancer susceptibility 1";
+    "Pancreatic cancer, susceptibility to, 4" becomes
+    "Pancreatic cancer susceptibility 4";
+    "Fanconi anemia, complementation group S" becomes
+    "Fanconi anemia complementation group S". A title with no comma, or with
+    any part outside the recognised qualifiers, comes back unchanged.
+    """
+    parts = [part.strip() for part in title.split(",")]
+    if len(parts) < 2 or any(not part for part in parts):
+        return title
+    base, rest = parts[0], parts[1:]
+    prefixes: list[str] = []
+    suffixes: list[str] = []
+    for part in rest:
+        lowered = part.lower()
+        if lowered in _PREFIX_QUALIFIERS:
+            prefixes.append(lowered)
+        elif lowered == _SUSCEPTIBILITY_PART:
+            suffixes.append("susceptibility")
+        elif (
+            _SUSCEPTIBILITY_NUMBER.match(part)
+            and suffixes
+            and suffixes[-1] == "susceptibility"
+        ) or _SUFFIX_PART.match(part):
+            suffixes.append(part)
+        else:
+            return title
+    head = base
+    if prefixes:
+        # Lower-case the base's first letter only when it reads as an ordinary
+        # capitalised word, so an acronym such as "MODY" keeps its case.
+        if len(base) > 1 and base[0].isupper() and base[1].islower():
+            head = base[0].lower() + base[1:]
+        head = " ".join(prefixes) + " " + head
+    readable = " ".join([head, *suffixes])
+    if base[:1].isupper():
+        readable = readable[:1].upper() + readable[1:]
+    return readable

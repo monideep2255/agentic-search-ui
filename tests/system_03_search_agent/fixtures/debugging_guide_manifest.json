@@ -88,6 +88,7 @@
     "src/system_03_search_agent/orchestrator/__init__.py": "111c1d725d41c02614139f7bfade1f331235bdaaa68570d37ac92345ddbe39d7",
     "src/system_03_search_agent/orchestrator/few_shot_pool.py": "58fc5acdda93c8e636e7230bffcd6c3e50d4fa1c32498040d4f07851f9c24be9",
     "src/system_03_search_agent/synthesis/__init__.py": "4e3a4c59d4901db03751fb865ce432f3330468ae44ebd77cf09772a9b4213d4b",
+    "src/system_03_search_agent/synthesis/answer_layout.py": "f5bbbe78495fcaa5dc4d20e5960f27fc2fd1cd9510d01e25881dea35685c8638",
     "src/system_03_search_agent/synthesis/conflict_detection.py": "71254eb5e7798521c8f8ce1a83becec8978a0b9fe98d36b6bdb78d52f41a9383",
     "src/system_03_search_agent/synthesis/disease_names.py": "ac9ee4d5c657b350dccbb4d2a977879bea426acc6c30a38fc9013ff932fa1a26",
     "src/system_03_search_agent/synthesis/findings.py": "d7012ce62e801881a0c80872d79535f252ca0fd15fb80fded74b31b778309ac7",

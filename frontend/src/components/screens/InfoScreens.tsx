@@ -1126,8 +1126,8 @@ export function AboutScreen({
       >
         <JourneyStop index={1} title="You ask">
           <StopText>
-            You type a question and pick how deep the answer should go: clinical brief, researcher
-            or deep technical. That is the whole of your part. Everything after it happens on the
+            You type a question and pick how the answer is written: Plain language, the default,
+            or Researcher. That is the whole of your part. Everything after it happens on the
             server, and your question is carried through as data rather than as an instruction the
             system obeys.
           </StopText>

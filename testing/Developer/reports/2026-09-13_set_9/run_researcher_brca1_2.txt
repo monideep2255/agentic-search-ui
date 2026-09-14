@@ -1,0 +1,20 @@
+BRCA1 is identified as the gene symbol BRCA1 [1]. 
+One disease associated with BRCA1 is Familial cancer of breast [2]. A second associated disease is Familial breast-ovarian cancer susceptibility 1 [3]. A third associated disease is Pancreatic cancer susceptibility 4 [4]. 
+BRCA1 is also associated with Fanconi anemia complementation group S [5]. 
+One trial is named Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [6]. A second trial is named BRCA1 Haploinsufficiency and Gene Expression [7]. A third trial is named Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [8]. A fourth trial is named Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [9]. A fifth trial is named Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [10]. 
+
+## Summary of Associations
+The gene is identified by the symbol BRCA1 [1] and by the literature entity name BRCA1 [11]. 
+
+## Gene records found
+- BRCA1
+
+## Literature entity records found
+- BRCA1
+
+## Clinical trial records found
+- Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer- BRCA1 Haploinsufficiency and Gene Expression- Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma- Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation- Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations
+
+## Disease records found
+- Familial cancer of breast- Familial breast-ovarian cancer susceptibility 1- Pancreatic cancer susceptibility 4- Fanconi anemia complementation group S
+{"depth": "researcher", "question": "Which diseases are associated with BRCA1?", "outcome": "ask", "words": 228, "paragraphs": 5, "headings": 5, "list_items": 11, "table_rows": 0, "unmarked_claims": 0, "trust_line": "Based on 4 sources, not yet confirmed", "sources": ["672", "MedGen:C0346153", "MedGen:C2676676", "MedGen:C3280442", "MedGen:C4554406", "unknown"], "notes": [], "errors": []}

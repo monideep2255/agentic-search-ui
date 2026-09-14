@@ -165,6 +165,31 @@ def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
 
 
+@pytest.fixture(autouse=True)
+def _stub_layer3_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """UI fix set 8 (R29): a gene question now also plans pubtator_annotate
+    and clinicaltrials_search. Stubbed to genuine "empty" outputs, the same
+    discipline as `_stub_ncbi_efetch_dispatch` above, so no test here ever
+    reaches the network blocker and no pre-existing assertion about
+    citations or trust changes (an empty finding contributes nothing). A
+    test that needs a real Layer 3 result overrides the attribute itself,
+    exactly as the dual-plan tests override `ncbi_efetch`.
+    """
+    from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+        ClinicalTrialsSearchOutput,
+    )
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateOutput
+
+    async def _fake_pubtator(tool_input: object, **kwargs: object) -> PubtatorAnnotateOutput:
+        return PubtatorAnnotateOutput(status="empty", mode="entity_lookup")
+
+    async def _fake_trials(tool_input: object, **kwargs: object) -> ClinicalTrialsSearchOutput:
+        return ClinicalTrialsSearchOutput(status="empty")
+
+    monkeypatch.setattr(graph_module, "pubtator_annotate", _fake_pubtator)
+    monkeypatch.setattr(graph_module, "clinicaltrials_search", _fake_trials)
+
+
 # Matches a rendered findings line without assuming its internal shape.
 # An earlier version parsed "field: value" and broke silently the moment
 # `render_findings_block` started naming the record type, because a
@@ -750,9 +775,12 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
     assert done_event.payload["trust_outcome"] == "refuse"
     # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
     # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
-    # genuine "empty" result), so two tool calls are now attempted, not
-    # one; the cypher_query call still errors exactly as before.
-    assert done_event.payload["total_tool_calls"] == 2
+    # genuine "empty" result). UI fix set 8 (R29): the same gene also
+    # dispatches the two Layer 3 calls, pubtator_annotate and
+    # clinicaltrials_search (stubbed "empty" by `_stub_layer3_dispatch`),
+    # so four tool calls are attempted; the cypher_query call still errors
+    # exactly as before.
+    assert done_event.payload["total_tool_calls"] == 4
 
     citation_events = [event for event in events if event.type == "citation"]
     assert citation_events == [], "an errored tool call must never produce a citation"
@@ -822,9 +850,10 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     assert done_event.payload["trust_outcome"] == "answer"
     # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
     # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
-    # genuine "empty" result, which contributes no citation), so two tool
-    # calls are now attempted, not one.
-    assert done_event.payload["total_tool_calls"] == 2
+    # genuine "empty" result, which contributes no citation). UI fix set 8
+    # (R29): plus the two Layer 3 calls, stubbed "empty" the same way, so
+    # four tool calls are attempted and still exactly one citation exists.
+    assert done_event.payload["total_tool_calls"] == 4
 
 
 # ---------------------------------------------------------------------------
@@ -1862,12 +1891,15 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
     # T-3.4-05: BRCA1 resolves to a Gene CURIE, so plan_node also selects
     # ncbi_efetch as a second, Layer 2 answer-bearing call; see
     # test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query below
-    # for the dedicated test of that behavior.
-    assert len(tool_calls) == 2
+    # for the dedicated test of that behavior. UI fix set 8 (R29): the same
+    # gene also earns the two Layer 3 calls, so a gene question plans four.
+    assert len(tool_calls) == 4
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
     assert tool_calls[1]["layer"] == "layer_2_api"
+    assert {c["tool"] for c in tool_calls[2:]} == {"pubtator_annotate", "clinicaltrials_search"}
+    assert {c["layer"] for c in tool_calls[2:]} == {"layer_3_enrichment"}
 
 
 @pytest.mark.asyncio
@@ -1897,12 +1929,16 @@ async def test_act_executes_the_selected_cypher_query_call(
     tool_calls, results = calls[0]
     # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
     # (stubbed to a genuine "empty" result by the autouse
-    # `_stub_ncbi_efetch_dispatch` fixture), so two paired (tool_call,
-    # result) entries reach coordinator_worker_execute now, not one.
-    assert len(tool_calls) == 2
-    assert len(results) == 2
-    assert tool_calls[0].tool == "cypher_query"
-    assert tool_calls[1].tool == "ncbi_efetch"
+    # `_stub_ncbi_efetch_dispatch` fixture). UI fix set 8 (R29): plus the
+    # two Layer 3 calls, so four paired (tool_call, result) entries reach
+    # coordinator_worker_execute now, in LAYER order (2, 3, 1) so the
+    # small Layer 2/3 findings are offered to Synth ahead of a graph result
+    # that can fill every slot on its own.
+    assert len(tool_calls) == 4
+    assert len(results) == 4
+    assert tool_calls[0].tool == "ncbi_efetch"
+    assert {tool_calls[1].tool, tool_calls[2].tool} == {"pubtator_annotate", "clinicaltrials_search"}
+    assert tool_calls[3].tool == "cypher_query"
     for result in results:
         assert result.contains_untrusted_free_text is False  # structured data, never free text
 
@@ -2578,7 +2614,9 @@ async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    assert len(tool_calls) == 2
+    # UI fix set 8 (R29): four now, the two Layer 3 calls behind these two.
+    # The dedicated per-layer selection tests live in test_layer_handoff.py.
+    assert len(tool_calls) == 4
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"

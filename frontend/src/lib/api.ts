@@ -16,7 +16,9 @@
  * `signup` and `login` endpoints require no bearer token).
  */
 
-export type AudienceDepth = "clinical_brief" | "researcher" | "deep_technical";
+// UI fix set 9 (2026-09-13): `plain_language` added, additive. The web UI
+// offers Plain language and Researcher; the other two stay valid on the wire.
+export type AudienceDepth = "plain_language" | "researcher" | "clinical_brief" | "deep_technical";
 
 export interface CreateRunRequestBody {
   text: string;

@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -263,4 +264,59 @@ def persona_for_session(*, session_id: str, user_id: str | None) -> str:
     return best_name
 
 
-__all__ = ["MAX_PERSONAS", "Persona", "load_persona_list", "persona_for_session"]
+#: One helper per data layer, UI fix set 8 (R30): the lead hands the question
+#: to three scientists, one for the knowledge graph, one for live NCBI
+#: records, one for literature and trials.
+HELPER_COUNT = 3
+
+
+def draw_helpers(
+    *,
+    lead_name: str,
+    count: int = HELPER_COUNT,
+    rng: random.Random | None = None,
+) -> tuple[Persona, ...]:
+    """Draw `count` distinct helper scientists, never the lead, at random.
+
+    UI fix set 8, items 8.2 and 8.4 (product-owner decision U5, 2026-09-12):
+    the three helpers are picked at random on EVERY run, unlike the lead,
+    which `persona_for_session` keeps stable for the session or the
+    account. Two visits may therefore show different helpers over the same
+    answer, and that is the requirement rather than a defect: the helpers
+    are a label on the progress screen and nothing else.
+
+    The lead is excluded by NAME, so the same scientist can never appear
+    as both the coordinator and one of the people it hands off to. The
+    draw is `random.sample` over the curated list minus the lead, so the
+    `count` names are distinct by construction.
+
+    `rng` exists for tests: a seeded `random.Random` makes the draw
+    reproducible, and the default is `random.SystemRandom()`, which is the
+    OS entropy source and cannot be seeded, because a helper list that
+    repeated per process restart would read as a bug on the product
+    owner's screen. Presentation only, so cryptographic strength is not
+    the point; unpredictability across restarts is.
+
+    Raises `ValueError` if the list minus the lead holds fewer than
+    `count` names, which the shipped 32-entry list cannot reach; stated
+    rather than silently returning fewer, since a caller assigning one
+    helper per layer would otherwise index past the end.
+    """
+    candidates = [persona for persona in load_persona_list() if persona.name != lead_name]
+    if len(candidates) < count:
+        raise ValueError(
+            f"the persona list holds {len(candidates)} names besides the lead "
+            f"{lead_name!r}, fewer than the {count} helpers a run hands off to"
+        )
+    chooser = rng if rng is not None else random.SystemRandom()
+    return tuple(chooser.sample(candidates, count))
+
+
+__all__ = [
+    "HELPER_COUNT",
+    "MAX_PERSONAS",
+    "Persona",
+    "draw_helpers",
+    "load_persona_list",
+    "persona_for_session",
+]

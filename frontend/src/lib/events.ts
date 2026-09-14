@@ -80,6 +80,16 @@ export interface ToolCall {
   tool: ToolName;
   call_id: string;
   layer: Layer;
+  /**
+   * UI fix set 8 (R30). The helper scientist this call is handed to, one
+   * per data layer, drawn per run on the server and excluding the lead.
+   * OPTIONAL AND NULLABLE on the wire, mirroring `contracts/events.py`: an
+   * older backend omits all three, and every consumer treats absent and
+   * null identically (no handoff line renders). Presentation only.
+   */
+  persona?: string | null;
+  persona_about?: string | null;
+  persona_wikipedia?: string | null;
 }
 
 export interface PlanPayload {
@@ -116,6 +126,10 @@ export interface ToolStartPayload {
   tool: ToolName;
   layer: Layer;
   status: ToolStartStatus;
+  /** UI fix set 8 (R30): the same helper the planned `ToolCall` carries. Optional, nullable. */
+  persona?: string | null;
+  persona_about?: string | null;
+  persona_wikipedia?: string | null;
 }
 
 export interface ToolResultPayload extends ToolStartPayload {
@@ -131,9 +145,29 @@ export interface ToolResultPayload extends ToolStartPayload {
   truncated: boolean;
 }
 
+/**
+ * UI fix set 9 (2026-09-13). What a token chunk IS, mirroring
+ * `TokenPayload.kind` in `contracts/events.py`. Absent or null means an older
+ * producer, classified as before.
+ */
+export const TOKEN_KINDS = [
+  "claim",
+  "note",
+  "heading",
+  "paragraph_break",
+  "list_item",
+  "table_header",
+  "table_row",
+] as const;
+export type TokenKind = (typeof TOKEN_KINDS)[number];
+
 export interface TokenPayload {
   text: string;
   marker_ids: string[];
+  // UI fix set 9, additive and optional per Section 2.6.
+  kind?: TokenKind | null;
+  cells?: string[] | null;
+  emphasis?: string[] | null;
 }
 
 export interface CitationPayload {
@@ -205,6 +239,12 @@ export interface DonePayload {
   total_tool_calls: number;
   elapsed_ms: number;
   trust_outcome: TrustOutcome;
+  /**
+   * UI fix set 9, item 9.9. The one plain trust line for the answer ("Based
+   * on 1 source, not yet confirmed"), built in code by the backend. Optional
+   * and nullable; null on a refusal, absent from an older backend.
+   */
+  trust_line?: string | null;
   /**
    * T-6.2-08. An offer of somewhere to go next, or null when there is
    * nowhere honest. OPTIONAL on the wire: an older backend omits it
@@ -363,12 +403,25 @@ function isThinkPayload(value: unknown): value is ThinkPayload {
   );
 }
 
+/**
+ * UI fix set 8: the three persona fields are optional on both frames that
+ * carry them, so absent and null both pass and any other type is refused.
+ */
+function hasOptionalPersonaFields(value: Record<string, unknown>): boolean {
+  return (
+    (value.persona === undefined || isNullableString(value.persona)) &&
+    (value.persona_about === undefined || isNullableString(value.persona_about)) &&
+    (value.persona_wikipedia === undefined || isNullableString(value.persona_wikipedia))
+  );
+}
+
 function isToolCall(value: unknown): value is ToolCall {
   return (
     isRecord(value) &&
     isToolName(value.tool) &&
     typeof value.call_id === "string" &&
-    isLayer(value.layer)
+    isLayer(value.layer) &&
+    hasOptionalPersonaFields(value)
   );
 }
 
@@ -393,7 +446,8 @@ function isToolStartPayload(value: unknown): value is ToolStartPayload {
     typeof value.call_id === "string" &&
     isToolName(value.tool) &&
     isLayer(value.layer) &&
-    isToolStartStatus(value.status)
+    isToolStartStatus(value.status) &&
+    hasOptionalPersonaFields(value)
   );
 }
 
@@ -423,8 +477,21 @@ function isToolResultPayload(value: unknown): value is ToolResultPayload {
   );
 }
 
+function isOptionalStringArray(value: unknown): boolean {
+  return value === undefined || value === null || isStringArray(value);
+}
+
 function isTokenPayload(value: unknown): value is TokenPayload {
-  return isRecord(value) && typeof value.text === "string" && isStringArray(value.marker_ids);
+  return (
+    isRecord(value) &&
+    typeof value.text === "string" &&
+    isStringArray(value.marker_ids) &&
+    (value.kind === undefined ||
+      value.kind === null ||
+      (TOKEN_KINDS as readonly unknown[]).includes(value.kind)) &&
+    isOptionalStringArray(value.cells) &&
+    isOptionalStringArray(value.emphasis)
+  );
 }
 
 function isCitationPayload(value: unknown): value is CitationPayload {
@@ -482,7 +549,8 @@ function isDonePayload(value: unknown): value is DonePayload {
     typeof value.total_cost_usd === "number" &&
     typeof value.total_tool_calls === "number" &&
     typeof value.elapsed_ms === "number" &&
-    isTrustOutcome(value.trust_outcome)
+    isTrustOutcome(value.trust_outcome) &&
+    (value.trust_line === undefined || isNullableString(value.trust_line))
   );
 }
 

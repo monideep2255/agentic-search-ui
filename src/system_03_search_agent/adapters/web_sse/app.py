@@ -423,7 +423,10 @@ class CreateRunRequest(BaseModel):
     # values behaves exactly as before, and a client that omits the field now
     # gets the account's preference instead of a hardcoded literal, which is
     # what Section 14.5 asked for.
-    audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] | None = None
+    # UI fix set 9 (2026-09-13): `plain_language` added, additive.
+    audience_depth: (
+        Literal["clinical_brief", "researcher", "deep_technical", "plain_language"] | None
+    ) = None
 
     @field_validator("text")
     @classmethod

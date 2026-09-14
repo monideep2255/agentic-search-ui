@@ -1,0 +1,17 @@
+
+## Disease Associations
+The disease record Familial cancer of breast is associated with BRCA1 [1]. The disease record Familial breast-ovarian cancer susceptibility 1 is also associated with BRCA1 [2]. The disease record Pancreatic cancer susceptibility 4 is associated with BRCA1 as well [3]. 
+The clinical trial named Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer is one such record [4]. The clinical trial named BRCA1 Haploinsufficiency and Gene Expression is another retrieved record [5]. The clinical trial named Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation is a fourth retrieved record [6]. The clinical trial named Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations is the fifth retrieved clinical trial [7]. 
+
+## Gene records found
+- BRCA1
+
+## Literature entity records found
+- BRCA1
+
+## Clinical trial records found
+- Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer- BRCA1 Haploinsufficiency and Gene Expression- Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma- Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation- Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations
+
+## Disease records found
+- Familial cancer of breast- Familial breast-ovarian cancer susceptibility 1- Pancreatic cancer susceptibility 4- Fanconi anemia complementation group S
+{"depth": "researcher", "question": "Which diseases are associated with BRCA1?", "outcome": "ask", "words": 198, "paragraphs": 2, "headings": 5, "list_items": 11, "table_rows": 0, "unmarked_claims": 0, "trust_line": "Based on 4 sources, not yet confirmed", "sources": ["672", "MedGen:C0346153", "MedGen:C2676676", "MedGen:C3280442", "MedGen:C4554406", "unknown"], "notes": [], "errors": []}

@@ -443,6 +443,8 @@ entry; the dispatch-condition design decision: `DECISIONS.md`, 2026-08-09.
 
 from __future__ import annotations
 
+import asyncio
+import dataclasses
 import json
 import logging
 import re
@@ -480,6 +482,7 @@ from system_03_search_agent.core.next_step import (
     is_go_deeper_query,
     shared_record_type,
 )
+from system_03_search_agent.core.persona import draw_helpers, persona_for_session
 from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
@@ -499,6 +502,18 @@ from system_03_search_agent.harness.harness import (
     budget_for_step,
 )
 from system_03_search_agent.harness.tiers import Tier
+from system_03_search_agent.synthesis.answer_layout import (
+    MAX_HEADINGS,
+    TABLE_COLUMNS,
+    GroundingInput,
+    emphasis_for,
+    grounding_input,
+    heading_is_supported,
+    key_terms,
+    parse_synth_layout,
+    record_label,
+    table_second_cell,
+)
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.disease_names import resolve_concept_ids
 from system_03_search_agent.synthesis.findings import (
@@ -524,6 +539,7 @@ from system_03_search_agent.synthesis.grounding import (
     display_index_by_citation_id,
     run_grounding_pass,
 )
+from system_03_search_agent.synthesis.provenance_defaults import defaults_for_tool
 from system_03_search_agent.synthesis.refuse import (
     REFUSE_MESSAGE,
     build_fallback_link,
@@ -532,7 +548,16 @@ from system_03_search_agent.synthesis.refuse import (
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
     aggregate,
+    answer_trust_line,
     trust_for_claims,
+)
+from system_03_search_agent.tools.clinicaltrials_search import (
+    build_citation as clinicaltrials_build_citation,
+)
+from system_03_search_agent.tools.clinicaltrials_search import clinicaltrials_search
+from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+    ClinicalTrialsSearchInput,
+    ClinicalTrialsSearchOutput,
 )
 from system_03_search_agent.tools.cypher_provenance import source_url_for_curie
 from system_03_search_agent.tools.cypher_query import cypher_query
@@ -545,8 +570,23 @@ from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
     CYPHER_QUERY_TIMEOUT_SECONDS,
 )
+from system_03_search_agent.tools.litvar2_lookup import build_citation as litvar2_build_citation
+from system_03_search_agent.tools.litvar2_lookup import litvar2_lookup
+from system_03_search_agent.tools.litvar2_lookup_schemas import (
+    Litvar2LookupInput,
+    Litvar2LookupOutput,
+)
+from system_03_search_agent.tools.ncbi_dbsnp import build_citation as dbsnp_build_citation
+from system_03_search_agent.tools.ncbi_dbsnp import ncbi_dbsnp
+from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput, NcbiDbsnpOutput
 from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi_efetch
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput, NcbiEfetchOutput
+from system_03_search_agent.tools.pubtator_annotate import build_citation as pubtator_build_citation
+from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
+from system_03_search_agent.tools.pubtator_annotate_schemas import (
+    PubtatorAnnotateInput,
+    PubtatorAnnotateOutput,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1420,6 +1460,106 @@ async def _confirm_extracted_entities(
     )
 
 
+#: A word-bounded run of 2 to 8 letters and digits: the shape of a human
+#: gene symbol (`GCK`, `BRCA1`, `C9orf72`), and also of a great many
+#: ordinary words, which is why the shape alone admits nothing (see
+#: `_gene_shaped_fallback_candidates`).
+_GENE_SHAPED_TOKEN_PATTERN = re.compile(r"\b[A-Za-z0-9]{2,8}\b")
+
+#: How many fallback candidates a question may spend live lookups on.
+_MAX_FALLBACK_CANDIDATES = 3
+
+
+def _gene_shaped_fallback_candidates(
+    query_text: str, exact_matches: list[EventResolvedEntity]
+) -> list[str]:
+    """Gene-shaped tokens worth ONE live lookup each, when the model found none.
+
+    UI fix set 8 (2026-09-13), the GCK fallback. "Variants in GCK causing
+    MODY" resolved no gene on 2 runs of 5 because the Think model's
+    extraction returned an empty entity list, and "what diseases are
+    linked to brca1?" refused 1 run in 5 for the same reason. This
+    function names the tokens `think_node` then confirms live.
+
+    HOW THIS DIFFERS FROM BUILD PHASE 4.7'S RETIRED GUESS, which the
+    2026-08-23 product-owner decision removed outright and forbade any
+    fallback from resurrecting. That guess was `\\b[A-Z][A-Z0-9]{1,9}\\b`
+    over every question, with a hand-kept stopword list, and an
+    UNCONFIRMED token still steered retrieval. Here, three things gate
+    it, each of which the retired guess lacked:
+
+    - It runs ONLY when the model extracted no gene span at all. A
+      question the model read correctly never reaches this code, so a
+      common word that happens to be a gene symbol cannot hijack a
+      question that already resolved something else.
+    - A candidate contributes NOTHING unless `resolve_symbol_to_curie`
+      confirms it live (`_confirm_fallback_candidates`). Unconfirmed
+      candidates are dropped silently and are never filed as unresolved
+      symbols, so only model-extracted spans keep the refusal path.
+    - The shape rule admits a token only if it carries a digit (`brca1`,
+      `tp53`) or is entirely upper-case letters (`GCK`, `CFTR`, `MODY`).
+      An all-lowercase all-letter token (`in`, `causing`, `gck`) and a
+      Title-case or mixed-case token without a digit (`Which`,
+      `Variants`) are never tried, because nothing distinguishes them
+      from English without a word list, and this path carries no list
+      by the same decision. Stated residual: an all-lowercase symbol
+      with no digit (`gck`) still resolves nothing here.
+
+    Tokens inside an exact-identifier span the pre-pass already resolved
+    (`NCBIGene:672`, `rs334`, `PMID 123`, `NM_007294`) are excluded, so a
+    typed CURIE's prefix is never looked up as a symbol. At most
+    `_MAX_FALLBACK_CANDIDATES`, in question order, de-duplicated after
+    upper-casing, since `resolve_symbol_to_curie` upper-cases anyway.
+    """
+    claimed: list[tuple[int, int]] = []
+    for entity in exact_matches:
+        for match in re.finditer(re.escape(entity.text), query_text):
+            claimed.append((match.start(), match.end()))
+
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for match in _GENE_SHAPED_TOKEN_PATTERN.finditer(query_text):
+        token = match.group(0)
+        if _span_overlaps_any((match.start(), match.end()), claimed):
+            continue
+        if token.isdigit():
+            continue
+        has_digit = any(ch.isdigit() for ch in token)
+        all_upper_letters = token.isalpha() and token.isupper()
+        if not (has_digit or all_upper_letters):
+            continue
+        key = token.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(token)
+        if len(candidates) >= _MAX_FALLBACK_CANDIDATES:
+            break
+    return candidates
+
+
+async def _confirm_fallback_candidates(
+    candidates: list[str], taxon: str
+) -> list[tuple[str, str]]:
+    """Live-confirm each fallback candidate; keep only the confirmed.
+
+    Returns `(mention, curie)` pairs in question order, de-duplicated by
+    CURIE. A candidate the lookup rejects is dropped and NOT reported: the
+    refusal path belongs to model-extracted spans only, because a refusal
+    naming "MODY" as an unknown gene, on a question the model simply
+    failed to read, would be a new wrong answer replacing an old one.
+    """
+    confirmed: list[tuple[str, str]] = []
+    seen_curies: set[str] = set()
+    for candidate in candidates:
+        curie = await resolve_symbol_to_curie(candidate, taxon=taxon)
+        if curie is None or curie in seen_curies:
+            continue
+        seen_curies.add(curie)
+        confirmed.append((candidate, curie))
+    return confirmed
+
+
 async def think_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -1517,6 +1657,26 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
     model_resolution = await _confirm_extracted_entities(classification.entities)
 
+    # UI fix set 8 (2026-09-13), the GCK fallback. Gated on the model having
+    # extracted NO gene span at all, and on every candidate confirming live;
+    # see `_gene_shaped_fallback_candidates` for how this differs from the
+    # guess build phase 4.7 retired. The organism rule is the model path's
+    # own: an organism that cannot be honoured skips the fallback rather
+    # than resolving against human (F-4.7-A-03).
+    model_named_a_gene = any(e.entity_type == "gene" for e in classification.entities)
+    if not model_named_a_gene:
+        fallback_taxon = _taxon_for_extraction(classification.entities)
+        if fallback_taxon is not None:
+            fallback_confirmed = await _confirm_fallback_candidates(
+                _gene_shaped_fallback_candidates(query.text, exact_matches), fallback_taxon
+            )
+            if fallback_confirmed:
+                model_resolution = _EntityResolution(
+                    curies=[curie for _, curie in fallback_confirmed],
+                    unresolved_symbols=list(model_resolution.unresolved_symbols),
+                    confirmed=tuple(fallback_confirmed),
+                )
+
     # F-4.7-A-04, the trust asymmetry filed alongside F-4.7-A-01. The
     # exact-ID pre-pass is a PATTERN MATCH over text the caller typed: it
     # proves the string is CURIE-shaped and nothing more. The model-
@@ -1604,8 +1764,17 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         )
         else None
     )
+    think_narrative = classification.narrative
+    if model_resolution.unresolved_symbols and resolved_entities:
+        # UI fix set 8: a span the model tagged as a gene that the live
+        # lookup rejected, beside one that resolved, is named here rather
+        # than refused on or silently dropped (see the key's setter below).
+        think_narrative = (
+            f"{think_narrative} (not recognised as a gene symbol: "
+            f"{', '.join(model_resolution.unresolved_symbols)})"
+        )[:500]
     think_payload = ThinkPayload(
-        narrative=classification.narrative,
+        narrative=think_narrative,
         query_class=query_class,
         resolved_entities=resolved_entities[:20],
         clarifying_question=clarification,
@@ -1616,11 +1785,26 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         "query_class": query_class,
         "resolved_entities": resolved_entities,
     }
-    if model_resolution.unresolved_symbols:
+    if model_resolution.unresolved_symbols and not resolved_entities:
         # T-3.1-13/F-2.1-B10, moved from `plan_node` to `think_node` in
         # build phase 4.7 since Think is now where resolution happens.
         # `write_node` reads this key exactly as before this phase; only
         # which node sets it changed.
+        #
+        # UI fix set 8 (2026-09-13): set ONLY when nothing resolved. Every
+        # other reader already meant that: `_select_planned_tool_call`'s
+        # rule 1 refuses on `not target_curies and unresolved_symbols`, and
+        # `write_node`'s early exit is commented "this query's ONLY
+        # candidate entity does not resolve". But this key was set on ANY
+        # failed span, and `write_node` refuses on the key alone, so a
+        # question that resolved a real gene and also carried a span the
+        # model mis-tagged as a gene ran all its tools and then refused.
+        # Measured live: "Variants in GCK causing MODY", GCK resolved to
+        # NCBIGene:2645, four tools `ok`, then "I could not identify that
+        # gene" because the model had tagged MODY as a gene. The refusal
+        # for a lone mistyped symbol ("BRCA9") is unchanged; a span that
+        # failed beside one that resolved is named in the think narrative
+        # below rather than silently dropped.
         result["unresolved_entity_symbols"] = model_resolution.unresolved_symbols
     if clarification is not None:
         # Item 7.5. Plan selects no tool and Write asks the question.
@@ -1679,6 +1863,404 @@ class _PlannedNcbiEfetchToolCall:
 
     tool_call: ToolCall
     ncbi_efetch_input: NcbiEfetchInput
+
+
+@dataclass(frozen=True)
+class _PlannedLayerToolCall:
+    """UI fix set 8 (R29, 2026-09-13): one planned Layer 2 or Layer 3 call
+    for any of the four tools `_PlannedNcbiEfetchToolCall` does not cover:
+    `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup` and
+    `clinicaltrials_search`.
+
+    One dataclass for four tools rather than four dataclasses, because
+    `act_node` dispatches all four the same way: look the executor up by
+    `tool_call.tool` (`_layer_tool_executor`), run it under the tool's own
+    timeout (`_LAYER_TOOL_ACT_TIMEOUT_SECONDS`), shape its typed output
+    into the shared pseudo-row dict (`_layer_tool_output_to_structured_
+    fields`). Still a SEPARATE dataclass from the two above, for the reason
+    `_PlannedNcbiEfetchToolCall`'s docstring gives: `act_node` branches on
+    the planned call's TYPE, never on a field that might be absent.
+
+    `tool_input` is the tool's own validated input model, built by
+    `_build_layer_tool_calls` from values that are fixed for a given
+    question text and resolved entity, never from a model's free choice,
+    so the same question plans byte-identical inputs on every run (item
+    10.1's one-source-set rule).
+    """
+
+    tool_call: ToolCall
+    tool_input: Any
+
+
+#: Per-tool Act timeouts for the four tools above, in seconds. Each is the
+#: tool's own locked per-call budget from `.claude/rules/tool-call-budgets.md`
+#: plus the same five-second margin `_NCBI_EFETCH_ACT_TIMEOUT_SECONDS` already
+#: carries over `ncbi_efetch`'s 15 seconds plus one retry: `ncbi_dbsnp` runs
+#: two sequential calls, 30 seconds worst case (Section 6.3); the other three
+#: are 15 seconds per call (Sections 6.4, 6.5, 6.7). A timeout here degrades
+#: ONE call and discloses it; it never fails the run.
+_LAYER_TOOL_ACT_TIMEOUT_SECONDS: Final[dict[str, float]] = {
+    "ncbi_dbsnp": 35.0,
+    "pubtator_annotate": 20.0,
+    "litvar2_lookup": 20.0,
+    "clinicaltrials_search": 20.0,
+}
+
+#: The fixed number of rows a Layer 2/3 tool contributes to synthesis, after
+#: a stable sort. Fixed rather than "whatever the page held" so that the
+#: source set of a question does not move with a live API's page order.
+_LAYER_TOOL_ROW_CAP: Final[int] = 5
+
+#: How many studies to ask ClinicalTrials.gov for before the stable sort and
+#: the cap above. The tool always requests `sort=@relevance`, whose order is
+#: not stable run to run, so the cap is applied to a sorted superset rather
+#: than to the first page verbatim. Measured on 2026-09-13 with a page of
+#: 10: three runs of the BRCA1 disease question produced two distinct
+#: source sets, because one study sat at the page boundary. The tool's own
+#: maximum (`_MAX_STUDIES`, 50) is requested instead, so the five lowest
+#: NCT ids are drawn from a membership that churn at the boundary reaches
+#: far less often. Consistency over relevance, by the coordinator's
+#: instruction of the same day (item 10.1's one-source-set rule).
+_CLINICALTRIALS_PAGE_SIZE: Final[int] = 50
+
+#: One helper scientist per layer. The order the three helpers are assigned
+#: in, so the same draw always maps A to the graph, B to live records and C
+#: to literature and trials.
+_LAYERS_IN_HANDOFF_ORDER: Final[tuple[str, ...]] = (
+    "layer_1_graph",
+    "layer_2_api",
+    "layer_3_enrichment",
+)
+
+
+def _layer_tool_executor(tool: str) -> Any:
+    """The coroutine function that runs `tool`, looked up at CALL time.
+
+    Built inside the function, not at module scope, so the lookup reads
+    the module-level names `ncbi_dbsnp`, `pubtator_annotate`,
+    `litvar2_lookup` and `clinicaltrials_search` as they are NOW, which is
+    what lets a test replace any of them with `monkeypatch.setattr(graph_
+    module, ...)`, the same seam every existing test uses for
+    `cypher_query` and `ncbi_efetch`. A module-level dict would capture the
+    real functions at import and make the fakes silently inert.
+    """
+    executors: dict[str, Any] = {
+        "ncbi_dbsnp": ncbi_dbsnp,
+        "pubtator_annotate": pubtator_annotate,
+        "litvar2_lookup": litvar2_lookup,
+        "clinicaltrials_search": clinicaltrials_search,
+    }
+    return executors[tool]
+
+
+def _pseudo_row(
+    node_or_edge_type: str, fields: dict[str, Any], source_url: str
+) -> dict[str, Any]:
+    """One row in the shape `_ncbi_efetch_output_to_structured_fields`
+    already produces, so the tool-agnostic pipeline downstream
+    (`build_synth_findings`, `_citations_from_grounded_claims`'s generic
+    branch, `_curie_for_citation`, `_entity_name_for_citation`) needs no
+    per-tool branching. `curie` is the empty string, never fabricated: a
+    Layer 2/3 record's identity is its own id, not a graph CURIE. Empty
+    and `None` field values are dropped so the representative-field pick
+    never lands on a blank.
+    """
+    return {
+        "curie": "",
+        "node_or_edge_type": node_or_edge_type,
+        "fields": {
+            key: value
+            for key, value in fields.items()
+            if value is not None and value != "" and value != []
+        },
+        "source_url": source_url,
+    }
+
+
+def _shaped(status: str, rows: list[dict[str, Any]], error: str | None) -> dict[str, Any]:
+    """The `status`/`row_count`/`rows` envelope every `Finding.structured_
+    fields` carries. `status` is downgraded to `"empty"` when an `"ok"`
+    output yielded no citeable row (every record lacked a `source_url`),
+    since cite-or-refuse treats an uncitable record as no record.
+    """
+    if status == "ok" and not rows:
+        status = "empty"
+    return {
+        "status": status,
+        "row_count": len(rows),
+        "total_available": len(rows),
+        "truncated": False,
+        "rows": rows,
+        "error": error,
+    }
+
+
+def _layer_tool_output_to_structured_fields(
+    tool: str, output: Any, tool_input: Any = None
+) -> dict[str, Any]:
+    """Shape one of the four tools' typed outputs into pseudo-rows.
+
+    Every branch does the same three things, in this order, and the order
+    is what the coordinator's one-source-set rule depends on: keep only
+    records that carry a real `source_url`; SORT them by a key that is a
+    property of the record and not of the API's response order (an NCT
+    id, an rs id, a record URL); then CUT to `_LAYER_TOOL_ROW_CAP`. A
+    live API that returns the same records in a different order therefore
+    yields the same rows; one that returns different records is measured
+    by the live-run table rather than masked here.
+
+    The first field in each row's insertion order is the one
+    `_pick_representative_field` cites when no `name` key exists, so each
+    branch puts the fact a reader would quote first: a trial's title under
+    `name`, a variant's clinical significance ahead of its rs id.
+    """
+    rows: list[dict[str, Any]] = []
+
+    if tool == "clinicaltrials_search":
+        trials: ClinicalTrialsSearchOutput = output
+        for study in trials.studies:
+            if not study.source_url or not study.nct_id:
+                continue
+            rows.append(
+                _pseudo_row(
+                    "Clinical trial",
+                    {
+                        "name": study.brief_title,
+                        "nct_id": study.nct_id,
+                        "overall_status": study.overall_status,
+                        "phase": study.phase,
+                        "conditions": "; ".join(study.conditions) if study.conditions else None,
+                    },
+                    study.source_url,
+                )
+            )
+        rows.sort(key=lambda row: str(row["fields"].get("nct_id", "")))
+        return _shaped(trials.status, rows[:_LAYER_TOOL_ROW_CAP], trials.error)
+
+    if tool == "pubtator_annotate":
+        annotated: PubtatorAnnotateOutput = output
+        # The entity index answers a symbol with every species' homonym
+        # (`BRCA1` returns `brca1.L`, a frog gene, ahead of the human gene
+        # once sorted by record URL). When at least one entity's name is the
+        # queried symbol itself, only those are kept; otherwise every
+        # citeable entity is. A deterministic string comparison, never a
+        # judgement of relevance, and stated as the rule so a reader can
+        # predict which rows a symbol yields.
+        queried = ""
+        if tool_input is not None and getattr(tool_input, "root", None) is not None:
+            queried = str(getattr(tool_input.root, "query", "") or "").strip().casefold()
+        citeable = [entity for entity in annotated.entities if entity.source_url]
+        exact = [
+            entity
+            for entity in citeable
+            if entity.name and entity.name.strip().casefold() == queried
+        ]
+        for entity in exact or citeable:
+            rows.append(
+                _pseudo_row(
+                    "Literature entity",
+                    {
+                        "name": entity.name,
+                        "description": entity.description,
+                        "biotype": entity.biotype,
+                        "pubtator_id": entity.pubtator_id,
+                    },
+                    entity.source_url,
+                )
+            )
+        for publication in annotated.publications:
+            if not publication.source_url:
+                continue
+            rows.append(
+                _pseudo_row(
+                    "Publication",
+                    {
+                        "pmid": publication.pmid,
+                        "annotation_count": publication.total_annotations,
+                    },
+                    publication.source_url,
+                )
+            )
+        rows.sort(key=lambda row: str(row["source_url"]))
+        return _shaped(annotated.status, rows[:_LAYER_TOOL_ROW_CAP], annotated.error)
+
+    if tool == "ncbi_dbsnp":
+        snp: NcbiDbsnpOutput = output
+        if snp.source_url:
+            rows.append(
+                _pseudo_row(
+                    "Variant record",
+                    {
+                        "clinical_significance": (
+                            ", ".join(snp.clinical_significance)
+                            if snp.clinical_significance
+                            else None
+                        ),
+                        "functional_consequence": (
+                            ", ".join(snp.functional_consequence)
+                            if snp.functional_consequence
+                            else None
+                        ),
+                        "rsid": snp.rsid,
+                        "genes": ", ".join(g.name for g in snp.genes if g.name) or None,
+                        "chrpos": snp.chrpos,
+                    },
+                    snp.source_url,
+                )
+            )
+        return _shaped(snp.status, rows, snp.error)
+
+    if tool == "litvar2_lookup":
+        litvar: Litvar2LookupOutput = output
+        for match in litvar.variant_matches:
+            if not match.source_url:
+                continue
+            rows.append(
+                _pseudo_row(
+                    "Literature variant",
+                    {
+                        "name": match.name,
+                        "rsid": match.rsid,
+                        "gene": ", ".join(match.gene) if match.gene else None,
+                        "publication_count": match.pmids_count,
+                        "clinical_significance": (
+                            ", ".join(match.clinical_significance)
+                            if match.clinical_significance
+                            else None
+                        ),
+                    },
+                    match.source_url,
+                )
+            )
+        rows.sort(key=lambda row: (str(row["fields"].get("rsid", "")), str(row["source_url"])))
+        return _shaped(litvar.status, rows[:_LAYER_TOOL_ROW_CAP], litvar.error)
+
+    raise ValueError(f"no Layer 2/3 shaping exists for tool {tool!r}")
+
+
+def _layer_call(tool: str, layer: str, prefix: str, tool_input: Any) -> _PlannedLayerToolCall:
+    return _PlannedLayerToolCall(
+        tool_call=ToolCall(tool=tool, call_id=f"{prefix}-{uuid.uuid4().hex[:12]}", layer=layer),  # type: ignore[arg-type]
+        tool_input=tool_input,
+    )
+
+
+def _build_layer_tool_calls(
+    query_text: str,
+    gene_symbol: str | None,
+    rsids: list[str],
+) -> list[_PlannedLayerToolCall]:
+    """The Layer 2 and Layer 3 calls a question earns, each with an input
+    that is a pure function of `(query_text, gene_symbol, rsids)`.
+
+    UI fix set 8 (R29): every question that resolves a gene reaches live
+    NCBI records, the literature and the trials registry as well as the
+    graph. What is planned, and from what:
+
+    - `pubtator_annotate` (Layer 3), `entity_lookup` on the gene symbol
+      with a fixed `limit`. This is PubTator3's literature-derived entity
+      index, the one mode of the tool that takes a symbol; the other mode
+      needs PMIDs, which nothing upstream of Act holds.
+    - `clinicaltrials_search` (Layer 3), `query_cond` = the gene symbol,
+      `overall_status="RECRUITING"` only when the question itself says
+      "recruit". The condition is the SYMBOL and never a model-extracted
+      disease span, because the span's wording varies between runs of the
+      same question and the source set must not.
+    - `ncbi_dbsnp` (Layer 2) and `litvar2_lookup` (Layer 3), one each per
+      rs id written in the question, at most two rs ids, in question
+      order. An rs id is the one variant shape Section 17's exact-ID
+      pre-pass already recognises; a question that names no variant plans
+      neither.
+
+    `gene_symbol` is uppercased by the caller. A question that resolves no
+    gene and names no rs id plans nothing here, so a disease named only as
+    a typed `MedGen:` CURIE keeps its single graph call.
+    """
+    calls: list[_PlannedLayerToolCall] = []
+    if gene_symbol:
+        calls.append(
+            _layer_call(
+                "pubtator_annotate",
+                "layer_3_enrichment",
+                "pa",
+                PubtatorAnnotateInput.model_validate(
+                    {"mode": "entity_lookup", "query": gene_symbol[:200], "limit": _LAYER_TOOL_ROW_CAP}
+                ),
+            )
+        )
+        trials_input: dict[str, Any] = {
+            "query_cond": gene_symbol[:200],
+            "page_size": _CLINICALTRIALS_PAGE_SIZE,
+        }
+        if "recruit" in query_text.lower():
+            trials_input["overall_status"] = "RECRUITING"
+        calls.append(
+            _layer_call(
+                "clinicaltrials_search",
+                "layer_3_enrichment",
+                "ct",
+                ClinicalTrialsSearchInput.model_validate(trials_input),
+            )
+        )
+    for rsid in rsids[:2]:
+        calls.append(
+            _layer_call(
+                "ncbi_dbsnp",
+                "layer_2_api",
+                "db",
+                NcbiDbsnpInput(query=rsid, query_type="rsid", include_clinical=True),
+            )
+        )
+        calls.append(
+            _layer_call(
+                "litvar2_lookup",
+                "layer_3_enrichment",
+                "lv",
+                Litvar2LookupInput.model_validate({"mode": "variant_search", "query": rsid[:100]}),
+            )
+        )
+    return calls
+
+
+def _rsids_in_text(query_text: str) -> list[str]:
+    """Every distinct rs id written in the question, in order, lowercased."""
+    seen: list[str] = []
+    for match in _RSID_PATTERN.finditer(query_text):
+        rsid = match.group(0).lower()
+        if rsid not in seen:
+            seen.append(rsid)
+    return seen
+
+
+def _assign_helpers(
+    planned: list[Any], *, lead_name: str, rng: Any = None
+) -> list[Any]:
+    """Return `planned` with one helper scientist stamped per LAYER.
+
+    UI fix set 8 (R30, R43). One draw per run, three names, none the
+    lead; the same name goes on every call of one layer, so the screen
+    reads "A is searching the knowledge graph" once however many graph
+    calls there are. The names are written onto a COPY of each `ToolCall`
+    (`model_copy`) so the planned inputs are untouched. Presentation only:
+    nothing below Plan reads these fields.
+    """
+    helpers = draw_helpers(lead_name=lead_name, rng=rng)
+    by_layer = dict(zip(_LAYERS_IN_HANDOFF_ORDER, helpers, strict=True))
+    stamped: list[Any] = []
+    for call in planned:
+        helper = by_layer.get(call.tool_call.layer)
+        if helper is None:
+            stamped.append(call)
+            continue
+        tool_call = call.tool_call.model_copy(
+            update={
+                "persona": helper.name,
+                "persona_about": helper.about,
+                "persona_wikipedia": helper.wikipedia,
+            }
+        )
+        stamped.append(dataclasses.replace(call, tool_call=tool_call))
+    return stamped
 
 
 # Query texts that plainly need no graph lookup at all. Deliberately
@@ -2930,10 +3512,47 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         if gene_curie is not None:
             ncbi_efetch_call = _build_planned_ncbi_efetch_call(gene_curie)
             planned_tool_calls.append(ncbi_efetch_call)
-            narrative = (
-                "selected cypher_query for a Layer 1 graph lookup and "
-                f"ncbi_efetch for a Layer 2 confirmation of {gene_curie}"
+
+        # UI fix set 8 (R29, 2026-09-13): the same gene also earns the
+        # literature index and the trials registry, and an rs id written in
+        # the question earns dbSNP and LitVar2. The symbol is the mention
+        # Think resolved the gene from, or the mention memory holds for a
+        # memory-bound antecedent, uppercased; a gene named only as a typed
+        # CURIE has no symbol and plans no text search. Every input is a
+        # pure function of the question text and that symbol, so the same
+        # question plans the same calls on every run.
+        gene_symbol: str | None = None
+        if gene_curie is not None:
+            mention = _mention_by_curie.get(gene_curie) or _remembered_mention_for(
+                _session_memory(state), gene_curie
             )
+            if mention and ":" not in mention:
+                gene_symbol = mention.strip().upper()
+        layer_calls = _build_layer_tool_calls(query.text, gene_symbol, _rsids_in_text(query.text))
+        planned_tool_calls.extend(layer_calls)
+
+        # UI fix set 8 (R30): one helper scientist per layer, none the lead,
+        # drawn afresh on every run. Stamped onto copies of the ToolCalls,
+        # so the planned inputs above are untouched and nothing below Plan
+        # reads the names.
+        lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
+        planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
+
+        layer_words = {
+            "layer_1_graph": "Layer 1, the knowledge graph",
+            "layer_2_api": "Layer 2, live NCBI records",
+            "layer_3_enrichment": "Layer 3, literature and trials",
+        }
+        by_layer: dict[str, list[str]] = {}
+        for call in planned_tool_calls:
+            by_layer.setdefault(call.tool_call.layer, []).append(call.tool_call.tool)
+        narrative = "; ".join(
+            f"{layer_words[layer]}: {', '.join(dict.fromkeys(tools))}"
+            for layer, tools in by_layer.items()
+        )
+        if gene_curie is not None:
+            narrative = f"searching {len(by_layer)} layers for {gene_curie}. " + narrative
+        narrative = narrative[:500]
 
         plan_payload = PlanPayload(
             narrative=narrative,
@@ -3270,13 +3889,282 @@ def _ncbi_efetch_output_to_structured_fields(output: NcbiEfetchOutput) -> dict[s
     }
 
 
+@dataclass
+class _CallOutcome:
+    """What one dispatched planned call produced, gathered by `act_node`.
+
+    UI fix set 8 (R29): the planned calls now run CONCURRENTLY, so each
+    one's result is collected into one of these, keyed by `call_id`, and
+    the `tool_calls`/`results` pair `coordinator_worker_execute` requires
+    is reassembled in PLAN order afterwards. Before this the loop appended
+    to both lists as it went, which was only correct because it ran one
+    call at a time.
+
+    `pairs` is the list of `(ToolCall, ToolExecutionResult)` this call
+    contributes: one for every tool, plus the reader-bound quarantine pair
+    a `cypher_query` result with untrusted Article rows adds behind its
+    own (F-2.1-J4-06). `raw_output` is the typed `NcbiEfetchOutput` Write
+    needs for a real Layer 2 citation (T-3.4-05) and is `None` for every
+    other tool. `cap_exceeded` is True when the Section 21.3 ceiling was
+    reached MID-TOOL (T-6.0-01).
+    """
+
+    status: str
+    summary: str
+    result_count: int
+    truncated: bool
+    pairs: list[tuple[ToolCall, ToolExecutionResult]]
+    raw_output: NcbiEfetchOutput | None = None
+    cap_exceeded: bool = False
+    #: The typed output of one of the four other Layer 2/3 tools, for
+    #: `GraphState.layer3_raw_outputs`; `None` for ncbi_efetch and cypher.
+    layer_raw_output: Any = None
+
+
+def _error_outcome(call: ToolCall, summary: str, detail: str, *, cap_exceeded: bool = False) -> _CallOutcome:
+    """One failed call, disclosed rather than blank: an `"error"` pass-through
+    result whose `error` text names what happened and what stands, and a
+    `tool_result` summary a surface can show beside the layer.
+    """
+    return _CallOutcome(
+        status="error",
+        summary=summary,
+        result_count=0,
+        truncated=False,
+        pairs=[
+            (
+                call,
+                ToolExecutionResult(
+                    contains_untrusted_free_text=False,
+                    structured_fields={"status": "error", "error": detail},
+                ),
+            )
+        ],
+        cap_exceeded=cap_exceeded,
+    )
+
+
+async def _execute_planned_call(
+    harness: Harness, query_class: QueryClass, planned: Any
+) -> _CallOutcome:
+    """Run ONE planned call under its own timeout and shape its result.
+
+    Three planned shapes, branched on TYPE (see `_PlannedNcbiEfetchToolCall`'s
+    docstring for why never on a field). Every failure path returns an
+    `_error_outcome` rather than raising, so a layer that times out, hits
+    the call ceiling, or breaks unexpectedly degrades to a disclosed error
+    while its siblings' results stand; `act_node` never sees an exception
+    from here. The one exception deliberately NOT swallowed is
+    `asyncio.CancelledError`, which is not a failure but Stop.
+    """
+    call = planned.tool_call
+
+    if isinstance(planned, _PlannedNcbiEfetchToolCall):
+        # T-3.4-05/T-3.1-28: the Layer 2 gene report.
+        try:
+            ncbi_efetch_output: NcbiEfetchOutput = await harness.enforce_timeout(
+                "act",
+                ncbi_efetch(planned.ncbi_efetch_input),
+                _NCBI_EFETCH_ACT_TIMEOUT_SECONDS,
+            )
+        except HarnessCallError:
+            return _error_outcome(
+                call,
+                "call did not complete within its per-step timeout budget",
+                "ncbi_efetch call did not complete within its per-step timeout budget",
+            )
+        except call_budget.CallBudgetExceededError:
+            # T-6.0-01. The ceiling was reached MID-TOOL, which the
+            # pre-dispatch check in `act_node` cannot see and the one
+            # Section 21.3 actually names. A curated string, never
+            # `str(exc)` (build phase 5.0's five rounds on exception text).
+            return _error_outcome(
+                call,
+                "refused: this query reached its Layer 2/3 API call ceiling",
+                (
+                    "refused: this query reached its Layer 2/3 API call "
+                    "ceiling (Section 21.3) before this call completed"
+                ),
+                cap_exceeded=True,
+            )
+        return _CallOutcome(
+            status=ncbi_efetch_output.status,
+            summary=f"{ncbi_efetch_output.action}: {ncbi_efetch_output.record_count} record(s)",
+            result_count=ncbi_efetch_output.record_count,
+            truncated=ncbi_efetch_output.truncated,
+            pairs=[
+                (
+                    call,
+                    ToolExecutionResult(
+                        contains_untrusted_free_text=False,
+                        structured_fields=_ncbi_efetch_output_to_structured_fields(
+                            ncbi_efetch_output
+                        ),
+                    ),
+                )
+            ],
+            raw_output=ncbi_efetch_output,
+        )
+
+    if isinstance(planned, _PlannedLayerToolCall):
+        # UI fix set 8 (R29): the four remaining Layer 2/3 tools, one
+        # dispatch shape. The executor is looked up at call time so a test
+        # can fake it by module attribute; the timeout is the tool's own.
+        executor = _layer_tool_executor(call.tool)
+        timeout_s = _LAYER_TOOL_ACT_TIMEOUT_SECONDS[call.tool]
+        try:
+            output = await harness.enforce_timeout("act", executor(planned.tool_input), timeout_s)
+        except HarnessCallError:
+            return _error_outcome(
+                call,
+                f"call did not complete within its {timeout_s:g}s budget",
+                (
+                    f"{call.tool} call did not complete within its {timeout_s:g}s "
+                    "per-step timeout budget; the other layers' results stand"
+                ),
+            )
+        except call_budget.CallBudgetExceededError:
+            return _error_outcome(
+                call,
+                "refused: this query reached its Layer 2/3 API call ceiling",
+                (
+                    "refused: this query reached its Layer 2/3 API call "
+                    "ceiling (Section 21.3) before this call completed"
+                ),
+                cap_exceeded=True,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Every one of the four tools documents itself as never
+            # raising, so reaching here means a defect below the tool's
+            # own last-resort catch, or a harness that blocks the network.
+            # Logged with the tool name only, never the exception text,
+            # which could carry a URL or a response body.
+            logger.warning(
+                "%s raised out of its own never-raises boundary (trace %s); "
+                "degrading this layer to an error result",
+                call.tool,
+                harness.trace_id,
+                exc_info=True,
+            )
+            return _error_outcome(
+                call,
+                "call failed unexpectedly",
+                f"{call.tool} call failed unexpectedly; the other layers' results stand",
+            )
+        shaped = _layer_tool_output_to_structured_fields(call.tool, output, planned.tool_input)
+        return _CallOutcome(
+            status=str(shaped["status"]),
+            summary=f"{shaped['status']}: {shaped['row_count']} record(s)",
+            result_count=int(shaped["row_count"]),
+            truncated=False,
+            pairs=[
+                (
+                    call,
+                    ToolExecutionResult(
+                        contains_untrusted_free_text=False, structured_fields=shaped
+                    ),
+                )
+            ],
+            # The typed output, kept for the per-tool citation builders
+            # (`tools.<tool>.build_citation`) the write side will call
+            # once `_citations_from_grounded_claims` gains its Layer 3
+            # branch (approved 2026-09-14, sequenced behind set 9).
+            layer_raw_output=output,
+        )
+
+    # The Layer 1 graph call.
+    try:
+        # F-05 fix: cypher_query's own declared budget
+        # (CYPHER_QUERY_TIMEOUT_SECONDS, tool-call-budgets.md) is the locked
+        # number; a lookup-class step budget resolves well under it, so the
+        # larger of the two is what the call gets. Never let a query_class's
+        # own budget starve the tool below its own floor, but let a
+        # query_class that already budgets more keep that larger number.
+        act_timeout_s = max(budget_for_step("act", query_class), CYPHER_QUERY_TIMEOUT_SECONDS)
+        output: CypherQueryOutput = await harness.enforce_timeout(
+            "act",
+            cypher_query(harness, planned.cypher_input),
+            act_timeout_s,
+        )
+    except HarnessCallError:
+        return _error_outcome(
+            call,
+            "call did not complete within its per-step timeout budget",
+            "cypher_query call did not complete within its per-step timeout budget",
+        )
+
+    # F-2.1-C13: a Cypher row's envelope is structured data (Section 6.1's
+    # typed output schema), but an Article row's own field content (the raw
+    # PubMed title) is untrusted external free text. F-2.1-J4-06 fix: every
+    # row, trusted or not, goes into the structured pass-through payload via
+    # `_rows_for_citation` (an untrusted row's `fields` already emptied,
+    # never its whole row dropped), so row_count and total_available always
+    # agree and a real record is never silently disappeared. The untrusted
+    # rows' own free-text content is separately quarantined into a second,
+    # reader-bound tool_call/result pair, so that content still never
+    # reaches structured_fields or a citation's claim_text unmediated.
+    _, untrusted_rows = _split_rows_by_trust(output.rows)
+    pairs: list[tuple[ToolCall, ToolExecutionResult]] = [
+        (
+            call,
+            ToolExecutionResult(
+                contains_untrusted_free_text=False,
+                structured_fields=_cypher_output_to_structured_fields(
+                    output, _rows_for_citation(output.rows)
+                ),
+            ),
+        )
+    ]
+    # NOTE, deliberately no tool frame for the quarantine pair below.
+    # `untrusted_call` is the SAME call re-entered for the free-text
+    # reader's benefit, not a second dispatch: no network request is made
+    # for it and nothing new is fetched. Emitting a frame would put a
+    # second chip on screen for one tool that fired once, and would break
+    # the premise gate's A1, which asserts one `tool_start` per PLANNED
+    # call.
+    if untrusted_rows:
+        untrusted_call = ToolCall(
+            tool=call.tool,
+            call_id=f"{call.call_id}-articles"[:64],
+            layer=call.layer,
+        )
+        pairs.append(
+            (
+                untrusted_call,
+                ToolExecutionResult(
+                    contains_untrusted_free_text=True,
+                    free_text=_untrusted_rows_free_text(untrusted_rows),
+                ),
+            )
+        )
+    return _CallOutcome(
+        status=output.status,
+        summary=f"{output.row_count} row(s) of {output.total_available or output.row_count}",
+        result_count=output.row_count,
+        truncated=output.truncated,
+        pairs=pairs,
+    )
+
+
+async def _gather_planned_calls(coroutines: list[Any]) -> None:
+    """Run the admitted calls concurrently.
+
+    UI fix set 8 (R29): Layers 1, 2 and 3 are read at the same time, so
+    the Act step takes about as long as its SLOWEST call rather than the
+    sum of all of them. A module-level seam rather than an inline
+    `asyncio.gather`, so the mutation harness can swap in a sequential
+    runner and prove the concurrency test can fail.
+    """
+    await asyncio.gather(*coroutines)
+
+
 async def act_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     trace_id = state["query"].trace_id
     query_class: QueryClass = state.get("query_class", "lookup")
-    planned_tool_calls: list[_PlannedToolCall | _PlannedNcbiEfetchToolCall] = state.get(
-        "tool_calls", []
-    )
+    planned_tool_calls: list[Any] = state.get("tool_calls", [])
 
     # T-4.16-01. Until build phase 4.16 this node had no sink at all: it was
     # the one node in the loop that returned state and emitted nothing, so
@@ -3289,28 +4177,16 @@ async def act_node(state: GraphState) -> dict[str, Any]:
     # leaves the silence a reader actually experiences exactly as long.
     sink = _EventSink(trace_id, state["seq"])
 
-    def _close_tool_call(
-        call: ToolCall,
-        status: str,
-        summary: str,
-        result_count: int,
-        truncated: bool,
-    ) -> None:
+    def _close_tool_call(call: ToolCall, outcome: _CallOutcome) -> None:
         """Write the `tool_result` that closes one dispatched call.
 
-        A local helper rather than four inline blocks because this node has
-        FOUR exit paths per iteration (each of two tools can time out or
-        return), and an unclosed `tool_start` leaves a chip spinning for
-        ever on every surface that renders one. Routing all four through one
-        function is what makes "every start is closed" a property of the
-        code rather than of whoever edits it next; the premise gate's A2
-        asserts the same thing from outside.
-
-        `status` is passed through from the tool's own output, which both
-        `CypherQueryOutput` and `NcbiEfetchOutput` already constrain to
-        exactly `ok|empty|error`. It is never inferred from whether an
-        exception was raised, which would be a proxy for the outcome rather
-        than the outcome.
+        One function for every exit path, so "every start is closed" is a
+        property of the code rather than of whoever edits it next; the
+        premise gate's A2 asserts the same thing from outside. `status` is
+        passed through from the tool's own output, never inferred from
+        whether an exception was raised. The helper persona rides along
+        from the start frame (UI fix set 8), so a surface can name the
+        scientist on either frame.
         """
         sink.emit_live(
             "tool_result",
@@ -3318,30 +4194,27 @@ async def act_node(state: GraphState) -> dict[str, Any]:
                 call_id=call.call_id,
                 tool=call.tool,
                 layer=call.layer,
-                status=status,  # type: ignore[arg-type]
-                summary=summary[:1000],
-                result_count=max(0, result_count),
-                truncated=truncated,
+                status=outcome.status,  # type: ignore[arg-type]
+                summary=outcome.summary[:1000],
+                result_count=max(0, outcome.result_count),
+                truncated=outcome.truncated,
+                persona=call.persona,
+                persona_about=call.persona_about,
+                persona_wikipedia=call.persona_wikipedia,
             ),
         )
 
-    tool_calls: list[ToolCall] = []
-    results: list[ToolExecutionResult] = []
-    # T-3.4-05: the real, typed output behind each dispatched Layer 2
-    # call, keyed by its call_id. See GraphState.layer2_raw_outputs'
-    # docstring for why write_node needs this rather than reconstructing
-    # a validated model from the generic structured_fields dict below.
-    layer2_raw_outputs: dict[str, NcbiEfetchOutput] = {}
+    # Admission, in plan order, BEFORE any tool_start is written, so every
+    # start frame describes a call that is actually dispatched.
+    admitted: list[Any] = []
     cap_exceeded = False
-
     for planned in planned_tool_calls:
-        # F-2.0-08 (Act's own half): checked immediately before dispatch,
-        # never after, matching _dispatch_tier_call's own discipline. A
-        # call that would breach the cap is never issued at all: it is
-        # excluded from both tool_calls and results (never a placeholder
-        # pair), so the two lists coordinator_worker_execute requires to
-        # stay paired 1:1 never drift apart. Applies identically to
-        # whichever tool this planned call is for.
+        # F-2.0-08 (Act's own half): checked before dispatch, never after,
+        # matching _dispatch_tier_call's own discipline. A call that would
+        # breach the cap is never issued at all: it is excluded from both
+        # tool_calls and results (never a placeholder pair), so the two
+        # lists coordinator_worker_execute requires to stay paired 1:1
+        # never drift apart.
         try:
             cost_control.check_per_query_cap(harness, trace_id, "plan")
         except cost_control.QueryCapExceededError:
@@ -3349,36 +4222,11 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             break
 
         # T-6.0-01, Section 21.3's half of the ceiling that belongs to the
-        # LOOP rather than to the transport. The transport refuses the 21st
-        # call; this stops planning a 21st tool whose every call would be
-        # refused, so the run does not pay a dispatch and a tool_start frame
-        # to learn what is already known.
-        #
-        # Reuses `cap_exceeded` deliberately rather than adding a second
-        # degradation flag. Section 21.3 requires the same outcome the cost
-        # cap already produces, "the loop moves to Write with whatever
-        # tool_results already exist", `write_node` already implements
-        # exactly that, and its user-facing note already reads "reached its
-        # resource limit" with no mention of cost. A second flag would be a
-        # second path to test for one behaviour.
-        # F-6.0-J-03 (judge round): this check used to apply to EVERY planned
-        # call and to `break`, which refused Layer 1 `cypher_query` calls the
-        # ceiling does not bound. The reachable path was not hypothetical:
-        # `think_node` spends Layer 2 calls on entity resolution before Act
-        # runs, so a query that exhausted its ceiling in Think answered with
-        # ZERO graph rows, having never queried the free in-house graph at
-        # all. Under cite-or-refuse that turns a partial answer into a
-        # refusal, which is the opposite of what Section 21.3 asks for.
-        #
-        # Two changes. It is gated on the planned call's own declared LAYER,
-        # since "Layer 2 and Layer 3" is the property 21.3 actually names,
-        # rather than on the tool's type, which would need editing again for
-        # every tool added. And it `continue`s rather than `break`s, so an
-        # exhausted budget skips the calls it bounds and leaves the ones it
-        # does not. `cap_exceeded` is still set, so `write_node` ships the
-        # partial answer and says so.
-        #
-        # Pairing is preserved because this precedes `tool_calls.append`.
+        # LOOP rather than to the transport. Gated on the planned call's own
+        # declared LAYER (F-6.0-J-03), and `continue` rather than `break`,
+        # so an exhausted budget skips the calls it bounds and leaves the
+        # Layer 1 graph call it does not. `cap_exceeded` is still set, so
+        # `write_node` ships the partial answer and says so.
         already_made = call_budget.calls_made()
         if (
             planned.tool_call.layer in ("layer_2_api", "layer_3_enrichment")
@@ -3387,202 +4235,78 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         ):
             cap_exceeded = True
             continue
+        admitted.append(planned)
 
-        tool_calls.append(planned.tool_call)
-
-        # T-4.16-01. Written immediately BEFORE dispatch, never after, so
-        # the frame describes a call that is about to run rather than one
-        # that already has. `status="running"` is the honest value and is
-        # why that enum member was added; every other member would assert
-        # an outcome this line cannot know.
+    # T-4.16-01. Written immediately BEFORE dispatch, never after, so the
+    # frame describes a call that is about to run rather than one that
+    # already has. `status="running"` is the honest value. All starts are
+    # written before any call runs, so a surface sees the whole handoff at
+    # once (UI fix set 8: "{Lead} is handing off to A, B and C").
+    for planned in admitted:
+        call = planned.tool_call
         sink.emit_live(
             "tool_start",
             ToolStartPayload(
-                call_id=planned.tool_call.call_id,
-                tool=planned.tool_call.tool,
-                layer=planned.tool_call.layer,
+                call_id=call.call_id,
+                tool=call.tool,
+                layer=call.layer,
                 status="running",
+                persona=call.persona,
+                persona_about=call.persona_about,
+                persona_wikipedia=call.persona_wikipedia,
             ),
         )
 
-        if isinstance(planned, _PlannedNcbiEfetchToolCall):
-            # T-3.4-05/T-3.1-28: the second, Layer 2 dispatch. A type
-            # check on the planned call, never a duck-typed inspection of
-            # a field that might be absent on the other shape (see
-            # `_PlannedNcbiEfetchToolCall`'s own docstring).
-            try:
-                ncbi_efetch_output: NcbiEfetchOutput = await harness.enforce_timeout(
-                    "act",
-                    ncbi_efetch(planned.ncbi_efetch_input),
-                    _NCBI_EFETCH_ACT_TIMEOUT_SECONDS,
-                )
-            except HarnessCallError:
-                results.append(
-                    ToolExecutionResult(
-                        contains_untrusted_free_text=False,
-                        structured_fields={
-                            "status": "error",
-                            "error": (
-                                "ncbi_efetch call did not complete within its "
-                                "per-step timeout budget"
-                            ),
-                        },
-                    )
-                )
-                _close_tool_call(
-                    planned.tool_call,
-                    "error",
-                    "call did not complete within its per-step timeout budget",
-                    0,
-                    False,
-                )
-                continue
-            except call_budget.CallBudgetExceededError:
-                # T-6.0-01. The ceiling was reached MID-TOOL, which is the
-                # case the pre-dispatch check above cannot see and the one
-                # Section 21.3 actually names: a retry or a wider-than-
-                # expected fan-out inside a single planned call. The
-                # `tool_start` frame for this call is already on the wire,
-                # so it is closed here rather than left spinning, and the
-                # loop stops instead of continuing: every later call would
-                # be refused by the same budget.
-                results.append(
-                    ToolExecutionResult(
-                        contains_untrusted_free_text=False,
-                        structured_fields={
-                            # A curated string, never `str(exc)`. The
-                            # exception's own message is built entirely from
-                            # this repository's own values and would be safe,
-                            # but build phase 5.0 spent five rounds on
-                            # exception text reaching a sink, and matching
-                            # the sibling branch above costs nothing.
-                            "status": "error",
-                            "error": (
-                                "refused: this query reached its Layer 2/3 API "
-                                "call ceiling (Section 21.3) before this call "
-                                "completed"
-                            ),
-                        },
-                    )
-                )
-                _close_tool_call(
-                    planned.tool_call,
-                    "error",
-                    "refused: this query reached its Layer 2/3 API call ceiling",
-                    0,
-                    False,
-                )
-                cap_exceeded = True
-                break
+    outcomes: dict[str, _CallOutcome] = {}
 
-            layer2_raw_outputs[planned.tool_call.call_id] = ncbi_efetch_output
-            results.append(
-                ToolExecutionResult(
-                    contains_untrusted_free_text=False,
-                    structured_fields=_ncbi_efetch_output_to_structured_fields(
-                        ncbi_efetch_output
-                    ),
-                )
-            )
-            _close_tool_call(
-                planned.tool_call,
-                ncbi_efetch_output.status,
-                f"{ncbi_efetch_output.action}: {ncbi_efetch_output.record_count} record(s)",
-                ncbi_efetch_output.record_count,
-                ncbi_efetch_output.truncated,
-            )
-            continue
+    async def _run_one(planned: Any) -> None:
+        outcome = await _execute_planned_call(harness, query_class, planned)
+        outcomes[planned.tool_call.call_id] = outcome
+        # Closed the moment THIS call lands, not when the slowest one does,
+        # which is what lets a layer's badge turn to done on its own.
+        _close_tool_call(planned.tool_call, outcome)
 
-        try:
-            # F-05 fix: cypher_query's own declared budget
-            # (CYPHER_QUERY_TIMEOUT_SECONDS, 30s, tool-call-budgets.md)
-            # is the locked number; think_node's stub "lookup"
-            # classification resolves `budget_for_step("act", ...)` to a
-            # figure well under both the tool's own budget and live
-            # graph latency alone. The caller's budget is what gives:
-            # never let a query_class's own budget starve the tool below its
-            # own floor, but let a query_class that already budgets more
-            # (multi_hop, aggregate, exploratory) keep that larger
-            # number.
-            act_timeout_s = max(budget_for_step("act", query_class), CYPHER_QUERY_TIMEOUT_SECONDS)
-            output: CypherQueryOutput = await harness.enforce_timeout(
-                "act",
-                cypher_query(harness, planned.cypher_input),
-                act_timeout_s,
-            )
-        except HarnessCallError:
-            results.append(
-                ToolExecutionResult(
-                    contains_untrusted_free_text=False,
-                    structured_fields={
-                        "status": "error",
-                        "error": "cypher_query call did not complete within its per-step timeout budget",
-                    },
-                )
-            )
-            _close_tool_call(
-                planned.tool_call,
-                "error",
-                "call did not complete within its per-step timeout budget",
-                0,
-                False,
-            )
-            continue
+    await _gather_planned_calls([_run_one(planned) for planned in admitted])
 
-        # F-2.1-C13: a Cypher row's envelope is structured data (Section
-        # 6.1's typed output schema), but an Article row's own field
-        # content (the raw PubMed title) is untrusted external free text.
-        # F-2.1-J4-06 fix: C13's original split excluded an Article row
-        # from the structured pass-through payload entirely, which made
-        # row_count disagree with total_available (F-2.1-C07's
-        # contradiction, one layer up) and made an Article-only result
-        # refuse outright, silently. Every row, trusted or not, now goes
-        # into the structured pass-through payload via `_rows_for_citation`
-        # (an untrusted row's `fields` already emptied, never its whole
-        # row dropped), so row_count and total_available always agree and
-        # a real record is never silently disappeared. The untrusted rows'
-        # own free-text content is separately quarantined into a second,
-        # reader-bound tool_call/result pair, same as before this fix, so
-        # that content still never reaches structured_fields or a
-        # citation's claim_text unmediated; it just no longer gates
-        # whether the record itself is countable and citeable.
-        _, untrusted_rows = _split_rows_by_trust(output.rows)
-        results.append(
-            ToolExecutionResult(
-                contains_untrusted_free_text=False,
-                structured_fields=_cypher_output_to_structured_fields(
-                    output, _rows_for_citation(output.rows)
-                ),
-            )
-        )
-        _close_tool_call(
-            planned.tool_call,
-            output.status,
-            f"{output.row_count} row(s) of {output.total_available or output.row_count}",
-            output.row_count,
-            output.truncated,
-        )
-        # NOTE, deliberately no tool frame for the quarantine pair below.
-        # `untrusted_call` is the SAME call re-entered for the free-text
-        # reader's benefit, not a second dispatch: no network request is
-        # made for it and nothing new is fetched. Emitting a frame would
-        # put a second chip on screen for one tool that fired once, and
-        # would break the premise gate's A1, which asserts one `tool_start`
-        # per PLANNED call. The quarantine mechanism is an internal trust
-        # boundary and is not a thing a reader is watching happen.
-        if untrusted_rows:
-            untrusted_call = ToolCall(
-                tool=planned.tool_call.tool,
-                call_id=f"{planned.tool_call.call_id}-articles"[:64],
-                layer=planned.tool_call.layer,
-            )
-            tool_calls.append(untrusted_call)
-            results.append(
-                ToolExecutionResult(
-                    contains_untrusted_free_text=True,
-                    free_text=_untrusted_rows_free_text(untrusted_rows),
-                )
-            )
+    # Reassembled with every pair intact (`tool_calls[i]` and `results[i]`
+    # pair 1:1, each call's quarantine pair directly behind its own), in
+    # LAYER order: Layer 2, then Layer 3, then Layer 1, each in plan order
+    # within the layer. UI fix set 8 (R29): the write side offers Synth at
+    # most `MAX_FINDINGS_PER_PROMPT` findings and cites at most 20, walking
+    # `findings` in this order, and the graph call alone returns up to 100
+    # rows. In plan order the graph filled every slot and the live records,
+    # literature and trials never reached the prompt; measured live on
+    # 2026-09-13 on the CFTR and EGFR questions, all four tools `ok` and
+    # every citation Layer 1. The small, fixed-cap Layer 2/3 findings (one
+    # gene record, up to five literature entities, up to five trials) go
+    # first so the graph takes the remaining slots. Deterministic, so the
+    # source set of a question is still one set. `state["tool_calls"]`, the
+    # PLANNED list write_node reads `[0].cypher_input` from, is untouched.
+    layer_rank = {"layer_2_api": 0, "layer_3_enrichment": 1, "layer_1_graph": 2}
+    ordered = sorted(
+        enumerate(admitted), key=lambda pair: (layer_rank.get(pair[1].tool_call.layer, 3), pair[0])
+    )
+    tool_calls: list[ToolCall] = []
+    results: list[ToolExecutionResult] = []
+    # T-3.4-05: the real, typed output behind each dispatched Layer 2
+    # `ncbi_efetch` call, keyed by its call_id. See GraphState.layer2_raw_
+    # outputs' docstring for why write_node needs this rather than
+    # reconstructing a validated model from the generic dict.
+    layer2_raw_outputs: dict[str, NcbiEfetchOutput] = {}
+    # UI fix set 8: the same, for ncbi_dbsnp, pubtator_annotate, litvar2_
+    # lookup and clinicaltrials_search, so a per-tool citation builder can
+    # be handed the real record rather than the flattened pseudo-row.
+    layer3_raw_outputs: dict[str, Any] = {}
+    for _, planned in ordered:
+        outcome = outcomes[planned.tool_call.call_id]
+        for call, result in outcome.pairs:
+            tool_calls.append(call)
+            results.append(result)
+        if outcome.raw_output is not None:
+            layer2_raw_outputs[planned.tool_call.call_id] = outcome.raw_output
+        if outcome.layer_raw_output is not None:
+            layer3_raw_outputs[planned.tool_call.call_id] = outcome.layer_raw_output
+        cap_exceeded = cap_exceeded or outcome.cap_exceeded
 
     findings = await coordinator_worker_execute(harness, tool_calls, results)
     # A5/F-02 fix: the real Finding list now survives into GraphState
@@ -3596,6 +4320,7 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         # claim's raw output is not found here (see GraphState's docstring
         # and `_citations_from_grounded_claims`).
         "layer2_raw_outputs": layer2_raw_outputs,
+        "layer3_raw_outputs": layer3_raw_outputs,
     }
     if cap_exceeded:
         # Section 19.1: the query still ships an answer, a partial one,
@@ -4744,6 +5469,7 @@ def _citations_from_grounded_claims(
     grounding: GroundingResult,
     findings: list[Finding],
     layer2_raw_outputs: dict[str, NcbiEfetchOutput] | None = None,
+    layer3_raw_outputs: dict[str, Any] | None = None,
 ) -> list[CitationPayload]:
     """Build one `CitationPayload` per surviving grounded claim.
 
@@ -4775,6 +5501,7 @@ def _citations_from_grounded_claims(
     literals to cover a case they were never true of.
     """
     layer2_raw_outputs = layer2_raw_outputs or {}
+    layer3_raw_outputs = layer3_raw_outputs or {}
     display_slots = display_index_by_citation_id(grounding)
     suspect_by_citation_id = {
         claim.finding.citation_id: claim.finding.value_is_suspect
@@ -4807,6 +5534,17 @@ def _citations_from_grounded_claims(
             )
             if layer2_citation is not None:
                 citations.append(layer2_citation)
+            continue
+
+        if synth_finding.tool in _LAYER3_CITATION_TOOLS:
+            # UI fix set 8: the four other Layer 2/3 tools, through their
+            # own builders. None is skipped, never a crash, as above.
+            layer3_citation = _layer3_citation_for_synth_finding(
+                synth_finding, findings, layer3_raw_outputs, citation_id,
+                display_index, claim_text,
+            )
+            if layer3_citation is not None:
+                citations.append(layer3_citation)
             continue
 
         curie = (
@@ -5755,6 +6493,144 @@ def _layer2_citation_for_synth_finding(
         return None
 
 
+#: The tools whose grounded claims are cited through their OWN builders.
+_LAYER3_CITATION_TOOLS: Final[frozenset[str]] = frozenset(
+    {"clinicaltrials_search", "pubtator_annotate", "litvar2_lookup", "ncbi_dbsnp"}
+)
+
+
+def _layer3_row_for_synth_finding(
+    synth_finding: SynthFinding, findings: list[Finding], layer3_raw_outputs: dict[str, Any]
+) -> tuple[Any, dict[str, Any] | None]:
+    """The typed tool output and the pseudo-row behind a Layer 3 (or dbSNP)
+    finding, recovered by `source_url` identity, the same lookup
+    `_layer2_citation_for_synth_finding` uses. `(None, None)` when no
+    `"ok"` finding of that tool carries the URL.
+    """
+    for finding in findings:
+        if finding.tool != synth_finding.tool:
+            continue
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") == synth_finding.source_url:
+                return layer3_raw_outputs.get(finding.call_id), row
+    return None, None
+
+
+def _layer3_base_citation(
+    synth_finding: SynthFinding, raw_output: Any, display_index: int
+) -> CitationPayload | None:
+    """One tool's own `build_citation` over its own typed output, or None.
+
+    Each builder is the one T-3.4-04 shipped for that tool and carries the
+    tool's `provenance_defaults` (`evidence_kind`, `license`) and its own
+    `source` word (`clinicaltrials.gov`, `PubTator3`, `litvar2`, `dbsnp`).
+    The trials builder takes ONE study, so the study whose `source_url` is
+    the claim's is selected; the other three take the whole output and cite
+    its first record, which the caller then re-targets at the claim's own
+    record (see `_layer3_citation_for_synth_finding`). A builder's own
+    "nothing citable" `ValueError` and a `CitationPayload` validation error
+    both yield None, the same discipline as the Layer 2 helper.
+    """
+    try:
+        if synth_finding.tool == "clinicaltrials_search":
+            study = next(
+                (s for s in raw_output.studies if s.source_url == synth_finding.source_url),
+                None,
+            )
+            if study is None:
+                return None
+            return clinicaltrials_build_citation(study, display_index=display_index)
+        if synth_finding.tool == "pubtator_annotate":
+            return pubtator_build_citation(raw_output, display_index=display_index)
+        if synth_finding.tool == "litvar2_lookup":
+            return litvar2_build_citation(raw_output, display_index=display_index)
+        if synth_finding.tool == "ncbi_dbsnp":
+            return dbsnp_build_citation(raw_output, synth_finding.field, display_index=display_index)
+    except ValueError:
+        return None
+    return None
+
+
+def _layer3_citation_for_synth_finding(
+    synth_finding: SynthFinding,
+    findings: list[Finding],
+    layer3_raw_outputs: dict[str, Any],
+    citation_id: str,
+    display_index: int,
+    claim_text: str,
+) -> CitationPayload | None:
+    """Build the final `CitationPayload` for a grounded claim from one of the
+    four tools in `_LAYER3_CITATION_TOOLS`. UI fix set 8, approved by the
+    coordinator on 2026-09-14, shaped like `_layer2_citation_for_synth_
+    finding` and placed beside it.
+
+    Before this branch every such claim fell through to the generic Layer 1
+    construction, which wrote the tool NAME as `source`, `"unknown"` as
+    `source_id` (the pseudo-row's CURIE is empty by design) and the Layer 1
+    literals `primary_assertion` and `public_domain_us_gov`, wrong for a
+    ClinicalTrials.gov study. Now: `source`, `evidence_kind` and `license`
+    come from the tool's own builder and `provenance_defaults`; `source_id`
+    is the record's own identity read off the pseudo-row (`nct_id`,
+    `pubtator_id`, `rsid`, else the CURIE), never the builder's first
+    record; `source_url` is the CLAIM'S record, so a builder that cites its
+    output's first entity is re-targeted at the entity the clause was
+    grounded on, and stays host-pinned by `CitationPayload`'s own pattern.
+
+    Falls back to the generic construction with the tool's registered
+    defaults when the typed output cannot be found or the builder refuses,
+    and returns None, never raises, when that fails too (F-3.4-T05-04's
+    rule): one uncited claim rather than a crashed answer.
+    """
+    raw_output, row = _layer3_row_for_synth_finding(synth_finding, findings, layer3_raw_outputs)
+    row_fields = (row or {}).get("fields") or {}
+    identity = str(
+        row_fields.get("nct_id")
+        or row_fields.get("pubtator_id")
+        or row_fields.get("rsid")
+        or synth_finding.curie
+        or "unknown"
+    )
+    base = (
+        _layer3_base_citation(synth_finding, raw_output, display_index)
+        if raw_output is not None
+        else None
+    )
+    if base is not None:
+        try:
+            return base.model_copy(
+                update={
+                    "citation_id": citation_id,
+                    "claim_text": claim_text,
+                    "field": synth_finding.field[:128],
+                    "source_id": identity[:128],
+                    "source_url": synth_finding.source_url,
+                }
+            )
+        except ValueError:
+            pass
+    try:
+        defaults = defaults_for_tool(synth_finding.tool)
+        return CitationPayload(
+            citation_id=citation_id,
+            display_index=display_index,
+            source=synth_finding.tool[:128],
+            source_id=identity[:128],
+            source_url=synth_finding.source_url,
+            layer=synth_finding.layer,  # type: ignore[arg-type]
+            field=synth_finding.field[:128],
+            claim_text=claim_text,
+            evidence_kind=defaults["evidence_kind"],
+            assertion_confidence="asserted",
+            population_ancestry_context=None,
+            license=defaults["license"],
+        )
+    except (ValueError, KeyError):
+        return None
+
+
 # One `token` event per sentence rather than per answer. Section 6 of
 # `system-design-patterns` requires time-to-first-token under a second and
 # citation chips emitted inline as the model references sources; a single
@@ -5789,6 +6665,209 @@ def _narrative_chunks(
     return chunks
 
 
+#: UI fix set 9, item 9.11 (2026-09-13), in the product owner's words from the
+#: set 9 brief. Emitted as a `note` token after every Plain language answer and
+#: never after a Researcher one. A note, never a claim, so it carries no marker
+#: and no surface counts it toward citation coverage.
+_MEDICAL_ADVICE_NOTE = "This is a research summary, not medical advice."
+
+
+def _renumber_markers_by_citation_id(
+    sentence: str, local_slots: dict[str, int], merged_slots: dict[str, int]
+) -> str:
+    """Rewrite a separately grounded sentence's markers into merged numbering.
+
+    Keyed on the finding's `citation_id`, not an offset: a Researcher listing
+    cites records the model's prose may already have cited, and such a record
+    must print the number it already has, since `display_index_by_citation_id`
+    numbers by first appearance.
+    """
+    citation_id_by_local = {slot: citation_id for citation_id, slot in local_slots.items()}
+
+    def replace(match: re.Match[str]) -> str:
+        citation_id = citation_id_by_local.get(int(match.group(1)))
+        if citation_id is None or citation_id not in merged_slots:
+            return match.group(0)
+        return f"[{merged_slots[citation_id]}]"
+
+    return _MARKER_PATTERN.sub(replace, sentence)
+
+
+def _row_fields_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
+    """The raw row a prepared finding was built from, matched by source URL."""
+    for tool_finding in findings:
+        fields = tool_finding.structured_fields or {}
+        if fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") == finding.source_url:
+                row_fields = row.get("fields")
+                return row_fields if isinstance(row_fields, dict) else None
+    return None
+
+
+def _answer_tokens(
+    *,
+    audience_depth: str,
+    question: str,
+    model_grounding: GroundingResult | None,
+    model_layout: GroundingInput,
+    fallback_sentences: tuple[str, ...],
+    tail_sentences: tuple[str, ...],
+    tail_is_listing: bool,
+    citations: list[CitationPayload],
+    synth_findings: list[SynthFinding],
+    findings: list[Finding],
+    mentions: list[str],
+    notes: list[str],
+) -> list[TokenPayload]:
+    """The answer as typed token chunks, in reading order.
+
+    UI fix set 9. Every sentence here was already accepted by the grounding
+    pass; this function adds structure around them and never adds, removes
+    or rewrites a claim. Structure is:
+
+    - A `paragraph_break` wherever the model's reply changed paragraph.
+    - A `heading` before a paragraph, Researcher only, when the model wrote
+      one and `heading_is_supported` accepts it, at most `MAX_HEADINGS`.
+    - After the prose: the findings-tail note and its sentences as claims
+      (every depth but Researcher), or the Researcher listing, grouped by
+      record type under a code-built heading, as `table_row` tokens when
+      every record in the group carries the second column
+      (`answer_layout.TABLE_COLUMNS`) and `list_item` tokens otherwise.
+    - The disclosure notes, each a `note`.
+
+    Bold terms (`emphasis`) are set on Researcher prose sentences only, from
+    the run's resolved entity mentions and record names.
+    """
+    citation_by_display = {citation.display_index: citation for citation in citations}
+    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+    researcher = audience_depth == "researcher"
+    terms = key_terms(synth_findings, [m for m in mentions if m]) if researcher else []
+    tokens: list[TokenPayload] = []
+
+    def marker_ids(sentence: str) -> list[str]:
+        return [
+            citation_by_display[int(number)].citation_id
+            for number in _MARKER_PATTERN.findall(sentence)
+            if int(number) in citation_by_display
+        ][:20]
+
+    def paragraph_break() -> None:
+        if tokens and tokens[-1].kind not in ("paragraph_break", "heading"):
+            tokens.append(TokenPayload(text="\n\n", marker_ids=[], kind="paragraph_break"))
+
+    def heading(text: str) -> None:
+        paragraph_break()
+        tokens.append(TokenPayload(text=f"{text[:200]}\n\n", marker_ids=[], kind="heading"))
+
+    def sentence_token(
+        sentence: str,
+        kind: str = "claim",
+        cells: list[str] | None = None,
+        emphasize: bool = False,
+    ) -> None:
+        text = (sentence if sentence.endswith(" ") else sentence + " ")[:1000]
+        emphasis = emphasis_for(text, terms) if emphasize and terms else []
+        tokens.append(
+            TokenPayload(
+                text=text,
+                marker_ids=marker_ids(sentence),
+                kind=kind,  # type: ignore[arg-type]
+                cells=cells,
+                emphasis=emphasis or None,
+            )
+        )
+
+    def listing(sentences: tuple[str, ...]) -> None:
+        groups: dict[str, list[tuple[str, SynthFinding | None]]] = {}
+        for sentence in sentences:
+            ids = marker_ids(sentence)
+            finding = finding_by_citation_id.get(ids[0]) if ids else None
+            key = finding.entity_type if finding is not None else ""
+            groups.setdefault(key, []).append((sentence, finding))
+        for entity_type, entries in groups.items():
+            noun = entity_type_noun(entity_type) if entity_type else ""
+            heading(f"{noun[:1].upper()}{noun[1:]} records found" if noun else "Records found")
+            second_cells = [
+                table_second_cell(entity_type, _row_fields_for(finding, findings))
+                if finding is not None
+                else None
+                for _, finding in entries
+            ]
+            as_table = entity_type in TABLE_COLUMNS and all(
+                cell is not None for cell in second_cells
+            )
+            if as_table:
+                _, first_label, second_label = TABLE_COLUMNS[entity_type]
+                tokens.append(
+                    TokenPayload(
+                        text="", marker_ids=[], kind="table_header",
+                        cells=[first_label, second_label],
+                    )
+                )
+            for (sentence, finding), second in zip(entries, second_cells, strict=True):
+                if finding is None:
+                    sentence_token(sentence)
+                elif as_table and second is not None:
+                    sentence_token(
+                        sentence, kind="table_row",
+                        cells=[record_label(finding, _row_fields_for(finding, findings)), second],
+                    )
+                else:
+                    sentence_token(
+                        sentence,
+                        kind="list_item",
+                        cells=[record_label(finding, _row_fields_for(finding, findings))],
+                    )
+
+    if fallback_sentences:
+        if researcher:
+            listing(fallback_sentences)
+        else:
+            for sentence in fallback_sentences:
+                sentence_token(sentence)
+    elif model_grounding is not None:
+        headings_shown = 0
+        last_paragraph: int | None = None
+        for sentence, origin in zip(
+            model_grounding.sentences, model_grounding.sentence_origins, strict=False
+        ):
+            paragraph = (
+                model_layout.sentence_paragraph[origin]
+                if origin < len(model_layout.sentence_paragraph)
+                else (last_paragraph or 0)
+            )
+            if paragraph != last_paragraph:
+                if last_paragraph is not None:
+                    paragraph_break()
+                title = model_layout.heading_before.get(paragraph)
+                if (
+                    researcher
+                    and title
+                    and headings_shown < MAX_HEADINGS
+                    and heading_is_supported(title, synth_findings, question)
+                ):
+                    heading(title)
+                    headings_shown += 1
+                last_paragraph = paragraph
+            sentence_token(sentence, emphasize=researcher)
+
+    if tail_sentences:
+        if tail_is_listing:
+            listing(tail_sentences)
+        else:
+            paragraph_break()
+            tokens.append(TokenPayload(text=_FINDINGS_TAIL_NOTE, marker_ids=[], kind="note"))
+            for sentence in tail_sentences:
+                sentence_token(sentence)
+
+    for note in notes:
+        paragraph_break()
+        tokens.append(TokenPayload(text=note[:1000], marker_ids=[], kind="note"))
+    return tokens
+
+
 async def write_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -5800,6 +6879,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # T-3.4-05: empty for the common single-tool query; see GraphState's
     # docstring and `_citations_from_grounded_claims`.
     layer2_raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs", {})
+    layer3_raw_outputs: dict[str, Any] = state.get("layer3_raw_outputs", {})
 
     step_error = state.get("step_error")
     if step_error is not None:
@@ -6019,8 +7099,15 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # survived, not from whether any row happened to carry a source_url.
     tool_outcome = _tool_execution_outcome(findings)
 
+    # UI fix set 9 (2026-09-13). The reply is read into paragraphs and
+    # headings first, and the grounding pass receives the paragraphs joined,
+    # exactly the prose it always matched. `model_layout` keeps which
+    # paragraph each sentence came from, so structure reaches the screen
+    # beside the grounded text rather than inside it. See
+    # `synthesis/answer_layout.py`.
+    model_layout = grounding_input(parse_synth_layout(_response_text(synth_text)))
     grounding = run_grounding_pass(
-        _response_text(synth_text),
+        model_layout.narrative,
         synth_findings,
         core_ask_required=True,
         question=query.text,
@@ -6117,8 +7204,11 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 # Best-effort, per the contract stated above.
                 repaired_text = None
             if repaired_text is not None:
+                repaired_layout = grounding_input(
+                    parse_synth_layout(_response_text(repaired_text))
+                )
                 repaired_grounding = run_grounding_pass(
-                    _response_text(repaired_text),
+                    repaired_layout.narrative,
                     synth_findings,
                     core_ask_required=True,
                     question=query.text,
@@ -6151,6 +7241,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 if reported_after > reported_before:
                     synth_text = repaired_text
                     grounding = repaired_grounding
+                    model_layout = repaired_layout
                     omitted_findings = unreported_findings(
                         reported_after, synth_findings
                     )
@@ -6229,29 +7320,47 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # case and floors at `ask` for it) and never after the fallback (the
     # fallback already listed every finding, so what it left unreported is
     # exactly what the tail would fail on again).
+    # UI fix set 9 (2026-09-13, product-owner decision superseding U2 for
+    # Researcher answers). A Researcher answer lists EVERY prepared record in
+    # code under its own heading, as a list or a two-column table, after the
+    # model's prose; the same one-sentence-per-finding grounding as the tail,
+    # over all prepared findings rather than only the omitted ones. So the
+    # cited set is the prepared set in both modes, as item 10.1 requires, and
+    # only its presentation differs. Every other depth keeps the tail.
+    model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
+    tail_sentences: tuple[str, ...] = ()
+    tail_is_listing = query.audience_depth == "researcher"
+    tail_findings = synth_findings if tail_is_listing else omitted_findings
     if (
         tool_outcome == "ok"
-        and omitted_findings
+        and tail_findings
         and grounding.claims
         and not structured_fallback_used
     ):
         tail_grounding = run_grounding_pass(
-            build_structured_fallback_narrative(omitted_findings),
+            build_structured_fallback_narrative(tail_findings),
             synth_findings,
             core_ask_required=True,
             question=query.text,
         )
         if tail_grounding.claims:
-            offset = len(display_index_by_citation_id(grounding))
+            merged_claims = list(grounding.claims) + list(tail_grounding.claims)
+            merged_slots = display_index_by_citation_id(
+                GroundingResult(narrative="", claims=merged_claims, stripped_count=0, refused=False)
+            )
+            tail_slots = display_index_by_citation_id(tail_grounding)
+            tail_sentences = tuple(
+                _renumber_markers_by_citation_id(sentence, tail_slots, merged_slots)
+                for sentence in tail_grounding.sentences
+            )
+            separator = " " if tail_is_listing else " " + _FINDINGS_TAIL_NOTE + " "
             grounding = GroundingResult(
                 narrative=(
                     grounding.narrative.rstrip()
-                    + " "
-                    + _FINDINGS_TAIL_NOTE
-                    + " "
-                    + _renumber_markers(tail_grounding.narrative, offset)
+                    + separator
+                    + " ".join(tail_sentences)
                 ),
-                claims=list(grounding.claims) + list(tail_grounding.claims),
+                claims=merged_claims,
                 stripped_count=grounding.stripped_count + tail_grounding.stripped_count,
                 refused=False,
             )
@@ -6270,7 +7379,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         trust_outcome: TrustOutcome = "answer"
     else:
         claim_trusts = trust_for_claims(grounding.claims, synth_findings, row_types)
-        citations = _citations_from_grounded_claims(grounding, findings, layer2_raw_outputs)
+        citations = _citations_from_grounded_claims(
+            grounding, findings, layer2_raw_outputs, layer3_raw_outputs
+        )
         # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
         # `flag` AFTER citations exist (it needs their `source_url` for
         # `ConflictResult`) and BEFORE the answer-level aggregate below, so
@@ -6509,20 +7620,44 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             ),
         )
     else:
-        for chunk, marker_ids in _narrative_chunks(grounding, citations):
-            sink.emit("token", TokenPayload(text=chunk, marker_ids=marker_ids))
-
-        if truncation_note is not None:
-            sink.emit("token", TokenPayload(text=truncation_note, marker_ids=[]))
-
-        if structured_fallback_note is not None:
-            sink.emit("token", TokenPayload(text=structured_fallback_note, marker_ids=[]))
-        if partial_answer_note is not None:
-            sink.emit("token", TokenPayload(text=partial_answer_note, marker_ids=[]))
-        if incomplete_answer_note is not None:
-            sink.emit("token", TokenPayload(text=incomplete_answer_note, marker_ids=[]))
-        if repair_cap_note is not None:
-            sink.emit("token", TokenPayload(text=repair_cap_note, marker_ids=[]))
+        # UI fix set 9 (2026-09-13). One token per sentence as before, now
+        # typed: paragraph breaks, supported headings, the code-built listing
+        # and every note carry a `kind`, so no surface classifies a note as a
+        # claim by its wording again (item 9.8). The notes follow the answer
+        # in the same order as before, and a Plain language answer ends with
+        # the medical-advice note (item 9.11).
+        notes = [
+            note
+            for note in (
+                truncation_note,
+                structured_fallback_note,
+                partial_answer_note,
+                incomplete_answer_note,
+                repair_cap_note,
+            )
+            if note is not None
+        ]
+        if query.audience_depth == "plain_language":
+            notes.append(_MEDICAL_ADVICE_NOTE)
+        for token in _answer_tokens(
+            audience_depth=query.audience_depth,
+            question=query.text,
+            model_grounding=model_grounding,
+            model_layout=model_layout,
+            fallback_sentences=grounding.sentences if structured_fallback_used else (),
+            tail_sentences=tail_sentences,
+            tail_is_listing=tail_is_listing,
+            citations=citations,
+            synth_findings=synth_findings,
+            findings=findings,
+            mentions=[
+                getattr(entity, "text", "") or ""
+                for entity in (state.get("resolved_entities") or [])
+            ]
+            + [state.get("next_step_entity_label") or ""],
+            notes=notes,
+        ):
+            sink.emit("token", token)
 
         for citation in citations:
             sink.emit("citation", citation)
@@ -6583,6 +7718,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             total_tool_calls=total_tool_calls,
             elapsed_ms=elapsed_ms,
             trust_outcome=trust_outcome,
+            # UI fix set 9, item 9.9: the one plain line, derived from the
+            # verdicts above and nothing else; None on a refusal.
+            trust_line=answer_trust_line(trust_outcome, claim_trusts, grounding.claims),
             # T-6.2-08, re-keyed by UI fix set 10, item 10.1: computed from
             # the SAME capped-or-truncated signal the truncation note is
             # built from, so an answer can never offer to show more while

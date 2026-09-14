@@ -73,6 +73,12 @@ const SYSTEM_NOTE_PREFIXES = [
   // alongside real citations, so there is no scope="answer" trust_signal
   // to key off. A prefix stays the only option for this one note.
   "Note: this answer's completeness check could not run to the end",
+  // UI fix set 9 (2026-09-13). The backend now types every note
+  // (`TokenPayload.kind === "note"`), which is the classification this list
+  // could never be. These stay for a producer that sends no `kind`.
+  "Note: one further",
+  "Note: the written summary of these records could not be verified",
+  "This is a research summary, not medical advice",
 ];
 
 const isSystemNote = (text: string) =>
@@ -411,18 +417,37 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     // Tool chips, one per started call, deduplicated by call_id because a
     // tool_result repeats its call's identity.
-    const seenCalls = new Set<string>();
+    // UI fix set 8 (R30, R31): an UPSERT keyed on call_id rather than
+    // first-frame-wins. The earlier loop kept the `tool_start` frame and
+    // skipped the `tool_result` that followed it, so a chip's detail read
+    // "running" for the life of the run; the handoff lines need the
+    // result's status to turn a layer's badge from working to done. The
+    // helper persona rides on both frames (set 8, additive), read here so
+    // `RunProgress` can name the scientist beside the layer.
+    const chipByCall = new Map<string, ToolCall>();
     const toolCalls: ToolCall[] = [];
     for (const event of events) {
       if (event.type !== "tool_start" && event.type !== "tool_result") continue;
       const payload = event.payload;
-      if (seenCalls.has(payload.call_id)) continue;
-      seenCalls.add(payload.call_id);
-      toolCalls.push({
+      const existing = chipByCall.get(payload.call_id);
+      const status = event.type === "tool_result" ? event.payload.status : "running";
+      const detail = event.type === "tool_result" ? `${event.payload.result_count} rows` : "running";
+      if (existing) {
+        existing.status = status;
+        existing.detail = detail;
+        continue;
+      }
+      const chip: ToolCall = {
         name: payload.tool,
-        detail: event.type === "tool_result" ? `${event.payload.result_count} rows` : "running",
+        detail,
         layer: layerNumber(payload.layer),
-      });
+        status,
+        persona: payload.persona ?? null,
+        personaAbout: payload.persona_about ?? null,
+        personaWikipedia: payload.persona_wikipedia ?? null,
+      };
+      chipByCall.set(payload.call_id, chip);
+      toolCalls.push(chip);
     }
 
     // Sources come from citation events, in the order the agent numbered them.
@@ -551,6 +576,27 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     const claims: Claim[] = [];
     const systemNotes: string[] = [];
+    /*
+     * UI FIX SET 9 (2026-09-13): STRUCTURE FROM THE WIRE, NEVER FROM WORDING.
+     *
+     * `write_node` now types each token (`kind`). A paragraph break or a
+     * heading moves the paragraph counter and is never a claim; a note is
+     * never a claim and is shown in place when claims follow it (the
+     * findings-tail note) or after the answer when none do (item 9.8: notes
+     * render as notes, never first). A token with no `kind` comes from an
+     * older producer and is classified exactly as before.
+     */
+    let paragraph = 0;
+    let claimsInParagraph = 0;
+    let pendingHeading: string | null = null;
+    let pendingNotes: string[] = [];
+    let pendingTableHeader: string[] | null = null;
+    const nextParagraph = () => {
+      if (claimsInParagraph > 0) {
+        paragraph += 1;
+        claimsInParagraph = 0;
+      }
+    };
     for (const event of events) {
       if (event.type !== "token") continue;
       // The whole point of `answerRefusalSignal`: none of this run's tokens
@@ -559,6 +605,28 @@ export function useRunView(events: AgentEvent[]): RunView {
       // below, from the trust_signal's own `message` and `fallback_link`
       // fields, never from this token's text.
       if (answerRefusalSignal) continue;
+      const kind = event.payload.kind ?? null;
+      if (kind === "paragraph_break") {
+        nextParagraph();
+        continue;
+      }
+      if (kind === "heading") {
+        nextParagraph();
+        const heading = event.payload.text.trim();
+        if (heading) pendingHeading = heading;
+        continue;
+      }
+      if (kind === "table_header") {
+        const cells = event.payload.cells ?? [];
+        pendingTableHeader = cells.length === 2 ? cells : null;
+        continue;
+      }
+      if (kind === "note") {
+        nextParagraph();
+        const note = event.payload.text.trim();
+        if (note) pendingNotes.push(note);
+        continue;
+      }
       // R-08: a repeated marker_id must not produce a repeated chip.
       const seenMarkers = new Set<string>();
       const cited = (event.payload.marker_ids ?? [])
@@ -596,12 +664,20 @@ export function useRunView(events: AgentEvent[]): RunView {
       // A system-status note is not an assertion about biology, so it must
       // never occupy a segment on the provenance spine. Collected instead, so
       // the disclosures are still shown, just not as claims.
-      if (isSystemNote(text)) {
+      //
+      // Set 9: a kind-less token with no citation that opens "Note:" is a
+      // system note too. The grounding pass strips any MODEL sentence that
+      // asserts something without a marker, so an uncited "Note:" chunk can
+      // only be one the harness wrote (item 9.8's "one further gene record").
+      if (
+        kind === null &&
+        (isSystemNote(text) || (cited.length === 0 && text.startsWith("Note:")))
+      ) {
         systemNotes.push(text);
         continue;
       }
 
-      claims.push({
+      const claim: Claim = {
         text,
         // The spine colours a claim by the layer that backed it. With several
         // citations the first is used, which is the order the backend numbered
@@ -613,8 +689,32 @@ export function useRunView(events: AgentEvent[]): RunView {
         citations: cited.map((match) =>
           match.type === "citation" ? match.payload.display_index : 0,
         ),
-      });
+      };
+      if (kind !== null) {
+        claim.kind = kind === "list_item" || kind === "table_row" ? kind : "claim";
+        claim.paragraph = paragraph;
+        if (pendingHeading !== null) {
+          claim.heading = pendingHeading;
+          pendingHeading = null;
+        }
+        if (pendingNotes.length > 0) {
+          claim.noteBefore = pendingNotes.join(" ");
+          pendingNotes = [];
+        }
+        const cells = event.payload.cells;
+        if (cells && cells.length > 0) claim.cells = cells;
+        const emphasis = event.payload.emphasis;
+        if (emphasis && emphasis.length > 0) claim.emphasis = emphasis;
+        if (kind === "table_row" && pendingTableHeader !== null) {
+          claim.tableHeader = pendingTableHeader;
+          pendingTableHeader = null;
+        }
+        claimsInParagraph += 1;
+      }
+      claims.push(claim);
     }
+    // Notes with no claim after them are disclosures about the whole answer.
+    systemNotes.push(...pendingNotes);
 
     // Trust signals. Worst-wins is the server's job; this only renders what
     // arrived, and never manufactures a positive verdict from nothing.
@@ -687,6 +787,34 @@ export function useRunView(events: AgentEvent[]): RunView {
           (event) => event.type === "trust_signal" && event.payload.triangulated === true,
         ),
       };
+      /*
+       * UI FIX SET 9, ITEM 9.9 (decision U1): ONE PLAIN LINE.
+       *
+       * When the run's `done` event carries `trust_line`, built in code by
+       * `synthesis/trust.py`'s `answer_trust_line`, it replaces the pills,
+       * which could contradict each other ("Grounded · every claim cited"
+       * beside "Single source, not independently confirmed"). Two things
+       * are never dropped for it: an ungrounded verdict, and a high-risk
+       * tier, which stays visible in the risk colour. A run with no
+       * `trust_line` (an older backend) keeps the pills below, unchanged.
+       */
+      const summary =
+        done &&
+        done.type === "done" &&
+        typeof done.payload.trust_line === "string" &&
+        done.payload.trust_line.trim().length > 0
+          ? done.payload.trust_line.trim()
+          : null;
+      if (summary !== null) {
+        if (!payload.grounded) trust.push({ kind: "risk", label: "Not fully grounded" });
+        trust.push({ kind: summary.startsWith("Confirmed") ? "good" : "plain", label: summary });
+        if (payload.risk_tier && payload.risk_tier !== "low" && payload.risk_tier !== "unknown") {
+          trust.push({
+            kind: "risk",
+            label: payload.risk_tier === "high" ? "High-risk claim" : `${payload.risk_tier} risk claim`,
+          });
+        }
+      } else {
       trust.push(
         payload.grounded
           ? { kind: "good", label: "Grounded · every claim cited" }
@@ -719,6 +847,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         // `layerCount` is computed below from the run's own tool calls; the
         // pill is pushed after it exists.
         trust.push({ kind: "plain", label: "__LAYER_COUNT__" });
+      }
       }
     }
 
@@ -841,11 +970,26 @@ export function useRunView(events: AgentEvent[]): RunView {
       ask: "warn",
       refuse: "risk",
     };
+    /*
+     * UI fix set 9, item 9.9. When the run carries a trust line, the caution
+     * is said THERE, once. Leaving the `ask` word in the status strip put
+     * "Single source, not independently confirmed" directly above "Based on 4
+     * sources, not yet confirmed", two signals contradicting each other on one
+     * screen, which is the defect the single line exists to remove. The tone
+     * stays `warn`, so the strip still marks the answer as cautious.
+     */
+    const hasTrustLine =
+      done !== undefined &&
+      done.type === "done" &&
+      typeof done.payload.trust_line === "string" &&
+      done.payload.trust_line.trim().length > 0;
     const outcome =
       fatalError !== undefined
         ? null
         : done && done.type === "done"
-          ? (OUTCOME_BY_TRUST[done.payload.trust_outcome] ?? "Answered")
+          ? hasTrustLine && done.payload.trust_outcome === "ask"
+            ? "Answered"
+            : (OUTCOME_BY_TRUST[done.payload.trust_outcome] ?? "Answered")
           : null;
     const outcomeTone =
       fatalError !== undefined || !done || done.type !== "done"

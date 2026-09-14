@@ -1,0 +1,17 @@
+
+## Gene records found
+- GCK
+
+## Literature entity records found
+- Gck
+
+## Clinical trial records found
+- A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus- Using Pharmacogenetics to Improve Treatment in Early-onset Diabetes- A Study of LY2608204 in Patients With Type 2 Diabetes- A Clinical Study to Evaluate Safety, Tolerability and Pharmacokinetics of Oral ZYGK1 in Healthy Volunteers- The Effect of ß-cell Specific Glucokinase Mutation on Glucose Homeostasis and Insulin Secretion in a MODY-2 Family
+
+## Sequence variant records found
+- NM_000162.5(GCK):c.415A>T (p.Met139Leu)- NM_000162.5(GCK):c.762T>G (p.Asn254Lys)- NM_000162.5(GCK):c.359dup (p.Met121fs)- NM_000162.5(GCK):c.397T>C (p.Phe133Leu)- NM_000162.5(GCK):c.1139A>C (p.His380Pro)- NM_000162.5(GCK):c.82G>A (p.Glu28Lys)- NM_000162.5(GCK):c.691A>G (p.Asn231Asp)- NM_000162.5(GCK):c.660C>A (p.Cys220Ter)- https://www.ncbi.nlm.nih.gov/clinvar/variation/1179956- NM_000162.5(GCK):c.434C>T (p.Pro145Leu)- https://www.ncbi.nlm.nih.gov/clinvar/variation/1188508- https://www.ncbi.nlm.nih.gov/clinvar/variation/1190030- https://www.ncbi.nlm.nih.gov/clinvar/variation/1190681
+
+(Note: this result was truncated. Showing 20 of 1333 matching rows; the rest are not shown above.)
+
+(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)
+{"depth": "researcher", "question": "Variants in GCK causing MODY", "outcome": "ask", "words": 89, "paragraphs": 0, "headings": 4, "list_items": 20, "table_rows": 0, "unmarked_claims": 0, "trust_line": "Based on 4 sources, not yet confirmed", "sources": ["2645", "ClinVar:1028584", "ClinVar:1045215", "ClinVar:1074406", "ClinVar:1077171", "ClinVar:1098819", "ClinVar:1172675", "ClinVar:1172895", "ClinVar:1172896", "ClinVar:1179956", "ClinVar:1187444", "ClinVar:1188508", "ClinVar:1190030", "ClinVar:1190681", "unknown"], "notes": ["Note: this result was truncated. Showing 20 of 1333 matching rows; the rest are not shown above.", "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead"], "errors": []}

@@ -244,9 +244,12 @@ class Query(BaseModel):
     # Additive within v1, per `system-design-patterns` pattern 10: a new
     # optional field, no existing field's meaning changed.
     owner_id: str | None = Field(None, max_length=128)
-    audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] = (
-        "researcher"
-    )
+    # UI fix set 9, item 9.1 (2026-09-13): `plain_language` added, additive
+    # per pattern 10. The web UI offers only Plain language and Researcher;
+    # the other two stay accepted for GraphQL, the CLI and MCP.
+    audience_depth: Literal[
+        "clinical_brief", "researcher", "deep_technical", "plain_language"
+    ] = "researcher"
 
     @field_validator("text")
     @classmethod

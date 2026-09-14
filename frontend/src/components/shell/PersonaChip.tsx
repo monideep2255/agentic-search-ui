@@ -336,10 +336,23 @@ export interface PersonaCaptionProps {
   /** The scientist's about line and Wikipedia address, for the "i" card. */
   about?: string | null;
   wikipedia?: string | null;
+  /**
+   * UI fix set 8 (R30). Replaces `STEP_NARRATIVE[step]` for this render
+   * when set: during Act the lead's line reads "is handing off to A, B and
+   * C" rather than "is reading the records". Null falls back to the step's
+   * own narrative, so every caller that never passes it is unchanged.
+   */
+  narrative?: string | null;
 }
 
 /** The per-step caption on the run screen. Renders nothing when idle. */
-export function PersonaCaption({ name, step, about = null, wikipedia = null }: PersonaCaptionProps) {
+export function PersonaCaption({
+  name,
+  step,
+  about = null,
+  wikipedia = null,
+  narrative = null,
+}: PersonaCaptionProps) {
   if (!step || name === null) return null;
   return (
     <Box
@@ -374,7 +387,7 @@ export function PersonaCaption({ name, step, about = null, wikipedia = null }: P
         <Box component="b" sx={{ fontWeight: 700, color: designTokens.ink }}>
           {name}
         </Box>{" "}
-        {STEP_NARRATIVE[step] ?? "is working"}
+        {narrative ?? STEP_NARRATIVE[step] ?? "is working"}
       </Typography>
       <PersonaInfo name={name} about={about} wikipedia={wikipedia} variant="onLight" align="left" />
     </Box>

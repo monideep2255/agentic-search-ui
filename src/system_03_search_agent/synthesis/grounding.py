@@ -268,6 +268,15 @@ class GroundingResult:
     claims: list[GroundedClaim]
     stripped_count: int
     refused: bool
+    # UI fix set 9 (2026-09-13), additive. The surviving sentences one by
+    # one, and for each the index of the INPUT sentence (as `_split_sentences`
+    # numbers the narrative) it was rebuilt from. `narrative` is still exactly
+    # " ".join(sentences). This is how a paragraph break or a heading in the
+    # model's reply is carried to the screen without entering the text the
+    # pass matches: see `synthesis/answer_layout.py`. Empty on a result built
+    # by hand, which a caller must treat as "no structure known".
+    sentences: tuple[str, ...] = ()
+    sentence_origins: tuple[int, ...] = ()
 
     @property
     def grounded(self) -> bool:
@@ -796,13 +805,17 @@ def run_grounding_pass(
     licensed_question = _licensed_question_content(question)
 
     surviving_sentences: list[str] = []
+    surviving_origins: list[int] = []
     claims: list[GroundedClaim] = []
     stripped = 0
     # Maps a surviving finding's ref_index to its new 1-based display slot,
     # assigned on first appearance so the numbering matches reading order.
     display_slot: dict[int, int] = {}
+    # UI fix set 9, item 9.7: whether the sentence before this one survived,
+    # so a pronoun opener whose antecedent was discarded can be recognised.
+    previous_survived = False
 
-    for sentence in _split_sentences(narrative):
+    for sentence_index, sentence in enumerate(_split_sentences(narrative)):
         # Build phase 6.2, T-6.2-15. Nothing in this sentence is committed to
         # `claims`, `display_slot` or `surviving_sentences` until the whole
         # sentence has been walked, because whether a surviving clause may be
@@ -957,6 +970,38 @@ def run_grounding_pass(
             pending_claims.clear()
             kept_parts.clear()
 
+        # UI fix set 9, item 9.7 (2026-09-13), measured on the live site:
+        #
+        #     BRCA1 (gene symbol BRCA1 [1]. These are familial cancer ...
+        #
+        # The model wrote "BRCA1 (gene symbol BRCA1 [1]) is associated with
+        # the following diseases." The unmarked tail ") is associated with the
+        # following diseases." asserts something and cites nothing, so it was
+        # stripped, and because it was the LAST segment T-6.2-15's
+        # middle-strip rule did not apply. What shipped kept an open
+        # parenthesis and lost the verb, and the next sentence then opened on
+        # "These are" with its antecedent gone.
+        #
+        # Two deterministic rules, both STRICTER, neither changing what a
+        # clause must contain to ground:
+        #
+        # - A surviving sentence whose parentheses do not balance is a
+        #   fragment, and is dropped whole exactly as a middle strip is.
+        # - A surviving sentence that opens on a bare pronoun ("These are",
+        #   "They", "It") is dropped whole when the sentence before it did not
+        #   survive, or when it is the first sentence, because its subject is
+        #   no longer on the page. The findings tail lists what either rule
+        #   removes, so no source is lost with the sentence.
+        if kept_parts:
+            probe = "".join(part for part, _ in kept_parts)
+            if _is_unbalanced_fragment(probe) or (
+                _opens_on_bare_pronoun(probe) and not previous_survived
+            ):
+                stripped += len(pending_claims)
+                pending_claims.clear()
+                kept_parts.clear()
+
+        survived_this = False
         if kept_parts:
             # The display numbers are assigned HERE, on a sentence that is
             # actually going to be shown, so the sequence Section 9.4
@@ -979,6 +1024,9 @@ def run_grounding_pass(
                 rebuilt += "."
             if rebuilt:
                 surviving_sentences.append(rebuilt)
+                surviving_origins.append(sentence_index)
+                survived_this = True
+        previous_survived = survived_this
 
     if core_ask_required and not claims:
         # Step 7: stripping removed the query's core ask. Discard the
@@ -992,7 +1040,39 @@ def run_grounding_pass(
         claims=claims,
         stripped_count=stripped,
         refused=False,
+        sentences=tuple(surviving_sentences),
+        sentence_origins=tuple(surviving_origins),
     )
+
+
+def _is_unbalanced_fragment(text: str) -> bool:
+    """True when a sentence's round brackets do not pair up (item 9.7)."""
+    depth = 0
+    for character in text:
+        if character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth < 0:
+                return True
+    return depth != 0
+
+
+_BARE_PRONOUNS = frozenset({"they", "it"})
+_DEMONSTRATIVES = frozenset({"these", "those", "this"})
+_LINKING_VERBS = frozenset({"are", "is", "were", "was", "include", "includes"})
+
+
+def _opens_on_bare_pronoun(text: str) -> bool:
+    """True for "They ...", "It ...", or a demonstrative used as the subject,
+    "These are ..." or "This includes ...". "These diseases ..." names its
+    subject and is not caught."""
+    words = normalize(text).split()
+    if not words:
+        return False
+    if words[0] in _BARE_PRONOUNS:
+        return True
+    return words[0] in _DEMONSTRATIVES and len(words) > 1 and words[1] in _LINKING_VERBS
 
 
 def display_index_by_citation_id(result: GroundingResult) -> dict[str, int]:

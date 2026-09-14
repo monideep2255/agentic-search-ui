@@ -34,7 +34,7 @@ import { Box, Button, Typography } from "@mui/material";
 import { designTokens, layerColour } from "../../theme";
 import { useElapsedSeconds } from "../../hooks/useElapsedSeconds";
 import { ReasoningLog } from "./ReasoningLog";
-import { PersonaCaption } from "../shell/PersonaChip";
+import { PersonaCaption, PersonaInfo } from "../shell/PersonaChip";
 
 /**
  * The live step's pulse (T-6.2-05).
@@ -71,6 +71,76 @@ export interface ToolCall {
   name: string;
   detail: string;
   layer: 1 | 2 | 3;
+  /**
+   * UI fix set 8 (R30, R31). The call's outcome so far, from its own
+   * frames: "running" until its `tool_result` arrives, then that frame's
+   * status. Optional so every fixture built before this set still
+   * type-checks; absent reads as "running".
+   */
+  status?: "running" | "ok" | "empty" | "error";
+  /** The helper scientist this call was handed to, from the wire. Null or absent: no handoff line. */
+  persona?: string | null;
+  personaAbout?: string | null;
+  personaWikipedia?: string | null;
+}
+
+/** What each helper is doing, by layer: the sentence after the name (R31). */
+export const HANDOFF_NARRATIVE: Record<1 | 2 | 3, string> = {
+  1: "is searching the knowledge graph",
+  2: "is checking live NCBI records",
+  3: "is reading the literature and trials",
+};
+
+export interface HandoffLine {
+  layer: 1 | 2 | 3;
+  name: string;
+  about: string | null;
+  wikipedia: string | null;
+  /** working until every call on the layer has landed; failed when every one errored. */
+  state: "working" | "done" | "failed";
+}
+
+/**
+ * One line per layer the run handed off, in layer order, from the chip list.
+ *
+ * UI fix set 8 (R30). Pure and exported so the derivation carries its own
+ * tests. A layer appears only when at least one of its calls named a
+ * helper, so an older backend that sends no persona yields an empty list
+ * and the screen is exactly what it was before this set. The state is read
+ * off the calls' own statuses, never off the elapsed time or the step:
+ *
+ *   working: at least one call on the layer has not landed
+ *   failed:  every call landed and every one reported an error
+ *   done:    otherwise (at least one landed ok or empty)
+ *
+ * An empty result is "done", not "failed": the scientist looked and found
+ * nothing, which is an answer.
+ */
+export function deriveHandoff(toolCalls: ToolCall[]): HandoffLine[] {
+  const lines: HandoffLine[] = [];
+  for (const layer of [1, 2, 3] as const) {
+    const calls = toolCalls.filter((call) => call.layer === layer);
+    const named = calls.find((call) => typeof call.persona === "string" && call.persona.length > 0);
+    if (!named || typeof named.persona !== "string") continue;
+    const statuses = calls.map((call) => call.status ?? "running");
+    const working = statuses.some((status) => status === "running");
+    const failed = !working && statuses.every((status) => status === "error");
+    lines.push({
+      layer,
+      name: named.persona,
+      about: named.personaAbout ?? null,
+      wikipedia: named.personaWikipedia ?? null,
+      state: working ? "working" : failed ? "failed" : "done",
+    });
+  }
+  return lines;
+}
+
+/** "A, B and C", "A and B", or "A": the lead's handoff sentence (R30). */
+export function handoffSentence(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return `is handing off to ${names[0]}`;
+  return `is handing off to ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 /**
@@ -235,6 +305,15 @@ export function RunProgress({
   const reached = new Set(reachedSteps);
   const elapsed = useElapsedSeconds(startedAt);
   const running = startedAt !== null && activeStep !== null;
+  // UI fix set 8 (R30): the handoff, derived from the chips' own frames.
+  // Shown from Act onward while the run is live; the lead's own caption
+  // reads the handoff sentence during Act only, and returns to "is writing
+  // the answer" on Write, which is the coordinator writing underneath.
+  const handoff = !stopped && activeStep !== null ? deriveHandoff(toolCalls) : [];
+  const leadNarrative =
+    activeStep === "Act" && handoff.length > 0
+      ? handoffSentence(handoff.map((line) => line.name))
+      : null;
 
   return (
     <>
@@ -465,7 +544,110 @@ export function RunProgress({
         step={activeStep ?? null}
         about={personaAbout}
         wikipedia={personaWikipedia}
+        narrative={leadNarrative}
       />
+
+      {/*
+        UI fix set 8 (R30, R31): one line per layer the lead handed off,
+        each with its layer badge and its scientist's info control.
+
+        NO HANDOFF DESIGN EXISTS. Checked `docs/build/design/README.md`'s
+        coverage table, `components/persona.html` (chip and per-step
+        caption only) and `prototype/app.html` (one `.pcap` caption per
+        step, no helpers). Built from the two nearest designed neighbours
+        rather than invented: the persona caption above (`.pcap`: 13.5px
+        muted text, bold ink name, 22px minimum height, the same
+        `PersonaInfo` control) and the layer badge from
+        `identity/layer-badges.html` (`.dot`: a 12px square, 3px radius,
+        filled with the layer colour; `.n`: mono 11px, .06em tracking,
+        bold, in the layer colour). Every value below names its token:
+        `layerColour(n).main` and `.wash` for the badge, `designTokens.ink`,
+        `inkMuted` and `surface` for the text and the working dot,
+        `designTokens.line` for the failed dot's border. Nothing here is a
+        new colour, radius or type size.
+
+        Working versus done is the dot: outlined in the layer colour while
+        the scientist is still working, filled once that layer's results
+        landed, bordered in the line colour with the word "did not answer"
+        when every call on the layer errored. State is exposed as
+        `data-state` so a test reads the fact, not the paint.
+
+        `flexWrap: "wrap"` on each line is what keeps 390px honest: a long
+        name plus the sentence plus the info control drops the sentence
+        under the badge instead of pushing the card past the screen edge.
+      */}
+      {handoff.length > 0 ? (
+        <Box
+          data-testid="handoff"
+          role="list"
+          aria-label="Scientists working on this search"
+          sx={{ display: "flex", flexDirection: "column", gap: 0.75, mt: 1.25 }}
+        >
+          {handoff.map((line) => {
+            const colour = layerColour(line.layer);
+            const filled = line.state === "done";
+            return (
+              <Box
+                key={line.layer}
+                role="listitem"
+                data-testid={`handoff-layer-${line.layer}`}
+                data-state={line.state}
+                sx={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 1.2,
+                  minHeight: 22,
+                  pl: 0.5,
+                }}
+              >
+                <Box
+                  component="span"
+                  aria-hidden="true"
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "3px",
+                    flex: "none",
+                    border: "2px solid",
+                    borderColor: line.state === "failed" ? designTokens.line : colour.main,
+                    bgcolor: filled ? colour.main : designTokens.surface,
+                    transition: "background-color .2s ease",
+                  }}
+                />
+                <Box
+                  component="span"
+                  sx={{
+                    fontFamily: "ui-monospace, monospace",
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    fontWeight: 700,
+                    color: colour.main,
+                    flex: "none",
+                  }}
+                >
+                  L{line.layer}
+                </Box>
+                <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+                  <Box component="b" sx={{ fontWeight: 700, color: designTokens.ink }}>
+                    {line.name}
+                  </Box>{" "}
+                  {HANDOFF_NARRATIVE[line.layer]}
+                  {line.state === "failed" ? " · did not answer" : ""}
+                </Typography>
+                <PersonaInfo
+                  name={line.name}
+                  about={line.about}
+                  wikipedia={line.wikipedia}
+                  variant="onLight"
+                  align="left"
+                />
+              </Box>
+            );
+          })}
+        </Box>
+      ) : null}
 
       {!stopped && toolCalls.length > 0 ? (
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.25, mt: 2.25, alignItems: "center" }}>

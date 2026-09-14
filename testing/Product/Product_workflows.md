@@ -14,7 +14,7 @@ Tip: use a private or incognito window whenever a test says "as a guest". It giv
 - [4. Guest limit of 5 searches (removed)](#4-guest-limit-of-5-searches-removed)
 - [5. Wrong password](#5-wrong-password)
 - [6. Search history](#6-search-history)
-- [7. Answer depth](#7-answer-depth)
+- [7. Answer mode](#7-answer-mode)
 - [8. Off-topic question](#8-off-topic-question)
 - [9. Stop a search](#9-stop-a-search)
 - [10. Feedback on an answer](#10-feedback-on-an-answer)
@@ -44,8 +44,11 @@ Steps: open the site as a guest → tick "I understand this is a research tool�
 Expected:
 
 - A progress screen with five steps and a seconds counter that keeps ticking.
-- Then an answer made of sentences, each with a numbered citation chip, plus source cards.
-- Diseases named in words, such as "Familial cancer of breast", never codes like `MedGen:C0346153`.
+- During the search step, the scientist at the top says "{name} is handing off to {A}, {B} and {C}". Three lines appear under it: "{A} is searching the knowledge graph", "{B} is checking live NCBI records" and "{C} is reading the literature and trials". Each line has an L1, L2 or L3 badge that starts as an outline and fills in when that layer's results arrive. Each helper's name has the same small "i" as the lead's, which opens a card with a Wikipedia link.
+- The answer builds on screen sentence by sentence while the steps are still showing, then settles into short paragraphs, each sentence with its numbered citation chip, plus source cards. Typical time to the answer is 20 to 40 seconds, and never more than 90.
+- The answer never opens on a broken sentence, such as an unclosed bracket or "These are …" with nothing before it.
+- Notes, such as "Note: the records below were retrieved …", read as grey notes after the answer. They never look like an uncited sentence and never come first.
+- Diseases named in words that read naturally, such as "Familial breast-ovarian cancer susceptibility 1", never codes like `MedGen:C0346153` and never "susceptibility to, 1".
 - Clicking a citation or source link opens an ncbi.nlm.nih.gov page for that record.
 
 ## 2. Follow-up questions
@@ -111,20 +114,23 @@ Expected:
 - Guests see no history panel.
 - Reload the page: you stay signed in and both searches are still listed, without logging in again.
 
-## 7. Answer depth
+## 7. Answer mode
 
-Testing: the three depth options change how the answer is written, not what it finds.
+Testing: the two modes change how the answer is written, not what it finds.
 
-Query: `Which diseases are associated with BRCA1?`, asked three times.
+Query: `Which diseases are associated with BRCA1?`, asked twice.
 
-Steps: on the home page choose "Clinical brief" → Search → New search → choose "Researcher" → Search → New search → choose "Deep technical" → Search
+Steps: on the home page check that "Plain language" is selected → click the small "i" beside the mode and read the explanation → Search → while it runs, try to change the mode → New search → choose "Researcher" → Search
 
 Expected:
 
-- Clinical brief: short plain sentences, and no diagnosis or treatment advice.
-- Researcher: normal scientific wording. This is the default.
-- Deep technical: the most detail, with codes like `MedGen:C0346153` shown inline. That is correct at this depth.
-- The same diseases appear at all three depths. A shorter answer must not quietly drop one.
+- Plain language is the default. The "i" explains both modes.
+- Plain language: a short answer in about three paragraphs of everyday words, with no headings, lists or tables. It ends with the grey line "This is a research summary, not medical advice."
+- Researcher: an opening paragraph with key names in bold, short topic headings, then the records found as a bulleted list under a heading, each row with its citation chip. No medical-advice line.
+- The same sources appear in both modes. Compare the source count and the source list.
+- The mode cannot be changed while a search is running. A change applies to the next question.
+- Follow-up question: the handoff lines from test 1 appear again under the new question. The three helper scientists may differ from the first question's, and the lead stays the same.
+- Known limit, to note rather than fail: answers currently run shorter than the targets of about 250 words (Plain language) and a full page (Researcher), because every sentence must be tied to a retrieved record.
 
 ## 8. Off-topic question
 
@@ -194,18 +200,20 @@ Expected:
 
 ## 12. Trust signals and sources
 
-Testing: an answer shows how much to trust each claim.
+Testing: an answer says in one line how much to trust it, and its sources come from more than one layer.
 
-Query: `Which diseases are associated with BRCA1?`
+Query: `Which diseases are associated with BRCA1?`, then `What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?`
 
-Steps: get the answer → read the trust signals next to the claims → open "Show work"
+Steps: get the answer → read the line under the answer → click its "i" → look through the sources → open "Show work"
 
 Expected:
 
-- Each claim shows its trust signals, such as confidence and evidence.
-- A claim backed by only one source says "Single source, not independently confirmed".
+- Under the answer, one plain line such as "Based on 4 sources, not yet confirmed" or "Confirmed by 2 independent sources", with an "i" that explains how sources are counted. No row of pills, and no two trust signals that contradict each other: the status word says "Answered" when the line carries the caution.
+- A high-risk claim adds "High-risk claim" in red on the same line.
+- Sources come from more than one layer: live NCBI gene records (L2), the literature record from PubTator3 (L3), and up to five clinical trials from clinicaltrials.gov (L3). For the EGFR question, the trials shown are recruiting ones.
+- A trial source names clinicaltrials.gov and its NCT number, and opens that trial's page.
 - Any sentence with no source is shown in grey with no citation chip. It must never look like a cited claim.
-- "Show work" shows the steps and tools the search used.
+- "Show work" shows the steps and tools the search used, including the literature and trials tools.
 
 ## 13. Suggested next step and missing-information notes
 
@@ -234,7 +242,8 @@ Expected:
 - A scientist's name, which may differ between visits.
 - The "i" opens a small card with one or two lines on what the scientist did, and a "Learn more on Wikipedia" link that opens their Wikipedia page in a new tab.
 - The card closes with Escape or a click elsewhere.
-- The answer is the same whichever name is shown.
+- During each search, three helper scientists appear on the progress screen, one per layer, never the lead scientist. Their "i" cards work the same way. They may differ on every search, even in the same window.
+- The answer, and its list of sources, are the same whichever names are shown.
 
 ## 15. The disclaimer
 

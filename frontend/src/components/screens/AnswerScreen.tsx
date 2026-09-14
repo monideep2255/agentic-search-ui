@@ -33,6 +33,7 @@ import { designTokens, layerColour } from "../../theme";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
 import { FeedbackSurface } from "../feedback/FeedbackSurface";
+import { PersonaInfo } from "../shell/PersonaChip";
 
 export type Layer = 1 | 2 | 3;
 
@@ -48,6 +49,52 @@ export interface Claim {
    * dropped the rest (F-4.8-J-14, made routine by F-4.8-A-04).
    */
   citations: number[];
+  /*
+   * UI fix set 9. All optional, all read from the token's typed `kind` on the
+   * wire, so a claim from an older producer renders exactly as before.
+   *
+   * `kind`: a prose sentence, or a code-built list item or table row.
+   * `paragraph`: which paragraph the sentence belongs to; present means the
+   *   answer is structured and renders as paragraphs rather than one row per
+   *   sentence.
+   * `heading`, `noteBefore`: a heading or a system note that stands directly
+   *   before this claim.
+   * `cells`: the display values of a list item (one) or table row (two).
+   * `emphasis`: substrings of `text` to bold, chosen in code by the backend.
+   * `tableHeader`: the column labels, on the first row of a table.
+   */
+  kind?: "claim" | "list_item" | "table_row";
+  paragraph?: number;
+  heading?: string;
+  noteBefore?: string;
+  cells?: string[];
+  emphasis?: string[];
+  tableHeader?: string[];
+}
+
+/** What the trust line's info card says (item 9.9). */
+export const TRUST_LINE_EXPLAINER =
+  "Sources are counted by the database each record comes from, so twenty records from one " +
+  "database are one source. Confirmed means two independent databases agree on the same " +
+  "high-stakes fact. Not yet confirmed means a high-stakes fact rests on a single source.";
+
+/** Bold the backend's chosen terms, matched exactly as it spelled them. */
+function withEmphasis(text: string, emphasis?: string[]): React.ReactNode {
+  const terms = (emphasis ?? []).filter((term) => term.length > 0);
+  if (terms.length === 0) return text;
+  const escaped = [...terms]
+    .sort((a, b) => b.length - a.length)
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const pattern = new RegExp(`(${escaped.join("|")})`, "g");
+  return text.split(pattern).map((part, i) =>
+    terms.includes(part) ? (
+      <Box key={i} component="strong" sx={{ fontWeight: 700 }}>
+        {part}
+      </Box>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  );
 }
 
 export interface Source {
@@ -497,6 +544,13 @@ export interface AnswerBodyProps extends AnswerBodyContent {
    * folded turn would point the tour at an archived answer.
    */
   tour?: boolean;
+  /**
+   * UI fix set 9, item 9.6: the run is still writing this answer.
+   *
+   * Only the claims render, as they arrive. Sources, notes and the trust
+   * line belong to a finished answer and wait for the run to land.
+   */
+  streaming?: boolean;
 }
 
 /**
@@ -554,6 +608,7 @@ export function AnswerBody({
   flaggedSources = [],
   testIdPrefix = "",
   tour = false,
+  streaming = false,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
@@ -590,6 +645,264 @@ export function AnswerBody({
     const source = sourceByIndex.get(n);
     if (!source) return null;
     return source.name.replace(/^NCBI\s+/i, "");
+  };
+
+  /** One claim's spine segment. `grow` shares a paragraph's height evenly. */
+  const spineSegment = (claim: Claim, index: number, grow = false) => (
+    <Box
+      key={index}
+      aria-hidden="true"
+      data-testid={`${testIdPrefix}spine-segment-${index}`}
+      data-layer={claim.layer ?? "none"}
+      sx={{
+        width: 6,
+        mx: "auto",
+        borderRadius: 1,
+        alignSelf: "stretch",
+        ...(grow ? { flex: 1 } : {}),
+        bgcolor: layerColour(claim.layer).main,
+      }}
+    />
+  );
+
+  /** The screen-reader source list and the chips for one claim. */
+  const citationChips = (claim: Claim, index: number) => (
+    <>
+      {/*
+        F-4.9-A-04. Each source names its own layer for assistive technology;
+        the spine is decorative, so the meaning is carried here (WCAG 1.4.1).
+      */}
+      <Box component="span" sx={visuallyHidden}>
+        {claim.citations.length === 0
+          ? "This sentence has no source."
+          : claim.citations
+              .map((n) => `Source ${n}, layer ${sourceByIndex.get(n)?.layer ?? claim.layer}`)
+              .join("; ") + "."}
+      </Box>
+      {claim.citations.map((n, position) => (
+        <Box
+          key={n}
+          component="span"
+          data-testid={`${testIdPrefix}citation-${n}`}
+          data-claim={index}
+          data-layer={sourceByIndex.get(n)?.layer ?? claim.layer}
+          aria-label={`Source ${n}`}
+          role="note"
+          sx={{
+            ...mono,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.6,
+            fontSize: 11.5,
+            fontWeight: 600,
+            lineHeight: 1.7,
+            px: 0.75,
+            borderRadius: 0.5,
+            border: `1px solid ${designTokens.lineStrong}`,
+            borderLeft: `4px solid ${layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).main}`,
+            bgcolor: layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).wash,
+            ml: position === 0 ? 0 : 0.5,
+          }}
+        >
+          {n}
+          {shortLabel(n) ? (
+            <Box component="span" sx={{ color: designTokens.inkMuted, fontWeight: 400 }}>
+              {shortLabel(n)}
+            </Box>
+          ) : null}
+        </Box>
+      ))}
+    </>
+  );
+
+  /*
+   * UI FIX SET 9: THE STRUCTURED ANSWER (items 9.3 to 9.5, 9.8, 9.10).
+   *
+   * A claim that carries `paragraph` came from a typed token stream, so the
+   * answer renders as the backend structured it: consecutive sentences of one
+   * paragraph flow as prose in one grid row, a heading or an inline note is a
+   * row of its own, and a code-built listing is a list or a table. Every claim
+   * keeps its own spine segment (stacked within its block) and its own
+   * `claim-text-N` hook, so the spine still has exactly one segment per claim.
+   *
+   * DESIGN SOURCES, per `design-consistency`. The prose, bold and heading
+   * values are the prototype's `.answer p`, `.answer p strong` and `.answer
+   * .ah` rules; the table is its `.rtab`. DESIGN GAP, named: no card or
+   * prototype rule styles a bulleted list inside an answer. The list uses the
+   * body text of `.answer p` with the browser's own marker and the 6px gap
+   * the refusal block already uses, introducing no new value.
+   */
+  const structured = claims.some((claim) => claim.paragraph !== undefined);
+  type AnswerBlock =
+    | { type: "heading"; text: string; key: string }
+    | { type: "note"; text: string; key: string }
+    | {
+        type: "claim" | "list_item" | "table_row";
+        paragraph: number;
+        key: string;
+        items: { claim: Claim; index: number }[];
+      };
+  const blocks: AnswerBlock[] = [];
+  if (structured) {
+    claims.forEach((claim, index) => {
+      if (claim.noteBefore) blocks.push({ type: "note", text: claim.noteBefore, key: `note-${index}` });
+      if (claim.heading) blocks.push({ type: "heading", text: claim.heading, key: `heading-${index}` });
+      const type = claim.kind ?? "claim";
+      const paragraphNo = claim.paragraph ?? 0;
+      const last = blocks[blocks.length - 1];
+      if (last && last.type === type && "items" in last && last.paragraph === paragraphNo) {
+        last.items.push({ claim, index });
+      } else {
+        blocks.push({ type, paragraph: paragraphNo, key: `block-${index}`, items: [{ claim, index }] });
+      }
+    });
+  }
+  const tableCell = {
+    textAlign: "left",
+    p: "8px 11px",
+    borderBottom: `1px solid ${designTokens.line}`,
+    verticalAlign: "top",
+  } as const;
+  let headingNumber = 0;
+  let noteNumber = 0;
+  const renderBlock = (block: AnswerBlock) => {
+    if (block.type === "heading") {
+      return (
+        <Fragment key={block.key}>
+          <Box aria-hidden="true" />
+          <Typography
+            component="h2"
+            data-testid={`${testIdPrefix}answer-heading-${headingNumber++}`}
+            sx={{
+              fontSize: 11.5,
+              letterSpacing: "0.13em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+              color: designTokens.inkFaint,
+              mt: headingNumber === 1 ? 0 : 1.5,
+              mb: 0,
+              pb: "7px",
+              borderBottom: `1px solid ${designTokens.line}`,
+            }}
+          >
+            {block.text}
+          </Typography>
+        </Fragment>
+      );
+    }
+    if (block.type === "note") {
+      return (
+        <Fragment key={block.key}>
+          <Box aria-hidden="true" />
+          <Typography
+            data-testid={`${testIdPrefix}answer-inline-note-${noteNumber++}`}
+            sx={{ fontSize: 13.5, color: designTokens.inkMuted, maxWidth: "66ch" }}
+          >
+            {block.text}
+          </Typography>
+        </Fragment>
+      );
+    }
+    const spine = (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: "3px", alignSelf: "stretch" }}>
+        {block.items.map(({ claim, index }) => spineSegment(claim, index, true))}
+      </Box>
+    );
+    if (block.type === "list_item") {
+      return (
+        <Fragment key={block.key}>
+          {spine}
+          <Box
+            component="ul"
+            sx={{ m: 0, pl: 2.5, display: "flex", flexDirection: "column", gap: 0.75 }}
+          >
+            {block.items.map(({ claim, index }) => (
+              <Box
+                component="li"
+                key={index}
+                data-testid={`${testIdPrefix}claim-text-${index}`}
+                sx={{ maxWidth: "66ch" }}
+              >
+                {claim.cells?.[0] ?? claim.text} {citationChips(claim, index)}
+              </Box>
+            ))}
+          </Box>
+        </Fragment>
+      );
+    }
+    if (block.type === "table_row") {
+      const header = block.items[0]?.claim.tableHeader;
+      return (
+        <Fragment key={block.key}>
+          {spine}
+          <Box sx={{ overflowX: "auto" }}>
+            <Box
+              component="table"
+              data-testid={`${testIdPrefix}answer-table`}
+              sx={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 13.5,
+                border: `1px solid ${designTokens.line}`,
+                bgcolor: designTokens.surface,
+              }}
+            >
+              {header ? (
+                <thead>
+                  <tr>
+                    {header.map((label) => (
+                      <Box
+                        component="th"
+                        key={label}
+                        scope="col"
+                        sx={{
+                          ...tableCell,
+                          fontSize: 10.5,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: designTokens.inkFaint,
+                          bgcolor: designTokens.surfaceSunk,
+                        }}
+                      >
+                        {label}
+                      </Box>
+                    ))}
+                  </tr>
+                </thead>
+              ) : null}
+              <tbody>
+                {block.items.map(({ claim, index }) => (
+                  <Box
+                    component="tr"
+                    key={index}
+                    data-testid={`${testIdPrefix}claim-text-${index}`}
+                  >
+                    <Box component="td" sx={{ ...tableCell, ...mono, fontSize: 12.5 }}>
+                      {claim.cells?.[0] ?? claim.text}
+                    </Box>
+                    <Box component="td" sx={tableCell}>
+                      {claim.cells?.[1] ?? ""} {citationChips(claim, index)}
+                    </Box>
+                  </Box>
+                ))}
+              </tbody>
+            </Box>
+          </Box>
+        </Fragment>
+      );
+    }
+    return (
+      <Fragment key={block.key}>
+        {spine}
+        <Typography component="p" sx={{ maxWidth: "66ch", m: 0 }}>
+          {block.items.map(({ claim, index }) => (
+            <Box component="span" key={index} data-testid={`${testIdPrefix}claim-text-${index}`}>
+              {withEmphasis(claim.text, claim.emphasis)} {citationChips(claim, index)}{" "}
+            </Box>
+          ))}
+        </Typography>
+      </Fragment>
+    );
   };
 
   return (
@@ -730,9 +1043,6 @@ export function AnswerBody({
       {capMessage ? (
         <Notice testId={`${testIdPrefix}answer-cap`} tone="warn" text={capMessage} />
       ) : null}
-      {systemNotes.map((note, i) => (
-        <Notice key={i} testId={`${testIdPrefix}answer-note-${i}`} tone="warn" text={note} />
-      ))}
 
       {/*
         The provenance spine runs beside the prose, one segment per claim.
@@ -762,6 +1072,7 @@ export function AnswerBody({
       <Box
         {...(tour ? { "data-tour": "citations" } : {})}
         data-testid={`${testIdPrefix}claims`}
+        aria-live={streaming ? "polite" : undefined}
         sx={{
           display: "grid",
           gridTemplateColumns: "14px 1fr",
@@ -770,7 +1081,8 @@ export function AnswerBody({
           alignItems: "stretch",
         }}
       >
-          {claims.map((claim, index) => (
+          {structured ? blocks.map(renderBlock) : null}
+          {structured ? null : claims.map((claim, index) => (
             <Fragment key={index}>
               {/*
                 F-4.8-A-16. This was `aria-hidden`, so the provenance spine,
@@ -865,12 +1177,33 @@ export function AnswerBody({
       </Box>
 
       {/*
+        UI fix set 9, item 9.8: disclosures render AFTER the answer they
+        qualify, as quiet grey notes, never as amber boxes above the first
+        sentence. Colour and size are the refusal explanation's (`inkMuted`,
+        13.5px), the nearest designed neighbour for text about an answer.
+      */}
+      {!streaming && systemNotes.length > 0 ? (
+        <Box sx={{ mt: 2.5, display: "flex", flexDirection: "column", gap: 0.75 }}>
+          {systemNotes.map((note, i) => (
+            <Typography
+              key={i}
+              role="status"
+              data-testid={`${testIdPrefix}answer-note-${i}`}
+              sx={{ fontSize: 13.5, color: designTokens.inkMuted, maxWidth: "66ch" }}
+            >
+              {note}
+            </Typography>
+          ))}
+        </Box>
+      ) : null}
+
+      {/*
         F-4.8-D-01. The sources were always expanded, every field of every
         card at once, so a six-source answer became a wall and the sources
         stopped being scannable. The prototype collapses them behind one
         disclosure carrying the count, and collapses each card inside it.
       */}
-      {sources.length > 0 ? (
+      {sources.length > 0 && !streaming ? (
         <Box
           component="details"
           data-testid={`${testIdPrefix}sources-disclosure`}
@@ -1117,55 +1450,71 @@ export function AnswerBody({
         </Box>
       ) : null}
 
-      {trust.length > 0 ? (
+      {/*
+        UI fix set 9, item 9.9 (decision U1): ONE PLAIN LINE, not a row of
+        pills. Each signal is a span in one sentence-like line, separated by
+        a middle dot, with the info card explaining how sources are counted.
+        A high-risk span keeps the risk colour, the one place red appears
+        (`trust-pills.html`'s note), so it stays visible. The green check
+        stays on a confirmed line only; the label reads in ink, because the
+        design's green on white text is the pair F-4.9 measured below AA.
+        Sizes are the pills' own (12.5px) and the refusal explanation's
+        colour; no new value.
+      */}
+      {trust.length > 0 && !streaming ? (
         <Box
           role="status"
           aria-label="Trust signals"
-          sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2.5 }}
+          data-testid={`${testIdPrefix}trust-line`}
+          sx={{
+            position: "relative",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 0.75,
+            mt: 2.5,
+            fontSize: 12.5,
+            color: designTokens.inkMuted,
+          }}
         >
-          {trust.map((signal) => {
-            // The "good" pill's own design-system pair fails WCAG AA: ok
-            // (#2E8540) on layer2Wash (#E6F2E8) measures 4.01:1 against a
-            // 4.5:1 requirement. The risk pill passes at 7.05:1, so this is
-            // specific to the green, which is a lighter hue than the red.
-            //
-            // Fixed by reading the LABEL in ink while the border, the wash
-            // and the check mark keep carrying the green. No new colour is
-            // introduced and no token is changed, because the design system
-            // is frozen for this phase. Recorded as a finding for the next
-            // design pass, which should resolve it at the token level, since
-            // this pair is stated in the design system itself.
-            const palette =
-              signal.kind === "good"
-                ? { fg: designTokens.ink, bg: designTokens.layer2Wash, border: designTokens.ok }
-                : signal.kind === "risk"
-                  ? { fg: designTokens.risk, bg: designTokens.riskWash, border: designTokens.risk }
-                  : {
-                      fg: designTokens.inkMuted,
-                      bg: designTokens.surfaceSunk,
-                      border: designTokens.line,
-                    };
-            return (
+          {trust.map((signal, position) => (
+            <Fragment key={signal.label}>
+              {position > 0 ? (
+                <Box component="span" aria-hidden="true">
+                  ·
+                </Box>
+              ) : null}
               <Box
-                key={signal.label}
+                component="span"
                 data-testid={`${testIdPrefix}trust-${signal.kind}`}
                 sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  borderRadius: 999,
-                  px: 1.5,
-                  py: 0.5,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  color: palette.fg,
-                  bgcolor: palette.bg,
-                  border: `1px solid ${palette.border}`,
+                  fontWeight: signal.kind === "plain" ? 400 : 600,
+                  color:
+                    signal.kind === "risk"
+                      ? designTokens.risk
+                      : signal.kind === "good"
+                        ? designTokens.ink
+                        : designTokens.inkMuted,
                 }}
               >
+                {signal.kind === "good" ? (
+                  <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
+                    ✓
+                  </Box>
+                ) : null}
                 {signal.label}
               </Box>
-            );
-          })}
+            </Fragment>
+          ))}
+          <Box component="span" sx={{ position: "relative", display: "inline-flex" }}>
+            <PersonaInfo
+              name="Trust signals"
+              about={TRUST_LINE_EXPLAINER}
+              wikipedia={null}
+              variant="onLight"
+              align="left"
+            />
+          </Box>
         </Box>
       ) : null}
     </Box>
@@ -1502,7 +1851,15 @@ export function AnswerScreen({
         */}
         <Box sx={{ mt: 2.5 }}>
           {running ? (
-            progress
+            <>
+              {progress}
+              {/* UI fix set 9, item 9.6: the answer builds under the progress. */}
+              {claims.length > 0 ? (
+                <Box data-testid="streaming-answer" sx={{ mt: 2.5 }}>
+                  <AnswerBody streaming claims={claims} sources={sources} />
+                </Box>
+              ) : null}
+            </>
           ) : (
             <>
               <AnswerBody

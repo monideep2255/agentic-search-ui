@@ -339,7 +339,8 @@ describe("App", () => {
     expect(createRunMock).toHaveBeenCalledWith(
       expect.objectContaining({
         text: "Which diseases are associated with BRCA1?",
-        audience_depth: "researcher",
+        // UI fix set 9, item 9.1: Plain language is the default mode.
+        audience_depth: "plain_language",
       }),
       "guest-token-1",
     );

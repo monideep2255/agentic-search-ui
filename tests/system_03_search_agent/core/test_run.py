@@ -133,6 +133,30 @@ def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _stub_layer3_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """UI fix set 8 (R29): a gene question now also plans pubtator_annotate
+    and clinicaltrials_search. Stubbed to genuine "empty" outputs, the same
+    discipline as `_stub_ncbi_efetch_dispatch` above, so no test here ever
+    reaches the network blocker and no pre-existing assertion about
+    citations or trust changes (an empty finding contributes nothing).
+    """
+    from system_03_search_agent.core import graph as graph_module
+    from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+        ClinicalTrialsSearchOutput,
+    )
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateOutput
+
+    async def _fake_pubtator(tool_input: object, **kwargs: object) -> PubtatorAnnotateOutput:
+        return PubtatorAnnotateOutput(status="empty", mode="entity_lookup")
+
+    async def _fake_trials(tool_input: object, **kwargs: object) -> ClinicalTrialsSearchOutput:
+        return ClinicalTrialsSearchOutput(status="empty")
+
+    monkeypatch.setattr(graph_module, "pubtator_annotate", _fake_pubtator)
+    monkeypatch.setattr(graph_module, "clinicaltrials_search", _fake_trials)
+
+
+@pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     # T-3.0-06: dispatches per tier. See `tests/system_03_search_agent/
     # model_stub.py` for why a single fixed response stopped working the
@@ -336,14 +360,16 @@ async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_quer
     tool_calls = plan_event.payload["tool_calls"]
     # T-3.4-05: BRCA1 resolves to a Gene CURIE, so plan_node also selects
     # ncbi_efetch as a second, Layer 2 call (stubbed to a genuine "empty"
-    # result by the autouse `_stub_ncbi_efetch_dispatch` fixture).
-    assert len(tool_calls) == 2
+    # result by the autouse `_stub_ncbi_efetch_dispatch` fixture). UI fix
+    # set 8 (R29): plus pubtator_annotate and clinicaltrials_search on
+    # Layer 3, stubbed "empty" by `_stub_layer3_dispatch`, so four in all.
+    assert len(tool_calls) == 4
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 
     done_event = events[-1]
     assert done_event.type == "done"
-    assert done_event.payload["total_tool_calls"] == 2
+    assert done_event.payload["total_tool_calls"] == 4
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:
@@ -359,14 +385,14 @@ async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answe
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    # T-3.4-05: see the sibling test_run_ (non-streaming) test above.
-    assert len(tool_calls) == 2
+    # T-3.4-05 and UI fix set 8: see the sibling non-streaming test above.
+    assert len(tool_calls) == 4
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 
     done_event = events[-1]
     assert done_event.type == "done"
-    assert done_event.payload["total_tool_calls"] == 2
+    assert done_event.payload["total_tool_calls"] == 4
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:

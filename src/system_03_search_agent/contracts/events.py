@@ -134,6 +134,18 @@ class ToolCall(BaseModel):
     tool: ToolName
     call_id: str = Field(..., max_length=64)
     layer: Layer
+    # UI fix set 8, item 8.2 (2026-09-13). The helper scientist this call is
+    # handed to on the progress screen: one name per data layer, drawn per
+    # run from the curated list excluding the session's lead, so the screen
+    # can read "Franklin is searching the knowledge graph". ADDITIVE and
+    # OPTIONAL, default None, so every consumer and every fixture built
+    # before this field validates unchanged (Section 2.6). PRESENTATION
+    # ONLY: `harness.coordinator_worker` copies only `call_id`, `tool` and
+    # `layer` onto a `Finding`, so the name can never reach a synthesis
+    # prompt or a grounding pass, and a test pins that.
+    persona: str | None = Field(None, max_length=64)
+    persona_about: str | None = Field(None, max_length=160)
+    persona_wikipedia: str | None = Field(None, max_length=256)
 
 
 class PlanPayload(BaseModel):
@@ -186,6 +198,14 @@ class ToolStartPayload(BaseModel):
     # word for the chip's detail text since build phase 4.8, against an event
     # nothing had ever emitted.
     status: Literal["running", "ok", "empty", "error"]
+    # UI fix set 8, item 8.2 (2026-09-13). The same helper the planned
+    # `ToolCall` carries, repeated on the start frame (and therefore on the
+    # result frame, which inherits it) so a surface that builds its tool
+    # chips from these two frames alone can name the scientist without
+    # joining back to the plan event. Optional, default None, additive.
+    persona: str | None = Field(None, max_length=64)
+    persona_about: str | None = Field(None, max_length=160)
+    persona_wikipedia: str | None = Field(None, max_length=256)
 
 
 class ToolResultPayload(ToolStartPayload):
@@ -211,6 +231,34 @@ class TokenPayload(BaseModel):
 
     text: str = Field(..., max_length=1000)
     marker_ids: list[str] = Field(default_factory=list, max_length=20)
+    # UI fix set 9, items 9.4 to 9.10 (2026-09-13). Additive and optional per
+    # Section 2.6, so every token built before this validates unchanged and
+    # a surface that joins `text` still reads the answer as prose.
+    #
+    # `kind` says what the chunk IS, so a surface never has to guess from
+    # its wording: a grounded `claim`, a system `note` (never a claim), a
+    # `heading` or `paragraph_break` (structure, never counted as a claim),
+    # or a code-built `list_item`, `table_header` or `table_row`, each of
+    # which carries a grounded sentence and its marker in `text` and the
+    # display values in `cells`. None means an older producer: classify as
+    # before. `emphasis` names substrings of `text` to bold, chosen in code
+    # from the run's own resolved entities and record values.
+    kind: (
+        Literal[
+            "claim",
+            "note",
+            "heading",
+            "paragraph_break",
+            "list_item",
+            "table_header",
+            "table_row",
+        ]
+        | None
+    ) = None
+    cells: list[Annotated[str, Field(max_length=500)]] | None = Field(None, max_length=2)
+    emphasis: list[Annotated[str, Field(max_length=200)]] | None = Field(
+        None, max_length=12
+    )
 
 
 class CitationPayload(BaseModel):
@@ -337,6 +385,15 @@ class DonePayload(BaseModel):
     total_tool_calls: int = Field(..., ge=0)
     elapsed_ms: int = Field(..., ge=0)
     trust_outcome: TrustOutcome
+
+    # UI fix set 9, item 9.9 (2026-09-13). The one plain trust line for the
+    # answer ("Based on 1 source, not yet confirmed"), built in code by
+    # `synthesis.trust.answer_trust_line` from the verdicts `trust_outcome`
+    # already summarises. Additive and optional; None on a refusal. Carried
+    # HERE rather than on `TrustSignalPayload` because the MCP surface
+    # projects that model whole under a pinned key allowlist, and a trust
+    # line is a statement about the finished answer, which is this event.
+    trust_line: Annotated[str | None, Field(default=None, max_length=200)] = None
 
     next_step: Annotated[str | None, Field(default=None, max_length=200)] = None
     """An offer of somewhere to go next, or None when there is nowhere honest.

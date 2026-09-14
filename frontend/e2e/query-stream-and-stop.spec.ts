@@ -311,6 +311,83 @@ test.describe("query stream and stop", () => {
     await expect(page.getByTestId("step-Think")).toHaveCount(0);
   });
 
+  /**
+   * UI fix set 9, item 9.6: Stop works while the answer is visibly streaming.
+   *
+   * The e2e backend emits no claim token before a run ends, so the claims are
+   * scripted into the event stream the page reads, and the stream closes with
+   * NO terminal event, which leaves the run live exactly as a slow Write step
+   * does. The run itself is real and still running on the server (the slow
+   * marker), so the server-side proof is the same `task_cancelled` poll as
+   * the arm above.
+   *
+   * Three things are asserted: the answer builds on screen before the run
+   * lands; Stop is offered and works from that screen; and after Stop the
+   * partial answer is gone and the stopped block says no answer was written.
+   */
+  test("stop works while the answer is streaming in", async ({ page, request }) => {
+    const streamFrame = (seq: number, type: string, payload: unknown): string =>
+      `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+        type, version: "v1", trace_id: "stop-mid-stream", seq,
+        ts: "2026-09-13T00:00:00Z", payload,
+      })}\n\n`;
+    const partialStream = [
+      streamFrame(0, "guard", { passed: true, category: "ok", reason: null }),
+      streamFrame(1, "think", {
+        narrative: "Resolving the gene.", query_class: "single_hop",
+        resolved_entities: [], clarifying_question: null,
+      }),
+      streamFrame(2, "plan", { narrative: "Query the graph.", tool_calls: [] }),
+      streamFrame(3, "token", {
+        text: "BRCA1 is associated with familial cancer of breast [1]. ",
+        marker_ids: ["cid-1"], kind: "claim",
+      }),
+      streamFrame(4, "token", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+      streamFrame(5, "token", {
+        text: "It is a tumour suppressor gene [2]. ", marker_ids: ["cid-2"], kind: "claim",
+      }),
+    ].join("");
+
+    await signUpFreshAccount(page);
+    let runId: string | null = null;
+    await page.route("**/v1/query/*/events*", (route) => {
+      const match = /\/v1\/query\/([^/]+)\/events/.exec(route.request().url());
+      runId = match?.[1] ?? null;
+      return route.fulfill({
+        status: 200,
+        headers: { "content-type": "text/event-stream", "cache-control": "no-cache" },
+        body: partialStream,
+      });
+    });
+
+    await ask(page, `${SLOW_QUERY_MARKER} which diseases are associated with BRCA1?`);
+
+    const streaming = page.getByTestId("streaming-answer");
+    await expect(streaming).toBeVisible({ timeout: 30_000 });
+    await expect(streaming).toContainText("familial cancer of breast");
+    await expect(page.getByTestId("answer-meta")).toHaveCount(0);
+
+    const stop = page.getByRole("button", { name: /^stop$/i });
+    await expect(stop).toBeEnabled();
+    await stop.click();
+
+    await expect(page.getByTestId("run-stopped")).toBeVisible();
+    await expect(page.getByTestId("run-stopped")).toContainText("Search stopped");
+    await expect(page.getByTestId("streaming-answer")).toHaveCount(0);
+
+    expect(runId, "the page must have opened the run's event stream").not.toBeNull();
+    await expect
+      .poll(
+        async () => {
+          const statusResponse = await request.get(`${BACKEND_URL}/__e2e__/run_status/${runId}`);
+          const body = (await statusResponse.json()) as { task_cancelled: boolean };
+          return body.task_cancelled;
+        },
+        { message: "server-side run task never reported cancelled", timeout: 10_000 },
+      )
+      .toBe(true);
+  });
+
   test("stop stops being offered once the run has finished", async ({ page }) => {
     // Preserved from StopButton's own 19-test contract: stop disables on any
     // terminal event. The first version of phase 4.8's run screen offered stop
