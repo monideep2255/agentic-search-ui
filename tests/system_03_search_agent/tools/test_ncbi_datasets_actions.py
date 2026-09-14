@@ -568,3 +568,72 @@ async def test_over_long_genome_assembly_name_is_capped() -> None:
     assert output.status == "ok"
     assert output.records[0].fields["assembly_info.assembly_name"].endswith("[truncated]")
     assert output.records[0].fields["assembly_info.assembly_level"] == "Chromosome"
+
+
+# ===========================================================================
+# UI fix set 11 (search breadth, 2026-09-14): the gene record keeps its
+# RefSeq `summary`, bounded like every other free-text field.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_gene_summary_is_kept_when_present() -> None:
+    """Valid input: the summary paragraph reaches the record's fields."""
+    body = json.dumps(
+        {
+            "reports": [
+                {
+                    "gene": {
+                        "gene_id": "672",
+                        "symbol": "BRCA1",
+                        "summary": "This gene encodes a nuclear phosphoprotein.",
+                        "gene_ontology": {"biological_processes": [{"name": "DNA repair"}]},
+                    }
+                }
+            ]
+        }
+    )
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="672"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    fields = output.records[0].fields
+    assert fields["summary"] == "This gene encodes a nuclear phosphoprotein."
+    # GO terms stay beside it; the fix set makes them citeable elsewhere.
+    assert fields["gene_ontology"]["biological_processes"][0]["name"] == "DNA repair"
+    assert "summary" in ncbi_datasets_actions._GENE_REPORT_FIELDS
+
+
+@pytest.mark.asyncio
+async def test_over_long_gene_summary_is_capped() -> None:
+    """Invalid (hostile-length) input: the summary is bounded before it can
+    reach a prompt, the same cap `description` already has.
+    """
+    body = json.dumps({"reports": [{"gene": {"gene_id": "672", "summary": "x" * 9000}}]})
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="672"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    summary = output.records[0].fields["summary"]
+    assert len(summary) <= ncbi_datasets_actions._MAX_FIELD_VALUE_CHARS + len(" [truncated]")
+    assert summary.endswith("[truncated]")
+
+
+@pytest.mark.asyncio
+async def test_gene_without_a_summary_has_no_summary_key() -> None:
+    """Null input: a record with no summary upstream gets no invented one."""
+    body = json.dumps({"reports": [{"gene": {"gene_id": "672", "symbol": "BRCA1"}}]})
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="672"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert "summary" not in output.records[0].fields
