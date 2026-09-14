@@ -35,7 +35,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | ✅ | 🚀 | 👍 | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | 🚀 | 👍 | Tests 11, 15 |
 | 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | ✅ | 🚀 | | Nothing |
-| 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen | ✅ | 🚀 | | Tests 2, 13 |
+| 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | | Tests 2, 13 |
 | 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | | | | Tests 1, 7, 12 |
 | 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken | | | | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
@@ -403,6 +403,22 @@ Built: ✅ · Live: 🚀 · Approved:
 - Feature being tested: asking a follow-up feels like a conversation, not a new page.
 - What you noted: "Secondly, it goes to a new page, which it should not. The first answer should minimise and the chat should continue on the same screen. That is one of the most important things."
 - What's expected: the earlier answer shrinks above and the new answer grows below, on one screen, checked in test 2.
+
+### 7.4 A folded turn keeps the whole earlier answer, with room between turns (R22 retest)
+
+Built: · Live: · Approved:
+
+- Feature being tested: opening a folded earlier turn shows everything that answer had: its status line, notes, every claim with its chips, the full source cards, the trust pills and Show work.
+- What you noted (retest of 2026-09-13): "The formatting and spacing between the answers is way off. Improve the spacing. Also in the folded answer the sources and everything else run previously must still be visible. Basically, the previous answer with all sources must be retained, think of threads that enter the drop down like structure."
+- What's expected: a folded row opens to the complete earlier answer, unchanged from when it was live, and there is clear space between the folded rows and the new question's heading, checked in test 2.
+
+### 7.5 A follow-up that refers to nothing asks for the missing detail (R20 retest)
+
+Built: · Live: · Approved:
+
+- Feature being tested: "What variants cause it?" with nothing earlier to point at asks which gene or condition you mean, instead of refusing.
+- What you noted (retest of 2026-09-13): "Also the follow up must retain context or ask clarification if the question is not clear. Because if this is a discussion, it must flow."
+- What's expected: with an earlier answer, the follow-up uses it; without one, the screen says one more detail is needed and names it, with the follow-up field ready, checked in test 2.
 
 ## Set 8: search every layer, with the scientists
 

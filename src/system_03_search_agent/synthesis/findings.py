@@ -582,7 +582,8 @@ values share a prefix, such as a transcript in front of each variant \
 name, repeat the whole value every time rather than writing the prefix \
 once and listing the remainders, and never pack several findings' values \
 into one sentence: a value that is not quoted whole is deleted by the \
-code check, and so is every other value in the same sentence.
+code check, and so is every other value in the same sentence. Write the \
+value as plain text, never inside quotation marks.
 4. Use only the identifiers the question and the findings give you. Never \
 substitute a name you happen to know for an identifier you were given: if \
 the question says NCBIGene:672, write NCBIGene:672, not the gene symbol \

@@ -452,7 +452,7 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -1583,11 +1583,21 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # Only the wait ceiling moves; the Section 21.3 call COUNT is the same
     # 20 for every class.
     call_budget.set_query_class(query_class)
+    clarification = (
+        CLARIFICATION_QUESTION
+        if _needs_clarification(
+            query.text,
+            state,
+            [entity.curie for entity in resolved_entities],
+            model_resolution.unresolved_symbols,
+        )
+        else None
+    )
     think_payload = ThinkPayload(
         narrative=classification.narrative,
         query_class=query_class,
         resolved_entities=resolved_entities[:20],
-        clarifying_question=None,
+        clarifying_question=clarification,
     )
     sink.emit("think", think_payload)
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "plan"))
@@ -1601,6 +1611,9 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         # `write_node` reads this key exactly as before this phase; only
         # which node sets it changed.
         result["unresolved_entity_symbols"] = model_resolution.unresolved_symbols
+    if clarification is not None:
+        # Item 7.5. Plan selects no tool and Write asks the question.
+        result["clarification_needed"] = clarification
     return sink.result(**result)
 
 
@@ -2546,6 +2559,45 @@ def _is_memory_bound_follow_up(text: str, state: GraphState) -> bool:
     return bool(tokens & _REFERRING_WORDS)
 
 
+#: What the answer says when a follow-up points at nothing. Under
+#: `ThinkPayload.clarifying_question`'s 500-character bound.
+CLARIFICATION_QUESTION: Final = (
+    "One more detail is needed: which gene, variant or condition do you "
+    "mean? Ask again naming it, for example \"Which variants cause disease "
+    "in BRCA1?\", and the follow-up will use it."
+)
+
+
+def _needs_clarification(
+    text: str,
+    state: GraphState,
+    resolved_curies: list[str],
+    unresolved_symbols: list[str],
+) -> bool:
+    """True when a question refers back to something nothing can supply.
+
+    UI fix set 7, item 7.5 (2026-09-13), the product owner's retest: "the
+    follow up must retain context or ask clarification if the question is
+    not clear. Because if this is a discussion, it must flow." The retain
+    half is `_is_memory_bound_follow_up` and Plan's antecedent binding.
+    This is the other half: a question with a referring word ("it",
+    "those", ...), no entity of its own, no unresolved symbol to refuse
+    on, and NO remembered entity for the reference to bind to, has an
+    honest answer that is neither a refusal nor a guess: ask which.
+
+    Deterministic and narrow. Any resolved entity, any unresolved symbol
+    (which takes the existing refusal path), any remembered antecedent, or
+    no referring word at all, and this is False, so an ordinary question
+    is never asked to repeat itself.
+    """
+    if resolved_curies or unresolved_symbols:
+        return False
+    if _antecedent_curie(_memory_curies(state)) is not None:
+        return False
+    tokens = {token.strip("?.,;:!\"'()") for token in text.lower().split()}
+    return bool(tokens & _REFERRING_WORDS)
+
+
 def _memory_suffix(state: GraphState, tier: Tier) -> str:
     """The session-memory block to append to a Think or Plan prompt.
 
@@ -2723,6 +2775,22 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
     query_class: QueryClass = state.get("query_class", "lookup")
+
+    if state.get("clarification_needed"):
+        # Item 7.5: Think found a reference with nothing to bind to. There
+        # is nothing to look up until the reader says which, so no tool and
+        # no model call; Write asks the question.
+        sink.emit(
+            "plan",
+            PlanPayload(
+                narrative=(
+                    "no tool selected; the question refers to something no "
+                    "earlier turn resolved, so the answer asks which"
+                ),
+                tool_calls=[],
+            ),
+        )
+        return sink.result(tool_calls=[])
 
     try:
         await _dispatch_tier_call(
@@ -5698,6 +5766,38 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # Routed straight here from an earlier node's per-query cap hit;
         # ship the partial result per Section 19.1, never a blank failure.
         return _partial_result_for_cap(sink, harness, trace_id, elapsed_ms, total_tool_calls)
+
+    clarification_needed = state.get("clarification_needed")
+    if clarification_needed:
+        # Item 7.5. The same three events the unresolved-symbol refusal
+        # below emits, so every surface renders it through the path it
+        # already has, and `ThinkPayload.clarifying_question` carries the
+        # same text so the web UI can label it as a question rather than as
+        # "no answer found". `trust_outcome` is `refuse` because no claim
+        # was made; nothing was retrieved to ground one.
+        sink.emit("token", TokenPayload(text=clarification_needed[:1000], marker_ids=[]))
+        sink.emit(
+            "trust_signal",
+            TrustSignalPayload(
+                outcome="refuse",
+                risk_tier="unknown",
+                grounded=False,
+                triangulated=None,
+                scope="answer",
+                message=clarification_needed[:500],
+                fallback_link=build_fallback_link(query.text),
+            ),
+        )
+        sink.emit(
+            "done",
+            DonePayload(
+                total_cost_usd=harness.get_query_cost_usd(trace_id),
+                total_tool_calls=total_tool_calls,
+                elapsed_ms=elapsed_ms,
+                trust_outcome="refuse",
+            ),
+        )
+        return sink.result()
 
     unresolved_entity_symbols = state.get("unresolved_entity_symbols")
     if unresolved_entity_symbols:

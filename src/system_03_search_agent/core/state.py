@@ -179,6 +179,11 @@ class GraphState(TypedDict, total=False):
     daily_cap_declined: bool
     guard_refused: bool
     unresolved_entity_symbols: list[str]
+    # UI fix set 7, item 7.5 (2026-09-13): set by `think` when the question
+    # refers back to something no entity, no unresolved symbol and no
+    # remembered antecedent can supply. `plan` then selects no tool and
+    # `write` asks the question instead of refusing or guessing.
+    clarification_needed: str
     layer2_raw_outputs: dict[str, Any]
     # UI fix set 7, item 7.2 (2026-09-13). Both set by `plan`, both read by
     # `write`, both plain data so that `write` never reads session memory

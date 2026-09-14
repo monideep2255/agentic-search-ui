@@ -60,7 +60,8 @@ Expected:
 
 - You stay on the same screen. The first question and its answer fold into a collapsed row at the top, and the new search's progress (the steps, the scientist, the Stop button) appears below it in place of the answer. The page scrolls so the new question's heading is in view.
 - A second answer about BRCA1, without you typing BRCA1 again, grows where the progress was. It names ClinVar variants, each with a source. Sometimes the answer reads as a plain list of records with a note saying so; that is the honest form when the answer text could not be tied to its sources word for word, and it is still an answer, not a refusal.
-- Clicking the collapsed row at the top opens the earlier answer again.
+- Clicking the collapsed row at the top opens the earlier answer again, complete: its status line, notes, every claim with its chips, the full source cards and the trust pills, exactly as it looked when it was live. There is clear space between the folded rows and the new question.
+- From a fresh page with no earlier answer, "What variants cause it?" does not refuse: a grey "One more detail needed" label asks which gene, variant or condition you mean, and the follow-up field is ready for the answer.
 - Stop during the follow-up shows "Search stopped" in the same place, with "Run again".
 - "New search" clears the conversation and returns you to the home page.
 

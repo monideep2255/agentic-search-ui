@@ -1872,6 +1872,10 @@ _MEMORY_READERS_ALLOWED = {
     # still hold that neither `act_node` nor `write_node` reads memory.
     "guardrail_node",
     "_is_memory_bound_follow_up",
+    # Item 7.5 (2026-09-13): Think asks a clarifying question only when no
+    # remembered antecedent exists, so the rule must read memory; it reads
+    # the same accessor Plan's binding reads and injects nothing.
+    "_needs_clarification",
     # The helpers, which are the memory accessors themselves.
     "_memory_curies",
     "_memory_suffix",
