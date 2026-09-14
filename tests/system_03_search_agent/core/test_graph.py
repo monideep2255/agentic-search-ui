@@ -425,6 +425,9 @@ async def test_happy_path_emits_the_expected_event_type_sequence() -> None:
         "cost",
         "plan",
         "cost",
+        # UI fix set 11.16 (2026-09-14): write_node announces its start
+        # before the synth call, once every pre-synth refusal has returned.
+        "step",
         "cost",
         "done",
     ]

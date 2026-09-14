@@ -469,6 +469,7 @@ from system_03_search_agent.contracts.events import (
     Event,
     GuardPayload,
     PlanPayload,
+    StepPayload,
     ThinkPayload,
     TokenPayload,
     ToolCall,
@@ -699,6 +700,13 @@ class _EventSink:
         than raising, verified by probing the installed LangGraph directly
         rather than read from the `>=0.2` pin. So `run()` is unchanged and
         still gets every event through `result()`.
+
+        UI fix set 11.16 (2026-09-14): `write_node` uses this too, for its
+        `step` marker and for every grounded `token`, `citation` and
+        `trust_signal`, the same defect measured again one node later
+        (`testing/Developer/reports/2026-09-14_handover_inputs/streamcheck/
+        findings.md`). Refusal branches keep plain `emit`, since each
+        returns on the next line and there is nothing to be early about.
         """
         event = self.emit(event_type, payload)
         try:
@@ -7518,6 +7526,18 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         )
         return sink.result()
 
+    # UI fix set 11.16 (2026-09-14). The normal answer path begins HERE,
+    # after every refusal decided without a synth call has returned, and
+    # this is the first thing a reader can honestly be told about it: the
+    # Write step has started. It goes out live because everything after it
+    # up to the first token is the synth call, the grounding pass and the
+    # optional repair call, measured at 1.9 to 22.6 seconds on develop with
+    # nothing on the wire. It carries no text and no verdict, so it cannot
+    # be read as a claim (production-standards' cite-or-refuse gate is
+    # untouched: the tokens below still wait for grounding). Consumers
+    # that predate it skip it by name; see `StepPayload`.
+    sink.emit_live("step", StepPayload(step="write", status="started"))
+
     query_class: QueryClass = state.get("query_class", "lookup")
 
     # Section 8.1: the findings list is code-built before the model is ever
@@ -8343,13 +8363,22 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             summary_sentence=summary_sentence,
             condition_names=condition_names,
         ):
-            sink.emit("token", token)
+            # UI fix set 11.16 (2026-09-14): `emit_live`, not `emit`, for
+            # every event from here to the answer-scope verdict. Each token
+            # is a sentence the grounding pass above has already accepted,
+            # and the citations and verdicts are derived from that same
+            # pass, so nothing leaving the node here is a draft. Only WHEN
+            # a reader sees it changes; `run_streaming` de-duplicates by
+            # seq, so the node's own state still carries every one of them
+            # in this order. The `cost` and `done` events below keep plain
+            # `emit`: the node returns on the line after them.
+            sink.emit_live("token", token)
 
         for citation in citations:
-            sink.emit("citation", citation)
+            sink.emit_live("citation", citation)
 
         for trust in claim_trusts:
-            sink.emit(
+            sink.emit_live(
                 "trust_signal",
                 TrustSignalPayload(
                     outcome=trust.outcome,
@@ -8366,7 +8395,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             # for why `high` outranks `unknown` and why `low` requires
             # unanimity.
             answer_risk_tier, answer_grounded = _aggregate_answer_scope_trust(claim_trusts)
-            sink.emit(
+            sink.emit_live(
                 "trust_signal",
                 TrustSignalPayload(
                     outcome=trust_outcome,

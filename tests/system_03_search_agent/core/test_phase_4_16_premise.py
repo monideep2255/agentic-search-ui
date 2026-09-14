@@ -476,8 +476,14 @@ async def test_a5_no_silent_gap_between_plan_and_the_answer(
     assert "plan" in types, "populate-check failed: the run produced no plan event."
 
     plan_index = len(types) - 1 - types[::-1].index("plan")
+    # UI fix set 11.16 (2026-09-14): the Act window now ends at Write's own
+    # `step` marker, which write_node emits before its synth call. Without
+    # this the marker itself would count as "something between plan and the
+    # answer" and this arm would stay green with every tool frame suppressed
+    # (its M5 mutation survived exactly that way). The window this arm
+    # measures is the Act step, and the marker is where the Act step ends.
     terminal = next(
-        (i for i, t in enumerate(types) if t in {"token", "done"} and i > plan_index),
+        (i for i, t in enumerate(types) if t in {"token", "done", "step"} and i > plan_index),
         None,
     )
     assert terminal is not None, "populate-check failed: the run never reached an answer."
