@@ -1,0 +1,54 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+Q: What pathways does the GCK gene participate in?
+
+Query Pipeline
+
+7/7 steps · 6.0s
+
+GCK participates in 1 pathway in the queried dataset: Metabolism of carbohydrates. The pathway accession returned is R-HSA-71387.
+
+Pathway participation
+Gene	Pathway	Pathway accession
+GCK	Metabolism of carbohydrates	R-HSA-71387
+Notes
+This result reflects the pathway relationships returned by the query.
+The pathway accession format (R-HSA-71387) is consistent with Reactome pathway identifiers.
+
+Showing 1 of 1 total results.
+
+Sources:
+NCBI Gene
+1 results
+5990ms
+Helpful?
+
+Generated Cypher
+
+Graph Visualization
+
+Raw Results (1)
+
+NCBI Knowledge Graph - Proof of Concept

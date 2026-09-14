@@ -1,0 +1,98 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+Q: What biological processes are shared across MODY genes?
+
+Query Pipeline
+
+7/7 steps · 11.6s
+
+The MODY genes share biological processes centered on glucose regulation, insulin secretion, and transcriptional control. Across the queried set of 10 MODY genes, the top shared Gene Ontology biological processes involve up to 5 genes each.
+
+Most shared biological processes across MODY genes
+Biological process	Gene count	MODY genes
+glucose homeostasis	5	INS, HNF1A, GCK, HNF4A, NEUROD1
+positive regulation of DNA-templated transcription	5	HNF1A, HNF4A, PDX1, HNF1B, NEUROD1
+regulation of insulin secretion	5	KCNJ11, GCK, HNF4A, ABCC8, NEUROD1
+insulin secretion	4	HNF1A, PDX1, HNF1B, NEUROD1
+positive regulation of transcription by RNA polymerase II	4	HNF1A, HNF4A, PDX1, NEUROD1
+regulation of DNA-templated transcription	4	INS, HNF4A, PDX1, NEUROD1
+regulation of transcription by RNA polymerase II	4	HNF1A, HNF4A, PDX1, HNF1B
+response to glucose	4	GCK, HNF4A, PDX1, NEUROD1
+cell differentiation	3	HNF4A, PDX1, NEUROD1
+glucose metabolic process	3	INS, KCNJ11, GCK
+pancreas development	3	HNF1A, PDX1, HNF1B
+positive regulation of insulin secretion	3	GCK, PDX1, NEUROD1
+response to xenobiotic stimulus	3	KCNJ11, ABCC8, PDX1
+endocrine pancreas development	2	HNF1B, NEUROD1
+intracellular glucose homeostasis	2	GCK, ABCC8
+liver development	2	HNF1A, HNF1B
+negative regulation of DNA-templated transcription	2	HNF4A, PDX1
+negative regulation of gluconeogenesis	2	INS, GCK
+negative regulation of insulin secretion	2	KCNJ11, ABCC8
+positive regulation of cell differentiation	2	INS, NEUROD1
+Main themes
+
+Glucose biology
+
+glucose homeostasis
+response to glucose
+glucose metabolic process
+intracellular glucose homeostasis
+
+Insulin production and secretion
+
+regulation of insulin secretion
+insulin secretion
+positive regulation of insulin secretion
+negative regulation of insulin secretion
+
+Transcriptional regulation
+
+positive regulation of DNA-templated transcription
+regulation of DNA-templated transcription
+positive regulation of transcription by RNA polymerase II
+regulation of transcription by RNA polymerase II
+
+Developmental processes
+
+pancreas development
+endocrine pancreas development
+cell differentiation
+
+These results are consistent with Gene Ontology biological process annotations and show that MODY genes converge mainly on pancreatic development, beta-cell transcriptional programs, and glucose/insulin regulation. Data source: Gene Ontology annotations linked to gene entities.
+
+Sources:
+Gene Ontology
+20 results
+11571ms
+Helpful?
+
+Generated Cypher
+
+Graph Visualization
+
+Raw Results (20)
+
+NCBI Knowledge Graph - Proof of Concept

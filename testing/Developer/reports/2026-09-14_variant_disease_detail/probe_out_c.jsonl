@@ -1,0 +1,2 @@
+{"probe": "C1 mody disease names", "cypher": "MATCH (d:Disease) WHERE d.name =~ $pat RETURN d.id, d.name ORDER BY d.id", "params": {"pat": "(?i).*maturity-onset diabetes.*"}, "rows": 0, "total_available": 0, "elapsed_s": 1.256, "sample": []}
+{"probe": "C2 mody genes via name pattern", "cypher": "MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease) WHERE d.name =~ $pat RETURN g.id, g.name, d.id, d.name ORDER BY g.id, d.id", "params": {"pat": "(?i).*maturity-onset diabetes.*"}, "rows": 0, "total_available": 0, "elapsed_s": 0.544, "sample": []}

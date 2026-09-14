@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #F0F0F0; color: #1B1B1B; font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: #0071BC; } a:hover { color: #112F4E; }
+    .p { margin: 0 0 16px; font-size: 16px; line-height: 1.65; color: #1B1B1B; text-wrap: pretty; }
+    .ah { font-size: 11.5px; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: #666B70; margin: 28px 0 10px; padding-bottom: 7px; border-bottom: 1px solid #D6D7D9; }
+    .row { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid #D6D7D9; }
+    .row:last-child { border-bottom: 0; }
+    .rn { font-size: 15px; line-height: 1.45; color: #1B1B1B; }
+    .rm { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; color: #565C65; }
+    sup.c { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; font-weight: 700; letter-spacing: .06em; margin-left: 1px; line-height: 0; }
+    .l2 { color: #2E8540; } .l3 { color: #4C2C92; }
+    ul.notes { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; color: #565C65; }
+    ul.notes li { margin: 0 0 6px; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 2000px; background: #F0F0F0; display: flex; flex-direction: column;">
+  <div style="height: 54px; background: #205493; color: #FFFFFF; display: flex; align-items: center; gap: 10px; padding: 0 16px;">
+    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px;">
+      <svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M6 2c0 6 9 11 9 17M15 2c0 6-9 11-9 17" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path><path d="M7 6h7M7 15h7" stroke="#CFE1F5" stroke-width="1.6" stroke-linecap="round"></path></svg>
+      <span>NCBI Agentic Search</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 13px;">
+      <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="4" cy="9" r="1.5" fill="#FFFFFF"></circle><circle cx="9" cy="9" r="1.5" fill="#FFFFFF"></circle><circle cx="14" cy="9" r="1.5" fill="#FFFFFF"></circle></svg>
+      <span style="border: 1px solid rgba(255,255,255,.55); border-radius: 4px; padding: 5px 12px; font-weight: 600;">Log in</span>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; padding: 20px 16px 40px;">
+    <div style="background: #FFFFFF; border: 1px solid #D6D7D9; border-radius: 8px; padding: 20px 18px 24px;">
+      <div style="display: flex; align-items: flex-start; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #D6D7D9;">
+        <div style="font-size: 19px; font-weight: 700; line-height: 1.3;">Which diseases are associated with BRCA1?</div>
+        <div style="margin-left: auto; background: #205493; color: #FFFFFF; font-size: 12.5px; font-weight: 600; padding: 7px 11px; border-radius: 4px; white-space: nowrap;">New search</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 12px 0; border-bottom: 1px solid #D6D7D9; font-size: 13px; color: #565C65;">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="#276E34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="color: #276E34; font-weight: 700;">Answered</span><span>6.2s · 11 sources from 2 layers</span>
+      </div>
+
+      <div style="padding-top: 20px;">
+        <p class="p">NCBI records link <strong>BRCA1</strong> to four diseases: <strong>familial cancer of breast</strong>, <strong>familial breast-ovarian cancer susceptibility 1</strong>, <strong>pancreatic cancer susceptibility 4</strong> and <strong>Fanconi anemia complementation group S</strong>.<sup class="c l2">1–4</sup></p>
+        <p class="p">Each disease below comes from its own MedGen record. Five clinical trials that name BRCA1 are listed after them.<sup class="c l3">7–11</sup></p>
+
+        <div class="ah">Diseases linked to BRCA1</div>
+        <div style="display: flex; flex-direction: column;">
+          <div class="row"><span class="rn">Familial cancer of breast<sup class="c l2">1</sup></span><span class="rm">MedGen C0346153</span></div>
+          <div class="row"><span class="rn">Familial breast-ovarian cancer susceptibility 1<sup class="c l2">2</sup></span><span class="rm">MedGen C2676676</span></div>
+          <div class="row"><span class="rn">Pancreatic cancer susceptibility 4<sup class="c l2">3</sup></span><span class="rm">MedGen C3280442</span></div>
+          <div class="row"><span class="rn">Fanconi anemia complementation group S<sup class="c l2">4</sup></span><span class="rm">MedGen C4554406</span></div>
+        </div>
+
+        <div class="ah">The gene</div>
+        <p class="p" style="font-size: 15px;">BRCA1 is NCBI Gene 672<sup class="c l2">5</sup>, with a matching entry in the PubTator3 literature index.<sup class="c l3">6</sup></p>
+
+        <div class="ah">Related clinical trials</div>
+        <div style="display: flex; flex-direction: column;">
+          <div class="row"><span class="rn">Germline BRCA1 and BRCA2 mutations in Jewish women affected by breast cancer<sup class="c l3">7</sup></span><a class="rm" href="#">NCT00590109</a></div>
+          <div class="row"><span class="rn">BRCA1 haploinsufficiency and gene expression<sup class="c l3">8</sup></span><a class="rm" href="#">NCT00597987</a></div>
+          <div class="row"><span class="rn">Treatment customized according to RAP80 and BRCA1 in advanced lung carcinoma<sup class="c l3">9</sup></span><a class="rm" href="#">NCT00617656</a></div>
+          <div class="row"><span class="rn">Letrozole in preventing breast cancer in postmenopausal women with a BRCA1 or BRCA2 mutation<sup class="c l3">10</sup></span><a class="rm" href="#">NCT00673335</a></div>
+          <div class="row"><span class="rn">Recombinant human chorionic gonadotropin in preventing breast cancer in premenopausal women with BRCA1 mutations<sup class="c l3">11</sup></span><a class="rm" href="#">NCT00700778</a></div>
+        </div>
+
+        <div class="ah">Notes</div>
+        <ul class="notes">
+          <li>Disease names are shown as NCBI MedGen records them.</li>
+          <li>The trials are the five ClinicalTrials.gov studies that match BRCA1, in study-number order.</li>
+        </ul>
+        <div style="margin-top: 18px; font-size: 13px; color: #565C65;">This is a research summary, not medical advice.</div>
+        <div style="border-top: 1px solid #D6D7D9; margin-top: 18px; padding-top: 12px; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #666B70; font-weight: 700;">Sources</span>
+          <span style="font-size: 11px; font-weight: 700; border: 1px solid #D6D7D9; border-radius: 999px; padding: 0 7px; color: #565C65;">11</span>
+        </div>
+        <div style="margin-top: 12px; font-size: 12.5px; color: #565C65;">Based on 4 sources, not yet confirmed · <span style="color: #981B1E; font-weight: 600;">High-risk claim</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="height: 50px; background: #205493; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px;">NCBI Agentic Search</div>
+</div>
+</x-dc>
+</body>
+</html>

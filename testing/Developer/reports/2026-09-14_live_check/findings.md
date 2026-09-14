@@ -34,6 +34,19 @@ Same script, same questions, results and screenshots in `after_674b7b9/`.
 - No "has a source URL of" sentence in any answer; 0 claims without a marker in all four.
 - `flagship_measure.py 5` against `674b7b9` (`after_674b7b9/flagship_measure_674b7b9.log`): 25 of 25 answered, one distinct source set per question (BRCA1 diseases 11, BRCA1 variants 20, GCK 20, BRCA1 and BRCA2 20, lowercase brca1 11), no write-step error, 13 to 71 seconds. Before the fix the same measurement was 22 of 25 with three write-step errors. The error is not proven gone: its measured cause (the Synth tier's reasoning effort "low" occasionally running out the 45-second step) is unchanged, and the shorter directives made each Synth call shorter, which is the likely reason none fired in these 25 runs.
 
+## After quieter citations, the writing state and the speed fix, commit `2b6d274`
+
+Same script and questions, results and screenshots in `after_2b6d274/`. Both Railway services reached SUCCESS.
+
+- Citations render as small raised numbers in the layer colour on every answer. The BRCA1 summary sentence carries one "1–4" marker, and the GCK summary one "1–13" marker. No boxed chips remain.
+- BRCA1 diseases, Plain language, at 1280 and 390: opens on "Found 4 disease records for BRCA1: …", then a model sentence naming the four diseases, then the trial and literature record lines. Every sentence carries a marker, the trust line and medical-advice line are present, and nothing scrolls sideways.
+- Follow-up "What variants cause it?": opens "Found 13 sequence variant records for BRCA1, of 15310 available." with 20 sources from 3 layers. The check reported 12 claims without a marker, but the screenshot shows a marker on every sentence: the script's selector reads the old chip label, so the count is a measurement artifact, not an uncited claim.
+- GCK, Researcher: opens on the "Found 13 sequence variant records for GCK, of 1333 available." summary with 4 group headings and 20 cited list rows.
+- No "has a source URL of" sentence in any answer.
+- `flagship_measure.py 5` against `2b6d274` (`after_2b6d274/flagship_measure_2b6d274.log`): median 19.7 seconds and worst 53.0, against 26.5 and 71.0 on `674b7b9` the night before. Four questions answered 5 of 5 with one source set each. "Variants in GCK causing MODY" answered 3 of 5: one fatal error at 15.7 seconds and one refusal at 5.4 seconds.
+- Reproduced on develop, 8 more GCK runs: 7 answered (14.8 to 37.2 seconds, 20 citations each), and 1 refused in 4.0 seconds. On the refused run the guard passed, and Think's own narrative named the gene ("Query requires linking gene GCK to variants…"), yet Think resolved no entity, so no tool ran and the answer was the unresolved-gene refusal. Consistent with the speed-fix report's note that GCK refused in Think 2 of 10 runs because the live symbol lookup returned nothing. The 15.7-second fatal error did not recur in 8 runs. Its timing matches the 15-second guard budget, and a guard timeout was seen once in the synth-effort measurement, so it is recorded as a likely intermittent guard-step timeout, not yet proven.
+- Remaining roughness, unchanged by this commit: record lines such as "Clinical trial name: …" and "SequenceVariant ClinVar:…, name: …" still read stiffly, and the model's sentence repeats the summary's disease names. The variant-to-disease and gene-to-disease tables in progress address part of this.
+
 ## Disposition
 
 Defects 1 and 2 went to a fix agent the same night, on the answer path, with five live runs per case required. Its report: `testing/Developer/reports/2026-09-14_answer_quality/report.md`.

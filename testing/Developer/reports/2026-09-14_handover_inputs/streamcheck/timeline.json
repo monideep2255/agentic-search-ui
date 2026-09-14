@@ -1,0 +1,282 @@
+[
+  {
+    "frame": 0,
+    "t_ms": 59,
+    "file": "frame_0000_t59ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 260
+  },
+  {
+    "frame": 1,
+    "t_ms": 409,
+    "file": "frame_0001_t409ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 260
+  },
+  {
+    "frame": 2,
+    "t_ms": 728,
+    "file": "frame_0002_t728ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 260
+  },
+  {
+    "frame": 3,
+    "t_ms": 1081,
+    "file": "frame_0003_t1081ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 260
+  },
+  {
+    "frame": 4,
+    "t_ms": 1415,
+    "file": "frame_0004_t1415ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 260
+  },
+  {
+    "frame": 5,
+    "t_ms": 1735,
+    "file": "frame_0005_t1735ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 260
+  },
+  {
+    "frame": 6,
+    "t_ms": 2068,
+    "file": "frame_0006_t2068ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 260
+  },
+  {
+    "frame": 7,
+    "t_ms": 2400,
+    "file": "frame_0007_t2400ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 338
+  },
+  {
+    "frame": 8,
+    "t_ms": 2729,
+    "file": "frame_0008_t2729ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 338
+  },
+  {
+    "frame": 9,
+    "t_ms": 3047,
+    "file": "frame_0009_t3047ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 338
+  },
+  {
+    "frame": 10,
+    "t_ms": 3366,
+    "file": "frame_0010_t3366ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 338
+  },
+  {
+    "frame": 11,
+    "t_ms": 3696,
+    "file": "frame_0011_t3696ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 338
+  },
+  {
+    "frame": 12,
+    "t_ms": 4020,
+    "file": "frame_0012_t4020ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 338
+  },
+  {
+    "frame": 13,
+    "t_ms": 4364,
+    "file": "frame_0013_t4364ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 338
+  },
+  {
+    "frame": 14,
+    "t_ms": 4684,
+    "file": "frame_0014_t4684ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 850
+  },
+  {
+    "frame": 15,
+    "t_ms": 5042,
+    "file": "frame_0015_t5042ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 918
+  },
+  {
+    "frame": 16,
+    "t_ms": 5406,
+    "file": "frame_0016_t5406ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 951
+  },
+  {
+    "frame": 17,
+    "t_ms": 5741,
+    "file": "frame_0017_t5741ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 18,
+    "t_ms": 6089,
+    "file": "frame_0018_t6089ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 19,
+    "t_ms": 6426,
+    "file": "frame_0019_t6426ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 20,
+    "t_ms": 6762,
+    "file": "frame_0020_t6762ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 21,
+    "t_ms": 7095,
+    "file": "frame_0021_t7095ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 22,
+    "t_ms": 7441,
+    "file": "frame_0022_t7441ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 23,
+    "t_ms": 7783,
+    "file": "frame_0023_t7783ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 24,
+    "t_ms": 8156,
+    "file": "frame_0024_t8156ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 25,
+    "t_ms": 8502,
+    "file": "frame_0025_t8502ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 26,
+    "t_ms": 8846,
+    "file": "frame_0026_t8846ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": false,
+    "claim_count": 0,
+    "body_text_len": 993
+  },
+  {
+    "frame": 27,
+    "t_ms": 9181,
+    "file": "frame_0027_t9181ms.png",
+    "has_is_writing_the_answer": false,
+    "has_writing_dots": false,
+    "has_found_disease_records": true,
+    "claim_count": 9,
+    "body_text_len": 1997
+  }
+]

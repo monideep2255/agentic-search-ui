@@ -1,0 +1,12 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Plain language, 1280", "x": 0, "y": 0, "w": 1280, "h": 1560 },
+    { "file": "Researcher.dc.html", "title": "Researcher, 1280", "x": 1360, "y": 0, "w": 1280, "h": 1760 },
+    { "file": "Mobile.dc.html", "title": "Plain language, 390", "x": 2720, "y": 0, "w": 390, "h": 2400 },
+    { "file": "Streaming.dc.html", "title": "While it writes", "x": 0, "y": 1680, "w": 1280, "h": 1020 }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 1360, "y": 1840, "w": 520, "text": "One answer layout for both modes: a short summary with bold key terms, then records grouped under small headings as tables (or stacked rows on a phone), then Notes. Citations are small raised numbers in the layer colour. Plain language and Researcher share the structure; Researcher adds more prose, a source-layer column and a longer Notes section. Colours, type sizes and table style are the app's own design tokens." }
+  ],
+  "launch": { "view": "canvas" }
+}

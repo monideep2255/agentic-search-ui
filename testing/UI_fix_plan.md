@@ -23,6 +23,7 @@ The ordered work list for fixing the product after the first testing round on 20
 - [Set 8: search every layer, with the scientists](#set-8-search-every-layer-with-the-scientists)
 - [Set 9: answers worth reading](#set-9-answers-worth-reading)
 - [Set 10: reliable flagship answers, and saved history](#set-10-reliable-flagship-answers-and-saved-history)
+- [Set 11: live feedback of 2026-09-13 and 2026-09-14](#set-11-live-feedback-of-2026-09-13-and-2026-09-14)
 - [Developer detail](#developer-detail)
 
 ## Progress at a glance
@@ -39,6 +40,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | | Tests 1, 7, 12, 14 |
 | 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
+| 11. Live feedback, 2026-09-13 and 14 | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below | Partly | Partly | | Tests 1, 7, 12 |
 
 ## Set 1: let people in
 
@@ -612,6 +614,39 @@ Built: · Live: · Approved:
 - Feature being tested: answer quality is judged only once the product answers consistently.
 - What you noted: "Only once questions answer reliably, judge answer quality: the grader, or a domain expert reading the answers."
 - What's expected: a quality pass with the grader or a domain expert, once R38's consistency run shows reliable answering. This is a developer check, not a hand test.
+
+## Set 11: live feedback of 2026-09-13 and 2026-09-14
+
+Batch: answers. Your feedback given in conversation while testing, one row each, so we can both track it. Status words: Live (on develop and checked), In progress (an agent is building it now), Queued (waits for another piece of work to land), Not started, Answered (a question, no build), Done (housekeeping).
+
+| # | Your feedback | Status | Where it stands |
+|---|---|---|---|
+| 11.1 | Researcher answers should follow your reference screenshot | Live | Built in set 9, commit `537377d`. Being replaced by the approved layout in 11.12 |
+| 11.2 | Delete the reference screenshot and the sets 8 and 9 session prompt when done | Done | Both moved to the Trash on 2026-09-14; the prompt stays in git history |
+| 11.3 | Stop after sets 8 and 9, do not touch set 10 | Done | Set 10 untouched |
+| 11.4 | Does the research layer make people wait 45 seconds? | Answered | No: the searches take about a second; the wait was the writing step. See 11.8 |
+| 11.5 | Citations are too big and overwhelm the answer | Live | Small raised numbers with a hover or tap card, commit `2b6d274` |
+| 11.6 | The answers lack the level of detail of your reference prototype | Built, being verified | Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode. Set 9's "no such link" claim was wrong: HNF1A has 2,075 links. Measured live on this machine: HNF1A 5 of 5, 5 variant rows and 6 diseases. The reference shows 13 rows; ours stop at 5 because an answer cites at most 20 sources, which is your call to change |
+| 11.7 | Switch the answer-writing model's reasoning setting to none | Live | Commit `2b6d274`; 35 local runs, no writing errors |
+| 11.8 | Make the process quicker | Live | Median answer on develop 26.5 to 19.7 seconds, slowest 71 to 53, commit `2b6d274` |
+| 11.9 | Show "[scientist] is writing the answer…" while it loads | Built, being verified | The writing banner now appears as soon as the searches finish and stays up through the silent wait. Built to your approved mockup, desktop and phone |
+| 11.10 | Use parallel sub-agents, each on a model matched to the task | Done | Applied to every dispatch since |
+| 11.11 | Use your reference prototype for answer depth, formatting and structure; it writes with a different model family | In progress | The detail agent is modelling answers on it. The answer-writing model is unchanged: switching models is a separate decision |
+| 11.12 | The answer reads as one block; break it into readable paragraphs, headings and tables | Built, being verified | Design mockup approved. The screen build matches the mockup in both modes, desktop and phone. The run-on record lines are gone from the backend in every mode |
+| 11.13 | The same readable format in both Plain language and Researcher | Built, being verified | Both screen and backend now use one structure in every mode |
+| 11.14 | Copying the answer picks up "Source 1, layer 2" text | Built, being verified | Citation names moved off the copied text; a real selection and the clipboard contain only the answer |
+| 11.15 | The answer does not stream | Built in part, being verified | The screen now reveals sentences one by one after the writing banner has shown for 1.5 seconds. Because the backend still sends the whole answer at once, the reveal is quick (40 ms per sentence) until the backend fix in 11.16 lands |
+| 11.16 | Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready | Queued | The two screen parts are in progress. The two backend parts wait until the agent editing `graph.py` lands |
+| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Queued, approved | Audit done: the narrow search is our fixed plan in code, not the models. Build approved on 2026-09-14 as 11.21; starts after 11.12 lands on develop and the backend streaming fix in 11.16 |
+| 11.18 | Search everything in all three layers, sources exact; is the harness or the open-source model to blame? | Answered | The harness: a fixed plan of one graph query and four live calls per gene, one fact per record. The models do not choose what is searched. Fix is 11.21 |
+| 11.19 | "Variants in GCK causing MODY" should answer every time | Built, being verified | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
+| 11.20 | "What genes are associated with MODY?" should answer | Built, being verified | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. Answered 9 of 10 live runs on this machine; the one miss was a pre-existing Think parsing failure |
+| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Queued, approved | One fixed plan per question shape across all three layers, deterministic inputs, stable sort and a cap per source. Starts after 11.16's backend part |
+| 11.22 | PubMed and PMC should provide context for the answers | Queued, approved | Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
+| 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered | Measured from NCBI's own header: your key allows 10 per second (3 without a key). 100 needs a separate arrangement with NCBI. The limiter moves from 3 to 10 as part of 11.21 |
+| 11.24 | How do I test what is built so far? | Answered | A test walk-through is given once the current work is on develop |
+| 11.25 | What from Set 11 is on develop? | Answered | On develop now: 11.5, 11.7, 11.8. Built and in final checks, not yet on develop: 11.6, 11.9, 11.12 to 11.15, 11.19, 11.20 |
+| 11.26 | The answers do not look like the approved mockup | In progress | Correct: the new layout is built but not yet pushed. It goes to develop today once the frontend tests and browser specs pass |
 
 ## Developer detail
 

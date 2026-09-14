@@ -1,0 +1,87 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+Q: Which genes are located in the mitochondria?
+
+Query Pipeline
+
+7/7 steps · 11.9s
+
+The query found 200 gene–cellular component localization records matching mitochondrial terms, representing genes annotated to the mitochondrion or mitochondrial subcompartments. These localization annotations are typically derived from Gene Ontology (GO) cellular component data linked to gene records (e.g., via NCBI Gene/GO).
+
+Example mitochondrial-localized genes
+
+Below are the first results returned, with concise mitochondrial localization terms:
+
+Gene	Gene name	Mitochondrial localization
+AADAT	aminoadipate aminotransferase	mitochondrion; mitochondrial matrix
+AARS2	alanyl-tRNA synthetase 2, mitochondrial	mitochondrion
+AASS	aminoadipate-semialdehyde synthase	mitochondrion; mitochondrial matrix
+ABAT	4-aminobutyrate aminotransferase	mitochondrion; mitochondrial matrix
+ABCB10	ATP binding cassette subfamily B member 10	mitochondrion; mitochondrial membrane; mitochondrial inner membrane
+ABCB6	ATP binding cassette subfamily B member 6 (LAN blood group)	mitochondrion; mitochondrial outer membrane; mitochondrial envelope
+ABCB7	ATP binding cassette subfamily B member 7	mitochondrion; mitochondrial membrane; mitochondrial inner membrane
+ABCB8	ATP binding cassette subfamily B member 8	mitochondrion; mitochondrial membrane; mitochondrial inner membrane; ... and 1 more
+ABCC9	ATP binding cassette subfamily C member 9	mitochondrion
+ABCD1	ATP binding cassette subfamily D member 1	mitochondrial membrane
+ABCD3	ATP binding cassette subfamily D member 3	mitochondrion
+ABCE1	ATP binding cassette subfamily E member 1	mitochondrion; mitochondrial matrix
+ABCG1	ATP binding cassette subfamily G member 1	mitochondrion
+ABCG2	ATP binding cassette subfamily G member 2 (JR blood group)	mitochondrial membrane
+ABHD10	abhydrolase domain containing 10, depalmitoylase	mitochondrion; mitochondrial matrix
+ABHD11	abhydrolase domain containing 11	mitochondrion; mitochondrial matrix
+ABHD18	abhydrolase domain containing 18	mitochondrion
+ABHD6	abhydrolase domain containing 6, acylglycerol lipase	mitochondrion; mitochondrial membrane
+ABL1	ABL proto-oncogene 1, non-receptor tyrosine kinase	mitochondrion
+ACAA2	acetyl-CoA acyltransferase 2	mitochondrion; mitochondrial matrix
+ACACA	acetyl-CoA carboxylase alpha	mitochondrion
+ACACB	ACACB	mitochondrion; mitochondrial outer membrane
+Mitochondrial compartments represented
+
+The returned annotations include several mitochondrial cellular components:
+
+mitochondrion
+mitochondrial matrix
+mitochondrial membrane
+mitochondrial inner membrane
+mitochondrial outer membrane
+mitochondrial envelope
+mitochondrial ATP-gated potassium channel complex
+
+Showing 22 genes from the returned 200 localization records; additional mitochondrial-associated genes were present in the truncated results.
+
+Sources:
+NCBI Gene
+200 results
+11944ms
+Truncated
+Helpful?
+
+Generated Cypher
+
+Graph Visualization
+
+Raw Results (200)
+
+NCBI Knowledge Graph - Proof of Concept

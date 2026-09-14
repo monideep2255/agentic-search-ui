@@ -212,6 +212,8 @@ Expected:
 - While the answer is being written, the scientist's line reads "{name} is writing the answer…" with moving dots, and "writing…" follows the sentences as they appear. No raw bracket numbers such as "[1][2]" show while it writes. Both disappear when the answer lands or you press Stop.
 - Each cited sentence ends in small raised numbers, not boxes. A sentence with many sources shows one range, such as "1–13".
 - Hovering, tapping or tabbing to a number opens a small card naming each source, its id, its layer in words, and an "Open the record" link that opens on ncbi.nlm.nih.gov or clinicaltrials.gov. Escape or clicking elsewhere closes it.
+- Select the whole answer and paste it into a text editor. It reads as prose and table text with citation digits only, never "Source 1, layer 2" or "Sources 1 to 4". With a screen reader, each citation number still announces its source and layer.
+- On a phone, in Researcher mode, the tables become stacked rows: the name first with its citation number, the identifier underneath. The page never scrolls sideways.
 - Under the answer, one plain line such as "Based on 4 sources, not yet confirmed" or "Confirmed by 2 independent sources", with an "i" that explains how sources are counted. No row of pills, and no two trust signals that contradict each other: the status word says "Answered" when the line carries the caution.
 - A high-risk claim adds "High-risk claim" in red on the same line.
 - Sources come from more than one layer: live NCBI gene records (L2), the literature record from PubTator3 (L3), and up to five clinical trials from clinicaltrials.gov (L3). For the EGFR question, the trials shown are recruiting ones.
