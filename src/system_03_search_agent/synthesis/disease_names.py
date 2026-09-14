@@ -343,6 +343,26 @@ _PREFIX_QUALIFIERS = frozenset(
         "adult-onset",
     }
 )
+# ClinVar's placeholder conditions, as MedGen titles (variant-to-disease
+# detail, 2026-09-14, product-owner decision D2). A ClinVar submission with
+# no named condition points at one of these three MedGen records, and they
+# are the MOST frequent targets of the variant-to-disease edge (HNF1A: 730
+# of 2075 links to "not provided", 193 to "not specified"). They are real
+# records, so this is a presentation rule, never a grounding change: a cell
+# and a count exclude them, and the answer discloses how many links were
+# excluded. Exact match on the record's own case-folded title, never a
+# substring, so a real disease whose name contains one of these words is
+# never mistaken for a placeholder.
+PLACEHOLDER_CONDITION_TITLES: frozenset[str] = frozenset(
+    {"not provided", "not specified", "see cases"}
+)
+
+
+def is_placeholder_condition_title(title: object) -> bool:
+    """Exact, case-folded membership in `PLACEHOLDER_CONDITION_TITLES`."""
+    return isinstance(title, str) and title.strip().casefold() in PLACEHOLDER_CONDITION_TITLES
+
+
 _SUSCEPTIBILITY_PART = "susceptibility to"
 _SUSCEPTIBILITY_NUMBER = re.compile(r"^\d{1,3}[A-Za-z]?$")
 _SUFFIX_PART = re.compile(r"^(?:type|complementation group|group)\s+\S{1,8}$", re.IGNORECASE)

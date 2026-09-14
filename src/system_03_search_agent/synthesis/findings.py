@@ -79,7 +79,10 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 from system_03_search_agent.harness.coordinator_worker import Finding
-from system_03_search_agent.synthesis.disease_names import readable_disease_name
+from system_03_search_agent.synthesis.disease_names import (
+    is_placeholder_condition_title,
+    readable_disease_name,
+)
 
 # Section 8.1's finding schema caps `field_value` at 2000 and `field` at 128.
 # Enforced here at construction rather than only at the schema boundary, per
@@ -530,6 +533,42 @@ def build_synth_findings(
 _RESOLVED_NAME_LAYER = "layer_2_api"
 _RESOLVED_NAME_TOOL = "ncbi_efetch"
 _RESOLVED_NAME_FIELD = "name"
+
+
+def drop_placeholder_condition_findings(
+    synth_findings: list[SynthFinding],
+) -> tuple[list[SynthFinding], int]:
+    """Remove Disease findings whose resolved title is a ClinVar placeholder.
+
+    Variant-to-disease detail, 2026-09-14, product-owner decision D2. Runs
+    AFTER `apply_resolved_disease_names`, so it judges the record's own
+    MedGen title, exactly and case-folded (`disease_names.
+    is_placeholder_condition_title`), never a substring and never the
+    graph's vocabulary-token `name`. Only a `name_resolved` finding can
+    match, so an unresolved record is never dropped on a guess.
+
+    Survivors are renumbered densely, `ref_index` and the `citation_id`
+    suffix together, because both are positional promises to Synth and the
+    citation layer (`build_synth_findings`). Returns the survivors and how
+    many were dropped, so the answer can disclose the exclusion.
+    """
+    kept = [
+        f for f in synth_findings
+        if not (f.name_resolved and is_placeholder_condition_title(f.field_value))
+    ]
+    dropped = len(synth_findings) - len(kept)
+    if not dropped:
+        return synth_findings, 0
+    renumbered: list[SynthFinding] = []
+    for index, finding in enumerate(kept, start=1):
+        renumbered.append(
+            replace(
+                finding,
+                ref_index=index,
+                citation_id=_clip(f"{finding.call_id}-{index}", MAX_CITATION_ID_CHARS),
+            )
+        )
+    return renumbered, dropped
 
 
 def apply_resolved_disease_names(

@@ -46,6 +46,10 @@ from typing import Any
 # number, true, false, null) carries no suffix at all, so this pattern
 # matching nothing is itself a valid, expected outcome, not an error.
 _TYPE_SUFFIX_PATTERN = re.compile(r"::(vertex|edge|path)\s*$")
+# The same suffix on an element inside a list payload, matched only where
+# it directly follows a closing brace and directly precedes a separator or
+# the closing bracket. See `parse_agtype`'s list branch.
+_INNER_SUFFIX_PATTERN = re.compile(r"\}::(?:vertex|edge)(?=\s*[,\]])")
 
 VERTEX = "vertex"
 EDGE = "edge"
@@ -114,6 +118,16 @@ def parse_agtype(value: Any) -> Any:
     payload = payload.strip()
     if not payload:
         return None
+    if payload.startswith("["):
+        # A list column (`collect(DISTINCT x)`, or a path's elements)
+        # carries the type suffix on EACH element, `[{...}::vertex,
+        # {...}::vertex]`, which is not JSON. Measured live 2026-09-14 on
+        # the variant-to-disease templates: without this the whole column
+        # decoded to None and every collected Disease record was lost. The
+        # suffix is removed only where it closes an object directly before
+        # a separator or the list's end, so a suffix-shaped substring
+        # inside a quoted string value is left alone.
+        payload = _INNER_SUFFIX_PATTERN.sub("}", payload)
     try:
         return json.loads(payload)
     except (json.JSONDecodeError, ValueError, RecursionError):

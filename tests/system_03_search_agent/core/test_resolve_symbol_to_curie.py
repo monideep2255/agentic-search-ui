@@ -315,7 +315,10 @@ async def test_transient_outage_is_never_cached_and_retries_on_the_next_call(
 
     during_outage = await graph_module.resolve_symbol_to_curie("TP53")
     assert during_outage is None
-    assert calls == ["dataset_report", "search"]
+    # GCK refusal fix (2026-09-14): a non-cacheable miss is retried ONCE
+    # inside the same call before it is reported, so an outage costs two
+    # rounds of the two legs, never one and never three.
+    assert calls == ["dataset_report", "search", "dataset_report", "search"]
     assert "TP53:human" not in graph_module._SYMBOL_CURIE_CACHE, (
         "a transient error must never be written to the cache"
     )

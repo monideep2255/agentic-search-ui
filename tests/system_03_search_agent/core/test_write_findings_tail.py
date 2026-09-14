@@ -208,11 +208,14 @@ async def test_the_note_precedes_the_tail_and_carries_no_marker(model_reports) -
         e.payload["source_id"]: e.payload["citation_id"] for e in _events(result, "citation")
     }
 
-    note_positions = [i for i, (text, _) in enumerate(tokens) if text.startswith("Note: the records below")]
-    assert len(note_positions) == 1, tokens
-    note_at = note_positions[0]
-    assert tokens[note_at][1] == [], "the note must carry no marker"
-    assert tokens[note_at][0].startswith(graph_module._FINDINGS_TAIL_NOTE)
+    # Product-owner direction 2026-09-14: the findings tail note is gone in
+    # every depth; the records the model left out are listed in code under
+    # a code-built heading instead, each row carrying its own marker.
+    assert not any(text.startswith("Note: the records below") for text, _ in tokens), tokens
+    heading_positions = [i for i, (text, _) in enumerate(tokens) if text.startswith("Disease records found")]
+    assert len(heading_positions) == 1, tokens
+    note_at = heading_positions[0]
+    assert tokens[note_at][1] == [], "the heading must carry no marker"
 
     # Answer quality fix (2026-09-14): the first token is the code-built
     # summary sentence, which cites every answer record; the model's own
@@ -223,7 +226,13 @@ async def test_the_note_precedes_the_tail_and_carries_no_marker(model_reports) -
     before = [m for _, markers in tokens[1:note_at] for m in markers]
     after = [m for _, markers in tokens[note_at + 1 :] for m in markers]
     assert before == [citation_id_by_source["MedGen:C1"]], before
-    assert after == [citation_id_by_source["MedGen:C2"], citation_id_by_source["MedGen:C3"]], after
+    # The listing carries EVERY prepared record, the one the prose already
+    # cited included, one row each in prepared order.
+    assert after == [
+        citation_id_by_source["MedGen:C1"],
+        citation_id_by_source["MedGen:C2"],
+        citation_id_by_source["MedGen:C3"],
+    ], after
 
 
 @pytest.mark.asyncio

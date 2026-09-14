@@ -60,6 +60,7 @@ erDiagram
     SequenceVariant }|--|| Gene : "is_sequence_variant_of"
     Gene }|--o{ Disease : "gene_associated_with_condition"
     Disease }|--o{ PhenotypicFeature : "has_phenotype"
+    SequenceVariant }|--o{ Disease : "has_phenotype"
     Gene }|--o{ Article : "mentioned_in"
     Gene }|--|| OrganismTaxon : "in_taxon"
     Gene }|--o{ BiologicalProcess : "participates_in"
@@ -93,7 +94,7 @@ The eleventh label, `NamedThing`, is not in that diagram because it is not a con
 | participates_in | 40,767,983 | Gene to BiologicalProcess |
 | located_in | 31,890,737 | Gene to CellularComponent |
 | orthologous_to | 17,418,089 | Gene to Gene |
-| has_phenotype | 6,076,735 | Disease to PhenotypicFeature |
+| has_phenotype | 6,076,735 | Disease to PhenotypicFeature, and SequenceVariant to Disease (ClinVar condition assertions, measured live 2026-09-14; the pair is recorded in `graph_schema_constants.ADDITIONAL_EDGE_ENDPOINTS`) |
 | is_sequence_variant_of | 4,407,252 | SequenceVariant to Gene |
 | cited_in | 3,924,906 | Article to Article |
 | subclass_of | 2,832,513 | OntologyClass to OntologyClass |
@@ -391,4 +392,4 @@ References:
 - [docs/ncbi/Tool_implementation_mechanics.md](../docs/ncbi/Tool_implementation_mechanics.md): the per-tool API traps behind these schemas
 - [docs/build/Debugging_guide.md](../docs/build/Debugging_guide.md): one row per file under `src/`
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14

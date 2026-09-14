@@ -43,13 +43,38 @@ and the model path runs exactly as before. Falling back is the honest
 answer to an ambiguous question; a wrong template answered consistently
 would be F-2.1-B01 with better reproducibility.
 
+The variant-to-disease shapes (2026-09-14, `testing/Developer/reports/
+2026-09-14_variant_disease_detail/`). An earlier version of this docstring
+said the graph has no variant-to-disease edge, and set 9 built its answer
+layout on that sentence. It was never queried, and it was false: the live
+graph joins a SequenceVariant to a Disease through `has_phenotype`, with
+`source` "ClinVar" and the variant's own ClinVar page as `source_url`
+(HNF1A: 2075 such rows over 1158 variants and 36 diseases, 1.5 s). Three
+templates use it, and each carries a FOLD: the query collects the second
+hop's vertices into a list beside the anchor row, and `cypher_query` copies
+their CURIEs onto the anchor row's `fields` so the pairing survives the
+one-row-per-record output shape. The Disease vertices are still emitted and
+cited as their own records.
+
+- `gene_variant_diseases_one`: a gene's variants, each with the diseases
+  its ClinVar record asserts ("diseases caused by variants in HNF1A").
+- `gene_variant_disease_link`: the variants of a gene whose ClinVar record
+  asserts one of the bound diseases ("variants in GCK causing MODY").
+- `disease_genes_one` / `_many`: the genes linked to the bound disease
+  records through `gene_associated_with_condition`, each with the disease
+  records it is linked to, and a FALLBACK run only when that returns no
+  rows: the genes whose variants are linked to the diseases ("genes
+  associated with MODY", where the MODY subtypes have few gene edges but
+  thousands of variant links).
+
 Depends on:
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
       QueryClass)
     - system_03_search_agent.tools.graph_schema_constants (EDGE_LABELS,
-      EDGE_ENDPOINTS, LABEL_CURIE_PREFIXES, VERTEX_LABELS): every label a
-      template names is asserted present at import time, so a template
-      can never reference an edge the graph does not have.
+      EDGE_ENDPOINTS, ADDITIONAL_EDGE_ENDPOINTS, LABEL_CURIE_PREFIXES,
+      VERTEX_LABELS): every label a template names is asserted present at
+      import time, with an endpoint pair one of the two tables documents,
+      so a template can never reference an edge the graph does not have.
 
 Reads:
     - Nothing at import time beyond the constants above.
@@ -70,6 +95,7 @@ from typing import Final
 
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput, QueryClass
 from system_03_search_agent.tools.graph_schema_constants import (
+    ADDITIONAL_EDGE_ENDPOINTS,
     EDGE_ENDPOINTS,
     EDGE_LABELS,
     LABEL_CURIE_PREFIXES,
@@ -80,17 +106,37 @@ from system_03_search_agent.tools.graph_schema_constants import (
 # carry a fixed max_length.
 MAX_TEMPLATE_NAME_CHARS: Final[int] = 60
 
+# The most CURIEs a fold copies onto one anchor row. A ClinVar record
+# rarely asserts more than a handful of conditions; the cap bounds the
+# field like every other list this system carries (production-standards,
+# maxItems on every array).
+MAX_FOLD_ITEMS: Final[int] = 12
+
+# The row field a fold writes, per anchor label. Named for where the
+# CURIEs come from so a reader of the row knows what it asserts.
+FOLD_FIELD_VARIANT_CONDITIONS: Final[str] = "clinvar_condition_ids"
+FOLD_FIELD_GENE_CONDITIONS: Final[str] = "medgen_condition_ids"
+
 
 @dataclass(frozen=True)
 class CypherTemplate:
     """One code-chosen query. `cypher` references only the `$e_...` names
     in the caller's `entity_bindings`; `edge_label` is the single edge the
     template traverses, or None for a bare record lookup or an aggregate.
+
+    `fold` is `(anchor variable, list alias, field name)` or None. When
+    set, the query's RETURN carries the anchor vertex under the variable
+    and a `collect(DISTINCT ...)` of vertices under the alias, and
+    `cypher_query` writes the list's CURIEs onto the anchor row's
+    `fields[field name]` (at most `MAX_FOLD_ITEMS`). `fallback` is a
+    second template `cypher_query` runs only when this one returns no rows.
     """
 
     name: str
     cypher: str
     edge_label: str | None
+    fold: tuple[str, str, str] | None = None
+    fallback: CypherTemplate | None = None
 
 
 # --------------------------------------------------------------------------
@@ -215,23 +261,52 @@ _ANCHOR_VAR: Final[str] = "a"
 _OTHER_VAR: Final[str] = "x"
 
 
+def _documented_endpoint_pairs(edge_label: str) -> tuple[tuple[str, str], ...]:
+    """Every endpoint pair the graph documents for `edge_label`: the
+    typical pair from `EDGE_ENDPOINTS` plus any measured extra pair from
+    `ADDITIONAL_EDGE_ENDPOINTS`."""
+    pairs: list[tuple[str, str]] = []
+    primary = EDGE_ENDPOINTS.get(edge_label)
+    if primary is not None:
+        pairs.append(primary)
+    pairs.extend(ADDITIONAL_EDGE_ENDPOINTS.get(edge_label, ()))
+    return tuple(pairs)
+
+
+def _assert_hop_documented(edge_label: str, source_label: str, target_label: str) -> None:
+    if edge_label not in EDGE_LABELS:
+        raise AssertionError(f"template names unknown edge label {edge_label!r}")
+    if source_label not in VERTEX_LABELS or target_label not in VERTEX_LABELS:
+        raise AssertionError(f"template names unknown vertex label for {edge_label!r}")
+    pairs = _documented_endpoint_pairs(edge_label)
+    if not pairs:
+        raise AssertionError(f"template uses mixed-endpoint edge {edge_label!r}")
+    if (source_label, target_label) not in pairs:
+        raise AssertionError(
+            f"template endpoints {(source_label, target_label)} disagree with the graph's "
+            f"{pairs} for {edge_label!r}"
+        )
+
+
+# The second hop of the variant-to-disease templates, asserted at import
+# like every single-hop entry in `_HOPS`. The pair lives in
+# `ADDITIONAL_EDGE_ENDPOINTS`, measured live, not in the typical table.
+_VARIANT_DISEASE_EDGE: Final[str] = "has_phenotype"
+_VARIANT_GENE_EDGE: Final[str] = "is_sequence_variant_of"
+_GENE_DISEASE_EDGE: Final[str] = "gene_associated_with_condition"
+
+
 def _assert_templates_name_real_labels() -> None:
     """Import-time guard: a template can only ever name a label the graph
-    has, with the endpoint pair the graph documents for it."""
+    has, with an endpoint pair the graph documents for it."""
     for (anchor, _shape), hop in _HOPS.items():
-        if hop.edge_label not in EDGE_LABELS:
-            raise AssertionError(f"template names unknown edge label {hop.edge_label!r}")
-        if anchor not in VERTEX_LABELS or hop.other_label not in VERTEX_LABELS:
-            raise AssertionError(f"template names unknown vertex label for {hop.edge_label!r}")
-        endpoints = EDGE_ENDPOINTS.get(hop.edge_label)
-        if endpoints is None:
-            raise AssertionError(f"template uses mixed-endpoint edge {hop.edge_label!r}")
-        expected = (anchor, hop.other_label) if hop.direction == "out" else (hop.other_label, anchor)
-        if endpoints != expected:
-            raise AssertionError(
-                f"template endpoints {expected} disagree with the graph's {endpoints} "
-                f"for {hop.edge_label!r}"
-            )
+        if hop.direction == "out":
+            _assert_hop_documented(hop.edge_label, anchor, hop.other_label)
+        else:
+            _assert_hop_documented(hop.edge_label, hop.other_label, anchor)
+    _assert_hop_documented(_VARIANT_DISEASE_EDGE, "SequenceVariant", "Disease")
+    _assert_hop_documented(_VARIANT_GENE_EDGE, "SequenceVariant", "Gene")
+    _assert_hop_documented(_GENE_DISEASE_EDGE, "Gene", "Disease")
 
 
 _assert_templates_name_real_labels()
@@ -304,12 +379,12 @@ def _mixed_gene_disease_template(
     "Variants in GCK causing MODY" or "Is BRCA1 linked to breast cancer?"
     resolves to. Two forms only, both narrow:
 
-    - The variants shape: the graph has no variant-to-disease edge
-      (`is_sequence_variant_of` joins a variant to its gene and nothing
-      else), so the answer the graph can give is the gene's variants. The
-      disease binding goes unused on purpose rather than pretending a join
-      exists; `cypher_query._build_params` binds only the names the query
-      references.
+    - The variants shape, with exactly one gene: the gene's variants whose
+      ClinVar record asserts one of the bound diseases
+      (`gene_variant_disease_link`, the `has_phenotype` edge from a
+      SequenceVariant to a Disease). Before 2026-09-14 this returned the
+      gene's variants alone with the disease binding unused, on the belief
+      that no variant-to-disease edge existed; it does, measured live.
     - No shape, or the diseases shape, with exactly one gene and one
       disease: the link between them, `gene_associated_with_condition`
       anchored at both ends. One row or none, and "none" is the honest
@@ -328,9 +403,9 @@ def _mixed_gene_disease_template(
     if shapes and shape is None:
         return None
     if shape == "variants":
-        if _wants_count(tool_input):
+        if _wants_count(tool_input) or len(gene_params) != 1:
             return None
-        return _hop_template("variants", _HOPS[("Gene", "variants")], "Gene", gene_params, False)
+        return _gene_variant_disease_link_template(gene_params[0], disease_params)
     if shape in (None, "diseases") and len(gene_params) == 1 and len(disease_params) == 1:
         return CypherTemplate(
             name="gene_disease_link",
@@ -343,6 +418,96 @@ def _mixed_gene_disease_template(
             edge_label="gene_associated_with_condition",
         )
     return None
+
+
+def _id_clause(param_names: list[str], var: str) -> tuple[str, str]:
+    """`({id: $e})` inline for one name, else an empty inline clause and a
+    `WHERE var.id IN [...]` for several. Returns (inline, where)."""
+    if len(param_names) == 1:
+        return f" {{id: ${param_names[0]}}}", ""
+    return "", f" WHERE {var}.id IN [" + ", ".join(f"${n}" for n in param_names) + "]"
+
+
+# The variant and the collected-diseases alias, fixed text like the anchor
+# and record variables above.
+_VARIANT_VAR: Final[str] = "v"
+_FOLD_ALIAS: Final[str] = "xs"
+
+
+def _gene_variant_diseases_template(gene_param: str) -> CypherTemplate:
+    """One gene's variants, each beside the Disease records its ClinVar
+    entry asserts. Ordered by variant id; the fold puts the disease CURIEs
+    on the variant row."""
+    cypher = (
+        f"MATCH ({_VARIANT_VAR}:SequenceVariant)-[:{_VARIANT_GENE_EDGE}]->"
+        f"({_ANCHOR_VAR}:Gene {{id: ${gene_param}}}) "
+        f"MATCH ({_VARIANT_VAR})-[:{_VARIANT_DISEASE_EDGE}]->({_OTHER_VAR}:Disease) "
+        f"WITH {_VARIANT_VAR}, collect(DISTINCT {_OTHER_VAR}) AS {_FOLD_ALIAS} "
+        f"RETURN {_VARIANT_VAR}, {_FOLD_ALIAS} ORDER BY {_VARIANT_VAR}.id"
+    )
+    return CypherTemplate(
+        name="gene_variant_diseases_one",
+        cypher=cypher,
+        edge_label=_VARIANT_DISEASE_EDGE,
+        fold=(_VARIANT_VAR, _FOLD_ALIAS, FOLD_FIELD_VARIANT_CONDITIONS),
+    )
+
+
+def _gene_variant_disease_link_template(
+    gene_param: str, disease_params: list[str]
+) -> CypherTemplate:
+    """One gene's variants whose ClinVar record asserts one of the bound
+    diseases, each beside those Disease records. `disease_params` is one
+    name (an inline id) or several (an IN list)."""
+    inline, where = _id_clause(disease_params, _OTHER_VAR)
+    cypher = (
+        f"MATCH ({_VARIANT_VAR}:SequenceVariant)-[:{_VARIANT_GENE_EDGE}]->"
+        f"({_ANCHOR_VAR}:Gene {{id: ${gene_param}}}) "
+        f"MATCH ({_VARIANT_VAR})-[:{_VARIANT_DISEASE_EDGE}]->({_OTHER_VAR}:Disease{inline})"
+        f"{where} "
+        f"WITH {_VARIANT_VAR}, collect(DISTINCT {_OTHER_VAR}) AS {_FOLD_ALIAS} "
+        f"RETURN {_VARIANT_VAR}, {_FOLD_ALIAS} ORDER BY {_VARIANT_VAR}.id"
+    )
+    return CypherTemplate(
+        name="gene_variant_disease_link",
+        cypher=cypher,
+        edge_label=_VARIANT_DISEASE_EDGE,
+        fold=(_VARIANT_VAR, _FOLD_ALIAS, FOLD_FIELD_VARIANT_CONDITIONS),
+    )
+
+
+def _disease_genes_template(disease_params: list[str]) -> CypherTemplate:
+    """The genes linked to the bound Disease records, each beside the
+    records it is linked to, through `gene_associated_with_condition`;
+    with the variant path as the fallback when that edge has no rows for
+    them (the MODY subtypes, measured 2026-09-14: the umbrella concept has
+    zero gene edges and 15 genes through 2000-odd variant links)."""
+    inline, where = _id_clause(disease_params, _ANCHOR_VAR)
+    suffix = "one" if len(disease_params) == 1 else "many"
+    fold = (_OTHER_VAR, _FOLD_ALIAS, FOLD_FIELD_GENE_CONDITIONS)
+    via_variants = CypherTemplate(
+        name=f"disease_variant_genes_{suffix}",
+        cypher=(
+            f"MATCH ({_OTHER_VAR}:Gene)<-[:{_VARIANT_GENE_EDGE}]-({_VARIANT_VAR}:SequenceVariant)"
+            f"-[:{_VARIANT_DISEASE_EDGE}]->({_ANCHOR_VAR}:Disease{inline}){where} "
+            f"WITH {_OTHER_VAR}, collect(DISTINCT {_ANCHOR_VAR}) AS {_FOLD_ALIAS} "
+            f"RETURN {_OTHER_VAR}, {_FOLD_ALIAS} ORDER BY {_OTHER_VAR}.id"
+        ),
+        edge_label=_VARIANT_DISEASE_EDGE,
+        fold=fold,
+    )
+    return CypherTemplate(
+        name=f"disease_genes_{suffix}",
+        cypher=(
+            f"MATCH ({_OTHER_VAR}:Gene)-[:{_GENE_DISEASE_EDGE}]->({_ANCHOR_VAR}:Disease{inline})"
+            f"{where} "
+            f"WITH {_OTHER_VAR}, collect(DISTINCT {_ANCHOR_VAR}) AS {_FOLD_ALIAS} "
+            f"RETURN {_OTHER_VAR}, {_FOLD_ALIAS} ORDER BY {_OTHER_VAR}.id"
+        ),
+        edge_label=_GENE_DISEASE_EDGE,
+        fold=fold,
+        fallback=via_variants,
+    )
 
 
 def _pattern(hop: _Hop, anchor_label: str, anchor_clause: str) -> str:
@@ -451,11 +616,26 @@ def select_template(
         if tool_input.query_class is QueryClass.LOOKUP:
             return _record_template(anchor_label, param_names)
         return None
+    wants_count = _wants_count(tool_input)
+    # The variant-to-disease shape (2026-09-14, decision D1): ONE gene with
+    # both a variants word and a diseases word, in either order ("diseases
+    # caused by variants in HNF1A", "what variants cause disease in
+    # BRCA1"), asks for the variants and the diseases each is linked to. A
+    # question naming only one of the two keeps its single-hop template, so
+    # "Which diseases are associated with BRCA1?" is unchanged.
+    if (
+        anchor_label == "Gene"
+        and len(param_names) == 1
+        and not wants_count
+        and {"variants", "diseases"} <= set(shapes)
+    ):
+        return _gene_variant_diseases_template(param_names[0])
     shape = _resolve_shape(tool_input, shapes, len(param_names))
     if shape is None:
         return None
+    if anchor_label == "Disease" and shape == "genes" and not wants_count:
+        return _disease_genes_template(param_names)
     hop = _HOPS[(anchor_label, shape)]
-    wants_count = _wants_count(tool_input)
     if wants_count and len(param_names) > 1:
         return None
     return _hop_template(shape, hop, anchor_label, param_names, count=wants_count)
@@ -482,4 +662,14 @@ def all_template_examples() -> list[CypherTemplate]:
     if link is None:
         raise AssertionError("the gene_disease_link template did not build")
     examples.append(link)
+    # The fold templates and every fallback they carry.
+    examples.append(_gene_variant_diseases_template("e_one"))
+    examples.append(_gene_variant_disease_link_template("e_one", ["e_two"]))
+    examples.append(_gene_variant_disease_link_template("e_one", ["e_two", "e_three"]))
+    for params in (one, many):
+        with_fallback = _disease_genes_template(params)
+        examples.append(with_fallback)
+        if with_fallback.fallback is None:
+            raise AssertionError("the disease genes template lost its fallback")
+        examples.append(with_fallback.fallback)
     return examples

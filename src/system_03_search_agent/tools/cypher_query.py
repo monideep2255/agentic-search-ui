@@ -224,7 +224,11 @@ from system_03_search_agent.tools.cypher_schemas import (
     CypherQueryOutput,
     CypherQueryRow,
 )
-from system_03_search_agent.tools.cypher_templates import select_template
+from system_03_search_agent.tools.cypher_templates import (
+    MAX_FOLD_ITEMS,
+    CypherTemplate,
+    select_template,
+)
 from system_03_search_agent.tools.cypher_validator import ValidationResult, validate_cypher
 from system_03_search_agent.tools.graph_connection import GraphError, execute_cypher
 from system_03_search_agent.tools.graph_schema_constants import (
@@ -1788,6 +1792,77 @@ def _ambiguous_high_risk_edge_touch_by_column(cypher: str) -> frozenset[str]:
     return frozenset(result)
 
 
+def _fold_curies(
+    raw_row: dict[str, Any],
+    normalized_cypher: str,
+    fold: tuple[str, str, str],
+) -> tuple[str | None, list[str]]:
+    """The anchor's CURIE and the list column's vertex CURIEs for one raw
+    row of a fold template (`cypher_templates.CypherTemplate.fold`).
+
+    Both columns are located by the RETURN text, never by position guessed
+    from the template name, through `_returned_variable_by_column`, which
+    maps a bare variable OR a bare alias (`xs`) to its column. A row whose
+    anchor column did not decode to one vertex, or whose list column is
+    not a list, yields `(None, [])` and the caller writes nothing: an
+    absent fold is an absent field, never a guessed one.
+    """
+    anchor_var, list_alias, _field = fold
+    column_by_variable = {v: c for c, v in _returned_variable_by_column(normalized_cypher).items()}
+    anchor_column = column_by_variable.get(anchor_var)
+    list_column = column_by_variable.get(list_alias)
+    if anchor_column is None or list_column is None:
+        return None, []
+    anchor = parse_agtype(raw_row.get(anchor_column))
+    if not isinstance(anchor, dict):
+        return None, []
+    anchor_curie = str((anchor.get("properties") or {}).get("id") or "")
+    if not anchor_curie:
+        return None, []
+    listed = parse_agtype(raw_row.get(list_column))
+    if not isinstance(listed, list):
+        return anchor_curie, []
+    curies: list[str] = []
+    for item in listed:
+        if not isinstance(item, dict):
+            continue
+        curie = str((item.get("properties") or {}).get("id") or "")
+        if curie and curie not in curies:
+            curies.append(curie)
+        if len(curies) >= MAX_FOLD_ITEMS:
+            break
+    return anchor_curie, curies
+
+
+def _apply_fold(
+    raw_row: dict[str, Any],
+    shaped_rows: list[dict[str, Any]],
+    normalized_cypher: str,
+    fold: tuple[str, str, str] | None,
+) -> None:
+    """Write the fold's CURIE list onto the anchor's shaped row, in place.
+
+    2026-09-14, the variant-to-disease detail. `to_output_rows` emits one
+    row per record and `_dedupe_by_cited_record` keeps one per `source_url`,
+    so `RETURN v, xs` alone loses which diseases belonged to which variant.
+    The fold keeps the pairing on the anchor row as retrieved data: the
+    CURIEs of the vertices this row's own edges reach, which for a ClinVar
+    variant are the conditions its record asserts. Template path only; a
+    template with no fold, and the whole model path, are untouched.
+    """
+    if fold is None:
+        return
+    anchor_curie, curies = _fold_curies(raw_row, normalized_cypher, fold)
+    if anchor_curie is None or not curies:
+        return
+    for shaped in shaped_rows:
+        if str(shaped.get("curie") or "") == anchor_curie:
+            fields = dict(shaped.get("fields") or {})
+            fields[fold[2]] = curies
+            shaped["fields"] = fields
+            return
+
+
 async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> CypherQueryOutput:
     start = time.monotonic()
     schema_slice = build_schema_slice(tool_input.query_class.value, tool_input.target_entities)
@@ -1842,77 +1917,101 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # exactly as before.
     template = select_template(tool_input, entity_bindings)
     template_name: str | None = None
-    if template is not None:
-        template_name = template.name
-        raw_cypher, validation = _check_entity_binding(
-            template.cypher, validate_cypher(template.cypher, tool_input.row_limit), entity_bindings
-        )
-        if not validation.ok:
-            return _error_output(
-                raw_cypher,
-                f"query template '{template.name}' was rejected by the validator, "
-                "which is a code defect rather than a graph fault; retrying will "
-                "not help. " + (validation.message or ""),
-                template=template_name,
-            )
-    else:
-        raw_cypher, validation = await _generate_and_validate(
-            harness, tool_input, schema_slice, None, entity_bindings
-        )
-        if not validation.ok:
-            # Exactly one repair retry, informed by the first attempt's error.
-            raw_cypher, validation = await _generate_and_validate(
-                harness, tool_input, schema_slice, validation.message, entity_bindings
+    # A template may carry ONE fallback (`CypherTemplate.fallback`), run
+    # only when the template itself returns no rows: the disease-genes
+    # shape reads the gene edge first and the variant path second. Every
+    # candidate passes the identical validator and binding gate, and the
+    # whole sequence shares this call's one timeout budget. The model path
+    # has exactly one candidate, generated below, as before.
+    candidates: list[CypherTemplate | None] = [template]
+    if template is not None and template.fallback is not None:
+        candidates.append(template.fallback)
+
+    rows: list[dict[str, Any]] = []
+    returned_total = 0
+    normalized_cypher = ""
+    params: dict[str, Any] = {}
+    active_template: CypherTemplate | None = None
+    for candidate in candidates:
+        active_template = candidate
+        if candidate is not None:
+            template_name = candidate.name
+            raw_cypher, validation = _check_entity_binding(
+                candidate.cypher,
+                validate_cypher(candidate.cypher, tool_input.row_limit),
+                entity_bindings,
             )
             if not validation.ok:
                 return _error_output(
                     raw_cypher,
-                    validation.message or "Cypher generation failed after one repair retry.",
+                    f"query template '{candidate.name}' was rejected by the validator, "
+                    "which is a code defect rather than a graph fault; retrying will "
+                    "not help. " + (validation.message or ""),
+                    template=template_name,
                 )
+        else:
+            raw_cypher, validation = await _generate_and_validate(
+                harness, tool_input, schema_slice, None, entity_bindings
+            )
+            if not validation.ok:
+                # Exactly one repair retry, informed by the first attempt's error.
+                raw_cypher, validation = await _generate_and_validate(
+                    harness, tool_input, schema_slice, validation.message, entity_bindings
+                )
+                if not validation.ok:
+                    return _error_output(
+                        raw_cypher,
+                        validation.message or "Cypher generation failed after one repair retry.",
+                    )
 
-    normalized_cypher = validation.normalized_cypher
-    if normalized_cypher is None:
-        # Defensive: validate_cypher's own contract guarantees a
-        # normalized_cypher whenever ok is True. This branch exists so a
-        # violation of that contract fails loudly with an actionable
-        # message instead of crashing on a None passed into
-        # execute_cypher.
-        return _error_output(
-            raw_cypher,
-            "internal error: Cypher validation reported success with no normalized query",
-            template=template_name,
-        )
+        candidate_cypher = validation.normalized_cypher
+        if candidate_cypher is None:
+            # Defensive: validate_cypher's own contract guarantees a
+            # normalized_cypher whenever ok is True. This branch exists so a
+            # violation of that contract fails loudly with an actionable
+            # message instead of crashing on a None passed into
+            # execute_cypher.
+            return _error_output(
+                raw_cypher,
+                "internal error: Cypher validation reported success with no normalized query",
+                template=template_name,
+            )
+        normalized_cypher = candidate_cypher
 
-    params = _build_params(normalized_cypher, entity_bindings)
-    elapsed = time.monotonic() - start
-    remaining_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - elapsed)
+        params = _build_params(normalized_cypher, entity_bindings)
+        elapsed = time.monotonic() - start
+        remaining_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - elapsed)
 
-    # Finding F-01's fix: derive the AGE output column declaration from the
-    # RETURN clause's own item count, instead of always passing
-    # execute_cypher's single-column default. A multi-hop query naturally
-    # binds several variables (RETURN v, g), and the hardcoded default
-    # failed that shape live with DatatypeMismatch.
-    as_clause = _build_as_clause(normalized_cypher)
+        # Finding F-01's fix: derive the AGE output column declaration from the
+        # RETURN clause's own item count, instead of always passing
+        # execute_cypher's single-column default. A multi-hop query naturally
+        # binds several variables (RETURN v, g), and the hardcoded default
+        # failed that shape live with DatatypeMismatch.
+        as_clause = _build_as_clause(normalized_cypher)
 
-    try:
-        # F-2.1-06: `execute_cypher` is synchronous, so awaiting it directly
-        # would block the event loop for the whole query. `asyncio.wait_for`
-        # cannot cancel a blocking call, which made both this tool's own 30
-        # second bound and Act's `enforce_timeout` dead code: a 0.5 second
-        # wait_for around a 4 second call was measured returning after 4.01
-        # seconds, with the loop ticking once. Off-thread, the await point is
-        # real, so the bound above it can actually fire and one graph query
-        # no longer freezes every concurrent SSE stream.
-        rows, returned_total = await asyncio.to_thread(
-            execute_cypher,
-            normalized_cypher,
-            params=params,
-            row_limit=tool_input.row_limit,
-            timeout_s=remaining_budget,
-            as_clause=as_clause,
-        )
-    except GraphError as exc:
-        return _error_output(normalized_cypher, str(exc), template=template_name)
+        try:
+            # F-2.1-06: `execute_cypher` is synchronous, so awaiting it directly
+            # would block the event loop for the whole query. `asyncio.wait_for`
+            # cannot cancel a blocking call, which made both this tool's own 30
+            # second bound and Act's `enforce_timeout` dead code: a 0.5 second
+            # wait_for around a 4 second call was measured returning after 4.01
+            # seconds, with the loop ticking once. Off-thread, the await point is
+            # real, so the bound above it can actually fire and one graph query
+            # no longer freezes every concurrent SSE stream.
+            rows, returned_total = await asyncio.to_thread(
+                execute_cypher,
+                normalized_cypher,
+                params=params,
+                row_limit=tool_input.row_limit,
+                timeout_s=remaining_budget,
+                as_clause=as_clause,
+            )
+        except GraphError as exc:
+            return _error_output(normalized_cypher, str(exc), template=template_name)
+        if rows:
+            break
+
+    fold = active_template.fold if active_template is not None else None
 
     if not rows:
         return CypherQueryOutput(
@@ -2016,7 +2115,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     )
     mapped_rows: list[CypherQueryRow] = []
     for raw_row in rows:
-        for shaped_row in to_output_rows(
+        shaped_rows = to_output_rows(
             raw_row,
             snapshot_version,
             # F-2.1-B05: a derived value (a count, a projection) has no
@@ -2048,7 +2147,12 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             # ambiguous candidates" signal onto the same entity row, only
             # ever set when T-3.4-03's own signal above was not.
             ambiguous_high_risk_edge_touch_by_column=ambiguous_high_risk_edge_touch_by_column,
-        ):
+        )
+        # The fold (template path only): the pairing this raw row carried
+        # between its anchor and the vertices collected beside it, written
+        # onto the anchor's row before the cap and the typed boundary.
+        _apply_fold(raw_row, shaped_rows, normalized_cypher, fold)
+        for shaped_row in shaped_rows:
             if not shaped_row.get("source_url"):
                 # Finding F-2.1-A1's cite-or-refuse corollary: an entity
                 # that parsed but resolves no source_url (an unmapped

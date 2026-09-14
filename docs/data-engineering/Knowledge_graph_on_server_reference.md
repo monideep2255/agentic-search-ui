@@ -105,7 +105,7 @@ Total: 115,406,761 nodes.
 | participates_in | 40,767,983 | Gene to BiologicalProcess |
 | located_in | 31,890,737 | Gene to CellularComponent |
 | orthologous_to | 17,418,089 | Gene to Gene |
-| has_phenotype | 6,076,735 | Disease to PhenotypicFeature |
+| has_phenotype | 6,076,735 | Disease to PhenotypicFeature, and SequenceVariant to Disease (ClinVar's condition assertions; measured live 2026-09-14, HNF1A alone has 2075 such rows over 1158 variants and 36 diseases, with the variant's ClinVar page as the edge's source_url) |
 | is_sequence_variant_of | 4,407,252 | SequenceVariant to Gene |
 | cited_in | 3,924,906 | Article to Article |
 | subclass_of | 2,832,513 | OntologyClass to OntologyClass |
@@ -399,4 +399,4 @@ The Postgres process gets OOM-killed during a load: confirm swap is mounted (`fr
 - AGE loader explainer: [docs/architecture/AGE_loader_explained.md](docs/architecture/AGE_loader_explained.md)
 - Health sweep snapshot: [tests/cypher/health_sweep_2026-04-22.txt](tests/cypher/health_sweep_2026-04-22.txt)
 
-Last updated: 2026-08-25
+Last updated: 2026-09-14

@@ -121,8 +121,8 @@ def _select(
             "What variants cause disease in BRCA1?",
             [BRCA1],
             "single_hop",
-            "gene_variants_one",
-            "is_sequence_variant_of",
+            "gene_variant_diseases_one",
+            "has_phenotype",
         ),
         # Measured on develop 2026-09-13: Think classifies this question
         # `multi_hop`, and the first cut declined two-shape questions on
@@ -134,30 +134,30 @@ def _select(
             "What variants cause disease in BRCA1?",
             [BRCA1],
             "multi_hop",
-            "gene_variants_one",
-            "is_sequence_variant_of",
+            "gene_variant_diseases_one",
+            "has_phenotype",
         ),
         (
             "What variants cause disease in BRCA1?",
             [BRCA1],
             "exploratory",
-            "gene_variants_one",
-            "is_sequence_variant_of",
+            "gene_variant_diseases_one",
+            "has_phenotype",
         ),
         (
             ("Give me everything NCBI knows about BRCA1: the gene record, associated "
              "conditions, clinically significant variants, and key literature."),
             [BRCA1],
             "multi_hop",
-            "gene_diseases_one",
-            "gene_associated_with_condition",
+            "gene_variant_diseases_one",
+            "has_phenotype",
         ),
         (
             "Which diseases are associated with BRCA1 variants?",
             [BRCA1],
             "single_hop",
-            "gene_diseases_one",
-            "gene_associated_with_condition",
+            "gene_variant_diseases_one",
+            "has_phenotype",
         ),
         ("gene lookup for BRCA1", [BRCA1], "lookup", "gene_record_one", None),
         (
@@ -248,8 +248,8 @@ def _select(
             "Variants in GCK causing MODY",
             ["NCBIGene:2645", "MedGen:C0342276"],
             "single_hop",
-            "gene_variants_one",
-            "is_sequence_variant_of",
+            "gene_variant_disease_link",
+            "has_phenotype",
         ),
         (
             "Is BRCA1 linked to breast cancer?",
@@ -280,11 +280,17 @@ def test_the_two_gene_disease_template_binds_both_genes_and_returns_both_endpoin
     assert re.search(r"RETURN a, x ORDER BY a\.id, x\.id$", template.cypher)
 
 
-def test_the_mixed_variants_template_uses_only_the_gene_binding() -> None:
+def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
+    """Before 2026-09-14 the disease binding went unused, on the belief that
+    the graph had no variant-to-disease edge. It has one (`has_phenotype`
+    from a SequenceVariant, measured live), so the template now anchors
+    both ends and folds the matched Disease records onto each variant."""
     template = _select("Variants in GCK causing MODY", ["NCBIGene:2645", "MedGen:C0342276"])
     assert template is not None
+    assert template.name == "gene_variant_disease_link"
     assert "$e_NCBIGene_2645" in template.cypher
-    assert "$e_MedGen_C0342276" not in template.cypher
+    assert "$e_MedGen_C0342276" in template.cypher
+    assert template.fold == ("v", "xs", "clinvar_condition_ids")
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +361,7 @@ def test_matched_shapes_are_ordered_by_position_in_the_question() -> None:
 def test_every_template_passes_the_validator_and_binds_only_its_names() -> None:
     examples = all_template_examples()
     assert len(examples) >= 40, "the example set shrank; a shape was dropped"
-    bindings = {"e_one": "NCBIGene:672", "e_two": "NCBIGene:675"}
+    bindings = {"e_one": "NCBIGene:672", "e_two": "NCBIGene:675", "e_three": "MedGen:C0342276"}
     for template in examples:
         result = validate_cypher(template.cypher, 100)
         assert result.ok, f"{template.name}: {result.reason} {result.message}"
@@ -373,7 +379,7 @@ def test_every_record_template_orders_by_the_record_id_before_its_limit() -> Non
             # row. Neither has an order to fix.
             continue
         normalized = validate_cypher(template.cypher, 25).normalized_cypher or ""
-        order = re.search(r"ORDER BY ((?:[ax]\.id(?:, )?)+) LIMIT 25$", normalized)
+        order = re.search(r"ORDER BY ((?:[axv]\.id(?:, )?)+) LIMIT 25$", normalized)
         assert order is not None, f"{template.name}: {normalized}"
         assert "LIMIT" not in template.cypher, template.name
 

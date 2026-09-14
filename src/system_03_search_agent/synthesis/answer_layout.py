@@ -47,6 +47,10 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from system_03_search_agent.core.next_step import entity_type_noun
+from system_03_search_agent.synthesis.disease_names import (
+    is_placeholder_condition_title,
+    readable_disease_name,
+)
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import (
     _MARKER,
@@ -259,15 +263,67 @@ def emphasis_for(text: str, terms: list[str]) -> list[str]:
     return found
 
 
-# The one two-column mapping this graph's records can support. The graph has
-# no variant-to-disease edge (`tools/cypher_templates.py`, the variants
-# shape), so the screenshot's "variant, associated disease" table is not
-# expressible from retrieved data. What one variant record DOES carry beside
-# its name is its clinical significance, so that is the second column, read
-# verbatim from the same record the row cites.
+# The two-column mappings this graph's records support (variant-to-disease
+# detail, 2026-09-14). The earlier version of this comment said the graph
+# has no variant-to-disease edge; it has one, `has_phenotype` from a
+# SequenceVariant to a Disease, asserted by ClinVar, and the fold templates
+# in `tools/cypher_templates.py` write the linked Disease CURIEs onto each
+# variant row as `clinvar_condition_ids` (and onto each gene row of the
+# disease-genes shape as `medgen_condition_ids`). The second cell shows the
+# MedGen titles those CURIEs resolve to, read live, never the CURIE.
 TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
-    "SequenceVariant": ("clinical_significance", "Variant", "Clinical significance"),
+    "SequenceVariant": ("clinvar_condition_ids", "Variant", "Associated disease(s)"),
+    "Gene": ("medgen_condition_ids", "Gene", "Associated disease"),
+    # Product-owner direction 2026-09-14: a trial row has a second field of
+    # its own, its recruitment status, read verbatim from the record.
+    "Clinical trial": ("overall_status", "Trial", "Status"),
 }
+
+# The code-built heading over a mapping table, per anchor type, in place of
+# the generic "<Type> records found".
+TABLE_HEADINGS: dict[str, str] = {
+    "SequenceVariant": "Variant-to-disease mapping",
+    "Gene": "Gene-to-disease mapping",
+}
+
+
+def condition_ids_for_row(entity_type: str, row_fields: dict[str, Any] | None) -> list[str]:
+    """The fold's CURIE list on one row, or an empty list."""
+    spec = TABLE_COLUMNS.get(entity_type)
+    if spec is None or not row_fields:
+        return []
+    value = row_fields.get(spec[0])
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item.strip()]
+
+
+def condition_titles(
+    curies: list[str], condition_names: dict[str, str | None] | None
+) -> tuple[list[str], int, int]:
+    """Resolve fold CURIEs to readable titles for display.
+
+    Returns `(titles, placeholder_count, unresolved_count)`. A CURIE whose
+    title is a ClinVar placeholder (`disease_names.PLACEHOLDER_CONDITION_
+    TITLES`, exact match) is counted and not shown; a CURIE with no
+    resolved title is counted and not shown either, so a raw MedGen code
+    never reaches answer words.
+    """
+    titles: list[str] = []
+    placeholders = 0
+    unresolved = 0
+    for curie in curies:
+        title = (condition_names or {}).get(curie)
+        if not isinstance(title, str) or not title.strip():
+            unresolved += 1
+            continue
+        if is_placeholder_condition_title(title):
+            placeholders += 1
+            continue
+        readable = readable_disease_name(title.strip())[:200]
+        if readable not in titles:
+            titles.append(readable)
+    return titles, placeholders, unresolved
 
 
 # Fields that NAME a record, in preference order, for a list label.
@@ -316,17 +372,60 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
     return finding.citation_id[:500]
 
 
-def table_second_cell(entity_type: str, row_fields: dict[str, Any] | None) -> str | None:
-    """The second column's value for one record, or None when it has none."""
+def table_second_cell(
+    entity_type: str,
+    row_fields: dict[str, Any] | None,
+    condition_names: dict[str, str | None] | None = None,
+) -> str | None:
+    """The second column's value for one record, or None when it has none.
+
+    A fold field (a list of CURIEs) becomes the resolved titles joined by
+    "; ", through `condition_titles`. A row whose every CURIE was a
+    placeholder or unresolved gets the EMPTY string, not None: the row
+    still belongs in the table (its variant is a real, cited record) and
+    an empty cell asserts nothing. None is only for a row with no fold
+    field at all.
+    """
     spec = TABLE_COLUMNS.get(entity_type)
     if spec is None or not row_fields:
         return None
     value = row_fields.get(spec[0])
     if isinstance(value, list):
-        value = "; ".join(str(item) for item in value if isinstance(item, (str, int)))
+        titles, _placeholders, _unresolved = condition_titles(
+            condition_ids_for_row(entity_type, row_fields), condition_names
+        )
+        return "; ".join(titles)[:500]
     if not isinstance(value, str) or not value.strip():
         return None
     return value.strip()[:500]
+
+
+def placeholder_link_count(
+    anchor_rows: list[tuple[str, dict[str, Any] | None]],
+    condition_names: dict[str, str | None] | None,
+) -> int:
+    """How many links from the shown anchor rows pointed at a placeholder
+    condition and were therefore not listed. `anchor_rows` is
+    `(entity_type, row_fields)` per shown row. The real count, for the
+    disclosure note under the table."""
+    total = 0
+    for entity_type, row_fields in anchor_rows:
+        _titles, placeholders, _unresolved = condition_titles(
+            condition_ids_for_row(entity_type, row_fields), condition_names
+        )
+        total += placeholders
+    return total
+
+
+def placeholder_links_note(count: int) -> str | None:
+    """The disclosure under a mapping table (decision D2), or None."""
+    if count <= 0:
+        return None
+    links = "link" if count == 1 else "links"
+    return (
+        f"{count} variant {links} to ClinVar placeholder conditions "
+        "('not provided', 'not specified' or 'see cases') are not listed."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -456,6 +555,7 @@ def answer_summary_sentence(
     entity_label: str,
     total_available: int | None,
     row_for: Any,
+    condition_names: dict[str, str | None] | None = None,
 ) -> str | None:
     """The code-built sentence that opens an answer (2026-09-14).
 
@@ -475,12 +575,42 @@ def answer_summary_sentence(
     finding here has a display slot, so its list row or a prose clause
     grounded) and it cites every record it counts. None when no answer
     finding was cited, so a summary can never open a refusal.
+
+    The fold clause (variant-to-disease detail, 2026-09-14). When cited
+    anchor rows carry a fold (`condition_ids_for_row`), the Disease records
+    those folds point at are reported as the anchors' LINKED diseases
+    rather than counted as records of their own: "Found 13 sequence
+    variant records for HNF1A, of 1212 available [1]...[13], linked to 6
+    diseases: Maturity-onset diabetes of the young [14], Monogenic
+    diabetes [15] and 4 others." The count is the distinct non-placeholder
+    CURIEs across the cited anchors' folds; a disease is named only when
+    it is itself a cited finding, with that finding's marker, and the rest
+    are counted. Nothing here is written by a model.
     """
     cited = [f for f in answer_findings if f.citation_id in display_slots]
     if not cited:
         return None
-    counts: dict[str, int] = {}
+
+    # Anchors: cited findings whose row carries a fold. Their linked CURIEs
+    # decide which cited Disease findings move from the count to the clause.
+    linked_curies: list[str] = []
+    anchors: list[SynthFinding] = []
     for finding in cited:
+        row = row_for(finding)
+        fields = (row or {}).get("fields") if isinstance(row, dict) else None
+        ids = condition_ids_for_row(finding.entity_type, fields if isinstance(fields, dict) else None)
+        if ids:
+            anchors.append(finding)
+            for curie in ids:
+                if curie not in linked_curies:
+                    linked_curies.append(curie)
+    linked_set = set(linked_curies)
+    counted = [f for f in cited if not (anchors and f.curie in linked_set)]
+    if not counted:
+        counted = list(anchors)
+
+    counts: dict[str, int] = {}
+    for finding in counted:
         noun = entity_type_noun(finding.entity_type) if finding.entity_type else "record"
         counts[noun] = counts.get(noun, 0) + 1
 
@@ -488,18 +618,44 @@ def answer_summary_sentence(
         unit = "record" if count == 1 else "records"
         return f"{count} {noun} {unit}" if noun != "record" else f"{count} {unit}"
 
+    def joined(items: list[str]) -> str:
+        return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
     parts = [plural(noun, count) for noun, count in counts.items()]
-    what = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+    what = joined(parts)
     subject = f" for {entity_label.strip()[:200]}" if entity_label and entity_label.strip() else ""
     head = f"Found {what}{subject}"
-    markers = sorted(display_slots[f.citation_id] for f in cited)
-    if total_available is not None and total_available > len(cited):
+    markers = sorted(display_slots[f.citation_id] for f in counted)
+    if total_available is not None and total_available > len(counted):
         head += f", of {total_available} available"
-    if len(cited) <= MAX_SUMMARY_NAMES:
+
+    if len(counted) <= MAX_SUMMARY_NAMES:
         named = [
             f"{summary_label(f, row_for(f))} [{display_slots[f.citation_id]}]"
-            for f in sorted(cited, key=lambda f: display_slots[f.citation_id])
+            for f in sorted(counted, key=lambda f: display_slots[f.citation_id])
         ]
-        listed = named[0] if len(named) == 1 else ", ".join(named[:-1]) + " and " + named[-1]
-        return f"{head}: {listed}."
-    return f"{head} " + "".join(f"[{slot}]" for slot in markers) + "."
+        body = f"{head}: {joined(named)}"
+    else:
+        body = f"{head} " + "".join(f"[{slot}]" for slot in markers)
+
+    if not anchors:
+        return body + "."
+
+    titles, _placeholders, _unresolved = condition_titles(linked_curies, condition_names)
+    if not titles:
+        return body + "."
+    named_diseases = [
+        f"{f.field_value.strip()[:200]} [{display_slots[f.citation_id]}]"
+        for f in sorted(cited, key=lambda f: display_slots[f.citation_id])
+        if f.curie in linked_set
+        and f.name_resolved
+        and not is_placeholder_condition_title(f.field_value)
+    ][:MAX_SUMMARY_NAMES]
+    others = len(titles) - len(named_diseases)
+    noun = "disease" if len(titles) == 1 else "diseases"
+    clause = f", linked to {len(titles)} {noun}"
+    if named_diseases:
+        clause += ": " + joined(named_diseases)
+        if others > 0:
+            clause += f" and {others} {'other' if others == 1 else 'others'}"
+    return body + clause + "."

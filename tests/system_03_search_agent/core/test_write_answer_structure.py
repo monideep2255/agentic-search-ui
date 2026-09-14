@@ -192,17 +192,23 @@ async def test_an_unsupported_heading_appears_without_the_check(monkeypatch) -> 
 
 
 @pytest.mark.asyncio
-async def test_plain_language_has_no_headings_or_lists_and_ends_on_the_note(monkeypatch) -> None:
+async def test_plain_language_lists_its_records_in_code_and_ends_on_the_note(monkeypatch) -> None:
+    """Product-owner direction 2026-09-14: the structure is the same in every
+    mode. Plain language shows no MODEL heading (its prose stays short and
+    unheaded), but the records are grouped in code under a code-built
+    heading as list or table rows, never the run-on findings tail, and the
+    answer still ends on the medical-advice note."""
     _install(monkeypatch, lambda lines: f"{lines[1]} [1].\n\n## Disease associations\n{lines[2]} [2].")
     tokens = _tokens(await graph_module.write_node(_state("plain_language")))
-    kinds = {t["kind"] for t in tokens}
-    assert not kinds & {"heading", "list_item", "table_row", "table_header"}, kinds
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert "Disease associations" not in headings, headings
+    assert "Disease records found" in headings, headings
+    assert any(t["kind"] == "list_item" for t in tokens), {t["kind"] for t in tokens}
+    assert not any(t["text"].startswith("Note: the records below") for t in tokens)
     assert tokens[-1] == {
         "text": "This is a research summary, not medical advice.",
         "marker_ids": [], "kind": "note", "cells": None, "emphasis": None,
     }
-    tail_note = [t for t in tokens if t["text"].startswith("Note: the records below")]
-    assert tail_note and tail_note[0]["kind"] == "note"
 
 
 @pytest.mark.asyncio
@@ -223,14 +229,96 @@ async def test_a_listing_marker_reuses_the_number_the_prose_gave_it(monkeypatch)
         assert [citations[m] for m in token["marker_ids"]] == numbers, token
 
 
+# Variant-to-disease detail (2026-09-14): what the fold template returns for
+# one gene, as `cypher_query` shapes it. Each variant row carries the CURIEs
+# of the Disease records its ClinVar entry asserts (`clinvar_condition_ids`),
+# and the Disease records follow as rows of their own, with the graph's
+# vocabulary-token `name` that the live MedGen resolution replaces.
+_FOLDED_VARIANT_ROWS = [
+    {
+        "node_or_edge_type": "SequenceVariant",
+        "curie": "ClinVar:1",
+        "fields": {
+            "name": "variant number 1",
+            "clinvar_condition_ids": ["MedGen:C0342276", "MedGen:C3661900"],
+        },
+        "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1",
+        "graph_snapshot_version": "v1",
+    },
+    {
+        "node_or_edge_type": "Disease",
+        "curie": "MedGen:C0342276",
+        "fields": {"name": "OMIM included"},
+        "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0342276",
+        "graph_snapshot_version": "v1",
+    },
+    {
+        "node_or_edge_type": "Disease",
+        "curie": "MedGen:C3661900",
+        "fields": {"name": "OMIM allelic variant"},
+        "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C3661900",
+        "graph_snapshot_version": "v1",
+    },
+    {
+        "node_or_edge_type": "SequenceVariant",
+        "curie": "ClinVar:2",
+        "fields": {"name": "variant number 2", "clinvar_condition_ids": ["MedGen:C3661900"]},
+        "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/2",
+        "graph_snapshot_version": "v1",
+    },
+]
+
+_MEDGEN_TITLES = {
+    "MedGen:C0342276": "Maturity-onset diabetes of the young",
+    "MedGen:C3661900": "not provided",
+}
+
+
+async def _fake_resolve_concept_ids(concept_ids):
+    return {cid: _MEDGEN_TITLES.get(cid) for cid in concept_ids}
+
+
 @pytest.mark.asyncio
-async def test_variant_records_become_a_table_with_the_records_own_significance(monkeypatch) -> None:
+async def test_variant_records_become_a_variant_to_disease_table(monkeypatch) -> None:
+    """The mapping table, the disease list before it, the placeholder rule
+    and the summary clause, from one folded graph result (2026-09-14).
+
+    Populate-checked: the fixture's second variant links ONLY to the
+    placeholder "not provided", so its cell is empty and the disclosure
+    counts two excluded links (one per variant). Mutation-proven by hand
+    before this test was kept: removing `_apply_fold`'s effect (a fixture
+    with no `clinvar_condition_ids`) turns the table into a list and the
+    header assertion red; dropping `drop_placeholder_condition_findings`
+    puts "not provided" into the disease list and the placeholder
+    assertion red; dropping the fold clause from `answer_summary_sentence`
+    turns the "linked to 1 disease" assertion red.
+    """
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
     _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
-    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=_VARIANT_ROWS)))
+    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=_FOLDED_VARIANT_ROWS)))
     header = [t for t in tokens if t["kind"] == "table_header"]
-    assert header and header[0]["cells"] == ["Variant", "Clinical significance"]
+    assert header and header[0]["cells"] == ["Variant", "Associated disease(s)"]
     rows = [t["cells"] for t in tokens if t["kind"] == "table_row"]
-    assert rows == [["variant number 1", "Pathogenic"], ["variant number 2", "Pathogenic"]]
+    assert rows == [
+        ["variant number 1", "Maturity-onset diabetes of the young"],
+        ["variant number 2", ""],
+    ]
+    # Every row cites its own record; the first row also cites the disease
+    # its cell names, and no cell carries a raw code.
+    table_rows = [t for t in tokens if t["kind"] == "table_row"]
+    assert len(table_rows[0]["marker_ids"]) == 2 and len(table_rows[1]["marker_ids"]) == 1
+    assert not any("MedGen:" in cell for row in rows for cell in row)
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert "Variant-to-disease mapping" in headings
+    assert headings.index("Disease records found") < headings.index("Variant-to-disease mapping")
+    list_items = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
+    assert list_items == ["Maturity-onset diabetes of the young"], list_items
+    assert "not provided" not in " ".join(list_items)
+    notes = [t["text"] for t in tokens if t["kind"] == "note"]
+    assert any(n.startswith("2 variant links to ClinVar placeholder conditions") for n in notes), notes
+    first = next(t["text"] for t in tokens if t["kind"] == "claim")
+    assert first.startswith("Found 2 sequence variant records for BRCA1"), first
+    assert "linked to 1 disease: Maturity-onset diabetes of the young [" in first, first
 
 
 @pytest.mark.asyncio
@@ -286,3 +374,22 @@ async def test_a_listing_cell_reads_the_variant_name_when_the_pick_was_the_url(m
     for cell in cells:
         assert cell[0] == "NM_000162.5(GCK):c.363+318G>A", cell
         assert not cell[0].startswith("https://"), cell
+
+
+@pytest.mark.asyncio
+async def test_the_structured_fallback_lists_records_in_every_depth(monkeypatch) -> None:
+    """Product-owner direction 2026-09-14. When the model's prose grounds
+    nothing, the records themselves are the answer, and they render as a
+    grouped listing in Plain language exactly as in Researcher, never as
+    run-on "Disease name: ..." claims. Measured live: 3 of 5 Plain language
+    runs of "What genes are associated with MODY?" took this branch.
+    Mutation that turns this red: render `fallback_sentences` as plain
+    `sentence_token`s for non-Researcher depths again."""
+    _install(monkeypatch, lambda lines: "Nothing here matches any record at all.")
+    tokens = _tokens(await graph_module.write_node(_state("plain_language")))
+    kinds = [t["kind"] for t in tokens]
+    assert "list_item" in kinds, kinds
+    assert "Disease records found" in [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert not any(
+        t["kind"] == "claim" and t["text"].startswith("Disease name") for t in tokens
+    ), [t["text"] for t in tokens if t["kind"] == "claim"]

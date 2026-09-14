@@ -312,9 +312,13 @@ async def test_a_repair_that_drops_a_reported_finding_is_discarded(
     assert "disease name number 3" not in narrative, (
         "the discarded repair's own content must not leak into the answer"
     )
-    note_at = narrative.index(graph_module._FINDINGS_TAIL_NOTE)
+    # Product-owner direction 2026-09-14: the findings tail note is gone in
+    # every depth; the code-built listing under its heading carries what the
+    # tail used to report.
+    assert graph_module._FINDINGS_TAIL_NOTE not in narrative, narrative
+    note_at = narrative.index("Disease records found")
     assert "disease name number 4" in narrative[note_at:], (
-        "the findings tail must still report what the tail can ground"
+        "the code-built listing must still report what the tail could ground"
     )
     assert "one further disease record was found" in narrative, narrative
     done = next(event for event in events if event.type == "done")

@@ -93,6 +93,21 @@ EDGE_ENDPOINTS: Final[dict[str, tuple[str, str] | None]] = {
     "exact_match": None,
 }
 
+# Endpoint pairs the live graph carries under a label BESIDE the typical
+# pair the reference doc lists for it. Measured 2026-09-14 by read-only
+# parameterised queries (variant-to-disease detail work, `testing/Developer/
+# reports/2026-09-14_variant_disease_detail/`): `has_phenotype` joins a
+# SequenceVariant to a Disease, source "ClinVar", `source_url` the variant's
+# own ClinVar variation page. HNF1A alone has 2075 such rows over 1158
+# variants and 36 diseases. Kept SEPARATE from `EDGE_ENDPOINTS` on purpose:
+# `schema_slice` expands neighbourhoods along that table and the model
+# prompt is built from it, so widening the primary pair to `None` (mixed)
+# would silently drop the Disease-to-PhenotypicFeature expansion. Templates
+# consult both tables (`cypher_templates._assert_templates_name_real_labels`).
+ADDITIONAL_EDGE_ENDPOINTS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
+    "has_phenotype": (("SequenceVariant", "Disease"),),
+}
+
 # Section F. The prefix set the graph actually uses.
 CURIE_PREFIXES: Final[tuple[str, ...]] = (
     "NCBIGene",

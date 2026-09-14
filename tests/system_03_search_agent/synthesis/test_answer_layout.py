@@ -239,9 +239,25 @@ def test_a_clean_name_finding_keeps_its_own_value() -> None:
 
 
 def test_the_table_second_cell_is_read_from_the_record() -> None:
-    assert table_second_cell("SequenceVariant", {"clinical_significance": "Pathogenic"}) == "Pathogenic"
+    """Variant-to-disease detail (2026-09-14): the second cell is the
+    resolved MedGen titles of the row's folded condition CURIEs, never a
+    CURIE; a placeholder title is left out; a row with no fold has no cell
+    (None) while a row whose links were all placeholders has an EMPTY one."""
+    names = {
+        "MedGen:C0342276": "Maturity-onset diabetes of the young",
+        "MedGen:C3661900": "not provided",
+    }
+    row = {"name": "x", "clinvar_condition_ids": ["MedGen:C0342276", "MedGen:C3661900"]}
+    assert table_second_cell("SequenceVariant", row, names) == "Maturity-onset diabetes of the young"
     assert table_second_cell("SequenceVariant", {"name": "x"}) is None
-    assert table_second_cell("Disease", {"clinical_significance": "Pathogenic"}) is None
+    only_placeholder = {"name": "x", "clinvar_condition_ids": ["MedGen:C3661900"]}
+    assert table_second_cell("SequenceVariant", only_placeholder, names) == ""
+    unresolved = {"name": "x", "clinvar_condition_ids": ["MedGen:C9"]}
+    assert table_second_cell("SequenceVariant", unresolved, names) == ""
+    assert "MedGen" not in (table_second_cell("SequenceVariant", unresolved, names) or "")
+    assert table_second_cell("Disease", {"clinvar_condition_ids": ["MedGen:C0342276"]}) is None
+    gene_row = {"name": "glucokinase", "medgen_condition_ids": ["MedGen:C0342276"]}
+    assert table_second_cell("Gene", gene_row, names) == "Maturity-onset diabetes of the young"
 
 
 # ---------------------------------------------------------------- item 9.8
@@ -322,3 +338,69 @@ def test_trust_line_flag_and_refuse() -> None:
     assert answer_trust_line("flag", [], _claims(DISEASE)) == "Sources disagree on at least one claim"
     assert answer_trust_line("refuse", [], _claims(DISEASE)) is None
     assert answer_trust_line("answer", [], []) is None
+
+
+# ---------------------------------------------------------------------------
+# Variant-to-disease detail (2026-09-14): the fold clause of the summary
+# sentence and the placeholder count under the table.
+# Mutations run by hand before these were kept: removing the `anchors`
+# branch from `answer_summary_sentence` drops the "linked to" clause (red);
+# counting placeholders as titles in `condition_titles` makes the disease
+# count 3 (red); dropping `placeholder_link_count`'s accumulation returns 0
+# (red).
+# ---------------------------------------------------------------------------
+
+
+def _fold_finding(ref: int, entity_type: str, curie: str, value: str, *, resolved: bool = False) -> SynthFinding:
+    return SynthFinding(
+        ref_index=ref, citation_id=f"cq-{ref}", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value=value, source_url=f"https://www.ncbi.nlm.nih.gov/x/{ref}",
+        entity_type=entity_type, curie=curie, name_resolved=resolved, call_id="cq",
+    )
+
+
+_NAMES = {
+    "MedGen:C0342276": "Maturity-onset diabetes of the young",
+    "MedGen:C3888631": "Monogenic diabetes",
+    "MedGen:C3661900": "not provided",
+}
+
+
+def test_the_summary_counts_variants_and_their_distinct_linked_diseases() -> None:
+    from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
+
+    v1 = _fold_finding(1, "SequenceVariant", "ClinVar:1", "NM_1")
+    v2 = _fold_finding(2, "SequenceVariant", "ClinVar:2", "NM_2")
+    d1 = _fold_finding(3, "Disease", "MedGen:C0342276", "Maturity-onset diabetes of the young", resolved=True)
+    rows = {
+        "cq-1": {"fields": {"name": "NM_1", "clinvar_condition_ids": ["MedGen:C0342276", "MedGen:C3661900"]}},
+        "cq-2": {"fields": {"name": "NM_2", "clinvar_condition_ids": ["MedGen:C3888631", "MedGen:C0342276"]}},
+        "cq-3": {"fields": {"name": "OMIM"}},
+    }
+    sentence = answer_summary_sentence(
+        [v1, v2, d1], {"cq-1": 1, "cq-2": 2, "cq-3": 3}, "HNF1A", 1212, lambda f: rows[f.citation_id], _NAMES
+    )
+    assert sentence is not None
+    assert sentence.startswith("Found 2 sequence variant records for HNF1A, of 1212 available"), sentence
+    assert "linked to 2 diseases: Maturity-onset diabetes of the young [3] and 1 other." in sentence, sentence
+    assert "disease records" not in sentence, "a linked disease is not counted as a record of its own"
+    assert "MedGen:" not in sentence
+
+
+def test_the_placeholder_count_is_the_real_number_of_excluded_links() -> None:
+    from system_03_search_agent.synthesis.answer_layout import (
+        placeholder_link_count,
+        placeholder_links_note,
+    )
+
+    rows = [
+        ("SequenceVariant", {"clinvar_condition_ids": ["MedGen:C0342276", "MedGen:C3661900"]}),
+        ("SequenceVariant", {"clinvar_condition_ids": ["MedGen:C3661900"]}),
+        ("Disease", {"name": "OMIM"}),
+    ]
+    assert placeholder_link_count(rows, _NAMES) == 2
+    assert placeholder_links_note(2) == (
+        "2 variant links to ClinVar placeholder conditions "
+        "('not provided', 'not specified' or 'see cases') are not listed."
+    )
+    assert placeholder_links_note(0) is None
