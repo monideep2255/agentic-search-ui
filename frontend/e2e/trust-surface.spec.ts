@@ -140,7 +140,9 @@ test.describe("the trust surface", () => {
     // not, regardless of the fact that claim one's claim_text is a substring of
     // nothing else. This is the shape F-4.8-A-01 got wrong.
     await expect(page.getByTestId("citation-1")).toBeVisible();
-    const segments = page.getByTestId(/^spine-segment-/);
+    // REQUIREMENT CHANGE, 2026-09-14: no spine bar; each claim carries its
+    // own provenance attribute, one per claim, exactly as the segments did.
+    const segments = page.getByTestId(/^claim-text-\d+$/);
     await expect(segments).toHaveCount(2);
     await expect(segments.nth(0)).toHaveAttribute("data-layer", "1");
     await expect(segments.nth(1)).toHaveAttribute("data-layer", "none");
@@ -153,58 +155,38 @@ test.describe("the trust surface", () => {
   });
 
   /*
-   * The spine's whole claim is that segment N describes claim N. Every other
-   * assertion in this file checks the segments' count, order and colour, which
-   * all stay correct while the two columns drift vertically out of register.
-   *
-   * This measures the thing those cannot see: each segment must be level with
-   * the sentence it is pointing at. The tolerance is generous on purpose, since
-   * the point is to catch a segment beside the WRONG claim, not to pin a
-   * padding value.
+   * REQUIREMENT CHANGE, 2026-09-14 (approved answer layout). The spine is
+   * retired, so "each spine segment stays level with its claim" has nothing
+   * left to measure. The property it protected was that a provenance mark
+   * points at the RIGHT claim. That is now asserted directly: every citation
+   * marker is inside the claim it declares, and the first claim's marker is
+   * level with that claim's own rendered text.
    */
-  test("each spine segment stays level with the claim it describes", async ({ page }) => {
+  test("each citation marker sits inside the claim it cites", async ({ page }) => {
     await signInAndScript(page);
-
-    /*
-     * Measured against the RENDERED TEXT, via a Range over the claim's own text
-     * nodes, not against the element box that holds it.
-     *
-     * The first version of this check compared the segment's box to the
-     * Typography's box. Both are cells of the same grid row, so they are level
-     * by construction and the assertion could not fail: a mutation restoring
-     * the old independent sizing passed it. Comparing against the glyphs is
-     * what makes it a measurement rather than a restatement of the layout.
-     */
-    const rows = await page.evaluate(() => {
-      const segments = [...document.querySelectorAll('[data-testid^="spine-segment-"]')];
-      const texts = [...document.querySelectorAll('[data-testid^="claim-text-"]')];
-      return segments.map((element, index) => {
-        const segment = element.getBoundingClientRect();
+    const pairs = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid^="citation-"][data-claim]')].map((marker) => {
+        const claim = document.querySelector(
+          `[data-testid="claim-text-${marker.getAttribute("data-claim")}"]`,
+        );
         const range = document.createRange();
-        range.selectNodeContents(texts[index]!);
+        if (claim) range.selectNodeContents(claim);
         const text = range.getBoundingClientRect();
+        const box = marker.getBoundingClientRect();
         return {
-          segmentTop: segment.top,
-          segmentBottom: segment.bottom,
+          inside: claim !== null && claim.contains(marker),
+          markerMid: (box.top + box.bottom) / 2,
           textTop: text.top,
           textBottom: text.bottom,
         };
-      });
-    });
-
-    // Both sides present, and more than one, or the loop below proves nothing.
-    expect(rows.length).toBe(await page.getByTestId(/^claim-text-/).count());
-    expect(rows.length).toBeGreaterThan(1);
-
-    for (const [index, row] of rows.entries()) {
-      // The segment must SPAN the sentence it points at. A segment that has
-      // slipped onto a neighbouring claim fails one bound or the other.
-      expect(row.segmentTop, `segment ${index} starts below its claim`).toBeLessThanOrEqual(
-        row.textTop + 12,
-      );
-      expect(row.segmentBottom, `segment ${index} ends above its claim`).toBeGreaterThanOrEqual(
-        row.textBottom - 12,
-      );
+      }),
+    );
+    // Populate-check: at least one marker, or the loop proves nothing.
+    expect(pairs.length).toBeGreaterThan(0);
+    for (const [index, pair] of pairs.entries()) {
+      expect(pair.inside, `marker ${index} is outside the claim it cites`).toBe(true);
+      expect(pair.markerMid, `marker ${index} is above its claim`).toBeGreaterThanOrEqual(pair.textTop - 12);
+      expect(pair.markerMid, `marker ${index} is below its claim`).toBeLessThanOrEqual(pair.textBottom + 12);
     }
   });
 

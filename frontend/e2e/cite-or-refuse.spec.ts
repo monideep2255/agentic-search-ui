@@ -266,7 +266,6 @@ test.describe("cite or refuse", () => {
     // THE WHOLE POINT: no claim, cited or uncited, exists on the spine.
     // Before the 2026-09-05 fix this exact token rendered as an ordinary
     // uncited claim, per `testing/Developer/Developer_workflows.md`'s defect #5.
-    await expect(page.getByTestId(/^spine-segment-/)).toHaveCount(0);
     await expect(page.getByTestId(/^claim-text-/)).toHaveCount(0);
     await expect(page.getByTestId(/^citation-\d+$/)).toHaveCount(0);
 
@@ -302,7 +301,6 @@ test.describe("cite or refuse", () => {
     );
     await expect(page.getByTestId("trust-risk")).toHaveCount(0);
 
-    await expect(page.getByTestId(/^spine-segment-/)).toHaveCount(0);
     await expect(page.getByTestId(/^claim-text-/)).toHaveCount(0);
 
     // No tool ever ran on this path (`act_node` never dispatched), so no
@@ -323,6 +321,6 @@ test.describe("cite or refuse", () => {
 
     await expect(page.getByTestId("answer-refusal")).toHaveCount(0);
     await expect(page.getByTestId("citation-1")).toBeVisible();
-    await expect(page.getByTestId(/^spine-segment-/)).toHaveCount(1);
+    await expect(page.getByTestId(/^claim-text-\d+$/)).toHaveCount(1);
   });
 });

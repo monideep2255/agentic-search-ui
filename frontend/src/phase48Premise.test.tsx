@@ -282,7 +282,10 @@ describe("clause 2: structure", () => {
     }
   });
 
-  it("the provenance spine renders one segment per claim, carrying its layer", async () => {
+  // REQUIREMENT CHANGE, 2026-09-14 (approved answer layout): the spine bar is
+  // retired and each claim carries its own provenance. The guarantee is the
+  // same: one per claim, an uncited claim distinguishable.
+  it("every claim carries its own provenance, one per claim, with the gap visible", async () => {
     // T-4.8-06, and the product owner's settled decision to keep it always on.
     const { AnswerScreen } = await loadAnswer();
     render(
@@ -295,7 +298,7 @@ describe("clause 2: structure", () => {
         sources={[SOURCE]}
       />,
     );
-    const segments = screen.getAllByTestId(/^spine-segment-/);
+    const segments = screen.getAllByTestId(/^claim-text-\d+$/);
     expect(segments).toHaveLength(2);
     // An uncited claim must be visibly distinguishable, which is the whole
     // reason the spine exists rather than being decoration.

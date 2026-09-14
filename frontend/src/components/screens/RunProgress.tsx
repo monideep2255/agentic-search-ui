@@ -34,7 +34,124 @@ import { Box, Button, Typography } from "@mui/material";
 import { designTokens, layerColour } from "../../theme";
 import { useElapsedSeconds } from "../../hooks/useElapsedSeconds";
 import { ReasoningLog } from "./ReasoningLog";
-import { PersonaCaption, PersonaInfo } from "../shell/PersonaChip";
+import { PersonaCaption, PersonaInfo, WritingEllipsis } from "../shell/PersonaChip";
+
+/** "A", "A and B", "A, B and C". */
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * The write step's banner, 2026-09-14, from the approved
+ * `design/Streaming.dc.html`: a pencil in a wash circle, "{Lead} is writing
+ * the answer" with animated dots, and on the right who found how many records.
+ *
+ * It replaces the per-step caption, the handoff lines and the tool chips for
+ * the length of Write, because the design shows none of them there and the
+ * right-hand line already carries the helpers and the count.
+ *
+ * Every value names its token or designed neighbour:
+ *   ground, border     `surfaceSunk`, 1px `line` (the source card and refusal block)
+ *   radius             theme `shape.borderRadius` 8px (`--r`)
+ *   padding, gap       16px 18px, 12px (the mockup; the persona caption's 12px gap)
+ *   icon circle        30px, `layer1Wash` ground, pencil stroked in `blue`
+ *   lead line          16px `ink`, name 700 (theme `body1`)
+ *   dots               700 in `blue`, 2px tracking, at the line's own 16px. The
+ *                      mockup draws them at 18px, which is not a type size in
+ *                      the design system, so the line's size is kept instead.
+ *   right line         12.5px `inkMuted` (theme `caption`)
+ * The dots are `WritingEllipsis`, which is static under reduced motion.
+ */
+export function WritingBanner({
+  lead,
+  toolCalls,
+}: {
+  lead: string | null;
+  toolCalls: ToolCall[];
+}) {
+  const helpers = deriveHandoff(toolCalls).map((line) => line.name);
+  const counted = toolCalls.filter((call) => typeof call.resultCount === "number");
+  const records = counted.reduce((sum, call) => sum + (call.resultCount ?? 0), 0);
+  const found =
+    counted.length === 0 || records === 0
+      ? null
+      : `${helpers.length > 0 ? `${joinNames(helpers)} found` : "Found"} ${records} ${
+          records === 1 ? "record" : "records"
+        }`;
+  return (
+    <Box
+      data-testid="writing-banner"
+      sx={{
+        mt: "18px",
+        px: "18px",
+        py: "16px",
+        bgcolor: designTokens.surfaceSunk,
+        border: `1px solid ${designTokens.line}`,
+        borderRadius: 1,
+        display: "flex",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "12px",
+      }}
+    >
+      <Box
+        component="span"
+        aria-hidden="true"
+        sx={{
+          width: 30,
+          height: 30,
+          borderRadius: "50%",
+          bgcolor: designTokens.layer1Wash,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flex: "none",
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path
+            d="M3 13l2.5-.6L13 4.9 11.1 3 3.6 10.5 3 13z"
+            stroke={designTokens.blue}
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </Box>
+      <Box
+        component="span"
+        data-testid="persona-caption"
+        sx={{ fontSize: 16, color: designTokens.ink, minWidth: 0 }}
+      >
+        {lead ? (
+          <>
+            <Box component="strong" sx={{ fontWeight: 700 }}>
+              {lead}
+            </Box>{" "}
+            is writing the answer
+          </>
+        ) : (
+          "Writing the answer"
+        )}
+        <Box
+          component="span"
+          sx={{ fontWeight: 700, color: designTokens.blue, letterSpacing: "2px", ml: "4px" }}
+        >
+          <WritingEllipsis testId="persona-caption-ellipsis" />
+        </Box>
+      </Box>
+      {found ? (
+        <Box
+          component="span"
+          data-testid="writing-banner-found"
+          sx={{ ml: "auto", fontSize: 12.5, color: designTokens.inkMuted }}
+        >
+          {found}
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
 
 /**
  * The live step's pulse (T-6.2-05).
@@ -78,6 +195,8 @@ export interface ToolCall {
    * type-checks; absent reads as "running".
    */
   status?: "running" | "ok" | "empty" | "error";
+  /** Rows the call returned, from its `tool_result`. Absent until it lands. */
+  resultCount?: number;
   /** The helper scientist this call was handed to, from the wire. Null or absent: no handoff line. */
   persona?: string | null;
   personaAbout?: string | null;
@@ -309,7 +428,10 @@ export function RunProgress({
   // Shown from Act onward while the run is live; the lead's own caption
   // reads the handoff sentence during Act only, and returns to "is writing
   // the answer" on Write, which is the coordinator writing underneath.
-  const handoff = !stopped && activeStep !== null ? deriveHandoff(toolCalls) : [];
+  // 2026-09-14: during Write the approved banner stands in for the caption,
+  // the handoff lines, the tool chips and the reasoning log.
+  const writingNow = activeStep === "Write" && !stopped;
+  const handoff = !stopped && activeStep !== null && !writingNow ? deriveHandoff(toolCalls) : [];
   const leadNarrative =
     activeStep === "Act" && handoff.length > 0
       ? handoffSentence(handoff.map((line) => line.name))
@@ -539,13 +661,17 @@ export function RunProgress({
       {capMessage ? <Notice testId="cap-notice" tone="warn" text={capMessage} /> : null}
       {failure ? <Notice testId="run-failure" tone="warn" text={failure} /> : null}
 
-      <PersonaCaption
-        name={personaName}
-        step={activeStep ?? null}
-        about={personaAbout}
-        wikipedia={personaWikipedia}
-        narrative={leadNarrative}
-      />
+      {writingNow ? (
+        <WritingBanner lead={personaName} toolCalls={toolCalls} />
+      ) : (
+        <PersonaCaption
+          name={personaName}
+          step={activeStep ?? null}
+          about={personaAbout}
+          wikipedia={personaWikipedia}
+          narrative={leadNarrative}
+        />
+      )}
 
       {/*
         UI fix set 8 (R30, R31): one line per layer the lead handed off,
@@ -649,7 +775,7 @@ export function RunProgress({
         </Box>
       ) : null}
 
-      {!stopped && toolCalls.length > 0 ? (
+      {!stopped && !writingNow && toolCalls.length > 0 ? (
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.25, mt: 2.25, alignItems: "center" }}>
           <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
             Querying
@@ -688,7 +814,7 @@ export function RunProgress({
 
       {/* The reasoning log, F-4.8-D-10. Same component as the answer
           screen's `Show work`, so the two cannot drift apart. */}
-      {!stopped && steps.length > 0 ? (
+      {!stopped && !writingNow && steps.length > 0 ? (
         <Box sx={{ mt: 2.5 }}>
           <Typography
             component="p"

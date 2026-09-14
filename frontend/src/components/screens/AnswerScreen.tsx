@@ -26,7 +26,7 @@
 
 import type React from "react";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
 import type { ReasoningStep } from "./RunProgress";
@@ -81,6 +81,8 @@ export interface Claim {
   cells?: string[];
   emphasis?: string[];
   tableHeader?: string[];
+  /** 2026-09-14: a record line after the findings-tail note, set by `useRunView`. */
+  findingsTail?: boolean;
 }
 
 /** What the trust line's info card says (item 9.9). */
@@ -106,6 +108,238 @@ function withEmphasis(text: string, emphasis?: string[]): React.ReactNode {
       <Fragment key={i}>{part}</Fragment>
     ),
   );
+}
+
+/*
+ * 2026-09-14, THE APPROVED ANSWER LAYOUT (`design/Main.dc.html`,
+ * `Researcher.dc.html`, `Mobile.dc.html`, `Streaming.dc.html`).
+ *
+ * Prose paragraphs, a small-caps section heading, record tables (stacked rows
+ * on a phone), a muted Notes list, the medical-advice line, then Sources and
+ * the trust line. No provenance spine beside each sentence: the citation
+ * marker's layer colour carries the layer. Every value below is the
+ * prototype's own rule, named where it is used:
+ *   `.answer p`   16.5px, line-height 1.68, 66ch, 18px below; 16px and 1.65 on a phone
+ *   `.answer .ah` 11.5px, .13em, uppercase, 700, `inkFaint`, 32px above and 14px
+ *                 below (28px and 10px on a phone), 7px and a `line` rule under it
+ *   `.rtab`       13.5px, `line` border, `surface` ground; cells 8px 11px;
+ *                 header 10.5px .1em uppercase `inkFaint` on `surfaceSunk`;
+ *                 an identifier cell `.g` mono 12.5px nowrap `inkMuted`
+ *   stacked row   15px/1.45 `ink` name, 12.5px mono `inkMuted` identifier, 10px
+ *                 padding and a `line` rule (the mockup's `.row`, `.rn`, `.rm`;
+ *                 15px is the prototype's `.fu-bar input` size)
+ *   Notes list    14.5px/1.6 `inkMuted`, 20px indent, 6px between items (14px and
+ *                 18px on a phone; the prototype's `.nolist li` and `.conflict`)
+ *   medical line  13.5px `inkMuted` (theme `body2`)
+ */
+
+/** The prototype's phone breakpoint (`@media (max-width:720px)`). */
+export const PHONE_LAYOUT_QUERY = "(max-width:720px)";
+
+/** A sentence, row or heading rising into place while the answer is written. */
+const RISE = {
+  "@keyframes s3-answer-rise": {
+    from: { opacity: 0, transform: "translateY(4px)" },
+    to: { opacity: 1, transform: "none" },
+  },
+  animation: "s3-answer-rise .45s ease-out both",
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+} as const;
+
+const AH_BASE = {
+  fontSize: 11.5,
+  letterSpacing: "0.13em",
+  textTransform: "uppercase",
+  fontWeight: 700,
+  color: designTokens.inkFaint,
+  m: "32px 0 14px",
+  pb: "7px",
+  borderBottom: `1px solid ${designTokens.line}`,
+  "@media (max-width:720px)": { m: "28px 0 10px" },
+} as const;
+const AH_SX = { ...AH_BASE, "&:first-child": { mt: 0 } } as const;
+
+const PROSE_SX = {
+  m: "0 0 18px",
+  fontSize: 16.5,
+  lineHeight: 1.68,
+  maxWidth: "66ch",
+  color: designTokens.ink,
+  textWrap: "pretty",
+  "&:last-child": { mb: 0 },
+  "@media (max-width:860px)": { maxWidth: "none" },
+  "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px" },
+} as const;
+
+const RTAB_CELL = {
+  textAlign: "left",
+  p: "8px 11px",
+  borderBottom: `1px solid ${designTokens.line}`,
+  verticalAlign: "top",
+} as const;
+const RTAB_HEAD = {
+  ...RTAB_CELL,
+  fontSize: 10.5,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: designTokens.inkFaint,
+  bgcolor: designTokens.surfaceSunk,
+  fontWeight: 700,
+} as const;
+const RTAB_ID = {
+  fontFamily: "ui-monospace, monospace",
+  fontSize: 12.5,
+  whiteSpace: "nowrap",
+  color: designTokens.inkMuted,
+} as const;
+
+/**
+ * The record-line labels the answer recognises, deterministically.
+ *
+ * `synthesis/findings.py`'s `render_finding_body` writes a code-built record
+ * line as "{entity type} {field}: {value}", and the findings tail is made of
+ * them. A label is recognised only as one of these entity types followed by
+ * one of these fields, then ": ", compared without regard to case.
+ */
+export const RECORD_LINE_ENTITY_TYPES = [
+  "Disease",
+  "Gene",
+  "Clinical trial",
+  "Literature entity",
+  "Sequence variant",
+  "SequenceVariant",
+  "Chemical entity",
+  "Protein",
+] as const;
+export const RECORD_LINE_FIELDS = ["name", "symbol", "title", "preferred name", "preferred_name"] as const;
+
+const RECORD_LINE_PATTERN = new RegExp(
+  `^((?:${RECORD_LINE_ENTITY_TYPES.join("|")}) (?:${RECORD_LINE_FIELDS.join("|")})): (\\S[\\s\\S]*)$`,
+  "i",
+);
+
+/**
+ * Split a record line into its label and value, or null.
+ *
+ * The value is the claim text with the label prefix removed and nothing else
+ * changed, so a row never words a record differently from its sentence.
+ */
+export function parseRecordLine(text: string): { label: string; value: string } | null {
+  const match = RECORD_LINE_PATTERN.exec(text);
+  if (!match) return null;
+  return { label: match[1]!, value: match[2]! };
+}
+
+/** An accession or concept id, set in mono: "C0346153", "NCT00590109", "rs80357906", "MedGen:C1". */
+export function isIdentifierCell(cell: string): boolean {
+  return /^(?:[A-Za-z][\w.-]*:\S+|[A-Z]{1,4}\d{6,}|NCT\d{8}|rs\d+)$/.test(cell.trim());
+}
+
+/** The Plain language closing line, shown on its own rather than as a note. */
+export const MEDICAL_NOTE_PREFIX = "This is a research summary, not medical advice";
+
+export interface RecordRow {
+  claim: Claim;
+  index: number;
+  cells: string[];
+}
+
+export type AnswerBlock =
+  | { type: "heading"; text: string; key: string }
+  | { type: "note"; text: string; key: string }
+  | { type: "prose"; key: string; paragraph: number | undefined; items: { claim: Claim; index: number }[] }
+  | {
+      type: "records";
+      key: string;
+      source: "table_row" | "list_item" | "record_line";
+      label: string | null;
+      header: string[] | null;
+      rows: RecordRow[];
+    };
+
+/**
+ * Group an answer's claims into blocks. Pure, exported for its tests.
+ *
+ * RECORDS NEVER RENDER INLINE (product-owner defect, 2026-09-14: "Disease
+ * name: X.1 Disease name: Y.2 gene symbol: ..."). Three shapes become a
+ * record block rather than prose:
+ *   - consecutive `table_row` claims, one table, with their header;
+ *   - consecutive `list_item` claims, one table;
+ *   - record lines ("Disease name: X") that follow the findings-tail note, or
+ *     that stand next to another record line in the same paragraph, grouped
+ *     by label, with the label as the block's heading.
+ * Everything else is prose, one paragraph per `paragraph` number, or one
+ * paragraph per sentence for a producer that sends none.
+ */
+export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
+  const blocks: AnswerBlock[] = [];
+  const labels = claims.map((claim) =>
+    claim.kind === "list_item" || claim.kind === "table_row" ? null : parseRecordLine(claim.text),
+  );
+  const adjacentRecordLine = (index: number, other: number) => {
+    if (other < 0 || other >= claims.length || labels[other] === null) return false;
+    const later = Math.max(index, other);
+    if (claims[later]!.heading || claims[later]!.noteBefore) return false;
+    return claims[other]!.paragraph === claims[index]!.paragraph;
+  };
+  claims.forEach((claim, index) => {
+    if (claim.noteBefore) blocks.push({ type: "note", text: claim.noteBefore, key: `note-${index}` });
+    if (claim.heading) blocks.push({ type: "heading", text: claim.heading, key: `heading-${index}` });
+    const last = blocks[blocks.length - 1];
+    if (claim.kind === "table_row" || claim.kind === "list_item") {
+      const cells =
+        claim.kind === "table_row"
+          ? claim.cells && claim.cells.length > 0
+            ? claim.cells
+            : [claim.text]
+          : [claim.cells?.[0] ?? claim.text];
+      const row = { claim, index, cells };
+      if (last && last.type === "records" && last.source === claim.kind && !claim.tableHeader) {
+        last.rows.push(row);
+      } else {
+        blocks.push({
+          type: "records",
+          key: `records-${index}`,
+          source: claim.kind,
+          label: null,
+          header: claim.kind === "table_row" ? (claim.tableHeader ?? null) : null,
+          rows: [row],
+        });
+      }
+      return;
+    }
+    const parsed = labels[index];
+    if (
+      parsed &&
+      (claim.findingsTail || adjacentRecordLine(index, index - 1) || adjacentRecordLine(index, index + 1))
+    ) {
+      const row = { claim, index, cells: [parsed.value] };
+      if (last && last.type === "records" && last.source === "record_line" && last.label === parsed.label) {
+        last.rows.push(row);
+      } else {
+        blocks.push({
+          type: "records",
+          key: `records-${index}`,
+          source: "record_line",
+          label: parsed.label,
+          header: null,
+          rows: [row],
+        });
+      }
+      return;
+    }
+    if (
+      last &&
+      last.type === "prose" &&
+      claim.paragraph !== undefined &&
+      last.paragraph === claim.paragraph
+    ) {
+      last.items.push({ claim, index });
+    } else {
+      blocks.push({ type: "prose", key: `prose-${index}`, paragraph: claim.paragraph, items: [{ claim, index }] });
+    }
+  });
+  return blocks;
 }
 
 export interface Source {
@@ -646,42 +880,15 @@ export function AnswerBody({
 
   const sourceByIndex = new Map(sources.map((source) => [source.n, source]));
 
-  /** One claim's spine segment. `grow` shares a paragraph's height evenly. */
-  const spineSegment = (claim: Claim, index: number, grow = false) => (
-    <Box
-      key={index}
-      aria-hidden="true"
-      data-testid={`${testIdPrefix}spine-segment-${index}`}
-      data-layer={claim.layer ?? (claim.pendingCitations ? "pending" : "none")}
-      sx={{
-        width: 6,
-        mx: "auto",
-        borderRadius: 1,
-        alignSelf: "stretch",
-        ...(grow ? { flex: 1 } : {}),
-        // A sentence whose sources are still arriving is not uncited: it
-        // takes the lighter `line` token, never the uncited `lineStrong`.
-        bgcolor:
-          claim.layer === null && claim.pendingCitations
-            ? designTokens.line
-            : layerColour(claim.layer).main,
-      }}
-    />
-  );
+  /** The prototype's phone layout: record tables become stacked rows. */
+  const phone = useMediaQuery(PHONE_LAYOUT_QUERY, { noSsr: true });
 
   /*
-   * One claim's citation markers, 2026-09-14.
-   *
-   * These were boxed chips reading `1 ncbi_efetch MedGen:C0346153`, and the
-   * product owner's verdict was that they overwhelmed the answer. They are
-   * now superscript numbers whose card carries the source, its id, its layer
-   * and its record link; see `answer/CitationMarkers.tsx` for the design and
-   * the token behind every value.
-   *
-   * WHAT DID NOT MOVE: each source still names its own layer for assistive
-   * technology (F-4.9-A-04), now as the marker button's own accessible name,
-   * and an uncited sentence still says so in words (F-4.8-A-16, WCAG 1.4.1).
-   * The spine stays decorative, so the meaning is carried here.
+   * One claim's citation markers, 2026-09-14: superscript numbers in the layer
+   * colour whose card carries the source; see `answer/CitationMarkers.tsx`.
+   * Each marker's accessible name is its `aria-label`, so copying the answer
+   * yields prose, and an uncited sentence still says so for assistive
+   * technology (F-4.8-A-16, WCAG 1.4.1).
    */
   const citationChips = (claim: Claim, index: number) => (
     <CitationMarkers
@@ -695,200 +902,197 @@ export function AnswerBody({
   );
 
   /*
-   * UI FIX SET 9: THE STRUCTURED ANSWER (items 9.3 to 9.5, 9.8, 9.10).
-   *
-   * A claim that carries `paragraph` came from a typed token stream, so the
-   * answer renders as the backend structured it: consecutive sentences of one
-   * paragraph flow as prose in one grid row, a heading or an inline note is a
-   * row of its own, and a code-built listing is a list or a table. Every claim
-   * keeps its own spine segment (stacked within its block) and its own
-   * `claim-text-N` hook, so the spine still has exactly one segment per claim.
-   *
-   * DESIGN SOURCES, per `design-consistency`. The prose, bold and heading
-   * values are the prototype's `.answer p`, `.answer p strong` and `.answer
-   * .ah` rules; the table is its `.rtab`. DESIGN GAP, named: no card or
-   * prototype rule styles a bulleted list inside an answer. The list uses the
-   * body text of `.answer p` with the browser's own marker and the 6px gap
-   * the refusal block already uses, introducing no new value.
+   * What each claim rests on, as a data attribute on the claim itself: its
+   * layer, "pending" while its citations are still arriving, or "none". This
+   * is what the retired spine segment carried, moved onto the element it
+   * describes. The visible, non-colour cue for an uncited claim is muted ink
+   * with no marker after it.
    */
-  const structured = claims.some((claim) => claim.paragraph !== undefined);
-  type AnswerBlock =
-    | { type: "heading"; text: string; key: string }
-    | { type: "note"; text: string; key: string }
-    | {
-        type: "claim" | "list_item" | "table_row";
-        paragraph: number;
-        key: string;
-        items: { claim: Claim; index: number }[];
-      };
-  const blocks: AnswerBlock[] = [];
-  if (structured) {
-    claims.forEach((claim, index) => {
-      if (claim.noteBefore) blocks.push({ type: "note", text: claim.noteBefore, key: `note-${index}` });
-      if (claim.heading) blocks.push({ type: "heading", text: claim.heading, key: `heading-${index}` });
-      const type = claim.kind ?? "claim";
-      const paragraphNo = claim.paragraph ?? 0;
-      const last = blocks[blocks.length - 1];
-      if (last && last.type === type && "items" in last && last.paragraph === paragraphNo) {
-        last.items.push({ claim, index });
-      } else {
-        blocks.push({ type, paragraph: paragraphNo, key: `block-${index}`, items: [{ claim, index }] });
-      }
-    });
-  }
-  const tableCell = {
-    textAlign: "left",
-    p: "8px 11px",
-    borderBottom: `1px solid ${designTokens.line}`,
-    verticalAlign: "top",
-  } as const;
+  const provenance = (claim: Claim) => claim.layer ?? (claim.pendingCitations ? "pending" : "none");
+  const uncitedInk = (claim: Claim) =>
+    claim.citations.length === 0 && !claim.pendingCitations ? { color: designTokens.inkMuted } : {};
+  const rise = streaming ? RISE : {};
+
+  const blocks = buildAnswerBlocks(claims);
   let headingNumber = 0;
   let noteNumber = 0;
-  const renderBlock = (block: AnswerBlock) => {
-    if (block.type === "heading") {
+  let recordsNumber = 0;
+
+  const renderRecords = (block: Extract<AnswerBlock, { type: "records" }>) => {
+    const number = recordsNumber++;
+    const heading =
+      block.label !== null ? (
+        <Typography
+          component="h2"
+          data-testid={`${testIdPrefix}answer-heading-${headingNumber++}`}
+          sx={{ ...AH_SX, ...rise }}
+        >
+          {block.label}
+        </Typography>
+      ) : null;
+    if (phone) {
       return (
         <Fragment key={block.key}>
-          <Box aria-hidden="true" />
-          <Typography
-            component="h2"
-            data-testid={`${testIdPrefix}answer-heading-${headingNumber++}`}
-            sx={{
-              fontSize: 11.5,
-              letterSpacing: "0.13em",
-              textTransform: "uppercase",
-              fontWeight: 700,
-              color: designTokens.inkFaint,
-              mt: headingNumber === 1 ? 0 : 1.5,
-              mb: 0,
-              pb: "7px",
-              borderBottom: `1px solid ${designTokens.line}`,
-            }}
-          >
-            {block.text}
-          </Typography>
-        </Fragment>
-      );
-    }
-    if (block.type === "note") {
-      return (
-        <Fragment key={block.key}>
-          <Box aria-hidden="true" />
-          <Typography
-            data-testid={`${testIdPrefix}answer-inline-note-${noteNumber++}`}
-            sx={{ fontSize: 13.5, color: designTokens.inkMuted, maxWidth: "66ch" }}
-          >
-            {block.text}
-          </Typography>
-        </Fragment>
-      );
-    }
-    const spine = (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: "3px", alignSelf: "stretch" }}>
-        {block.items.map(({ claim, index }) => spineSegment(claim, index, true))}
-      </Box>
-    );
-    if (block.type === "list_item") {
-      return (
-        <Fragment key={block.key}>
-          {spine}
+          {heading}
           <Box
             component="ul"
-            sx={{ m: 0, pl: 2.5, display: "flex", flexDirection: "column", gap: 0.75 }}
+            data-testid={`${testIdPrefix}answer-records-${number}`}
+            data-record-source={block.source}
+            sx={{ listStyle: "none", m: "0 0 16px", p: 0 }}
           >
-            {block.items.map(({ claim, index }) => (
+            {block.rows.map(({ claim, index, cells }) => (
               <Box
                 component="li"
                 key={index}
                 data-testid={`${testIdPrefix}claim-text-${index}`}
-                sx={{ maxWidth: "66ch" }}
+                data-layer={provenance(claim)}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                  py: "10px",
+                  borderBottom: `1px solid ${designTokens.line}`,
+                  "&:last-child": { borderBottom: 0 },
+                  ...rise,
+                }}
               >
-                {claim.cells?.[0] ?? claim.text}
-                {citationChips(claim, index)}
+                <Box
+                  component="span"
+                  sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, ...uncitedInk(claim) }}
+                >
+                  {withEmphasis(cells[0] ?? claim.text, claim.emphasis)}
+                  {citationChips(claim, index)}
+                </Box>
+                {cells.slice(1).map((cell, c) =>
+                  cell ? (
+                    <Box
+                      component="span"
+                      key={c}
+                      sx={
+                        isIdentifierCell(cell)
+                          ? RTAB_ID
+                          : { fontSize: 13.5, lineHeight: 1.45, color: designTokens.inkMuted }
+                      }
+                    >
+                      {cell}
+                    </Box>
+                  ) : null,
+                )}
               </Box>
             ))}
           </Box>
         </Fragment>
       );
     }
-    if (block.type === "table_row") {
-      const header = block.items[0]?.claim.tableHeader;
-      return (
-        <Fragment key={block.key}>
-          {spine}
-          <Box sx={{ overflowX: "auto" }}>
-            <Box
-              component="table"
-              data-testid={`${testIdPrefix}answer-table`}
-              sx={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: 13.5,
-                border: `1px solid ${designTokens.line}`,
-                bgcolor: designTokens.surface,
-              }}
-            >
-              {header ? (
-                <thead>
-                  <tr>
-                    {header.map((label) => (
-                      <Box
-                        component="th"
-                        key={label}
-                        scope="col"
-                        sx={{
-                          ...tableCell,
-                          fontSize: 10.5,
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
-                          color: designTokens.inkFaint,
-                          bgcolor: designTokens.surfaceSunk,
-                        }}
-                      >
-                        {label}
-                      </Box>
-                    ))}
-                  </tr>
-                </thead>
-              ) : null}
-              <tbody>
-                {block.items.map(({ claim, index }) => (
-                  <Box
-                    component="tr"
-                    key={index}
-                    data-testid={`${testIdPrefix}claim-text-${index}`}
-                  >
-                    <Box component="td" sx={{ ...tableCell, ...mono, fontSize: 12.5 }}>
-                      {claim.cells?.[0] ?? claim.text}
-                    </Box>
-                    <Box component="td" sx={tableCell}>
-                      {claim.cells?.[1] ?? ""}
-                      {citationChips(claim, index)}
-                    </Box>
-                  </Box>
-                ))}
-              </tbody>
-            </Box>
-          </Box>
-        </Fragment>
-      );
-    }
     return (
       <Fragment key={block.key}>
-        {spine}
-        <Typography component="p" sx={{ maxWidth: "66ch", m: 0 }}>
-          {block.items.map(({ claim, index }) => (
-            <Box component="span" key={index} data-testid={`${testIdPrefix}claim-text-${index}`}>
-              {/* No space before the markers: a superscript sits against the
-                  sentence it cites, and a space would let it wrap onto a line
-                  of its own. */}
-              {withEmphasis(claim.text, claim.emphasis)}
-              {citationChips(claim, index)}{" "}
-            </Box>
-          ))}
-        </Typography>
+        {heading}
+        <Box
+          data-testid={`${testIdPrefix}answer-records-${number}`}
+          data-record-source={block.source}
+          sx={{ overflowX: "auto", m: "0 0 16px", "&:last-child": { mb: 0 } }}
+        >
+          <Box
+            component="table"
+            data-testid={`${testIdPrefix}answer-table`}
+            sx={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: 13.5,
+              border: `1px solid ${designTokens.line}`,
+              bgcolor: designTokens.surface,
+              "& tbody tr:last-child td": { borderBottom: 0 },
+            }}
+          >
+            {block.header ? (
+              <thead>
+                <tr>
+                  {block.header.map((label, c) => (
+                    <Box component="th" key={`${label}-${c}`} scope="col" sx={RTAB_HEAD}>
+                      {label}
+                    </Box>
+                  ))}
+                  <Box component="th" scope="col" aria-label="Sources" sx={{ ...RTAB_HEAD, width: 36 }} />
+                </tr>
+              </thead>
+            ) : null}
+            <tbody>
+              {block.rows.map(({ claim, index, cells }) => (
+                <Box
+                  component="tr"
+                  key={index}
+                  data-testid={`${testIdPrefix}claim-text-${index}`}
+                  data-layer={provenance(claim)}
+                  sx={{ ...uncitedInk(claim), ...rise }}
+                >
+                  {cells.map((cell, c) => (
+                    <Box
+                      component="td"
+                      key={c}
+                      sx={isIdentifierCell(cell) ? { ...RTAB_CELL, ...RTAB_ID } : RTAB_CELL}
+                    >
+                      {c === 0 ? withEmphasis(cell, claim.emphasis) : cell}
+                    </Box>
+                  ))}
+                  <Box component="td" sx={{ ...RTAB_CELL, width: 36, whiteSpace: "nowrap" }}>
+                    {citationChips(claim, index)}
+                  </Box>
+                </Box>
+              ))}
+            </tbody>
+          </Box>
+        </Box>
       </Fragment>
     );
   };
+
+  const renderBlock = (block: AnswerBlock) => {
+    if (block.type === "heading") {
+      return (
+        <Typography
+          key={block.key}
+          component="h2"
+          data-testid={`${testIdPrefix}answer-heading-${headingNumber++}`}
+          sx={{ ...AH_SX, ...rise }}
+        >
+          {block.text}
+        </Typography>
+      );
+    }
+    if (block.type === "note") {
+      return (
+        <Typography
+          key={block.key}
+          data-testid={`${testIdPrefix}answer-inline-note-${noteNumber++}`}
+          sx={{ fontSize: 13.5, color: designTokens.inkMuted, maxWidth: "66ch", m: "0 0 14px", ...rise }}
+        >
+          {block.text}
+        </Typography>
+      );
+    }
+    if (block.type === "records") return renderRecords(block);
+    return (
+      <Typography key={block.key} component="p" sx={PROSE_SX}>
+        {block.items.map(({ claim, index }) => (
+          <Box
+            component="span"
+            key={index}
+            data-testid={`${testIdPrefix}claim-text-${index}`}
+            data-layer={provenance(claim)}
+            sx={{ ...uncitedInk(claim), ...rise }}
+          >
+            {/* No space before the markers: a superscript sits against the
+                sentence it cites, and a space would let it wrap alone. */}
+            {withEmphasis(claim.text, claim.emphasis)}
+            {citationChips(claim, index)}{" "}
+          </Box>
+        ))}
+      </Typography>
+    );
+  };
+
+  const medicalNotes = systemNotes.filter((note) => note.trimStart().startsWith(MEDICAL_NOTE_PREFIX));
+  const otherNotes = systemNotes.filter((note) => !note.trimStart().startsWith(MEDICAL_NOTE_PREFIX));
 
   return (
     /*
@@ -1030,115 +1234,41 @@ export function AnswerBody({
       ) : null}
 
       {/*
-        The provenance spine runs beside the prose, one segment per claim.
-
-        Segment and claim are two cells of the SAME grid row rather than two
-        independently laid out columns, so a segment's height is driven by
-        the claim it describes and the two cannot drift apart. The earlier
-        form gave each segment `flex: 1` and a `minHeight` in a column of its
-        own, which held only while every claim happened to be one line long:
-        a two-line claim pushed the prose down while the track kept its own
-        rhythm, and by the third claim the grey uncited segment sat beside
-        the wrong sentence. A spine that points at the wrong claim is worse
-        than no spine, because it asserts a provenance that is not there.
-
-        Found by opening the application and looking at it, the same way the
-        `#root` width defect was, and for the same reason: every test here
-        asserts segment COUNT, colour and order, and none of them can see
-        that two boxes are no longer level with each other.
-      */}
-      {/*
-        RENDERED UNCONDITIONALLY, even with no claims, exactly as it was
-        before the extraction. An empty grid has no height, and it is what
-        the onboarding tour's `citations` anchor hangs on: guarding it on
-        `claims.length` would take the anchor off the page on a refusal,
-        which is a behaviour change this ticket has no business making.
+        RENDERED UNCONDITIONALLY, even with no claims: the onboarding tour's
+        `citations` anchor hangs on it, and an empty box has no height.
       */}
       <Box
         {...(tour ? { "data-tour": "citations" } : {})}
         data-testid={`${testIdPrefix}claims`}
         aria-live={streaming ? "polite" : undefined}
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "14px 1fr",
-          columnGap: 2.25,
-          rowGap: 1.9,
-          alignItems: "stretch",
-        }}
       >
-          {structured ? blocks.map(renderBlock) : null}
-          {structured ? null : claims.map((claim, index) => (
-            <Fragment key={index}>
-              {/*
-                F-4.8-A-16. This was `aria-hidden`, so the provenance spine,
-                which this product's own documentation calls "visible before
-                you read a word", did not exist for assistive technology at
-                all. Axe reported zero violations the whole time, because axe
-                cannot check whether the one signal a product exists to convey
-                is conveyed.
-
-                The visual track stays decorative; the MEANING is carried in
-                text on each claim instead, so a cited and an uncited claim are
-                distinguishable without colour. That is WCAG 1.4.1 (use of
-                colour), which no automated rule was ever going to flag here.
-              */}
-              <Box
-                aria-hidden="true"
-                data-testid={`${testIdPrefix}spine-segment-${index}`}
-                data-layer={claim.layer ?? (claim.pendingCitations ? "pending" : "none")}
-                sx={{
-                  width: 6,
-                  mx: "auto",
-                  borderRadius: 1,
-                  alignSelf: "stretch",
-                  // A sentence whose sources are still arriving is not uncited: it
-        // takes the lighter `line` token, never the uncited `lineStrong`.
-        bgcolor:
-          claim.layer === null && claim.pendingCitations
-            ? designTokens.line
-            : layerColour(claim.layer).main,
-                }}
-              />
-
-              <Typography
-                data-testid={`${testIdPrefix}claim-text-${index}`}
-                sx={{ maxWidth: "64ch" }}
-              >
-                {claim.text}
-                {/*
-                  F-4.9-A-04 still holds: each marker names its OWN source's
-                  layer, not the claim's first one. The same renderer as the
-                  structured path, so the two cannot drift.
-                */}
-                {citationChips(claim, index)}
-              </Typography>
-            </Fragment>
-          ))}
+        {blocks.map(renderBlock)}
       </Box>
 
       {/*
-        2026-09-14, product-owner request: show that the answer is still being
-        written. A quiet line at the end of the streamed text, gone the moment
-        the run lands (this body re-renders without `writing`) or stops.
-
-        NEAREST DESIGNED NEIGHBOUR: the inline system note above it in this
-        same grid (`answer-inline-note`, 13.5px `inkMuted`, 66ch), set in the
-        spine's second column so it lines up with the prose, followed by the
-        caption's `WritingEllipsis`. `aria-hidden`, because the claims region
-        is already a polite live region and `RunProgress` announces "Write
-        step running"; a third announcement would only repeat them.
+        The "writing" line at the end of the streamed text, from the approved
+        `Streaming.dc.html`: 13.5px `inkMuted`, the dots 700 in `blue`. Gone
+        the moment the run lands or stops. `aria-hidden`, because the claims
+        region is already a polite live region and `RunProgress` announces
+        "Write step running".
       */}
       {streaming && writing ? (
         <Box
           data-testid={`${testIdPrefix}streaming-writing-indicator`}
           aria-hidden="true"
-          sx={{ display: "grid", gridTemplateColumns: "14px 1fr", columnGap: 2.25, mt: 1 }}
+          sx={{
+            mt: 1,
+            fontSize: 13.5,
+            color: designTokens.inkMuted,
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+          }}
         >
-          <Box />
-          <Typography sx={{ fontSize: 13.5, color: designTokens.inkMuted, maxWidth: "66ch" }}>
-            writing
+          writing
+          <Box component="span" sx={{ fontWeight: 700, color: designTokens.blue }}>
             <WritingEllipsis />
-          </Typography>
+          </Box>
         </Box>
       ) : null}
 
@@ -1148,20 +1278,48 @@ export function AnswerBody({
         sentence. Colour and size are the refusal explanation's (`inkMuted`,
         13.5px), the nearest designed neighbour for text about an answer.
       */}
-      {!streaming && systemNotes.length > 0 ? (
-        <Box sx={{ mt: 2.5, display: "flex", flexDirection: "column", gap: 0.75 }}>
-          {systemNotes.map((note, i) => (
+      {/*
+        The Notes section and the medical-advice line, from the approved
+        mockups: after the answer, before Sources. Notes are a muted bulleted
+        list under a small-caps heading; the Plain language closing line
+        stands on its own below them.
+      */}
+      {!streaming && otherNotes.length > 0 ? (
+        <Box data-testid={`${testIdPrefix}answer-notes`} sx={{ mt: "32px", "@media (max-width:720px)": { mt: "28px" } }}>
+          <Typography component="h2" sx={{ ...AH_BASE, mt: 0 }}>
+            Notes
+          </Typography>
+          <Box
+            component="ul"
+            sx={{
+              m: 0,
+              pl: "20px",
+              fontSize: 14.5,
+              lineHeight: 1.6,
+              color: designTokens.inkMuted,
+              maxWidth: "66ch",
+              "@media (max-width:720px)": { pl: "18px", fontSize: 14 },
+            }}
+          >
+            {otherNotes.map((note, i) => (
+              <Box component="li" key={i} data-testid={`${testIdPrefix}answer-note-${i}`} sx={{ m: "0 0 6px" }}>
+                {note}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      ) : null}
+      {!streaming
+        ? medicalNotes.map((note, i) => (
             <Typography
               key={i}
-              role="status"
-              data-testid={`${testIdPrefix}answer-note-${i}`}
-              sx={{ fontSize: 13.5, color: designTokens.inkMuted, maxWidth: "66ch" }}
+              data-testid={`${testIdPrefix}answer-medical-note`}
+              sx={{ mt: "22px", fontSize: 13.5, color: designTokens.inkMuted, "@media (max-width:720px)": { mt: "18px", fontSize: 13 } }}
             >
               {note}
             </Typography>
-          ))}
-        </Box>
-      ) : null}
+          ))
+        : null}
 
       {/*
         F-4.8-D-01. The sources were always expanded, every field of every
@@ -1175,7 +1333,8 @@ export function AnswerBody({
           data-testid={`${testIdPrefix}sources-disclosure`}
           {...(tour ? { "data-tour": "sources" } : {})}
           open={sourcesOpen}
-          sx={{ mt: 3.5 }}
+          // The mockup's rule above Sources: 22px above, 14px inside, one `line`.
+          sx={{ mt: "22px", pt: "14px", borderTop: `1px solid ${designTokens.line}` }}
         >
           <Box
             component="summary"
@@ -1220,7 +1379,6 @@ export function AnswerBody({
                 fontSize: 11,
                 fontWeight: 700,
                 color: designTokens.inkMuted,
-                bgcolor: designTokens.surfaceSunk,
                 border: `1px solid ${designTokens.line}`,
                 borderRadius: 999,
                 px: 0.75,
@@ -1438,7 +1596,7 @@ export function AnswerBody({
             flexWrap: "wrap",
             alignItems: "center",
             gap: 0.75,
-            mt: 2.5,
+            mt: "14px",
             fontSize: 12.5,
             color: designTokens.inkMuted,
           }}
@@ -1698,14 +1856,15 @@ export function AnswerScreen({
     // `my: auto` centres a short answer vertically, product-owner feedback
     // 2026-09-12. A tall one starts at the top, since auto margins collapse
     // to zero when the content is taller than the space.
-    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: 3, py: 3.5 }}>
+    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: { xs: 2, sm: 3 }, py: 3.5 }}>
       <Box
         data-tour="answer"
         sx={{
           bgcolor: designTokens.surface,
           border: `1px solid ${designTokens.line}`,
           borderRadius: 1,
-          p: { xs: 2.5, sm: 3.25 },
+          // 2026-09-14, the approved mockups' card padding.
+          p: { xs: "20px 18px 24px", sm: "26px 32px 32px" },
         }}
       >
         {/*

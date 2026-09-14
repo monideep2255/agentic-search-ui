@@ -244,7 +244,7 @@ describe("App", () => {
 
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
-    expect(screen.queryByTestId(/^spine-segment-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^claim-text-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^trust-/)).not.toBeInTheDocument();
     // No NCBI record URL, and no grounding claim, may appear without a run.
@@ -1058,7 +1058,9 @@ describe("system notes: App forwards the run's disclosures to AnswerScreen", () 
 
     await ask(user, "What genes are associated with HBOC?");
 
-    const note = await screen.findByTestId("answer-note-0");
+    // 2026-09-14: the answer reveal holds landing for at least 1.5s, so this
+    // waits as long as the other landed-answer arms in this file do.
+    const note = await screen.findByTestId("answer-note-0", undefined, { timeout: 5000 });
     expect(note.textContent).toMatch(/showing 5 of 30 matching rows/i);
   });
 });

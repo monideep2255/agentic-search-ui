@@ -165,6 +165,16 @@ export function markerSpokenName(
 const MONO =
   'ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace';
 
+/**
+ * Screen-reader text that is kept OUT of a copy.
+ *
+ * The two statements that must stay words for assistive technology ("This
+ * sentence has no source.", "2 sources pending.") have no control to hang an
+ * `aria-label` on, so they stay text nodes; `user-select: none` keeps a
+ * reader's selection from picking them up when the answer is copied.
+ */
+const SCREEN_READER_ONLY = { ...visuallyHidden, userSelect: "none" } as const;
+
 /** The card's width, `PersonaInfo`'s. */
 const CARD_WIDTH = 280;
 /** The page gutter the card keeps from either screen edge, `PersonaInfo`'s 32px total. */
@@ -282,6 +292,15 @@ function CitationMarker({
         data-citations={members.join(",")}
         aria-expanded={open}
         aria-controls={open ? cardId : undefined}
+        /*
+         * 2026-09-14, product-owner defect: copying the answer yielded
+         * "1–4Sources 1 to 4: Source 1, layer 2; …" because the name was a
+         * visually hidden TEXT NODE inside the selectable prose. The same
+         * name now travels as `aria-label`, which is not text and is not
+         * copied. The visible digits stay `aria-hidden` so nothing is read
+         * twice.
+         */
+        aria-label={markerSpokenName(members, layerOf)}
         onFocus={show}
         onClick={show}
         sx={{
@@ -307,9 +326,6 @@ function CitationMarker({
       >
         <Box component="span" aria-hidden="true">
           {markerLabel(members)}
-        </Box>
-        <Box component="span" sx={visuallyHidden}>
-          {markerSpokenName(members, layerOf)}
         </Box>
       </Box>
 
@@ -421,12 +437,10 @@ function CardRow({
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`Open the record for source ${n}, opens in a new tab`}
               sx={{ fontSize: 12.5, color: designTokens.link }}
             >
               Open the record
-              <Box component="span" sx={visuallyHidden}>
-                {` for source ${n}, opens in a new tab`}
-              </Box>
             </Box>
           ) : (
             <Box component="span" sx={{ fontSize: 11.5, color: designTokens.risk }}>
@@ -498,7 +512,7 @@ export function CitationMarkers({
         <Box component="span" aria-hidden="true">
           {"·".repeat(Math.min(pending, COMMA_LIST_MAX))}
         </Box>
-        <Box component="span" sx={visuallyHidden}>
+        <Box component="span" sx={SCREEN_READER_ONLY}>
           {pending === 1 ? "Source pending." : `${pending} sources pending.`}
         </Box>
       </Box>
@@ -506,7 +520,7 @@ export function CitationMarkers({
   }
   if (citations.length === 0) {
     return (
-      <Box component="span" sx={visuallyHidden}>
+      <Box component="span" data-uncited="true" sx={SCREEN_READER_ONLY}>
         This sentence has no source.
       </Box>
     );
@@ -520,6 +534,16 @@ export function CitationMarkers({
       data-testid={`${testIdPrefix}citation-markers-${claimIndex}`}
       sx={{ fontSize: 11, lineHeight: 0, verticalAlign: "super", whiteSpace: "nowrap" }}
     >
+      {/*
+        A WORD JOINER (U+2060) ahead of the first marker. A button is an
+        atomic inline, which lets a line break fall between the last word and
+        its marker, so at 390px a lone "8" could wrap onto a line of its own
+        (seen on the 2026-09-14 screenshot). The joiner forbids that break;
+        `user-select: none` keeps it out of a copy.
+      */}
+      <Box component="span" aria-hidden="true" sx={{ userSelect: "none" }}>
+        {"\u2060"}
+      </Box>
       {groups.map((members, position) => (
         <Box component="span" key={members.join("-")}>
           {position > 0 ? (

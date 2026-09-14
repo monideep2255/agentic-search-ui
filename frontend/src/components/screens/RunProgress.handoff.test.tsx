@@ -156,8 +156,10 @@ describe("RunProgress handoff during Act", () => {
       <RunProgress question="q" activeStep="Write" startedAt={Date.now()} personaName="Mendel" toolCalls={calls} />,
     );
     expect(screen.getByTestId("persona-caption")).toHaveTextContent("Mendel is writing the answer");
-    // The handoff lines stay while the coordinator writes underneath.
-    expect(screen.getByTestId("handoff")).toBeInTheDocument();
+    // REQUIREMENT CHANGE, 2026-09-14 (approved Streaming.dc.html): during Write
+    // the writing banner names the helpers, so the handoff lines give way.
+    expect(screen.getByTestId("writing-banner")).toBeInTheDocument();
+    expect(screen.queryByTestId("handoff")).toBeNull();
   });
 
   it("says a layer did not answer when every call on it errored", () => {

@@ -81,6 +81,9 @@ const SYSTEM_NOTE_PREFIXES = [
   "This is a research summary, not medical advice",
 ];
 
+/** The findings-tail note's opening words, `_FINDINGS_TAIL_NOTE` in core/graph.py. */
+export const FINDINGS_TAIL_NOTE_PREFIX = "Note: the records below were retrieved for this question";
+
 const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
@@ -391,8 +394,55 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     // Step derivation, latest-wins. Ordered from last to first so the most
     // advanced observed step is the live one.
+    /*
+     * 2026-09-14, WRITE BEGINS WHEN ACT ENDS, not when the first token lands.
+     *
+     * Measured on develop (6 live runs, 28 frames at 250ms): `write_node`
+     * holds every event until it returns, so all 14 to 33 tokens arrive
+     * within 217ms of each other after a SILENT gap of 1.9 to 22.6 seconds.
+     * Keyed on `has("token")`, the stepper sat on Act with an open ring for
+     * that whole gap and "is writing the answer" never appeared once.
+     *
+     * So Write is entered as soon as the run's own events say Act is over:
+     *   - every tool call the run opened (by `tool_start`, or by the plan's
+     *     own `tool_calls`) has a matching `tool_result`, and at least one
+     *     result arrived; or
+     *   - the plan selected no tool and none started (a no-data refusal
+     *     path, where Write follows Plan directly).
+     * A later `tool_start` reopens Act, which is the honest reading.
+     */
+    const planEvent = [...events].reverse().find((event) => event.type === "plan");
+    // `tool_calls` is validated on the wire, but a hand-built fixture may omit it.
+    const plannedCalls =
+      planEvent && planEvent.type === "plan" && Array.isArray(planEvent.payload.tool_calls)
+        ? planEvent.payload.tool_calls
+        : [];
+    const plannedIds = plannedCalls.map((call) => call.call_id);
+    const openedIds = new Set<string>();
+    const closedIds = new Set<string>();
+    for (const event of events) {
+      if (event.type === "tool_start") openedIds.add(event.payload.call_id);
+      if (event.type === "tool_result") {
+        openedIds.add(event.payload.call_id);
+        closedIds.add(event.payload.call_id);
+      }
+    }
+    const startedAnyTool = openedIds.size > 0;
+    // Planned ids count only once any of them has appeared on a tool frame:
+    // a plan whose ids never reach the wire must not hold Write back forever.
+    const plannedOnWire = plannedIds.some((id) => openedIds.has(id));
+    const idsToClose = new Set([...openedIds, ...(plannedOnWire ? plannedIds : [])]);
+    const actComplete =
+      startedAnyTool && closedIds.size > 0 && [...idsToClose].every((id) => closedIds.has(id));
+    const planSelectedNoTool =
+      planEvent !== undefined &&
+      planEvent.type === "plan" &&
+      plannedCalls.length === 0 &&
+      !startedAnyTool;
+    const writing = has("token") || actComplete || planSelectedNoTool;
+
     let activeStep: StepName | null = null;
-    if (has("token")) activeStep = "Write";
+    if (writing) activeStep = "Write";
     else if (has("tool_start")) activeStep = "Act";
     else if (has("plan")) activeStep = "Plan";
     else if (has("think")) activeStep = "Think";
@@ -403,7 +453,7 @@ export function useRunView(events: AgentEvent[]): RunView {
     if (has("think")) reachedSteps.push("Think");
     if (has("plan")) reachedSteps.push("Plan");
     if (has("tool_start") || has("tool_result")) reachedSteps.push("Act");
-    if (has("token")) reachedSteps.push("Write");
+    if (writing) reachedSteps.push("Write");
 
     const done = events.find((event) => event.type === "done");
     // Only a FATAL error is terminal. A non-fatal one (a cap notice, a degraded
@@ -432,9 +482,11 @@ export function useRunView(events: AgentEvent[]): RunView {
       const existing = chipByCall.get(payload.call_id);
       const status = event.type === "tool_result" ? event.payload.status : "running";
       const detail = event.type === "tool_result" ? `${event.payload.result_count} rows` : "running";
+      const resultCount = event.type === "tool_result" ? event.payload.result_count : undefined;
       if (existing) {
         existing.status = status;
         existing.detail = detail;
+        if (resultCount !== undefined) existing.resultCount = resultCount;
         continue;
       }
       const chip: ToolCall = {
@@ -442,6 +494,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         detail,
         layer: layerNumber(payload.layer),
         status,
+        ...(resultCount !== undefined ? { resultCount } : {}),
         persona: payload.persona ?? null,
         personaAbout: payload.persona_about ?? null,
         personaWikipedia: payload.persona_wikipedia ?? null,
@@ -591,6 +644,15 @@ export function useRunView(events: AgentEvent[]): RunView {
     let pendingHeading: string | null = null;
     let pendingNotes: string[] = [];
     let pendingTableHeader: string[] | null = null;
+    /*
+     * 2026-09-14: true after the findings-tail note, until a heading. Every
+     * claim in that span is a code-built record line ("Disease name: X"), so
+     * the answer screen groups them into a record block instead of prose.
+     * Set for a typed note and a kind-less one alike.
+     */
+    let inFindingsTail = false;
+    const isFindingsTailNote = (text: string) =>
+      text.trimStart().startsWith(FINDINGS_TAIL_NOTE_PREFIX);
     const nextParagraph = () => {
       if (claimsInParagraph > 0) {
         paragraph += 1;
@@ -612,17 +674,20 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
       if (kind === "heading") {
         nextParagraph();
+        inFindingsTail = false;
         const heading = event.payload.text.trim();
         if (heading) pendingHeading = heading;
         continue;
       }
       if (kind === "table_header") {
         const cells = event.payload.cells ?? [];
-        pendingTableHeader = cells.length === 2 ? cells : null;
+        // 2026-09-14: any column count; the Researcher table carries a third.
+        pendingTableHeader = cells.length > 0 ? cells : null;
         continue;
       }
       if (kind === "note") {
         nextParagraph();
+        inFindingsTail = isFindingsTailNote(event.payload.text);
         const note = event.payload.text.trim();
         if (note) pendingNotes.push(note);
         continue;
@@ -693,6 +758,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         kind === null &&
         (isSystemNote(text) || (cited.length === 0 && text.startsWith("Note:")))
       ) {
+        inFindingsTail = isFindingsTailNote(text);
         systemNotes.push(text);
         continue;
       }
@@ -711,6 +777,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         ),
       };
       if (unresolved > 0) claim.pendingCitations = unresolved;
+      if (inFindingsTail) claim.findingsTail = true;
       if (kind !== null) {
         claim.kind = kind === "list_item" || kind === "table_row" ? kind : "claim";
         claim.paragraph = paragraph;

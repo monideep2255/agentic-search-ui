@@ -90,7 +90,10 @@ describe("CitationMarkers rendering", () => {
     // Visible glyphs read "1, 2, 3"; the hidden names are not part of that.
     const visible = Array.from(markers.querySelectorAll('[aria-hidden="true"]'))
       .map((node) => node.textContent)
-      .join("");
+      .join("")
+      // REQUIREMENT CHANGE, 2026-09-14: a hidden word joiner (U+2060) keeps
+      // the first marker on the line of the word it cites; it is not a glyph.
+      .replace(/\u2060/g, "");
     expect(visible).toBe("1, 2, 3");
   });
 
@@ -205,7 +208,10 @@ describe("the answer screen uses markers, not boxed chips", () => {
     expect(marker.tagName).toBe("BUTTON");
     expect(marker.closest("sup")).not.toBeNull();
     expect(marker).not.toHaveAttribute("role", "note");
-    expect(screen.getByTestId("claim-text-0")).toHaveTextContent(/Source 1, layer 1/);
+    // REQUIREMENT CHANGE, 2026-09-14: the name is the button's aria-label, so
+    // it is announced but never part of the copied prose.
+    expect(marker).toHaveAccessibleName("Source 1, layer 1");
+    expect(screen.getByTestId("claim-text-0").textContent).not.toMatch(/Source \d+, layer/);
     // The old chip printed the source name inline; the marker does not.
     expect(screen.getByTestId("claim-text-0")).not.toHaveTextContent(/MedGen C001/);
     expect(screen.getByTestId("claim-text-1")).toHaveTextContent("This sentence has no source.");

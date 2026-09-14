@@ -227,7 +227,7 @@ for (const width of [1280, 390]) {
       await expect(claims).toContainText("Found 4 disease records for BRCA1");
       expect(await claims.innerText()).not.toMatch(/\[\d+\]/);
       await expect(page.getByTestId("citation-pending-0")).toBeAttached();
-      await expect(page.getByTestId("spine-segment-0")).toHaveAttribute("data-layer", "pending");
+      await expect(page.getByTestId("claim-text-0")).toHaveAttribute("data-layer", "pending");
       await expect(page.getByText("This sentence has no source.")).toHaveCount(0);
       await noSidewaysScroll(page);
       await page.screenshot({ path: path.join(SHOTS, `w${width}_write_step.png`), fullPage: true });

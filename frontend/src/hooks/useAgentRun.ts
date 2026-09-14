@@ -134,6 +134,9 @@ export function parseSseFrame(frameText: string): RawSseFrame {
  * acceptance criteria. A non-fatal `error` event is dispatched like any
  * other event and does NOT stop the loop.
  */
+/** Frame names ignored without parsing, so a future progress frame cannot end a run. */
+export const FORWARD_COMPATIBLE_EVENT_NAMES: ReadonlySet<string> = new Set(["step", "stage"]);
+
 export async function consumeEventStream(
   response: Response,
   onEvent: (event: AgentEvent) => void,
@@ -163,6 +166,17 @@ export async function consumeEventStream(
         if (frame.event === null || frame.data === null) {
           // A comment-only frame (a keep-alive ping) or a blank frame.
           // Nothing to dispatch.
+          continue;
+        }
+        /*
+         * 2026-09-14. A live step-progress frame the backend does not send
+         * yet (a Write `step` or `stage` event) is skipped by NAME rather
+         * than parsed. Without this, `parseAgentEvent` would throw on it and
+         * end the run as an error the day the backend starts emitting one.
+         * Deliberately a two-name allowlist, not "skip anything unknown":
+         * a `cost` frame must still be rejected as malformed.
+         */
+        if (FORWARD_COMPATIBLE_EVENT_NAMES.has(frame.event)) {
           continue;
         }
 

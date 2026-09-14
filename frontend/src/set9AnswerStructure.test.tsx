@@ -155,13 +155,20 @@ describe("set 9: structure travels on the wire and reaches the screen", () => {
     expect(firstParagraph).not.toBeNull();
     expect(firstParagraph).toContainElement(screen.getByTestId("claim-text-1"));
     expect(screen.getByRole("heading", { name: "Disease records found", level: 2 })).toBeInTheDocument();
-    expect(screen.getByTestId("claim-text-2").tagName.toLowerCase()).toBe("li");
+    // REQUIREMENT CHANGE, 2026-09-14 (approved answer layout): a list item is
+    // a row of a record table, never inline prose and no longer a bullet.
+    expect(screen.getByTestId("claim-text-2").tagName.toLowerCase()).toBe("tr");
+    expect(screen.getByTestId("claim-text-2").closest("table")).toContainElement(screen.getByTestId("claim-text-3"));
     expect(screen.getByTestId("claim-text-2")).toHaveTextContent("Familial cancer of breast");
     expect(screen.getByTestId("claim-text-2")).not.toHaveTextContent("MedGen:C1, name:");
     const bold = within(screen.getByTestId("claim-text-0")).getAllByText(/BRCA1|Familial cancer of breast/);
     expect(bold.every((element) => element.tagName.toLowerCase() === "strong")).toBe(true);
-    // One spine segment per claim, still.
-    expect(screen.getAllByTestId(/^spine-segment-\d+$/)).toHaveLength(4);
+    // REQUIREMENT CHANGE, 2026-09-14: no spine. Each claim carries its own
+    // provenance instead, one per claim, still.
+    const claimNodes = screen.getAllByTestId(/^claim-text-\d+$/);
+    expect(claimNodes).toHaveLength(4);
+    expect(claimNodes.every((node) => node.getAttribute("data-layer") === "1")).toBe(true);
+    expect(screen.queryAllByTestId(/^spine-segment-/)).toHaveLength(0);
   });
 
   it("shows notes after the answer, never before the first sentence", () => {

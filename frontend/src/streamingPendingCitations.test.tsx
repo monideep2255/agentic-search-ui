@@ -104,7 +104,7 @@ describe("a streaming sentence with markers but no citation frames yet", () => {
     // Nothing to open yet, so nothing to focus.
     expect(pending.querySelector("button")).toBeNull();
     expect(claim).not.toHaveTextContent("This sentence has no source.");
-    expect(screen.getByTestId("spine-segment-0")).toHaveAttribute("data-layer", "pending");
+    expect(screen.getByTestId("claim-text-0")).toHaveAttribute("data-layer", "pending");
   });
 
   it("switches to real markers once its citation frames arrive", () => {
@@ -118,7 +118,7 @@ describe("a streaming sentence with markers but no citation frames yet", () => {
     expect(screen.queryByTestId("citation-pending-0")).toBeNull();
     expect(screen.getByRole("button", { name: "Source 1, layer 2" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Source 2, layer 2" })).toBeInTheDocument();
-    expect(screen.getByTestId("spine-segment-0")).toHaveAttribute("data-layer", "2");
+    expect(screen.getByTestId("claim-text-0")).toHaveAttribute("data-layer", "2");
   });
 
   it("handles one citation arriving before the other", () => {
@@ -141,7 +141,7 @@ describe("the landed answer is unchanged", () => {
     expect(screen.getByTestId("claim-text-0")).toHaveTextContent("Familial cancer of breast");
     expect(screen.getByTestId("claim-text-1")).toHaveTextContent("widely discussed");
     expect(screen.getByTestId("claim-text-1")).toHaveTextContent("This sentence has no source.");
-    expect(screen.getByTestId("spine-segment-1")).toHaveAttribute("data-layer", "none");
+    expect(screen.getByTestId("claim-text-1")).toHaveAttribute("data-layer", "none");
     expect(screen.queryByTestId(/^citation-pending-/)).toBeNull();
   });
 

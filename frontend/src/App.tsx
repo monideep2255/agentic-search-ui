@@ -75,6 +75,7 @@ import {
 } from "./lib/authSession";
 import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
+import { useAnswerReveal } from "./hooks/useAnswerReveal";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import { useScreenRoute } from "./lib/routing";
@@ -976,7 +977,15 @@ export function App() {
    * Gating on `runId` closes that window at the point of use, without reaching
    * into a hook other screens share.
    */
-  const view = runId === null ? EMPTY_RUN_VIEW : streamed;
+  const liveView = runId === null ? EMPTY_RUN_VIEW : streamed;
+  /*
+   * 2026-09-14. The write step's sentences arrive as one burst, usually with
+   * `done`, after a long silent gap. `useAnswerReveal` shows them one at a
+   * time under the writing banner and holds the view unlanded until the last
+   * one is on screen, so every consumer below sees one consistent state.
+   * Once revealed, it returns `liveView` itself, unchanged.
+   */
+  const view = useAnswerReveal(liveView, { runKey: runId, stopped, flush: status === "error" });
 
   /*
    * What the tour is told about the run it is watching, derived from the

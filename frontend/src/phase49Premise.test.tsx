@@ -311,7 +311,17 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     openEventStreamMock.mockImplementation(() => {
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode(STREAM.slice(0, STREAM.indexOf("event: token"))));
+          /*
+           * REQUIREMENT CHANGE, 2026-09-14 (approved `Streaming.dc.html`):
+           * once every tool result is in, the run is in Write and the writing
+           * banner stands in for the reasoning log. So this stream now ends
+           * DURING Act, with one call still open, which is where the log is
+           * still what a reader sees while the run is going.
+           */
+          const live =
+            STREAM.slice(0, STREAM.indexOf("event: tool_result")) +
+            frame(3, "tool_start", { call_id: "c1", tool: "cypher_query", layer: "layer_1_graph", status: "running" });
+          controller.enqueue(new TextEncoder().encode(live));
           /*
            * CLOSE it. The first version left the controller open to simulate a
            * run still in flight, which left a reader pending for the rest of
@@ -522,7 +532,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     render(<App />);
     await askIt(user);
 
-    const strip = await screen.findByTestId("answer-meta");
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    const strip = await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
     expect(strip).not.toHaveTextContent(/refused/i);
     expect(strip).not.toHaveTextContent("✓");
     expect(strip).not.toHaveTextContent("⚠");
@@ -540,7 +551,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     render(<App />);
     await askIt(user);
 
-    await screen.findByTestId("answer-meta");
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
     /*
      * In a cite-or-refuse system the ABSENCE of a grounding verdict must read
      * as "not verified", never as silence. A dropped or never-emitted
@@ -580,7 +592,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     render(<App />);
     await askIt(user);
 
-    await screen.findByTestId("citation-1");
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    await screen.findByTestId("citation-1", undefined, { timeout: 5000 });
     /*
      * F-4.9-R-04. This asserted `data-layer` ALONE, which is a test hook no
      * user meets. The two harms the finding actually named are what a reader
@@ -605,9 +618,13 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     expect(colourOf(two)).toBe("rgb(76, 44, 146)");
 
     // What a screen reader hears: each source named with its OWN layer.
-    const claim = screen.getByTestId("claim-text-0");
-    expect(claim).toHaveTextContent(/Source 1, layer 1/i);
-    expect(claim).toHaveTextContent(/Source 2, layer 3/i);
+    //
+    // REQUIREMENT CHANGE, 2026-09-14 (clean copy): the name is each marker's
+    // `aria-label`, so it is asserted as the accessible name, and it must not
+    // be selectable text inside the claim.
+    expect(one).toHaveAccessibleName("Source 1, layer 1");
+    expect(two).toHaveAccessibleName("Source 2, layer 3");
+    expect(screen.getByTestId("claim-text-0").textContent).not.toMatch(/Source \d+, layer/);
   });
 
   /*
@@ -637,7 +654,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     render(<App />);
     await askIt(user);
 
-    await screen.findByTestId("answer-meta");
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
     /*
      * The A-05 fix MOVED this nonsense rather than removing it: counting from
      * tool calls gave "0 layers agreed" when citations arrived without tool

@@ -51,13 +51,15 @@ export function RunScreen(props: RunScreenProps) {
     // when the answer screen replaced it. Both screens are now the full 900.
     // `my: auto` centres the card vertically, product-owner feedback
     // 2026-09-12, the same as the log-in screen.
-    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: 3, py: 3.5 }}>
+    // 2026-09-14, the approved mockups: a 16px page gutter on a phone, and
+    // the card padded 26px 32px 32px (20px 18px 24px on a phone).
+    <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: { xs: 2, sm: 3 }, py: 3.5 }}>
       <Box
         sx={{
           bgcolor: designTokens.surface,
           border: `1px solid ${designTokens.line}`,
           borderRadius: 1,
-          p: { xs: 2.5, sm: 3.25 },
+          p: { xs: "20px 18px 24px", sm: "26px 32px 32px" },
         }}
       >
         <RunProgress {...props} />
