@@ -35,7 +35,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | ✅ | 🚀 | 👍 | Tests 3, 6, 11 (phone width) |
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | 🚀 | 👍 | Tests 11, 15 |
 | 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | ✅ | 🚀 | | Nothing |
-| 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | | Tests 2, 13 |
+| 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | 👍 | Tests 2, 13 |
 | 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | | | | Tests 1, 7, 12 |
 | 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken | | | | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
@@ -376,13 +376,13 @@ Built: ✅ · Live: 🚀 · Approved:
 
 Batch: answers.
 
-What you will see: "What variants cause it?" answers about BRCA1. "Yes, go deeper" continues the same search. A follow-up stays on the same screen, with the earlier answer shrinking above. Pushed and live on develop on 2026-09-13.
+What you will see: "What variants cause it?" answers about BRCA1. "Yes, go deeper" continues the same search. A follow-up stays on the same screen, with the earlier answer shrinking above. Pushed and live on develop on 2026-09-13, approved by the product owner the same night after two retests. By product-owner decision at approval, set 10's reliability item (the same question returns the same sources every time) opens next, ahead of sets 8 and 9.
 
 What was actually wrong, measured by running the same follow-up twelve times locally before any change: the memory worked every time ("it" resolved to BRCA1), and the refusal came from two later steps. The guardrail judged the bare words "What variants cause it?" off topic about one run in three, because it never saw that the session remembered a gene. When it passed, the grounding gate dropped every claim whenever the answer model shortened a stored variant name, so a correct, fully retrieved answer was refused on phrasing and the error blamed a size cut that never happened. "Yes, go deeper" sent its own yes/no wording as the next search. Fixed on the backend by setting aside the guardrail's off-topic verdict in code when a question refers back to an entity the session remembers (a first cut put the memory into the guard's prompt instead, and live on develop that made the guard model answer the question in prose rather than classify it, so every follow-up failed; measured, reverted the same evening; the guard's model call also stopped carrying the agent's cached prefix ahead of the classifier's instruction, which had made the guard model answer the question in prose one call in ten locally and more often on develop), by answering from the retrieved records themselves in code when the model's wording will not ground, by an honest error for the grounding case, and by a real go-deeper question that lists the records the earlier answer did not show. Five of five consecutive follow-up runs answered afterwards with the real stored memory shape, and the go-deeper run showed ten records none of the earlier answers had.
 
 ### 7.1 Follow-ups keep the earlier context (R20)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: "it" in a follow-up question resolves to the gene from the previous answer.
 - What you noted: "With a different question, I don't see any answers being produced. With diseases linked to BRCA1, I tried the follow-up 'What variants cause it?' and it refuses to answer, which means it is not retaining the previous context."
@@ -390,7 +390,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 7.2 "Yes, go deeper" continues the same search (R21)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the go-deeper button uses what the previous answer already found.
 - What you noted: "When it asks me 'do you want me to go deeper?', I clicked on it and it completely refused. What was the purpose? Have you not set up the context that gets fed into it?"
@@ -398,7 +398,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 7.3 A follow-up stays on the same screen (R22)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: asking a follow-up feels like a conversation, not a new page.
 - What you noted: "Secondly, it goes to a new page, which it should not. The first answer should minimise and the chat should continue on the same screen. That is one of the most important things."
@@ -406,7 +406,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 7.4 A folded turn keeps the whole earlier answer, with room between turns (R22 retest)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: opening a folded earlier turn shows everything that answer had: its status line, notes, every claim with its chips, the full source cards, the trust pills and Show work.
 - What you noted (retest of 2026-09-13): "The formatting and spacing between the answers is way off. Improve the spacing. Also in the folded answer the sources and everything else run previously must still be visible. Basically, the previous answer with all sources must be retained, think of threads that enter the drop down like structure."
@@ -414,7 +414,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 7.5 A follow-up that refers to nothing asks for the missing detail (R20 retest)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: "What variants cause it?" with nothing earlier to point at asks which gene or condition you mean, instead of refusing.
 - What you noted (retest of 2026-09-13): "Also the follow up must retain context or ask clarification if the question is not clear. Because if this is a discussion, it must flow."
