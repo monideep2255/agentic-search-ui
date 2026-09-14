@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-13.
+Last updated: 2026-09-14.
 
 ## Table of contents
 
@@ -50,6 +50,17 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+NEW ON 14 SEPTEMBER, from the product owner's hands-on feedback over two days:
+
+- Answers read like a short report instead of one long block. There is a one-line summary, then headings, then tables of diseases, genes, variants and clinical trials. It looks the same in the plain-language mode and the researcher mode, and on a phone the tables turn into stacked rows so nothing scrolls sideways.
+- Sources are quieter. Each fact ends in a small number. Hover over it or tap it to see which record it came from, with a link to that record.
+- While the answer is being written, a banner names the scientist writing it and how many records their helpers found. The sentences then appear one after another rather than all at once.
+- Copying an answer and pasting it somewhere else gives you just the answer, without the hidden labels meant for screen readers.
+- It can now say which genetic variant is linked to which disease. Ask "What diseases are caused by variants in the HNF1A gene?" and you get a table pairing each variant with its diseases. An earlier note claiming our database could not do this was wrong: nobody had checked.
+- "What genes are associated with MODY?" now answers with six genes, the same six an outside prototype shows. Before, it did not recognise the name of a disease on its own.
+- "Variants in GCK causing MODY" now answers every time. Before, it sometimes mistook MODY for the name of an animal and refused.
+- Honest limits as of today: about 1 search in 10 fails with "could not be completed" and needs asking again, and the cause has not been found. Some answers have too much bold text. Long lists stop at 20 sources, so one question shows 5 variant rows where the outside prototype shows 13.
 
 NEW ON 13 SEPTEMBER, from the product owner's first round of hands-on testing:
 
@@ -234,6 +245,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 5.1 | Fifty test questions with known-correct answers, each checked against the live public databases rather than taken on trust. Sorted into three kinds: questions with one exact answer, questions asking for everything of a kind, and open-ended conversations that build over several turns | 2026-08-30 |
 | 5.2 | The machine meant to score answers against those questions. Built, reviewed four times, failed four times, and SHELVED. It is kept and it refuses to run, so nobody mistakes it for working | 2026-08-30 |
 | A map of the code | A guide that says which file to open when something breaks, plus one line on what every single code file does. Written for whoever picks this up next, human or machine | 2026-08-31 |
+| Set 11, answers worth sharing | Answers read like a short report, with a summary, headings and tables, in both modes and on a phone. Sources became small numbers you tap. A banner names the scientist writing the answer. Copying an answer copies only the answer. Questions about which variant causes which disease, and which genes go with a disease, now answer. About 1 search in 10 still fails and needs asking again | 2026-09-14 |
 
 Nine of these are worth understanding, because they explain how this project works.
 
@@ -552,12 +564,14 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Saved search history that survives closing the browser. The record of what you asked is already being written; what is missing is the part that reads it back and shows it to you when you return.
+1. Finish the answer work started on 14 September: fewer bold words, a slower and smoother move from searching to writing, and using PubMed abstracts, full gene summaries and gene function terms as evidence. It stops when a tester retests and approves.
+
+2. Saved search history that survives closing the browser. The record of what you asked is already being written; what is missing is the part that reads it back and shows it to you when you return.
 
 
-2. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
+3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 
-3. Then the remaining work: measurement and quality scoring, and finally hardening it for real use.
+4. Then the remaining work: measurement and quality scoring, and finally hardening it for real use.
 
 Two items that used to head this list are gone because they are done, and it is worth saying what they were rather than letting them disappear. The first was closing two ways the system could be made to answer about the wrong gene, both fixed on 24 August before any public address existed, which was the ordering we insisted on: a confidently worded, properly sourced answer about the wrong thing is more dangerous than no answer. The second was getting it online at all, done the same day.
 
@@ -567,8 +581,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| About 1 search in 10 ends with "could not be completed" instead of an answer. Asking the same question again works. We have not yet found the cause, because the failures did not happen again when we tried to catch them | Next session: record the error behind every failed search so the next one names its cause |
+| Some answers have too many words in bold, so nothing stands out | Being built: only the question and the main point stay bold |
 | Answers can take more than twenty-five seconds. We had believed twelve to fourteen and were wrong: we filmed the live site and the answer had not arrived at twenty-five, with fifteen of those seconds showing no change on screen at all. The waiting is now visible, which is honest rather than fast | NOT ASSIGNED. This is the largest problem on this page with nobody working on it |
-| On a phone-sized screen the page is about eight pixels too wide, so it slides sideways a little. On a tablet or laptop it is fine, which is why it went unnoticed for so long | With the design comparison against the approved mock-up, not yet scheduled |
 | The system reports the cost of answering a question as zero, which cannot be right. No spending figure should be trusted until this is understood | Not yet scheduled. It matters because the daily spending limits read this number |
 | The page listing ways to connect other software may already be fine. It was described as advertising things nobody can use, but that was checked against the real site rather than the practice one, and the practice site has no such dead button. We do not yet know which is true of the real site | Needs one check against the real site before anyone decides |
 | The automatic tests written to prove the new request budget works do not actually check it. The whole feature could be deleted and every test would still pass. The feature does work, confirmed by watching it run, but nothing would warn us if it stopped | After we have heard from real users. A gap in the tests rather than a fault in the product, written down with owners rather than quietly left |

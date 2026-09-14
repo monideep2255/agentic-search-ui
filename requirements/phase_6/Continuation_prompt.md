@@ -32,11 +32,12 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- PRODUCT OWNER RETESTS SETS 8 AND 9, THEN RELEASE. As of commit `674b7b9` on develop (2026-09-14), sets 8 (every question searches all three layers, the scientists' handoff, the GCK fallback) and 9 (Plain language and Researcher modes, streaming, the screenshot layout for Researcher, one trust line) are built and live, followed by an answer-quality fix found by the live check (every answer opens on a cited "Found N … records" summary). Sets 1 to 7 are approved; item 10.1 is live. `testing/UI_fix_plan.md` is the single owner of per-item status, and the evidence is under `testing/Developer/reports/2026-09-13_set_8/`, `2026-09-13_set_9/`, `2026-09-14_answer_quality/` and `2026-09-14_live_check/`. The steps, in order:
-  1. DECIDED 2026-09-14 by the product owner: the Synth tier's reasoning effort becomes "none" (DECISIONS.md), measured with five live runs per flagship question in `testing/Developer/reports/2026-09-14_synth_effort_none/`, alongside a quieter citation presentation and a "writing the answer" state in `testing/Developer/reports/2026-09-14_citations_and_writing/`, and a speed fix in `testing/Developer/reports/2026-09-14_speed_fix/` (the completeness repair runs only when it can change the answer, and `plan_node` makes no model call; median search 21.2 to 16.6 seconds over 35 local runs). The background, kept for the record: the Synth tier's reasoning effort. Before the answer-quality fix, 3 of 25 flagship runs on develop ended with a write-step transient error, and after it 0 of 25 did, but the measured cause is unchanged: effort "low" spending the 4000-token ceiling on reasoning past the 45-second step budget, while effort "none" finished 6 of 6 probe calls in 5 to 7 seconds. The dial is `_TIER_REASONING["synth"]` in `src/system_03_search_agent/harness/harness.py`. Also for their read: answers run about 120 words (Plain language) and 200 (Researcher) because grounding strips interpretive prose, and the trust line reads "Based on 4 sources, not yet confirmed" on most answers.
-  2. The product owner retests hand-tests 1, 7, 12 and 14 in `testing/Product/Product_workflows.md` and approves or sends feedback, worked through the UI fix loop below.
-  3. On approval, release to production per `docs/build/Release_flow.md`: cut `release/<version>` from develop, open a pull request into `production`, confirm CI, merge. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`. Confirm both production Railway services reach SUCCESS, confirm one LangSmith trace appears for a production query, review the back-merge pull request, and hand the product owner the production address with the demo questions that answer every time (`testing/Developer/scripts/flagship_measure.py` names five).
-  4. Only then open the rest of set 10: 10.2 saved history, 10.3 the 150-run consistency measurement, 10.4 the quality judgement.
+- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", rewritten at the close of 2026-09-14. Start with its "Next, in order" item 1, then work down the list.
+  - As of that close, testers use the develop app. Production stays on `v0.1.2` by product-owner decision (DECISIONS.md, 2026-09-14).
+  - The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
+  - Sets 1 to 7 are approved. Sets 8, 9 and 11 are live on develop, awaiting the product owner's retest. Set 10 is untouched apart from item 10.1.
+  - Evidence is under `testing/Developer/reports/2026-09-14_*`.
+  - When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
   Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, and never let two builders own one file region.
 
 THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-phase cadence for UI fixes, and it overrides `.claude/rules/git-workflow.md`'s branch requirement and the judge and adversary rounds for this work only:
@@ -61,7 +62,8 @@ WHERE TO LOOK, in the order a fresh session should read them:
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
 | What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
-| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, plus the UI-fix-loop rows dated 2026-09-12 and 2026-09-13 |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, plus the UI-fix-loop rows dated 2026-09-12 to 2026-09-14 |
+| Where the last session stopped | `testing/UI_fix_plan.md`, section "Where we stopped" |
 
 ### Process lessons from the fix-loop sessions, already applied
 
@@ -103,7 +105,7 @@ THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong
 
 Two consequences for whoever picks this up. THE ASSISTANT DRIVES THE BROWSER WHEN ASKED, and on 2026-09-12 the product owner asked it to: every push in the UI fix loop is checked on develop with Playwright screenshots and measurements at 1280px and 390px. The eight journeys under `frontend/e2e/journeys/` still stay gated behind `RUN_LIVE_JOURNEYS=1`, since they spend real model calls, and run on request. And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
 
-Everything else on this page is context for that one line, and it describes the state after fix sets 1 and 2 of the UI fix loop, on 2026-09-13. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
+Everything else on this page is context for that one line, and it describes the state at the close of 2026-09-14, with Set 11 of the UI fix loop in progress. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
 
 ### What the sections below used to say, and where that content lives now
 

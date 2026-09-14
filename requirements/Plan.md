@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-13.
+Kick-off: 2026-05-06. Last updated: 2026-09-14.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-09-13.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR: fix sets 1 and 2 plus eight retest follow-ups are built, live and approved as of commit d72256b, except item 2.12's flexible Search button placement, which is being built. THE NEXT ACTION is finishing that item, then fix set 3, refusals and Stop. Item-level status: `testing/UI_fix_plan.md`; authoritative build state: `tracker/BOARD.md` |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is the first item under "Next, in order" in `testing/UI_fix_plan.md`'s "Where we stopped" section, which owns the cutoff. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 562 (DECISIONS.md).
+Decisions logged: 564 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,38 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-14, UI FIX SET 11, THE PRODUCT OWNER'S LIVE FEEDBACK OF 2026-09-13 AND 2026-09-14. Worked in the UI fix loop on `develop`, with no branch and no pull request. Parallel sub-agents built pieces in isolated worktrees, and the lead verified, merged and committed.
+
+- WHAT SHIPPED TO DEVELOP AND WAS CHECKED LIVE, at commit `e5947e0`:
+  - the approved answer layout: summary, headings, record tables, and stacked rows on phones
+  - the writing banner and the sentence reveal
+  - clean copy
+  - variant-to-disease and gene-to-disease tables over the graph's `has_phenotype` edge
+  - MedGen disease-span resolution
+  - the GCK organism fix
+- WHAT MERGED ON DEVELOP AFTER THAT:
+  - 11.16's additive `step` event, and live write emits
+  - 11.21's tool layer: 10 per second E-utilities default, the Datasets summary, GO terms citeable only through an explicit single-gene attribution, `pmc`, the direct-linkname allowlist, the OMIM symbol filter and the deterministic call planner
+  - the CI lint fix
+- EVIDENCE:
+  - Live browser check at 1280 and 390: 6 of 6 items passed.
+  - Repeated live questions: 48 of 53 answered, and every question returned one source set.
+  - Retry of the questions that had errored: 12 of 12 answered.
+  - 11.21 passed two independent review rounds.
+  - Doc drift clean.
+- WHAT WENT WRONG:
+  - About 1 in 10 live searches failed with an uncaptured error that did not reproduce.
+  - CI on develop was red for six pushes because of 13 lint errors in committed probe scripts. The local lint run checked `src` and `tests`; CI checks the whole repository.
+  - 11.21's abstract quote check failed review twice, the second time inside its own fix. By product-owner decision it was removed rather than patched again.
+  - The session was closed with 11.27 and 11.28 (less bold, paced transition) unfinished in a worktree, and with 11.16's review unreported.
+- OPEN, waiting on the product owner:
+  - HNF1A's row count, capped by the 20-source limit
+  - the provenance note under the mapping table
+  - where the mode toggle goes
+  - the trust-line wording
+  - production stays on `v0.1.2` for now
+- Pointers: `testing/UI_fix_plan.md`, Set 11 and "Where we stopped", and the reports under `testing/Developer/reports/2026-09-14_*`.
 
 2026-09-12 to 2026-09-13, THE FIRST PRODUCT-OWNER TESTING ROUND, AND THE UI FIX LOOP IT OPENED ON `develop`. Not a numbered build phase and not a pull request: the loop is fix on develop, quick checks, push, confirm live, product owner retests, by product-owner decision logged in DECISIONS.md.
 

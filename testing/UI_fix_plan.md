@@ -679,7 +679,7 @@ The cutoff. It is updated at the end of every working session, so the next sessi
   - Changed: `AnswerScreen.tsx`, `App.tsx` and `useAnswerReveal.ts`, plus several tests.
   - New: `hooks/usePacedEvents.ts`, `answerBold.test.tsx`, `usePacedEvents.test.ts`, `e2e/bold-and-stagger.spec.ts` and `testing/Developer/reports/2026-09-14_bold_and_stagger/`.
   - It also re-captured older answer-layout screenshots; check those before committing.
-- The independent review of 11.16 was stopped before it reported. The code is already merged. Its copy, `.claude/worktrees/agent-ad0b1a05272ac1d85`, can be removed once the review is rerun against `develop` or deliberately skipped.
+- The independent review of 11.16 was stopped before it reported. The code is already merged. Its merged worktree is removed at the end-of-day ship; rerun the review against `develop` instead.
 
 ### Next, in order
 
