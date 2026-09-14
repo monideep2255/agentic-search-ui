@@ -107,8 +107,9 @@ one") and it had been applied to exactly one arm.
   memory-to-Write path to delete and build phase 2.2's grounding pass caught
   the rest (F-4.5-J-05).
 - The prompt-cache stable prefix, by SHA-256, on both axes the tickets name:
-  as depth varies (P7, Synth) and as session memory varies (P7b, Think and
-  Plan). The memory half did not exist at all before this fix branch
+  as depth varies (P7, Synth) and as session memory varies (P7b, Think;
+  Plan too until its model call was deleted on 2026-09-14). The memory
+  half did not exist at all before this fix branch
   (F-4.5-J-08), and P7b carries a negative control so it cannot be satisfied
   by a build that stopped assembling the block.
 - The hard token cap AND the tokenizer, measured against an independent
@@ -1605,10 +1606,11 @@ def test_p7b_the_stable_prefix_is_byte_identical_as_session_memory_varies() -> N
     prefix raises nothing, it just re-bills every request at the uncached
     rate.
 
-    Asserted where memory is actually injected, which is Think and Plan, not
-    Synth. `build_synth_messages` takes no memory argument at all, so hashing
-    ITS system block across two memory values would be trivially green and
-    would prove nothing about the two prompts that do carry the block.
+    Asserted where memory is actually injected, which is Think (and Plan,
+    until 2026-09-14), not Synth. `build_synth_messages` takes no memory
+    argument at all, so hashing ITS system block across two memory values
+    would be trivially green and would prove nothing about the prompt that
+    does carry the block.
 
     The messages are the real ones the two nodes assembled, captured at
     `_dispatch_tier_call` and then aborted, so nothing reaches a network.
@@ -1638,7 +1640,11 @@ def test_p7b_the_stable_prefix_is_byte_identical_as_session_memory_varies() -> N
         last_updated=_now(),
     )
 
-    for step in ("think", "plan"):
+    # Think only since 2026-09-14: the speed fix deleted `plan_node`'s
+    # discarded Plan-tier call, the prompt this arm used to capture for
+    # "plan". Plan's use of memory is now `_memory_curies` in code, with no
+    # prompt and therefore no prefix to keep byte-identical.
+    for step in ("think",):
         without = asyncio.run(_step_messages_for(step, None))
         with_memory = asyncio.run(_step_messages_for(step, memory))
 
@@ -2000,7 +2006,11 @@ def test_p10_memory_is_never_injected_into_the_act_or_write_step() -> None:
         "was removed or this walk has stopped seeing the real call sites and "
         f"the assertion above is vacuous. sites={sorted(sites)}"
     )
-    assert "_memory_suffix" in sites.get("plan_node", set()), (
+    # Since 2026-09-14 (the speed fix) plan_node makes no model call, so it
+    # no longer renders memory into a prompt through `_memory_suffix`; it
+    # reads memory in code, through `_memory_curies` (and `_session_memory`
+    # for the remembered mention), which is the site this control pins now.
+    assert sites.get("plan_node", set()) & {"_memory_curies", "_session_memory"}, (
         "plan_node no longer reads session memory, so either the feature was "
         "removed or this walk has stopped seeing the real call sites and the "
         f"assertion above is vacuous. sites={sorted(sites)}"

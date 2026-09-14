@@ -493,13 +493,12 @@ async def test_guardrail_alone_calls_the_guard_tier_model(
 @pytest.mark.asyncio
 async def test_think_now_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> None:
     """T-4.7-04: `think_node`'s real classification call resolves to the
-    Plan-tier model, one of the two plan-tier calls a no-tool query makes
-    (the other is `plan_node`'s own, still-discarded stub call). Asserted
-    by content rather than by count alone, since `test_plan_calls_the_
-    plan_tier_model` already covers the count: this asserts a call whose
-    messages actually carry `_THINK_SYSTEM_INSTRUCTION` reached the plan
-    tier, distinguishing it from `plan_node`'s own plan-tier call, which
-    carries no system instruction of its own at all.
+    Plan-tier model, the ONLY plan-tier call a no-tool query makes since
+    `plan_node`'s discarded stub call was deleted (speed fix, 2026-09-14).
+    Asserted by content rather than by count alone, since
+    `test_plan_node_dispatches_no_model_call` covers the count: this
+    asserts a call whose messages actually carry `_THINK_SYSTEM_INSTRUCTION`
+    reached the plan tier.
     """
     from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
 
@@ -524,9 +523,10 @@ async def test_think_now_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> 
 
 @pytest.mark.asyncio
 async def test_plan_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> None:
-    """No-tool-selected path: two plan-tier calls fire, `think_node`'s real
-    classification (T-4.7-04) and `plan_node`'s own still-discarded stub
-    dispatch, since act_node never reaches cypher_query. See
+    """No-tool-selected path: ONE plan-tier call fires, `think_node`'s real
+    classification (T-4.7-04). `plan_node`'s own discarded stub dispatch,
+    the second until 2026-09-14, was deleted by the speed fix; see
+    `test_plan_node_dispatches_no_model_call` for the per-step count. See
     test_plan_calls_the_plan_tier_model_when_a_tool_runs below for the
     tool path, restored per the judge's T-2.1 rework finding.
     """
@@ -534,7 +534,50 @@ async def test_plan_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> None:
     plan_tier_calls = [
         call for call in _mock_litellm.call_args_list if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
     ]
-    assert len(plan_tier_calls) == 2  # think + plan
+    assert len(plan_tier_calls) == 1  # think only
+
+
+@pytest.mark.asyncio
+async def test_plan_node_dispatches_no_model_call(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Speed fix (2026-09-14): `plan_node` makes no model call.
+
+    Its Plan-tier call had discarded its reply since build phase 4.7
+    (F-4.5-A-09) and cost a median 1.4 seconds with a tail to 45, measured
+    live on 2026-09-14. Counted at `_dispatch_tier_call` per (tier, step)
+    on a template-shaped question that plans `cypher_query`, so the count
+    is of the loop's own dispatches rather than of every `litellm` call
+    (cypher generation's two attempts go through the harness directly).
+
+    Populate check: Think's plan-tier call and Write's synth call are both
+    present, so an empty count cannot pass. The reply nothing read is also
+    proven unread here: the stub's fixed reply text reaches no event.
+
+    MUTATION PROOF. Restoring a `_dispatch_tier_call(harness, trace_id,
+    "plan", "plan", ...)` in `plan_node` turns this arm red:
+
+        AssertionError: plan_node dispatched a model call: [('plan', 'plan')]
+    """
+    original = graph_module._dispatch_tier_call
+    dispatched: list[tuple[str, str]] = []
+
+    async def _counting(harness, trace_id, tier, step, messages, **kwargs):
+        dispatched.append((tier, step))
+        return await original(harness, trace_id, tier, step, messages, **kwargs)
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _counting)
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+
+    from_plan_node = [pair for pair in dispatched if pair[1] == "plan"]
+    assert from_plan_node == [], f"plan_node dispatched a model call: {from_plan_node}"
+    assert ("plan", "think") in dispatched, dispatched
+    assert ("synth", "write") in dispatched, dispatched
+    assert "plan" in [event.type for event in events]
+    plan_event = next(event for event in events if event.type == "plan")
+    assert plan_event.payload["tool_calls"], "the template-shaped question must still plan a tool"
 
 
 @pytest.mark.asyncio
@@ -543,15 +586,16 @@ async def test_plan_calls_the_plan_tier_model_when_a_tool_runs(_mock_litellm: As
     a weakened verify surface once commit 7c5b8d6 pinned the shared query
     fixture to the no-tool path ("hello"), where exactly one plan-tier
     call was always true and the assertion never exercised the tool path
-    the phase exists to build. On the tool path, four calls resolve to
-    the plan tier: think_node's real classification (T-4.7-04), plan_node's
-    own dispatch, plus cypher_query's two internal generate_cypher attempts
+    the phase exists to build. On the tool path, three calls resolve to
+    the plan tier: think_node's real classification (T-4.7-04) plus
+    cypher_query's two internal generate_cypher attempts
     (the generic "ok" mock response is not recoverable Cypher, so both the
     initial attempt and the one repair retry fire; see
     test_act_executes_the_selected_cypher_query_call's docstring for the
-    same mechanics). F-06 means neither of those two generate_cypher calls
-    carries the stable prefix, a documented, out-of-file-scope gap this
-    pass does not close (see
+    same mechanics). Four until 2026-09-14, when the speed fix deleted
+    plan_node's own discarded dispatch. F-06 means neither of the two
+    generate_cypher calls carries the stable prefix, a documented,
+    out-of-file-scope gap this pass does not close (see
     test_every_model_call_carries_the_stable_prefix_as_its_leading_message_when_a_tool_runs).
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
@@ -561,7 +605,7 @@ async def test_plan_calls_the_plan_tier_model_when_a_tool_runs(_mock_litellm: As
         for call in _mock_litellm.call_args_list
         if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
     ]
-    assert len(plan_tier_calls) == 4
+    assert len(plan_tier_calls) == 3
 
 
 @pytest.mark.asyncio
@@ -579,10 +623,10 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
 ) -> None:
     """F-2.0-03 fix: build_stable_prefix() has a real caller, not zero.
 
-    No-tool-selected path: the plan and write calls (two of the four; the
+    No-tool-selected path: the write call (one of the three; the
     guardrail and Think classification calls are the documented exceptions
     below)
-    reach litellm.acompletion with graph_module._STABLE_PREFIX prepended
+    reaches litellm.acompletion with graph_module._STABLE_PREFIX prepended
     as a leading system-role message, proving the prompt-cache scaffold
     T-2.0-06 built is actually wired into the loop, not merely
     unit-tested in isolation. See the `_when_a_tool_runs` sibling below
@@ -593,13 +637,14 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
     # first and no stable prefix, because the prefix ahead of that
     # instruction made the Guard model answer the question instead of
     # classifying it (see `_dispatch_tier_call`). Section 4.2 names Think,
-    # Plan and Write as the prefix sharers. So: four calls, the first one
-    # (the guardrail) leads with `GUARD_SYSTEM_INSTRUCTION`, the other
-    # three with the prefix.
+    # Plan and Write as the prefix sharers. Since 2026-09-14 (the speed
+    # fix) Plan makes no call at all. So: three calls, the first one
+    # (the guardrail) leads with `GUARD_SYSTEM_INSTRUCTION`, Think with its
+    # own instruction, and Write with the prefix.
     from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
 
     await _run_graph(_valid_query(), _valid_context())
-    assert _mock_litellm.call_count == 4
+    assert _mock_litellm.call_count == 3
     guard_call, think_call, *loop_calls = _mock_litellm.call_args_list
     assert guard_call.kwargs["messages"][0] == {
         "role": "system",
@@ -612,7 +657,7 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
         "role": "system",
         "content": graph_module._THINK_SYSTEM_INSTRUCTION,
     }
-    assert len(loop_calls) == 2
+    assert len(loop_calls) == 1
     for call in loop_calls:
         leading_message = call.kwargs["messages"][0]
         assert leading_message["role"] == "system"
@@ -628,30 +673,32 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
     carried the prefix, then asserted the filtered count was 4, a shape
     structurally incapable of failing regardless of how many calls fired
     in total or how many of them lacked the prefix. It concealed exactly
-    the gap F-06 documents: 2 of the 6 calls a tool-path query fires
+    the gap F-06 documents: 2 of the 5 calls a tool-path query fires
     (cypher_query's two internal generate_cypher attempts) never carry
     the prefix at all, since generate_cypher does not accept a
     cache_prefix parameter (a fix that belongs in cypher_generation.py,
     out of this file's scope). This restores a real assertion: the total
-    call count (6) is checked first, then exactly 4 of those 6, the
-    node-level calls (guardrail, think, plan, write), are asserted to
-    carry the prefix; the other 2 are the documented, known gap, not
-    silently absorbed by a filter.
+    call count (5 since 2026-09-14, 6 before plan_node's discarded call
+    was deleted) is checked first, then exactly 1 of those 5, the
+    node-level Write call, is asserted to carry the prefix; the other
+    calls are the documented exceptions, not silently absorbed by a
+    filter.
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
 
-    assert _mock_litellm.call_count == 6
+    assert _mock_litellm.call_count == 5
     prefixed_calls = [
         call
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    # Two since 2026-09-13, not four: the guardrail and Think classification
-    # calls deliberately carry no prefix (see the no-tool sibling above), and
-    # both are asserted present separately so a missing call cannot hide in
-    # the count.
-    assert len(prefixed_calls) == 2
+    # One since 2026-09-14, two since 2026-09-13, four before: the guardrail
+    # and Think classification calls deliberately carry no prefix (see the
+    # no-tool sibling above) and Plan makes no call, and the two
+    # classification calls are asserted present separately so a missing
+    # call cannot hide in the count.
+    assert len(prefixed_calls) == 1
     for call in prefixed_calls:
         assert call.kwargs["messages"][0]["role"] == "system"
     from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
@@ -665,29 +712,31 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
 
 
 @pytest.mark.asyncio
-async def test_exactly_four_model_calls_fire_on_the_happy_path(
+async def test_exactly_three_model_calls_fire_on_the_happy_path(
     _mock_litellm: AsyncMock,
 ) -> None:
-    """No-tool-selected path: guardrail, think, plan, write each call_tier
-    once; act calls no model since no tool was selected. See
-    test_six_model_calls_fire_when_a_tool_runs below for the tool path,
-    restored per the judge's T-2.1 rework finding: this assertion was
+    """No-tool-selected path: guardrail, think and write each call_tier
+    once; plan makes no call since 2026-09-14 (the speed fix deleted its
+    discarded dispatch) and act calls no model since no tool was selected.
+    See test_five_model_calls_fire_when_a_tool_runs below for the tool
+    path, restored per the judge's T-2.1 rework finding: this assertion was
     "now only true on the no-tool path" with no sibling covering the
     other one.
     """
     await _run_graph(_valid_query(), _valid_context())
-    assert _mock_litellm.call_count == 4
+    assert _mock_litellm.call_count == 3
 
 
 @pytest.mark.asyncio
-async def test_six_model_calls_fire_when_a_tool_runs(_mock_litellm: AsyncMock) -> None:
-    """T-2.1 rework: on the tool path, the four node-level calls
-    (guardrail, think, plan, write) plus cypher_query's two internal
-    generate_cypher attempts (F-06's documented gap) total six, not four.
+async def test_five_model_calls_fire_when_a_tool_runs(_mock_litellm: AsyncMock) -> None:
+    """T-2.1 rework: on the tool path, the three node-level calls
+    (guardrail, think, write) plus cypher_query's two internal
+    generate_cypher attempts (F-06's documented gap) total five, not three.
+    Six until 2026-09-14, when plan_node's discarded call was deleted.
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
-    assert _mock_litellm.call_count == 6
+    assert _mock_litellm.call_count == 5
 
 
 # ---------------------------------------------------------------------------
@@ -1952,14 +2001,14 @@ async def test_stable_prefix_still_reaches_every_graph_node_call_when_a_tool_run
 ) -> None:
     """Guards the LEARNINGS row 28 regression for the scenario that
     actually exercises a tool, not only the no-tool-selected happy path:
-    the four established graph.py node calls (guardrail, think, plan,
-    write) must each still carry graph_module._STABLE_PREFIX as their
-    leading message, even though Act's cypher_query dispatch issues
-    additional plan-tier calls of its own (cypher_generation.
-    generate_cypher does not accept a cache_prefix, by that module's own
-    design, so those calls are expected to lack the leading system
-    message; this test asserts the count that DOES carry it, not the
-    total call count).
+    the established graph.py node call that shares the prefix (write, since
+    2026-09-14; plan and write before the speed fix deleted plan's call)
+    must still carry graph_module._STABLE_PREFIX as its leading message,
+    even though Act's cypher_query dispatch issues additional plan-tier
+    calls of its own (cypher_generation.generate_cypher does not accept a
+    cache_prefix, by that module's own design, so those calls are expected
+    to lack the leading system message; this test asserts the count that
+    DOES carry it, not the total call count).
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
@@ -1969,36 +2018,39 @@ async def test_stable_prefix_still_reaches_every_graph_node_call_when_a_tool_run
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    # Plan and write. The guardrail and Think classification calls stopped
+    # Write only. The guardrail and Think classification calls stopped
     # carrying the prefix on 2026-09-13 (UI fix set 7, item 7.1; see
-    # `_dispatch_tier_call`) and are pinned by their own arms.
-    assert len(node_level_calls) == 2
+    # `_dispatch_tier_call`) and are pinned by their own arms; Plan makes no
+    # call since 2026-09-14 (`test_plan_node_dispatches_no_model_call`).
+    assert len(node_level_calls) == 1
 
 
 @pytest.mark.asyncio
 async def test_cost_cap_breach_during_act_ships_partial_result_without_calling_the_tool(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Act's own pre-dispatch cost-cap check (the THIRD "plan"-tier check
-    for this query as of build phase 4.7: think_node's own real
-    classification call is the first, T-4.7-04, plan_node's own dispatch
-    is the second) breaches the cap, so cypher_query is never called at
-    all, and the query still ships a partial result via write_node's
-    existing cap-hit handling.
+    """Act's own pre-dispatch cost-cap check (the SECOND "plan"-tier check
+    for this query since 2026-09-14: think_node's own real classification
+    call is the first, T-4.7-04) breaches the cap, so cypher_query is never
+    called at all, and the query still ships a partial result via
+    write_node's existing cap-hit handling.
 
     The threshold below moved from 2 to 3 when `think_node` started
     dispatching a plan-tier call of its own (T-4.7-04): before that, the
     sequence was plan_node's dispatch (1st) then act's pre-dispatch check
-    (2nd); it is now think_node's dispatch (1st), plan_node's dispatch
-    (2nd), then act's pre-dispatch check (3rd).
+    (2nd); it became think_node's dispatch (1st), plan_node's dispatch
+    (2nd), then act's pre-dispatch check (3rd). It moved back to 2 on
+    2026-09-14 when the speed fix deleted plan_node's discarded dispatch,
+    which is where the per-query cost pre-flight now goes: Think's call
+    immediately before Plan, Act's own check immediately after it.
     """
     real_check = cost_control.check_per_query_cap
     plan_tier_check_count = {"n": 0}
 
-    def _raise_on_third_plan_tier_check(harness, trace_id, tier, **kwargs):
+    def _raise_on_second_plan_tier_check(harness, trace_id, tier, **kwargs):
         if tier == "plan":
             plan_tier_check_count["n"] += 1
-            if plan_tier_check_count["n"] == 3:
+            if plan_tier_check_count["n"] == 2:
                 raise QueryCapExceededError(
                     "forced for test",
                     query_cost_usd=0.05,
@@ -2007,7 +2059,7 @@ async def test_cost_cap_breach_during_act_ships_partial_result_without_calling_t
                 )
         return real_check(harness, trace_id, tier, **kwargs)
 
-    monkeypatch.setattr(cost_control, "check_per_query_cap", _raise_on_third_plan_tier_check)
+    monkeypatch.setattr(cost_control, "check_per_query_cap", _raise_on_second_plan_tier_check)
 
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     events = await _run_graph(query, _valid_context())

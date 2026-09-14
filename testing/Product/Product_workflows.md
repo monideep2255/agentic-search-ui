@@ -205,10 +205,13 @@ Testing: an answer says in one line how much to trust it, and its sources come f
 
 Query: `Which diseases are associated with BRCA1?`, then `What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?`
 
-Steps: get the answer → read the line under the answer → click its "i" → look through the sources → open "Show work"
+Steps: watch the answer being written → get the answer → hover, tap, or Tab to a small number after a sentence → read the card → press Escape → read the line under the answer → click its "i" → look through the sources → open "Show work"
 
 Expected:
 
+- While the answer is being written, the scientist's line reads "{name} is writing the answer…" with moving dots, and "writing…" follows the sentences as they appear. No raw bracket numbers such as "[1][2]" show while it writes. Both disappear when the answer lands or you press Stop.
+- Each cited sentence ends in small raised numbers, not boxes. A sentence with many sources shows one range, such as "1–13".
+- Hovering, tapping or tabbing to a number opens a small card naming each source, its id, its layer in words, and an "Open the record" link that opens on ncbi.nlm.nih.gov or clinicaltrials.gov. Escape or clicking elsewhere closes it.
 - Under the answer, one plain line such as "Based on 4 sources, not yet confirmed" or "Confirmed by 2 independent sources", with an "i" that explains how sources are counted. No row of pills, and no two trust signals that contradict each other: the status word says "Answered" when the line carries the caution.
 - A high-risk claim adds "High-risk claim" in red on the same line.
 - Sources come from more than one layer: live NCBI gene records (L2), the literature record from PubTator3 (L3), and up to five clinical trials from clinicaltrials.gov (L3). For the EGFR question, the trials shown are recruiting ones.

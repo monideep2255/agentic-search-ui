@@ -233,4 +233,38 @@ test.describe("citation host allowlist", () => {
     await expect(link).toHaveAttribute("rel", "noopener noreferrer");
     await expect(card).not.toContainText("Not linked");
   });
+
+  /*
+   * ADDED 2026-09-14. The inline citation became a superscript marker whose
+   * card carries a record link, so the allowlist now guards TWO places that
+   * build a link from `source_url`: the source card above and this marker
+   * card. Each is checked in a real browser, since a link rendered from the
+   * wire is exactly what the F-4.8-A-24 adversary exploited.
+   */
+  test("the citation marker's card links only the allowed host", async ({ page }) => {
+    await askWithScriptedCitations(page);
+
+    const cases: [number, string | null][] = [
+      [1, null],
+      [2, null],
+      [3, "https://www.ncbi.nlm.nih.gov/gene/672"],
+    ];
+    for (const [n, href] of cases) {
+      const marker = page.getByTestId(`citation-${n}`);
+      await marker.focus();
+      const card = page.getByTestId(`cite-popover-${n}`);
+      await expect(card, `focusing marker ${n} opened no card`).toBeVisible();
+      if (href === null) {
+        await expect(card.locator("a"), `marker ${n}'s card linked a disallowed URL`).toHaveCount(0);
+        await expect(card).toContainText("Not linked: this URL is not on a recognised NCBI host.");
+      } else {
+        const link = card.locator("a");
+        await expect(link).toHaveCount(1);
+        await expect(link).toHaveAttribute("href", href);
+        await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      }
+      await page.keyboard.press("Escape");
+      await expect(card).toBeHidden();
+    }
+  });
 });

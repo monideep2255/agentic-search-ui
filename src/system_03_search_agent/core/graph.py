@@ -59,17 +59,20 @@ Writes:
       via `session_scope()` is opened and closed inside the guardrail
       node's own call.
 
-Five nodes, fixed sequence. `guardrail` calls `tier="guard"`; `plan` and
-`write` call `tier="plan"`/`tier="synth"` respectively (Section 3.2's
-step-to-tier table). `think` called `tier="guard"` through build phase
-2.0's stub; as of build phase 4.7 (T-4.7-04) it calls `tier="plan"`
-instead, per Section 17's explicit "Think still makes this call, via the
-Plan-tier model, on every query" (`budget_for_step`'s own per-step
-timeout budget for the `think` step moved with it, `harness/harness.py`).
-`act` fires no model call at all (Section 3.2: Act is non-LLM code that
-dispatches tool calls).
+Five nodes, fixed sequence. `guardrail` calls `tier="guard"`; `write`
+calls `tier="synth"` (Section 3.2's step-to-tier table). `think` called
+`tier="guard"` through build phase 2.0's stub; as of build phase 4.7
+(T-4.7-04) it calls `tier="plan"` instead, per Section 17's explicit
+"Think still makes this call, via the Plan-tier model, on every query"
+(`budget_for_step`'s own per-step timeout budget for the `think` step
+moved with it, `harness/harness.py`). `plan` made a `tier="plan"` call
+whose reply was discarded from build phase 4.7 on; that call was deleted
+on 2026-09-14 (see `plan_node`), so `plan` now fires no model call and
+selects tools in code from Think's resolved entities. `act` fires no
+model call at all (Section 3.2: Act is non-LLM code that dispatches tool
+calls).
 
-Every model-calling node (guardrail, think, plan, write) follows the same
+Every model-calling node (guardrail, think, write) follows the same
 three-step pattern in this order, never reordered:
     1. `cost_control.check_per_query_cap(harness, trace_id, tier)`, the
        pre-flight per-query cap check, called immediately before, never
@@ -3383,78 +3386,54 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         )
         return sink.result(tool_calls=[])
 
-    try:
-        await _dispatch_tier_call(
-            harness,
-            trace_id,
-            "plan",
-            "plan",
-            # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after the
-            # question, never spliced into the system block. The system block
-            # is the prompt-cache stable prefix, and a per-session value there
-            # misses the cache on every request whose memory changed, which is
-            # every request after the first. Nothing errors; the bill climbs.
-            #
-            # F-4.5-A-09: this call's RESPONSE IS DISCARDED too. Entity
-            # resolution moved to `think_node` in build phase 4.7 (T-4.7-05),
-            # so this Plan-tier call's own tool selection is now driven by
-            # Think's already-resolved entities (`target_curies` below) and
-            # `_memory_curies`, neither of which reads this reply. The
-            # rendered block is billed at the plan tier and consumed by
-            # nothing.
-            [
-                # F-4.12-01. A one-line system instruction, for the same
-                # reason the guard and think stubs got one: a bare question
-                # sent to a real model makes it ANSWER the question at
-                # length, and this call's reply is discarded. Measured
-                # against the live plan model on 2026-08-24, same question,
-                # same cap:
-                #
-                #   bare question               1.5s to 53.6s, out 16 to 1957
-                #   with this instruction       1.1s,          out 2
-                #
-                # The wide range on the bare question is the point. It is not
-                # that the model is slow, it is that an open-ended prompt makes
-                # its latency unbounded in practice, and the 45-second plan
-                # budget sat inside that range. Live on Railway it lost, twice
-                # measured, and the whole query died with a transient step
-                # error having produced nothing.
-                {"role": "system", "content": "Reply with the single word: ok"},
-                {"role": "user", "content": query.text + _memory_suffix(state, "plan")},
-            ],
-            budget_s=budget_for_step("plan", query_class),
-            # F-4.12-01. This call's reply is DISCARDED (see F-4.5-A-09
-            # above), and until this cap it was allowed the plan tier's full
-            # 4000 tokens. Sending a bare question with no system instruction
-            # and no tight cap makes a model answer it AT LENGTH, which is
-            # exactly what the guard tier already measured and fixed:
-            # `_TIER_MAX_TOKENS["guard"]` is 128 because "a Guard call
-            # measured out=1000 exactly, every time, because the step sent a
-            # bare question with no instruction and the model answered it at
-            # length". The plan step still sends that bare question.
-            #
-            # Measured live on Railway, 2026-08-24: the step ran the FULL
-            # 45-second plan budget and the query died with a transient
-            # step error, every time, having produced nothing. Guard (1.6s)
-            # and Think (2.7s, same tier) were unaffected, which is what
-            # located it here rather than in the provider or the network.
-            #
-            # 16 is not a tuned figure, it is "as small as the API will take
-            # without being zero". Nothing reads the output, so any cap is
-            # behaviour-neutral by construction; the only thing this changes
-            # is how long the provider spends generating text nobody sees.
-            #
-            # THE REAL FIX IS TO DELETE THIS CALL, and it is deliberately not
-            # done here. The call is also what triggers the per-query cost-cap
-            # pre-flight (`QueryCapExceededError` below), so removing it moves
-            # cost enforcement, which is a product decision and not a
-            # deployment one. Filed rather than taken unilaterally.
-            max_tokens=16,
-        )
-    except cost_control.QueryCapExceededError:
-        return {"cap_exceeded": True}
-    except HarnessCallError as exc:
-        return {"step_error": _step_error_kwargs("plan", exc)}
+    # THE PLAN-TIER MODEL CALL THAT USED TO SIT HERE WAS DELETED on
+    # 2026-09-14 (the speed fix, on the product owner's "can we make the
+    # process quicker?"). Its history, kept because the deletion is the end
+    # of a filed finding rather than a tidy-up:
+    #
+    # - Build phase 2.0 gave every node a model call. This one sent the
+    #   question to the Plan tier and discarded the reply.
+    # - Build phase 4.7 (T-4.7-05) moved entity resolution to `think_node`,
+    #   after which tool selection below read only Think's resolved entities
+    #   (`target_curies`) and `_memory_curies`. F-4.5-A-09 recorded that the
+    #   reply was consumed by nothing.
+    # - F-4.12-01 (2026-08-24) measured the bare prompt running 1.5 to 53.6
+    #   seconds and killing the whole query at the 45-second plan budget,
+    #   live on Railway, and capped it at 16 tokens behind a one-word
+    #   instruction ("Reply with the single word: ok"), writing at the same
+    #   time: "THE REAL FIX IS TO DELETE THIS CALL, and it is deliberately
+    #   not done here. The call is also what triggers the per-query cost-cap
+    #   pre-flight, so removing it moves cost enforcement, which is a
+    #   product decision and not a deployment one. Filed rather than taken
+    #   unilaterally."
+    # - Measured on 2026-09-14 over 34 live runs
+    #   (`testing/Developer/reports/2026-09-14_synth_effort_none/`): a
+    #   median 1.40 seconds, 4 runs of 4.0 to 27.0 seconds, and one run
+    #   that hit the full 45-second budget and refused a question that
+    #   should have answered.
+    #
+    # THE FIX WAS TAKEN. Proven by reading and by execution before the
+    # deletion: no event, narrative, tool selection, cost figure, test or
+    # trace read the reply (`tests/system_03_search_agent/core/test_graph.py`,
+    # `test_plan_node_dispatches_no_model_call`). What the call's side
+    # effects provided still exists elsewhere:
+    #
+    # - The per-query cost-cap pre-flight. `_dispatch_tier_call` runs it
+    #   before every model call, so it fires at Think's classification call
+    #   immediately before this node and at Act's own pre-dispatch check
+    #   (`act_node`, `check_per_query_cap(harness, trace_id, "plan")`)
+    #   immediately after it; a cap breach between them is impossible,
+    #   since nothing here spends money. Both are routed to `write_node`'s
+    #   partial-result path exactly as this node's own handler was.
+    # - Session memory. It still reaches Plan's decisions through
+    #   `_memory_curies(state)` and `_remembered_mention_for`, in code, as
+    #   it did before; the prompt suffix it used to ride into was the
+    #   discarded reply's prompt.
+    # - The `plan` and `cost` events below are emitted as before.
+    #
+    # So this node makes no model call. `cap_exceeded` and `step_error`
+    # can no longer originate here; `_route_after_plan` keeps reading them
+    # because Think's copies are merged into the same state.
 
     # T-4.7-06: Plan consumes Think's entities rather than re-deriving them.
     # `resolved_entities` is set by `think_node` (T-4.7-05); `EventResolvedEntity`
@@ -4913,6 +4892,57 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
 #: disclosed. The asymmetry is what makes the value safe to pick rather than
 #: measure: skipping is free, timing out is not.
 _WRITE_REPAIR_MIN_BUDGET_S = 5.0
+
+
+def _code_built_lines_will_cite(
+    omitted_findings: list[SynthFinding],
+    synth_findings: list[SynthFinding],
+    *,
+    tool_outcome: str,
+    model_grounded: bool,
+    lists_every_finding: bool,
+    question: str,
+) -> bool:
+    """Whether the Researcher listing or the findings tail will cite every
+    finding the model's prose left out, so the completeness repair could not
+    change what the reader gets.
+
+    Speed fix (2026-09-14). Measured on the day: the repair Synth call fired
+    on 33 of 33 answered runs, a median 4.8 seconds each, while the
+    code-built lines below it already cited every one of the findings it
+    was regenerating for. This is the tail's own computation run ahead of
+    the repair: the same `build_structured_fallback_narrative` over the same
+    findings the tail or listing will render, through the same
+    `run_grounding_pass`, so the answer it gives is the answer the tail
+    would give. Deterministic, no model call.
+
+    Returns False, keeping the repair, in each case where the repair still
+    has a job:
+
+    - the tool outcome is not `ok`, because the tail never runs then;
+    - the model grounded nothing, because the tail fires only on a grounded
+      answer and the alternative is the structured fallback, which floors
+      the outcome at `ask`, so a repair that grounds something changes the
+      outcome;
+    - a code-built sentence the pass strips (a value carrying a sentence
+      boundary, or one that fails the number check), because only the
+      model's own phrasing can still cite that finding.
+
+    `lists_every_finding` selects the Researcher listing, which renders every
+    prepared finding, over the tail, which renders only the omitted ones, so
+    the probe grounds exactly the narrative the answer will carry.
+    """
+    if tool_outcome != "ok" or not model_grounded or not omitted_findings:
+        return False
+    rendered = synth_findings if lists_every_finding else omitted_findings
+    probe = run_grounding_pass(
+        build_structured_fallback_narrative(rendered),
+        synth_findings,
+        core_ask_required=True,
+        question=question,
+    )
+    cited = {claim.finding.citation_id for claim in probe.claims}
+    return all(finding.citation_id in cited for finding in omitted_findings)
 
 
 def _build_repair_cap_note(omission_remains: bool = True) -> str:
@@ -7229,13 +7259,29 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # occasional.
     #
     # What follows from that (whether to gate the trigger on depth, to raise
-    # the floor, or to leave both as they are) is a product decision about
-    # cost and about what `ask` is allowed to mean, not a defect with one
-    # correct repair, so this change deliberately does not move the trigger
-    # or the floor. It is escalated rather than guessed at. What IS fixed
-    # here is everything about the mechanism that is wrong regardless of the
-    # firing rate: the shared budget above, the cap disclosure below, the
-    # acceptance rule, and this comment.
+    # the floor, or to leave both as they are) was a product decision about
+    # cost and about what `ask` is allowed to mean, escalated rather than
+    # guessed at, and the firing rate was later MEASURED: 33 of 33 answered
+    # runs on 2026-09-14, a median of 4.8 seconds and a worst of 22.9 per
+    # run (`testing/Developer/reports/2026-09-14_synth_effort_none/`).
+    #
+    # Speed fix (2026-09-14, the product owner's "can we make the process
+    # quicker?"). The trigger is now gated on what the code-built lines
+    # below will do, and nothing else about the mechanism moved. Since UI
+    # fix set 10 (the findings tail) and set 9 (the Researcher listing),
+    # every prepared finding the model's prose leaves out is cited by a
+    # code-built sentence grounded by the same pass, so the cited set equals
+    # the prepared set whether or not the repair ran. The repair therefore
+    # cannot change what the reader gets, and is skipped, exactly when
+    # `_code_built_lines_will_cite` holds: the tool outcome is ok, the model
+    # grounded something (so the tail or listing will fire), and the
+    # code-built sentence for every omitted finding grounds. It still runs
+    # in every case where it has a job: the model grounded nothing (the
+    # alternative is the structured fallback, which floors at `ask`), a
+    # value the pass strips (the tail cannot ground it, so only the model's
+    # own phrasing can), or a tool outcome the tail does not run on. The
+    # probe is the tail's own computation, in code, deterministic, and
+    # costs no model call.
     #
     # The repair does NOT sit inside the first call's try block, which the
     # comment here used to claim (F-4.5-J-14). It carries its own handlers,
@@ -7262,7 +7308,18 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             {claim.finding.citation_id for claim in grounding.claims}, synth_findings
         )
         repair_budget_s = write_budget_s - (time.monotonic() - write_started_at)
-        if omitted_findings and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S:
+        if (
+            omitted_findings
+            and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S
+            and not _code_built_lines_will_cite(
+                omitted_findings,
+                synth_findings,
+                tool_outcome=tool_outcome,
+                model_grounded=bool(grounding.claims),
+                lists_every_finding=query.audience_depth == "researcher",
+                question=query.text,
+            )
+        ):
             try:
                 repaired_text = await _dispatch_tier_call(
                     harness,

@@ -1570,6 +1570,9 @@ export function App() {
             question={searchView.question}
             previousTurns={thread}
             progress={inlineProgress}
+            // 2026-09-14: a stopped follow-up keeps its partial sentences, so
+            // the "writing" mark under them must go when Stop latches.
+            stopped={stopped}
             claims={view.claims}
             sources={view.sources}
             trust={view.trust}

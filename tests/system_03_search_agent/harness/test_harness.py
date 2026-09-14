@@ -141,6 +141,48 @@ async def test_call_tier_prepends_cache_prefix_as_leading_system_message(
     assert sent_messages[1] == {"role": "user", "content": "hi"}
 
 
+# --- _TIER_REASONING["synth"]: product-owner decision, 2026-09-14 ---
+
+
+def test_synth_reasoning_effort_is_none() -> None:
+    """Synth reasoning is OFF, product-owner decision of 2026-09-14.
+
+    At effort "low" the synth model intermittently spent its whole
+    4000-token ceiling on reasoning, returned `finish_reason: length` with
+    empty or truncated content, and ran 20 to 45 seconds against the write
+    step's 45-second budget: 3 of 25 flagship runs on develop, and 2 of 6
+    direct probe calls. At "none" the same prompt finished 6 of 6 in 5.2 to
+    7.2 seconds. Full measurement:
+    testing/Developer/reports/2026-09-14_answer_quality/report.md.
+
+    This is the direct regression guard on that decision: a revert to
+    "low" (or any other value) must fail this test, not just a live run
+    three queries later.
+    """
+    assert harness_module._TIER_REASONING["synth"] == {"effort": "none"}
+
+
+@pytest.mark.asyncio
+async def test_call_tier_sends_synth_reasoning_effort_none_to_litellm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Populate check: the configured value above must reach the actual
+    LiteLLM call, not merely sit correctly in the dict `call_tier` reads
+    from. `call_tier` passes `reasoning=_TIER_REASONING[tier]` straight
+    through to `litellm.acompletion` (harness.py); this proves that wiring
+    for the synth tier specifically, with a faked `acompletion` standing in
+    for the network call.
+    """
+    _patch_model_env(monkeypatch, "SYNTH_MODEL")
+    _patch_price(monkeypatch)
+    mock_acompletion = AsyncMock(return_value=_fake_response("hi", 10, 10))
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+
+    await Harness(trace_id="trace-1").call_tier("synth", [{"role": "user", "content": "hi"}])
+
+    assert mock_acompletion.call_args.kwargs["reasoning"] == {"effort": "none"}
+
+
 @pytest.mark.asyncio
 async def test_call_tier_missing_cache_prefix_leaves_messages_unchanged(
     monkeypatch: pytest.MonkeyPatch,

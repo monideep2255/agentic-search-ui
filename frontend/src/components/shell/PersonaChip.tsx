@@ -325,8 +325,93 @@ export const STEP_NARRATIVE: Record<string, string> = {
   Think: "is working out what the question is asking for",
   Plan: "is choosing which sources to read",
   Act: "is reading the records",
-  Write: "is writing the answer, citing as it goes",
+  /*
+   * 2026-09-14, product-owner request: "show people the answer is loading, in
+   * the sense like [scientist] is writing the answer....". Shortened from the
+   * design card's "is writing the answer, citing as it goes"
+   * (`components/persona.html`, `prototype/app.html:988`) so the animated
+   * ellipsis that follows it reads as the end of the sentence. A named
+   * departure from the persona card, recorded in the report and in
+   * `identity/citation-chip.html`'s change note.
+   */
+  Write: "is writing the answer",
 };
+
+/**
+ * Whether the reader has asked the system for less motion.
+ *
+ * Read in script as well as in CSS, so the static ellipsis is a rendered fact
+ * a test can assert (`data-motion="static"`) rather than a media query jsdom
+ * cannot evaluate. Updates live if the preference changes mid-run.
+ */
+export function usePrefersReducedMotion(): boolean {
+  const query = "(prefers-reduced-motion: reduce)";
+  const read = () =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia(query).matches
+      : false;
+  const [reduced, setReduced] = useState(read);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const list = window.matchMedia(query);
+    const onChange = () => setReduced(list.matches);
+    if (typeof list.addEventListener === "function") {
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    }
+    return undefined;
+  }, []);
+  return reduced;
+}
+
+/**
+ * Three dots that say the writing is still happening.
+ *
+ * NEAREST DESIGNED NEIGHBOUR: the live pip's pulse in `screens/streaming.html`,
+ * `@keyframes p{0%,100%{opacity:.35}50%{opacity:1}}` at 1.1s ease-in-out,
+ * applied to each dot with a staggered delay. The dots are the caption's own
+ * text in the caption's own colour, so no new colour or type size enters.
+ *
+ * Under `prefers-reduced-motion` the dots are static and fully opaque, in
+ * script and again in CSS. `aria-hidden` because the step change is already
+ * announced once by `RunProgress`'s live region; dots read aloud would repeat
+ * nothing useful.
+ *
+ * THE PERSONA STAYS STILL. Section 12.7 forbids an animated mascot, and the
+ * chip and the avatar here do not move. What moves is a progress mark on the
+ * work, the same class of signal as the stepper's pulse.
+ */
+export function WritingEllipsis({ testId }: { testId?: string }) {
+  const reduced = usePrefersReducedMotion();
+  return (
+    <Box
+      component="span"
+      aria-hidden="true"
+      data-testid={testId}
+      data-motion={reduced ? "static" : "animated"}
+      sx={{
+        display: "inline-block",
+        "@keyframes s3-writing-dot": {
+          "0%, 100%": { opacity: 0.35 },
+          "50%": { opacity: 1 },
+        },
+        "& > span": reduced
+          ? { opacity: 1 }
+          : {
+              opacity: 0.35,
+              animation: "s3-writing-dot 1.1s ease-in-out infinite",
+              "@media (prefers-reduced-motion: reduce)": { animation: "none", opacity: 1 },
+            },
+        "& > span:nth-of-type(2)": reduced ? {} : { animationDelay: "0.18s" },
+        "& > span:nth-of-type(3)": reduced ? {} : { animationDelay: "0.36s" },
+      }}
+    >
+      <span>.</span>
+      <span>.</span>
+      <span>.</span>
+    </Box>
+  );
+}
 
 export interface PersonaCaptionProps {
   /** Server-assigned persona (T-4.5-10); null before the first run returns. */
@@ -388,6 +473,11 @@ export function PersonaCaption({
           {name}
         </Box>{" "}
         {narrative ?? STEP_NARRATIVE[step] ?? "is working"}
+        {/* Write only, and only on the step's own narrative: a handoff
+            sentence during Act is not the lead writing. */}
+        {step === "Write" && narrative === null ? (
+          <WritingEllipsis testId="persona-caption-ellipsis" />
+        ) : null}
       </Typography>
       <PersonaInfo name={name} about={about} wikipedia={wikipedia} variant="onLight" align="left" />
     </Box>

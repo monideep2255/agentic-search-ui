@@ -27,11 +27,18 @@ supplies, which is the difference between testing the rule and restating it
   repair that covers more findings while dropping one), the shared Write
   budget, the repair's cost-cap disclosure, the incomplete-answer note's
   denominator, and the data framing on the completeness directive.
-- NOT exercised: how OFTEN the repair fires. That is F-4.5-J-18 and
-  F-4.5-A-05, it is unsettled between the two reports, and settling it needs
-  a live measurement neither round ran. This file deliberately does not pin
-  the trigger condition or the `ask` floor, so a later product decision to
-  change either is not blocked by an arm here.
+- Exercised since the speed fix (2026-09-14): the trigger GATE. The repair
+  is skipped when the code-built findings tail or Researcher listing will
+  cite every finding the model left out (`_code_built_lines_will_cite`),
+  and still fires when a code-built line cannot ground or when the model
+  grounded nothing. F-4.5-J-18 and F-4.5-A-05 were settled by measurement
+  first (33 of 33 answered live runs fired the repair, see
+  `testing/Developer/reports/2026-09-14_synth_effort_none/`), then gated.
+  The arms that drive the repair's OWN controls (the acceptance rule, the
+  shared budget, the cap disclosure) now make the tail unable to ground
+  first, since that is the only remaining way to reach the repair with a
+  grounded first answer.
+- NOT exercised: the `ask` floor's trigger beyond the cases above.
 - NOT exercised: the repair's `HarnessCallError` path beyond the fact that
   it is a separate handler from the cap path. The swallow is deliberate and
   its only observable is the answer surviving unchanged, which the cap arm
@@ -66,6 +73,9 @@ _SYNTH_MODEL = "test-provider/synth-model"
 
 _CORRECTION_MARKER = "COMPLETENESS CORRECTION"
 _FINDING_LINE = re.compile(r"^\[(\d+)\]\s+(.+)$", re.MULTILINE)
+#: The real builder, kept so an arm that replaced it can put it back
+#: mid-test.
+_ORIGINAL_FALLBACK_BUILDER = graph_module.build_structured_fallback_narrative
 
 #: Five distinct, citable Layer 1 rows. Five rather than two because the
 #: acceptance rule's failure mode needs room: a repair must be able to add
@@ -154,7 +164,9 @@ def synth_pair(monkeypatch: pytest.MonkeyPatch):
     return _install
 
 
-def _write_state(total_available: int = 5, truncated: bool = False) -> dict[str, object]:
+def _write_state(
+    total_available: int = 5, truncated: bool = False, audience_depth: str = "clinical_brief"
+) -> dict[str, object]:
     from system_03_search_agent.harness.coordinator_worker import Finding
 
     query = Query(
@@ -165,7 +177,7 @@ def _write_state(total_available: int = 5, truncated: bool = False) -> dict[str,
         # UI fix set 9: a Researcher answer now lists every record in code in
         # place of the findings-tail note, so the tail's own contract is
         # pinned on a depth that still carries it.
-        audience_depth="clinical_brief",
+        audience_depth=audience_depth,
     )
     finding = Finding(
         call_id="cq-completeness",
@@ -208,6 +220,32 @@ def _cited_values(events: list) -> set[str]:
     }
 
 
+def _tail_cannot_ground(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make every code-built line ungroundable, standing in for a value the
+    pass strips. With the tail unable to cite, the repair is the only thing
+    that can, so it fires (speed fix, 2026-09-14)."""
+    monkeypatch.setattr(
+        graph_module, "build_structured_fallback_narrative", lambda findings: "nothing here."
+    )
+
+
+def _record_synth_dispatches(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
+    """Wrap the real `_dispatch_tier_call`; one entry per Synth call, True
+    when that call carried the completeness correction."""
+    original = graph_module._dispatch_tier_call
+    dispatched: list[bool] = []
+
+    async def _recording(*args: object, **kwargs: object):
+        if len(args) > 2 and args[2] == "synth":
+            messages = kwargs.get("messages") if "messages" in kwargs else args[4]
+            joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
+            dispatched.append(_CORRECTION_MARKER in joined)
+        return await original(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _recording)
+    return dispatched
+
+
 # ---------------------------------------------------------------------------
 # F-4.5-J-13 / F-4.5-A-06: acceptance is a superset test, not a count test.
 # ---------------------------------------------------------------------------
@@ -215,7 +253,7 @@ def _cited_values(events: list) -> set[str]:
 
 @pytest.mark.asyncio
 async def test_a_repair_that_drops_a_reported_finding_is_discarded(
-    synth_pair,
+    synth_pair, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pins: the repair is accepted only when its finding set is a STRICT
     SUPERSET of the first answer's.
@@ -229,56 +267,73 @@ async def test_a_repair_that_drops_a_reported_finding_is_discarded(
     floors at `ask`, which outranks `flag`. That is what made the loss hard
     to see.
 
-    MUTATION PROOF. Restoring the shipped rule:
+    Speed fix (2026-09-14): the repair no longer runs when the tail would
+    cite every omitted finding, so this arm makes finding 3's code-built
+    line ungroundable (the builder skips it) and leaves 4 and 5 to the tail.
+    Finding 3 is then citeable only by the model, the repair fires, and the
+    rule under test is reached with a grounded first answer.
+
+    MUTATION PROOF, re-run 2026-09-14 after the gate. Restoring the shipped
+    rule:
 
         if repaired_grounding.claims and len(still_omitted) < len(
             omitted_findings
         ):
 
-    turns this arm red:
+    turns this arm red, now on the leak assertion, because the findings
+    tail carries the dropped finding 1 back in while the wrongly accepted
+    repair's finding 3 ships in the prose:
 
-        AssertionError: a repair that drops a reported finding must be
-        discarded; 'disease name number 1' is missing from the shipped
-        answer
+        AssertionError: the discarded repair's own content must not leak
+        into the answer
     """
     synth_pair(first={1, 2}, repaired={2, 3, 4, 5})
+    original_builder = graph_module.build_structured_fallback_narrative
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda findings: original_builder([f for f in findings if f.ref_index != 3]),
+    )
+    dispatched = _record_synth_dispatches(monkeypatch)
 
     result = await graph_module.write_node(_write_state())
     events = result["events"]
     narrative = _narrative(events)
 
+    assert dispatched == [False, True], dispatched
     assert "disease name number 1" in narrative, (
         "a repair that drops a reported finding must be discarded; "
         "'disease name number 1' is missing from the shipped answer"
     )
-    # UI fix set 10, item 10.1 (2026-09-13): finding 3 now reaches the
-    # answer, but through the code-built findings tail, never through the
-    # discarded repair. The tail is announced by its note sentence, so the
-    # discarded repair's content must appear ONLY after that note; before
-    # it, the model's first answer (findings 1 and 2) stands alone.
-    # Answer quality fix (2026-09-14): the answer now OPENS on a code-built
-    # summary sentence that names every answer record the answer cites, so
-    # "disease name number 3" legitimately appears there, once, with its
-    # marker. The leak check therefore covers the model's prose region: from
-    # the end of the summary's own paragraph to the tail note.
-    note_at = narrative.index(graph_module._FINDINGS_TAIL_NOTE)
-    summary_end = narrative.index("\n\n") + 2
-    assert narrative.startswith("Found 5 disease records"), narrative[:80]
-    assert "disease name number 3" not in narrative[summary_end:note_at], (
+    # The discarded repair was the only text that carried finding 3, and the
+    # tail cannot render it here, so it must appear nowhere: not in the
+    # prose, not in the tail, and not in the code-built summary sentence,
+    # which counts only the records the answer cites.
+    assert "disease name number 3" not in narrative, (
         "the discarded repair's own content must not leak into the answer"
     )
-    assert "disease name number 3" in narrative[note_at:], (
-        "the findings tail must still report what the discarded repair had"
+    note_at = narrative.index(graph_module._FINDINGS_TAIL_NOTE)
+    assert "disease name number 4" in narrative[note_at:], (
+        "the findings tail must still report what the tail can ground"
     )
+    assert "one further disease record was found" in narrative, narrative
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "ask", done.payload
 
 
 @pytest.mark.asyncio
-async def test_a_repair_that_adds_without_dropping_is_kept(synth_pair) -> None:
+async def test_a_repair_that_adds_without_dropping_is_kept(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Pins: the superset rule accepts a genuine improvement.
 
     The negative control for the arm above, and the one that stops the fix
     from degenerating into "never accept a repair", which would pass the
     first arm while deleting the feature.
+
+    Speed fix (2026-09-14): the tail is made unable to ground, so the repair
+    fires and its accepted prose is the only thing that can cite findings 3
+    to 5. A discarded repair would leave them undisclosed except by note.
 
     MUTATION PROOF. Changing the acceptance condition to `False` turns this
     arm red:
@@ -287,6 +342,7 @@ async def test_a_repair_that_adds_without_dropping_is_kept(synth_pair) -> None:
         must be kept; 'disease name number 4' is missing
     """
     synth_pair(first={1, 2}, repaired={1, 2, 3, 4, 5})
+    _tail_cannot_ground(monkeypatch)
 
     result = await graph_module.write_node(_write_state())
     events = result["events"]
@@ -302,6 +358,122 @@ async def test_a_repair_that_adds_without_dropping_is_kept(synth_pair) -> None:
         "a repair that recovered every omission leaves nothing to disclose"
     )
     assert "of the 5 findings" not in narrative
+    assert "further disease record" not in narrative
+
+
+# ---------------------------------------------------------------------------
+# Speed fix (2026-09-14): the repair is skipped exactly when the code-built
+# lines will cite every finding the model left out.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("audience_depth", ["clinical_brief", "researcher"])
+async def test_the_repair_is_skipped_when_the_code_built_lines_cite_every_omission(
+    synth_pair, monkeypatch: pytest.MonkeyPatch, audience_depth: str
+) -> None:
+    """Pins: with a grounded first answer whose omissions the findings tail
+    (every other depth) or the Researcher listing will cite, the second
+    Synth call is not made, and the cited set still equals the prepared set.
+
+    Measured before this gate (2026-09-14): the repair fired on 33 of 33
+    answered live runs, a median 4.8 seconds each, while the tail or listing
+    already cited every finding it regenerated for. The populate check is
+    the first dispatch and the five citations: a build that made no Synth
+    call at all would also record no repair.
+
+    MUTATION PROOF. Replacing `and not _code_built_lines_will_cite(...)` in
+    `write_node` with `and True` turns both cases red:
+
+        AssertionError: [False, True]
+    """
+    synth_pair(first={1, 2}, repaired={1, 2, 3, 4, 5})
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    result = await graph_module.write_node(_write_state(audience_depth=audience_depth))
+    events = result["events"]
+
+    assert dispatched == [False], dispatched
+    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
+    assert cited == {row["source_url"] for row in _ROWS}, cited
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "answer", done.payload
+    narrative = _narrative(events)
+    for row in _ROWS:
+        assert row["fields"]["name"] in narrative, narrative
+    assert "further disease record" not in narrative, narrative
+
+
+@pytest.mark.asyncio
+async def test_the_repair_still_runs_when_a_code_built_line_cannot_ground(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pins the gate's other side: a value the pass strips leaves the tail
+    unable to cite it, so only the model's own phrasing can, and the repair
+    fires. Here the repair recovers everything, so the answer is whole.
+
+    MUTATION PROOF. Making `_code_built_lines_will_cite` return True
+    unconditionally turns this arm red:
+
+        AssertionError: [False]
+    """
+    synth_pair(first={1, 2}, repaired={1, 2, 3, 4, 5})
+    _tail_cannot_ground(monkeypatch)
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    assert dispatched == [False, True], dispatched
+    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
+    assert cited == {row["source_url"] for row in _ROWS}, cited
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "answer", done.payload
+
+
+@pytest.mark.asyncio
+async def test_the_repair_still_runs_when_the_model_grounded_nothing(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pins: when nothing the model wrote survived, the repair is a second
+    chance for prose. Without it the structured fallback lists the records
+    and floors at `ask`; with a repair that grounds, the answer is `answer`.
+
+    MUTATION PROOF. Dropping `or not model_grounded` from
+    `_code_built_lines_will_cite` turns this arm red:
+
+        AssertionError: [False]
+    """
+    synth_pair(first=set(), repaired={1, 2, 3, 4, 5})
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    assert dispatched == [False, True], dispatched
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "answer", done.payload
+    assert graph_module._build_structured_fallback_note() not in _narrative(events)
+    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
+    assert cited == {row["source_url"] for row in _ROWS}, cited
+
+
+def test_code_built_lines_will_cite_keeps_the_repair_off_the_ok_path() -> None:
+    """The unit half: any tool outcome the tail does not run on keeps the
+    repair, and so does an empty omission list."""
+    findings = [_synth_finding(index, f"disease name number {index}") for index in (1, 2)]
+    assert not graph_module._code_built_lines_will_cite(
+        findings, findings, tool_outcome="error", model_grounded=True,
+        lists_every_finding=False, question="",
+    )
+    assert not graph_module._code_built_lines_will_cite(
+        [], findings, tool_outcome="ok", model_grounded=True,
+        lists_every_finding=False, question="",
+    )
+    assert graph_module._code_built_lines_will_cite(
+        findings[1:], findings, tool_outcome="ok", model_grounded=True,
+        lists_every_finding=False, question="",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +504,9 @@ async def test_both_write_calls_share_the_steps_one_declared_budget(
         first=45.0 repair=45.0
     """
     synth_pair(first={1, 2}, repaired={2, 3, 4, 5})
+    # Speed fix (2026-09-14): the repair fires only when the tail cannot
+    # cite what the model left out, so make it unable to.
+    _tail_cannot_ground(monkeypatch)
 
     original = graph_module._dispatch_tier_call
     budgets: list[float] = []
@@ -410,6 +585,10 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
         graph_module.cost_control, "check_per_query_cap", _capped
     )
 
+    # Speed fix (2026-09-14): with a grounded first answer the repair now
+    # fires only when the tail cannot cite what was left out, so that is the
+    # case in which the cap can be hit, and the omission then remains.
+    _tail_cannot_ground(monkeypatch)
     result = await graph_module.write_node(_write_state())
     events = result["events"]
     narrative = _narrative(events)
@@ -420,25 +599,26 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
     assert "disease name number 1" in narrative, (
         "the grounded answer already in hand must survive the cap"
     )
+    assert "was not repaired" in narrative, narrative
     done = next(event for event in events if event.type == "done")
-    # UI fix set 10, item 10.1 (2026-09-13): the findings tail reports what
-    # the capped repair could not, so the answer is whole, the disclosure
-    # says so in its second clause, and no `ask` floor applies. The floor
-    # is asserted below on the case the tail cannot cover.
-    assert "listed below as found" in narrative, narrative
-    assert "was not repaired" not in narrative, narrative
-    assert done.payload["trust_outcome"] == "answer", done.payload
+    assert done.payload["trust_outcome"] == "ask", done.payload
 
+    # The other clause: the repair also fires when the model grounded
+    # NOTHING (the structured fallback would otherwise floor at `ask`), and
+    # when the cap stops it there, the fallback lists every record, so the
+    # note says the records are listed below rather than claiming an
+    # omission the answer no longer has.
     synth_preflights["count"] = 0
     monkeypatch.setattr(
-        graph_module, "build_structured_fallback_narrative", lambda findings: "nothing here."
+        graph_module, "build_structured_fallback_narrative", _ORIGINAL_FALLBACK_BUILDER
     )
+    synth_pair(first=set(), repaired={1, 2, 3, 4, 5})
     result = await graph_module.write_node(_write_state())
     events = result["events"]
     narrative = _narrative(events)
-    assert "cost limit" in narrative and "was not repaired" in narrative, narrative
-    done = next(event for event in events if event.type == "done")
-    assert done.payload["trust_outcome"] == "ask", done.payload
+    assert "cost limit" in narrative and "listed below as found" in narrative, narrative
+    assert "was not repaired" not in narrative, narrative
+    assert len([e for e in events if e.type == "citation"]) == len(_ROWS)
 
 
 # ---------------------------------------------------------------------------

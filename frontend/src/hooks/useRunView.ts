@@ -654,10 +654,30 @@ export function useRunView(events: AgentEvent[]): RunView {
       const citedIndexes = new Set(
         cited.map((match) => (match.type === "citation" ? match.payload.display_index : -1)),
       );
+      /*
+       * 2026-09-14, product-owner complaint that the wait is cluttered: WHILE
+       * THE RUN IS STILL STREAMING, a token's `marker_ids` can name citations
+       * whose frames have not arrived yet, so their `[N]` markers matched
+       * nothing above and showed as raw "[1][2]" text beside a grey spine.
+       *
+       * The R-05 rule is kept: nothing is stripped by pattern alone. Only as
+       * many bracketed numbers as this token has UNRESOLVED marker ids are
+       * removed, and only before the run lands, so the landed answer is
+       * classified exactly as before. The count travels on the claim as
+       * `pendingCitations`, so the screen can show quiet pending markers and
+       * must not call the sentence uncited.
+       */
+      const unresolved = landed ? 0 : seenMarkers.size - cited.length;
+      let toStrip = unresolved;
       const text = event.payload.text
-        .replace(/\s*\[(\d{1,3})\]/g, (whole, digits) =>
-          citedIndexes.has(Number(digits)) ? "" : whole,
-        )
+        .replace(/\s*\[(\d{1,3})\]/g, (whole, digits) => {
+          if (citedIndexes.has(Number(digits))) return "";
+          if (toStrip > 0) {
+            toStrip -= 1;
+            return "";
+          }
+          return whole;
+        })
         .trim();
       if (!text) continue;
 
@@ -690,6 +710,7 @@ export function useRunView(events: AgentEvent[]): RunView {
           match.type === "citation" ? match.payload.display_index : 0,
         ),
       };
+      if (unresolved > 0) claim.pendingCitations = unresolved;
       if (kind !== null) {
         claim.kind = kind === "list_item" || kind === "table_row" ? kind : "claim";
         claim.paragraph = paragraph;

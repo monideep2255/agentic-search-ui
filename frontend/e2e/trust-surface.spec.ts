@@ -232,8 +232,14 @@ test.describe("the trust surface", () => {
 
     // The uncited claim must SAY it is uncited, not merely look grey.
     await expect(page.getByText(/this sentence has no source/i)).toHaveCount(1);
-    // The cited claim must name its source.
-    await expect(page.getByLabel(/^source 1$/i)).toBeVisible();
+    // The cited claim must name its source AND its layer.
+    //
+    // REQUIREMENT CHANGE, 2026-09-14: the citation is now a superscript marker
+    // button rather than a boxed chip carrying `aria-label="Source 1"`, at the
+    // product owner's request. The marker's accessible name is
+    // "Source 1, layer 1", so this asserts more than before (the role, and
+    // the layer in words), not less.
+    await expect(page.getByRole("button", { name: /^source 1, layer 1$/i })).toBeVisible();
     // And the visible prose must not be the only carrier of that difference.
     expect(text).toContain("BRCA1");
   });

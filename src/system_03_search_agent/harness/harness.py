@@ -299,7 +299,19 @@ _TIER_REASONING: dict[Tier, dict[str, Any]] = {
     # setting is measured again on that workload rather than assumed to
     # carry over.
     "plan": {"effort": "none"},
-    "synth": {"effort": "low"},
+    # Synth reasoning is OFF, product-owner decision of 2026-09-14, for the
+    # same reason as guard and plan above. At "low" the synth model
+    # intermittently spent its whole 4000-token ceiling on reasoning,
+    # returned `finish_reason: length` with empty or truncated content, and
+    # ran 20 to 45 seconds, so `enforce_timeout` killed the write step at
+    # its 45-second budget and the run died as "a step hit a temporary
+    # error": 3 of 25 flagship runs on develop, and 2 of 6 direct probe
+    # calls. At "none" the same prompt finished 6 of 6 in 5.2 to 7.2
+    # seconds. Synth assembles already-retrieved records under a
+    # deterministic grounding gate, and the summary sentence and record
+    # lists are built in code, so hidden reasoning bought little the gate
+    # keeps. Evidence: testing/Developer/reports/2026-09-14_answer_quality/.
+    "synth": {"effort": "none"},
 }
 
 _TIER_MAX_TOKENS: dict[Tier, int] = {

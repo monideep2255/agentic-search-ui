@@ -399,8 +399,20 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     // The prototype's id-bearing chip: the index AND what it points at.
     // Citation 1 is the LAYER 3 PubMed source and citation 2 is the Layer 1
     // Gene source, so an index-keyed or position-keyed label cannot pass.
-    expect(screen.getByTestId("citation-1")).toHaveTextContent(/PubMed\s*21990134/);
-    expect(screen.getByTestId("citation-2")).toHaveTextContent(/Gene\s*672/);
+    //
+    // REQUIREMENT CHANGE, 2026-09-14: at the product owner's request the
+    // inline citation is a superscript number, and what it points at moved
+    // from the chip's face into the card the number opens. The identity rule
+    // is unchanged; it is read from the card now, and each card must name its
+    // OWN source, never its neighbour's.
+    await user.click(screen.getByTestId("citation-1"));
+    const one = screen.getByTestId("cite-popover-1");
+    expect(one).toHaveTextContent(/PubMed\s*21990134/);
+    expect(one).not.toHaveTextContent(/Gene\s*672/);
+    await user.click(screen.getByTestId("citation-2"));
+    const two = screen.getByTestId("cite-popover-2");
+    expect(two).toHaveTextContent(/Gene\s*672/);
+    expect(two).not.toHaveTextContent(/PubMed\s*21990134/);
   });
 
   // ---------------------------------------------------------------- F-4.8-D-11
@@ -582,8 +594,15 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     expect(two).toHaveAttribute("data-layer", "3");
 
     // What the reader sees: layer 1 navy versus layer 3 violet, never equal.
-    const colourOf = (el: HTMLElement) => getComputedStyle(el).borderLeftColor;
+    //
+    // REQUIREMENT CHANGE, 2026-09-14: the boxed chip's 4px left edge carried
+    // the layer colour; the superscript marker that replaced it carries the
+    // layer colour on the number itself. So the property read is `color`,
+    // and it is pinned to each layer's own token, not merely "different".
+    const colourOf = (el: HTMLElement) => getComputedStyle(el).color;
     expect(colourOf(one)).not.toBe(colourOf(two));
+    expect(colourOf(one)).toBe("rgb(32, 84, 147)");
+    expect(colourOf(two)).toBe("rgb(76, 44, 146)");
 
     // What a screen reader hears: each source named with its OWN layer.
     const claim = screen.getByTestId("claim-text-0");

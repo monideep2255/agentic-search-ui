@@ -1,0 +1,32 @@
+{
+ "question": "What variants cause disease in BRCA1?",
+ "depth": "researcher",
+ "gate_calls": [
+  {
+   "result": true,
+   "tool_outcome": "ok",
+   "model_grounded": true,
+   "omitted": 7,
+   "prepared": 20,
+   "probe_claims": 20,
+   "probe_stripped": 0,
+   "uncovered": []
+  }
+ ]
+}
+{
+ "question": "Which diseases are associated with BRCA1?",
+ "depth": "researcher",
+ "gate_calls": [
+  {
+   "result": false,
+   "tool_outcome": "ok",
+   "model_grounded": false,
+   "omitted": 11,
+   "prepared": 11,
+   "probe_claims": 11,
+   "probe_stripped": 0,
+   "uncovered": []
+  }
+ ]
+}

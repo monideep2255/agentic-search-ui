@@ -27,13 +27,17 @@
 import type React from "react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
-import { visuallyHidden } from "@mui/utils";
 
 import { designTokens, layerColour } from "../../theme";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
 import { FeedbackSurface } from "../feedback/FeedbackSurface";
-import { PersonaInfo } from "../shell/PersonaChip";
+import { PersonaInfo, WritingEllipsis } from "../shell/PersonaChip";
+import {
+  CitationMarkers,
+  LAYER_WORD,
+  isLinkableCitationUrl,
+} from "../answer/CitationMarkers";
 
 export type Layer = 1 | 2 | 3;
 
@@ -63,6 +67,13 @@ export interface Claim {
    * `emphasis`: substrings of `text` to bold, chosen in code by the backend.
    * `tableHeader`: the column labels, on the first row of a table.
    */
+  /**
+   * 2026-09-14. Citations this sentence declared whose frames have not arrived
+   * yet, set by `useRunView` only while the run is still streaming. A claim
+   * carrying it is NOT uncited: its spine segment reads `pending` and it shows
+   * quiet pending markers instead of "This sentence has no source."
+   */
+  pendingCitations?: number;
   kind?: "claim" | "list_item" | "table_row";
   paragraph?: number;
   heading?: string;
@@ -294,6 +305,13 @@ export interface AnswerScreenProps extends AnswerBodyContent {
    * `useRunView` owns that judgement and states it here.
    */
   clarifying?: boolean;
+  /**
+   * 2026-09-14. The in-flight run was stopped. Only read while `progress` is
+   * present: it hides the "writing" mark under a stopped follow-up's partial
+   * sentences. Absent reads as not stopped, so every existing caller is
+   * unchanged.
+   */
+  stopped?: boolean;
   /** A fatal run error, or a dispatch failure. Never rendered as silence. */
   failure?: string | null;
   /**
@@ -323,24 +341,13 @@ const mono = { fontFamily: "ui-monospace, monospace" } as const;
  * check, and requires it on whichever side of the stack builds the link. This
  * is that side.
  */
-const ALLOWED_CITATION_HOSTS = [
-  "ncbi.nlm.nih.gov",
-  "www.ncbi.nlm.nih.gov",
-  "pubmed.ncbi.nlm.nih.gov",
-  "pmc.ncbi.nlm.nih.gov",
-  "clinicaltrials.gov",
-  "www.clinicaltrials.gov",
-];
-
-/** A citation URL is linkable only if it is https and on an allowed host. */
-export function isLinkableCitationUrl(raw: string): boolean {
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === "https:" && ALLOWED_CITATION_HOSTS.includes(parsed.hostname);
-  } catch {
-    return false;
-  }
-}
+/*
+ * The list itself moved to `answer/CitationMarkers.tsx` on 2026-09-14, so the
+ * citation marker's card and the source card below read ONE allowlist rather
+ * than two copies that could drift. Re-exported here so every existing import
+ * of `isLinkableCitationUrl` from this module keeps working.
+ */
+export { isLinkableCitationUrl };
 
 /**
  * Is this refusal's fallback address safe to turn into a link? (R14)
@@ -551,6 +558,14 @@ export interface AnswerBodyProps extends AnswerBodyContent {
    * line belong to a finished answer and wait for the run to land.
    */
   streaming?: boolean;
+  /**
+   * 2026-09-14: sentences are still arriving, so show the quiet "writing"
+   * mark at the end of the streamed text. Separate from `streaming` because a
+   * STOPPED follow-up keeps its partial sentences on screen under the
+   * "Search stopped" block, and a writing mark there would claim work that
+   * is no longer happening.
+   */
+  writing?: boolean;
 }
 
 /**
@@ -609,6 +624,7 @@ export function AnswerBody({
   testIdPrefix = "",
   tour = false,
   streaming = false,
+  writing = false,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
@@ -628,24 +644,7 @@ export function AnswerBody({
       current.includes(n) ? current.filter((x) => x !== n) : [...current, n],
     );
 
-  /** The prototype's `s.tag`, naming the layer rather than numbering it. */
-  const LAYER_WORD: Record<number, string> = { 1: "graph", 2: "live", 3: "literature" };
-
-  /*
-   * The chip's short label, F-4.8-D-04.
-   *
-   * The prototype's chip reads `1 Gene 672`: the index AND what it points at,
-   * so a reader can tell two citations apart without scrolling to the cards.
-   * "NCBI " is trimmed exactly as the prototype trims it; nothing else is
-   * invented, and a chip whose source is missing falls back to the bare index
-   * rather than showing a placeholder.
-   */
   const sourceByIndex = new Map(sources.map((source) => [source.n, source]));
-  const shortLabel = (n: number): string | null => {
-    const source = sourceByIndex.get(n);
-    if (!source) return null;
-    return source.name.replace(/^NCBI\s+/i, "");
-  };
 
   /** One claim's spine segment. `grow` shares a paragraph's height evenly. */
   const spineSegment = (claim: Claim, index: number, grow = false) => (
@@ -653,66 +652,46 @@ export function AnswerBody({
       key={index}
       aria-hidden="true"
       data-testid={`${testIdPrefix}spine-segment-${index}`}
-      data-layer={claim.layer ?? "none"}
+      data-layer={claim.layer ?? (claim.pendingCitations ? "pending" : "none")}
       sx={{
         width: 6,
         mx: "auto",
         borderRadius: 1,
         alignSelf: "stretch",
         ...(grow ? { flex: 1 } : {}),
-        bgcolor: layerColour(claim.layer).main,
+        // A sentence whose sources are still arriving is not uncited: it
+        // takes the lighter `line` token, never the uncited `lineStrong`.
+        bgcolor:
+          claim.layer === null && claim.pendingCitations
+            ? designTokens.line
+            : layerColour(claim.layer).main,
       }}
     />
   );
 
-  /** The screen-reader source list and the chips for one claim. */
+  /*
+   * One claim's citation markers, 2026-09-14.
+   *
+   * These were boxed chips reading `1 ncbi_efetch MedGen:C0346153`, and the
+   * product owner's verdict was that they overwhelmed the answer. They are
+   * now superscript numbers whose card carries the source, its id, its layer
+   * and its record link; see `answer/CitationMarkers.tsx` for the design and
+   * the token behind every value.
+   *
+   * WHAT DID NOT MOVE: each source still names its own layer for assistive
+   * technology (F-4.9-A-04), now as the marker button's own accessible name,
+   * and an uncited sentence still says so in words (F-4.8-A-16, WCAG 1.4.1).
+   * The spine stays decorative, so the meaning is carried here.
+   */
   const citationChips = (claim: Claim, index: number) => (
-    <>
-      {/*
-        F-4.9-A-04. Each source names its own layer for assistive technology;
-        the spine is decorative, so the meaning is carried here (WCAG 1.4.1).
-      */}
-      <Box component="span" sx={visuallyHidden}>
-        {claim.citations.length === 0
-          ? "This sentence has no source."
-          : claim.citations
-              .map((n) => `Source ${n}, layer ${sourceByIndex.get(n)?.layer ?? claim.layer}`)
-              .join("; ") + "."}
-      </Box>
-      {claim.citations.map((n, position) => (
-        <Box
-          key={n}
-          component="span"
-          data-testid={`${testIdPrefix}citation-${n}`}
-          data-claim={index}
-          data-layer={sourceByIndex.get(n)?.layer ?? claim.layer}
-          aria-label={`Source ${n}`}
-          role="note"
-          sx={{
-            ...mono,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 0.6,
-            fontSize: 11.5,
-            fontWeight: 600,
-            lineHeight: 1.7,
-            px: 0.75,
-            borderRadius: 0.5,
-            border: `1px solid ${designTokens.lineStrong}`,
-            borderLeft: `4px solid ${layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).main}`,
-            bgcolor: layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).wash,
-            ml: position === 0 ? 0 : 0.5,
-          }}
-        >
-          {n}
-          {shortLabel(n) ? (
-            <Box component="span" sx={{ color: designTokens.inkMuted, fontWeight: 400 }}>
-              {shortLabel(n)}
-            </Box>
-          ) : null}
-        </Box>
-      ))}
-    </>
+    <CitationMarkers
+      citations={claim.citations}
+      sources={sourceByIndex}
+      claimLayer={claim.layer}
+      claimIndex={index}
+      pending={claim.pendingCitations ?? 0}
+      testIdPrefix={testIdPrefix}
+    />
   );
 
   /*
@@ -823,7 +802,8 @@ export function AnswerBody({
                 data-testid={`${testIdPrefix}claim-text-${index}`}
                 sx={{ maxWidth: "66ch" }}
               >
-                {claim.cells?.[0] ?? claim.text} {citationChips(claim, index)}
+                {claim.cells?.[0] ?? claim.text}
+                {citationChips(claim, index)}
               </Box>
             ))}
           </Box>
@@ -881,7 +861,8 @@ export function AnswerBody({
                       {claim.cells?.[0] ?? claim.text}
                     </Box>
                     <Box component="td" sx={tableCell}>
-                      {claim.cells?.[1] ?? ""} {citationChips(claim, index)}
+                      {claim.cells?.[1] ?? ""}
+                      {citationChips(claim, index)}
                     </Box>
                   </Box>
                 ))}
@@ -897,7 +878,11 @@ export function AnswerBody({
         <Typography component="p" sx={{ maxWidth: "66ch", m: 0 }}>
           {block.items.map(({ claim, index }) => (
             <Box component="span" key={index} data-testid={`${testIdPrefix}claim-text-${index}`}>
-              {withEmphasis(claim.text, claim.emphasis)} {citationChips(claim, index)}{" "}
+              {/* No space before the markers: a superscript sits against the
+                  sentence it cites, and a space would let it wrap onto a line
+                  of its own. */}
+              {withEmphasis(claim.text, claim.emphasis)}
+              {citationChips(claim, index)}{" "}
             </Box>
           ))}
         </Typography>
@@ -1100,13 +1085,18 @@ export function AnswerBody({
               <Box
                 aria-hidden="true"
                 data-testid={`${testIdPrefix}spine-segment-${index}`}
-                data-layer={claim.layer ?? "none"}
+                data-layer={claim.layer ?? (claim.pendingCitations ? "pending" : "none")}
                 sx={{
                   width: 6,
                   mx: "auto",
                   borderRadius: 1,
                   alignSelf: "stretch",
-                  bgcolor: layerColour(claim.layer).main,
+                  // A sentence whose sources are still arriving is not uncited: it
+        // takes the lighter `line` token, never the uncited `lineStrong`.
+        bgcolor:
+          claim.layer === null && claim.pendingCitations
+            ? designTokens.line
+            : layerColour(claim.layer).main,
                 }}
               />
 
@@ -1114,67 +1104,43 @@ export function AnswerBody({
                 data-testid={`${testIdPrefix}claim-text-${index}`}
                 sx={{ maxWidth: "64ch" }}
               >
-                {claim.text}{" "}
+                {claim.text}
                 {/*
-                  F-4.9-A-04. This announced one layer for the whole list,
-                  taken from the claim's FIRST citation, so a sentence citing a
-                  graph edge and a PubTator co-mention told a screen reader
-                  that both were layer 1. Each source now names its own.
+                  F-4.9-A-04 still holds: each marker names its OWN source's
+                  layer, not the claim's first one. The same renderer as the
+                  structured path, so the two cannot drift.
                 */}
-                <Box component="span" sx={visuallyHidden}>
-                  {claim.citations.length === 0
-                    ? "This sentence has no source."
-                    : claim.citations
-                        .map(
-                          (n) => `Source ${n}, layer ${sourceByIndex.get(n)?.layer ?? claim.layer}`,
-                        )
-                        .join("; ") + "."}
-                </Box>
-                {claim.citations.map((n, position) => (
-                  <Box
-                    key={n}
-                    component="span"
-                    data-testid={`${testIdPrefix}citation-${n}`}
-                    data-claim={index}
-                    // The CITATION's own layer, not the claim's (F-4.9-A-04).
-                    // `claim.layer` is the first citation's, which is right for
-                    // the spine segment (one per claim) and wrong for a chip
-                    // (one per source): chip 2 of a graph-plus-literature claim
-                    // was painted navy while its own card read "L3 · literature".
-                    data-layer={sourceByIndex.get(n)?.layer ?? claim.layer}
-                    aria-label={`Source ${n}`}
-                    role="note"
-                    sx={{
-                      ...mono,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.6,
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      lineHeight: 1.7,
-                      px: 0.75,
-                      borderRadius: 0.5,
-                      border: `1px solid ${designTokens.lineStrong}`,
-                      borderLeft: `4px solid ${layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).main}`,
-                      bgcolor: layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).wash,
-                      ml: position === 0 ? 0 : 0.5,
-                    }}
-                  >
-                    {n}
-                    {shortLabel(n) ? (
-                      <Box
-                        component="span"
-                        sx={{ color: designTokens.inkMuted, fontWeight: 400 }}
-                      >
-                        {shortLabel(n)}
-                      </Box>
-                    ) : null}
-                  </Box>
-                ))}
+                {citationChips(claim, index)}
               </Typography>
             </Fragment>
           ))}
       </Box>
+
+      {/*
+        2026-09-14, product-owner request: show that the answer is still being
+        written. A quiet line at the end of the streamed text, gone the moment
+        the run lands (this body re-renders without `writing`) or stops.
+
+        NEAREST DESIGNED NEIGHBOUR: the inline system note above it in this
+        same grid (`answer-inline-note`, 13.5px `inkMuted`, 66ch), set in the
+        spine's second column so it lines up with the prose, followed by the
+        caption's `WritingEllipsis`. `aria-hidden`, because the claims region
+        is already a polite live region and `RunProgress` announces "Write
+        step running"; a third announcement would only repeat them.
+      */}
+      {streaming && writing ? (
+        <Box
+          data-testid={`${testIdPrefix}streaming-writing-indicator`}
+          aria-hidden="true"
+          sx={{ display: "grid", gridTemplateColumns: "14px 1fr", columnGap: 2.25, mt: 1 }}
+        >
+          <Box />
+          <Typography sx={{ fontSize: 13.5, color: designTokens.inkMuted, maxWidth: "66ch" }}>
+            writing
+            <WritingEllipsis />
+          </Typography>
+        </Box>
+      ) : null}
 
       {/*
         UI fix set 9, item 9.8: disclosures render AFTER the answer they
@@ -1659,6 +1625,7 @@ export function AnswerScreen({
   progress = null,
   onNewSearch,
   clarifying = false,
+  stopped = false,
   refusal = null,
   refusalLabel = null,
   refusalLink = null,
@@ -1856,7 +1823,7 @@ export function AnswerScreen({
               {/* UI fix set 9, item 9.6: the answer builds under the progress. */}
               {claims.length > 0 ? (
                 <Box data-testid="streaming-answer" sx={{ mt: 2.5 }}>
-                  <AnswerBody streaming claims={claims} sources={sources} />
+                  <AnswerBody streaming writing={!stopped} claims={claims} sources={sources} />
                 </Box>
               ) : null}
             </>

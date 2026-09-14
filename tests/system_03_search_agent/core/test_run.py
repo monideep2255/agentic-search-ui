@@ -522,14 +522,16 @@ class TestRunStreamingIsGenuinelyIncremental:
     async def test_earlier_events_arrive_before_a_delayed_nodes_event_by_a_real_measurable_gap(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # The graph fires exactly four sequential model calls for one
-        # query, in this fixed order: guardrail (guard tier), think
-        # (guard tier), plan (plan tier), write (synth tier). Delaying the
-        # third call delays exactly the `plan` node's own emitted events
-        # (its `plan` and `cost` events), while `guardrail`'s `guard`/
-        # `cost` events and `think`'s `think`/`cost` events were already
-        # produced (and, under real streaming, already yielded to the
-        # caller) before that delay even begins.
+        # The graph fires exactly three sequential model calls for one
+        # no-tool query, in this fixed order: guardrail (guard tier), think
+        # (plan tier), write (synth tier). Four until 2026-09-14, when the
+        # speed fix deleted `plan_node`'s discarded Plan-tier call, which
+        # used to be the third; the delayed node is therefore `write` now.
+        # Delaying the third call delays exactly the `write` node's own
+        # emitted events (its `cost` and `done` events), while `guardrail`'s
+        # `guard`/`cost`, `think`'s `think`/`cost` and `plan`'s `plan`/`cost`
+        # events were already produced (and, under real streaming, already
+        # yielded to the caller) before that delay even begins.
         # T-3.0-06: the guardrail's call is a real classification now, so a
         # stub that answers every call identically fails to parse there and
         # the run never reaches `think`. The guard branch below is what keeps
@@ -563,7 +565,7 @@ class TestRunStreamingIsGenuinelyIncremental:
                 return _fake_response(COMPLIANT_GUARD_CLASSIFICATION)
             if _THINK_SYSTEM_INSTRUCTION in joined:
                 return _fake_response(compliant_think_classification(messages))  # type: ignore[arg-type]
-            if call_count == 3:  # the plan node's call_tier call
+            if call_count == 3:  # the write node's call_tier call
                 await asyncio.sleep(delay_s)
             return _fake_response()
 
@@ -573,17 +575,18 @@ class TestRunStreamingIsGenuinelyIncremental:
         async for event in run_streaming(_valid_query(), _valid_context()):
             arrival_time_by_type.setdefault(event.type, time.monotonic())
 
-        assert "think" in arrival_time_by_type
+        assert call_count == 3, call_count
         assert "plan" in arrival_time_by_type
-        gap_s = arrival_time_by_type["plan"] - arrival_time_by_type["think"]
+        assert "done" in arrival_time_by_type
+        gap_s = arrival_time_by_type["done"] - arrival_time_by_type["plan"]
         # A generous margin below the real delay (not the full delay_s),
         # so ordinary scheduling jitter cannot make a genuinely-streaming
         # implementation fail this assertion; a buffered implementation
         # would show a gap near 0, far below this margin, regardless of
         # jitter.
         assert gap_s >= delay_s * 0.6, (
-            f"expected the 'plan' event to arrive at least "
-            f"{delay_s * 0.6:.3f}s after 'think' (proving the delayed "
+            f"expected the 'done' event to arrive at least "
+            f"{delay_s * 0.6:.3f}s after 'plan' (proving the delayed "
             f"node's own call_tier sleep was actually awaited before its "
             f"event reached the caller), observed only {gap_s:.3f}s"
         )
