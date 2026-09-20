@@ -122,6 +122,22 @@ Two honest caveats on these numbers.
 - The wall time is inflated. Two other agents were running their own suites on this machine at the same time, at load averages between 48 and 60. The counts are the evidence, never the durations.
 - A green local suite is necessary, not sufficient. Every cause here was invisible locally and red in CI, which is the whole point of the diagnosis. The real verification is the CI run on the pushed commit, and it is recorded in `../2026-09-19_overnight/session_log.md`.
 
+### The worker's own run of the same surface
+
+Recorded separately from the lead's run above, because it carries the before-and-after pairs: each row states what the command gave BEFORE the fix as well as after, which is what makes the fix's effect visible rather than merely asserted.
+
+Every item from the brief, with the exact result. Nothing on this surface was weakened: no test deleted, skipped, marked `xfail`, or loosened; no gate script or workflow touched.
+
+| Item | Command | Result |
+|------|---------|--------|
+| 1a. The three cause 2 victims under CI's asymmetry, in the collection that broke them | `PGUSER=nonexistent_role_ci_repro USER_DB_URL="postgresql://$(whoami)@localhost:5432/search_agent_users" venv/bin/python -m pytest tests/system_03_search_agent/core/test_clarification.py tests/system_03_search_agent/core/test_think_retry.py -q -p no:cacheprovider` | `8 passed in 66.87s` (before the fix, the core slice under the same environment gave `3 failed, 706 passed, 59 skipped`, the three failures being exactly CI's) |
+| 1b. The cause 3 victim in CI's order | `venv/bin/python -m pytest tests/e2e_support/test_real_model_mode.py tests/system_03_search_agent/adapters/mcp/test_phase_4_1_production_mount.py -q -p no:cacheprovider` | `28 passed, 2 warnings in 191.32s` (before the fix: `1 failed, 27 passed`, the `.run() can only be called once` error) |
+| 2. The full Python suite | `venv/bin/python -m pytest tests -q -p no:cacheprovider` | `5007 passed, 176 skipped, 1 xfailed, 8 warnings in 392.22s (0:06:32)`. Zero failed. The wall time includes contention from two other agents' suites on the same machine. The skip count differs from CI's 157 because this machine holds no Layer 1 graph credential and CI deselects 23 tests by marker; neither figure is part of this brief. |
+| 3. ruff over the whole repository | `venv/bin/ruff check` (no path argument) | `All checks passed!`, exit 0 |
+| 4. isort | `venv/bin/isort --check-only src tests` | `Skipped 2 files`, exit 0 (the two skips are isort's own `skip` config, unchanged) |
+| 5. Order robustness, cause 2 | Same environment as 1a, `test_think_retry.py` FIRST then `test_clarification.py` | `8 passed in 87.02s` |
+| 5. Order robustness, cause 3 | Reverse of 1b, mount test first | `1 failed, 27 passed`, and the failure is `Cannot add middleware after an application has started`, a different, pre-existing coupling documented under [Not fixed](#not-fixed). The lifespan collision this brief owns does not occur in either order. |
+
 ## Not fixed
 
 | Finding | Why it is left |
