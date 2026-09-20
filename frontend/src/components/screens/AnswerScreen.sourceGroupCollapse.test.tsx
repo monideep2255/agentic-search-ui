@@ -100,11 +100,12 @@ async function openSourcesDisclosure() {
 
 describe("AnswerScreen source list: layer-group collapse", () => {
   it("shows all three layer headings with counts and no records, before any group is opened", async () => {
-    // Catches: a group that renders its records unconditionally (the
-    // `9d20438` behaviour) instead of gating them on `openGroups`. A
-    // mutation that always treats the group as open, e.g. replacing
-    // `groupOpen && group.items.map(...)` with `group.items.map(...)`,
-    // must fail this arm: `source-1` would then be found before any click.
+    // Catches: a group that starts OPEN instead of closed, which is the
+    // `9d20438` behaviour this fix replaced. The mutation that proves it,
+    // and that was run: replace `openGroups.includes(group.layer)` with a
+    // literal `true`, leaving every symbol, export and test id intact. This
+    // arm then fails on its own assertion below, because each group carries
+    // the `open` attribute before any click.
     const { disclosure } = await openSourcesDisclosure();
 
     const l1 = within(disclosure).getByTestId("sources-group-1");
@@ -187,16 +188,29 @@ describe("AnswerScreen source list: layer-group collapse", () => {
 
   it("still resolves a prose citation marker to the correct record after group collapse ships", async () => {
     // Catches: `sourceByIndex` (marker resolution) being rebuilt from a
-    // filtered or grouped structure instead of the flat `sources` prop. A
-    // mutation that builds `sourceByIndex` from `sourceGroups` instead of
-    // `sources` must fail this arm, since a merged group item no longer
-    // carries a single `n` for every one of its markers.
+    // filtered or grouped structure instead of the flat `sources` prop.
+    //
+    // The first version of this arm only checked `data-layer` on markers 1
+    // and 2, and it did NOT discriminate: a mutation that rebuilds
+    // `sourceByIndex` from the deduplicated `sourceGroups` (so key `2`,
+    // gene 672's second marker, is missing) still passes that check,
+    // because `layerOf` falls back to the CLAIM's own `layer` when a key is
+    // absent, and both claims here happen to be layer 1. Recorded so the
+    // next reader does not repeat it: a data-layer check alone cannot tell
+    // "resolved via the record" from "resolved via the fallback that
+    // happens to agree with it".
+    //
+    // This version opens marker 2's own popover and reads the RECORD NAME
+    // from it, which only renders when `sourceByIndex.get(2)` returns the
+    // actual source; a missing key renders the popover's no-source branch
+    // instead. That mutation was run and confirmed this version fails.
     await openSourcesDisclosure();
-    const marker1 = screen.getByTestId("citation-1");
     const marker2 = screen.getByTestId("citation-2");
+    marker2.focus();
+    const popover = await screen.findByTestId("cite-popover-2");
+    expect(within(popover).getByTestId("cite-popover-row-2")).toHaveTextContent("NCBI Gene 672");
+
     const marker5 = screen.getByTestId("citation-5");
-    expect(marker1).toHaveAttribute("data-layer", "1");
-    expect(marker2).toHaveAttribute("data-layer", "1");
     expect(marker5).toHaveAttribute("data-layer", "3");
   });
 

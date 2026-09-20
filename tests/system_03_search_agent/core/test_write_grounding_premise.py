@@ -805,9 +805,10 @@ async def test_a_truncated_answer_says_so_in_the_prose() -> None:
 @pytest.mark.xfail(
     strict=False,
     reason=(
-        "F-2.2-06, OPEN. The disclosure fires and names the shown count, but "
-        "not the total: the note reads 'Showing 10 matching rows, but more "
-        "exist than are shown above; the exact total is not available for "
+        "F-2.2-06, OPEN. The disclosure fires but does not name the total: "
+        "the note reads (reworded 2026-09-20, D-2/D-3) 'this answer was "
+        "truncated before every matching record could be retrieved, and "
+        "the exact total that matched this question is not available for "
         "this query.' That is honest rather than wrong, and it is not what "
         "F-2.1-C12 asked for, which was the SCALE, so a reader still cannot "
         "tell whether they are missing 5 rows or 15,290. The cause is "

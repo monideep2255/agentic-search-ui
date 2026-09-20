@@ -1208,6 +1208,162 @@ async def test_citation_cap_truncation_is_surfaced_even_when_tool_reports_no_tru
 
 
 # ---------------------------------------------------------------------------
+# D-2/D-3 (2026-09-20, `testing/Developer/reports/2026-09-20_tp53_findings/
+# findings.md`): a live answer showed the graph's own MATCH count (124) next
+# to a DISPLAYED count (78) with a note that said "the rest are not shown
+# above", read by the product owner as the paginated table hiding rows it
+# was never given. `_build_truncated_answer_note` now takes a
+# `retrieval_limited` flag and a `retrieved` count so it can tell "never
+# retrieved" apart from "retrieved but not all included in this answer",
+# and never again phrases either one as something sitting "above" a list.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_truncated_answer_note_is_silent_when_everything_was_retrieved_and_shown(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Arm 1: when the graph tool fetched every matching row and none of
+    them were cut for display, `write_node` must never call
+    `_build_truncated_answer_note` at all. A note that fires on a
+    complete result is noise, and the product owner reading a live
+    answer is exactly what surfaced D-2/D-3, where a note fired and then
+    had to be reconciled against numbers that did not need reconciling.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-no-truncation")
+    call = ToolCall(tool="cypher_query", call_id="call-no-truncation", layer="layer_1_graph")
+    row_count = 3
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_light_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+    finding = findings[0]
+    assert finding.truncated is False
+    assert finding.structured_fields["truncated"] is False
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, [finding]))
+    events = write_result["events"]
+
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) == row_count, "every retrieved row must be displayed here"
+
+    token_events = [event for event in events if event.type == "token"]
+    assert not any("truncat" in event.payload["text"].lower() for event in token_events), (
+        "a complete result (every matching row retrieved and shown) must "
+        "never carry a truncation note"
+    )
+
+
+def test_truncated_answer_note_when_never_retrieved_does_not_blame_the_pager() -> None:
+    """Arm 2: rows that were genuinely never fetched from the graph must
+    be described as never retrieved, in words that make no claim about
+    anything being visually hidden. The pre-fix wording ("the rest are
+    not shown above") sits directly over a paginated table in the shipped
+    UI and reads as the pager hiding rows it was never given.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=10, total_available=42, retrieval_limited=True, retrieved=10
+    )
+    assert "shown above" not in note.lower(), (
+        f"a never-retrieved gap must not be phrased as something hidden "
+        f"above a list: {note!r}"
+    )
+    assert "retrieved" in note.lower(), (
+        f"the note must say the cause is retrieval, not display: {note!r}"
+    )
+    assert "42" in note and "10" in note, (
+        f"the note must state both the match count and the retrieved "
+        f"count so the gap is a number, not just a word: {note!r}"
+    )
+
+
+def test_truncated_answer_note_when_never_retrieved_and_total_unknown() -> None:
+    """The no-total sibling of the test above: `_known_total_available`
+    can return `None` (a UNION or aliased multi-item `DISTINCT` query
+    T-3.4-05 documents), and that case must stay honest about not
+    knowing the total rather than fabricating one, while still never
+    invoking a pager.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=10, total_available=None, retrieval_limited=True, retrieved=10
+    )
+    assert "shown above" not in note.lower()
+    assert "not available" in note.lower()
+    assert "retrieved" in note.lower()
+
+
+def test_truncated_answer_note_when_retrieved_but_not_all_displayed() -> None:
+    """The other cause the old note conflated with the one above: every
+    matching record WAS retrieved from the graph, and only the display
+    cap (`_MAX_FINDINGS_FOR_DISPLAY` shared across every layer's
+    findings) limited how many made it into this one answer. The note
+    must say retrieval was complete, distinguishing this from arm 2's
+    case, and must still never say anything is hidden "above".
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=78, total_available=124, retrieval_limited=False, retrieved=124
+    )
+    assert "shown above" not in note.lower()
+    assert "retrieved" in note.lower(), (
+        f"the note must say retrieval was complete, distinguishing this "
+        f"from the never-retrieved case: {note!r}"
+    )
+    assert "78" in note and "124" in note
+
+
+def test_truncated_answer_note_when_retrieved_but_not_all_displayed_total_unknown() -> None:
+    """Same display-only cause as the test above, but `total_available`
+    itself is unknown (or not comparably scoped to `shown`, e.g. a
+    breadth query's cross-layer citation count exceeding this query's
+    own Layer 1 total). The note must still say retrieval was complete
+    without inventing a match count it cannot support.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=78, total_available=None, retrieval_limited=False, retrieved=None
+    )
+    assert "shown above" not in note.lower()
+    assert "retrieved" in note.lower()
+    assert "78" in note
+
+
+@pytest.mark.parametrize(
+    ("shown", "total_available", "retrieval_limited", "retrieved"),
+    [
+        (10, 42, True, 10),
+        (10, None, True, 10),
+        (78, 124, False, 124),
+        (78, None, False, None),
+    ],
+)
+def test_truncated_answer_note_is_one_sentence_opening_with_note(
+    shown: int, total_available: int | None, retrieval_limited: bool, retrieved: int | None
+) -> None:
+    """Arm 3: every note this function can emit is exactly one sentence,
+    opens "Note:", and carries no interior period or semicolon, the shape
+    `_build_structured_fallback_note`'s own docstring documents: the
+    coverage grader (`tests/system_03_search_agent/eval/
+    test_write_step_eval_gate.py`) splits sentences on those characters
+    and counts an unmarked continuation as an uncited factual claim.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=shown,
+        total_available=total_available,
+        retrieval_limited=retrieval_limited,
+        retrieved=retrieved,
+    )
+    assert note.startswith("Note:"), note
+    assert "." not in note, f"an interior period fragments the note into uncited claims: {note!r}"
+    assert ";" not in note, f"an interior semicolon fragments the note into uncited claims: {note!r}"
+
+
+# ---------------------------------------------------------------------------
 # Answer quality fix (2026-09-20): the prompt bound (how many findings a
 # Synth model call may see) and the display bound (how many code-built rows
 # the citation list, the table and the findings tail may carry) are now two
@@ -4868,6 +5024,138 @@ def test_unaddressed_target_entities_reports_a_prefix_with_no_url_builder() -> N
     result = graph_module._unaddressed_target_entities(["GO:0003677"], citations)
 
     assert result == ["GO:0003677"]
+
+
+def test_unaddressed_target_entities_recognizes_a_cited_dbsnp_rsid() -> None:
+    """D-1 sibling defect, D-4 (`testing/Developer/reports/2026-09-20_
+    tp53_findings/findings.md`): `dbSNP:` is not one of `source_url_for_
+    curie`'s six graph-vertex prefixes, since the graph carries no dbSNP
+    vertex at all; an rsID is answered entirely through `ncbi_dbsnp`.
+    Before `_expected_source_url_for_target_entity`, this entity was
+    reported unaddressed unconditionally, even when the real dbSNP
+    citation for the SAME rsid was present."""
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_2_api", field="rsid",
+            claim_text="dbSNP:rs28934578 is the variant rs28934578.",
+            source_url="https://www.ncbi.nlm.nih.gov/snp/rs28934578",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(["dbSNP:rs28934578"], citations)
+
+    assert result == []
+
+
+def test_unaddressed_target_entities_still_flags_a_genuinely_uncited_rsid() -> None:
+    """The other half of the same fix: a real gap must still be reported.
+    Fixing the false positive must never turn into never checking dbSNP
+    coverage at all."""
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+            claim_text="NCBIGene:7157 has the name tumor protein p53.",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/7157",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(
+        ["dbSNP:rs28934578", "NCBIGene:7157"], citations
+    )
+
+    assert result == ["dbSNP:rs28934578"]
+
+
+def test_dbsnp_record_url_rejects_a_malformed_local_id() -> None:
+    """Never guess a URL for a target entity that merely starts with
+    `dbSNP:`: the local id must actually be a well-formed rsID."""
+    assert graph_module._dbsnp_record_url("dbSNP:not-an-rsid") is None
+    assert graph_module._dbsnp_record_url("NCBIGene:672") is None
+    assert graph_module._dbsnp_record_url("dbSNP:rs28934578") == (
+        "https://www.ncbi.nlm.nih.gov/snp/rs28934578"
+    )
+
+
+def test_row_for_resolves_a_go_row_to_its_own_fields_not_a_url_sibling() -> None:
+    """D-1 (`testing/Developer/reports/2026-09-20_tp53_findings/
+    findings.md`): every GO biological process row in a live TP53 answer
+    rendered the label "TP53" instead of its own process name, because
+    `_row_for` used to scan every finding's rows for the first one whose
+    `source_url` matched, and a GO row cited through its gene shares that
+    gene's own record URL with the gene's own row and with every other GO
+    row of the same gene. `_row_for` now delegates to `_row_behind_synth_
+    finding`, which narrows to the finding's own call and then its own
+    CURIE first. This pins that two DISTINCT GO rows sharing one URL each
+    resolve to their OWN fields, not to the gene row that also shares it
+    and would, under the old scan, have been the first (and only) match
+    reachable from any finding in the list.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis import answer_layout
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.tools import cypher_provenance
+
+    gene_url = "https://www.ncbi.nlm.nih.gov/gene/7157"
+    gene_row = {
+        "curie": "NCBIGene:7157", "node_or_edge_type": "Gene",
+        "fields": {"name": "TP53"}, "source_url": gene_url,
+    }
+    go_row_1 = {
+        "curie": "GO:0006281", "node_or_edge_type": "BiologicalProcess",
+        "fields": {"name": "DNA repair", cypher_provenance.CITED_VIA_GENE_FIELD: "NCBIGene:7157"},
+        "source_url": gene_url,
+    }
+    go_row_2 = {
+        "curie": "GO:0006974", "node_or_edge_type": "BiologicalProcess",
+        "fields": {
+            "name": "DNA damage response",
+            cypher_provenance.CITED_VIA_GENE_FIELD: "NCBIGene:7157",
+        },
+        "source_url": gene_url,
+    }
+    gene_finding = Finding(
+        call_id="cq-gene", tool="cypher_query", layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={"status": "ok", "rows": [gene_row]},
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+    go_finding = Finding(
+        call_id="cq-go", tool="cypher_query", layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={"status": "ok", "rows": [go_row_1, go_row_2]},
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+    findings = [gene_finding, go_finding]
+
+    synth_1 = SynthFinding(
+        ref_index=1, citation_id="cq-go-1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="DNA repair", source_url=gene_url,
+        entity_type="BiologicalProcess", curie="GO:0006281", call_id="cq-go",
+    )
+    synth_2 = SynthFinding(
+        ref_index=2, citation_id="cq-go-2", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="DNA damage response", source_url=gene_url,
+        entity_type="BiologicalProcess", curie="GO:0006974", call_id="cq-go",
+    )
+
+    row_1 = graph_module._row_for(synth_1, findings)
+    row_2 = graph_module._row_for(synth_2, findings)
+
+    assert row_1 is not None and row_2 is not None
+    assert row_1["fields"]["name"] == "DNA repair"
+    assert row_2["fields"]["name"] == "DNA damage response"
+    assert row_1["fields"]["name"] != row_2["fields"]["name"]
+
+    # Attribution is preserved: both GO rows still carry the citing
+    # gene's CURIE, the fact that makes them citeable at all (review F-01).
+    assert row_1["fields"][cypher_provenance.CITED_VIA_GENE_FIELD] == "NCBIGene:7157"
+    assert row_2["fields"][cypher_provenance.CITED_VIA_GENE_FIELD] == "NCBIGene:7157"
+
+    label_1 = answer_layout.record_label(synth_1, row_1["fields"])
+    label_2 = answer_layout.record_label(synth_2, row_2["fields"])
+    assert label_1 == "DNA repair"
+    assert label_2 == "DNA damage response"
+    assert label_1 != label_2
 
 
 def test_build_partial_answer_note_names_every_unaddressed_entity() -> None:

@@ -5600,6 +5600,43 @@ def _known_total_available(findings: list[Finding]) -> int | None:
     return total if saw_any else None
 
 
+def _known_retrieved_count(findings: list[Finding]) -> int | None:
+    """Sum `row_count` across this query's `"ok"` Layer 1 findings: how
+    many rows the graph tool actually fetched, before any citation or
+    display-level cut narrows that further.
+
+    D-2/D-3 (`testing/Developer/reports/2026-09-20_tp53_findings/
+    findings.md`): a live answer showed "78 of 124 matching rows" and
+    then said "the rest are not shown above" directly over a paginated
+    table, which reads as "the pager is hiding them" when the true cause
+    was that the graph tool's own row limit never fetched them at all.
+    Telling those two causes apart needs a number for what was actually
+    RETRIEVED, not just `total_available` (what MATCHED in the graph) and
+    `shown` (how many citations this answer carries after every layer's
+    findings share the display cap). This is that number.
+
+    Scoped identically to `_known_total_available` (Layer 1 `"ok"`
+    findings only, `None` propagating the same way for the same reason:
+    summing a known row count with an unknown one is not a knowable
+    total), so the two are always directly comparable. `total_available >
+    _known_retrieved_count(...)` is exactly `_ok_finding_was_truncated`'s
+    own condition restated as numbers instead of a flag: a gap between
+    them means rows were never retrieved, not merely never displayed.
+    """
+    total = 0
+    saw_any = False
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok" or finding.layer != "layer_1_graph":
+            continue
+        saw_any = True
+        count = fields.get("row_count")
+        if count is None:
+            return None
+        total += count
+    return total if saw_any else None
+
+
 def _target_entities_from_tool_calls(tool_calls: list[Any]) -> list[str]:
     """The CURIEs `plan_node` resolved for this query, read from the
     planned `cypher_query` call's own `CypherQueryInput.target_entities`.
@@ -5620,6 +5657,49 @@ def _target_entities_from_tool_calls(tool_calls: list[Any]) -> list[str]:
         if cypher_input is not None:
             return list(cypher_input.target_entities)
     return []
+
+
+def _dbsnp_record_url(entity: str) -> str | None:
+    """The dbSNP record page for a `dbSNP:rsNNNN` target entity, or None.
+
+    D-4 (`testing/Developer/reports/2026-09-20_tp53_findings/findings.md`):
+    `cypher_provenance.source_url_for_curie` maps six graph-vertex CURIE
+    prefixes (`NCBIGene`, `ClinVar`, `MedGen`, `PMID`, `NCBITaxon`,
+    `MeSH`), because a `dbSNP:` CURIE never appears as a graph row: the
+    graph carries no dbSNP-labelled vertex at all
+    (`graph_schema_constants.LABEL_CURIE_PREFIXES` has no dbSNP entry;
+    `SequenceVariant` is `ClinVar`-only). An rsID is resolved into
+    `target_entities` by Think's own entity extraction
+    (`f"dbSNP:{match.group(0)}"`, this module, the rsID pass) purely as
+    text the question named, then answered entirely through
+    `tools.ncbi_dbsnp`, a Layer 2 tool `source_url_for_curie` was never
+    built to know about. `_unaddressed_target_entities` therefore reported
+    every rsID unaddressed unconditionally, per that function's own
+    documented fallback for an unmapped prefix, even on a live answer
+    that visibly carried the dbSNP record and cited it.
+
+    This mirrors `tools.ncbi_dbsnp._build_source_url` exactly
+    (`https://www.ncbi.nlm.nih.gov/snp/{rsid}`, the local id verbatim, no
+    percent-encoding needed since `_RSID_PATTERN` already restricts it to
+    ASCII digits after "rs"), so the two independently built URLs for the
+    same record are byte-identical and `_normalized_citation_source_url`
+    matches them with no new normalization rule. Returns None for
+    anything that is not a well-formed `dbSNP:rs<digits>` CURIE, the same
+    "never guess" discipline `source_url_for_curie` itself documents.
+    """
+    prefix, sep, local_id = entity.partition(":")
+    if prefix != "dbSNP" or not sep or not _RSID_PATTERN.fullmatch(local_id):
+        return None
+    return f"https://www.ncbi.nlm.nih.gov/snp/{local_id}"
+
+
+def _expected_source_url_for_target_entity(entity: str) -> str | None:
+    """The citable record URL a `target_entities` CURIE is expected to
+    reach, across every entity kind this system can name from a question,
+    not only the six graph-vertex prefixes `source_url_for_curie` maps.
+    See `_dbsnp_record_url` for why dbSNP needs its own branch (D-4).
+    """
+    return source_url_for_curie(entity) or _dbsnp_record_url(entity)
 
 
 def _unaddressed_target_entities(
@@ -5643,19 +5723,22 @@ def _unaddressed_target_entities(
     `source_url`, once normalized (`_normalized_citation_source_url`,
     the same trailing-slash-insensitive comparison F-3.4-A-01's own
     same-entity pairing fix uses), matches that entity's own canonical
-    record URL (`source_url_for_curie`). This works identically for a
-    Layer 1 citation (built from the graph's own row) and a Layer 2
-    citation (`ncbi_efetch`, anchored to exactly one of the named
-    entities), with no per-layer branching: both layers' URL builders
-    resolve to the same normalized string for the same real record.
+    record URL (`_expected_source_url_for_target_entity`). This works
+    identically for a Layer 1 citation (built from the graph's own row),
+    a Layer 2 citation anchored on a graph-vertex CURIE (`ncbi_efetch`),
+    and a Layer 2 citation anchored on an entity kind the graph never
+    stores at all (`ncbi_dbsnp`, an rsID: D-4), with no per-layer
+    branching: every builder resolves to the same normalized string for
+    the same real record.
 
-    A target entity whose CURIE prefix `source_url_for_curie` cannot map
-    to a URL at all (a prefix outside the nine documented mappings) is
-    always reported unaddressed rather than silently excluded from the
-    check: this function never assumes coverage it cannot verify.
+    A target entity whose CURIE prefix `_expected_source_url_for_target_
+    entity` cannot map to a URL at all (a prefix outside every documented
+    mapping) is always reported unaddressed rather than silently excluded
+    from the check: this function never assumes coverage it cannot
+    verify.
     """
     expected_by_entity = {
-        entity: _normalized_citation_source_url(source_url_for_curie(entity))
+        entity: _normalized_citation_source_url(_expected_source_url_for_target_entity(entity))
         for entity in target_entities
     }
     cited_urls = {
@@ -6027,21 +6110,64 @@ def _renumber_markers(narrative: str, offset: int) -> str:
     return _MARKER_PATTERN.sub(lambda m: f"[{int(m.group(1)) + offset}]", narrative)
 
 
-def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
+def _build_truncated_answer_note(
+    shown: int,
+    total_available: int | None,
+    retrieval_limited: bool,
+    retrieved: int | None,
+) -> str:
     """F-2.1-C12: state the scale of what is not shown, not just that a
     cut happened. "Results were truncated" said nothing when the user was
     shown 20 of 15,310 rows; a note that omits the scale is technically
     true and practically useless.
+
+    D-2/D-3, reworded (`testing/Developer/reports/2026-09-20_tp53_
+    findings/findings.md`). The old wording always read "Showing {shown}
+    of {total_available} matching rows; the rest are not shown above."
+    That sentence sits directly over a paginated table in the shipped UI,
+    so a reader reads "not shown above" as "the pager is hiding them",
+    which is true in exactly one of the two cases this note covers and
+    false in the other. This function now tells them apart using
+    `retrieval_limited`, the caller's own `_ok_finding_was_truncated`
+    flag:
+
+    - `retrieval_limited=True`: the graph tool's own row limit fired, so
+      some matching records were never fetched at all. The note compares
+      what MATCHED (`total_available`) against what was RETRIEVED
+      (`retrieved`, `_known_retrieved_count`), and never mentions display
+      or a pager, because the cause has nothing to do with either.
+    - `retrieval_limited=False`: every matching record was retrieved, and
+      the cut is purely how many of them are INCLUDED in this one
+      answer (`shown`, capped by `_MAX_FINDINGS_FOR_DISPLAY` across every
+      layer). The note says so in those terms, "included in this
+      answer", never "shown above", so it cannot be misread as the table
+      below hiding rows it was never given.
+
+    One sentence, opening "Note:", no interior period or semicolon, the
+    same shape `_build_structured_fallback_note` documents and the
+    coverage grader requires: it splits sentences on those characters and
+    counts an unmarked continuation as an uncited claim.
     """
+    if retrieval_limited:
+        if total_available is not None and retrieved is not None and total_available > retrieved:
+            return (
+                f"Note: this answer was truncated because only {retrieved} of the "
+                f"{total_available} records that matched this question in the graph "
+                "were retrieved"
+            )
+        return (
+            "Note: this answer was truncated before every matching record could "
+            "be retrieved, and the exact total that matched this question is not "
+            "available for this query"
+        )
     if total_available is not None and total_available > shown:
         return (
-            f"Note: this result was truncated. Showing {shown} of "
-            f"{total_available} matching rows; the rest are not shown above."
+            f"Note: this answer was truncated to {shown} of the {total_available} "
+            "records that matched this question, all of which were retrieved"
         )
     return (
-        f"Note: this result was truncated. Showing {shown} matching rows, "
-        "but more exist than are shown above; the exact total is not "
-        "available for this query."
+        f"Note: this answer was truncated to {shown} records, though every "
+        "record that matched this question was retrieved"
     )
 
 
@@ -7615,17 +7741,32 @@ def _summary_subject(state: GraphState) -> str:
 
 
 def _row_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
-    """The dumped tool row a prepared finding was built from, matched by
-    source URL. Carries `fields` and, for a graph row, the
-    `vocabulary_artifact_fields` list `_dump_row_for_synthesis` attached."""
-    for tool_finding in findings:
-        fields = tool_finding.structured_fields or {}
-        if fields.get("status") != "ok":
-            continue
-        for row in fields.get("rows", []):
-            if str(row.get("source_url") or "") == finding.source_url:
-                return row if isinstance(row, dict) else None
-    return None
+    """The dumped tool row a prepared finding was built from. Carries
+    `fields` and, for a graph row, the `vocabulary_artifact_fields` list
+    `_dump_row_for_synthesis` attached.
+
+    D-1 (`testing/Developer/reports/2026-09-20_tp53_findings/findings.md`):
+    this used to scan every `ok` finding's rows for the first one whose
+    `source_url` matched `finding.source_url`, the same naive lookup
+    `_row_behind_synth_finding`'s own docstring documents and was fixed
+    away from under UI fix 11.21: a GO row cited through its gene shares
+    that gene's page URL with the gene's own record row and with every
+    other GO row of the same gene, so the first match across ALL findings
+    was, in the live TP53 answer, always the gene's own row. Every list
+    row's label (`record_label`, via this function) then read "TP53" ten
+    times over, one per distinct GO term, each with its own correct
+    citation and an identical, useless label.
+
+    Delegates to `_row_behind_synth_finding`, which already narrows to the
+    finding's own call and then to its own CURIE before ever falling back
+    to a bare URL scan, so a GO row now resolves to its OWN fields
+    (`name`, e.g. "DNA repair") rather than to whichever row happened to
+    share its citation URL and come first. `_curie_for_citation`,
+    `_entity_name_for_citation` and `_graph_snapshot_version_for_citation`
+    already read through that same helper for the citation object; this
+    was the one caller still doing its own, unfixed scan.
+    """
+    return _row_behind_synth_finding(findings, finding)
 
 
 def _row_fields_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
@@ -8743,7 +8884,10 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     truncation_note: str | None = None
     if truncated_ok_finding and trust_outcome != "refuse":
         truncation_note = _build_truncated_answer_note(
-            shown=len(citations), total_available=_known_total_available(findings)
+            shown=len(citations),
+            total_available=_known_total_available(findings),
+            retrieval_limited=_ok_finding_was_truncated(findings),
+            retrieved=_known_retrieved_count(findings),
         )
     elif tool_outcome == "ok" and trust_outcome == "refuse":
         # UI fix set 7, item 7.1 (2026-09-13). WHICH refusal this is, decided
@@ -8897,6 +9041,19 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # built from the answer findings this answer actually cites and the
         # graph's own total, once the final numbering is known. See
         # `answer_layout.answer_summary_sentence` for what it may contain.
+        #
+        # D-2 (`testing/Developer/reports/2026-09-20_tp53_findings/
+        # findings.md`): this total is passed ONLY when `_ok_finding_was_
+        # truncated` is true, i.e. only in the same "some matching records
+        # were never retrieved" case `_build_truncated_answer_note` above
+        # now labels `retrieval_limited`. When the cut is purely a
+        # display-count limit instead (`citations_capped` alone), this
+        # sentence stays silent about a total and the truncation note is
+        # the only place that says so, in its own "included in this
+        # answer" wording, so the two never restate the same fact in
+        # different units the way the lead sentence and the note did in
+        # the reported answer (a summary total next to a differently
+        # scoped shown-count in the note).
         summary_sentence = answer_summary_sentence(
             answer_findings,
             shown_slots,
