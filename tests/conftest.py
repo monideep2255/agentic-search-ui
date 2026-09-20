@@ -184,3 +184,76 @@ def _forbid_live_http_in_the_unit_suite():
         httpx.AsyncHTTPTransport.handle_async_request = original_async_handler
         httpx.HTTPTransport.handle_request = original_sync_handler
         requests.adapters.HTTPAdapter.send = original_requests_send
+
+
+def _user_db_engine_is_stale() -> bool:
+    """True when a process-wide user-data engine exists and was built from a
+    different `USER_DB_URL` than the one the environment carries right now."""
+    from sqlalchemy.engine import make_url
+
+    from system_03_search_agent.data import base
+
+    engine = base._engine
+    if engine is None:
+        return False
+    ambient = os.environ.get("USER_DB_URL")
+    if not ambient:
+        return True
+    try:
+        return make_url(ambient) != engine.url
+    except Exception:  # noqa: BLE001 - an unparseable ambient URL is a mismatch, not a crash
+        return True
+
+
+def _drop_stale_user_db_engine() -> None:
+    from system_03_search_agent.data import base, session
+
+    if _user_db_engine_is_stale():
+        base.reset_engine()
+        session.reset_session_factory()
+
+
+@pytest.fixture(autouse=True)
+def _user_db_engine_matches_the_ambient_url():
+    """The process-wide user-data engine never outlives the `USER_DB_URL` it was built from.
+
+    CI run 34892563076 (2026-09-14) and every push after it: three tests in
+    `tests/system_03_search_agent/core/test_think_retry.py` failed with
+    `fe_sendauth: no password supplied` from
+    `Engine(postgresql://localhost:5432/search_agent_users)`, a URL with no
+    user and no password, while CI's own `USER_DB_URL` carried
+    `postgres:postgres@`. The URL had not come from the environment. Nine
+    test files `monkeypatch.setenv("USER_DB_URL", ...)` to that credential-
+    less form (the first in collection order is
+    `core/test_clarification.py`); the first of them to touch the database
+    builds `data/base.py`'s `_engine` singleton from it, `monkeypatch`
+    restores the environment variable at teardown, and the engine, which is
+    module state rather than environment state, survives into every later
+    test in the process. On a developer's machine the credential-less URL
+    happens to work through trust authentication, so the leak is invisible
+    locally and red in CI. Reproduced locally with
+    `PGUSER=<nonexistent role>` and a user-bearing ambient `USER_DB_URL`,
+    which fails the credential-less URL and keeps the ambient one working,
+    CI's exact asymmetry: the same three tests fail.
+
+    Why a guard on BOTH sides of every test rather than a teardown in the
+    nine files: the next file to set `USER_DB_URL` would reintroduce the
+    leak, and teardown-only ordering depends on whether this fixture or the
+    test's `monkeypatch` tears down first. Checking at setup makes the
+    invariant hold regardless of collection order or fixture order: a test
+    starts with either no engine or an engine that matches the environment
+    it is about to run under. Checking again at teardown returns the process
+    to that state as early as possible. A stale engine is disposed, and the
+    session factory bound to it (`data/session.py`) is cleared with it, since
+    a factory bound to a disposed engine is the same leak one layer up.
+
+    The `reset_engine()` calls that `core/test_feedback_capture_premise.py`,
+    `feedback/test_writer.py` and `feedback/test_capture_bypasses.py` already
+    make inside their own fixtures are unaffected: those tests then build an
+    engine that matches the URL they set, which this guard leaves alone.
+    """
+    _drop_stale_user_db_engine()
+    try:
+        yield
+    finally:
+        _drop_stale_user_db_engine()

@@ -293,7 +293,7 @@ Typed request and event contracts shared by every System 3 surface (web_ui, rest
 | File | What it does | Open it when |
 |---|---|---|
 | `src/system_03_search_agent/contracts/__init__.py` | Package marker. States that contracts are typed request and event shapes shared across every surface. | Confirming which package owns a shared type before searching elsewhere |
-| `src/system_03_search_agent/contracts/events.py` | The event envelope and the eleven-member event payload taxonomy (Sections 2.2 and 2.3), including `Event`, `GuardPayload`, `ThinkPayload`, `PlanPayload`, `ToolCall`, `CitationPayload`, `CostPayload`, `ErrorPayload`, `DonePayload`. | An emitted event has the wrong shape, a missing field, or fails validation |
+| `src/system_03_search_agent/contracts/events.py` | The event envelope and the twelve-member event payload taxonomy (Sections 2.2 and 2.3, plus the additive `step` progress marker from UI fix 11.16), including `Event`, `GuardPayload`, `ThinkPayload`, `PlanPayload`, `ToolCall`, `CitationPayload`, `CostPayload`, `StepPayload`, `ErrorPayload`, `DonePayload`. | An emitted event has the wrong shape, a missing field, or fails validation |
 | `src/system_03_search_agent/contracts/query.py` | The `Query` and `RequestContext` models: the single request shape every surface builds before calling `run()` (Section 2.1). | A surface builds a malformed `Query` or `RequestContext` before `run()` |
 
 ### `guardrail/` Section 10 admission control
