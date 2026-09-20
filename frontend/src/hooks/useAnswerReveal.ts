@@ -38,11 +38,6 @@ export const REVEAL_TIMING = {
   perItemMs: 110,
   /** One sentence per this many ms once `done` has arrived. */
   afterDoneMs: 40,
-  /**
-   * UI fix 11.28: the banner minimum under `prefers-reduced-motion`. The
-   * order is kept (banner, then sentences) but the hold is cut to a minimum.
-   */
-  reducedMinBannerMs: 300,
 } as const;
 
 export interface AnswerRevealOptions {
@@ -56,15 +51,12 @@ export interface AnswerRevealOptions {
    * sentences back would hide what the reader is owed.
    */
   flush?: boolean;
-  /** `prefers-reduced-motion: reduce`: hold the banner `reducedMinBannerMs` only. */
-  reducedMotion?: boolean;
 }
 
 export function useAnswerReveal(
   view: RunView,
-  { runKey, stopped, flush = false, reducedMotion = false }: AnswerRevealOptions,
+  { runKey, stopped, flush = false }: AnswerRevealOptions,
 ): RunView {
-  const minBannerMs = reducedMotion ? REVEAL_TIMING.reducedMinBannerMs : REVEAL_TIMING.minBannerMs;
   const [state, setState] = useState<{ key: string | null; count: number }>({
     key: runKey,
     count: 0,
@@ -86,7 +78,7 @@ export function useAnswerReveal(
     let delay: number = pace;
     if (count === 0) {
       const startedAt = writeStartRef.current?.at ?? Date.now();
-      delay = Math.max(0, startedAt + minBannerMs - Date.now());
+      delay = Math.max(0, startedAt + REVEAL_TIMING.minBannerMs - Date.now());
     }
     const timer = setTimeout(() => {
       setState((current) => ({
@@ -95,7 +87,7 @@ export function useAnswerReveal(
       }));
     }, delay);
     return () => clearTimeout(timer);
-  }, [runKey, stopped, flush, count, total, view.landed, minBannerMs]);
+  }, [runKey, stopped, flush, count, total, view.landed]);
 
   if (runKey === null || flush || count >= total) return view;
 

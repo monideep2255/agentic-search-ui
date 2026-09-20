@@ -44,8 +44,8 @@
  * layer up), and it is gone, not merely renamed.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, CssBaseline, ThemeProvider, useMediaQuery } from "@mui/material";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 
 import { designTokens, theme } from "./theme";
 import {
@@ -76,8 +76,6 @@ import {
 import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { useAnswerReveal } from "./hooks/useAnswerReveal";
-import { usePacedEvents } from "./hooks/usePacedEvents";
-import { deriveStopEnabled } from "./components/chat/StopButton";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import { useScreenRoute } from "./lib/routing";
@@ -966,34 +964,7 @@ export function App() {
   // ever. F-4.8-J-12 closed exactly this hole for createRun and left the
   // identical one a single call downstream.
   const { events, status, error: streamError, stop } = useAgentRun(runId, authToken);
-  /*
-   * UI fix 11.28, 2026-09-14. Events arrive in bursts, so the screen raced
-   * through the lead starting, the handoff, each helper's search and the
-   * writing banner in one frame. `usePacedEvents` releases the events that
-   * ARRIVED one at a time with a minimum dwell per stage (never reordered,
-   * never invented, never more than 3.5s behind arrival, no delay when the run
-   * is slower than the pacing), and flushes on Stop, a failed stream, an
-   * error or a refusal. Everything below derives from the paced prefix.
-   */
-  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", { noSsr: true });
-  const pacedEvents = usePacedEvents(events, {
-    runKey: runId,
-    stopped,
-    flush: status === "error",
-    reducedMotion,
-  });
-  const pacedView = useRunView(pacedEvents);
-  /*
-   * Stop follows the REAL stream, not the paced one: once `done` has arrived
-   * the run is over on the server, and offering Stop while its last stages
-   * are still being shown would stop a finished run.
-   */
-  const realStopEnabled = deriveStopEnabled(events);
-  const streamed = useMemo(
-    () =>
-      pacedView.stopEnabled === realStopEnabled ? pacedView : { ...pacedView, stopEnabled: realStopEnabled },
-    [pacedView, realStopEnabled],
-  );
+  const streamed = useRunView(events);
 
   /**
    * F-4.8-J-03. `useAgentRun` does not clear its buffer when `runId` goes null,
@@ -1014,12 +985,7 @@ export function App() {
    * one is on screen, so every consumer below sees one consistent state.
    * Once revealed, it returns `liveView` itself, unchanged.
    */
-  const view = useAnswerReveal(liveView, {
-    runKey: runId,
-    stopped,
-    flush: status === "error",
-    reducedMotion,
-  });
+  const view = useAnswerReveal(liveView, { runKey: runId, stopped, flush: status === "error" });
 
   /*
    * What the tour is told about the run it is watching, derived from the

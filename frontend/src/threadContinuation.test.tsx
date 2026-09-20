@@ -169,7 +169,7 @@ async function askFirst(user: ReturnType<typeof userEvent.setup>) {
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
   // The landed answer, not merely a screen change: `source-1` is written
   // from the run's own citation event and cannot render before it arrives.
-  await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+  await screen.findByTestId("source-1", undefined, { timeout: 5000 });
 }
 
 async function askFollowUp(user: ReturnType<typeof userEvent.setup>) {
@@ -273,7 +273,7 @@ describe("R22: a follow-up continues on the same screen", () => {
 
     // The second answer's own prose, which exists nowhere in the frontend
     // and can only come from the second run's token event.
-    await screen.findByText(/It is linked to HBOC/, undefined, { timeout: 10000 });
+    await screen.findByText(/It is linked to HBOC/, undefined, { timeout: 5000 });
 
     expect(
       document.querySelector('[data-tour="answer"]'),
