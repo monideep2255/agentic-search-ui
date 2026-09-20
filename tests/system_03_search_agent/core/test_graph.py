@@ -832,7 +832,11 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
     # clinicaltrials_search (stubbed "empty" by `_stub_layer3_dispatch`),
     # so four tool calls are attempted; the cypher_query call still errors
     # exactly as before.
-    assert done_event.payload["total_tool_calls"] == 4
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert done_event.payload["total_tool_calls"] == 5
 
     citation_events = [event for event in events if event.type == "citation"]
     assert citation_events == [], "an errored tool call must never produce a citation"
@@ -905,7 +909,11 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     # genuine "empty" result, which contributes no citation). UI fix set 8
     # (R29): plus the two Layer 3 calls, stubbed "empty" the same way, so
     # four tool calls are attempted and still exactly one citation exists.
-    assert done_event.payload["total_tool_calls"] == 4
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert done_event.payload["total_tool_calls"] == 5
 
 
 # ---------------------------------------------------------------------------
@@ -1945,13 +1953,27 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
     # test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query below
     # for the dedicated test of that behavior. UI fix set 8 (R29): the same
     # gene also earns the two Layer 3 calls, so a gene question plans four.
-    assert len(tool_calls) == 4
+    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
+    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
+    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
+    # GO graph call; see test_breadth_wiring.py for the per-call arms.
+    assert len(tool_calls) == 10
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
     assert tool_calls[1]["layer"] == "layer_2_api"
-    assert {c["tool"] for c in tool_calls[2:]} == {"pubtator_annotate", "clinicaltrials_search"}
-    assert {c["layer"] for c in tool_calls[2:]} == {"layer_3_enrichment"}
+    # UI fix 11.21 wiring (2026-09-20): the tail is set 8's two Layer 3 calls,
+    # then the breadth plan in its fixed order: the PubMed and ClinVar
+    # searches, the abstract fetch, the PubTator3 publications, the ClinVar
+    # summary, and the context-only GO graph call.
+    assert [c["tool"] for c in tool_calls[2:]] == [
+        "pubtator_annotate", "clinicaltrials_search", "ncbi_efetch", "ncbi_efetch",
+        "ncbi_efetch", "pubtator_annotate", "ncbi_efetch", "cypher_query",
+    ]
+    assert [c["layer"] for c in tool_calls[2:]] == [
+        "layer_3_enrichment", "layer_3_enrichment", "layer_2_api", "layer_2_api",
+        "layer_2_api", "layer_3_enrichment", "layer_2_api", "layer_1_graph",
+    ]
 
 
 @pytest.mark.asyncio
@@ -1986,11 +2008,16 @@ async def test_act_executes_the_selected_cypher_query_call(
     # coordinator_worker_execute now, in LAYER order (2, 3, 1) so the
     # small Layer 2/3 findings are offered to Synth ahead of a graph result
     # that can fill every slot on its own.
-    assert len(tool_calls) == 4
-    assert len(results) == 4
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert len(tool_calls) == 5
+    assert len(results) == 5
     assert tool_calls[0].tool == "ncbi_efetch"
     assert {tool_calls[1].tool, tool_calls[2].tool} == {"pubtator_annotate", "clinicaltrials_search"}
     assert tool_calls[3].tool == "cypher_query"
+    assert tool_calls[4].tool == "cypher_query"
     for result in results:
         assert result.contains_untrusted_free_text is False  # structured data, never free text
 
@@ -2671,7 +2698,11 @@ async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None
     tool_calls = plan_event.payload["tool_calls"]
     # UI fix set 8 (R29): four now, the two Layer 3 calls behind these two.
     # The dedicated per-layer selection tests live in test_layer_handoff.py.
-    assert len(tool_calls) == 4
+    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
+    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
+    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
+    # GO graph call; see test_breadth_wiring.py for the per-call arms.
+    assert len(tool_calls) == 10
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"

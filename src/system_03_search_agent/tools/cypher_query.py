@@ -1822,16 +1822,19 @@ def _fold_curies(
     listed = parse_agtype(raw_row.get(list_column))
     if not isinstance(listed, list):
         return anchor_curie, []
-    curies: list[str] = []
+    found: set[str] = set()
     for item in listed:
         if not isinstance(item, dict):
             continue
         curie = str((item.get("properties") or {}).get("id") or "")
-        if curie and curie not in curies:
-            curies.append(curie)
-        if len(curies) >= MAX_FOLD_ITEMS:
-            break
-    return anchor_curie, curies
+        if curie:
+            found.add(curie)
+    # L-01 shape 2 (2026-09-20): the aggregate's own order is not stable
+    # between executions, so the fold is sorted by CURIE before the cap,
+    # the same rule `cypher_provenance._iter_entities` applies to the
+    # vertices themselves. The set of CURIEs the cap keeps is then a
+    # property of the record, not of the run.
+    return anchor_curie, sorted(found)[:MAX_FOLD_ITEMS]
 
 
 def _apply_fold(
@@ -1863,7 +1866,11 @@ def _apply_fold(
             return
 
 
-async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> CypherQueryOutput:
+async def _run_pipeline(
+    harness: HarnessLike,
+    tool_input: CypherQueryInput,
+    forced_template: CypherTemplate | None = None,
+) -> CypherQueryOutput:
     start = time.monotonic()
     schema_slice = build_schema_slice(tool_input.query_class.value, tool_input.target_entities)
 
@@ -1915,7 +1922,14 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # reported as an error rather than silently handed to the model, so it
     # cannot hide. When no template matches, the model path below runs
     # exactly as before.
-    template = select_template(tool_input, entity_bindings)
+    #
+    # UI fix 11.21 wiring (2026-09-20): a caller that already chose the
+    # template in code (`plan_node`'s GO call) passes it as
+    # `forced_template`, and selection from the question text is skipped.
+    # It still passes the identical validator and binding gate below.
+    template = forced_template if forced_template is not None else select_template(
+        tool_input, entity_bindings
+    )
     template_name: str | None = None
     # A template may carry ONE fallback (`CypherTemplate.fallback`), run
     # only when the template itself returns no rows: the disease-genes
@@ -2012,6 +2026,16 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             break
 
     fold = active_template.fold if active_template is not None else None
+    # UI fix 11.21 wiring (2026-09-20): the gene every GO vertex this query
+    # returns is annotated to, read from the template's own bound parameter
+    # (review F-01: only a code-chosen single-gene template may say so).
+    # Resolved through `entity_bindings`, the one mapping from a parameter
+    # name to the CURIE that was actually bound, so it is the gene the
+    # query traversed FROM and never a gene that shares a row. None on
+    # every other template and on the whole model path.
+    go_attribution_curie: str | None = None
+    if active_template is not None and active_template.go_attribution_param is not None:
+        go_attribution_curie = entity_bindings.get(active_template.go_attribution_param)
 
     if not rows:
         return CypherQueryOutput(
@@ -2147,6 +2171,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             # ambiguous candidates" signal onto the same entity row, only
             # ever set when T-3.4-03's own signal above was not.
             ambiguous_high_risk_edge_touch_by_column=ambiguous_high_risk_edge_touch_by_column,
+            go_attribution_curie=go_attribution_curie,
         )
         # The fold (template path only): the pairing this raw row carried
         # between its anchor and the vertices collected beside it, written
@@ -2294,9 +2319,22 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     )
 
 
-async def cypher_query(harness: HarnessLike, tool_input: CypherQueryInput) -> CypherQueryOutput:
+async def cypher_query(
+    harness: HarnessLike,
+    tool_input: CypherQueryInput,
+    *,
+    template: CypherTemplate | None = None,
+) -> CypherQueryOutput:
     """Run Section 6.1's three-step Layer 1 pipeline and return a
     `CypherQueryOutput`.
+
+    `template` (UI fix 11.21 wiring, 2026-09-20) is an optional template
+    the caller chose in code, keyword-only and defaulting to None so every
+    existing call site and every surface that exposes this tool by its
+    schema is unchanged: the tool's INPUT schema does not carry it, and a
+    model can never choose it. When given, it replaces `select_template`'s
+    choice and nothing else; validation, binding and row shaping run as
+    for any template.
 
     Bounded at `CYPHER_QUERY_TIMEOUT_SECONDS` (30 seconds) total, however
     the internal steps (schema slicing, up to two generation calls,
@@ -2325,7 +2363,8 @@ async def cypher_query(harness: HarnessLike, tool_input: CypherQueryInput) -> Cy
     """
     try:
         return await asyncio.wait_for(
-            _run_pipeline(harness, tool_input), timeout=CYPHER_QUERY_TIMEOUT_SECONDS
+            _run_pipeline(harness, tool_input, forced_template=template),
+            timeout=CYPHER_QUERY_TIMEOUT_SECONDS,
         )
     except TimeoutError:
         return _error_output(

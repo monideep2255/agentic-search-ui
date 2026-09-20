@@ -794,8 +794,29 @@ def _iter_entities(parsed: Any) -> list[dict[str, Any]]:
     if isinstance(parsed, dict):
         return [parsed] if is_vertex_or_edge(parsed) else []
     if isinstance(parsed, list):
-        return [item for item in parsed if isinstance(item, dict) and is_vertex_or_edge(item)]
+        entities = [item for item in parsed if isinstance(item, dict) and is_vertex_or_edge(item)]
+        # L-01 shape 2 (2026-09-20, `testing/Developer/reports/2026-09-19_
+        # live_measure/findings.md`): a `collect(DISTINCT x)` list arrives in
+        # whatever order the aggregate produced, which neither AGE nor
+        # Postgres holds stable between executions, and the caller keeps
+        # the FIRST row per CURIE before it cuts to `row_limit`. Measured
+        # live: six identical runs of the HNF1A question returned a
+        # different six MedGen concepts on one of them. A list of vertices
+        # is therefore emitted in CURIE order, a property of the records
+        # rather than of the execution. A path (a list that carries edges)
+        # is left in its own order, since its adjacency is meaningful.
+        if entities and not any(_is_edge_entity(entity) for entity in entities):
+            entities.sort(key=_vertex_sort_key)
+        return entities
     return []
+
+
+def _vertex_sort_key(entity: dict[str, Any]) -> tuple[str, str]:
+    """CURIE first, then the graph-internal id, both as text, so two
+    vertices with the same CURIE (or none) still sort the same way twice."""
+    properties = entity.get("properties")
+    curie = str(properties.get("id") or "") if isinstance(properties, dict) else ""
+    return curie, str(entity.get("id") or "")
 
 
 
