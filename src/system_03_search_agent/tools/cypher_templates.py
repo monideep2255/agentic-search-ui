@@ -137,6 +137,14 @@ class CypherTemplate:
     edge_label: str | None
     fold: tuple[str, str, str] | None = None
     fallback: CypherTemplate | None = None
+    #: UI fix 11.21 wiring (2026-09-20): the bound parameter naming the ONE
+    #: gene whose own GO edges this template traverses, so `cypher_query`
+    #: can pass that gene's CURIE to `to_output_rows` as
+    #: `go_attribution_curie` (review F-01: a GO term is cited only on the
+    #: caller's explicit say-so). Set only by `gene_go_terms_template`; None
+    #: on every other template, so no GO vertex reached any other way is
+    #: ever attributed.
+    go_attribution_param: str | None = None
 
 
 # --------------------------------------------------------------------------
@@ -559,6 +567,60 @@ def _hop_template(
     return CypherTemplate(name=name, cypher=f"{match}{where} {returns}", edge_label=hop.edge_label)
 
 
+# The three edges the graph carries from a Gene to a GO term, one per GO
+# label (`graph_schema_constants.EDGE_ENDPOINTS`), asserted documented at
+# import like every hop in `_HOPS`.
+_GENE_GO_EDGES: Final[tuple[tuple[str, str], ...]] = (
+    ("participates_in", "BiologicalProcess"),
+    ("actively_involved_in", "MolecularActivity"),
+    ("located_in", "CellularComponent"),
+)
+for _edge, _label in _GENE_GO_EDGES:
+    _assert_hop_documented(_edge, "Gene", _label)
+del _edge, _label
+
+
+def gene_go_terms_template(gene_param: str) -> CypherTemplate:
+    """UI fix 11.21 wiring (2026-09-20): the GO biological processes ONE
+    gene participates in, cited to that gene's record page.
+
+    Code-chosen by `core/graph.py`'s `plan_node` as a second, context-only
+    graph call beside the question's own template; never selected from the
+    question text, so `select_template` is untouched. The query traverses
+    the bound gene's OWN `participates_in` edge and nothing else, one hop,
+    so every vertex it returns is annotated to that gene by construction
+    of the query shape, never by which column a gene happened to sit in
+    (review F-01). `go_attribution_param` names the bound gene so
+    `cypher_query` can hand its CURIE to `to_output_rows`. Exactly one gene
+    is bound, which keeps review N-04 (CURIE-only dedupe across two genes'
+    citations of one GO term) dormant: a multi-gene form of this template
+    must not be built without first repairing `_dedupe_by_cited_record`.
+
+    ONE edge rather than the three in `_GENE_GO_EDGES`, measured live on
+    2026-09-20: the graph (AGE) rejects a relationship-type alternation,
+    `-[:participates_in|actively_involved_in|located_in]->` and the
+    `|:`-separated form alike, with a `SyntaxError`, although
+    `cypher_validator.validate_cypher` accepts both. A single-edge hop
+    returns 40 BiologicalProcess rows for BRCA1, each cited to gene 672.
+    The molecular activities and cellular components are two further
+    single-edge calls, recorded as not done in the wiring's build report
+    rather than added as two more graph calls tonight.
+
+    Ordered by the term's id, a stable key, so the same gene returns the
+    same terms in the same order on every run.
+    """
+    edge, label = _GENE_GO_EDGES[0]
+    return CypherTemplate(
+        name="gene_go_processes_one",
+        cypher=(
+            f"MATCH ({_ANCHOR_VAR}:Gene {{id: ${gene_param}}})-[:{edge}]->({_OTHER_VAR}:{label}) "
+            f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+        ),
+        edge_label=edge,
+        go_attribution_param=gene_param,
+    )
+
+
 def _record_template(anchor_label: str, param_names: list[str]) -> CypherTemplate:
     """The record itself: `MATCH (a:Gene {id: $e}) RETURN a`, or the IN-list
     form ordered by id when several are bound."""
@@ -662,6 +724,8 @@ def all_template_examples() -> list[CypherTemplate]:
     if link is None:
         raise AssertionError("the gene_disease_link template did not build")
     examples.append(link)
+    # The code-chosen GO template (UI fix 11.21 wiring).
+    examples.append(gene_go_terms_template("e_one"))
     # The fold templates and every fallback they carry.
     examples.append(_gene_variant_diseases_template("e_one"))
     examples.append(_gene_variant_disease_link_template("e_one", ["e_two"]))

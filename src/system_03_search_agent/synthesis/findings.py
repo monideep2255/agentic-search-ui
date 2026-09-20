@@ -397,8 +397,23 @@ def build_synth_findings(
     max_findings: int = MAX_FINDINGS_PER_PROMPT,
     defer_source_urls: frozenset[str] = frozenset(),
     lead_call_ids: frozenset[str] = frozenset(),
+    lead_quota: int | None = None,
 ) -> tuple[list[SynthFinding], bool]:
     """Compress this query's `"ok"` tool results into the Section 8.1 list.
+
+    `lead_quota` (UI fix 11.21 wiring, 2026-09-20) changes ADMISSION, and
+    only when it is given together with `lead_call_ids`; every other caller
+    keeps the order described below. The breadth plan adds up to fifteen
+    Layer 2 and 3 rows (ClinVar, PubMed, PubTator3 publications) ahead of
+    the graph in the handoff order, which under the plain order would fill
+    every slot before the question's own answer reached the prompt. With a
+    quota: the lead calls' rows are admitted first, up to `lead_quota`;
+    the remaining slots are then shared one row per call per round, in the
+    handoff order the findings arrived in, with the lead calls' leftover
+    rows as the last queue. Every source therefore reaches the answer, the
+    answer's own shape reaches it first, and the admitted set is a pure
+    function of the findings' order and content, so it is one set per
+    question. The cap itself (`max_findings`) is unchanged.
 
     Returns `(synth_findings, capped)`. `capped` is True when more citable
     facts existed than `max_findings` allowed through, so `write_node` can
@@ -491,11 +506,14 @@ def build_synth_findings(
             continue
         seen.add(identity)
         total_citable += 1
-        if len(collected) >= max_findings:
+        if (lead_quota is None or not lead_call_ids) and len(collected) >= max_findings:
             continue
         collected.append(
             (source_url, row, (field_name, field_value, is_suspect, curie_fallback), finding)
         )
+
+    if lead_quota is not None and lead_call_ids:
+        collected = _allot_with_lead_quota(collected, lead_call_ids, lead_quota, max_findings)
 
     if lead_call_ids:
         # Stable: the lead calls' rows keep their own order, and so do the
@@ -523,6 +541,34 @@ def build_synth_findings(
         )
 
     return synth_findings, total_citable > len(synth_findings)
+
+
+def _allot_with_lead_quota(
+    collected: list[Any], lead_call_ids: frozenset[str], lead_quota: int, max_findings: int
+) -> list[Any]:
+    """Admit the lead calls' rows first, up to `lead_quota`, then share the
+    remaining slots one row per call per round in arrival order, with the
+    lead calls' leftover rows as the last queue. See `build_synth_findings`.
+    Deterministic: a pure function of `collected`'s order and content."""
+    lead_rows = [entry for entry in collected if entry[3].call_id in lead_call_ids]
+    queues: dict[str, list[Any]] = {}
+    for entry in collected:
+        if entry[3].call_id in lead_call_ids:
+            continue
+        queues.setdefault(entry[3].call_id, []).append(entry)
+    admitted = lead_rows[: max(0, lead_quota)][:max_findings]
+    rounds = [list(rows) for rows in queues.values()]
+    leftover_lead = lead_rows[max(0, lead_quota):]
+    if leftover_lead:
+        rounds.append(leftover_lead)
+    while len(admitted) < max_findings and any(rounds):
+        for queue in rounds:
+            if not queue:
+                continue
+            admitted.append(queue.pop(0))
+            if len(admitted) >= max_findings:
+                break
+    return admitted
 
 
 # The Layer 2 tool and field a resolved disease name is attributed to.

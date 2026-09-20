@@ -480,6 +480,7 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
+from system_03_search_agent.core import breadth_plan
 from system_03_search_agent.core.next_step import (
     build_next_step_query,
     entity_type_noun,
@@ -574,11 +575,16 @@ from system_03_search_agent.tools.clinicaltrials_search_schemas import (
     ClinicalTrialsSearchOutput,
 )
 from system_03_search_agent.tools.cypher_provenance import source_url_for_curie
-from system_03_search_agent.tools.cypher_query import cypher_query
+from system_03_search_agent.tools.cypher_query import cypher_query, entity_param_bindings
 from system_03_search_agent.tools.cypher_schemas import (
     CypherQueryInput,
     CypherQueryOutput,
     CypherQueryRow,
+)
+from system_03_search_agent.tools.cypher_templates import (
+    CypherTemplate,
+    gene_go_terms_template,
+    matched_shapes,
 )
 from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
@@ -2215,6 +2221,15 @@ class _PlannedToolCall:
     #: user did not name on this turn. Defaults to False, so every call site
     #: that resolves its own entities is unaffected and needs no change.
     memory_bound: bool = False
+    #: UI fix 11.21 wiring (2026-09-20): a template chosen in CODE for this
+    #: call, handed to `cypher_query(template=...)` so selection from the
+    #: question text is skipped. None on the question's own graph call,
+    #: whose template `cypher_query` still selects itself.
+    template: CypherTemplate | None = None
+    #: True for a graph call that supplies context (the gene's GO biological processes)
+    #: rather than the answer to the question's own shape. `_answer_call_ids`
+    #: skips it, so its rows are never numbered as answer findings.
+    context_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -2237,6 +2252,12 @@ class _PlannedNcbiEfetchToolCall:
 
     tool_call: ToolCall
     ncbi_efetch_input: NcbiEfetchInput
+    #: UI fix 11.21 wiring (2026-09-20): what the call is for in the breadth
+    #: fan-out (`breadth_plan.PlannedCall.purpose`), so Act can route its
+    #: result: a search's ids feed the follow-ups and contribute no rows;
+    #: an abstract fetch keeps its title and drops its abstract. Empty for
+    #: the set 8 gene record, which is shaped exactly as before.
+    purpose: str = ""
 
 
 @dataclass(frozen=True)
@@ -2264,6 +2285,27 @@ class _PlannedLayerToolCall:
 
     tool_call: ToolCall
     tool_input: Any
+    #: UI fix 11.21 wiring (2026-09-20): see `_PlannedNcbiEfetchToolCall.
+    #: purpose`. Empty for every set 8 call.
+    purpose: str = ""
+
+
+@dataclass(frozen=True)
+class _PlannedFollowUpCall:
+    """UI fix 11.21 wiring (2026-09-20): a Layer 2 or 3 call DECLARED at Plan
+    whose input can only be built at Act, from the ids a first-stage search
+    returns (`breadth_plan.plan_literature_follow_up`, `plan_clinvar_follow_
+    up`). The `ToolCall`, with its `call_id` and layer, is fixed at Plan so
+    the `plan` event lists the same calls for a question on every run and
+    the premise gate's A1 (one `tool_start` per planned call) holds; Act
+    fills in the input once `source_purpose`'s outcome is known, or closes
+    the call as `empty` with a disclosure when that search returned no ids.
+    A fourth planned shape, branched on TYPE like the other three.
+    """
+
+    tool_call: ToolCall
+    purpose: str
+    source_purpose: str
 
 
 #: Per-tool Act timeouts for the four tools above, in seconds. Each is the
@@ -2594,6 +2636,131 @@ def _build_layer_tool_calls(
             )
         )
     return calls
+
+
+#: The first-stage purposes whose ids feed a follow-up, and the follow-ups
+#: each one feeds, in the fixed order they are planned. OMIM is deliberately
+#: absent: `ncbi_eutils_actions._RECORD_URL_TEMPLATES["omim"]` is
+#: `omim.org`, which `contracts.events.NCBI_SOURCE_URL_PATTERN` rejects, so
+#: an OMIM record can never carry a citation on an answer
+#: (`_layer2_citation_for_synth_finding`, F-3.4-T05-04) and two calls
+#: whose records would feed only uncited claims are not issued.
+_BREADTH_FOLLOW_UPS: Final[dict[str, tuple[tuple[str, str, str, str], ...]]] = {
+    # source purpose: ((tool, layer, prefix, follow-up purpose), ...)
+    "pubmed_search": (
+        ("ncbi_efetch", "layer_2_api", "ne", "pubmed_abstracts"),
+        ("pubtator_annotate", "layer_3_enrichment", "pa", "pubtator_publications"),
+    ),
+    "clinvar_search": (("ncbi_efetch", "layer_2_api", "ne", "clinvar_summary"),),
+}
+_BREADTH_SEARCH_PURPOSES: Final[frozenset[str]] = frozenset(_BREADTH_FOLLOW_UPS)
+_BREADTH_DROPPED_PURPOSES: Final[frozenset[str]] = frozenset({"omim_search"})
+
+#: The rows a breadth call contributes to synthesis, after the stable sort.
+#: The same figure as `_LAYER_TOOL_ROW_CAP`, and for the same reason: a
+#: source's presence in the answer is fixed, not "whatever the page held".
+_BREADTH_ROW_CAP: Final[int] = _LAYER_TOOL_ROW_CAP
+
+#: UI fix 11.21 wiring: how many of the 20 citation slots the answer-shape
+#: calls take before the context calls share the rest one row per round
+#: (`synthesis.findings.build_synth_findings`, `lead_quota`). Half the
+#: cap: enough that a variants question lists ten variants, which is more
+#: than the five it showed before, and enough left that each of the seven
+#: context calls reaches the prompt. The cap itself is untouched.
+_LEAD_FINDINGS_QUOTA: Final[int] = 10
+
+#: The GO shapes `cypher_templates` already answers from the question text.
+#: When the question itself asks for one, the GO call is not added a
+#: second time.
+_GO_SHAPES: Final[frozenset[str]] = frozenset({"processes", "activities", "components"})
+
+
+def _planned_from_breadth(call: breadth_plan.PlannedCall) -> _PlannedNcbiEfetchToolCall | _PlannedLayerToolCall:
+    """Wrap one `breadth_plan.PlannedCall` in the planned-call shape Act
+    dispatches, with a fresh `call_id` under the tool's own prefix."""
+    tool_call = ToolCall(
+        tool=call.tool,  # type: ignore[arg-type]
+        call_id=f"{call.prefix}-{uuid.uuid4().hex[:12]}",
+        layer=call.layer,  # type: ignore[arg-type]
+    )
+    if call.tool == "ncbi_efetch":
+        return _PlannedNcbiEfetchToolCall(
+            tool_call=tool_call, ncbi_efetch_input=call.tool_input, purpose=call.purpose
+        )
+    return _PlannedLayerToolCall(tool_call=tool_call, tool_input=call.tool_input, purpose=call.purpose)
+
+
+def _build_breadth_calls(gene_symbol: str | None) -> list[Any]:
+    """UI fix 11.21 wiring (2026-09-20): the breadth fan-out for one gene.
+
+    `breadth_plan.plan_first_stage` on the symbol alone, never on a disease
+    title: the only disease text Plan holds is the model-extracted mention,
+    whose boundaries vary between runs of one question (the reason set 8
+    keeps the trials call on the symbol too), and one source set per
+    question is half of 11.21. The searches come first, then one
+    `_PlannedFollowUpCall` per follow-up in `_BREADTH_FOLLOW_UPS` order,
+    declared now so the plan event and the premise gate's A1 see a fixed
+    list. OMIM is filtered out (see `_BREADTH_FOLLOW_UPS`).
+
+    A symbol that is not symbol-shaped plans nothing: `breadth_plan` raises
+    `ValueError` for a term like `BRCA1 OR cancer` rather than search for
+    text the reader never typed, and this function turns that refusal into
+    an empty plan, deterministically for the same mention.
+    """
+    if not gene_symbol:
+        return []
+    try:
+        first_stage = breadth_plan.plan_first_stage(gene_symbol, None)
+    except (TypeError, ValueError):
+        return []
+    calls: list[Any] = []
+    for call in first_stage:
+        if call.purpose in _BREADTH_DROPPED_PURPOSES:
+            continue
+        calls.append(_planned_from_breadth(call))
+    for search_purpose, follow_ups in _BREADTH_FOLLOW_UPS.items():
+        if not any(getattr(c, "purpose", "") == search_purpose for c in calls):
+            continue
+        for tool, layer, prefix, purpose in follow_ups:
+            calls.append(
+                _PlannedFollowUpCall(
+                    tool_call=ToolCall(
+                        tool=tool,  # type: ignore[arg-type]
+                        call_id=f"{prefix}-{uuid.uuid4().hex[:12]}",
+                        layer=layer,  # type: ignore[arg-type]
+                    ),
+                    purpose=purpose,
+                    source_purpose=search_purpose,
+                )
+            )
+    return calls
+
+
+def _build_planned_go_terms_call(gene_curie: str, query_class: QueryClass) -> _PlannedToolCall:
+    """UI fix 11.21 wiring (2026-09-20): the code-chosen single-gene GO call.
+
+    Binds exactly ONE gene, the question's first Gene CURIE, so the
+    template's `go_attribution_param` names the gene whose own GO edges
+    are traversed and every returned term is cited to that gene's record
+    page by construction of the query (review F-01). One gene, never
+    several, so review N-04 stays dormant. `context_only`, so its rows are
+    context beside the question's own answer rather than the answer.
+    """
+    bindings = entity_param_bindings([gene_curie])
+    [gene_param] = list(bindings)
+    return _PlannedToolCall(
+        tool_call=ToolCall(
+            tool="cypher_query", call_id=f"cq-{uuid.uuid4().hex[:12]}", layer="layer_1_graph"
+        ),
+        cypher_input=CypherQueryInput(
+            query_intent="Gene Ontology terms annotated to the gene",
+            query_class=query_class,
+            target_entities=[gene_curie],
+            row_limit=_PLAN_TOOL_CALL_ROW_LIMIT,
+        ),
+        template=gene_go_terms_template(gene_param),
+        context_only=True,
+    )
 
 
 def _rsids_in_text(query_text: str) -> list[str]:
@@ -3893,6 +4060,18 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         layer_calls = _build_layer_tool_calls(query.text, gene_symbol, _rsids_in_text(query.text))
         planned_tool_calls.extend(layer_calls)
 
+        # UI fix 11.21 wiring (2026-09-20): the breadth fan-out, planned
+        # AFTER set 8's calls so that under the Section 21.3 ceiling the
+        # newest calls are the ones admission skips first, and the gene's
+        # GO terms as a second, context-only graph call, unless the
+        # question itself asks for a GO shape, which the primary call's
+        # own template already answers.
+        planned_tool_calls.extend(_build_breadth_calls(gene_symbol))
+        if gene_curie is not None and not (
+            set(matched_shapes(query.text, "Gene")) & _GO_SHAPES
+        ):
+            planned_tool_calls.append(_build_planned_go_terms_call(gene_curie, query_class))
+
         # UI fix set 8 (R30): one helper scientist per layer, none the lead,
         # drawn afresh on every run. Stamped onto copies of the ToolCalls,
         # so the planned inputs above are untouched and nothing below Plan
@@ -4209,7 +4388,20 @@ def _rows_for_citation(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
 _NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id"})
 
 
-def _ncbi_efetch_output_to_structured_fields(output: NcbiEfetchOutput) -> dict[str, Any]:
+#: UI fix 11.21 wiring: per breadth purpose, the record fields that reach
+#: synthesis, in the order they are offered (the first is the cited claim).
+#: PubMed keeps the title and never the abstract, which is reserved for
+#: 11.22 by product-owner decision (2026-09-14); ClinVar leads with the
+#: variant title and drops the nested `variation_set`.
+_BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
+    "pubmed_abstracts": ("title",),
+    "clinvar_summary": ("title", "germline_classification", "accession", "genes"),
+}
+
+
+def _ncbi_efetch_output_to_structured_fields(
+    output: NcbiEfetchOutput, purpose: str = ""
+) -> dict[str, Any]:
     """Shape an `ncbi_efetch` result into the same generic pseudo-row shape
     `_cypher_output_to_structured_fields` already produces for
     `cypher_query` (`status`/`row_count`/`total_available`/`truncated`/
@@ -4228,19 +4420,31 @@ def _ncbi_efetch_output_to_structured_fields(output: NcbiEfetchOutput) -> dict[s
     are the record's own real data, never fabricated; only
     `_NCBI_EFETCH_ROW_IDENTITY_FIELDS` is withheld, see that constant.
     """
+    allowed = _BREADTH_FIELDS_BY_PURPOSE.get(purpose)
     rows = [
         {
             "curie": "",
             "node_or_edge_type": record.db or "ncbi_efetch",
-            "fields": {
-                key: value
-                for key, value in record.fields.items()
-                if key not in _NCBI_EFETCH_ROW_IDENTITY_FIELDS
-            },
+            "fields": (
+                {key: record.fields[key] for key in allowed if key in record.fields}
+                if allowed is not None
+                else {
+                    key: value
+                    for key, value in record.fields.items()
+                    if key not in _NCBI_EFETCH_ROW_IDENTITY_FIELDS
+                }
+            ),
             "source_url": record.source_url,
         }
         for record in output.records
     ]
+    if purpose in _BREADTH_FIELDS_BY_PURPOSE:
+        # A breadth result is sorted by record URL, a property of the
+        # record and not of the response order, then cut to the fixed cap,
+        # the same discipline as `_layer_tool_output_to_structured_fields`.
+        rows = [row for row in rows if row["source_url"]]
+        rows.sort(key=lambda row: str(row["source_url"]))
+        rows = rows[:_BREADTH_ROW_CAP]
     return {
         "status": output.status,
         "row_count": len(rows),
@@ -4349,19 +4553,55 @@ async def _execute_planned_call(
                 ),
                 cap_exceeded=True,
             )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # UI fix 11.21 wiring (2026-09-20): the same last-resort
+            # boundary the four other Layer 2/3 tools already have below.
+            # `ncbi_efetch` documents itself as never raising, so reaching
+            # here means a defect below that boundary; with up to five
+            # `ncbi_efetch` dispatches per gene question now, one such
+            # fault degrades ONE call and discloses it rather than failing
+            # the run. Logged with the call id only, never the exception
+            # text (build phase 5.0's rounds on exception text).
+            logger.warning(
+                "ncbi_efetch raised out of its own never-raises boundary (call %s, trace %s); "
+                "degrading this call to an error result",
+                call.call_id,
+                harness.trace_id,
+                exc_info=True,
+            )
+            return _error_outcome(
+                call,
+                "call failed unexpectedly",
+                "ncbi_efetch call failed unexpectedly; the other layers' results stand",
+            )
+        purpose = getattr(planned, "purpose", "")
+        if purpose in _BREADTH_SEARCH_PURPOSES:
+            # UI fix 11.21 wiring: an ESearch result is one aggregate record
+            # of ids. It feeds the follow-ups (`act_node`'s second stage)
+            # and is never a finding, so it contributes no pair.
+            ids = _search_ids(ncbi_efetch_output)
+            return _CallOutcome(
+                status=ncbi_efetch_output.status,
+                summary=f"search: {len(ids)} id(s)",
+                result_count=len(ids),
+                truncated=ncbi_efetch_output.truncated,
+                pairs=[],
+                raw_output=ncbi_efetch_output,
+            )
+        shaped_fields = _ncbi_efetch_output_to_structured_fields(ncbi_efetch_output, purpose)
         return _CallOutcome(
             status=ncbi_efetch_output.status,
-            summary=f"{ncbi_efetch_output.action}: {ncbi_efetch_output.record_count} record(s)",
-            result_count=ncbi_efetch_output.record_count,
+            summary=f"{ncbi_efetch_output.action}: {shaped_fields['row_count']} record(s)",
+            result_count=int(shaped_fields["row_count"]),
             truncated=ncbi_efetch_output.truncated,
             pairs=[
                 (
                     call,
                     ToolExecutionResult(
                         contains_untrusted_free_text=False,
-                        structured_fields=_ncbi_efetch_output_to_structured_fields(
-                            ncbi_efetch_output
-                        ),
+                        structured_fields=shaped_fields,
                     ),
                 )
             ],
@@ -4445,16 +4685,44 @@ async def _execute_planned_call(
         # own budget starve the tool below its own floor, but let a
         # query_class that already budgets more keep that larger number.
         act_timeout_s = max(budget_for_step("act", query_class), CYPHER_QUERY_TIMEOUT_SECONDS)
-        output: CypherQueryOutput = await harness.enforce_timeout(
-            "act",
-            cypher_query(harness, planned.cypher_input),
-            act_timeout_s,
-        )
+        # UI fix 11.21 wiring: a code-chosen template (the GO call) is
+        # handed to the tool as a keyword. The question's own call is
+        # dispatched exactly as before, with no keyword, so every caller
+        # and every test stand-in that takes `(harness, tool_input)` is
+        # untouched.
+        forced_template = getattr(planned, "template", None)
+        if forced_template is not None:
+            graph_call = cypher_query(harness, planned.cypher_input, template=forced_template)
+        else:
+            graph_call = cypher_query(harness, planned.cypher_input)
+        output: CypherQueryOutput = await harness.enforce_timeout("act", graph_call, act_timeout_s)
     except HarnessCallError:
         return _error_outcome(
             call,
             "call did not complete within its per-step timeout budget",
             "cypher_query call did not complete within its per-step timeout budget",
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        # UI fix 11.21 wiring (2026-09-20): the same last-resort boundary
+        # the Layer 2/3 branches above carry. `cypher_query` documents
+        # itself as never raising, so reaching here means a defect below
+        # that boundary (or a stand-in that does not accept the keyword);
+        # with two graph calls per gene question now, one such fault
+        # degrades ONE call and discloses it rather than discarding every
+        # event the run accumulated. Logged with the call id only.
+        logger.warning(
+            "cypher_query raised out of its own never-raises boundary (call %s, trace %s); "
+            "degrading this call to an error result",
+            call.call_id,
+            harness.trace_id,
+            exc_info=True,
+        )
+        return _error_outcome(
+            call,
+            "call failed unexpectedly",
+            "cypher_query call failed unexpectedly; the other layers' results stand",
         )
 
     # F-2.1-C13: a Cypher row's envelope is structured data (Section 6.1's
@@ -4507,6 +4775,60 @@ async def _execute_planned_call(
         result_count=output.row_count,
         truncated=output.truncated,
         pairs=pairs,
+    )
+
+
+def _search_ids(output: NcbiEfetchOutput) -> list[str]:
+    """The ids an `ncbi_efetch` search result carries, as strings, or []."""
+    if output.status != "ok":
+        return []
+    ids: list[str] = []
+    for record in output.records:
+        listed = record.fields.get("idlist")
+        if isinstance(listed, list):
+            ids.extend(str(value) for value in listed)
+    return ids
+
+
+def _follow_up_planned_call(
+    follow_up: _PlannedFollowUpCall, ids: list[str]
+) -> _PlannedNcbiEfetchToolCall | _PlannedLayerToolCall | None:
+    """Build the dispatchable call for one follow-up from the search's ids,
+    through `breadth_plan`'s own planners so the ids are sorted highest
+    first, deduplicated and capped there and nowhere else. The follow-up's
+    own `ToolCall` (and so its `call_id`) is kept, so the start frame
+    written at admission is the one this call closes. None when the
+    planner produced nothing for this purpose."""
+    if follow_up.source_purpose == "pubmed_search":
+        planned = breadth_plan.plan_literature_follow_up(ids)
+    elif follow_up.source_purpose == "clinvar_search":
+        planned = breadth_plan.plan_clinvar_follow_up(ids)
+    else:
+        return None
+    for call in planned:
+        if call.purpose != follow_up.purpose:
+            continue
+        if call.tool == "ncbi_efetch":
+            return _PlannedNcbiEfetchToolCall(
+                tool_call=follow_up.tool_call,
+                ncbi_efetch_input=call.tool_input,
+                purpose=call.purpose,
+            )
+        return _PlannedLayerToolCall(
+            tool_call=follow_up.tool_call, tool_input=call.tool_input, purpose=call.purpose
+        )
+    return None
+
+
+def _empty_follow_up_outcome(follow_up: _PlannedFollowUpCall, reason: str) -> _CallOutcome:
+    """A follow-up closed without a request: `empty`, with a summary that
+    says why, and no pair, since there is nothing to cite."""
+    return _CallOutcome(
+        status="empty",
+        summary=f"no ids to fetch: {reason}"[:1000],
+        result_count=0,
+        truncated=False,
+        pairs=[],
     )
 
 
@@ -4628,7 +4950,65 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         # which is what lets a layer's badge turn to done on its own.
         _close_tool_call(planned.tool_call, outcome)
 
-    await _gather_planned_calls([_run_one(planned) for planned in admitted])
+    # UI fix 11.21 wiring (2026-09-20): two stages. Every call whose input
+    # is already known runs first, concurrently as before. The follow-ups
+    # (`_PlannedFollowUpCall`) need the ids a first-stage search returned,
+    # so they run second, also concurrently, each built from its source
+    # search's outcome through `breadth_plan`'s own planners. A follow-up
+    # whose search failed, was skipped, or returned no ids is closed as
+    # `empty` with a disclosure and no request, so every start frame
+    # written above is closed and the answer degrades to the sources that
+    # did respond. The ceiling is re-read here: stage one has charged the
+    # budget since admission, and a follow-up that would now breach it is
+    # closed with the same refusal the transport would have raised.
+    first_stage = [p for p in admitted if not isinstance(p, _PlannedFollowUpCall)]
+    follow_ups = [p for p in admitted if isinstance(p, _PlannedFollowUpCall)]
+    await _gather_planned_calls([_run_one(planned) for planned in first_stage])
+
+    outcome_by_purpose: dict[str, _CallOutcome] = {}
+    for planned in first_stage:
+        purpose = getattr(planned, "purpose", "")
+        if purpose:
+            outcome_by_purpose[purpose] = outcomes[planned.tool_call.call_id]
+
+    second_stage: list[Any] = []
+    for follow_up in follow_ups:
+        source = outcome_by_purpose.get(follow_up.source_purpose)
+        if source is None or source.raw_output is None or source.status != "ok":
+            reason = (
+                f"the {follow_up.source_purpose} search did not complete"
+                if source is None or source.status == "error"
+                else f"the {follow_up.source_purpose} search returned none"
+            )
+            outcome = _empty_follow_up_outcome(follow_up, reason)
+            outcomes[follow_up.tool_call.call_id] = outcome
+            _close_tool_call(follow_up.tool_call, outcome)
+            continue
+        concrete = _follow_up_planned_call(follow_up, _search_ids(source.raw_output))
+        if concrete is None:
+            outcome = _empty_follow_up_outcome(
+                follow_up, f"the {follow_up.source_purpose} search returned none"
+            )
+            outcomes[follow_up.tool_call.call_id] = outcome
+            _close_tool_call(follow_up.tool_call, outcome)
+            continue
+        already_made = call_budget.calls_made()
+        if already_made is not None and already_made >= call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY:
+            cap_exceeded = True
+            outcome = _error_outcome(
+                follow_up.tool_call,
+                "refused: this query reached its Layer 2/3 API call ceiling",
+                (
+                    "refused: this query reached its Layer 2/3 API call "
+                    "ceiling (Section 21.3) before this follow-up was issued"
+                ),
+                cap_exceeded=True,
+            )
+            outcomes[follow_up.tool_call.call_id] = outcome
+            _close_tool_call(follow_up.tool_call, outcome)
+            continue
+        second_stage.append(concrete)
+    await _gather_planned_calls([_run_one(planned) for planned in second_stage])
 
     # Reassembled with every pair intact (`tool_calls[i]` and `results[i]`
     # pair 1:1, each call's quarantine pair directly behind its own), in
@@ -6014,6 +6394,50 @@ def _citations_from_grounded_claims(
     return citations
 
 
+def _row_behind_synth_finding(
+    findings: list[Finding], synth_finding: SynthFinding
+) -> dict[str, Any] | None:
+    """The pseudo-row a synth finding was built from, or None.
+
+    UI fix 11.21 wiring (2026-09-20). The three Layer 1 identity readers
+    below used to scan every `ok` finding's rows for the first one whose
+    `source_url` matched, on the reasoning that a URL is unique per record.
+    Two things the wiring adds break that reasoning, and both were found
+    live rather than by reading: the PubTator3 entity row and the gene's
+    GO rows all cite the SAME gene page, and the findings arrive in the
+    Layer 2, 3, 1 handoff order, so a GO row's CURIE lookup returned the
+    entity row's empty CURIE and three GO citations shipped as `source_id`
+    `unknown` under `source` `cypher_query`. So the lookup is narrowed
+    before it is widened: first the rows of the finding's OWN call, and
+    among those the row carrying the finding's own CURIE when it has one
+    (several GO rows share one URL), then the same call's first URL match,
+    then the old global URL scan, so every caller that never hit the
+    collision behaves exactly as before.
+    """
+    own_call: list[dict[str, Any]] = []
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        if synth_finding.call_id and finding.call_id == synth_finding.call_id:
+            own_call.extend(fields.get("rows", []))
+    matching = [r for r in own_call if str(r.get("source_url") or "") == synth_finding.source_url]
+    if synth_finding.curie:
+        for row in matching:
+            if str(row.get("curie") or "") == synth_finding.curie:
+                return row
+    if matching:
+        return matching[0]
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") == synth_finding.source_url:
+                return row
+    return None
+
+
 def _curie_for_citation(
     citation_id: str, findings: list[Finding], synth_finding: SynthFinding
 ) -> str:
@@ -6024,14 +6448,8 @@ def _curie_for_citation(
     the record identifier, not the field value. Looked up by `source_url`,
     which is derived from the CURIE and is therefore unique per record.
     """
-    for finding in findings:
-        fields = finding.structured_fields
-        if fields is None or fields.get("status") != "ok":
-            continue
-        for row in fields.get("rows", []):
-            if str(row.get("source_url") or "") == synth_finding.source_url:
-                return str(row.get("curie") or "")
-    return ""
+    row = _row_behind_synth_finding(findings, synth_finding)
+    return str(row.get("curie") or "") if row is not None else ""
 
 
 def _graph_snapshot_version_for_citation(
@@ -6049,15 +6467,11 @@ def _graph_snapshot_version_for_citation(
     produces carries this key; a defensive `None` here reads as
     "staleness not determined", never "assume fresh".
     """
-    for finding in findings:
-        fields = finding.structured_fields
-        if fields is None or fields.get("status") != "ok":
-            continue
-        for row in fields.get("rows", []):
-            if str(row.get("source_url") or "") == synth_finding.source_url:
-                version = row.get("graph_snapshot_version")
-                return str(version) if version else None
-    return None
+    row = _row_behind_synth_finding(findings, synth_finding)
+    if row is None:
+        return None
+    version = row.get("graph_snapshot_version")
+    return str(version) if version else None
 
 
 def _snapshot_date_for_citation(
@@ -6097,22 +6511,17 @@ def _entity_name_for_citation(
     does, so a flagged value is omitted rather than shown as if it were
     a plain, trustworthy fact.
     """
-    for finding in findings:
-        fields = finding.structured_fields
-        if fields is None or fields.get("status") != "ok":
-            continue
-        for row in fields.get("rows", []):
-            if str(row.get("source_url") or "") != synth_finding.source_url:
-                continue
-            row_fields = row.get("fields")
-            if not isinstance(row_fields, dict):
-                return None
-            if "name" in row.get("vocabulary_artifact_fields", []):
-                return None
-            name = row_fields.get("name")
-            if isinstance(name, str) and name.strip():
-                return name.strip()
-            return None
+    row = _row_behind_synth_finding(findings, synth_finding)
+    if row is None:
+        return None
+    row_fields = row.get("fields")
+    if not isinstance(row_fields, dict):
+        return None
+    if "name" in row.get("vocabulary_artifact_fields", []):
+        return None
+    name = row_fields.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
     return None
 
 
@@ -6856,6 +7265,19 @@ def _layer2_citation_for_synth_finding(
             break
 
     if raw_output is not None:
+        # UI fix 11.21 wiring (2026-09-20): `build_layer2_citation` cites
+        # the FIRST record carrying a `source_url`, which was always the
+        # right one while `dataset_report` returned exactly one record. A
+        # ClinVar summary returns up to ten and a PubMed fetch up to five,
+        # so the output is narrowed to the record whose URL this claim
+        # grounded against before the builder sees it; a claim on record
+        # seven is cited to record seven. Never widened, never guessed: if
+        # no record matches, the builder's own refusal path runs as before.
+        matched = [r for r in raw_output.records if r.source_url == synth_finding.source_url]
+        if matched:
+            raw_output = raw_output.model_copy(
+                update={"records": matched[:1], "record_count": 1}
+            )
         try:
             base_citation = build_layer2_citation(
                 raw_output, field=synth_finding.field, display_index=display_index
@@ -6999,10 +7421,13 @@ def _layer3_citation_for_synth_finding(
     """
     raw_output, row = _layer3_row_for_synth_finding(synth_finding, findings, layer3_raw_outputs)
     row_fields = (row or {}).get("fields") or {}
+    # UI fix 11.21 wiring (2026-09-20): a PubTator3 publication row's own
+    # identity is its `pmid`; found live as a `source_id` of `unknown`.
     identity = str(
         row_fields.get("nct_id")
         or row_fields.get("pubtator_id")
         or row_fields.get("rsid")
+        or row_fields.get("pmid")
         or synth_finding.curie
         or "unknown"
     )
@@ -7167,9 +7592,11 @@ def _answer_call_ids(planned_tool_calls: list[Any], question: str) -> frozenset[
         if call is None:
             continue
         asks_for_trials = any(word in lowered for word in _TRIALS_QUESTION_WORDS)
-        answers = call.layer == "layer_1_graph" or (
-            call.tool == "clinicaltrials_search" and asks_for_trials
-        )
+        # UI fix 11.21 wiring: the GO call is a graph call that supplies
+        # context, never the answer to the question's own shape.
+        answers = (
+            call.layer == "layer_1_graph" and not getattr(planned, "context_only", False)
+        ) or (call.tool == "clinicaltrials_search" and asks_for_trials)
         if answers:
             ids.add(call.call_id)
     return frozenset(ids)
@@ -7567,6 +7994,10 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # turn, and `plan_node` is the only place that fills it.
         defer_source_urls=frozenset(state.get("deferred_record_ids") or []),
         lead_call_ids=answer_call_ids,
+        # UI fix 11.21 wiring: the answer-shape calls take the first ten
+        # slots, then every context call shares the rest one row per
+        # round, so the breadth rows never crowd the graph answer out.
+        lead_quota=_LEAD_FINDINGS_QUOTA,
     )
 
     # Build phase 6.2, T-6.2-02. A `curie_fallback` finding is one whose own
