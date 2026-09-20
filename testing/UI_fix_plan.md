@@ -777,7 +777,7 @@ Unchanged from 2026-09-14, plus three new ones at the top.
 
 - Two worktrees are deliberately kept: `agent-a8393711bb57d579b` for 11.27 and 11.28, and `breadth-wiring` for the broad search. Neither is merged, and neither should be cleared away.
 - Set 10 is untouched. Its baseline folder `testing/Developer/reports/2026-09-12_consistency_baseline/` is still uncommitted.
-- The empty `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/writetest.txt` is still waiting for your word before it moves to the Trash. It was left alone.
+- The empty `writetest.txt` under `2026-09-14_live_check/after_e5947e0/` is GONE, moved to the Trash on 2026-09-20 at the product owner's word. It is recoverable from there. The rest of that folder is real evidence and stays.
 - Review findings N-04 and N-06 remain open and minor, with owners, in the 11.21 review file.
 - The nine test files that hardcode a credential-less `USER_DB_URL` are now harmless behind the conftest guard, but switching them to the ambient form is a worthwhile tidy-up.
 
