@@ -21,6 +21,26 @@ It will:
 
 Wait for docs-sync to complete before proceeding. Its edits may add files to the commit.
 
+## Step 1b: stray file sweep
+
+Run `git status --porcelain` and account for EVERY untracked path before anything is staged. Each one is either work that belongs in the commit, work that belongs in `.gitignore`, or a leftover to remove. There is no fourth category, and "I did not look" is not one of them.
+
+Where scratch actually lives, because this is the part that gets assumed wrongly in both directions:
+
+- The session scratchpad is OUTSIDE the repository, under the harness's own temp directory. Nothing in it is tracked, nothing in it can be committed, and committing does not touch it. There is no cleanup to do there and no risk to guard against.
+- The risk is a file written INSIDE the repository by mistake: a probe script, a measurement dump, a log, an `out.txt`, a half-written report. That one is invisible to the reasoning above and is exactly what this sweep is for.
+
+For each untracked path, say which it is and why, in one clause:
+
+| What it is | What to do |
+|---|---|
+| Work that belongs in this commit | Stage it by name |
+| Output worth keeping but not committing (a large dump, a local measurement) | Add it to `.gitignore`, or move it under a path already ignored |
+| A leftover probe, log or temp file | Remove it, and SAY SO in the report rather than removing it silently |
+| Something you did not create and cannot classify | Leave it, name it in the report, and ask. Never remove a file whose purpose you do not know |
+
+Removing a leftover follows `file-protection`: inform first, and prefer moving to the Trash over `rm`, so a wrong call is recoverable.
+
 ## Step 2: git-sync agent
 
 Dispatch the `git-sync` sub-agent (`.claude/agents/git-sync.md`) with a "push" operation.
@@ -67,6 +87,7 @@ This step is deletion, so it follows `file-protection`: say what is going before
 - If docs-sync says "no changes needed" but there are uncommitted code changes, still proceed to git-sync
 - If there is nothing to commit at all, report that and stop
 - Do NOT push if the commit would include `.env`, secrets, or anything in the gitignore. Block and ask
+- Do NOT push with an unexplained untracked file in the tree. Every path from `git status --porcelain` is classified at Step 1b, or the push waits.
 - Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
 
 ## Output
@@ -76,5 +97,6 @@ After all three steps complete, report:
 1. Files changed (count + list)
 2. Commit hash
 3. Push status (pushed / nothing to push / blocked)
-4. Worktrees and `worktree-agent-*` branches removed, and anything skipped with the reason
-5. One-line summary of what was shipped
+4. Every untracked path that was found, and what happened to each: staged, ignored, removed, or left with a question
+5. Worktrees and `worktree-agent-*` branches removed, and anything skipped with the reason
+6. One-line summary of what was shipped

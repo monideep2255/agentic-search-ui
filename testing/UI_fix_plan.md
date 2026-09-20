@@ -638,11 +638,11 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live | Checked live: a real selection of 1,703 characters holds no "Source N, layer" or "Sources X to" text |
 | 11.15 | The answer does not stream | Live in part | The screen reveals sentences one by one after the writing banner. The backend still sends the whole answer at once until 11.16 lands |
 | 11.16 | Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready | In progress | The screen parts are live. The backend part is built in an isolated copy and passes its own gates (667 core tests, 0 failed, stable prefix unchanged). It sends a "writing has started" signal and each checked sentence live. Sentences still arrive close together, because checking needs the whole draft. Under independent review now; lands after review and when you say |
-| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Queued, approved | Audit done: the narrow search is our fixed plan in code, not the models. Build approved on 2026-09-14 as 11.21; starts after 11.12 lands on develop and the backend streaming fix in 11.16 |
+| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Built, not live | Answered and built. The narrow search was our fixed plan in code, not the models. The broader plan is built on `worktree-breadth-wiring` and held with 11.21, same reason. Abstracts as written evidence remain out of scope, item 11.22 |
 | 11.18 | Search everything in all three layers, sources exact; is the harness or the open-source model to blame? | Answered | The harness: a fixed plan of one graph query and four live calls per gene, one fact per record. The models do not choose what is searched. Fix is 11.21 |
 | 11.19 | "Variants in GCK causing MODY" should answer every time | Live | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
 | 11.20 | "What genes are associated with MODY?" should answer | Live | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. On develop: 5 of 5 repeated runs, one source set, plus the browser check |
-| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | In progress | One fixed plan per question shape across all three layers, deterministic inputs, stable sort and a cap per source. The pieces outside `graph.py` passed two review rounds and are being finished: 10 per second NCBI rate, the Datasets summary, GO terms citeable only through a single-gene lookup, PMC, the OMIM filter and the fixed plan. They land after you finish sharing. The wiring in `graph.py` follows 11.16 |
+| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Built, not live | The tool layer is on develop. The wiring that actually uses it is built and measured on `worktree-breadth-wiring` and is NOT merged: one test fails there that we cannot yet explain. Measured on that branch: retrieval returns the same findings on every run, the worst question spends 17 of its 20 allowed outside calls, latency is unchanged. Two caveats that are yours to settle, not engineering's: OMIM is never searched because its web address fails our citation rule, and the CITED set can still vary because the model picks which findings to cite. Separately, finding L-01 shows this requirement failing on the LIVE site today |
 | 11.22 | PubMed and PMC should provide context for the answers | Queued, approved | Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
 | 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered | Measured from NCBI's own header: your key allows 10 per second (3 without a key). 100 needs a separate arrangement with NCBI. The limiter moves from 3 to 10 as part of 11.21 |
 | 11.24 | How do I test what is built so far? | Answered | A test walk-through is given once the current work is on develop |
@@ -666,6 +666,19 @@ Five things were on the list. Three are done, one is built but held back with a 
 | 3 | Land the broad search wiring, 11.17 and 11.21 | BUILT AND MEASURED, NOT MERGED. One suite failure on the branch is still unexplained, so its verify surface is not met. Explained below |
 | 4 | Report the live failure rate with any error payload | DONE, and it found a different defect instead |
 | 5 | Refresh the documents | DONE, this section included |
+
+### If you are testing this morning, read this first
+
+| | |
+|---|---|
+| Where | `https://search-agent-web-develop-2aeb.up.railway.app` |
+| State | Deployed and healthy. Both develop services report SUCCESS |
+| Worth testing | Nothing new. No fix a person can see landed overnight |
+| Why | The two finished UI fixes, 11.27 and 11.28, were merged and then taken back out the same night. The product behaves exactly as it did on 2026-09-14, now on a green build |
+
+If you do test, the one thing worth doing is asking the SAME question several times and
+watching whether the source count changes. That is finding L-01 below, it is live right
+now, and a second pair of eyes on how it looks to a reader would be useful.
 
 ### On develop now, pushed and live
 
@@ -767,6 +780,13 @@ Unchanged from 2026-09-14, plus three new ones at the top.
 - The empty `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/writetest.txt` is still waiting for your word before it moves to the Trash. It was left alone.
 - Review findings N-04 and N-06 remain open and minor, with owners, in the 11.21 review file.
 - The nine test files that hardcode a credential-less `USER_DB_URL` are now harmless behind the conftest guard, but switching them to the ambient form is a worthwhile tidy-up.
+
+### The session boundary
+
+Work stopped on 2026-09-20 and resumes in a NEW session. Nothing is half-finished: the
+working tree is clean, develop is pushed, CI is green, both develop services are SUCCESS.
+The two worktrees are the only work in flight and both are parked deliberately, each with
+its reason written above.
 
 ### How to start the next session
 

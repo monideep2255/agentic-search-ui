@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-14.
+Last updated: 2026-09-20.
 
 ## Table of contents
 
@@ -139,7 +139,13 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 13 SEPTEMBER: the screens are steadier now, and the biggest remaining problem is the answers themselves. Most real questions are still refused or answered thinly, only two of our seven lookup tools are actually being used, and the literature and clinical-trials tools are never reached at all.
+THE HONEST HEADLINE AS OF 20 SEPTEMBER: the automatic checks that guard the code had been failing for five days and are now passing again, but nothing a user would notice got better. Two finished improvements, less heavy bold text and a slower, more watchable transition into the answer, were put in and then taken straight back out because a check failed in a way we could not explain in the moment. The bigger piece, searching more of the medical databases for every question, is built and measured but is being held back for the same reason.
+
+The most useful thing we learned overnight was not a fix. We asked the same question six times and got three different sets of sources back: eighteen sources, then thirteen, then eight. That is exactly the thing the product owner asked us to guarantee, and it is failing on the live site today. Every source that came and went was from our own stored copy of the medical data rather than from the live lookups, which narrows where to look considerably.
+
+One thing that did improve, quietly: the product answered thirty out of thirty live searches with no failures. Together with the day before, that is forty-five clean runs in a row, against roughly one in ten failing a week ago. We have not fixed that failure and we are not claiming we have. The instrument we built to catch it has been running the whole time and has never once caught it firing.
+
+THE HONEST HEADLINE AS OF 13 SEPTEMBER, kept for the record: the screens are steadier now, and the biggest remaining problem is the answers themselves. Most real questions are still refused or answered thinly, only two of our seven lookup tools are actually being used, and the literature and clinical-trials tools are never reached at all.
 
 A few more things worth saying plainly, from the product owner's first round of testing:
 
@@ -208,6 +214,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Getting the safety checks working again, and measuring what is really wrong | The automatic checks that run on every change had been failing for five days. The cause turned out to be three separate problems in the tests themselves, not in the product, one of which could have pointed the system at the wrong database. Fixed all three without weakening any check. Then measured the live site properly and found that the same question can return three different sets of sources | 20 September |
 | Making it easier on the eye, and writing down what it must do | Rebuilt the sign-in screen, which had never been designed at all and looked like a raw form. Removed a permanent warning strip that sat on every screen and took up a tenth of a phone display. Made the top bar work on a phone instead of overlapping itself. Gave the integrations page working copy buttons and real links, where before it was text you could only read. Fixed a privacy problem where one person's conversation stayed on screen for the next person. And wrote down, for the first time, the fifty things the product must be able to do, ranked so the most important come first | 5 September |
 | A budget on how much we ask of others | Capped how many requests one question may make of the public medical databases, and made a quick question give up waiting sooner than a deep one | 31 August |
 | 1.0 | The skeleton of the service, and the fixed format every answer travels in | 2026-07-27 |
@@ -489,9 +496,11 @@ Where the finished work sits against what is still ahead:
 
 THE IMMEDIATE NEXT STEP IS ALREADY UNDERWAY. The product owner is testing the product directly against a written plan, and their findings are what decide the order below, rather than a number on an old list.
 
-1. Finish the search box adjustment already in progress, then the next screen fixes. Right now the Search button always sits in the same spot; the change being built puts it beside the question for a short one and moves it below the question once it wraps onto a second line. After that: calmer refusal messages that carry a clickable link to the real NCBI record, and a clear "Search stopped" screen with a Run again button, for when a search is stopped on purpose.
-2. The rest of the screen work: staying signed in after you reload the page, so your search history does not vanish behind a sign-in wall (and making that history usable on a phone), a properly finished Integrations page, and a bigger, clearer disclaimer notice.
-3. The answer work, which is the bigger prize: follow-up questions that remember what you already asked, searching all three of our data sources instead of mostly two, better-written answers, and getting our most important test questions to answer reliably every single time.
+1. Decide the held-back search improvement. It is built and measured: it searches far more of the medical databases for each question, it stays inside its budget, and it does not make answers noticeably slower. One test fails on it that we cannot yet explain, and until we understand why, it does not go live. Understanding that failure is the single next task.
+2. Settle the two improvements that were put in and taken back out. One of them, reducing the amount of heavy bold text, is almost certainly fine on its own and only came out because it travelled with the other. Landing it alone is the quickest visible win available.
+3. Find out why the same question returns different sources on different tries. We know half the cause and have a fix for that half sitting on the held-back branch. The other half is still unexplained.
+4. Catch the intermittent failure in the act. About one search in ten used to fail a week ago and none have failed in forty-five tries since, but nothing was fixed, so it is hiding rather than gone.
+5. The rest of the screen work, unchanged: staying signed in after a reload so your search history does not vanish, a usable history on a phone, and a bigger, clearer disclaimer notice.
 
 The previous first step, "make the answers readable", is done and merged, which is why it has left this list.
 
@@ -581,8 +590,11 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| About 1 search in 10 ends with "could not be completed" instead of an answer. Asking the same question again works. We have not yet found the cause, because the failures did not happen again when we tried to catch them | Next session: record the error behind every failed search so the next one names its cause |
-| Some answers have too many words in bold, so nothing stands out | Being built: only the question and the main point stay bold |
+| About 1 search in 10 used to end with "could not be completed" instead of an answer. It has not happened once in the last forty-five tries, but nothing was fixed, so it is hiding rather than gone. The recorder built to capture the cause has been running the whole time and has never caught it | Still open. The next step is to catch one in the act rather than to assume it has left |
+| The same question can return a different set of sources each time it is asked. Asked six times, one question gave eighteen sources, then thirteen, then eight. This is the thing the product owner specifically asked us to guarantee, and it is failing on the live site today | Half of it has a known cause and a fix waiting on the held-back branch. The other half is not yet understood, and finding it is on the next session's list |
+| Some answers have too many words in bold, so nothing stands out | Built and finished, then taken back out. It was put in alongside a second change, that second change failed a check, and both came out together. Landing this one on its own is the next quick win |
+| The move from searching to the written answer is too abrupt to follow | Built and taken back out with the bold fix above. One real question is open: when a search ends without a proper finish signal, the steps may stop appearing part way. Until we know whether that is a genuine fault or just our test machine being overloaded, it stays out |
+| A test fails on the held-back search improvement and we cannot explain it. It passes on its own and passes alongside its neighbours, and fails only when the whole suite runs on that one branch | Before that improvement goes live, and not after. An unexplained failure on the path every question takes is exactly what caused the other two changes to be pulled |
 | Answers can take more than twenty-five seconds. We had believed twelve to fourteen and were wrong: we filmed the live site and the answer had not arrived at twenty-five, with fifteen of those seconds showing no change on screen at all. The waiting is now visible, which is honest rather than fast | NOT ASSIGNED. This is the largest problem on this page with nobody working on it |
 | The system reports the cost of answering a question as zero, which cannot be right. No spending figure should be trusted until this is understood | Not yet scheduled. It matters because the daily spending limits read this number |
 | The page listing ways to connect other software may already be fine. It was described as advertising things nobody can use, but that was checked against the real site rather than the practice one, and the practice site has no such dead button. We do not yet know which is true of the real site | Needs one check against the real site before anyone decides |
