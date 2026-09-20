@@ -1,0 +1,497 @@
+{
+  "base_url": "https://search-agent-api-develop-43b3.up.railway.app",
+  "questions": [
+    "Which diseases are associated with BRCA1?",
+    "What diseases are caused by variants in the HNF1A gene?",
+    "Variants in GCK causing MODY",
+    "What genes are associated with MODY?",
+    "Show the dbSNP record for rs28934578 in TP53"
+  ],
+  "depths": [
+    "researcher",
+    "plain_language"
+  ],
+  "n_per_cell": 3,
+  "runs": [
+    {
+      "question": "Which diseases are associated with BRCA1?",
+      "depth": "researcher",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 18.3,
+      "answer_text": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\n\n\nThe knowledge graph associates BRCA1 with four diseases: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. \n\n\n\nLiterature evidence\n\n\nPubMed records retrieved for BRCA1 include An Accessible Approach to Molecular and Biomarker Testing for Risk Stratification in Oral Cavity Squamous Cell Carcinoma [5], The BRCA1 coiled-coil domain is dispensable for suppression of tandem duplications and tolerance of FANCM loss [6], Mechanisms and disease relevance of DNA break repair pathway choice [7], and Beyond poly(ADP-ribose) polymerase inhibition: emerging therapeutic strategies for germline BRCA1/2-mutated and PALB2-mutated breast cancers [8]. \n\n\n\nDisease records found\n\n\nDisease name: Familial cancer of breast [1]. \nDisease name: Familial breast-ovarian cancer susceptibility 1 [2]. \nDisease name: Pancreatic cancer susceptibility 4 [3]. \nDisease name: Fanconi anemia complementation group S [4]. \n\n\n\nGene records found\n\n\ngene symbol: BRCA1 [9]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_007294.4(BRCA1):c.134+5del [10]. \nclinvar title: NM_007294.4(BRCA1):c.3114del (p.Ala1039fs) [14]. \nclinvar title: NM_007294.4(BRCA1):c.726_727del (p.Ser242fs) [17]. \nclinvar title: NM_007294.4(BRCA1):c.4210C>A (p.Leu1404Met) [20]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: BRCA1 [11]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [12]. \nClinical trial name: BRCA1 Haploinsufficiency and Gene Expression [15]. \nClinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [18]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [13]. \nBiologicalProcess GO:0006281, name: DNA repair [16]. \nBiologicalProcess GO:0006282, name: regulation of DNA repair [19]. \n\n\n\nNote: this result was truncated. Showing 20 of 44 matching rows; the rest are not shown above.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": false
+      },
+      "source_count": 20,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Which diseases are associated with BRCA1?",
+      "depth": "researcher",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 20.1,
+      "answer_text": "Found 4 disease records for BRCA1 and diseases: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\n\n\nBRCA1 is associated with Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. \n\n\n\nDisease records found\n\n\nDisease name: Familial cancer of breast [1]. \nDisease name: Familial breast-ovarian cancer susceptibility 1 [2]. \nDisease name: Pancreatic cancer susceptibility 4 [3]. \nDisease name: Fanconi anemia complementation group S [4]. \n\n\n\nGene records found\n\n\ngene symbol: BRCA1 [5]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_007294.4(BRCA1):c.134+5del [6]. \nclinvar title: NM_007294.4(BRCA1):c.3114del (p.Ala1039fs) [10]. \nclinvar title: NM_007294.4(BRCA1):c.726_727del (p.Ser242fs) [13]. \nclinvar title: NM_007294.4(BRCA1):c.4210C>A (p.Leu1404Met) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: BRCA1 [7]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [8]. \nClinical trial name: BRCA1 Haploinsufficiency and Gene Expression [11]. \nClinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [9]. \nBiologicalProcess GO:0006281, name: DNA repair [12]. \nBiologicalProcess GO:0006282, name: regulation of DNA repair [15]. \n\n\n\nNote: this result was truncated. Showing 16 of 48 matching rows; the rest are not shown above.\n\n\n\nNote: this answer does not address the following entities named in the question: Autosomal dominant mendelian susceptibility to mycobacterial diseases due to a partial deficiency, Autosomal recessive mendelian susceptibility to mycobacterial diseases due to a complete deficiency, Autosomal recessive mendelian susceptibility to mycobacterial diseases due to a partial deficiency, Cerebral diseases of vascular origin with epilepsy, Alpha-thalassemia and related diseases, Qualitative or quantitative protein defects in neuromuscular diseases, Alpha-thalassemia-related diseases, Systemic diseases with anterior uveitis. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Which diseases are associated with BRCA1?",
+      "depth": "researcher",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 15.3,
+      "answer_text": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\n\n\nBRCA1 is associated with Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. \n\n\n\nDisease records found\n\n\nDisease name: Familial cancer of breast [1]. \nDisease name: Familial breast-ovarian cancer susceptibility 1 [2]. \nDisease name: Pancreatic cancer susceptibility 4 [3]. \nDisease name: Fanconi anemia complementation group S [4]. \n\n\n\nGene records found\n\n\ngene symbol: BRCA1 [5]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_007294.4(BRCA1):c.134+5del [6]. \nclinvar title: NM_007294.4(BRCA1):c.3114del (p.Ala1039fs) [10]. \nclinvar title: NM_007294.4(BRCA1):c.726_727del (p.Ser242fs) [13]. \nclinvar title: NM_007294.4(BRCA1):c.4210C>A (p.Leu1404Met) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: BRCA1 [7]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [8]. \nClinical trial name: BRCA1 Haploinsufficiency and Gene Expression [11]. \nClinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [9]. \nBiologicalProcess GO:0006281, name: DNA repair [12]. \nBiologicalProcess GO:0006282, name: regulation of DNA repair [15]. \n\n\n\nNote: this result was truncated. Showing 16 of 44 matching rows; the rest are not shown above.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Which diseases are associated with BRCA1?",
+      "depth": "plain_language",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 9.6,
+      "answer_text": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\n\n\nThe diseases associated with BRCA1 are Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. \nThe gene symbol for this gene is BRCA1 [5], and a literature entity name for it is BRCA1 [6]. \n\n\n\nClinVar records include NM_007294.4(BRCA1):c.134+5del [7], NM_007294.4(BRCA1):c.3114del (p.Ala1039fs) [8], NM_007294.4(BRCA1):c.726_727del (p.Ser242fs) [9], and NM_007294.4(BRCA1):c.4210C>A (p.Leu1404Met) [10]. \n\n\n\nDisease records found\n\n\nDisease name: Familial cancer of breast [1]. \nDisease name: Familial breast-ovarian cancer susceptibility 1 [2]. \nDisease name: Pancreatic cancer susceptibility 4 [3]. \nDisease name: Fanconi anemia complementation group S [4]. \n\n\n\nGene records found\n\n\ngene symbol: BRCA1 [5]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_007294.4(BRCA1):c.134+5del [7]. \nclinvar title: NM_007294.4(BRCA1):c.3114del (p.Ala1039fs) [8]. \nclinvar title: NM_007294.4(BRCA1):c.726_727del (p.Ser242fs) [9]. \nclinvar title: NM_007294.4(BRCA1):c.4210C>A (p.Leu1404Met) [10]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: BRCA1 [6]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [11]. \nClinical trial name: BRCA1 Haploinsufficiency and Gene Expression [13]. \nClinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [15]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [12]. \nBiologicalProcess GO:0006281, name: DNA repair [14]. \nBiologicalProcess GO:0006282, name: regulation of DNA repair [16]. \n\n\n\nNote: this result was truncated. Showing 16 of 44 matching rows; the rest are not shown above.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Which diseases are associated with BRCA1?",
+      "depth": "plain_language",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 14.0,
+      "answer_text": "Found 4 disease records for BRCA1 and diseases: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\n\n\nThe diseases associated with BRCA1 are Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. \nThe gene symbol is BRCA1 [5], and a literature entity name is BRCA1 [6]. \n\n\n\nDisease records found\n\n\nDisease name: Familial cancer of breast [1]. \nDisease name: Familial breast-ovarian cancer susceptibility 1 [2]. \nDisease name: Pancreatic cancer susceptibility 4 [3]. \nDisease name: Fanconi anemia complementation group S [4]. \n\n\n\nGene records found\n\n\ngene symbol: BRCA1 [5]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_007294.4(BRCA1):c.134+5del [7]. \nclinvar title: NM_007294.4(BRCA1):c.3114del (p.Ala1039fs) [10]. \nclinvar title: NM_007294.4(BRCA1):c.726_727del (p.Ser242fs) [13]. \nclinvar title: NM_007294.4(BRCA1):c.4210C>A (p.Leu1404Met) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: BRCA1 [6]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [8]. \nClinical trial name: BRCA1 Haploinsufficiency and Gene Expression [11]. \nClinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [9]. \nBiologicalProcess GO:0006281, name: DNA repair [12]. \nBiologicalProcess GO:0006282, name: regulation of DNA repair [15]. \n\n\n\nNote: this result was truncated. Showing 16 of 48 matching rows; the rest are not shown above.\n\n\n\nNote: this answer does not address the following entities named in the question: Autosomal dominant mendelian susceptibility to mycobacterial diseases due to a partial deficiency, Autosomal recessive mendelian susceptibility to mycobacterial diseases due to a complete deficiency, Autosomal recessive mendelian susceptibility to mycobacterial diseases due to a partial deficiency, Cerebral diseases of vascular origin with epilepsy, Alpha-thalassemia and related diseases, Qualitative or quantitative protein defects in neuromuscular diseases, Alpha-thalassemia-related diseases, Systemic diseases with anterior uveitis. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Which diseases are associated with BRCA1?",
+      "depth": "plain_language",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 14.8,
+      "answer_text": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\n\n\nThe diseases associated with BRCA1 are familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. \nThe gene symbol for this gene is BRCA1 [5]. \n\n\n\nDisease records found\n\n\nDisease name: Familial cancer of breast [1]. \nDisease name: Familial breast-ovarian cancer susceptibility 1 [2]. \nDisease name: Pancreatic cancer susceptibility 4 [3]. \nDisease name: Fanconi anemia complementation group S [4]. \n\n\n\nGene records found\n\n\ngene symbol: BRCA1 [5]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_007294.4(BRCA1):c.134+5del [6]. \nclinvar title: NM_007294.4(BRCA1):c.3114del (p.Ala1039fs) [10]. \nclinvar title: NM_007294.4(BRCA1):c.726_727del (p.Ser242fs) [13]. \nclinvar title: NM_007294.4(BRCA1):c.4210C>A (p.Leu1404Met) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: BRCA1 [7]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [8]. \nClinical trial name: BRCA1 Haploinsufficiency and Gene Expression [11]. \nClinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [9]. \nBiologicalProcess GO:0006281, name: DNA repair [12]. \nBiologicalProcess GO:0006282, name: regulation of DNA repair [15]. \n\n\n\nNote: this result was truncated. Showing 16 of 44 matching rows; the rest are not shown above.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What diseases are caused by variants in the HNF1A gene?",
+      "depth": "researcher",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 14.5,
+      "answer_text": "Found 3 sequence variant records for HNF1A: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [1], NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [3] and NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [8], linked to 6 diseases: Maturity-onset diabetes of the young [2], Diabetes mellitus type 1 [4], Type 2 diabetes mellitus [5], Maturity-onset diabetes of the young type 3 [6], Type 1 diabetes mellitus 20 [7] and Monogenic diabetes [9]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young [2]. \nDisease name: Diabetes mellitus type 1 [4]. \nDisease name: Type 2 diabetes mellitus [5]. \nDisease name: Maturity-onset diabetes of the young type 3 [6]. \nDisease name: Type 1 diabetes mellitus 20 [7]. \nDisease name: Monogenic diabetes [9]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1025247, name: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [1]. \nSequenceVariant ClinVar:1026109, name: NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [3]. \nSequenceVariant ClinVar:1033090, name: NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [8]. \n\n\n\nGene records found\n\n\ngene symbol: HNF1A [10]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000545.8(HNF1A):c.4G>T (p.Val2Phe) [11]. \nclinvar title: NM_000545.8(HNF1A):c.611T>A (p.Phe204Tyr) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: HNF1A [12]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [13]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42639261 [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [15]. \n\n\n\nNote: this result was truncated. Showing 16 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above\n\n\n\n3 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What diseases are caused by variants in the HNF1A gene?",
+      "depth": "researcher",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 11.3,
+      "answer_text": "Found 3 sequence variant records for HNF1A: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [3], NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [5] and NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [10], linked to 6 diseases: Maturity-onset diabetes of the young [4], Diabetes mellitus type 1 [6], Type 2 diabetes mellitus [7], Maturity-onset diabetes of the young type 3 [8], Type 1 diabetes mellitus 20 [9] and Monogenic diabetes [11]. \n\n\n\nAdditional ClinVar records include NM_000545.8(HNF1A):c.4G>T (p.Val2Phe) [1] and NM_000545.8(HNF1A):c.611T>A (p.Phe204Tyr) [2]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young [4]. \nDisease name: Diabetes mellitus type 1 [6]. \nDisease name: Type 2 diabetes mellitus [7]. \nDisease name: Maturity-onset diabetes of the young type 3 [8]. \nDisease name: Type 1 diabetes mellitus 20 [9]. \nDisease name: Monogenic diabetes [11]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1025247, name: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [3]. \nSequenceVariant ClinVar:1026109, name: NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [5]. \nSequenceVariant ClinVar:1033090, name: NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [10]. \n\n\n\nGene records found\n\n\ngene symbol: HNF1A [12]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000545.8(HNF1A):c.4G>T (p.Val2Phe) [1]. \nclinvar title: NM_000545.8(HNF1A):c.611T>A (p.Phe204Tyr) [2]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: HNF1A [13]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [14]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42639261 [15]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [16]. \n\n\n\nNote: this result was truncated. Showing 16 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above\n\n\n\n3 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What diseases are caused by variants in the HNF1A gene?",
+      "depth": "researcher",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 127.1,
+      "answer_text": "Found 1 gene record, 4 clinvar records, 1 literature entity record, 4 clinical trial records, 3 publication records and 3 biological process records for HNF1A and diseases [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]. \n\n\n\nGene records found\n\n\ngene symbol: HNF1A [1]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000545.8(HNF1A):c.4G>T (p.Val2Phe) [2]. \nclinvar title: NM_000545.8(HNF1A):c.611T>A (p.Phe204Tyr) [7]. \nclinvar title: NM_000545.8(HNF1A):c.132G>T (p.Leu44=) [11]. \nclinvar title: NM_000545.8(HNF1A):c.1134C>G (p.Pro378=) [15]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: HNF1A [3]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [4]. \nClinical trial name: Using Pharmacogenetics to Improve Treatment in Early-onset Diabetes [8]. \nClinical trial name: Modulation of Cerebral Blood Flow Using Iron Chelators [12]. \nClinical trial name: Modulation of Cerebral Blood Flow Using Quercetin, a Nutritional Supplement [16]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42639261 [5]. \nPublication pmid: 42663735 [9]. \nPublication pmid: 42677197 [13]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [6]. \nBiologicalProcess GO:0001889, name: liver development [10]. \nBiologicalProcess GO:0006357, name: regulation of transcription by RNA polymerase II [14]. \n\n\n\nNote: this result was truncated. Showing 16 of 25 matching rows; the rest are not shown above.\n\n\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\n\n\nNote: this answer does not address the following entities named in the question: Autosomal dominant mendelian susceptibility to mycobacterial diseases due to a partial deficiency, Autosomal recessive mendelian susceptibility to mycobacterial diseases due to a complete deficiency, Autosomal recessive mendelian susceptibility to mycobacterial diseases due to a partial deficiency, Cerebral diseases of vascular origin with epilepsy, Alpha-thalassemia and related diseases, Qualitative or quantitative protein defects in neuromuscular diseases, Alpha-thalassemia-related diseases, Systemic diseases with anterior uveitis. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": true,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What diseases are caused by variants in the HNF1A gene?",
+      "depth": "plain_language",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 13.6,
+      "answer_text": "Found 3 sequence variant records for HNF1A: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [3], NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [5] and NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [10], linked to 6 diseases: Maturity-onset diabetes of the young [4], Diabetes mellitus type 1 [6], Type 2 diabetes mellitus [7], Maturity-onset diabetes of the young type 3 [8], Type 1 diabetes mellitus 20 [9] and Monogenic diabetes [11]. \n\n\n\nThe gene symbol HNF1A [1]. \nOne clinical trial is titled Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [2]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young [4]. \nDisease name: Diabetes mellitus type 1 [6]. \nDisease name: Type 2 diabetes mellitus [7]. \nDisease name: Maturity-onset diabetes of the young type 3 [8]. \nDisease name: Type 1 diabetes mellitus 20 [9]. \nDisease name: Monogenic diabetes [11]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1025247, name: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [3]. \nSequenceVariant ClinVar:1026109, name: NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [5]. \nSequenceVariant ClinVar:1033090, name: NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [10]. \n\n\n\nGene records found\n\n\ngene symbol: HNF1A [1]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000545.8(HNF1A):c.4G>T (p.Val2Phe) [12]. \nclinvar title: NM_000545.8(HNF1A):c.611T>A (p.Phe204Tyr) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: HNF1A [13]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [2]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42639261 [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [15]. \n\n\n\nNote: this result was truncated. Showing 16 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above\n\n\n\n3 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed.\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What diseases are caused by variants in the HNF1A gene?",
+      "depth": "plain_language",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 10.7,
+      "answer_text": "Found 3 sequence variant records for HNF1A: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [2], NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [4] and NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [9], linked to 6 diseases: Maturity-onset diabetes of the young [3], Diabetes mellitus type 1 [5], Type 2 diabetes mellitus [6], Maturity-onset diabetes of the young type 3 [7], Type 1 diabetes mellitus 20 [8] and Monogenic diabetes [10]. \n\n\n\nThe gene symbol is \"HNF1A\" [1]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young [3]. \nDisease name: Diabetes mellitus type 1 [5]. \nDisease name: Type 2 diabetes mellitus [6]. \nDisease name: Maturity-onset diabetes of the young type 3 [7]. \nDisease name: Type 1 diabetes mellitus 20 [8]. \nDisease name: Monogenic diabetes [10]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1025247, name: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [2]. \nSequenceVariant ClinVar:1026109, name: NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [4]. \nSequenceVariant ClinVar:1033090, name: NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [9]. \n\n\n\nGene records found\n\n\ngene symbol: HNF1A [1]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000545.8(HNF1A):c.4G>T (p.Val2Phe) [11]. \nclinvar title: NM_000545.8(HNF1A):c.611T>A (p.Phe204Tyr) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: HNF1A [12]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [13]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42639261 [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [15]. \n\n\n\nNote: this result was truncated. Showing 16 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above\n\n\n\n3 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed.\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What diseases are caused by variants in the HNF1A gene?",
+      "depth": "plain_language",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 11.1,
+      "answer_text": "Found 3 sequence variant records for HNF1A: NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [1], NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [2] and NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [5], linked to 6 diseases: Maturity-onset diabetes of the young [6], Diabetes mellitus type 1 [7], Type 2 diabetes mellitus [8], Maturity-onset diabetes of the young type 3 [9], Type 1 diabetes mellitus 20 [10] and Monogenic diabetes [11]. \n\n\n\nClinVar:1026109, named NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [1]. \nClinVar:1033090, named NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [2]. \n\n\n\nThe gene symbol is HNF1A [3]. \nA clinical trial titled Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [4]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young [6]. \nDisease name: Diabetes mellitus type 1 [7]. \nDisease name: Type 2 diabetes mellitus [8]. \nDisease name: Maturity-onset diabetes of the young type 3 [9]. \nDisease name: Type 1 diabetes mellitus 20 [10]. \nDisease name: Monogenic diabetes [11]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1025247, name: NM_000545.8(HNF1A):c.780G>A (p.Thr260=) [5]. \nSequenceVariant ClinVar:1026109, name: NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del) [1]. \nSequenceVariant ClinVar:1033090, name: NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg) [2]. \n\n\n\nGene records found\n\n\ngene symbol: HNF1A [3]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000545.8(HNF1A):c.4G>T (p.Val2Phe) [12]. \nclinvar title: NM_000545.8(HNF1A):c.611T>A (p.Phe204Tyr) [16]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: HNF1A [13]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function [4]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42639261 [14]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [15]. \n\n\n\nNote: this result was truncated. Showing 16 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above\n\n\n\n3 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed.\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 16,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Variants in GCK causing MODY",
+      "depth": "researcher",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 23.0,
+      "answer_text": "Found 10 sequence variant records for GCK and MODY [1][3][4][5][6][7][8][9][10][11], linked to 1 disease: Maturity-onset diabetes of the young type 2 [2]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 2 [2]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1028584, name: NM_000162.5(GCK):c.415A>T (p.Met139Leu) [1]. \nSequenceVariant ClinVar:1098819, name: NM_000162.5(GCK):c.1139A>C (p.His380Pro) [3]. \nSequenceVariant ClinVar:1172896, name: NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [4]. \nSequenceVariant record ClinVar:1188508 [5]. \nSequenceVariant ClinVar:1210150, name: NM_000162.5(GCK):c.386G>A (p.Cys129Tyr) [6]. \nSequenceVariant ClinVar:129144, name: NM_000162.5(GCK):c.544G>A (p.Val182Met) [7]. \nSequenceVariant record ClinVar:129147 [8]. \nSequenceVariant ClinVar:1299600, name: NM_000162.5(GCK):c.142G>A (p.Glu48Lys) [9]. \nSequenceVariant ClinVar:1301411, name: NM_000162.5(GCK):c.1278_1279del (p.Val427fs) [10]. \nSequenceVariant ClinVar:1303095, name: NM_000162.5(GCK):c.878T>C (p.Ile293Thr) [11]. \n\n\n\nGene records found\n\n\ngene symbol: GCK [12]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000162.5(GCK):c.796C>G (p.Leu266Val) [13]. \nclinvar title: NM_000162.5(GCK):c.1154G>C (p.Gly385Ala) [18]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: Gck [14]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus [15]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42684983 [16]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0001678, name: intracellular glucose homeostasis [17]. \n\n\n\nNote: this result was truncated. Showing 18 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young), Maturity-onset diabetes of the young type 4, Maturity-onset diabetes of the young type 3, Maturity-onset diabetes of the young type 1, Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young, Maturity-onset diabetes of the young type 14, Maturity-onset diabetes of the young type 13. Ask about them individually for a complete answer.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 18,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Variants in GCK causing MODY",
+      "depth": "researcher",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 13.6,
+      "answer_text": "Found 10 sequence variant records for GCK and MODY [3][5][6][7][8][9][10][11][12][13], linked to 1 disease: Maturity-onset diabetes of the young type 2 [4]. \n\n\n\nAdditional GCK Context\n\n\nThe gene symbol GCK [1] and its literature entity name Gck [2]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 2 [4]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1028584, name: NM_000162.5(GCK):c.415A>T (p.Met139Leu) [3]. \nSequenceVariant ClinVar:1098819, name: NM_000162.5(GCK):c.1139A>C (p.His380Pro) [5]. \nSequenceVariant ClinVar:1172896, name: NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [6]. \nSequenceVariant record ClinVar:1188508 [7]. \nSequenceVariant ClinVar:1210150, name: NM_000162.5(GCK):c.386G>A (p.Cys129Tyr) [8]. \nSequenceVariant ClinVar:129144, name: NM_000162.5(GCK):c.544G>A (p.Val182Met) [9]. \nSequenceVariant record ClinVar:129147 [10]. \nSequenceVariant ClinVar:1299600, name: NM_000162.5(GCK):c.142G>A (p.Glu48Lys) [11]. \nSequenceVariant ClinVar:1301411, name: NM_000162.5(GCK):c.1278_1279del (p.Val427fs) [12]. \nSequenceVariant ClinVar:1303095, name: NM_000162.5(GCK):c.878T>C (p.Ile293Thr) [13]. \n\n\n\nGene records found\n\n\ngene symbol: GCK [1]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000162.5(GCK):c.796C>G (p.Leu266Val) [14]. \nclinvar title: NM_000162.5(GCK):c.1154G>C (p.Gly385Ala) [18]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: Gck [2]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus [15]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42684983 [16]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0001678, name: intracellular glucose homeostasis [17]. \n\n\n\nNote: this result was truncated. Showing 18 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young), Maturity-onset diabetes of the young type 4, Maturity-onset diabetes of the young type 3, Maturity-onset diabetes of the young type 1, Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young, Maturity-onset diabetes of the young type 14, Maturity-onset diabetes of the young type 13. Ask about them individually for a complete answer.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 18,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Variants in GCK causing MODY",
+      "depth": "researcher",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 11.4,
+      "answer_text": "Found 10 sequence variant records for GCK and MODY [1][3][4][5][6][7][8][9][10][11], linked to 1 disease: Maturity-onset diabetes of the young type 2 [2]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 2 [2]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1028584, name: NM_000162.5(GCK):c.415A>T (p.Met139Leu) [1]. \nSequenceVariant ClinVar:1098819, name: NM_000162.5(GCK):c.1139A>C (p.His380Pro) [3]. \nSequenceVariant ClinVar:1172896, name: NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [4]. \nSequenceVariant record ClinVar:1188508 [5]. \nSequenceVariant ClinVar:1210150, name: NM_000162.5(GCK):c.386G>A (p.Cys129Tyr) [6]. \nSequenceVariant ClinVar:129144, name: NM_000162.5(GCK):c.544G>A (p.Val182Met) [7]. \nSequenceVariant record ClinVar:129147 [8]. \nSequenceVariant ClinVar:1299600, name: NM_000162.5(GCK):c.142G>A (p.Glu48Lys) [9]. \nSequenceVariant ClinVar:1301411, name: NM_000162.5(GCK):c.1278_1279del (p.Val427fs) [10]. \nSequenceVariant ClinVar:1303095, name: NM_000162.5(GCK):c.878T>C (p.Ile293Thr) [11]. \n\n\n\nGene records found\n\n\ngene symbol: GCK [12]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000162.5(GCK):c.796C>G (p.Leu266Val) [13]. \nclinvar title: NM_000162.5(GCK):c.1154G>C (p.Gly385Ala) [18]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: Gck [14]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus [15]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42684983 [16]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0001678, name: intracellular glucose homeostasis [17]. \n\n\n\nNote: this result was truncated. Showing 18 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young), Maturity-onset diabetes of the young type 4, Maturity-onset diabetes of the young type 3, Maturity-onset diabetes of the young type 1, Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young, Maturity-onset diabetes of the young type 14, Maturity-onset diabetes of the young type 13. Ask about them individually for a complete answer.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 18,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Variants in GCK causing MODY",
+      "depth": "plain_language",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 14.6,
+      "answer_text": "Found 10 sequence variant records for GCK and MODY [3][5][6][7][8][9][10][11][12][13], linked to 1 disease: Maturity-onset diabetes of the young type 2 [4]. \n\n\n\nAnother literature entity named Gck [1] and a PubMed title Fermentation of mulberry leaf extract by Aspergillus chevalieri CTCF-AC-1 for flavor improvement and enhanced hypoglycemic activity [2]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 2 [4]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1028584, name: NM_000162.5(GCK):c.415A>T (p.Met139Leu) [3]. \nSequenceVariant ClinVar:1098819, name: NM_000162.5(GCK):c.1139A>C (p.His380Pro) [5]. \nSequenceVariant ClinVar:1172896, name: NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [6]. \nSequenceVariant record ClinVar:1188508 [7]. \nSequenceVariant ClinVar:1210150, name: NM_000162.5(GCK):c.386G>A (p.Cys129Tyr) [8]. \nSequenceVariant ClinVar:129144, name: NM_000162.5(GCK):c.544G>A (p.Val182Met) [9]. \nSequenceVariant record ClinVar:129147 [10]. \nSequenceVariant ClinVar:1299600, name: NM_000162.5(GCK):c.142G>A (p.Glu48Lys) [11]. \nSequenceVariant ClinVar:1301411, name: NM_000162.5(GCK):c.1278_1279del (p.Val427fs) [12]. \nSequenceVariant ClinVar:1303095, name: NM_000162.5(GCK):c.878T>C (p.Ile293Thr) [13]. \n\n\n\nGene records found\n\n\ngene symbol: GCK [14]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000162.5(GCK):c.796C>G (p.Leu266Val) [15]. \nclinvar title: NM_000162.5(GCK):c.1154G>C (p.Gly385Ala) [19]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: Gck [1]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus [16]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42684983 [17]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0001678, name: intracellular glucose homeostasis [18]. \n\n\n\nNote: this result was truncated. Showing 19 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young), Maturity-onset diabetes of the young type 4, Maturity-onset diabetes of the young type 3, Maturity-onset diabetes of the young type 1, Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young, Maturity-onset diabetes of the young type 14, Maturity-onset diabetes of the young type 13. Ask about them individually for a complete answer.\n\n\n\nNote: one further pubmed record was found for this question and is not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": false
+      },
+      "source_count": 19,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Variants in GCK causing MODY",
+      "depth": "plain_language",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 13.9,
+      "answer_text": "Found 10 sequence variant records for GCK and MODY [1][2][3][4][6][8][9][10][11][12], linked to 1 disease: Maturity-onset diabetes of the young type 2 [7]. \n\n\n\nfound is ClinVar:1098819, named NM_000162.5(GCK):c.1139A>C (p.His380Pro) [1]. \nAnother is ClinVar:1172896, named NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [2]. \nThe search also returned record ClinVar:1188508 [3]. \nThe search also returned record ClinVar:129147 [4]. \n\n\n\nA literature entity name Gck was also found [5]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 2 [7]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1028584, name: NM_000162.5(GCK):c.415A>T (p.Met139Leu) [6]. \nSequenceVariant ClinVar:1098819, name: NM_000162.5(GCK):c.1139A>C (p.His380Pro) [1]. \nSequenceVariant ClinVar:1172896, name: NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [2]. \nSequenceVariant record ClinVar:1188508 [3]. \nSequenceVariant ClinVar:1210150, name: NM_000162.5(GCK):c.386G>A (p.Cys129Tyr) [8]. \nSequenceVariant ClinVar:129144, name: NM_000162.5(GCK):c.544G>A (p.Val182Met) [9]. \nSequenceVariant record ClinVar:129147 [4]. \nSequenceVariant ClinVar:1299600, name: NM_000162.5(GCK):c.142G>A (p.Glu48Lys) [10]. \nSequenceVariant ClinVar:1301411, name: NM_000162.5(GCK):c.1278_1279del (p.Val427fs) [11]. \nSequenceVariant ClinVar:1303095, name: NM_000162.5(GCK):c.878T>C (p.Ile293Thr) [12]. \n\n\n\nGene records found\n\n\ngene symbol: GCK [13]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000162.5(GCK):c.796C>G (p.Leu266Val) [14]. \nclinvar title: NM_000162.5(GCK):c.1154G>C (p.Gly385Ala) [18]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: Gck [5]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus [15]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42684983 [16]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0001678, name: intracellular glucose homeostasis [17]. \n\n\n\nNote: this result was truncated. Showing 18 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young), Maturity-onset diabetes of the young type 4, Maturity-onset diabetes of the young type 3, Maturity-onset diabetes of the young type 1, Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young, Maturity-onset diabetes of the young type 14, Maturity-onset diabetes of the young type 13. Ask about them individually for a complete answer.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 18,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Variants in GCK causing MODY",
+      "depth": "plain_language",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 20.0,
+      "answer_text": "Found 10 sequence variant records for GCK and MODY [1][2][3][4][5][6][7][8][9][11], linked to 1 disease: Maturity-onset diabetes of the young type 2 [12]. \n\n\n\nAnother is ClinVar:1098819, named NM_000162.5(GCK):c.1139A>C (p.His380Pro) [1]. \nClinVar:1172896, named NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [2]. \nClinVar:1210150, named NM_000162.5(GCK):c.386G>A (p.Cys129Tyr) [3]. \nClinVar:129144, named NM_000162.5(GCK):c.544G>A (p.Val182Met) [4]. \nClinVar:1299600, named NM_000162.5(GCK):c.142G>A (p.Glu48Lys) [5]. \nClinVar:1301411, named NM_000162.5(GCK):c.1278_1279del (p.Val427fs) [6]. \nClinVar:1303095, named NM_000162.5(GCK):c.878T>C (p.Ile293Thr) [7]. \nThere are also records ClinVar:1188508 [8] and ClinVar:129147 [9]. \n\n\n\nThe gene symbol is GCK [10]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 2 [12]. \n\n\n\nVariant-to-disease mapping\n\n\nSequenceVariant ClinVar:1028584, name: NM_000162.5(GCK):c.415A>T (p.Met139Leu) [11]. \nSequenceVariant ClinVar:1098819, name: NM_000162.5(GCK):c.1139A>C (p.His380Pro) [1]. \nSequenceVariant ClinVar:1172896, name: NM_000162.5(GCK):c.660C>A (p.Cys220Ter) [2]. \nSequenceVariant record ClinVar:1188508 [8]. \nSequenceVariant ClinVar:1210150, name: NM_000162.5(GCK):c.386G>A (p.Cys129Tyr) [3]. \nSequenceVariant ClinVar:129144, name: NM_000162.5(GCK):c.544G>A (p.Val182Met) [4]. \nSequenceVariant record ClinVar:129147 [9]. \nSequenceVariant ClinVar:1299600, name: NM_000162.5(GCK):c.142G>A (p.Glu48Lys) [5]. \nSequenceVariant ClinVar:1301411, name: NM_000162.5(GCK):c.1278_1279del (p.Val427fs) [6]. \nSequenceVariant ClinVar:1303095, name: NM_000162.5(GCK):c.878T>C (p.Ile293Thr) [7]. \n\n\n\nGene records found\n\n\ngene symbol: GCK [10]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000162.5(GCK):c.796C>G (p.Leu266Val) [13]. \nclinvar title: NM_000162.5(GCK):c.1154G>C (p.Gly385Ala) [18]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: Gck [14]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus [15]. \n\n\n\nPublication records found\n\n\nPublication pmid: 42684983 [16]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0001678, name: intracellular glucose homeostasis [17]. \n\n\n\nNote: this result was truncated. Showing 18 matching rows, but more exist than are shown above; the exact total is not available for this query.\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young), Maturity-onset diabetes of the young type 4, Maturity-onset diabetes of the young type 3, Maturity-onset diabetes of the young type 1, Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young, Maturity-onset diabetes of the young type 14, Maturity-onset diabetes of the young type 13. Ask about them individually for a complete answer.\n\n\n\nNote: 2 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 18,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What genes are associated with MODY?",
+      "depth": "researcher",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 8.7,
+      "answer_text": "Found 6 gene records for MODY: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1], glucokinase [3], hepatocyte nuclear factor 4 alpha [5], pancreatic and duodenal homeobox 1 [8], potassium inwardly rectifying channel subfamily J member 11 [10] and HNF1 homeobox A [12], linked to 7 diseases: Maturity-onset diabetes of the young type 14 [2], Maturity-onset diabetes of the young type 2 [4], Maturity-onset diabetes of the young type 1 [6], Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7], Maturity-onset diabetes of the young type 4 [9] and Maturity-onset diabetes of the young type 13 [11] and 1 other. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 14 [2]. \nDisease name: Maturity-onset diabetes of the young type 2 [4]. \nDisease name: Maturity-onset diabetes of the young type 1 [6]. \nDisease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7]. \nDisease name: Maturity-onset diabetes of the young type 4 [9]. \nDisease name: Maturity-onset diabetes of the young type 13 [11]. \nDisease name: Maturity-onset diabetes of the young type 3 [13]. \n\n\n\nGene-to-disease mapping\n\n\nGene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1]. \nGene NCBIGene:2645, name: glucokinase [3]. \nGene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha [5]. \nGene NCBIGene:3651, name: pancreatic and duodenal homeobox 1 [8]. \nGene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11 [10]. \nGene NCBIGene:6927, name: HNF1 homeobox A [12]. \n\n\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young). Ask about them individually for a complete answer.",
+      "notes_present": {
+        "structured_fallback": true,
+        "truncation": false,
+        "partial_answer": false
+      },
+      "source_count": 13,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What genes are associated with MODY?",
+      "depth": "researcher",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 8.7,
+      "answer_text": "Found 6 gene records for MODY: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1], glucokinase [3], hepatocyte nuclear factor 4 alpha [5], pancreatic and duodenal homeobox 1 [8], potassium inwardly rectifying channel subfamily J member 11 [10] and HNF1 homeobox A [12], linked to 7 diseases: Maturity-onset diabetes of the young type 14 [2], Maturity-onset diabetes of the young type 2 [4], Maturity-onset diabetes of the young type 1 [6], Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7], Maturity-onset diabetes of the young type 4 [9] and Maturity-onset diabetes of the young type 13 [11] and 1 other. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 14 [2]. \nDisease name: Maturity-onset diabetes of the young type 2 [4]. \nDisease name: Maturity-onset diabetes of the young type 1 [6]. \nDisease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7]. \nDisease name: Maturity-onset diabetes of the young type 4 [9]. \nDisease name: Maturity-onset diabetes of the young type 13 [11]. \nDisease name: Maturity-onset diabetes of the young type 3 [13]. \n\n\n\nGene-to-disease mapping\n\n\nGene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1]. \nGene NCBIGene:2645, name: glucokinase [3]. \nGene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha [5]. \nGene NCBIGene:3651, name: pancreatic and duodenal homeobox 1 [8]. \nGene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11 [10]. \nGene NCBIGene:6927, name: HNF1 homeobox A [12]. \n\n\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young). Ask about them individually for a complete answer.",
+      "notes_present": {
+        "structured_fallback": true,
+        "truncation": false,
+        "partial_answer": false
+      },
+      "source_count": 13,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What genes are associated with MODY?",
+      "depth": "researcher",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 10.4,
+      "answer_text": "Found 6 gene records for MODY: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1], glucokinase [3], hepatocyte nuclear factor 4 alpha [5], pancreatic and duodenal homeobox 1 [8], potassium inwardly rectifying channel subfamily J member 11 [10] and HNF1 homeobox A [12], linked to 7 diseases: Maturity-onset diabetes of the young type 14 [2], Maturity-onset diabetes of the young type 2 [4], Maturity-onset diabetes of the young type 1 [6], Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7], Maturity-onset diabetes of the young type 4 [9] and Maturity-onset diabetes of the young type 13 [11] and 1 other. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 14 [2]. \nDisease name: Maturity-onset diabetes of the young type 2 [4]. \nDisease name: Maturity-onset diabetes of the young type 1 [6]. \nDisease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7]. \nDisease name: Maturity-onset diabetes of the young type 4 [9]. \nDisease name: Maturity-onset diabetes of the young type 13 [11]. \nDisease name: Maturity-onset diabetes of the young type 3 [13]. \n\n\n\nGene-to-disease mapping\n\n\nGene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1]. \nGene NCBIGene:2645, name: glucokinase [3]. \nGene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha [5]. \nGene NCBIGene:3651, name: pancreatic and duodenal homeobox 1 [8]. \nGene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11 [10]. \nGene NCBIGene:6927, name: HNF1 homeobox A [12]. \n\n\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young). Ask about them individually for a complete answer.",
+      "notes_present": {
+        "structured_fallback": true,
+        "truncation": false,
+        "partial_answer": false
+      },
+      "source_count": 13,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What genes are associated with MODY?",
+      "depth": "plain_language",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 8.8,
+      "answer_text": "Found 6 gene records for MODY: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1], glucokinase [3], hepatocyte nuclear factor 4 alpha [5], pancreatic and duodenal homeobox 1 [8], potassium inwardly rectifying channel subfamily J member 11 [10] and HNF1 homeobox A [12], linked to 7 diseases: Maturity-onset diabetes of the young type 14 [2], Maturity-onset diabetes of the young type 2 [4], Maturity-onset diabetes of the young type 1 [6], Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7], Maturity-onset diabetes of the young type 4 [9] and Maturity-onset diabetes of the young type 13 [11] and 1 other. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 14 [2]. \nDisease name: Maturity-onset diabetes of the young type 2 [4]. \nDisease name: Maturity-onset diabetes of the young type 1 [6]. \nDisease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7]. \nDisease name: Maturity-onset diabetes of the young type 4 [9]. \nDisease name: Maturity-onset diabetes of the young type 13 [11]. \nDisease name: Maturity-onset diabetes of the young type 3 [13]. \n\n\n\nGene-to-disease mapping\n\n\nGene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1]. \nGene NCBIGene:2645, name: glucokinase [3]. \nGene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha [5]. \nGene NCBIGene:3651, name: pancreatic and duodenal homeobox 1 [8]. \nGene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11 [10]. \nGene NCBIGene:6927, name: HNF1 homeobox A [12]. \n\n\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young). Ask about them individually for a complete answer.\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": true,
+        "truncation": false,
+        "partial_answer": false
+      },
+      "source_count": 13,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What genes are associated with MODY?",
+      "depth": "plain_language",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 8.6,
+      "answer_text": "Found 6 gene records for MODY: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1], glucokinase [3], hepatocyte nuclear factor 4 alpha [5], pancreatic and duodenal homeobox 1 [8], potassium inwardly rectifying channel subfamily J member 11 [10] and HNF1 homeobox A [12], linked to 7 diseases: Maturity-onset diabetes of the young type 14 [2], Maturity-onset diabetes of the young type 2 [4], Maturity-onset diabetes of the young type 1 [6], Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7], Maturity-onset diabetes of the young type 4 [9] and Maturity-onset diabetes of the young type 13 [11] and 1 other. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 14 [2]. \nDisease name: Maturity-onset diabetes of the young type 2 [4]. \nDisease name: Maturity-onset diabetes of the young type 1 [6]. \nDisease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7]. \nDisease name: Maturity-onset diabetes of the young type 4 [9]. \nDisease name: Maturity-onset diabetes of the young type 13 [11]. \nDisease name: Maturity-onset diabetes of the young type 3 [13]. \n\n\n\nGene-to-disease mapping\n\n\nGene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1]. \nGene NCBIGene:2645, name: glucokinase [3]. \nGene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha [5]. \nGene NCBIGene:3651, name: pancreatic and duodenal homeobox 1 [8]. \nGene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11 [10]. \nGene NCBIGene:6927, name: HNF1 homeobox A [12]. \n\n\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young). Ask about them individually for a complete answer.\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": true,
+        "truncation": false,
+        "partial_answer": false
+      },
+      "source_count": 13,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "What genes are associated with MODY?",
+      "depth": "plain_language",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 7.4,
+      "answer_text": "Found 6 gene records for MODY: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [2], glucokinase [4], hepatocyte nuclear factor 4 alpha [6], pancreatic and duodenal homeobox 1 [8], potassium inwardly rectifying channel subfamily J member 11 [10] and HNF1 homeobox A [12], linked to 7 diseases: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [1], Maturity-onset diabetes of the young type 14 [3], Maturity-onset diabetes of the young type 2 [5], Maturity-onset diabetes of the young type 1 [7], Maturity-onset diabetes of the young type 4 [9] and Maturity-onset diabetes of the young type 13 [11] and 1 other. \n\n\n\nThere is also a disease named \"Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young\" [1]. \n\n\n\nDisease records found\n\n\nDisease name: Maturity-onset diabetes of the young type 14 [3]. \nDisease name: Maturity-onset diabetes of the young type 2 [5]. \nDisease name: Maturity-onset diabetes of the young type 1 [7]. \nDisease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [1]. \nDisease name: Maturity-onset diabetes of the young type 4 [9]. \nDisease name: Maturity-onset diabetes of the young type 13 [11]. \nDisease name: Maturity-onset diabetes of the young type 3 [13]. \n\n\n\nGene-to-disease mapping\n\n\nGene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [2]. \nGene NCBIGene:2645, name: glucokinase [4]. \nGene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha [6]. \nGene NCBIGene:3651, name: pancreatic and duodenal homeobox 1 [8]. \nGene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11 [10]. \nGene NCBIGene:6927, name: HNF1 homeobox A [12]. \n\n\n\nNote: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young). Ask about them individually for a complete answer.\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": false,
+        "partial_answer": false
+      },
+      "source_count": 13,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Show the dbSNP record for rs28934578 in TP53",
+      "depth": "researcher",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 13.7,
+      "answer_text": "Found 1 gene record, 1 variant record record, 4 clinvar records, 1 literature entity record, 4 clinical trial records, 1 literature variant record and 4 biological process records for rs28934578 and TP53, of 124 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]. \n\n\n\nGene records found\n\n\ngene symbol: TP53 [1]. \n\n\n\nVariant record records found\n\n\nVariant record clinical_significance: not-provided, likely-pathogenic, pathogenic-likely-pathogenic, pathogenic [2]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000546.6(TP53):c.244C>A (p.Pro82Thr) [3]. \nclinvar title: NM_000546.6(TP53):c.-28-2A>G [8]. \nclinvar title: NM_000546.6(TP53):c.1035T>C (p.Asn345=) [11]. \nclinvar title: NM_000546.6(TP53):c.810T>G (p.Phe270Leu) [14]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: TP53 [4]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [5]. \nClinical trial name: Study of SNX-5422 in TP53 Null Cancers [9]. \nClinical trial name: The p53 Colorectal Cancer Trial [12]. \nClinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [15]. \n\n\n\nLiterature variant records found\n\n\nLiterature variant name: p.R175H [6]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [7]. \nBiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [10]. \nBiologicalProcess GO:0006289, name: nucleotide-excision repair [13]. \nBiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [16]. \n\n\n\nNote: this result was truncated. Showing 16 of 124 matching rows; the rest are not shown above.\n\n\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\n\n\nNote: this answer does not address the following entities named in the question: rs28934578. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": true,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 15,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Show the dbSNP record for rs28934578 in TP53",
+      "depth": "researcher",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 14.8,
+      "answer_text": "Found 1 gene record, 1 variant record record, 4 clinvar records, 1 literature entity record, 4 clinical trial records, 1 literature variant record and 4 biological process records for rs28934578 and TP53, of 124 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]. \n\n\n\nGene records found\n\n\ngene symbol: TP53 [1]. \n\n\n\nVariant record records found\n\n\nVariant record clinical_significance: not-provided, likely-pathogenic, pathogenic-likely-pathogenic, pathogenic [2]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000546.6(TP53):c.244C>A (p.Pro82Thr) [3]. \nclinvar title: NM_000546.6(TP53):c.-28-2A>G [8]. \nclinvar title: NM_000546.6(TP53):c.1035T>C (p.Asn345=) [11]. \nclinvar title: NM_000546.6(TP53):c.810T>G (p.Phe270Leu) [14]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: TP53 [4]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [5]. \nClinical trial name: Study of SNX-5422 in TP53 Null Cancers [9]. \nClinical trial name: The p53 Colorectal Cancer Trial [12]. \nClinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [15]. \n\n\n\nLiterature variant records found\n\n\nLiterature variant name: p.R175H [6]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [7]. \nBiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [10]. \nBiologicalProcess GO:0006289, name: nucleotide-excision repair [13]. \nBiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [16]. \n\n\n\nNote: this result was truncated. Showing 16 of 124 matching rows; the rest are not shown above.\n\n\n\nNote: this answer does not address the following entities named in the question: rs28934578. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 15,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Show the dbSNP record for rs28934578 in TP53",
+      "depth": "researcher",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 13.2,
+      "answer_text": "Found 1 gene record, 1 variant record record, 4 clinvar records, 1 literature entity record, 4 clinical trial records, 1 literature variant record and 4 biological process records for rs28934578 and TP53, of 124 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]. \n\n\n\nTP53 Gene and Clinical Significance\n\n\nThe gene symbol for the retrieved records is TP53 [1], and the literature entity name is TP53 [2]. \n\n\n\nGene records found\n\n\ngene symbol: TP53 [1]. \n\n\n\nVariant record records found\n\n\nVariant record clinical_significance: not-provided, likely-pathogenic, pathogenic-likely-pathogenic, pathogenic [3]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000546.6(TP53):c.244C>A (p.Pro82Thr) [4]. \nclinvar title: NM_000546.6(TP53):c.-28-2A>G [8]. \nclinvar title: NM_000546.6(TP53):c.1035T>C (p.Asn345=) [11]. \nclinvar title: NM_000546.6(TP53):c.810T>G (p.Phe270Leu) [14]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: TP53 [2]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [5]. \nClinical trial name: Study of SNX-5422 in TP53 Null Cancers [9]. \nClinical trial name: The p53 Colorectal Cancer Trial [12]. \nClinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [15]. \n\n\n\nLiterature variant records found\n\n\nLiterature variant name: p.R175H [6]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [7]. \nBiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [10]. \nBiologicalProcess GO:0006289, name: nucleotide-excision repair [13]. \nBiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [16]. \n\n\n\nNote: this result was truncated. Showing 16 of 124 matching rows; the rest are not shown above.\n\n\n\nNote: this answer does not address the following entities named in the question: rs28934578. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 15,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Show the dbSNP record for rs28934578 in TP53",
+      "depth": "plain_language",
+      "run": 1,
+      "outcome": "ask",
+      "elapsed": 11.0,
+      "answer_text": "Found 1 gene record, 1 variant record record, 4 clinvar records, 1 literature entity record, 4 clinical trial records, 1 literature variant record and 4 biological process records for rs28934578 and TP53, of 124 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]. \n\n\n\nThe gene symbol is TP53 [1]. \nThe literature entity name is TP53 [2]. \nThe variant record clinical significance values are not-provided, likely-pathogenic, pathogenic-likely-pathogenic, pathogenic [3]. \nThe literature variant name is p.R175H [4]. \n\n\n\nGene records found\n\n\ngene symbol: TP53 [1]. \n\n\n\nVariant record records found\n\n\nVariant record clinical_significance: not-provided, likely-pathogenic, pathogenic-likely-pathogenic, pathogenic [3]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000546.6(TP53):c.244C>A (p.Pro82Thr) [5]. \nclinvar title: NM_000546.6(TP53):c.-28-2A>G [8]. \nclinvar title: NM_000546.6(TP53):c.1035T>C (p.Asn345=) [11]. \nclinvar title: NM_000546.6(TP53):c.810T>G (p.Phe270Leu) [14]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: TP53 [2]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [6]. \nClinical trial name: Study of SNX-5422 in TP53 Null Cancers [9]. \nClinical trial name: The p53 Colorectal Cancer Trial [12]. \nClinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [15]. \n\n\n\nLiterature variant records found\n\n\nLiterature variant name: p.R175H [4]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [7]. \nBiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [10]. \nBiologicalProcess GO:0006289, name: nucleotide-excision repair [13]. \nBiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [16]. \n\n\n\nNote: this result was truncated. Showing 16 of 124 matching rows; the rest are not shown above.\n\n\n\nNote: this answer does not address the following entities named in the question: rs28934578. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 15,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Show the dbSNP record for rs28934578 in TP53",
+      "depth": "plain_language",
+      "run": 2,
+      "outcome": "ask",
+      "elapsed": 12.0,
+      "answer_text": "Found 1 gene record, 1 variant record record, 4 clinvar records, 1 literature entity record, 4 clinical trial records, 1 literature variant record and 4 biological process records for rs28934578 and TP53, of 124 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]. \n\n\n\nA literature variant name is p.R175H [1]. \n\n\n\nGene records found\n\n\ngene symbol: TP53 [2]. \n\n\n\nVariant record records found\n\n\nVariant record clinical_significance: not-provided, likely-pathogenic, pathogenic-likely-pathogenic, pathogenic [3]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000546.6(TP53):c.244C>A (p.Pro82Thr) [4]. \nclinvar title: NM_000546.6(TP53):c.-28-2A>G [8]. \nclinvar title: NM_000546.6(TP53):c.1035T>C (p.Asn345=) [11]. \nclinvar title: NM_000546.6(TP53):c.810T>G (p.Phe270Leu) [14]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: TP53 [5]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [6]. \nClinical trial name: Study of SNX-5422 in TP53 Null Cancers [9]. \nClinical trial name: The p53 Colorectal Cancer Trial [12]. \nClinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [15]. \n\n\n\nLiterature variant records found\n\n\nLiterature variant name: p.R175H [1]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [7]. \nBiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [10]. \nBiologicalProcess GO:0006289, name: nucleotide-excision repair [13]. \nBiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [16]. \n\n\n\nNote: this result was truncated. Showing 16 of 124 matching rows; the rest are not shown above.\n\n\n\nNote: this answer does not address the following entities named in the question: rs28934578. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 15,
+      "trust_outcome": "ask",
+      "error_payload": null
+    },
+    {
+      "question": "Show the dbSNP record for rs28934578 in TP53",
+      "depth": "plain_language",
+      "run": 3,
+      "outcome": "ask",
+      "elapsed": 22.8,
+      "answer_text": "Found 1 gene record, 1 variant record record, 4 clinvar records, 1 literature entity record, 4 clinical trial records, 1 literature variant record and 4 biological process records for rs28934578 and TP53, of 124 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]. \n\n\n\nClinVar records include NM_000546.6(TP53):c.244C>A (p.Pro82Thr) [1], NM_000546.6(TP53):c.-28-2A>G [2], NM_000546.6(TP53):c.1035T>C (p.Asn345=) [3], and NM_000546.6(TP53):c.810T>G (p.Phe270Leu) [4]. \nA literature variant name is p.R175H [5]. \nA literature entity name is TP53 [6]. \n\n\n\nGene records found\n\n\ngene symbol: TP53 [7]. \n\n\n\nVariant record records found\n\n\nVariant record clinical_significance: not-provided, likely-pathogenic, pathogenic-likely-pathogenic, pathogenic [8]. \n\n\n\nClinvar records found\n\n\nclinvar title: NM_000546.6(TP53):c.244C>A (p.Pro82Thr) [1]. \nclinvar title: NM_000546.6(TP53):c.-28-2A>G [2]. \nclinvar title: NM_000546.6(TP53):c.1035T>C (p.Asn345=) [3]. \nclinvar title: NM_000546.6(TP53):c.810T>G (p.Phe270Leu) [4]. \n\n\n\nLiterature entity records found\n\n\nLiterature entity name: TP53 [6]. \n\n\n\nClinical trial records found\n\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [9]. \nClinical trial name: Study of SNX-5422 in TP53 Null Cancers [11]. \nClinical trial name: The p53 Colorectal Cancer Trial [13]. \nClinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [15]. \n\n\n\nLiterature variant records found\n\n\nLiterature variant name: p.R175H [5]. \n\n\n\nBiological process records found\n\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [10]. \nBiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [12]. \nBiologicalProcess GO:0006289, name: nucleotide-excision repair [14]. \nBiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [16]. \n\n\n\nNote: this result was truncated. Showing 16 of 124 matching rows; the rest are not shown above.\n\n\n\nNote: this answer does not address the following entities named in the question: rs28934578. Ask about them individually for a complete answer.\n\n\n\nNote: 4 further pubmed records were found for this question and are not described above\n\n\n\nThis is a research summary, not medical advice.",
+      "notes_present": {
+        "structured_fallback": false,
+        "truncation": true,
+        "partial_answer": true
+      },
+      "source_count": 15,
+      "trust_outcome": "ask",
+      "error_payload": null
+    }
+  ]
+}

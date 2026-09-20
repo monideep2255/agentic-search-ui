@@ -1,0 +1,32 @@
+[1/30] Which diseases are associated with BRCA1?     [researcher    ] run 1: outcome=ask        elapsed=  18.3s sources= 20 fallback_note=False
+[2/30] Which diseases are associated with BRCA1?     [researcher    ] run 2: outcome=ask        elapsed=  20.1s sources= 16 fallback_note=False
+[3/30] Which diseases are associated with BRCA1?     [researcher    ] run 3: outcome=ask        elapsed=  15.3s sources= 16 fallback_note=False
+[4/30] Which diseases are associated with BRCA1?     [plain_language] run 1: outcome=ask        elapsed=   9.6s sources= 16 fallback_note=False
+[5/30] Which diseases are associated with BRCA1?     [plain_language] run 2: outcome=ask        elapsed=  14.0s sources= 16 fallback_note=False
+[6/30] Which diseases are associated with BRCA1?     [plain_language] run 3: outcome=ask        elapsed=  14.8s sources= 16 fallback_note=False
+[7/30] What diseases are caused by variants in the H [researcher    ] run 1: outcome=ask        elapsed=  14.5s sources= 16 fallback_note=False
+[8/30] What diseases are caused by variants in the H [researcher    ] run 2: outcome=ask        elapsed=  11.3s sources= 16 fallback_note=False
+[9/30] What diseases are caused by variants in the H [researcher    ] run 3: outcome=ask        elapsed= 127.1s sources= 16 fallback_note=True
+[10/30] What diseases are caused by variants in the H [plain_language] run 1: outcome=ask        elapsed=  13.6s sources= 16 fallback_note=False
+[11/30] What diseases are caused by variants in the H [plain_language] run 2: outcome=ask        elapsed=  10.7s sources= 16 fallback_note=False
+[12/30] What diseases are caused by variants in the H [plain_language] run 3: outcome=ask        elapsed=  11.1s sources= 16 fallback_note=False
+[13/30] Variants in GCK causing MODY                  [researcher    ] run 1: outcome=ask        elapsed=  23.0s sources= 18 fallback_note=False
+[14/30] Variants in GCK causing MODY                  [researcher    ] run 2: outcome=ask        elapsed=  13.6s sources= 18 fallback_note=False
+[15/30] Variants in GCK causing MODY                  [researcher    ] run 3: outcome=ask        elapsed=  11.4s sources= 18 fallback_note=False
+[16/30] Variants in GCK causing MODY                  [plain_language] run 1: outcome=ask        elapsed=  14.6s sources= 19 fallback_note=False
+[17/30] Variants in GCK causing MODY                  [plain_language] run 2: outcome=ask        elapsed=  13.9s sources= 18 fallback_note=False
+[18/30] Variants in GCK causing MODY                  [plain_language] run 3: outcome=ask        elapsed=  20.0s sources= 18 fallback_note=False
+[19/30] What genes are associated with MODY?          [researcher    ] run 1: outcome=ask        elapsed=   8.7s sources= 13 fallback_note=True
+[20/30] What genes are associated with MODY?          [researcher    ] run 2: outcome=ask        elapsed=   8.7s sources= 13 fallback_note=True
+[21/30] What genes are associated with MODY?          [researcher    ] run 3: outcome=ask        elapsed=  10.4s sources= 13 fallback_note=True
+[22/30] What genes are associated with MODY?          [plain_language] run 1: outcome=ask        elapsed=   8.8s sources= 13 fallback_note=True
+[23/30] What genes are associated with MODY?          [plain_language] run 2: outcome=ask        elapsed=   8.6s sources= 13 fallback_note=True
+[24/30] What genes are associated with MODY?          [plain_language] run 3: outcome=ask        elapsed=   7.4s sources= 13 fallback_note=False
+[25/30] Show the dbSNP record for rs28934578 in TP53  [researcher    ] run 1: outcome=ask        elapsed=  13.7s sources= 15 fallback_note=True
+[26/30] Show the dbSNP record for rs28934578 in TP53  [researcher    ] run 2: outcome=ask        elapsed=  14.8s sources= 15 fallback_note=False
+[27/30] Show the dbSNP record for rs28934578 in TP53  [researcher    ] run 3: outcome=ask        elapsed=  13.2s sources= 15 fallback_note=False
+[28/30] Show the dbSNP record for rs28934578 in TP53  [plain_language] run 1: outcome=ask        elapsed=  11.0s sources= 15 fallback_note=False
+[29/30] Show the dbSNP record for rs28934578 in TP53  [plain_language] run 2: outcome=ask        elapsed=  12.0s sources= 15 fallback_note=False
+[30/30] Show the dbSNP record for rs28934578 in TP53  [plain_language] run 3: outcome=ask        elapsed=  22.8s sources= 15 fallback_note=False
+
+Full detail written to runs.json
