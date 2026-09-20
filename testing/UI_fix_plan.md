@@ -699,19 +699,50 @@ Full account: `testing/Developer/reports/2026-09-20_breadth_merge/mcp_failure_ex
 
 ### The plan we agreed, and where each piece stands
 
-| Wave | Item | State |
+Updated through the afternoon of 2026-09-20. Everything below is either live, being
+built right now, or waiting on a named decision. Nothing here is a vague intention.
+
+Live on develop and testable now:
+
+| Item | Commit | What a person sees |
 |---|---|---|
-| 1a | 11.27, bold only the lead's main point | LIVE at `aedf53d` |
-| 1b | 11.17 and 11.21, the broad search | PUSHED at `2bb1925`, deploying, needs the live check below |
-| 2a | Cite every retrieved finding | DECIDED, not built |
-| 2b | Widen the citation host rule so OMIM can be cited | DECIDED, not built |
-| 3a | 11.28, the paced transition | Diagnosis mostly done, needs one idle-machine run |
-| 3b | 10.3, the consistency run, and L-01 shape 1 | Not started. The L-01 instrument is written and has never run |
-| Held | 10.2, history shows the saved answer | BLOCKED on a decision from you, see below |
-| Held | 11.29, hard and soft edges, RAG and vectors | Discussion, its own session |
+| 11.27, bold only the lead's main point | `aedf53d` | Table cells and list items read plain |
+| 11.17 and 11.21, the broad search | `2bb1925` | Every question searches the resources that fit it |
+| Bold in BOTH answer modes | `b1c7334` | Plain language bolds its main point too, it no longer bolds nothing |
+| 11.28, the paced handoff | `50ed55b` | The lead starts, hands off, helpers land, then writing |
+
+Being built right now, one agent each, no two sharing a file:
+
+| Item | Owns | Why it exists |
+|---|---|---|
+| Pagination, 10 rows per page | `frontend/.../AnswerScreen.tsx` | Product-owner decision: if the data is relevant, show it and page it, do not truncate |
+| Split the prompt cap from the display cap | `core/graph.py`, `synthesis/findings.py` | One constant was doing two jobs. Bounding the MODEL's prompt is a hallucination control and stays. Bounding code-built table rows protects nothing, since the model never writes a table row |
+| Literature relevance | `core/breadth_plan.py` | Measured: a mulberry-leaf fermentation paper was returned for a GCK and MODY question. The ESearch call carries no sort, and ESearch defaults to most recent rather than most relevant |
+
+Approved and not yet started:
+
+| Item | Decision taken | Note |
+|---|---|---|
+| Scientist spacing, spread across the real run | 2026-09-20 | The product owner picked the adaptive design over simply raising the constants. Today's pacing squeezes the whole narrative into `maxLagMs` 3500ms, so names are unreadable, and then leaves dead air while tools run. Spreading it across the actual run costs zero added time on a slow run |
+| Cite every retrieved finding | 2026-09-20 | Lands naturally once the caps are split, rather than fighting a ceiling |
+| Widen the citation host rule so OMIM can be cited | 2026-09-20 | `omim.org` as an EXACT additional host, never a loosened pattern |
+| PMC as a literature source | 2026-09-20 | DELIBERATELY SEQUENCED SECOND. It needs `core/graph.py`, which the cap-split agent holds, and adding a source while relevance is broken buys more irrelevant papers rather than better answers |
+
+Open, with nobody on them:
+
+| Item | What is known |
+|---|---|
+| 11.22, abstracts as evidence | The biggest single lever on the "surface level" verdict, since today the answer lists literature TITLES rather than findings. Approved in principle, queued, awaiting the product owner's go-ahead |
+| The MODY-genes grounding failure | "What genes are associated with MODY?" discards its synthesis on 5 of 6 runs, against 7 of 30 overall. A broad multi-entity list question defeats grounding in some specific way nobody has found |
+| A 127.1 second run | Measured against a median of 13.6 and a stated budget of 53. Nothing owns it |
+| 10.2, history shows the saved answer | BLOCKED on a product-owner decision. It needs a schema migration, since no answer is stored anywhere today |
+| 10.3, the consistency run | 50 golden questions three times each. This is what would tell us whether the broad search actually fixed the wobble |
+| L-01 shape 1 | A whole graph result vanishing on some runs, hidden by graceful degradation. The instrument is written and has never run |
+| 11.29, hard and soft edges, RAG and vectors | Its own session. Its bar: not "does it cite" but "is it worth reading instead of a general chatbot" |
 
 The rule this plan follows, because it is the lesson of the overnight revert: ONE FEATURE PER PUSH. 11.27 and 11.28 shared a merge, CI failed on one, and the innocent one was reverted with it and sat unavailable for a week. Each item above lands alone, is confirmed live alone, and can be rolled back alone.
 
+The rule the parallel work follows: no two agents own one file. The fences are written into each brief, and the one shared resource that cannot be fenced, this machine's CPU, is handled by every agent checking load before it runs a suite.
 ### Decisions taken today
 
 Both are product-owner calls, both recorded in `DECISIONS.md` dated 2026-09-20, and NEITHER is built yet.
