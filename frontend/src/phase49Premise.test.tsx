@@ -156,7 +156,37 @@ const STREAM = [
     narrative: "Resolving the gene named in the question.",
     query_class: "single_hop", resolved_entities: [], clarifying_question: null,
   }),
-  frame(2, "plan", { narrative: "Read the curated edges, then confirm live.", tool_calls: [] }),
+  /*
+   * FIXTURE FIX, this session. `tool_calls` was `[]` here, which does not
+   * match what `plan_node` actually sends on the wire: `core/graph.py` line
+   * 3913 populates `tool_calls` with the real planned calls at the moment
+   * Plan fires, always in step with what Act goes on to run
+   * (`useRunView.writeState.test.tsx`'s `PLAN_TWO` pins the same shape and
+   * asserts "stays on Plan while a planned tool has not started").
+   *
+   * An empty array here told `useRunView`'s Write-begins-when-Act-ends logic
+   * (`planSelectedNoTool`, `useRunView.ts`) that the plan selected NO tool at
+   * all, the no-data-refusal shape, which is a real and intentional path but
+   * not what this fixture is. Before UI fix 11.28's pacing, `plan` and the
+   * first `tool_result` landed in the same events snapshot, so the resulting
+   * false "Write" activeStep lasted one recompute, invisible. Pacing holds
+   * `plan` on screen alone for up to `PACING.planMs` + `PACING.handoffMs`
+   * before the next event releases, long enough for `RunProgress` to see
+   * `writingNow` true and UNMOUNT `<ReasoningLog>`, then remount it as a new
+   * DOM node once the real tool_start arrived and reopened Act. Any
+   * already-captured reference to the old node (exactly what
+   * `findByTestId("reasoning-log")` holds in the test below) never saw the
+   * update, frozen at whatever `steps` had rendered before the unmount.
+   */
+  frame(2, "plan", {
+    narrative: "Read the curated edges, then confirm live.",
+    tool_calls: [
+      { tool: "cypher_query", call_id: "c1", layer: "layer_1_graph" },
+      { tool: "ncbi_efetch", call_id: "c2", layer: "layer_2_api" },
+      { tool: "pubtator_annotate", call_id: "c3", layer: "layer_3_enrichment" },
+      { tool: "clinicaltrials_search", call_id: "c4", layer: "layer_3_enrichment" },
+    ],
+  }),
   frame(3, "tool_result", { call_id: "c1", tool: "cypher_query", layer: "layer_1_graph", status: "ok", summary: "", result_count: 25, truncated: false }),
   frame(4, "tool_result", { call_id: "c2", tool: "ncbi_efetch", layer: "layer_2_api", status: "ok", summary: "", result_count: 1, truncated: false }),
   frame(5, "tool_result", { call_id: "c3", tool: "pubtator_annotate", layer: "layer_3_enrichment", status: "ok", summary: "", result_count: 1, truncated: false }),
@@ -210,7 +240,7 @@ async function landAnAnswer(user: ReturnType<typeof userEvent.setup>) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
-  await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+  await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 }
 
 describe("build phase 4.9: the app presents what the prototype presents", () => {
@@ -343,9 +373,42 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
     await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
 
-    const reasoning = await screen.findByTestId("reasoning-log", undefined, { timeout: 5000 });
-    expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
-    expect(reasoning).toHaveTextContent(/read the curated edges/i);
+    /*
+     * PACING, UI fix 11.28 (2026-09-14): guard, think and plan are staggered
+     * over up to ~2s of dwell (`PACING.guardMs` + `thinkMs` + `planMs` in
+     * `usePacedEvents.ts`), so `reasoning-log` exists as soon as guard
+     * passes but still reads "Guard" only until think and plan release.
+     * `findByTestId` waits for the ELEMENT, not for its content, so it
+     * resolves immediately on the guard-only text and the assertion below
+     * used to run before pacing caught up.
+     *
+     * This is judged NOT a regression, and the fix is a `waitFor` on the
+     * content rather than a shorter dwell or an extra flush trigger for a
+     * closed-with-no-`done` stream. `usePacedEvents` already guarantees "no
+     * event is ever held more than `maxLagMs` (3500ms) behind its own
+     * arrival" (its own module docstring), so ANY staleness this scenario
+     * can produce, including a genuine permanent stall, is already bounded
+     * and self-healing under a mechanism four other unit tests in
+     * `usePacedEvents.test.ts` cover directly. Here the burst is guard,
+     * think, plan and one `tool_start`, so the worst case is the ~2s sum of
+     * their three dwells, well inside that 3.5s ceiling and inside 11.28's
+     * own "adds at most about 4 seconds total" bound. Reaching for a new
+     * flush trigger keyed on "the connection closed with no `done` and no
+     * `error`" would special-case an already-bounded condition and add a
+     * distinction (a genuine permanent stall vs. a closed-but-answered run)
+     * the rest of the pacing design does not need. What this test still
+     * proves, unchanged: the think and plan detail shows up WHILE the run is
+     * going, never only after it lands, since `landed` stays false for the
+     * whole test (no `done` event is ever sent on this stream).
+     */
+    const reasoning = await screen.findByTestId("reasoning-log", undefined, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
+        expect(reasoning).toHaveTextContent(/read the curated edges/i);
+      },
+      { timeout: 10000 },
+    );
   });
 
   // ---------------------------------------------------------------- F-4.8-D-01
@@ -533,7 +596,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    const strip = await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
+    const strip = await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     expect(strip).not.toHaveTextContent(/refused/i);
     expect(strip).not.toHaveTextContent("✓");
     expect(strip).not.toHaveTextContent("⚠");
@@ -552,7 +615,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
+    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     /*
      * In a cite-or-refuse system the ABSENCE of a grounding verdict must read
      * as "not verified", never as silence. A dropped or never-emitted
@@ -593,7 +656,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("citation-1", undefined, { timeout: 5000 });
+    await screen.findByTestId("citation-1", undefined, { timeout: 10000 });
     /*
      * F-4.9-R-04. This asserted `data-layer` ALONE, which is a test hook no
      * user meets. The two harms the finding actually named are what a reader
@@ -655,7 +718,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
+    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     /*
      * The A-05 fix MOVED this nonsense rather than removing it: counting from
      * tool calls gave "0 layers agreed" when citations arrived without tool
