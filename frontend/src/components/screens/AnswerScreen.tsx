@@ -1013,6 +1013,34 @@ export function AnswerBody({
       current.includes(n) ? current.filter((x) => x !== n) : [...current, n],
     );
 
+  /*
+   * Layer-group disclosure state, 2026-09-20 (product owner, after `9d20438`
+   * landed): "make those drop down so user just see the 3 layers first and
+   * can have drop down". A live answer now carries up to 78 sources, so the
+   * three layer headings must render alone until a reader asks for one
+   * group's records.
+   *
+   * No design file covers a group-level disclosure: `identity/layer-badges.html`
+   * gives the heading only (dot, label, colour, already transcribed in
+   * `9d20438`) and `components/source-card.html` gives the per-record
+   * `<details>`/arrow interaction, but neither shows a THIRD, group-level
+   * layer of collapse. This reuses source-card's own arrow-and-summary
+   * mechanics at the group heading, rather than inventing a second kind of
+   * expander, per `design-consistency`.
+   *
+   * Each group's record list is rendered conditionally on `openGroups`,
+   * not merely hidden by the native `<details>` `open` attribute the way
+   * the outer disclosure and each record already are. A closed group's
+   * records must not exist in the document at all: with up to 78 sources
+   * across three groups, mounting every card whether or not its group is
+   * open would put the same wall back one level down.
+   */
+  const [openGroups, setOpenGroups] = useState<Layer[]>([]);
+  const toggleGroup = (layer: Layer) =>
+    setOpenGroups((current) =>
+      current.includes(layer) ? current.filter((x) => x !== layer) : [...current, layer],
+    );
+
   const sourceByIndex = new Map(sources.map((source) => [source.n, source]));
   /*
    * The RENDERED source list, grouped by layer and deduplicated by record.
@@ -1672,10 +1700,62 @@ export function AnswerBody({
             the result table above is untouched, because two table rows can
             state different facts about the same record and collapsing them
             would lose one of the facts.
+
+            COLLAPSED BEHIND ITS OWN DISCLOSURE, 2026-09-20 (product owner,
+            after testing the above live): "make those drop down so user
+            just see the 3 layers first and can have drop down". This reuses
+            `source-card.html`'s own `<details>`/`<summary>`/arrow pattern
+            one level up, rather than a second, differently styled expander:
+            same arrow glyph, same rotate-on-open transition, same
+            controlled-`open` approach as the outer Sources disclosure and
+            each record card (`openSources` above), for the same reason
+            noted there: jsdom does not implement native `<details>` toggling
+            reliably, so this stays a React-controlled `open` rather than an
+            uncontrolled one. Unlike those two, a closed group's records are
+            left OUT of the render entirely instead of merely un-opened,
+            since a group can hold most of a 78-source answer and mounting
+            every card regardless of its group's state would put the wall
+            back one level down.
           */}
-          {sourceGroups.map((group) => (
-            <Box key={group.layer} data-testid={`${testIdPrefix}sources-group-${group.layer}`} sx={{ mb: 1 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75, mt: 0.5 }}>
+          {sourceGroups.map((group) => {
+            const groupOpen = openGroups.includes(group.layer);
+            return (
+            <Box
+              key={group.layer}
+              component="details"
+              data-testid={`${testIdPrefix}sources-group-${group.layer}`}
+              open={groupOpen}
+              sx={{ mb: 1 }}
+            >
+              <Box
+                component="summary"
+                onClick={(event: React.MouseEvent) => {
+                  event.preventDefault();
+                  toggleGroup(group.layer);
+                }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  mb: 0.75,
+                  mt: 0.5,
+                  cursor: "pointer",
+                  listStyle: "none",
+                  "&::-webkit-details-marker": { display: "none" },
+                }}
+              >
+                <Box
+                  component="span"
+                  aria-hidden="true"
+                  sx={{
+                    fontSize: 9,
+                    color: designTokens.inkFaint,
+                    transform: groupOpen ? "rotate(90deg)" : "none",
+                    transition: "transform .12s ease",
+                  }}
+                >
+                  ▶
+                </Box>
                 <Box
                   component="span"
                   aria-hidden="true"
@@ -1901,7 +1981,8 @@ export function AnswerBody({
                 );
               })}
             </Box>
-          ))}
+            );
+          })}
         </Box>
       ) : null}
 

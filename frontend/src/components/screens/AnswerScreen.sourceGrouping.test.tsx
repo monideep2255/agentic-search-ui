@@ -147,6 +147,16 @@ describe("AnswerScreen source list: grouping", () => {
 describe("AnswerScreen source list: deduplication", () => {
   it("lists a record cited twice ONCE, carrying both markers", async () => {
     const disclosure = await renderAnswer();
+    // REQUIREMENT CHANGE, 2026-09-20: layer groups collapse by default, at the
+    // product owner's request, because a live answer now carries 78 sources and
+    // the expanded list was a wall. So reaching a record takes one more click
+    // than it did when this arm was written: open its LAYER as well as the
+    // outer disclosure. Only the navigation changed. Every assertion below is
+    // byte-identical to the version that shipped in `9d20438`, because what is
+    // under test here is DEDUPLICATION, which collapsing did not touch.
+    const user = (await import("@testing-library/user-event")).default.setup();
+    const l1Group = within(disclosure).getByTestId("sources-group-1");
+    await user.click(within(l1Group).getByText("Knowledge graph"));
     // Only one card for gene 672, not two.
     expect(within(disclosure).getAllByText(/NCBI Gene 672/)).toHaveLength(1);
     const card = within(disclosure).getByTestId("source-1");
