@@ -161,8 +161,13 @@ describe("set 9: structure travels on the wire and reaches the screen", () => {
     expect(screen.getByTestId("claim-text-2").closest("table")).toContainElement(screen.getByTestId("claim-text-3"));
     expect(screen.getByTestId("claim-text-2")).toHaveTextContent("Familial cancer of breast");
     expect(screen.getByTestId("claim-text-2")).not.toHaveTextContent("MedGen:C1, name:");
-    const bold = within(screen.getByTestId("claim-text-0")).getAllByText(/BRCA1|Familial cancer of breast/);
-    expect(bold.every((element) => element.tagName.toLowerCase() === "strong")).toBe(true);
+    // REQUIREMENT CHANGE, UI fix 11.27 (2026-09-14, "too much bold"): of the
+    // lead's emphasised terms only its main point is bold, the one the
+    // question names; the other emphasised term reads at regular weight.
+    const lead = screen.getByTestId("claim-text-0");
+    expect(lead.querySelectorAll("strong, b")).toHaveLength(1);
+    expect(within(lead).getByText("BRCA1").tagName.toLowerCase()).toBe("strong");
+    expect(lead).toHaveTextContent("BRCA1 is associated with Familial cancer of breast");
     // REQUIREMENT CHANGE, 2026-09-14: no spine. Each claim carries its own
     // provenance instead, one per claim, still.
     const claimNodes = screen.getAllByTestId(/^claim-text-\d+$/);

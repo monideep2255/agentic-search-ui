@@ -91,22 +91,65 @@ export const TRUST_LINE_EXPLAINER =
   "database are one source. Confirmed means two independent databases agree on the same " +
   "high-stakes fact. Not yet confirmed means a high-stakes fact rests on a single source.";
 
-/** Bold the backend's chosen terms, matched exactly as it spelled them. */
-function withEmphasis(text: string, emphasis?: string[]): React.ReactNode {
-  const terms = (emphasis ?? []).filter((term) => term.length > 0);
-  if (terms.length === 0) return text;
-  const escaped = [...terms]
-    .sort((a, b) => b.length - a.length)
-    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const pattern = new RegExp(`(${escaped.join("|")})`, "g");
-  return text.split(pattern).map((part, i) =>
-    terms.includes(part) ? (
-      <Box key={i} component="strong" sx={{ fontWeight: 700 }}>
-        {part}
+/*
+ * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the
+ * title or main point should be bold. right now everything looks bold."
+ *
+ * WHERE THE BOLD CAME FROM. The backend's `emphasis` field (Researcher prose,
+ * `synthesis/answer_layout.py`'s `emphasis_for`) names every resolved entity
+ * mention AND every record name in a sentence, up to its cap, and this file
+ * rendered each one at 700, in prose, in a table's first cell and in a
+ * stacked row's name. A disease list therefore read as a wall of bold.
+ *
+ * NOW: the question heading stays bold, and ONE term in the lead summary is
+ * bold, its main point. Every other emphasised term renders at regular weight,
+ * with its words unchanged. `emphasis` is still read (it is what says which
+ * words the backend considers key), it just no longer paints every one.
+ */
+
+/**
+ * The lead summary's main point: which claim, and which term in it, is bold.
+ *
+ * The lead is the first prose claim (not a table row, list item or record
+ * line). Its main point is one of the backend's own `emphasis` terms, never a
+ * word this screen picks: preferably a term the QUESTION names (the subject
+ * asked about), otherwise the term that comes first in the sentence. Null when
+ * the lead carries no emphasis, which is every Plain language answer from
+ * today's backend, so such an answer bolds its title alone.
+ */
+export function mainPointFor(
+  claims: Claim[],
+  question?: string | null,
+): { index: number; term: string } | null {
+  const index = claims.findIndex(
+    (claim) => claim.kind !== "list_item" && claim.kind !== "table_row" && parseRecordLine(claim.text) === null,
+  );
+  if (index < 0) return null;
+  const claim = claims[index]!;
+  const terms = (claim.emphasis ?? []).filter((term) => term.length > 0 && claim.text.includes(term));
+  if (terms.length === 0) return null;
+  const asked = (question ?? "").toLowerCase();
+  const named = terms.filter((term) => asked.includes(term.toLowerCase()));
+  const pool = named.length > 0 ? named : terms;
+  const [term] = [...pool].sort(
+    (a, b) => claim.text.indexOf(a) - claim.text.indexOf(b) || b.length - a.length,
+  );
+  return { index, term: term! };
+}
+
+/** Bold one term, its first occurrence only; everything else stays regular. */
+function withMainPoint(text: string, term: string | undefined, testId: string): React.ReactNode {
+  if (!term) return text;
+  const at = text.indexOf(term);
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <Box component="strong" data-testid={testId} sx={{ fontWeight: 700 }}>
+        {term}
       </Box>
-    ) : (
-      <Fragment key={i}>{part}</Fragment>
-    ),
+      {text.slice(at + term.length)}
+    </>
   );
 }
 
@@ -800,6 +843,12 @@ export interface AnswerBodyProps extends AnswerBodyContent {
    * is no longer happening.
    */
   writing?: boolean;
+  /**
+   * UI fix 11.27: the question this body answers, used only to choose the
+   * lead summary's main point (`mainPointFor`). Optional: without it the
+   * main point is the lead's first emphasised term.
+   */
+  question?: string | null;
 }
 
 /**
@@ -859,6 +908,7 @@ export function AnswerBody({
   tour = false,
   streaming = false,
   writing = false,
+  question = null,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
@@ -914,6 +964,8 @@ export function AnswerBody({
   const rise = streaming ? RISE : {};
 
   const blocks = buildAnswerBlocks(claims);
+  // UI fix 11.27: the one bold term in the body, or none.
+  const mainPoint = mainPointFor(claims, question);
   let headingNumber = 0;
   let noteNumber = 0;
   let recordsNumber = 0;
@@ -960,7 +1012,7 @@ export function AnswerBody({
                   component="span"
                   sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, ...uncitedInk(claim) }}
                 >
-                  {withEmphasis(cells[0] ?? claim.text, claim.emphasis)}
+                  {cells[0] ?? claim.text}
                   {citationChips(claim, index)}
                 </Box>
                 {cells.slice(1).map((cell, c) =>
@@ -1031,7 +1083,7 @@ export function AnswerBody({
                       key={c}
                       sx={isIdentifierCell(cell) ? { ...RTAB_CELL, ...RTAB_ID } : RTAB_CELL}
                     >
-                      {c === 0 ? withEmphasis(cell, claim.emphasis) : cell}
+                      {cell}
                     </Box>
                   ))}
                   <Box component="td" sx={{ ...RTAB_CELL, width: 36, whiteSpace: "nowrap" }}>
@@ -1083,7 +1135,11 @@ export function AnswerBody({
           >
             {/* No space before the markers: a superscript sits against the
                 sentence it cites, and a space would let it wrap alone. */}
-            {withEmphasis(claim.text, claim.emphasis)}
+            {withMainPoint(
+              claim.text,
+              mainPoint?.index === index ? mainPoint.term : undefined,
+              `${testIdPrefix}answer-main-point`,
+            )}
             {citationChips(claim, index)}{" "}
           </Box>
         ))}
@@ -1173,7 +1229,9 @@ export function AnswerBody({
                         : outcomeTone === "warn"
                           ? designTokens.warn
                           : designTokens.ok,
-                    fontWeight: 700,
+                    // UI fix 11.27: regular weight; the tone colour and the
+                    // glyph carry the outcome, the question is the bold line.
+                    fontWeight: 400,
                     mr: 0.75,
                   }}
                 >
@@ -1377,7 +1435,7 @@ export function AnswerBody({
               sx={{
                 ...mono,
                 fontSize: 11,
-                fontWeight: 700,
+                fontWeight: 400,
                 color: designTokens.inkMuted,
                 border: `1px solid ${designTokens.line}`,
                 borderRadius: 999,
@@ -1612,7 +1670,9 @@ export function AnswerBody({
                 component="span"
                 data-testid={`${testIdPrefix}trust-${signal.kind}`}
                 sx={{
-                  fontWeight: signal.kind === "plain" ? 400 : 600,
+                  // UI fix 11.27: every span regular; a high-risk span keeps
+                  // the risk colour, which is what makes it stand out.
+                  fontWeight: 400,
                   color:
                     signal.kind === "risk"
                       ? designTokens.risk
@@ -1747,6 +1807,7 @@ function FoldedTurn({ turn, index }: { turn: PreviousTurn; index: number }) {
                 >
                   <AnswerBody
                     testIdPrefix={`previous-turn-${index}-`}
+                    question={turn.question}
                     claims={turn.claims}
                     sources={turn.sources}
                     meta={turn.meta}
@@ -1982,7 +2043,7 @@ export function AnswerScreen({
               {/* UI fix set 9, item 9.6: the answer builds under the progress. */}
               {claims.length > 0 ? (
                 <Box data-testid="streaming-answer" sx={{ mt: 2.5 }}>
-                  <AnswerBody streaming writing={!stopped} claims={claims} sources={sources} />
+                  <AnswerBody streaming writing={!stopped} question={question} claims={claims} sources={sources} />
                 </Box>
               ) : null}
             </>
@@ -1990,6 +2051,7 @@ export function AnswerScreen({
             <>
               <AnswerBody
                 tour
+                question={question}
                 claims={claims}
                 sources={sources}
                 meta={meta}
