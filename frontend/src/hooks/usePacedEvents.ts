@@ -1,16 +1,34 @@
 /**
- * Pace the PRESENTATION of a run's events, UI fix 11.28, 2026-09-14.
+ * Pace the PRESENTATION of a run's events, UI fix 11.28 (2026-09-14) and its
+ * follow-up (2026-09-20).
  *
- * The product owner: "the transition of the agent searching to streaming
- * answer now is too quick. It is also the fun part of watching the agent
- * starting, giving to other agents to search and then coming up with the
- * answer. Stagger the process to make it smooth."
+ * The product owner, 11.28: "the transition of the agent searching to
+ * streaming answer now is too quick... Stagger the process to make it
+ * smooth." Then, testing 11.28 live: "still feel very fast since I cannot
+ * read all the scientist name and they disappear." What they want to watch:
+ * "the main scientist understand the task, calls 3 scientists to search 3
+ * resources, 3 scientists hand back to the main scientist and then the main
+ * scientist is writing."
  *
- * WHY. Events reach the browser in bursts: `act_node` emits its tool starts
- * together and often its results together, and a scripted or replayed stream
- * arrives as one chunk. Every screen state (the lead scientist starting, the
- * handoff line, each helper's search, the writing banner) derives from the
- * events received so far, so a burst races through all of them in one frame.
+ * WHY 11.28 WAS NOT ENOUGH. Two things, the second being the real one. First,
+ * `helperGapMs` was too short to read a name. Second, and load-bearing:
+ * `maxLagMs` was a single FIXED ceiling on how far any event may be held
+ * behind its own arrival, so a burst arrival (`act_node` emits its tool
+ * starts together and often its results together, or a scripted stream
+ * arrives as one chunk) compressed the ENTIRE narrative, guard through the
+ * last helper, into one fixed window no matter how many helpers ran. Three
+ * named scientists got the same window as one.
+ *
+ * THE FIX: the lag ceiling SCALES with how many helpers the plan actually
+ * named, read from the `plan` event's own `tool_calls` the moment it
+ * arrives, per `maxLagFor`. A plan naming three helpers earns three helpers'
+ * worth of reveal time; a plan naming one gets `baseMaxLagMs` alone. This
+ * only ever ADDS time to a burst arrival. It never touches a genuinely slow
+ * arrival, because the arrival-clamp rule below is unchanged: an event
+ * already spaced out in real time is shown the instant it arrives regardless
+ * of what the ceiling allows, so a 15-second real run pays nothing extra.
+ * That is what protects UI fix 11.8's latency work: pacing only spends time
+ * a fast run was not going to use anyway.
  *
  * WHAT IT DOES, and nothing else. It sits between `useAgentRun` and
  * `useRunView` and returns a PREFIX of the events that arrived, growing it one
@@ -21,8 +39,10 @@
  *   - An event is released at `max(arrival, previous release + dwell)`, so
  *     when the real run is slower than the pacing, it is released the moment
  *     it arrives and no delay is added at all.
- *   - No event is ever held more than `maxLagMs` behind its own arrival, so
- *     the answer lands at most that much later than it would unpaced.
+ *   - No event is ever held more than `maxLagFor(helperCount, timing)`
+ *     behind its own arrival, so the answer lands at most that much later
+ *     than it would unpaced, and that bound grows only with the number of
+ *     helpers the plan actually named.
  *   - Stop, a stream failure, any `error` event, a failed guard, an
  *     answer-level refusal and a clarification FLUSH: everything that
  *     arrived shows at once and the rest of the run is unpaced.
@@ -50,23 +70,39 @@ export interface PacingTiming {
   helperGapMs: number;
   /** After the last search in a group appears: the handoff line naming the helpers. */
   handoffMs: number;
-  /** The most any event is held behind its own arrival. */
-  maxLagMs: number;
+  /** The lag ceiling when the plan names one helper, or before Plan has arrived at all. */
+  baseMaxLagMs: number;
+  /** Extra lag ceiling earned per helper beyond the first, so naming three helpers earns three helpers' worth of reveal time rather than one fixed window. */
+  perHelperLagMs: number;
 }
 
 /**
  * The values, chosen by watching the paced run against the e2e stream at 1280
- * and 390 (screenshots in the bold-and-stagger report). For a two-helper run
- * whose events all arrive at once they sum to 3500ms, exactly `maxLagMs`, so
- * every stage gets its full dwell and the answer lands at most 3.5s later.
+ * and 390, then re-tuned 2026-09-20 after the product owner could not read a
+ * name before it disappeared. `helperGapMs` rose from 350ms, roughly a third
+ * of a reading beat, to 900ms. `maxLagMs` split into a base plus a per-helper
+ * share: for `n` helpers the ceiling is `baseMaxLagMs + (n - 1) *
+ * perHelperLagMs` (see `maxLagFor`), sized so the full minimum-dwell chain
+ * for one through four helpers always fits inside it rather than being
+ * truncated:
+ *
+ *   n=1: 2900ms chain, ceiling 3200ms
+ *   n=2: 4700ms chain, ceiling 5100ms
+ *   n=3: 6500ms chain, ceiling 7000ms
+ *   n=4: 8300ms chain, ceiling 8900ms
+ *
+ * This only ever lengthens a burst arrival's reveal window. A genuinely slow
+ * arrival pays none of it, because the ceiling is an upper bound on lag, not
+ * an added delay: see the module doc's "arrival-clamp" note.
  */
 export const PACING: PacingTiming = {
   guardMs: 600,
   thinkMs: 700,
   planMs: 700,
-  helperGapMs: 350,
-  handoffMs: 800,
-  maxLagMs: 3500,
+  helperGapMs: 900,
+  handoffMs: 900,
+  baseMaxLagMs: 3200,
+  perHelperLagMs: 1900,
 };
 
 /** Reduced motion: the same order, each stage held only long enough to paint. */
@@ -76,8 +112,27 @@ export const REDUCED_PACING: PacingTiming = {
   planMs: 100,
   helperGapMs: 50,
   handoffMs: 100,
-  maxLagMs: 1000,
+  baseMaxLagMs: 1000,
+  perHelperLagMs: 100,
 };
+
+/** How many helpers the plan named, from its `tool_calls`, or 0 before Plan has arrived. */
+export function helperCount(events: AgentEvent[]): number {
+  for (const event of events) {
+    if (event.type === "plan") return event.payload.tool_calls.length;
+  }
+  return 0;
+}
+
+/**
+ * The lag ceiling for a run naming this many helpers. Never less than
+ * `baseMaxLagMs`; each helper beyond the first adds `perHelperLagMs`, so a
+ * plan naming more helpers earns proportionately more time to show each one
+ * rather than sharing one fixed window.
+ */
+export function maxLagFor(count: number, timing: PacingTiming): number {
+  return timing.baseMaxLagMs + Math.max(0, count - 1) * timing.perHelperLagMs;
+}
 
 /** How long `event` stays the newest thing on screen before `next` may show. */
 export function dwellAfter(event: AgentEvent, next: AgentEvent, timing: PacingTiming): number {
@@ -188,13 +243,16 @@ export function usePacedEvents(events: AgentEvent[], options: PacedEventsOptions
   useEffect(() => {
     if (unpaced || count >= events.length) return;
     const at = Date.now();
+    // Read once per effect run, not per event: the plan is fixed for a run,
+    // so the ceiling it earns is fixed for the whole loop below.
+    const maxLag = maxLagFor(helperCount(events), timing);
     let next = count;
     let dueAt: number | null = null;
     while (next < events.length) {
       const arrival = current.arrivals[next]!;
       const earliest =
         next === 0 ? arrival : current.releases[next - 1]! + dwellAfter(events[next - 1]!, events[next]!, timing);
-      const target = Math.min(Math.max(arrival, earliest), arrival + timing.maxLagMs);
+      const target = Math.min(Math.max(arrival, earliest), arrival + maxLag);
       if (target > at) {
         dueAt = target;
         break;

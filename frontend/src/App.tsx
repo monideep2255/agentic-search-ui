@@ -971,8 +971,9 @@ export function App() {
    * through the lead starting, the handoff, each helper's search and the
    * writing banner in one frame. `usePacedEvents` releases the events that
    * ARRIVED one at a time with a minimum dwell per stage (never reordered,
-   * never invented, never more than 3.5s behind arrival, no delay when the run
-   * is slower than the pacing), and flushes on Stop, a failed stream, an
+   * never invented, never held past a ceiling that SCALES WITH THE NUMBER OF
+   * HELPERS the plan named, no delay when the run is slower than the pacing),
+   * and flushes on Stop, a failed stream, an
    * error or a refusal. Everything below derives from the paced prefix.
    */
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", { noSsr: true });
