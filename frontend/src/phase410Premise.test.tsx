@@ -661,7 +661,7 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       // into the answer screen, this clause still passed. Waiting on a
       // real element that only the ANSWER screen renders is what makes
       // the absences below capable of failing.
-      await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
+      await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
 
       expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
       expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();

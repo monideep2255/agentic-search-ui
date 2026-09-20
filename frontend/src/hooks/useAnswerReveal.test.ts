@@ -130,6 +130,20 @@ describe("useAnswerReveal", () => {
     expect(result.current.landed).toBe(false);
   });
 
+  it("cuts the banner minimum under reduced motion, keeping banner-then-sentences order", () => {
+    const { result, rerender } = renderHook(
+      ({ view }) => useAnswerReveal(view, { runKey: "run-1", stopped: false, reducedMotion: true }),
+      { initialProps: { view: viewWith(0) } },
+    );
+    rerender({ view: viewWith(3) });
+    // Populate-check: the reduced minimum really is shorter.
+    expect(REVEAL_TIMING.reducedMinBannerMs).toBeLessThan(REVEAL_TIMING.minBannerMs);
+    act(() => vi.advanceTimersByTime(REVEAL_TIMING.reducedMinBannerMs - 50));
+    expect(result.current.claims).toHaveLength(0);
+    act(() => vi.advanceTimersByTime(60));
+    expect(result.current.claims).toHaveLength(1);
+  });
+
   it("shows everything at once when the stream failed", () => {
     const failed = viewWith(4);
     const { result } = renderHook(() =>
