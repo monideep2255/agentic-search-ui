@@ -10,6 +10,7 @@
 - [The other two notes](#the-other-two-notes)
 - [The single most useful thing the data says](#the-single-most-useful-thing-the-data-says)
 - [Method](#method)
+- [Reviewer's independent recomputation, and one correction to the lead's own hypothesis](#reviewers-independent-recomputation-and-one-correction-to-the-leads-own-hypothesis)
 
 ## What this measures
 
