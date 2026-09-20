@@ -212,6 +212,21 @@ async def test_plain_language_lists_its_records_in_code_and_ends_on_the_note(mon
 
 
 @pytest.mark.asyncio
+async def test_plain_language_lead_summary_still_carries_emphasis(monkeypatch) -> None:
+    """UI fix 11.27 over-corrected: gating `key_terms` to Researcher left
+    every Plain language claim's `emphasis` empty, so `mainPointFor` on the
+    frontend always fell back to null and nothing but the title ever bolded
+    ("now nothing is bold", product owner, live test after `aedf53d`). The
+    lead (code-built) summary sentence must carry a non-empty `emphasis` in
+    Plain language too, the one arm that would have caught this."""
+    _install(monkeypatch, _structured_reply)
+    tokens = _tokens(await graph_module.write_node(_state("plain_language")))
+    claims = [t for t in tokens if t["kind"] == "claim"]
+    assert claims[0]["text"].startswith("Found 3 disease records for BRCA1: "), claims[0]
+    assert claims[0]["emphasis"] and "disease name number 1" in claims[0]["emphasis"], claims[0]
+
+
+@pytest.mark.asyncio
 async def test_the_source_set_is_the_same_in_both_modes(monkeypatch) -> None:
     _install(monkeypatch, _structured_reply)
     plain = await graph_module.write_node(_state("plain_language"))

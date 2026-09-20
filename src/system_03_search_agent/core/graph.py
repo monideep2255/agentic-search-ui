@@ -7639,13 +7639,21 @@ def _answer_tokens(
       (`answer_layout.TABLE_COLUMNS`) and `list_item` tokens otherwise.
     - The disclosure notes, each a `note`.
 
-    Bold terms (`emphasis`) are set on Researcher prose sentences only, from
-    the run's resolved entity mentions and record names.
+    Bold terms (`emphasis`) are set on the lead summary sentence in every
+    depth, and on other Researcher prose sentences only, from the run's
+    resolved entity mentions and record names.
     """
     citation_by_display = {citation.display_index: citation for citation in citations}
     finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
     researcher = audience_depth == "researcher"
-    terms = key_terms(synth_findings, [m for m in mentions if m]) if researcher else []
+    # UI fix 11.27 over-corrected: gating `terms` to Researcher meant the
+    # code-built lead summary carried no `emphasis` in Plain language at all,
+    # so `AnswerScreen.mainPointFor` always fell back to null and nothing but
+    # the title ever bolded. Terms are the run's own resolved names, computed
+    # the same way in both depths; only the LEAD summary sentence below is
+    # allowed to emphasize from them regardless of depth. Every other prose
+    # sentence keeps emphasizing on Researcher only, unchanged.
+    terms = key_terms(synth_findings, [m for m in mentions if m])
     tokens: list[TokenPayload] = []
 
     def marker_ids(sentence: str) -> list[str]:
@@ -7772,7 +7780,9 @@ def _answer_tokens(
                     sentence_token(sentence, kind="list_item", cells=[label])
 
     if summary_sentence:
-        sentence_token(summary_sentence, emphasize=researcher)
+        # Always emphasize the lead summary, not Researcher only: it is the
+        # one claim `mainPointFor` reads on the frontend, in every depth.
+        sentence_token(summary_sentence, emphasize=True)
         paragraph_break()
 
     if fallback_sentences:
