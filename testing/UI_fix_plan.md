@@ -669,8 +669,9 @@ Five things were on the list. Three are done, one is built but held back with a 
 
 ### On develop now, pushed and live
 
-- Remote `develop` and both Railway develop services are on `11e3348`. `GET /health` returns `app_env: develop`, the web app returns 200.
-- CI is GREEN, all four jobs, on that commit. That is the first green run on develop since 2026-09-14.
+- The last commit that changes any CODE is `11e3348`. Everything pushed after it is documentation, including this section, so the tip hash moved again while this was being written and is not worth pinning here. `git log --oneline` is the authority.
+- CI is GREEN, all four jobs, verified on `11e3348` and again on the documentation commit after it. That is the first green run on develop since 2026-09-14.
+- The develop API returns `{"status":"ok","app_env":"develop"}` and the web app returns 200.
 - What actually changed in the product tonight: nothing a tester will see. The two commits that stand are a test-isolation fix and documentation. That is the honest summary.
 
 ### Item 1: CI is green, and the cause was three things
