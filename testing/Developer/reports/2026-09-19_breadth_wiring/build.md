@@ -18,7 +18,7 @@ Unattended build in worktree `.claude/worktrees/breadth-wiring` (branch `worktre
 
 ## Status
 
-In progress. Started 2026-09-19 late evening (local). Wiring written and its 16 new tests green at 2026-09-20 00:50; the full suite, the live measurement and the determinism runs follow.
+Done, 2026-09-20 03:00. The wiring is built in the worktree, every verify-surface item is quoted below, and the judgement is at the end. Two items the run could not close are recorded as the product owner's (the cited-set half of determinism, and the answer's composition inside the 20 cap); two tool-layer items and one coordinator item are under "Not done".
 
 ## What was read first
 
@@ -48,6 +48,7 @@ Appended the moment each is established.
 - 2026-09-20 01:40: batch probe: each of the five BRCA1 PMIDs fails PubTator3 on its own, and the four without the newest fail as a batch too, so it is not one bad id sinking a batch; all five are newer than PubTator3's index. A wiring-side retry cannot help; the fix is in the planner (search wider than five, keep the five highest PubTator3 can annotate, or prefer ids below a recency margin), which changes `breadth_plan`'s documented selection rule and is a tool-layer decision.
 - 2026-09-20 02:10: the first full-suite run (started before the GO rename and the two boundaries) returned `43 failed, 4980 passed`. Causes, each established. Forty were one defect of mine: `act_node` passed `template=None` to EVERY `cypher_query` call, so every existing two-argument stand-in raised `TypeError`, and with no last-resort boundary on the Layer 1 branch that exception discarded the run's accumulated events (hence "no `think` event" and "never emitted a `guard` event" across the mutation and clarification files). Fixed by passing the keyword only when a template is set and by giving the Layer 1 branch the boundary the other branches have. Nine were count assertions in `test_run.py` and `test_graph.py` pinning set 8's plan size (4 planned, 4 dispatched); each now pins the new exact value (10 planned, 5 dispatched pairs) or the exact new tail list of tools and layers, with a comment naming this wiring; none was loosened to a range, a subset or removed. One (`test_debugging_guide_coverage`, `contracts/events.py`'s summary line) is pre-existing at `6e4aae1` and passes on the main tree, where the other agent's uncommitted manifest fix lives. One (`test_phase_4_1_production_mount`, "StreamableHTTPSessionManager .run() can only be called once per instance") is order-dependent in a full run and passes alone in both trees.
 - 2026-09-20 02:20: two citation identity defects found in the live citation dump, both mine, both fixed red first (`test_a_go_citation_carries_the_go_curie_even_when_a_layer3_row_shares_its_url` and `test_a_pubtator_publication_citation_carries_its_pmid_as_source_id`, red `'' == 'GO:0006281'` and `'unknown' == '42639261'`, then green). (1) Three GO rows in the BRCA1 answer shipped as `source_id` `unknown` under `source` `cypher_query`: `_curie_for_citation`, `_graph_snapshot_version_for_citation` and `_entity_name_for_citation` each recovered a row by `source_url` alone across every finding, and the PubTator3 entity row (Layer 3, empty CURIE, the same gene page URL) comes first in the handoff order. A shared `_row_behind_synth_finding` now prefers the finding's own call and, within it, the row carrying the finding's own CURIE (several GO rows share one URL), before the old global scan, so no caller that never hit the collision changes. (2) A PubTator3 publication row shipped as `source_id` `unknown`: the Layer 3 identity chain knew `nct_id`, `pubtator_id` and `rsid` but not `pmid`; added. Verified live after the fix, one BRCA1 run: 0 `unknown`, GO citations `GO:0000724`, `GO:0006281`, `GO:0006282` each to `https://www.ncbi.nlm.nih.gov/gene/672`, 16 sources, 14.3s.
+- 2026-09-20 03:15: the copy experiment did NOT confirm the inference. With develop's `tests/conftest.py` and manifest copied into the worktree, the full suite returned `3 failed, 5022 passed`: the MCP production-mount test still fails in the worktree's full run, and the copied manifest, paired with the branch's older `docs/build/Debugging_guide.md`, fails two coverage arms of its own. So whether a merge onto current develop clears the MCP failure is UNESTABLISHED; what is established is that it passes alone, passes with its whole directory (82 passed), fails only inside this worktree's full run, and does not fail in the main tree's full run at `079fe42`. The lead's table above attributes it to `a90ef25`; this run could not reproduce that attribution and does not assert it. The two copied files were restored to the branch's own content from `6e4aae1` by file write. The next session should merge develop into the branch and run the suite once; that run, not this reasoning, decides item 2.
 - 2026-09-19: the stable-prefix byte-equality checks are `tests/system_03_search_agent/harness/test_cache.py::test_prefix_byte_identical_across_differing_dynamic_suffixes`, `tests/system_03_search_agent/synthesis/test_prompt_cache_prefix.py::test_the_stable_prefix_is_byte_identical_across_assemblies`, and the graph-level `test_graph.py::test_every_model_call_carries_the_stable_prefix_as_its_leading_message*`. These are the named check for verify item 5.
 
 ## What was wired, file by file
@@ -219,21 +220,31 @@ venv/bin/python -m pytest tests -q -p no:cacheprovider
 2 failed, 5023 passed, 176 skipped, 1 xfailed, 8 warnings in 214.77s (0:03:34)
 ```
 
-The two failures are NOT this change. They are two of the three causes of the CI redness
-that was fixed on develop tonight, and this branch was cut from `6e4aae1`, which predates
-that fix:
+CORRECTED after the worker ran its own suite. The lead first wrote that both failures
+were two of the three CI causes this branch predates, and called that "checked rather
+than assumed". Only ONE of them is established as such.
 
-| Failure | Why it is not this change |
+What the lead actually checked was that develop's guard is ABSENT here:
+`grep -c "_user_db_engine_matches_the_ambient_url" tests/conftest.py` returns 0. That
+shows the guard is absent and nothing more. Reading it as "therefore both failures are
+the known ones" is inferring a cause from an absence, which is the same shape as the
+confident-sentence defects this repository has recorded before.
+
+The worker then tested the inference directly: it copied develop's `conftest.py` and
+manifest into this worktree and the MCP failure DID NOT clear. So:
+
+| Failure | Status |
 |---|---|
-| `test_phase_4_1_production_mount.py::TestProductionMount::test_the_real_shipped_app_answers_a_real_mcp_call_end_to_end` | The MCP session manager entered twice in one process. Fixed on develop in `a90ef25` |
-| `test_debugging_guide_coverage.py::test_no_repurposed_file_keeps_a_stale_row` | The stale `contracts/events.py` guide row from UI fix 11.16. Fixed on develop in `a90ef25` |
+| `test_debugging_guide_coverage.py::test_no_repurposed_file_keeps_a_stale_row` | Explained. The stale `contracts/events.py` guide row from UI fix 11.16, regenerated on develop in `a90ef25`, and this branch predates it |
+| `test_phase_4_1_production_mount.py::TestProductionMount::test_the_real_shipped_app_answers_a_real_mcp_call_end_to_end` | UNEXPLAINED. Develop's fix does not clear it here. It passes alone, and passes with its own directory (82 passed), inside this worktree; the main tree's full run at `079fe42` is clean. So it is an interaction visible only in this branch's full run, and its cause is unknown |
 
-Checked rather than assumed: `grep -c "_user_db_engine_matches_the_ambient_url"
-tests/conftest.py` returns 0 in this worktree, so the guard that fixes the engine leak is
-absent here, as expected for a branch cut before it.
+Item 2 of the verify surface is therefore NOT MET on this branch as it stands. It needs a
+full-suite run after develop is merged in, and if the MCP failure survives that merge, its
+cause must be established before anything is merged the other way.
 
-5023 passed against the 5007 on develop is the 16 new tests in
-`test_breadth_wiring.py`. So the wiring itself introduces no failure.
+5023 passed against the 5007 on develop is the new tests in `test_breadth_wiring.py`.
+That the wiring introduces no failure of its own is NOT established while the MCP
+interaction is unexplained.
 
 ### Merge judgement, by the lead
 
@@ -250,9 +261,10 @@ anything found wrong.
 - One merge was already reverted tonight for shipping ahead of complete verification. The
   same mistake on a larger change is not worth the hours saved.
 
-What the next session should do: rebase or merge develop into this branch so the two
-known failures disappear, read the worker's findings log for the two late citation
-defects, then merge if the suite is clean on the rebased branch.
+What the next session should do: merge develop into this branch and re-run the full
+suite. Expect the manifest failure to clear; do NOT expect the MCP one to, because
+that was tested and it did not. If it survives, establish why it appears only in this
+branch's full run before merging.
 
 ## Not done, with reasons
 
@@ -269,4 +281,14 @@ defects, then merge if the suite is clean on the rebased branch.
 
 ## Merge judgement
 
-See "Merge judgement, by the lead" above. The worker's own judgement was never written: it was still iterating when the session closed.
+Written by the worker at 2026-09-20 03:05, after the lead's HOLD above, which stands as the lead's decision; this is the author's sign-off the lead asked for. The two late citation identity arms are settled: both were red, both are green, and the fix was verified live (findings log, 02:20).
+
+The worker's own full-suite run on the final code, 02:45: `2 failed, 5023 passed, 176 skipped, 1 xfailed, 8 warnings in 259.70s`, the same two failures the lead names, and the main tree at `079fe42` runs `5007 passed, 176 skipped, 1 xfailed`, no failures, so both are develop's `a90ef25` fixes absent from this base. To prove that a merge clears them rather than infer it, develop's `tests/conftest.py` and the manifest, the only two files a merge would add under `tests/`, were copied into the worktree and the suite rerun; it returned `3 failed, 5022 passed` (findings log, 03:15), so that inference is unestablished and item 2 is NOT met on this branch as it stands: 5023 of 5025 collected pass, and the two failures are not in code this change touches, but the run that decides item 2 is the suite on this branch after develop is merged in, which this session could not do without a git state change.
+
+Judgement: safe to merge into `develop` once that merged-branch suite run is clean, and the lead's HOLD is right about the timing. Three things said plainly.
+
+- Retrieval is deterministic and broad, measured: one admitted findings set per question across every clean live run, ClinVar, PubMed and the gene's GO processes beside the graph, trials and the gene record, every new fact cited to a host-pinned NCBI page. The 20 cap, cite-or-refuse, the grounding gate and the stable prefix (nine byte-equality arms) are untouched.
+- Not proven: that the CITED set is identical on every run. A citation exists only where the model grounded a claim, and that choice varied once in 21 wired runs among identical findings. A Write-side product decision, not a retrieval defect, and the likeliest mechanism behind L-01 shape 1, which stays unestablished.
+- Two degradations ship disclosed: PubTator3 cannot annotate BRCA1's five newest PMIDs, so that one follow-up closes as an error, and OMIM is not searched. Both are recorded with owners under "Not done".
+
+Not for a live deployment tonight without the product owner seeing one answer first: the answer's composition changed (ten lead rows, then one row per source per round), the one decision this run took inside the reserved cap, and this report is the only review it has had. Merge develop into the branch, confirm the suite is clean, merge to develop, and let the product owner test on develop per the UI fix loop.

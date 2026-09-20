@@ -663,7 +663,7 @@ Five things were on the list. Three are done, one is built but held back with a 
 |---|---|---|
 | 1 | Make CI green on develop | DONE. Green on all four jobs for the first time since 2026-09-14 |
 | 2 | Land 11.27 less bold and 11.28 paced transition | MERGED THEN REVERTED. One real question is open, named below |
-| 3 | Land the broad search wiring, 11.17 and 11.21 | BUILT AND MEASURED, NOT MERGED. Its suite is clean; held back for a judgement call, explained below |
+| 3 | Land the broad search wiring, 11.17 and 11.21 | BUILT AND MEASURED, NOT MERGED. One suite failure on the branch is still unexplained, so its verify surface is not met. Explained below |
 | 4 | Report the live failure rate with any error payload | DONE, and it found a different defect instead |
 | 5 | Refresh the documents | DONE, this section included |
 
@@ -707,7 +707,11 @@ It was reverted rather than patched because the failure sits inside the previous
 
 The largest piece of work tonight, 726 insertions across seven files in `.claude/worktrees/breadth-wiring`, branch `worktree-breadth-wiring`. Full account: `testing/Developer/reports/2026-09-19_breadth_wiring/build.md`.
 
-The full Python suite DID finish, run by the lead rather than the worker: `2 failed, 5023 passed, 176 skipped, 1 xfailed`. Both failures are two of the three CI causes fixed on develop tonight, and this branch was cut before that fix, which was checked rather than assumed. So the wiring introduces no failure of its own.
+The full Python suite DID finish: `2 failed, 5023 passed, 176 skipped, 1 xfailed`.
+
+CORRECTED, and this correction is the important part. The lead first wrote that both failures were two of the three CI causes this branch predates, and called that "checked rather than assumed". It was not checked. What the lead checked was that develop's fix is ABSENT from the branch, which establishes only that, not that the failures would clear once it is present. The worker then actually tested it: it copied develop's `conftest.py` and manifest into the worktree and the MCP failure DID NOT clear. So one of the two failures is explained (the debugging-guide manifest) and the OTHER IS NOT. The MCP test passes alone and passes with its own directory (82 passed) inside the worktree, and the main tree's full run is clean, so it is an interaction that appears only in this branch's full run and its cause is unknown.
+
+The honest status of item 2 on the verify surface is therefore NOT MET on this branch as it stands. It needs one full-suite run after develop is merged in.
 
 It is still not merged, and the reasons are confidence and timing rather than anything found wrong. The worker's own merge judgement was never written, because it was still iterating on two citation identity defects it had found late. Merging would change what every query retrieves on the app you test in the morning, with no live browser check possible unattended. And one merge was already reverted tonight for shipping ahead of complete verification; repeating that on a 726-line change to the hot path is not worth the hours saved.
 
@@ -750,7 +754,7 @@ Unchanged from 2026-09-14, plus three new ones at the top.
 
 ### Next, in order
 
-1. Decide item 3. Merge develop into `.claude/worktrees/breadth-wiring` so the two known failures clear, read the two late citation defects in its findings log, re-run the suite, then merge if clean. The measurements are already done.
+1. Decide item 3. Merge develop into `.claude/worktrees/breadth-wiring` and re-run the full suite. The manifest failure should clear; the MCP one is NOT predicted to, because the worker tested that and it did not. If it persists, find out why it appears only in this branch's full run before merging, since an unexplained failure on the hot path is exactly what tonight's revert was about. The measurements and the two late citation-identity fixes are already done.
 2. Settle 11.28. Instrument `usePacedEvents` to log when each event is scheduled and when it releases, then run `phase49Premise.test.tsx` alone on an idle machine. If plan releases within 3.5 seconds the CI failure was starvation; if it does not, 11.28 has a real stall and needs the flush trigger its author argued against.
 3. Split 11.27 out and land the bold fix alone.
 4. Establish L-01 shape 1. Teach the measurement script to capture each `tool_result` payload, then re-run HNF1A enough times to catch a short run.
