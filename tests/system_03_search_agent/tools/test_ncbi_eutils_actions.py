@@ -160,6 +160,33 @@ class TestSearch:
         assert output.record_count == 1
 
     @pytest.mark.asyncio
+    async def test_relevance_sort_is_forwarded_to_esearch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """UI fix loop, 2026-09-20: the ESearch request must carry `sort=relevance`.
+
+        Live-verified against the real API (not exercised here, no network
+        in this file): ESearch with no `sort` parameter orders by
+        most-recently-added rather than relevance, which is how a GCK query
+        surfaced "Fermentation of mulberry leaf extract by Aspergillus
+        chevalieri" instead of a paper about the gene. This pins the wiring
+        that closes it: `NcbiEfetchSearchInput`'s default `sort="relevance"`
+        must actually reach the transport call's params, not just exist on
+        the schema. Reverting the `request_params["sort"] = params.sort`
+        line in `ncbi_eutils_actions.search` fails this test with a
+        `KeyError` on `scripted.calls[0]["params"]["sort"]`, confirmed
+        while writing this test.
+        """
+        scripted = _install(
+            monkeypatch,
+            [_json_response({"esearchresult": {"count": "1", "idlist": ["7157"]}})],
+        )
+        await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="gene", term="GCK", retmax=10)
+        )
+        assert scripted.calls[0]["params"]["sort"] == "relevance"
+
+    @pytest.mark.asyncio
     async def test_zero_hit_is_empty_not_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Trap 4, half of the near-miss pair: count 0, no ERROR key, no records fabricated."""
         _install(

@@ -684,6 +684,11 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
         "term": scoped_term,
         "retmode": "json",
         "retmax": params.retmax,
+        # UI fix loop, 2026-09-20: relevance-sorted by default. See
+        # NcbiEfetchSearchInput.sort's docstring for the live evidence that
+        # an unsorted ESearch call orders by most-recently-added, not by
+        # relevance, and for why only "relevance" is enum-legal.
+        "sort": params.sort,
     }
     if params.use_history:
         request_params["usehistory"] = "y"
