@@ -72,11 +72,24 @@ git worktree list
 git branch | grep worktree-agent
 ```
 
-For each `worktree-agent-*` branch, before removing anything:
+AN EMPTY `git log develop..<branch>` DOES NOT MEAN SAFE TO DELETE, and this step used to say it did. Measured on 2026-09-20: two worktrees both returned zero commits ahead of `develop`, and deleting either would have destroyed work.
 
-1. Check it holds no unmerged work: `git log develop..<branch> --oneline`. A non-empty result means the branch has commits `develop` does not, and it is NOT a leftover. Stop and report it.
-2. If it has a live worktree, check that worktree for uncommitted files: `git -C <worktree-path> status --short`. Untracked scratch is normally the agent's own probes and is safe to drop, but say what it was rather than removing it silently.
-3. Only then: `git worktree remove --force <path>`, `git worktree prune`, and `git branch -D <branch>`.
+| Worktree | What `git log develop..<branch>` said | What was actually there |
+|---|---|---|
+| The broad search wiring | 0 commits | 726 insertions across 8 files, entirely UNCOMMITTED. The branch was never committed to, so the log is blind to all of it |
+| The bold and pacing work | 0 commits | Its commit IS an ancestor of `develop`, because it was merged and then REVERTED. The log reads "already merged" and the work is not in the tree |
+
+The old wording made it worse by calling what a worktree holds "untracked scratch, normally the agent's own probes and safe to drop". That is sometimes true and was catastrophically false here.
+
+So the check is three questions, and ALL THREE must clear before anything is removed:
+
+1. Unmerged commits: `git log develop..<branch> --oneline`. Non-empty means stop.
+2. Uncommitted work in the worktree: `git -C <worktree-path> status --short` and `git -C <worktree-path> diff --stat`. ANY modified tracked file means stop, regardless of what the commit log says. Untracked files are classified individually, never dismissed as scratch by default.
+3. Reverted-after-merge: `git log --oneline --grep="Revert" develop | head`, and check whether the branch's commit was merged and then reverted. An ancestor of `develop` whose change is no longer in the tree is PARKED work, not finished work.
+
+Only when all three clear: `git worktree remove --force <path>`, `git worktree prune`, and `git branch -D <branch>`.
+
+If any question does not clear, do NOT delete. Report the worktree, say which question stopped it and what it holds, and leave it. A parked worktree costs disk; a deleted one costs the work.
 
 Report which branches and worktrees were removed, and name anything skipped and why. If a branch had unmerged commits, do NOT delete it, and surface it to the user as its own item; that is a lost-work risk, not housekeeping.
 
