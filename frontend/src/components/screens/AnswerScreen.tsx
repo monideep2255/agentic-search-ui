@@ -396,6 +396,91 @@ export interface Source {
   url: string;
 }
 
+/**
+ * The layer's plain-language group heading for the source list, transcribed
+ * verbatim from the three `<h3>` labels in
+ * `docs/build/design/design-system/identity/layer-badges.html`: "Knowledge
+ * graph", "Live NCBI APIs", "Enrichment". `LAYER_WORD` in
+ * `answer/CitationMarkers.tsx` names a layer inside one citation's own tag
+ * ("L1 · graph"), a short internal-facing word; this names the GROUP a
+ * reader sees once the source list is broken out by layer, a heading meant
+ * to stand alone with no "L1" beside it, so it is a second constant rather
+ * than a reuse of the first.
+ */
+export const LAYER_GROUP_LABEL: Record<Layer, string> = {
+  1: "Knowledge graph",
+  2: "Live NCBI APIs",
+  3: "Enrichment",
+};
+
+/** One row in the grouped, deduplicated source list: `Source` plus every
+ * citation marker that pointed at the same record. */
+export interface MergedSource {
+  /** Every citation marker this record answers for, ascending, e.g. [2, 5]. */
+  ns: number[];
+  layer: Layer;
+  name: string;
+  tool: string;
+  evidence: string;
+  confidence: string;
+  license: string;
+  url: string;
+}
+
+/**
+ * Groups `sources` by layer, Knowledge graph then Live NCBI APIs then
+ * Enrichment, and within each group collapses every citation that names the
+ * SAME record (`source.url`) into one row carrying every marker that
+ * pointed at it.
+ *
+ * This dedupes the SOURCE LIST only, never a table row. `AnswerScreen`'s
+ * result table (`RTAB`, rendered from `claims`) is untouched by this
+ * function: two table rows can legitimately cite the same record while
+ * stating different facts, for instance many variants linked to one gene
+ * record, and collapsing those rows would destroy information the reader
+ * came for. The source list answers a different question, "where did this
+ * evidence come from", so the same record answering that question twice is
+ * the duplication the product owner asked removed (2026-09-20), and this
+ * function only ever runs on the list that answers that question.
+ *
+ * A merged record's group is the layer of its FIRST citation. The same URL
+ * cited from two different layers is not a modelled case in this system
+ * (Section 6 gives each tool exactly one layer, so a record's layer is fixed
+ * by which tool fetched it); this is a defensive default, not a real path.
+ */
+export function groupSourcesByLayer(
+  sources: Source[],
+): { layer: Layer; label: string; items: MergedSource[] }[] {
+  const byUrl = new Map<string, MergedSource>();
+  const order: string[] = [];
+  sources.forEach((source) => {
+    const existing = byUrl.get(source.url);
+    if (existing) {
+      existing.ns.push(source.n);
+      return;
+    }
+    byUrl.set(source.url, {
+      ns: [source.n],
+      layer: source.layer,
+      name: source.name,
+      tool: source.tool,
+      evidence: source.evidence,
+      confidence: source.confidence,
+      license: source.license,
+      url: source.url,
+    });
+    order.push(source.url);
+  });
+  const merged = order.map((url) => byUrl.get(url) as MergedSource);
+  return ([1, 2, 3] as Layer[])
+    .map((layer) => ({
+      layer,
+      label: LAYER_GROUP_LABEL[layer],
+      items: merged.filter((item) => item.layer === layer),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 export interface TrustSignal {
   kind: "good" | "risk" | "plain";
   label: string;
@@ -929,6 +1014,15 @@ export function AnswerBody({
     );
 
   const sourceByIndex = new Map(sources.map((source) => [source.n, source]));
+  /*
+   * The RENDERED source list, grouped by layer and deduplicated by record.
+   * `sourceByIndex` above is untouched by this: every citation marker in the
+   * prose resolves through it by its own `n`, one entry per `n` regardless
+   * of how many markers a merged record now carries, so grouping and
+   * deduplicating the list a reader scrolls through never changes what a
+   * marker in the text resolves to.
+   */
+  const sourceGroups = groupSourcesByLayer(sources);
 
   /** The prototype's phone layout: record tables become stacked rows. */
   const phone = useMediaQuery(PHONE_LAYOUT_QUERY, { noSsr: true });
@@ -1554,193 +1648,260 @@ export function AnswerBody({
                 px: 0.75,
               }}
             >
-              {sources.length}
+              {sourceGroups.reduce((total, group) => total + group.items.length, 0)}
             </Box>
           </Box>
 
-          {sources.map((source) => {
-            const colour = layerColour(source.layer);
-            return (
-              <Box
-                key={source.n}
-                component="details"
-                data-testid={`${testIdPrefix}source-${source.n}`}
-                data-layer={source.layer}
-                open={openSources.includes(source.n)}
-                sx={{
-                  border: `1px solid ${designTokens.line}`,
-                  borderLeft: `4px solid ${colour.main}`,
-                  borderRadius: 0.5,
-                  bgcolor: designTokens.surface,
-                  mb: 1,
-                  px: 1.75,
-                  py: 1.25,
-                }}
-              >
-                <Box
-                  component="summary"
-                  onClick={(event: React.MouseEvent) => {
-                    event.preventDefault();
-                    toggleSource(source.n);
-                  }}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.25,
-                    flexWrap: "wrap",
-                    cursor: "pointer",
-                    listStyle: "none",
-                    "&::-webkit-details-marker": { display: "none" },
-                  }}
-                >
-                  <Box
-                    component="span"
-                    aria-hidden="true"
-                    sx={{
-                      fontSize: 9,
-                      color: designTokens.inkFaint,
-                      transform: openSources.includes(source.n) ? "rotate(90deg)" : "none",
-                      transition: "transform .12s ease",
-                    }}
-                  >
-                    ▶
-                  </Box>
-                  <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12 }}>
-                    [{source.n}]
-                  </Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {source.name}
-                  </Typography>
-                  {/*
-                    F-4.8-D-02. This read "L1", which a reader has to already
-                    know how to decode. The prototype names the layer in words.
-                  */}
-                  <Box
-                    component="span"
-                    sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}
-                  >
-                    L{source.layer} · {LAYER_WORD[source.layer] ?? "source"}
-                  </Box>
-                </Box>
+          {/*
+            GROUPED BY LAYER (product owner, 2026-09-20): "should we bucket
+            them into the layers and provide some info, will be hard to parse
+            500 sources to be honest". Once the reader-facing cap rose from 16
+            to 100 rows (`9cc5d63`), a flat list of that size stopped being
+            scannable. Each group's dot and label are transcribed from
+            `identity/layer-badges.html`'s three cards, the design system's
+            own answer to "what does a reader need to tell the layers apart
+            at a glance": the colour and the plain-language name, nothing
+            invented for this surface.
 
-                {/*
-                  The flag control sits in the card BODY, not the summary row.
-                  The prototype used to put it in the summary, and axe rightly
-                  calls that `nested-interactive`: a `<summary>` with a focusable
-                  descendant, WCAG 4.1.2. This shipped as a deviation
-                  (F-4.9-D-13); the design-system focus-nesting pass of
-                  2026-08-14 moved it in the design too, so the two agree.
-                */}
-                {onFlagSource ? (
-                  <Box
-                    component="button"
-                    type="button"
-                    aria-pressed={flaggedSources.includes(source.n)}
-                    onClick={(event: React.MouseEvent) => {
-                      // It lives inside the summary, as it does in the
-                      // prototype, so without this a flag click also opens or
-                      // closes the card under the user's cursor.
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onFlagSource(source.n);
-                    }}
-                    sx={{
-                      font: "inherit",
-                      fontSize: 11.5,
-                      px: 1,
-                      py: 0.3,
-                      borderRadius: 0.5,
-                      cursor: "pointer",
-                      border: "1px solid",
-                      borderColor: flaggedSources.includes(source.n)
-                        ? designTokens.risk
-                        : designTokens.line,
-                      color: flaggedSources.includes(source.n)
-                        ? designTokens.risk
-                        : designTokens.inkFaint,
-                      bgcolor: flaggedSources.includes(source.n)
-                        ? designTokens.riskWash
-                        : designTokens.surface,
-                      "&:hover": { color: designTokens.risk, borderColor: designTokens.risk },
-                    }}
-                  >
-                    {flaggedSources.includes(source.n) ? "Flagged" : "Flag: does not support"}
-                  </Box>
-                ) : null}
-                {/* Every field Section 9.1 requires. The licence is not optional.
-                    Inside the disclosure now, so a collapsed card is a header. */}
+            DEDUPLICATED WITHIN each group by record (`groupSourcesByLayer`,
+            above): "ensure the content in the table is pointing to unique
+            information, if it references same source, that should just be
+            present once". A record cited more than once now renders as one
+            card carrying every marker, e.g. "[2][5]", rather than the same
+            name, tool and licence repeated. This is the SOURCE LIST only;
+            the result table above is untouched, because two table rows can
+            state different facts about the same record and collapsing them
+            would lose one of the facts.
+          */}
+          {sourceGroups.map((group) => (
+            <Box key={group.layer} data-testid={`${testIdPrefix}sources-group-${group.layer}`} sx={{ mb: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75, mt: 0.5 }}>
                 <Box
-                  component="dl"
+                  component="span"
+                  aria-hidden="true"
                   sx={{
-                    m: 0,
-                    display: "grid",
-                    gridTemplateColumns: "auto 1fr",
-                    gap: "7px 18px",
-                    fontSize: 13,
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "3px",
+                    flex: "none",
+                    display: "block",
+                    bgcolor: layerColour(group.layer).main,
+                  }}
+                />
+                <Typography
+                  variant="overline"
+                  component="span"
+                  sx={{ color: designTokens.inkFaint, fontSize: 10.5, letterSpacing: "0.1em" }}
+                >
+                  {group.label}
+                </Typography>
+                <Box
+                  component="span"
+                  data-testid={`${testIdPrefix}sources-group-${group.layer}-count`}
+                  sx={{
+                    ...mono,
+                    fontSize: 11,
+                    fontWeight: 400,
+                    color: designTokens.inkMuted,
+                    border: `1px solid ${designTokens.line}`,
+                    borderRadius: 999,
+                    px: 0.75,
                   }}
                 >
-                  {[
-                    ["Tool", source.tool, true],
-                    ["Evidence", source.evidence, false],
-                    ["Confidence", source.confidence, false],
-                    ["License", source.license, false],
-                    ["Record", source.url, true],
-                  ].map(([label, value, isToken]) => (
-                    <Box key={label as string} sx={{ display: "contents" }}>
-                      <Typography
-                        component="dt"
-                        variant="overline"
-                        sx={{
-                          fontSize: 10.5,
-                          letterSpacing: "0.1em",
-                          color: designTokens.inkFaint,
-                        }}
-                      >
-                        {label as string}
-                      </Typography>
-                      <Box
-                        component="dd"
-                        sx={{
-                          m: 0,
-                          fontSize: isToken ? 12.5 : 13,
-                          ...(isToken ? mono : {}),
-                          wordBreak: isToken ? "break-all" : "normal",
-                        }}
-                      >
-                        {label === "Record" && isLinkableCitationUrl(value as string) ? (
-                          // A-17: every citation must link back to its source.
-                          // Previously the URL was plain text and the answer
-                          // screen contained zero anchors, so verifying a claim
-                          // meant selecting and copying a URL by hand.
-                          <Box
-                            component="a"
-                            href={value as string}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            sx={{ color: designTokens.link }}
-                          >
-                            {value as string}
-                          </Box>
-                        ) : (
-                          <>
-                            {value as string}
-                            {label === "Record" ? (
-                              <Box
-                                component="span"
-                                sx={{ display: "block", fontSize: 11.5, color: designTokens.risk }}
-                              >
-                                Not linked: this URL is not on a recognised NCBI host.
-                              </Box>
-                            ) : null}
-                          </>
-                        )}
-                      </Box>
-                    </Box>
-                  ))}
+                  {group.items.length}
                 </Box>
               </Box>
-            );
-          })}
+
+              {group.items.map((source) => {
+                const colour = layerColour(source.layer);
+                const primaryN = source.ns[0];
+                return (
+                  <Box
+                    key={source.ns.join(",")}
+                    component="details"
+                    data-testid={`${testIdPrefix}source-${primaryN}`}
+                    data-layer={source.layer}
+                    open={openSources.includes(primaryN)}
+                    sx={{
+                      border: `1px solid ${designTokens.line}`,
+                      borderLeft: `4px solid ${colour.main}`,
+                      borderRadius: 0.5,
+                      bgcolor: designTokens.surface,
+                      mb: 1,
+                      px: 1.75,
+                      py: 1.25,
+                    }}
+                  >
+                    <Box
+                      component="summary"
+                      onClick={(event: React.MouseEvent) => {
+                        event.preventDefault();
+                        toggleSource(primaryN);
+                      }}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.25,
+                        flexWrap: "wrap",
+                        cursor: "pointer",
+                        listStyle: "none",
+                        "&::-webkit-details-marker": { display: "none" },
+                      }}
+                    >
+                      <Box
+                        component="span"
+                        aria-hidden="true"
+                        sx={{
+                          fontSize: 9,
+                          color: designTokens.inkFaint,
+                          transform: openSources.includes(primaryN) ? "rotate(90deg)" : "none",
+                          transition: "transform .12s ease",
+                        }}
+                      >
+                        ▶
+                      </Box>
+                      <Box
+                        component="span"
+                        data-testid={`${testIdPrefix}source-${primaryN}-markers`}
+                        sx={{ ...mono, fontWeight: 700, fontSize: 12 }}
+                      >
+                        {source.ns.map((n) => `[${n}]`).join("")}
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {source.name}
+                      </Typography>
+                      {/*
+                        F-4.8-D-02. This read "L1", which a reader has to already
+                        know how to decode. The prototype names the layer in words.
+                      */}
+                      <Box
+                        component="span"
+                        sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}
+                      >
+                        L{source.layer} · {LAYER_WORD[source.layer] ?? "source"}
+                      </Box>
+                    </Box>
+
+                    {/*
+                      The flag control sits in the card BODY, not the summary row.
+                      The prototype used to put it in the summary, and axe rightly
+                      calls that `nested-interactive`: a `<summary>` with a focusable
+                      descendant, WCAG 4.1.2. This shipped as a deviation
+                      (F-4.9-D-13); the design-system focus-nesting pass of
+                      2026-08-14 moved it in the design too, so the two agree.
+                    */}
+                    {onFlagSource ? (
+                      <Box
+                        component="button"
+                        type="button"
+                        aria-pressed={flaggedSources.includes(primaryN)}
+                        onClick={(event: React.MouseEvent) => {
+                          // It lives inside the summary, as it does in the
+                          // prototype, so without this a flag click also opens or
+                          // closes the card under the user's cursor.
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onFlagSource(primaryN);
+                        }}
+                        sx={{
+                          font: "inherit",
+                          fontSize: 11.5,
+                          px: 1,
+                          py: 0.3,
+                          borderRadius: 0.5,
+                          cursor: "pointer",
+                          border: "1px solid",
+                          borderColor: flaggedSources.includes(primaryN)
+                            ? designTokens.risk
+                            : designTokens.line,
+                          color: flaggedSources.includes(primaryN)
+                            ? designTokens.risk
+                            : designTokens.inkFaint,
+                          bgcolor: flaggedSources.includes(primaryN)
+                            ? designTokens.riskWash
+                            : designTokens.surface,
+                          "&:hover": { color: designTokens.risk, borderColor: designTokens.risk },
+                        }}
+                      >
+                        {flaggedSources.includes(primaryN) ? "Flagged" : "Flag: does not support"}
+                      </Box>
+                    ) : null}
+                    {/* Every field Section 9.1 requires. The licence is not optional.
+                        Inside the disclosure now, so a collapsed card is a header. */}
+                    <Box
+                      component="dl"
+                      sx={{
+                        m: 0,
+                        display: "grid",
+                        gridTemplateColumns: "auto 1fr",
+                        gap: "7px 18px",
+                        fontSize: 13,
+                      }}
+                    >
+                      {[
+                        ["Tool", source.tool, true],
+                        ["Evidence", source.evidence, false],
+                        ["Confidence", source.confidence, false],
+                        ["License", source.license, false],
+                        ["Record", source.url, true],
+                      ].map(([label, value, isToken]) => (
+                        <Box key={label as string} sx={{ display: "contents" }}>
+                          <Typography
+                            component="dt"
+                            variant="overline"
+                            sx={{
+                              fontSize: 10.5,
+                              letterSpacing: "0.1em",
+                              color: designTokens.inkFaint,
+                            }}
+                          >
+                            {label as string}
+                          </Typography>
+                          <Box
+                            component="dd"
+                            sx={{
+                              m: 0,
+                              fontSize: isToken ? 12.5 : 13,
+                              ...(isToken ? mono : {}),
+                              wordBreak: isToken ? "break-all" : "normal",
+                            }}
+                          >
+                            {label === "Record" && isLinkableCitationUrl(value as string) ? (
+                              // A-17: every citation must link back to its source.
+                              // Previously the URL was plain text and the answer
+                              // screen contained zero anchors, so verifying a claim
+                              // meant selecting and copying a URL by hand.
+                              <Box
+                                component="a"
+                                href={value as string}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{ color: designTokens.link }}
+                              >
+                                {value as string}
+                              </Box>
+                            ) : (
+                              <>
+                                {value as string}
+                                {label === "Record" ? (
+                                  <Box
+                                    component="span"
+                                    sx={{ display: "block", fontSize: 11.5, color: designTokens.risk }}
+                                  >
+                                    Not linked: this URL is not on a recognised NCBI host.
+                                  </Box>
+                                ) : null}
+                              </>
+                            )}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          ))}
         </Box>
       ) : null}
 
