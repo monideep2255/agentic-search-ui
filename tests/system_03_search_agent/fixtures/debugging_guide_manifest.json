@@ -30,7 +30,7 @@
     "src/system_03_search_agent/auth/schemas.py": "fdc3bad1b358bbb1295d7343e98b83ba753fe858ba5f839c3dfc8fc1542d99f4",
     "src/system_03_search_agent/auth/tokens.py": "ea5ca1c5ba61ce79132e57e746b3d5e7c7565f7e20c26f849552ea09d585fcca",
     "src/system_03_search_agent/contracts/__init__.py": "f199fbda73526b99519d1c39ea163939ab3b925ab1259764d858bd3f2b1bf9dd",
-    "src/system_03_search_agent/contracts/events.py": "839785c95486551217600fbc77f0a861c988dffb0a2dcd8a8d7bdd8c685f7beb",
+    "src/system_03_search_agent/contracts/events.py": "514bfed52e931362265063092be5475c7783e8b33e98060afe3953b2ba6755c2",
     "src/system_03_search_agent/contracts/query.py": "9d0b199bd41b1289a9f8967b1105424f3d0bff64f6b01ebb3b4247c226ddb73a",
     "src/system_03_search_agent/core/__init__.py": "dd653147b6b294170bb8b95e5732ae2f2930ee638f56635532ced0c28bf43afd",
     "src/system_03_search_agent/core/breadth_plan.py": "6c2790f56214816492b149325c20fecfcdc18f326e1dcd0c90dcd1a40295a5de",

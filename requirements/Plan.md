@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-14.
+Kick-off: 2026-05-06. Last updated: 2026-09-20.
 
 ## Status at a glance
 
@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-14.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is the first item under "Next, in order" in `testing/UI_fix_plan.md`'s "Where we stopped" section, which owns the cutoff. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 564 (DECISIONS.md).
+Decisions logged: 568 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,21 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-20, THE UNATTENDED OVERNIGHT RUN. Worked in the UI fix loop on `develop`, with no branch and no pull request, against a written goal contract, the overnight session prompt, which was deleted at the product owner's word once the run closed and stays in git history. Five items were on the list; three closed, one was merged and reverted, one is built and held.
+
+- CI IS GREEN ON DEVELOP, all four jobs, for the first time since 2026-09-14. The cause was THREE independent test-isolation defects rather than one:
+  - a debugging-guide row and manifest left stale when UI fix 11.16 added the `step` event
+  - a process-wide database engine poisoned by an earlier test's `monkeypatch`, invisible locally because the credential-less URL works under local trust authentication and fails only on CI
+  - an MCP session manager entered twice in one process
+  - No gate was narrowed and no test was skipped, weakened or deleted. Full account: `testing/Developer/reports/2026-09-19_ci_green/python_gates.md`.
+- UI FIXES 11.27 AND 11.28 WERE MERGED AT `d41099d` AND REVERTED AT `11e3348` the same night. Both are built and pass 474 of 474 frontend tests in their worktree, but CI failed build phase 4.9's premise test with the reasoning log holding at Guard and Think, ten seconds into a design whose own guarantee is 3.5 seconds. A real stall on a stream that closes with no `done`, and event-loop starvation under a load average of 60, both fit the evidence and neither was separable that night. Reverted rather than patched because the failure sat inside the previous fix, which is this repository's own stop condition. The branch `worktree-agent-a8393711bb57d579b` keeps the work.
+- THE 11.21 BROAD SEARCH WIRING IS BUILT AND MEASURED BUT NOT MERGED, on `worktree-breadth-wiring`. Retrieval determinism holds across three runs per question, the worst question spends 17 of the 20 allowed Layer 2 and 3 calls, latency sits inside the current develop range, and the stable prompt prefix is byte-identical. Its suite ran at `2 failed, 5023 passed`; one failure is explained and the other is not, so its verify surface is NOT met.
+- LIVE RELIABILITY IS NOT REPRODUCING RATHER THAN FIXED. Thirty runs answered 30 of 30 with the error instrumentation live and never firing, which with the previous day's fifteen makes 45 consecutive clean runs against 48 of 53 on 2026-09-14. Nothing is known to have fixed it.
+- FINDING L-01, the substantive result of the measurement: one question returned THREE different source sets across six identical runs, which is UI fix 11.21's own headline requirement failing live before any of this session's changes. Every varying source is graph-derived. One of its two shapes has a code mechanism, an unordered `collect(DISTINCT x)` feeding a row cap, and a fix on the wiring branch; the other is unestablished.
+- THREE DECISIONS LOGGED: fix CI by repairing test isolation rather than relaxing a gate, revert rather than patch a fix inside a fix, and do not dispatch OMIM because an `omim.org` URL fails the citation contract and its rows could only feed uncited claims.
+- ONE CORRECTION THE SESSION MADE AGAINST ITSELF, recorded because the shape recurs in this repository: it published a claim that both of the wiring branch's failures were pre-existing and called it "checked rather than assumed". Only the ABSENCE of develop's fix had been confirmed, which establishes nothing about whether the failures would clear. A worker tested the inference directly and it did not hold. Both documents were corrected and pushed.
+- WHAT A TESTER SEES: nothing changed. The only code change that stands is the test-isolation fix.
 
 2026-09-14, UI FIX SET 11, THE PRODUCT OWNER'S LIVE FEEDBACK OF 2026-09-13 AND 2026-09-14. Worked in the UI fix loop on `develop`, with no branch and no pull request. Parallel sub-agents built pieces in isolated worktrees, and the lead verified, merged and committed.
 

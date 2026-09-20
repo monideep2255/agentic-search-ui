@@ -32,11 +32,18 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", rewritten at the close of 2026-09-14. Start with its "Next, in order" item 1, then work down the list.
+- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", rewritten after the unattended run of 2026-09-19 into 2026-09-20. Start with its "Next, in order" item 1, then work down the list.
+  - CI IS GREEN on develop, all four jobs. First green run since 2026-09-14, and the three causes were real test-isolation defects rather than CI being fussy. The last commit that changes any CODE is `11e3348`; everything after it is documentation, so `git log --oneline` is the authority for the tip rather than a hash pinned here.
+  - NOTHING A TESTER SEES CHANGED OVERNIGHT. The only code change that stands is the test-isolation fix. The develop app at `https://search-agent-web-develop-2aeb.up.railway.app` is functionally the same product as on 2026-09-14, now on a green build.
+  - TWO WORKTREES ARE DELIBERATELY KEPT AND NEITHER IS MERGED. Do not clear either away.
+    - `agent-a8393711bb57d579b` holds 11.27 and 11.28, merged then reverted the same night over one unresolved question: on a stream that closes with no `done`, paced events may never release. CI showed the reasoning log holding at Guard and Think, ten seconds into a design whose own guarantee is 3.5 seconds. Real stall or event-loop starvation was not separable that night.
+    - `breadth-wiring` holds the 11.21 broad search, built and measured. Its full suite DID run, at `2 failed, 5023 passed`. One failure is explained (the debugging-guide manifest, fixed on develop). The OTHER IS NOT: the MCP production-mount test fails only in that branch's full run, passes alone and passes with its own directory, and copying develop's fix in did NOT clear it. Its verify surface is therefore NOT MET.
+  - Live reliability is NOT REPRODUCING rather than fixed: 45 consecutive clean runs with the error instrumentation live and never firing. A different defect was found instead, finding L-01, where one question returns three different source sets across six identical runs. Every varying source is graph-derived. One of its two shapes has a code mechanism and a fix on the wiring branch; the other is unestablished.
+  - ONE CORRECTION THE OVERNIGHT SESSION MADE AGAINST ITSELF, worth reading before trusting any claim in its reports: it first wrote that both of the wiring branch's failures were pre-existing and called that "checked rather than assumed". It was not checked. Only the absence of develop's fix had been confirmed, which proves nothing about whether the failures would clear. A worker tested the inference directly and it did not hold. Both documents were corrected and pushed.
   - As of that close, testers use the develop app. Production stays on `v0.1.2` by product-owner decision (DECISIONS.md, 2026-09-14).
   - The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
-  - Sets 1 to 7 are approved. Sets 8, 9 and 11 are live on develop, awaiting the product owner's retest. Set 10 is untouched apart from item 10.1.
-  - Evidence is under `testing/Developer/reports/2026-09-14_*`.
+  - Sets 1 to 7 are approved. Sets 8 and 9 are live on develop, awaiting the product owner's retest. SET 11 IS ONLY PARTLY LIVE and must not be described as live as a whole: 11.5 to 11.9, 11.12 to 11.14, 11.19, 11.20, 11.26 and part of 11.15 are on develop, while 11.17, 11.21, 11.27 and 11.28 are built and NOT live. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Set 10 is untouched apart from item 10.1.
+  - Evidence is under `testing/Developer/reports/2026-09-14_*` and `2026-09-19_*`. Start with `2026-09-19_overnight/session_log.md`, which points at the other three.
   - When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
   Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, and never let two builders own one file region.
 
@@ -62,8 +69,25 @@ WHERE TO LOOK, in the order a fresh session should read them:
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
 | What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
-| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, plus the UI-fix-loop rows dated 2026-09-12 to 2026-09-14 |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and four rows dated 2026-09-20 on the CI fix, the 11.27 and 11.28 revert, the OMIM exclusion and the third `/phase-checkpoint` mode |
+| What happened overnight on 2026-09-19 | `testing/Developer/reports/2026-09-19_overnight/session_log.md`, then the three reports it points to |
 | Where the last session stopped | `testing/UI_fix_plan.md`, section "Where we stopped" |
+
+### The session boundary, 2026-09-20
+
+Work stopped here deliberately and resumes in a NEW session. Nothing is half-finished on
+disk: the working tree is clean, develop is pushed, CI is green and both develop services
+are SUCCESS. The two worktrees are the only work in flight and both are parked on purpose,
+each with a written reason above.
+
+What the next session should do first, in order, is `testing/UI_fix_plan.md`'s "Next, in
+order". Its item 1 is the broad-search wiring decision, and it needs the unexplained MCP
+failure understood before anything merges, not after.
+
+Three decisions are waiting on the product owner and none of them are blocked by
+engineering: split the bold fix out and land it alone, settle whether OMIM can ever be
+cited, and settle whether every retrieved source should be cited. The full list, each
+written to be answerable yes, no or pick-one, is in the cutoff's "Waiting on you".
 
 ### Process lessons from the fix-loop sessions, already applied
 
@@ -324,4 +348,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-14.
+Last updated: 2026-09-20.

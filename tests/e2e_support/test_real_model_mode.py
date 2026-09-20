@@ -246,9 +246,22 @@ class TestPatchingAndModeRoute:
         module-level `app` object, and Starlette refuses `add_middleware` after
         that app has served a request, so a second build would raise. The other
         arm is covered by `test_mode_payload_names_each_arm` below.
+
+        `TestClient` is deliberately NOT used as a context manager. Its
+        `__enter__` runs the app's lifespan, and this is the real module-level
+        `app` from `adapters/web_sse/app.py`, whose lifespan enters the
+        mounted MCP sub-app's `StreamableHTTPSessionManager.run()`. That
+        manager may run exactly once per process, and the one test allowed
+        to enter it is `tests/system_03_search_agent/adapters/mcp/
+        test_phase_4_1_production_mount.py` (see its module docstring). This
+        file collects before that one, so a `with TestClient(...)` here made
+        the production-mount test fail in CI with "`.run()` can only be
+        called once per instance" from 2026-09-14 to 2026-09-19. The `/__e2e__/
+        mode` route needs nothing from the lifespan, so the bare client is
+        the same proof, without the collision.
         """
-        with TestClient(backend._build_app()) as client:
-            response = client.get("/__e2e__/mode")
+        client = TestClient(backend._build_app())
+        response = client.get("/__e2e__/mode")
 
         assert response.status_code == 200
         assert response.json() == {"model": "fake"}

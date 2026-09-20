@@ -8,12 +8,13 @@
 - [Error payloads](#error-payloads)
 - [Answer quality spot check](#answer-quality-spot-check)
 - [Files in this report](#files-in-this-report)
+- [Correction by the main agent, 2026-09-19](#correction-by-the-main-agent-2026-09-19)
 
 ## Summary
 
 The develop web app and API were checked after five days idle, both on commit ba38cc9 with Railway reporting SUCCESS. The API answers and reports the correct environment. Reliability today is 15 of 15 runs completing cleanly with no fatal error event, across five questions asked three times each in fresh guest sessions. That is a change from 2026-09-14, when about 1 in 10 of 53 live searches failed with an uncaptured cause. No error was reproduced in this run, so no cause is reported for today, but the measurement now captures the full error payload and the last step seen before any future failure, which the prior script did not do.
 
-A separate finding, not a reliability failure: 14 of the 15 runs returned trust_outcome `ask` rather than `answer`, including all three researcher-depth BRCA1 runs and both plain_language BRCA1 runs. Only the HNF1A researcher run's third repetition returned a final `answer`. The measurement script counts `answer`, `ask` and `flag` as answered, so the 15 of 15 figure is correct by that definition, but a directly factual question such as "Which diseases are associated with BRCA1?" resolving to a clarifying question in all three of its researcher-depth repetitions is worth separate attention from whoever owns the think or plan step next.
+A separate finding, not a reliability failure: 14 of the 15 runs returned trust_outcome `ask` rather than `answer`, including all three researcher-depth BRCA1 runs and both plain_language BRCA1 runs. Only the HNF1A researcher run's third repetition returned a final `answer`. The measurement script counts `answer`, `ask` and `flag` as answered, so the 15 of 15 figure is correct by that definition, but a directly factual question such as "Which diseases are associated with BRCA1?" resolving to a clarifying question in all three of its researcher-depth repetitions is worth separate attention from whoever owns the think or plan step next. CORRECTED: this paragraph is wrong, see "Correction by the main agent" at the end of this report. `trust_outcome: "ask"` is the trust tier, not a clarifying question.
 
 ## Health check
 
