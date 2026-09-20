@@ -1651,8 +1651,9 @@ async def get_v1_query_citations(
     #
     # F-4.0-A-12 (adversary round 1, build phase 4.0, carried open): a
     # separate truncation disclosure exists upstream, `core/graph.py`'s
-    # `citations_capped` (the `_MAX_CITATIONS_PER_ANSWER` cut, F-2.1-C12's
-    # honesty guarantee), but it is currently only woven into the
+    # `citations_capped` (the `_MAX_FINDINGS_FOR_DISPLAY` cut, formerly
+    # `_MAX_CITATIONS_PER_ANSWER`, F-2.1-C12's honesty guarantee), but it is
+    # currently only woven into the
     # narrative `token` text or a non-fatal refusal `error`, never onto
     # `DonePayload`, so this endpoint (which reads only `citation`-typed
     # events) has no field to read it from. The correct fix threads a new
@@ -1685,14 +1686,29 @@ async def get_v1_query_citations(
         if len(citations) >= _MAX_CITATIONS_PER_RUN:
             break
     # F-4.0-A-13 (adversary round 1, build phase 4.0): the local
-    # `_MAX_CITATIONS_PER_RUN` break above is unreachable today (verified:
-    # `core/graph.py`'s own `_MAX_CITATIONS_PER_ANSWER = 20` is the only
-    # producer and cuts well below 50), but was itself an undisclosed
-    # silent truncation, the same shape phase 3.2's `_cap()` finding was
-    # fixed for, with nothing enforcing the 2.5x margin that makes it safe
-    # today. Disclosed defensively so raising the upstream cap past 50 in
-    # a later phase degrades to "the header says so" rather than "a live
-    # silent-truncation path with no failing test".
+    # `_MAX_CITATIONS_PER_RUN` break above was unreachable when this was
+    # written (verified: `core/graph.py`'s own `_MAX_CITATIONS_PER_ANSWER =
+    # 20` was the only producer and cut well below 50), but was itself an
+    # undisclosed silent truncation, the same shape phase 3.2's `_cap()`
+    # finding was fixed for, with nothing enforcing the 2.5x margin that
+    # made it safe at the time. Disclosed defensively so raising the
+    # upstream cap past 50 in a later phase would degrade to "the header
+    # says so" rather than "a live silent-truncation path with no failing
+    # test".
+    #
+    # That later phase arrived (answer quality fix, 2026-09-20): the
+    # upstream producer split into a model-prompt cap
+    # (`_MAX_FINDINGS_FOR_MODEL_PROMPT`, 20, unchanged) and a display cap
+    # (`_MAX_FINDINGS_FOR_DISPLAY`, 100, bounded by the tool's own
+    # `row_limit`), and an answer routinely carries more than 50 citations
+    # now that the code-built table and citation list are no longer bounded
+    # to what a model's own prompt could safely hold. This break is
+    # REACHABLE today, exactly as anticipated, and degrades exactly as
+    # designed: the header still fires, nothing here silently drops a
+    # citation with no signal. Whether `_MAX_CITATIONS_PER_RUN` and Section
+    # 13.2's `maxItems: 50` should themselves move is a separate,
+    # cross-surface decision (this endpoint, the MCP surface and its wire
+    # contract) and is left open rather than guessed at here.
     if citation_events_total > _MAX_CITATIONS_PER_RUN:
         response.headers["X-Citations-Export-Truncated"] = "true"
     return citations

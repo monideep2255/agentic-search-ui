@@ -2661,12 +2661,14 @@ _BREADTH_DROPPED_PURPOSES: Final[frozenset[str]] = frozenset({"omim_search"})
 #: source's presence in the answer is fixed, not "whatever the page held".
 _BREADTH_ROW_CAP: Final[int] = _LAYER_TOOL_ROW_CAP
 
-#: UI fix 11.21 wiring: how many of the 20 citation slots the answer-shape
-#: calls take before the context calls share the rest one row per round
-#: (`synthesis.findings.build_synth_findings`, `lead_quota`). Half the
-#: cap: enough that a variants question lists ten variants, which is more
-#: than the five it showed before, and enough left that each of the seven
-#: context calls reaches the prompt. The cap itself is untouched.
+#: UI fix 11.21 wiring: how many of the admitted citation slots the
+#: answer-shape calls take before the context calls share the rest one row
+#: per round (`synthesis.findings.build_synth_findings`, `lead_quota`).
+#: Ten, well under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (below): the lead
+#: calls' guaranteed rows land inside the model's own prompt slice
+#: regardless of how large `_MAX_FINDINGS_FOR_DISPLAY` grows, which is what
+#: keeps "the answer's own shape reaches the model first" true after the
+#: prompt/display split. The quota itself is untouched by that split.
 _LEAD_FINDINGS_QUOTA: Final[int] = 10
 
 #: The GO shapes `cypher_templates` already answers from the question text.
@@ -5096,6 +5098,42 @@ async def act_node(state: GraphState) -> dict[str, Any]:
 
 _MAX_CITATIONS_PER_ANSWER = 20
 
+# Answer quality fix (2026-09-20). `_MAX_CITATIONS_PER_ANSWER` above used to
+# be the ONE number doing two different jobs at once: how many findings
+# reach the model's own prompt, and how many code-built rows the citation
+# list, the disclosure table and the findings tail may carry. Measured
+# (`testing/Developer/reports/2026-09-20_verification_rate/findings.md`):
+# 24 of 30 live answers hit that shared cap and told the reader the answer
+# was incomplete, even though the table rows below the prose are built
+# entirely in code from a finding's own structured fields and never pass
+# through a model at all. `_MAX_CITATIONS_PER_ANSWER` itself is left alone,
+# unchanged, for `_citations_from_findings` below, a build-phase-2.1-era
+# function that is not on this live path (see its own docstring) and whose
+# tests assert on it directly.
+#
+# The hard ceiling on how many findings reach one Synth model call's own
+# prompt (`render_findings_block`/`build_synth_messages`). This is the
+# hallucination control `system-design-patterns.md` pattern 7 exists for:
+# never inline more raw facts into a model's context than it can be
+# trusted not to invent past (`synthesis/findings.py`'s own module
+# docstring makes the same point about `MAX_FINDINGS_PER_PROMPT`). The
+# VALUE is unchanged, still 20; only the name is new, so this job can never
+# again be silently re-merged with the one below.
+_MAX_FINDINGS_FOR_MODEL_PROMPT = 20
+
+# The much higher ceiling on how many already-fetched, code-built rows may
+# reach the citation list, the disclosure table and the findings tail.
+# None of that content is model-written: every cell is built in code
+# straight from a finding's own structured fields (`record_label`,
+# `table_second_cell`, `build_structured_fallback_narrative`), so the
+# hallucination risk the prompt bound exists for does not apply to it.
+# Bounded by `_PLAN_TOOL_CALL_ROW_LIMIT`, the planned graph call's own
+# `row_limit`: admitting more findings than a call could ever return is
+# not a bound, it is a number with no meaning. `production-standards.md`'s
+# multi-agent pipeline gate still requires the bound to exist, just at a
+# value the tool's own output can actually reach.
+_MAX_FINDINGS_FOR_DISPLAY = _PLAN_TOOL_CALL_ROW_LIMIT
+
 
 def _tool_execution_outcome(
     findings: list[Finding],
@@ -5826,14 +5864,23 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     # Singular and plural are handled rather than left as "1 records are",
     # because this string is shown to a reader in a clinical context and a
     # visible grammar slip in a caveat undermines the caveat.
+    # Answer quality fix (2026-09-20). "are not described above" read as
+    # "these are missing", which stopped being the honest framing once the
+    # findings tail below started listing the full admitted set in code: a
+    # finding this note names may still be missing from every part of the
+    # answer, prose and table alike, but it was never true to say the
+    # SUMMARY covers everything and only imply the rest is a gap in the
+    # whole answer. The note now names what it actually knows, that the
+    # written summary above did not cover them, and nothing about where
+    # else they may or may not appear.
     if count == 1:
         return (
             f"Note: one further {label} was found for this question and is "
-            "not described above"
+            "not covered in the summary above"
         )
     return (
         f"Note: {count} further {label}s were found for this question and "
-        "are not described above"
+        "are not covered in the summary above"
     )
 
 
@@ -7981,23 +8028,28 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # called, and it is the only thing Synth can draw a fact from. Built
     # here, before the call, so a zero-finding query never spends a synth
     # call at all: there is nothing it could honestly write.
-    # `max_findings` is the citation cap, deliberately, not the findings
-    # module's own larger default. A citation exists only where a claim
-    # grounded against a finding, so the number of findings handed to Synth
-    # is an upper bound on the number of citations that can be emitted, and
-    # setting the two to different values would let the citation cap be
-    # exceeded by construction. Build phase 2.1's cap is not weakened by
-    # this phase's rewrite of how citations are built.
+    #
+    # `max_findings` here is the DISPLAY cap, `_MAX_FINDINGS_FOR_DISPLAY`,
+    # not the model-prompt cap (2026-09-20 split; see that constant's own
+    # comment). `synth_findings` below is therefore the full ADMITTED list:
+    # every finding the code-built table, the findings tail and the
+    # citation list may draw on. The model itself is handed a strict
+    # PREFIX of it, `prompt_findings`, sliced out below once every
+    # transform that can reorder or renumber this list has already run.
+    # `build_synth_findings` assigns `ref_index` densely, 1..len(...), in
+    # exactly this order, so the slice keeps every ref_index identical to
+    # what `render_findings_block` will print for it: there is no
+    # renumbering step downstream of the slice to disagree with itself.
     # Answer quality fix (2026-09-14). Which calls answer the question's own
     # shape: the planned graph call, plus the trials call when the question
     # asks about trials. Their findings are NUMBERED first in the prompt,
-    # the fallback and the tail, while admission to the cap keeps set 8's
-    # Layer 2, 3, 1 handoff order (see `build_synth_findings`).
+    # the fallback and the tail, while admission to the display cap keeps
+    # set 8's Layer 2, 3, 1 handoff order (see `build_synth_findings`).
     answer_call_ids = _answer_call_ids(state.get("tool_calls", []), query.text)
     synth_findings, findings_capped = build_synth_findings(
         findings,
         _pick_representative_field,
-        max_findings=_MAX_CITATIONS_PER_ANSWER,
+        max_findings=_MAX_FINDINGS_FOR_DISPLAY,
         # UI fix set 7, item 7.2: on a go-deeper turn, the records an earlier
         # answer already showed go to the back of the queue so the cap
         # admits the ones the reader has not seen. Empty on every other
@@ -8007,6 +8059,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # UI fix 11.21 wiring: the answer-shape calls take the first ten
         # slots, then every context call shares the rest one row per
         # round, so the breadth rows never crowd the graph answer out.
+        # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20), so
+        # the answer's own shape always lands inside the model's prompt
+        # slice too, regardless of how large the display cap grows.
         lead_quota=_LEAD_FINDINGS_QUOTA,
     )
 
@@ -8065,12 +8120,30 @@ async def write_node(state: GraphState) -> dict[str, Any]:
 
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 
+    # THE PROMPT SLICE (2026-09-20). Every finding-list transform that can
+    # reorder or renumber `synth_findings` (the lead-quota sort inside
+    # `build_synth_findings`, `apply_resolved_disease_names`,
+    # `drop_placeholder_condition_findings`'s dense renumbering) has now
+    # run, so this is the last point `ref_index` changes. `prompt_findings`
+    # is what the model is actually shown and actually grounded against;
+    # `synth_findings` itself stays the full display list for everything
+    # after the model's own call (the tail, the table, the citations).
+    # Slicing rather than re-deriving means a finding's `ref_index` here is
+    # exactly the number `render_findings_block` prints for it, by
+    # construction, with no second numbering scheme to drift from the
+    # first.
+    prompt_findings = synth_findings[:_MAX_FINDINGS_FOR_MODEL_PROMPT]
+
     # The findings that answer the question, after the resolved-name rewrite
     # (which keeps `call_id`), so the prompt can say so and the summary can
-    # count them. Every finding when nothing is context.
-    answer_findings = [f for f in synth_findings if f.call_id in answer_call_ids]
+    # count them. Every finding when nothing is context. Computed over
+    # `prompt_findings`, never the full display list: `answer_ref_indices`
+    # feeds `build_answer_context_directive`, which the model reads inside
+    # its own prompt, so naming a ref_index the model was never shown would
+    # be an instruction about content that is not there.
+    answer_findings = [f for f in prompt_findings if f.call_id in answer_call_ids]
     if not answer_findings:
-        answer_findings = list(synth_findings)
+        answer_findings = list(prompt_findings)
     answer_ref_indices = [f.ref_index for f in answer_findings]
 
     # F-4.5-A-04: ONE declared budget for the whole Write step, shared by
@@ -8095,7 +8168,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             # 1.0 and dropped at this line until phase 4.5.
             build_synth_messages(
                 query.text,
-                synth_findings,
+                prompt_findings,
                 query.audience_depth,
                 answer_ref_indices=answer_ref_indices,
             ),
@@ -8134,9 +8207,17 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # beside the grounded text rather than inside it. See
     # `synthesis/answer_layout.py`.
     model_layout = grounding_input(parse_synth_layout(_response_text(synth_text)))
+    # Grounded against `prompt_findings`, never the full display list. The
+    # grounding pass resolves a printed `[N]` marker by `ref_index`
+    # (`synthesis/grounding.py`'s `by_ref`), and the model was shown exactly
+    # `prompt_findings`'s `ref_index` range and nothing past it. Passing the
+    # wider display list here would let a marker the model never had reason
+    # to write (naming a finding whose value it never saw) resolve to a
+    # real finding anyway, which is exactly the wrong-chip risk this split
+    # exists to avoid.
     grounding = run_grounding_pass(
         model_layout.narrative,
-        synth_findings,
+        prompt_findings,
         core_ask_required=True,
         question=query.text,
     )
@@ -8161,11 +8242,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # nearly every multi-finding query (F-4.5-A-05). Reconciling them without
     # a live run gets as far as arithmetic and no further:
     # `SYNTH_SYSTEM_INSTRUCTION` rule 7 asks for two to five sentences, and
-    # `synth_findings` carries up to `_MAX_CITATIONS_PER_ANSWER` (20), so for
-    # the repair NOT to fire a handful of sentences must ground a distinct
-    # claim against every finding. On any query with more findings than that
-    # many sentences can carry, the repair firing is structural rather than
-    # occasional.
+    # `synth_findings` carried up to `_MAX_CITATIONS_PER_ANSWER` (20) at the
+    # time this was measured, so for the repair NOT to fire a handful of
+    # sentences had to ground a distinct claim against every finding. On any
+    # query with more findings than that many sentences can carry, the
+    # repair firing is structural rather than occasional. (2026-09-20: the
+    # repair's own omission check now reads `prompt_findings`, the model's
+    # bounded prompt slice, not the wider `_MAX_FINDINGS_FOR_DISPLAY`
+    # admitted set; the arithmetic above is unchanged by that split.)
     #
     # What follows from that (whether to gate the trigger on depth, to raise
     # the floor, or to leave both as they are) was a product decision about
@@ -8213,8 +8297,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     omitted_findings: list[SynthFinding] = []
     repair_cap_exceeded = False
     if tool_outcome != "no_tool" and synth_findings:
+        # Scoped to `prompt_findings`, not the full display list: this
+        # drives the REPAIR, a second model call, and a model can only omit
+        # a finding it was actually shown. Whatever `synth_findings` admits
+        # beyond the prompt slice is the tail's job below, never the
+        # repair's, so `omitted_findings` here never grows past what
+        # `_MAX_FINDINGS_FOR_MODEL_PROMPT` already bounds.
         omitted_findings = unreported_findings(
-            {claim.finding.citation_id for claim in grounding.claims}, synth_findings
+            {claim.finding.citation_id for claim in grounding.claims}, prompt_findings
         )
         repair_budget_s = write_budget_s - (time.monotonic() - write_started_at)
         if (
@@ -8237,7 +8327,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                     "write",
                     build_synth_messages(
                         query.text,
-                        synth_findings,
+                        prompt_findings,
                         query.audience_depth,
                         completeness_directive=build_completeness_directive(
                             omitted_findings
@@ -8265,7 +8355,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 )
                 repaired_grounding = run_grounding_pass(
                     repaired_layout.narrative,
-                    synth_findings,
+                    prompt_findings,
                     core_ask_required=True,
                     question=query.text,
                 )
@@ -8575,9 +8665,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))
 
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
-    # fewer facts than exist. Its two sources are now the findings cap
-    # (more citable rows than one prompt may carry) and the citation cap.
-    citations_capped = findings_capped or len(citations) >= _MAX_CITATIONS_PER_ANSWER
+    # fewer facts than exist. Its two sources are the findings cap (more
+    # citable rows existed than `_MAX_FINDINGS_FOR_DISPLAY` could admit) and
+    # the citation cap. Compared against `_MAX_FINDINGS_FOR_DISPLAY`
+    # (2026-09-20), not `_MAX_CITATIONS_PER_ANSWER`: the latter is now the
+    # model-prompt bound alone, and an answer routinely carries more than
+    # 20 citations once the tail lists the full display set, which is not a
+    # cut and must not be reported as one.
+    citations_capped = findings_capped or len(citations) >= _MAX_FINDINGS_FOR_DISPLAY
 
     # F-2.1-10/F-2.1-11/F-2.1-C12 fix: a result the user is shown only part
     # of must never look identical to one they are shown in full.
@@ -8585,7 +8680,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # `structured_fields["truncated"]` were both missing (F-2.1-10,
     # F-2.1-C12: the byte ceiling and the tool's own row-limit cap are two
     # independent truncations, and the pre-fix code read only the first).
-    # `citations_capped` is the third: `_MAX_CITATIONS_PER_ANSWER` cutting
+    # `citations_capped` is the third: `_MAX_FINDINGS_FOR_DISPLAY` cutting
     # an already-fetched row list down further still. Any one of the three
     # means the user is not seeing the whole answer. Two cases:
     #   - The cut still left a citeable row: the query genuinely succeeded

@@ -1162,15 +1162,23 @@ async def test_citation_cap_truncation_is_surfaced_even_when_tool_reports_no_tru
     _mock_litellm: AsyncMock,
 ) -> None:
     """F-2.1-C12: confirmed failing against the pre-fix code. Neither the
-    tool's own row-limit flag nor the byte ceiling fired here (25 small
-    rows, `truncated=False` at both levels), but `_MAX_CITATIONS_PER_ANSWER`
-    (20) is a third, independent truncation that still cuts what the user
+    tool's own row-limit flag nor the byte ceiling fired here (150 small
+    rows, `truncated=False` at both levels), but `_MAX_FINDINGS_FOR_DISPLAY`
+    is a third, independent truncation that still cuts what the user
     is shown. Before this fix, `_citations_from_findings` silently stopped
     at the cap with no signal at all.
+
+    Answer quality fix (2026-09-20): row count raised from 25 to 150, and
+    the assertion re-keyed from `_MAX_CITATIONS_PER_ANSWER` (20) to
+    `_MAX_FINDINGS_FOR_DISPLAY` (100). The two constants used to be the same
+    number under one name; splitting them means 25 rows no longer exercises
+    this cap at all; the display cap is bounded by the tool's own
+    `row_limit` (100), so this fixture has to exceed that to still prove the
+    cap fires.
     """
     harness = harness_module.Harness(trace_id="test-trace-citation-cap")
     call = ToolCall(tool="cypher_query", call_id="call-citation-cap", layer="layer_1_graph")
-    row_count = 25
+    row_count = 150
     structured_fields = {
         "status": "ok",
         "row_count": row_count,
@@ -1190,12 +1198,174 @@ async def test_citation_cap_truncation_is_surfaced_even_when_tool_reports_no_tru
     events = write_result["events"]
 
     citation_events = [event for event in events if event.type == "citation"]
-    assert len(citation_events) == graph_module._MAX_CITATIONS_PER_ANSWER
+    assert len(citation_events) == graph_module._MAX_FINDINGS_FOR_DISPLAY
 
     token_events = [event for event in events if event.type == "token"]
     assert any("truncat" in event.payload["text"].lower() for event in token_events), (
         "hitting the citation cap must be acknowledged even though neither the tool nor "
         "the byte ceiling reported a truncation"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Answer quality fix (2026-09-20): the prompt bound (how many findings a
+# Synth model call may see) and the display bound (how many code-built rows
+# the citation list, the table and the findings tail may carry) are now two
+# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20, unchanged) and
+# `_MAX_FINDINGS_FOR_DISPLAY` (100, bounded by the tool's own `row_limit`).
+# Before this split, one shared cap of 20 meant a table could never carry
+# more rows than a model prompt could safely hold, even though every row is
+# built entirely in code and a model never reads or writes it.
+# ---------------------------------------------------------------------------
+
+
+def _unique_citeable_row(index: int) -> dict[str, object]:
+    """Like `_light_citeable_row`, but with a `source_url` unique per row.
+
+    `_light_citeable_row` shares one constant `source_url` across every
+    row, which is fine for a pure row-count test but useless for a
+    citation-IDENTITY test: two tests below need to prove a SPECIFIC row's
+    citation still points at that row's own record, not a neighbour's, and
+    that is unprovable if every row resolves to the same URL.
+    """
+    return {
+        "node_or_edge_type": "Gene",
+        "curie": f"NCBIGene:{672 + index}",
+        "fields": {"name": f"Gene {index}"},
+        "source_url": f"https://www.ncbi.nlm.nih.gov/gene/{672 + index}",
+        "graph_snapshot_version": "v1",
+    }
+
+
+@pytest.mark.asyncio
+async def test_the_model_prompt_never_grows_past_the_prompt_bound(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The hallucination control: 150 admitted findings, comfortably past
+    the old shared cap of 20 and within the new display cap of 100, must
+    still hand the Synth model at most `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    findings in its own prompt. `_compliant_synth_narrative` (this file's
+    mock model) restates every `[N]` finding line it is actually SHOWN, so
+    counting the finding lines in the captured prompt is a direct read of
+    what the model received, not an inference from the answer.
+
+    Confirmed failing against the code as it stood before this fix: with
+    `max_findings=_MAX_CITATIONS_PER_ANSWER` (20) passed straight through as
+    both the admission cap and the prompt content, this assertion already
+    held at 20 by construction, because there was only one list. Reverting
+    the `prompt_findings` slice in `write_node` (passing `synth_findings`,
+    the full display list, to `build_synth_messages` instead) makes this
+    arm fail: the prompt would then carry all 100 admitted findings, or as
+    many as `MAX_FINDINGS_BLOCK_CHARS` allows, not 20.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-prompt-bound")
+    call = ToolCall(tool="cypher_query", call_id="call-prompt-bound", layer="layer_1_graph")
+    row_count = 150
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    synth_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if any(
+            "You write the final answer for a biomedical search system"
+            in (message.get("content") or "")
+            for message in (call.kwargs.get("messages") or [])
+        )
+    ]
+    assert synth_calls, "the write step must have made at least one synth call"
+    first_synth_prompt = "\n".join(
+        message.get("content") or "" for message in synth_calls[0].kwargs["messages"]
+    )
+    shown = _FINDING_LINE.findall(first_synth_prompt)
+    assert len(shown) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT, (
+        f"the model's own prompt must carry exactly "
+        f"{graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT} findings even though "
+        f"{row_count} rows were admitted for display; got {len(shown)}"
+    )
+
+    # The display side must still carry far more than the old shared cap:
+    # this is the other half of the split, proven together so a fix that
+    # narrows both bounds back to one number fails this test either way.
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) > graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
+    assert len(citation_events) <= graph_module._MAX_FINDINGS_FOR_DISPLAY
+
+
+@pytest.mark.asyncio
+async def test_a_citation_beyond_the_prompt_bound_still_points_at_its_own_row(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """THE HIGH-RISK CASE: citation identity must survive the prompt/display
+    split. `SynthFinding.ref_index` is the number Synth cites and
+    `CitationPayload.display_index` is what a surface renders, and the two
+    are allowed to diverge (`synthesis/findings.py`'s own module docstring).
+    Once the model is shown only the first `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    findings while the table and citations carry up to
+    `_MAX_FINDINGS_FOR_DISPLAY`, a row admitted for display but never shown
+    to the model (ref_index 60 of 150, for instance) reaches the reader only
+    through the code-built findings tail, never through the model's own
+    prose. This proves that row's citation still carries THAT row's own
+    `source_url` and `curie`, not a neighbour's and not the row the model
+    actually wrote about.
+
+    Confirmed failing against the code as it stood before this fix in the
+    same way as the arm above: reverting the `prompt_findings` slice (using
+    `synth_findings` for the model's own prompt and grounding pass) does not
+    break identity by itself, since every row's own value never moves, but
+    it does break the PROMPT BOUND this fix exists to restore, which is why
+    that arm is the one pinned red against the revert; this arm is pinned
+    to prove the fix that closes it does not introduce a wrong-chip defect
+    while doing so.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-citation-identity")
+    call = ToolCall(tool="cypher_query", call_id="call-citation-identity", layer="layer_1_graph")
+    row_count = 150
+    marked_index = 60  # past the 20-row prompt bound, inside the 100-row display bound
+    rows = [_unique_citeable_row(i) for i in range(row_count)]
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": rows,
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    marked_row = rows[marked_index]
+    citation_events = [event for event in events if event.type == "citation"]
+    matches = [
+        event
+        for event in citation_events
+        if event.payload["source_url"] == marked_row["source_url"]
+    ]
+    assert len(matches) == 1, (
+        f"row {marked_index}'s own source_url must appear on exactly one "
+        f"citation; got {len(matches)} out of {len(citation_events)} citations"
+    )
+    matching_citation = matches[0]
+    assert matching_citation.payload["source_id"] == marked_row["curie"], (
+        "the citation carrying this row's own source_url must also carry "
+        "this row's own curie, not a neighbour's: a chip pointing at the "
+        "wrong record is worse than a truncated answer"
     )
 
 

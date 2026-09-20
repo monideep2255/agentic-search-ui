@@ -624,7 +624,7 @@ async def test_a5_internal_findings_accounting_never_reaches_the_reader() -> Non
             f"internal findings accounting is what the reader is shown when "
             f"{count} finding(s) are omitted: {leaked}. Note: {note!r}"
         )
-        assert "not described above" in note, (
+        assert "not covered in the summary above" in note, (
             f"the omission must still be DISCLOSED, and this arm must never "
             f"be satisfiable by deleting the note: {note!r}"
         )
@@ -638,7 +638,7 @@ async def test_a5_internal_findings_accounting_never_reaches_the_reader() -> Non
         f"internal findings accounting reached the reader: {leaked}"
         f"{answer.describe()}"
     )
-    if "not described above" not in answer.narrative:
+    if "not covered in the summary above" not in answer.narrative:
         pytest.skip(
             "the live half of A5 had nothing to assert on: this run omitted "
             "no finding, so no disclosure was produced. The deterministic "

@@ -295,18 +295,28 @@ _DEPTH_LENGTH_RATIO = 1.4
 #:
 #: Moved by build phase 6.2's T-6.2-03, which reworded that note from the
 #: system's side to the reader's: it said "the 2 not reported are absent from
-#: the citations as well as from the text above" and now says "2 further
+#: the citations as well as from the text above" and then said "2 further
 #: disease records were found for this question and are not described above".
 #: The PROPERTY this constant guards is unchanged, that an answer omitting a
 #: pinned disease says so, and only the phrase carrying it moved.
 #:
+#: Moved again, answer quality fix (2026-09-20): "not described above" read
+#: as "these are missing" once the prompt/display split let the findings
+#: tail admit far more rows than the model's prompt bounds, and a finding
+#: this note names is now routinely listed in the code-built table below
+#: even though the model's own prose never covered it. The note now says
+#: "are not covered in the summary above", true either way: it never claims
+#: the finding is missing from the whole answer, only that the written
+#: summary did not restate it.
+#:
 #: The comment at the assertion below warns that a fingerprint a grammar fix
 #: can invalidate is testing the wording rather than the control, and that
 #: warning applies to this line as much as to the count it replaced. "not
-#: described above" is the clause that states the omission, so it is the last
-#: part of the sentence a rewording would keep; it is still a phrase rather
-#: than a property, which is the residual this comment exists to flag.
-_INCOMPLETE_NOTE_MARKER = "not described above"
+#: covered in the summary above" is the clause that states the omission, so
+#: it is the last part of the sentence a rewording would keep; it is still a
+#: phrase rather than a property, which is the residual this comment exists
+#: to flag.
+_INCOMPLETE_NOTE_MARKER = "not covered in the summary above"
 
 # F-4.5-03. Live gene-symbol resolution goes to E-utilities, whose
 # unauthenticated pool is 3 requests per second, and this file fires several
