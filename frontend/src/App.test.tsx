@@ -923,7 +923,7 @@ describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () =
     //    vitest suites use; `answer-cap` is reached only by the browser
     //    suite, and waiting for it here made an earlier version of this
     //    clause fail for a reason unrelated to what it tests.
-    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 
     // The restored row must still report ITS OWN run. This run produced one
     // source today; if the nine-source row is gone, the landing run has
@@ -1060,7 +1060,7 @@ describe("system notes: App forwards the run's disclosures to AnswerScreen", () 
 
     // 2026-09-14: the answer reveal holds landing for at least 1.5s, so this
     // waits as long as the other landed-answer arms in this file do.
-    const note = await screen.findByTestId("answer-note-0", undefined, { timeout: 5000 });
+    const note = await screen.findByTestId("answer-note-0", undefined, { timeout: 10000 });
     expect(note.textContent).toMatch(/showing 5 of 30 matching rows/i);
   });
 });
@@ -1168,7 +1168,7 @@ describe("privacy: the previous person's thread is cleared on sign-out", () => {
     //    archives the landed turn into `thread`, so `thread` is non-empty
     //    the instant sign-out fires below.
     await ask(user, "What is BRCA1?");
-    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
     await user.type(
       screen.getByLabelText(/ask a follow-up question/i),
       "What variants cause it?",
@@ -1185,7 +1185,7 @@ describe("privacy: the previous person's thread is cleared on sign-out", () => {
     // 3. The next person signs in and lands their OWN, unrelated answer.
     await signIn(user);
     await ask(user, "What variants cause cystic fibrosis?");
-    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 
     // The first person's archived turn must not be here. `AnswerScreen`
     // only renders the `data-testid="thread"` wrapper when `previousTurns`

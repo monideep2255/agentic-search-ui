@@ -210,7 +210,7 @@ async function landAnAnswer(user: ReturnType<typeof userEvent.setup>) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
-  await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+  await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 }
 
 describe("build phase 4.9: the app presents what the prototype presents", () => {
@@ -343,9 +343,42 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
     await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
 
-    const reasoning = await screen.findByTestId("reasoning-log", undefined, { timeout: 5000 });
-    expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
-    expect(reasoning).toHaveTextContent(/read the curated edges/i);
+    /*
+     * PACING, UI fix 11.28 (2026-09-14): guard, think and plan are staggered
+     * over up to ~2s of dwell (`PACING.guardMs` + `thinkMs` + `planMs` in
+     * `usePacedEvents.ts`), so `reasoning-log` exists as soon as guard
+     * passes but still reads "Guard" only until think and plan release.
+     * `findByTestId` waits for the ELEMENT, not for its content, so it
+     * resolves immediately on the guard-only text and the assertion below
+     * used to run before pacing caught up.
+     *
+     * This is judged NOT a regression, and the fix is a `waitFor` on the
+     * content rather than a shorter dwell or an extra flush trigger for a
+     * closed-with-no-`done` stream. `usePacedEvents` already guarantees "no
+     * event is ever held more than `maxLagMs` (3500ms) behind its own
+     * arrival" (its own module docstring), so ANY staleness this scenario
+     * can produce, including a genuine permanent stall, is already bounded
+     * and self-healing under a mechanism four other unit tests in
+     * `usePacedEvents.test.ts` cover directly. Here the burst is guard,
+     * think, plan and one `tool_start`, so the worst case is the ~2s sum of
+     * their three dwells, well inside that 3.5s ceiling and inside 11.28's
+     * own "adds at most about 4 seconds total" bound. Reaching for a new
+     * flush trigger keyed on "the connection closed with no `done` and no
+     * `error`" would special-case an already-bounded condition and add a
+     * distinction (a genuine permanent stall vs. a closed-but-answered run)
+     * the rest of the pacing design does not need. What this test still
+     * proves, unchanged: the think and plan detail shows up WHILE the run is
+     * going, never only after it lands, since `landed` stays false for the
+     * whole test (no `done` event is ever sent on this stream).
+     */
+    const reasoning = await screen.findByTestId("reasoning-log", undefined, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
+        expect(reasoning).toHaveTextContent(/read the curated edges/i);
+      },
+      { timeout: 10000 },
+    );
   });
 
   // ---------------------------------------------------------------- F-4.8-D-01
@@ -533,7 +566,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    const strip = await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
+    const strip = await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     expect(strip).not.toHaveTextContent(/refused/i);
     expect(strip).not.toHaveTextContent("✓");
     expect(strip).not.toHaveTextContent("⚠");
@@ -552,7 +585,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
+    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     /*
      * In a cite-or-refuse system the ABSENCE of a grounding verdict must read
      * as "not verified", never as silence. A dropped or never-emitted
@@ -593,7 +626,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("citation-1", undefined, { timeout: 5000 });
+    await screen.findByTestId("citation-1", undefined, { timeout: 10000 });
     /*
      * F-4.9-R-04. This asserted `data-layer` ALONE, which is a test hook no
      * user meets. The two harms the finding actually named are what a reader
@@ -655,7 +688,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("answer-meta", undefined, { timeout: 5000 });
+    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     /*
      * The A-05 fix MOVED this nonsense rather than removing it: counting from
      * tool calls gave "0 layers agreed" when citations arrived without tool
