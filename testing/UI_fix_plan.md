@@ -41,7 +41,7 @@ The ordered work list for fixing the product after the first testing round on 20
 | 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | | Tests 1, 7, 12, 14 |
 | 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
-| 11. Live feedback, 2026-09-13 and 14 | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below | Partly | Partly | | Tests 1, 7, 12 |
+| 11. Live feedback, 2026-09-13 and 14 | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-20: the bold is quieter (11.27) and every question now searches the resources that fit it rather than a fixed plan (11.17 and 11.21) | Partly | Mostly | | Tests 1, 7, 12 |
 
 ## Set 1: let people in
 
@@ -638,163 +638,135 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live | Checked live: a real selection of 1,703 characters holds no "Source N, layer" or "Sources X to" text |
 | 11.15 | The answer does not stream | Live in part | The screen reveals sentences one by one after the writing banner. The backend still sends the whole answer at once until 11.16 lands |
 | 11.16 | Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready | Live | CORRECTED 2026-09-20: this row said "In progress ... under independent review now; lands after review and when you say". It had already landed, as commit `b8980dc` and merge `345046b`, verified with `git merge-base --is-ancestor b8980dc develop`. Both halves are on develop: the screen parts, and the backend that sends a "writing has started" signal (the additive `step` event, which takes the payload taxonomy to twelve members) and each checked sentence live. Sentences still arrive close together, because checking needs the whole draft. ONE THING IS GENUINELY MISSING rather than tidied away: no independent review report was ever written for it, so the "667 core tests, 0 failed" figure this row used to quote has no report behind it |
-| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Built, not live | Answered and built. The narrow search was our fixed plan in code, not the models. The broader plan is built on `worktree-breadth-wiring` and held with 11.21, same reason. Abstracts as written evidence remain out of scope, item 11.22 |
+| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Live | Answered and built. The narrow search was our fixed plan in code, not the models. The broader plan was built on `worktree-breadth-wiring` and held with 11.21. MERGED AND LIVE 2026-09-20 as `2bb1925`, once the one unexplained test failure that held it turned out to belong to the branch's missing CI fix rather than to its code. Abstracts as written evidence remain out of scope, item 11.22 |
 | 11.18 | Search everything in all three layers, sources exact; is the harness or the open-source model to blame? | Answered | The harness: a fixed plan of one graph query and four live calls per gene, one fact per record. The models do not choose what is searched. Fix is 11.21 |
 | 11.19 | "Variants in GCK causing MODY" should answer every time | Live | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
 | 11.20 | "What genes are associated with MODY?" should answer | Live | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. On develop: 5 of 5 repeated runs, one source set, plus the browser check |
-| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Built, not live | The tool layer is on develop. The wiring that actually uses it is built and measured on `worktree-breadth-wiring` and is NOT merged: one test fails there that we cannot yet explain. Measured on that branch: retrieval returns the same findings on every run, the worst question spends 17 of its 20 allowed outside calls, latency is unchanged. Two caveats that are yours to settle, not engineering's: OMIM is never searched because its web address fails our citation rule, and the CITED set can still vary because the model picks which findings to cite. Separately, finding L-01 shows this requirement failing on the LIVE site today |
+| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, with two decisions still to build | The tool layer is on develop. The wiring that actually uses it is built and measured on `worktree-breadth-wiring` and is NOT merged: one test fails there that we cannot yet explain. Measured on that branch: retrieval returns the same findings on every run, the worst question spends 17 of its 20 allowed outside calls, latency is unchanged. Two caveats that are yours to settle, not engineering's: OMIM is never searched because its web address fails our citation rule, and the CITED set can still vary because the model picks which findings to cite. Separately, finding L-01 shows this requirement failing on the LIVE site today. MERGED AND LIVE 2026-09-20 as `2bb1925`, verified by a full suite of 5025 passed and 0 failed plus gates 2 and 3 green. BOTH CAVEATS ARE NOW DECIDED RATHER THAN OPEN, and both are decided the other way: the citation host rule will be widened so OMIM can be cited, and every retrieved finding will be cited so the source set is identical run to run. Neither is built yet; both are in `DECISIONS.md` dated 2026-09-20 and in the cutoff's plan table as waves 2a and 2b. The merge also fixes L-01 shape 2, the `collect(DISTINCT)` ordering, but NOT shape 1 |
 | 11.22 | PubMed and PMC should provide context for the answers | Queued, approved | Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
 | 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered | Measured from NCBI's own header: your key allows 10 per second (3 without a key). 100 needs a separate arrangement with NCBI. The limiter moves from 3 to 10 as part of 11.21 |
 | 11.24 | How do I test what is built so far? | Answered | A test walk-through is given once the current work is on develop |
 | 11.25 | What from Set 11 is on develop? | Answered | On develop at `e5947e0`: 11.5 to 11.9, 11.12 to 11.14, 11.19, 11.20, 11.26, and 11.15 in part. Live run record: 48 of 53 answered, and the 5 failures did not reproduce in 12 more runs. See `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/findings.md` |
 | 11.26 | The answers do not look like the approved mockup | Live | Commit `28aa805`. Checked live at 1280 and 390 against the mockup's structure |
-| 11.27 | Too much bold: only the title or main point should be bold | Built, not live | Built and verified: only the lead claim's main point is bold, table cells and list items plain. It was merged to develop overnight and then REVERTED, not because of this fix but because 11.28 shares the merge and failed CI. Branch `worktree-agent-a8393711bb57d579b` holds it. Splitting it out from 11.28 and landing it alone is the quickest win available |
+| 11.27 | Too much bold: only the title or main point should be bold | Live | LANDED ALONE 2026-09-20 as `aedf53d`, both develop services SUCCESS. Split out of `107bdcb`, which had carried it together with 11.28 and was reverted as `11e3348` when CI failed on 11.28. The split was verified at file level rather than assumed: the three bold files carry no pacing content and 11.28's files carry no bold content. `frontend/e2e/bold-and-stagger.spec.ts` covers both fixes and travels with 11.28 instead of being split twice. Verified before push, each check on its own exit code: frontend suite 465 passed across 49 files on an idle machine, `npm run build` exit 0. PREVIOUS NOTE, kept: built and verified: only the lead claim's main point is bold, table cells and list items plain. It was merged to develop overnight and then REVERTED, not because of this fix but because 11.28 shares the merge and failed CI. Branch `worktree-agent-a8393711bb57d579b` holds it. Splitting it out from 11.28 and landing it alone is the quickest win available |
 | 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Built, reverted, one question open | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten seconds into a design whose own guarantee is 3.5 seconds. Either a real stall when a stream closes with no `done`, which a dropped connection would hit, or event-loop starvation under load. Next action is named in `2026-09-19_overnight/session_log.md` |
 | 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, not started | Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it needs its own session rather than a slot in the fix loop. Three things are worth settling before it opens. FIRST, most of the premise is not this repository's to decide: "everything is in the graph" is Systems 1 and 2, which live in a separate repository, and `.claude/rules/file-protection.md` forbids this repository writing into the graph at all, by direction of data flow. System 3 can only read. SECOND, vector embeddings, RAG pipelines and knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in `.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named trigger at all, so it stops and asks by rule. Discussing is free, building is not. THIRD, the multi-hop half is already real and measured rather than hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with SyntaxError, so the broad search traverses `participates_in` alone and GO molecular activities and cellular components are not reached (`2026-09-19_breadth_wiring/build.md`). That is a soft-edge limitation sitting in the product today, and it costs one graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20 when asked whether the product fails because the data is absent or because we cannot find the path between things that are present: BOTH, and the headline verdict is blunter than either: "the answers all look surface level and most chatbots like ChatGPT, Claude, Gemini can answer better". That is a judgement on the ANSWER PATH, not on presentation, and it is the bar 11.29 has to clear: not "does it cite" but "is it worth reading instead of a general chatbot". Every presentation-side fix in Set 11 leaves that bar untouched |
 
 ## Where we stopped
 
-The cutoff. It is updated at the end of every working session, so the next session starts here rather than reconstructing it. Last updated 2026-09-20, after an unattended overnight run. Read this, then the Set 11 table above.
+The cutoff. It is updated at the end of every working session, so the next session starts here rather than reconstructing it. Last updated 2026-09-20, afternoon session. Read this, then the Set 11 table above.
+
+This section is also the shared plan. What we agreed, what is done, and what is next all live here rather than in a session that disappears, so you and I read the same record.
 
 ### The short version
 
-Five things were on the list. Three are done, one is built but held back with a named question, one is built but unverified and not merged.
-
 | # | Item | Outcome |
 |---|---|---|
-| 1 | Make CI green on develop | DONE. Green on all four jobs for the first time since 2026-09-14 |
-| 2 | Land 11.27 less bold and 11.28 paced transition | MERGED THEN REVERTED. One real question is open, named below |
-| 3 | Land the broad search wiring, 11.17 and 11.21 | BUILT AND MEASURED, NOT MERGED. One suite failure on the branch is still unexplained, so its verify surface is not met. Explained below |
-| 4 | Report the live failure rate with any error payload | DONE, and it found a different defect instead |
-| 5 | Refresh the documents | DONE, this section included |
+| 1 | Settle the broad-search branch (the overnight cutoff's item 1) | DONE. The unexplained failure is explained, and it was never this branch's code |
+| 2 | UI fix 11.27, the bold fix, landed alone | LIVE on develop at `aedf53d`, both services SUCCESS |
+| 3 | UI fixes 11.17 and 11.21, the broad search | MERGED and pushed at `2bb1925`. Deploying |
+| 4 | Two product-owner decisions taken | Recorded in `DECISIONS.md`, not yet built |
+| 5 | One stale row corrected, one discussion item opened | Row 11.16 was wrong; 11.29 is new |
 
-### If you are testing this morning, read this first
+### If you are testing right now, read this first
 
 | | |
 |---|---|
 | Where | `https://search-agent-web-develop-2aeb.up.railway.app` |
-| State | Deployed and healthy. Both develop services report SUCCESS |
-| Worth testing | Nothing new. No fix a person can see landed overnight |
-| Why | The two finished UI fixes, 11.27 and 11.28, were merged and then taken back out the same night. The product behaves exactly as it did on 2026-09-14, now on a green build |
+| What is new | Two things you can see, for the first time since 2026-09-14 |
+| 11.27 | Only the lead claim's main point is bold. Table cells and list items read plain |
+| 11.17 and 11.21 | Every question now searches the resources that fit it, rather than a fixed plan of one graph query plus four live calls |
+| Worth testing | Tests 1, 7 and 12 in `testing/Product/Product_workflows.md`: basic search, answer mode, trust signals and sources |
+| The one measurement worth doing by hand | Ask the SAME question several times and watch whether the source count changes. That is finding L-01, and half of it should now be fixed |
 
-If you do test, the one thing worth doing is asking the SAME question several times and
-watching whether the source count changes. That is finding L-01 below, it is live right
-now, and a second pair of eyes on how it looks to a reader would be useful.
+### What was actually wrong, and why it took a week
 
-### On develop now, pushed and live
+The overnight session could not explain why one test, the MCP production-mount test, failed only in the broad-search branch's full suite run. That unexplained failure is the single reason the biggest feature in the queue sat unmerged.
 
-- The last commit that changes any CODE is `11e3348`. Everything pushed after it is documentation, including this section, so the tip hash moved again while this was being written and is not worth pinning here. `git log --oneline` is the authority.
-- CI is GREEN, all four jobs, verified on `11e3348` and again on the documentation commit after it. That is the first green run on develop since 2026-09-14.
-- The develop API returns `{"status":"ok","app_env":"develop"}` and the web app returns 200.
-- What actually changed in the product tonight: nothing a tester will see. The two commits that stand are a test-isolation fix and documentation. That is the honest summary.
+The cause was not in that branch at all. Develop's CI repair `a90ef25` fixed THREE test-isolation defects. The overnight worker ported TWO of them into the worktree by copying files across, watched the failure persist, and recorded the cause as unknown. The third fix lives in a file it never copied, `tests/e2e_support/test_real_model_mode.py`, and that fix's own docstring names this exact failure, this exact file and the collection order: it collects before the production-mount test, its `with TestClient(...)` entered the real app's lifespan, and the MCP session manager may be entered once per process.
 
-### Item 1: CI is green, and the cause was three things
+Every observed property follows from that with nothing left over: fails only in a full run, passes alone, passes inside its own directory, clean on develop.
 
-The handover said the cause was not diagnosed. It was three independent causes, not one, and all three are real defects rather than CI being fussy.
+A merge cannot omit a file. Copying files out of one can. That is the transferable part.
 
-| Cause | Root cause | Fix |
+Two failures remained after the merge, and both had ONE cause that also had nothing to do with the branch: a gitignored macOS duplicate, `src/system_03_search_agent/tools/cypher_query 2.py`, byte-identical to the pre-branch file. `git status` can never show it, because `.gitignore` hides it; the coverage test sees it because it walks the filesystem rather than git. Moved to the Trash, recoverable there and from git.
+
+That also means the branch's earlier `2 failed, 5023 passed` was never reproducible in CI, since CI checks out from git and the artifact was not in git.
+
+One more thing worth knowing: the 726 lines of broad-search work were UNCOMMITTED working-tree changes, not commits, although the overnight cutoff described the branch as holding them. One stray command would have lost them. They are committed now.
+
+Full account: `testing/Developer/reports/2026-09-20_breadth_merge/mcp_failure_explained.md`.
+
+### The plan we agreed, and where each piece stands
+
+| Wave | Item | State |
 |---|---|---|
-| A stale debugging-guide row | UI fix 11.16 added the `step` event and changed `contracts/events.py`'s docstring to "twelve-member" without regenerating the guide row or the manifest, which is exactly the obligation that test enforces | The row now names twelve members and `StepPayload`, with the manifest regenerated in the same commit |
-| A poisoned process-wide database engine | `data/base.py` caches the engine from whatever `USER_DB_URL` said at first use. Nine test files monkeypatch it to a credential-less URL. `core/test_graph.py` built that engine and nothing reset it before `core/test_think_retry.py`, which then died on "no password supplied". That URL works on a developer's machine under local trust authentication, which is why this was invisible locally and red in CI for five days | An autouse guard in `tests/conftest.py` holding one invariant at setup and teardown: the engine either does not exist or matches the ambient `USER_DB_URL`. Proven order-robust in both directions |
-| An MCP session manager run twice | `StreamableHTTPSessionManager.run()` cannot be re-entered, and an e2e test entered the real app's lifespan before the production-mount test did | That test needs nothing from the lifespan, so it no longer opens one. Its assertion is unchanged |
+| 1a | 11.27, bold only the lead's main point | LIVE at `aedf53d` |
+| 1b | 11.17 and 11.21, the broad search | PUSHED at `2bb1925`, deploying, needs the live check below |
+| 2a | Cite every retrieved finding | DECIDED, not built |
+| 2b | Widen the citation host rule so OMIM can be cited | DECIDED, not built |
+| 3a | 11.28, the paced transition | Diagnosis mostly done, needs one idle-machine run |
+| 3b | 10.3, the consistency run, and L-01 shape 1 | Not started. The L-01 instrument is written and has never run |
+| Held | 10.2, history shows the saved answer | BLOCKED on a decision from you, see below |
+| Held | 11.29, hard and soft edges, RAG and vectors | Discussion, its own session |
 
-No gate was narrowed and no test was skipped, weakened or deleted. Full evidence, and the alternatives rejected for each cause: `testing/Developer/reports/2026-09-19_ci_green/python_gates.md`.
+The rule this plan follows, because it is the lesson of the overnight revert: ONE FEATURE PER PUSH. 11.27 and 11.28 shared a merge, CI failed on one, and the innocent one was reverted with it and sat unavailable for a week. Each item above lands alone, is confirmed live alone, and can be rolled back alone.
 
-### Item 2: 11.27 and 11.28 were merged, then reverted the same night
+### Decisions taken today
 
-Read this one, because it is the only place tonight where something went backwards.
+Both are product-owner calls, both recorded in `DECISIONS.md` dated 2026-09-20, and NEITHER is built yet.
 
-Both features are genuinely built. Every test in that worktree's frontend suite passes, all 50 files and none failing, which is 14 more cases than develop's 460 because the change ships its own; `tsc` and `npm run build` are clean, the screenshots are a legitimate refresh, and no design-system value was invented. They were merged and pushed.
+- Widen the citation host rule so OMIM can be cited. This REVERSES a row taken earlier the same day. That row stays as the historical record it is; the reversal is its own row. Two boundaries are held rather than crossed quietly: editing the locked `requirements/Technical_specification.md` needs explicit product-owner sign-off, which the row now carries, and `omim.org` goes in as an EXACT additional host rather than a loosened pattern, because the host pin is a control against spoofed citation URLs.
+- Cite every retrieved finding, so a question's source set is identical run to run. This is what 11.21 actually asked for. Retrieval is deterministic after 1b; this closes the remaining gap, where the model chooses which findings to ground a claim on. Known cost, to be reported rather than hidden: answers may grow a tail of cited-but-unused records.
 
-CI then failed gate 8 on build phase 4.9's premise test, "shows the same reasoning detail while the run is still going", which is the one test this change had already had to argue about. The failure output is what forced the revert rather than another patch: at the moment the assertion timed out, the reasoning log read Guard and Think but did not contain the plan line, ten seconds into a design whose own guarantee is that no event is held more than 3.5 seconds behind its arrival. That guarantee was the whole argument for the fix that landed, which widened the test's wait instead of adding a flush trigger.
+### The verdict that matters most, and what it means
 
-Two explanations fit the evidence and this session could not separate them.
+Asked whether the product fails because the data is absent or because we cannot find the path between things that are present, the product owner answered BOTH, and added the blunter judgement: the answers look surface level, and general chatbots answer better.
 
-- A real defect. On a stream that closes with no `done` and no error, the last paced events may never release. Someone whose connection drops mid-run would watch a reasoning log frozen part way. That is a product defect, not a test nit.
-- Event-loop starvation. The same suite failed 87 tests under parallel execution at load average 48 to 60, and passed only serially, taking 1123 seconds.
+That is a judgement on the ANSWER PATH, not on presentation. It is recorded as the bar item 11.29 has to clear: not "does it cite" but "is it worth reading instead of a general chatbot".
 
-It was reverted rather than patched because the failure sits inside the previous fix, which is this repository's own stop condition, and because a change whose verification cannot be told apart from a flake should not sit on the branch you test on. Nothing is lost: branch `worktree-agent-a8393711bb57d579b` holds every commit.
+It also reframes this plan honestly. Wave 1b is the FIRST item in the queue that could plausibly move that bar, because it changes what gets retrieved. Everything else in Set 11 is presentation, and presentation cannot fix a thin answer. If answers still read thin once 1b is live, that is strong evidence that 11.29 is the real work rather than a nice-to-have.
 
-11.27, the bold change, is almost certainly innocent and was reverted only because it shares the merge. Splitting it out and landing it alone is the quickest win available, and it was deliberately not done unattended.
+### Pushback recorded: 10.2 is not the small job it looks like
 
-### Item 3: the broad search wiring is built and is not merged
+Row 10.2 reads like a frontend change. It is not, and this was established by reading the code rather than assumed.
 
-The largest piece of work tonight, 726 insertions across seven files in `.claude/worktrees/breadth-wiring`, branch `worktree-breadth-wiring`. Full account: `testing/Developer/reports/2026-09-19_breadth_wiring/build.md`.
+- `interactions` (`data/models.py:168`) stores `query_text`, `trust_signal`, `citations`, cost and latency. No claims, no sources, no meta.
+- `GET /v1/history` (`app.py:919`) returns the question, a timestamp, a trust signal and a citation COUNT. `feedback/history.py:88` says so outright, citing decision D-4.13-01: "No answer narrative: `interactions` stores none".
+- Nothing persists an answer client-side either. The `thread` state holds completed answers in React memory only, and dies with the tab.
+- Clicking a history item today re-asks the question, costing a fresh search. `App.tsx:1840` documents that as the only truthful option available.
 
-The full Python suite DID finish: `2 failed, 5023 passed, 176 skipped, 1 xfailed`.
-
-CORRECTED, and this correction is the important part. The lead first wrote that both failures were two of the three CI causes this branch predates, and called that "checked rather than assumed". It was not checked. What the lead checked was that develop's fix is ABSENT from the branch, which establishes only that, not that the failures would clear once it is present. The worker then actually tested it: it copied develop's `conftest.py` and manifest into the worktree and the MCP failure DID NOT clear. So one of the two failures is explained (the debugging-guide manifest) and the OTHER IS NOT. The MCP test passes alone and passes with its own directory (82 passed) inside the worktree, and the main tree's full run is clean, so it is an interaction that appears only in this branch's full run and its cause is unknown.
-
-The honest status of item 2 on the verify surface is therefore NOT MET on this branch as it stands. It needs one full-suite run after develop is merged in.
-
-It is still not merged, and the reasons are confidence and timing rather than anything found wrong. The worker's own merge judgement was never written, because it was still iterating on two citation identity defects it had found late. Merging would change what every query retrieves on the app you test in the morning, with no live browser check possible unattended. And one merge was already reverted tonight for shipping ahead of complete verification; repeating that on a 726-line change to the hot path is not worth the hours saved.
-
-What it does deliver, measured rather than claimed:
-
-- Retrieval determinism holds. Each question admitted the same findings on all three runs, with one exception that was a live NCBI search failure the answer degraded from and the tool disclosed. That is the half of 11.21 you reported.
-- The worst measured question spends 17 of the 20 allowed Layer 2 and Layer 3 calls, cold. No measured question reached the ceiling.
-- Latency sits inside the current develop range. The slowest wired run was 23.6 seconds against a 53 second budget.
-- The stable prompt prefix is byte-identical, proven by nine existing arms.
-
-Three things in it need your decision rather than more engineering.
-
-- OMIM is not searched, and cannot be. An OMIM record's URL is `omim.org`, which the citation contract rejects, so its rows could only ever feed uncited claims. Dispatching it would have meant two calls a reader can never verify. Lifting this needs a locked document changed.
-- The cited set is not provably identical run to run, because a citation exists only where the model grounded a claim on a finding, and that choice varied once in 21 runs. Making it deterministic means citing every admitted finding, which is a Write-side product decision.
-- GO molecular activities and cellular components are not traversed. AGE rejects the edge alternation, so only `participates_in` is covered.
-
-### Item 4: reliability is not reproducing, and a different defect turned up
-
-Thirty live runs against develop, five questions six times each, in fresh guest sessions. Full account: `testing/Developer/reports/2026-09-19_live_measure/findings.md`.
-
-- 30 of 30 answered, no fatal error event, no transport error. With the 15 of 15 of 2026-09-19 that is 45 consecutive clean runs, against 48 of 53 on 2026-09-14.
-- The instrumentation that would capture an error payload ran and had nothing to capture. So the 1-in-10 failure is UNREPRODUCED, not diagnosed. Nothing is known to have fixed it.
-- Finding L-01 is the real result: "What diseases are caused by variants in the HNF1A gene?" returned THREE different source sets across six identical runs, at 18, 13 and 8 sources. That is 11.21's headline requirement failing live, before any of tonight's changes. Every source that varies is graph-derived; the gene record, the PubTator annotation and the five trial identifiers are identical on all six runs.
-
-The mechanism behind one of its two shapes was then found in code: `collect(DISTINCT x)` produces a list whose element order neither AGE nor PostgreSQL fixes, and the row cut then keeps a different subset each time. The wiring branch fixes it with a sort. The other shape, a whole graph result vanishing on two runs of six and hidden by graceful degradation, stays UNESTABLISHED and needs the measurement script to capture tool-result payloads.
-
-### Waiting on you
-
-Unchanged from 2026-09-14, plus three new ones at the top.
-
-- Whether to split 11.27 out of the reverted merge and land the bold fix on its own.
-- OMIM: widen the citation host pattern or the record URL template, or accept that OMIM is never citeable.
-- Whether every admitted finding should be cited, which is what would make "the same number and set of sources" literally true rather than true of retrieval only.
-- The 20-source citation cap, which is why HNF1A shows 5 variant rows against the reference's 13.
-- The proposed provenance note under the mapping table.
-- Whether the mode toggle moves into the status strip, and whether switching re-runs the question.
-- The trust-line wording, "not yet confirmed".
-- Abstracts as evidence, 11.22. Untouched tonight, still reserved.
-- Production: no release. Nothing was released.
+So 10.2 needs new persistence, either new columns plus a write path on `interactions` or a new table. That is a schema migration with a rollback plan, not an afternoon of UI work, and it needs a decision from you about whether to store rendered answers at all, which is a data-retention question as much as a technical one.
 
 ### Next, in order
 
-1. Decide item 3. Merge develop into `.claude/worktrees/breadth-wiring` and re-run the full suite. The manifest failure should clear; the MCP one is NOT predicted to, because the worker tested that and it did not. If it persists, find out why it appears only in this branch's full run before merging, since an unexplained failure on the hot path is exactly what tonight's revert was about. The measurements and the two late citation-identity fixes are already done.
-2. Settle 11.28. Instrument `usePacedEvents` to log when each event is scheduled and when it releases, then run `phase49Premise.test.tsx` alone on an idle machine. If plan releases within 3.5 seconds the CI failure was starvation; if it does not, 11.28 has a real stall and needs the flush trigger its author argued against.
-3. Split 11.27 out and land the bold fix alone.
-4. Establish L-01 shape 1. Teach the measurement script to capture each `tool_result` payload, then re-run HNF1A enough times to catch a short run.
-5. Capture an actual failing run. The error instrumentation works and has never fired, so the failure needs to be caught rather than assumed gone.
+1. Confirm 1b live: the Railway deployment for `2bb1925` reports SUCCESS, the served app carries the change, and a live browser check at 1280px and 390px. Then ask one question several times and watch the source count hold.
+2. Build 2a, cite every retrieved finding.
+3. Build 2b, widen the citation host rule and dispatch OMIM.
+4. Settle 11.28. Instrument `usePacedEvents` to log scheduled-at and released-at per event, then run `phase49Premise.test.tsx` alone on an idle machine. Releases within 3.5s means the CI failure was event-loop starvation and it can land; if it does not release there is a mechanism nobody has found, and that is a stop-and-report rather than a patch.
+5. Run 10.3, the consistency run: each of the 50 golden questions three times, recording answered-or-refused, latency, sources and layers. This is what tells us whether 1b actually fixed the wobble rather than our believing it did.
+6. Establish L-01 shape 1, a whole graph result vanishing on some runs and hidden by graceful degradation. The instrument is written at `testing/Developer/reports/2026-09-20_L01/capture_tool_results.py` and has never run.
+
+### What 11.28's diagnosis already found
+
+Reading `usePacedEvents.ts` mostly answers its open question. Each event's release target is `min(max(arrival, earliest), arrival + maxLagMs)`, computed from that event's OWN arrival, and the `setTimeout` loop drains the queue on wall-clock alone, needing no `done` event and no new arrivals. So the "real stall when a stream closes with no `done`" hypothesis does not hold while the component is mounted: nothing can hold an event past arrival plus 3.5 seconds except the event loop not running.
+
+That points hard at event-loop starvation, consistent with the same suite failing 87 tests at load average 48 to 60 and passing only serially. It is still worth one confirming run rather than asserting it, which is step 4 above.
 
 ### Known loose ends
 
-- Two worktrees are deliberately kept: `agent-a8393711bb57d579b` for 11.27 and 11.28, and `breadth-wiring` for the broad search. Neither is merged, and neither should be cleared away.
-- Set 10 is untouched. Its baseline folder `testing/Developer/reports/2026-09-12_consistency_baseline/` is still uncommitted.
-- The empty `writetest.txt` under `2026-09-14_live_check/after_e5947e0/` is GONE, moved to the Trash on 2026-09-20 at the product owner's word. It is recoverable from there. The rest of that folder is real evidence and stays.
+- Two worktrees are deliberately kept. `agent-a8393711bb57d579b` holds 11.28 and is still needed. `breadth-wiring` is now merged into develop and can be cleared once 1b is confirmed live.
+- Row 11.16 said it was in progress and under review. It had already landed, as `b8980dc` and merge `345046b`, verified rather than assumed. What is genuinely missing: no review report was ever written, so the "667 core tests, 0 failed" figure that row quoted has nothing behind it.
+- Set 10 is otherwise untouched. Its baseline folder `testing/Developer/reports/2026-09-12_consistency_baseline/` is still uncommitted.
 - Review findings N-04 and N-06 remain open and minor, with owners, in the 11.21 review file.
-- The nine test files that hardcode a credential-less `USER_DB_URL` are now harmless behind the conftest guard, but switching them to the ambient form is a worthwhile tidy-up.
-
-### The session boundary
-
-Work stopped on 2026-09-20 and resumes in a NEW session. Nothing is half-finished: the
-working tree is clean, develop is pushed, CI is green, both develop services are SUCCESS.
-The two worktrees are the only work in flight and both are parked deliberately, each with
-its reason written above.
+- The nine test files that hardcode a credential-less `USER_DB_URL` are harmless behind the conftest guard, but switching them to the ambient form is a worthwhile tidy-up.
+- Still waiting on you, unchanged: the three `theme.ts` logo tokens, the six undesigned surfaces, whether answers carry a medical-advice notice, the 720px nav, the 20-source citation cap, the provenance note, the mode toggle's placement, and the trust-line wording.
 
 ### How to start the next session
 
 1. Read this section, then the Set 11 table above.
-2. Run `git status` and `git worktree list`. Two worktrees are expected.
-3. Read `testing/Developer/reports/2026-09-19_overnight/session_log.md` for the working detail, then the three reports it points to.
-4. Pick up "Next, in order" at item 1.
+2. Run `git status` and `git worktree list`.
+3. Pick up "Next, in order" at item 1.
 
 ## Developer detail
 
