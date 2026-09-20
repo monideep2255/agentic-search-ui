@@ -11,6 +11,8 @@ Running record of the unattended session. Written as it happened, so a stopped s
 - [Item 4: live failure rate](#item-4-live-failure-rate)
 - [Item 5: documents](#item-5-documents)
 - [Decisions taken](#decisions-taken)
+- [How the items closed](#how-the-items-closed)
+- [What this session got wrong](#what-this-session-got-wrong)
 
 ## State at the start
 
@@ -61,4 +63,28 @@ One document defect fixed early because the drift gate blocks a push on it: `202
 
 ## Decisions taken
 
-Logged here as they are taken, and copied to `DECISIONS.md` at the end.
+Three, all copied to `DECISIONS.md` with their full reasoning.
+
+| Decision | One-line reason |
+|---|---|
+| Fix CI by repairing test isolation, never by relaxing a gate or the CI environment | A CI-environment change would have hidden a live path by which application code can be pointed at the wrong database |
+| Revert 11.27 and 11.28 rather than patch the failing test again | The failure sits inside the previous fix, and a change whose verification cannot be told apart from a flake should not sit on the branch the product owner tests |
+| Do not dispatch the OMIM search or summary in the broad-search wiring | An `omim.org` URL fails the citation contract, so its rows could only feed uncited claims |
+
+## How the items closed
+
+| Item | Outcome | Evidence |
+|---|---|---|
+| 1, CI green | DONE | Run `35490681687`, four of four jobs green on `11e3348`. First green on develop since 2026-09-14 |
+| 2, 11.27 and 11.28 | MERGED THEN REVERTED | Merged at `d41099d`, reverted at `11e3348`. One open question, named in the revert commit and the plan |
+| 3, broad search wiring | BUILT, NOT MERGED | `2 failed, 5023 passed` where both failures are the CI causes this branch predates. Held for a judgement call, not for a defect |
+| 4, live failure rate | DONE | 30 of 30 answered, no error payload to capture, and finding L-01 found instead |
+| 5, documents | DONE | This log, the plan's cutoff, three `DECISIONS.md` rows, the continuation prompt |
+
+## What this session got wrong
+
+Recorded rather than tidied away, because the pattern is the useful part.
+
+- The parallel dispatch was the constraint it created. Three workers running full suites on one laptop drove the load average to 60, made the frontend suite take 1123 seconds instead of minutes, and produced an 87-test failure that was pure contention. A serialised verification stage would have been faster in wall-clock than three parallel ones.
+- A merge went out on a local green that did not predict CI. 474 of 474 passed twice locally and gate 8 still failed. The lesson is not "run it again" but that a timing-sensitive test under contention gives a result that cannot be distinguished from a real defect, and shipping on it is a coin flip.
+- The lead wrote the plan's item 3 section before the suite it depended on had finished, then had to correct it in the same session. The correction is in place; the habit to avoid is writing a conclusion while its evidence is still running.

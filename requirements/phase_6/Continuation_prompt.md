@@ -32,7 +32,10 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", rewritten at the close of 2026-09-14. Start with its "Next, in order" item 1, then work down the list.
+- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", rewritten after the unattended run of 2026-09-19 into 2026-09-20. Start with its "Next, in order" item 1, then work down the list.
+  - As of that close, CI IS GREEN on develop, all four jobs, on `11e3348`. That is the first green run since 2026-09-14, and the three causes were real test-isolation defects rather than CI being fussy.
+  - TWO WORKTREES ARE DELIBERATELY KEPT AND NEITHER IS MERGED: `agent-a8393711bb57d579b` holds 11.27 and 11.28, merged then reverted the same night over one unresolved question about paced events on a stream that closes with no `done`; `breadth-wiring` holds the 11.21 broad search, built and measured but with its full Python suite unfinished at the close. Do not clear either away.
+  - Live reliability is NOT REPRODUCING rather than fixed: 45 consecutive clean runs with the error instrumentation live and never firing. A different defect was found instead, finding L-01, where one question returns three different source sets across six identical runs.
   - As of that close, testers use the develop app. Production stays on `v0.1.2` by product-owner decision (DECISIONS.md, 2026-09-14).
   - The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
   - Sets 1 to 7 are approved. Sets 8, 9 and 11 are live on develop, awaiting the product owner's retest. Set 10 is untouched apart from item 10.1.
@@ -62,7 +65,8 @@ WHERE TO LOOK, in the order a fresh session should read them:
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
 | What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
-| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, plus the UI-fix-loop rows dated 2026-09-12 to 2026-09-14 |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and three rows dated 2026-09-20 on the CI fix, the 11.27 and 11.28 revert and the OMIM exclusion |
+| What happened overnight on 2026-09-19 | `testing/Developer/reports/2026-09-19_overnight/session_log.md`, then the three reports it points to |
 | Where the last session stopped | `testing/UI_fix_plan.md`, section "Where we stopped" |
 
 ### Process lessons from the fix-loop sessions, already applied
@@ -324,4 +328,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-14.
+Last updated: 2026-09-20.
