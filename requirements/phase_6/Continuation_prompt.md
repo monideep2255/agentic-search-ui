@@ -42,7 +42,7 @@ The next action is always one line, kept current here. Right now it is:
   - ONE CORRECTION THE OVERNIGHT SESSION MADE AGAINST ITSELF, worth reading before trusting any claim in its reports: it first wrote that both of the wiring branch's failures were pre-existing and called that "checked rather than assumed". It was not checked. Only the absence of develop's fix had been confirmed, which proves nothing about whether the failures would clear. A worker tested the inference directly and it did not hold. Both documents were corrected and pushed.
   - As of that close, testers use the develop app. Production stays on `v0.1.2` by product-owner decision (DECISIONS.md, 2026-09-14).
   - The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
-  - Sets 1 to 7 are approved. Sets 8, 9 and 11 are live on develop, awaiting the product owner's retest. Set 10 is untouched apart from item 10.1.
+  - Sets 1 to 7 are approved. Sets 8 and 9 are live on develop, awaiting the product owner's retest. SET 11 IS ONLY PARTLY LIVE and must not be described as live as a whole: 11.5 to 11.9, 11.12 to 11.14, 11.19, 11.20, 11.26 and part of 11.15 are on develop, while 11.17, 11.21, 11.27 and 11.28 are built and NOT live. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Set 10 is untouched apart from item 10.1.
   - Evidence is under `testing/Developer/reports/2026-09-14_*` and `2026-09-19_*`. Start with `2026-09-19_overnight/session_log.md`, which points at the other three.
   - When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
   Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, and never let two builders own one file region.
@@ -69,7 +69,7 @@ WHERE TO LOOK, in the order a fresh session should read them:
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
 | What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
-| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and three rows dated 2026-09-20 on the CI fix, the 11.27 and 11.28 revert and the OMIM exclusion |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and four rows dated 2026-09-20 on the CI fix, the 11.27 and 11.28 revert, the OMIM exclusion and the third `/phase-checkpoint` mode |
 | What happened overnight on 2026-09-19 | `testing/Developer/reports/2026-09-19_overnight/session_log.md`, then the three reports it points to |
 | Where the last session stopped | `testing/UI_fix_plan.md`, section "Where we stopped" |
 
