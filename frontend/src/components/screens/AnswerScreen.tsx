@@ -963,6 +963,24 @@ export function AnswerBody({
     claim.citations.length === 0 && !claim.pendingCitations ? { color: designTokens.inkMuted } : {};
   const rise = streaming ? RISE : {};
 
+  /*
+   * Pagination, product-owner request 2026-09-20: "why are we truncating,
+   * if the data is relevant, all the data should show, instead if it is a
+   * table, we create a pagination." Page size 10, fixed.
+   *
+   * Keyed per table by `block.key` (stable across a table's own streaming
+   * growth, since a growing table only ever appends to `rows`, never
+   * changes which claim started it). Reset on a new question rather than
+   * left to a same-key coincidence between an old table and a new one,
+   * since `AnswerBody` for the live turn is one long-lived component that
+   * outlives any single answer.
+   */
+  const RECORDS_PAGE_SIZE = 10;
+  const [recordsPage, setRecordsPage] = useState<Record<string, number>>({});
+  useEffect(() => {
+    setRecordsPage({});
+  }, [question]);
+
   const blocks = buildAnswerBlocks(claims);
   // UI fix 11.27: the one bold term in the body, or none.
   const mainPoint = mainPointFor(claims, question);
@@ -970,8 +988,100 @@ export function AnswerBody({
   let noteNumber = 0;
   let recordsNumber = 0;
 
+  /*
+   * The pagination bar itself, shared between the phone (stacked-list) and
+   * desktop (table) record renderings below. No pagination pattern exists
+   * anywhere in `docs/build/design/design-system/` (checked
+   * `prototype/app.html`, the only file carrying responsive rules, then
+   * `components/`, `screens/` and the README's coverage table): the design
+   * system's own result table, `.rtab`, only ever appears whole. So this is
+   * built from `frontend/src/theme.ts`'s tokens plus the nearest designed
+   * neighbour already shipped in this file, the "Show work" text button
+   * above (a real `component="button"`, `type="button"`, transparent,
+   * `designTokens.link`, `font: "inherit"`, `cursor: pointer`, `p: 0`),
+   * which is this repository's own precedent for a keyboard-reachable
+   * inline text control. The status line's tone (`inkMuted`) matches the
+   * inline-note text a few lines below.
+   */
+  const renderRecordsPagination = (
+    block: Extract<AnswerBlock, { type: "records" }>,
+    number: number,
+    currentPage: number,
+    totalPages: number,
+    totalRows: number,
+  ) => {
+    const start = currentPage * RECORDS_PAGE_SIZE + 1;
+    const end = Math.min(start + RECORDS_PAGE_SIZE - 1, totalRows);
+    const goTo = (next: number) =>
+      setRecordsPage((current) => ({ ...current, [block.key]: next }));
+    const navSx = {
+      font: "inherit",
+      fontSize: 13,
+      fontWeight: 600,
+      border: 0,
+      bgcolor: "transparent",
+      color: designTokens.link,
+      cursor: "pointer",
+      p: 0,
+      "&:disabled": { color: designTokens.inkFaint, cursor: "default" },
+    } as const;
+    return (
+      <Box
+        data-testid={`${testIdPrefix}answer-records-${number}-pagination`}
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "8px 16px",
+          fontSize: 13,
+          color: designTokens.inkMuted,
+          m: "0 0 16px",
+          pt: "8px",
+          borderTop: `1px solid ${designTokens.line}`,
+        }}
+      >
+        <Box component="span" aria-live="polite" data-testid={`${testIdPrefix}answer-records-${number}-status`}>
+          {`Showing ${start}–${end} of ${totalRows}`}
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <Box
+            component="button"
+            type="button"
+            data-testid={`${testIdPrefix}answer-records-${number}-prev`}
+            onClick={() => goTo(currentPage - 1)}
+            disabled={currentPage === 0}
+            sx={navSx}
+          >
+            {"‹ Previous"}
+          </Box>
+          <Box component="span" sx={{ color: designTokens.inkFaint, fontSize: 12.5 }}>
+            {`Page ${currentPage + 1} of ${totalPages}`}
+          </Box>
+          <Box
+            component="button"
+            type="button"
+            data-testid={`${testIdPrefix}answer-records-${number}-next`}
+            onClick={() => goTo(currentPage + 1)}
+            disabled={currentPage >= totalPages - 1}
+            sx={navSx}
+          >
+            {"Next ›"}
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
+
   const renderRecords = (block: Extract<AnswerBlock, { type: "records" }>) => {
     const number = recordsNumber++;
+    const totalRows = block.rows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / RECORDS_PAGE_SIZE));
+    const isPaginated = totalRows > RECORDS_PAGE_SIZE;
+    const currentPage = Math.min(recordsPage[block.key] ?? 0, totalPages - 1);
+    const visibleRows = isPaginated
+      ? block.rows.slice(currentPage * RECORDS_PAGE_SIZE, currentPage * RECORDS_PAGE_SIZE + RECORDS_PAGE_SIZE)
+      : block.rows;
     const heading =
       block.label !== null ? (
         <Typography
@@ -990,9 +1100,9 @@ export function AnswerBody({
             component="ul"
             data-testid={`${testIdPrefix}answer-records-${number}`}
             data-record-source={block.source}
-            sx={{ listStyle: "none", m: "0 0 16px", p: 0 }}
+            sx={{ listStyle: "none", m: isPaginated ? "0" : "0 0 16px", p: 0 }}
           >
-            {block.rows.map(({ claim, index, cells }) => (
+            {visibleRows.map(({ claim, index, cells }) => (
               <Box
                 component="li"
                 key={index}
@@ -1033,6 +1143,7 @@ export function AnswerBody({
               </Box>
             ))}
           </Box>
+          {isPaginated ? renderRecordsPagination(block, number, currentPage, totalPages, totalRows) : null}
         </Fragment>
       );
     }
@@ -1042,7 +1153,7 @@ export function AnswerBody({
         <Box
           data-testid={`${testIdPrefix}answer-records-${number}`}
           data-record-source={block.source}
-          sx={{ overflowX: "auto", m: "0 0 16px", "&:last-child": { mb: 0 } }}
+          sx={{ overflowX: "auto", m: isPaginated ? "0" : "0 0 16px", "&:last-child": { mb: 0 } }}
         >
           <Box
             component="table"
@@ -1069,7 +1180,7 @@ export function AnswerBody({
               </thead>
             ) : null}
             <tbody>
-              {block.rows.map(({ claim, index, cells }) => (
+              {visibleRows.map(({ claim, index, cells }) => (
                 <Box
                   component="tr"
                   key={index}
@@ -1094,6 +1205,7 @@ export function AnswerBody({
             </tbody>
           </Box>
         </Box>
+        {isPaginated ? renderRecordsPagination(block, number, currentPage, totalPages, totalRows) : null}
       </Fragment>
     );
   };
