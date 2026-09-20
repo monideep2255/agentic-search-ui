@@ -5782,7 +5782,9 @@ def _build_repair_cap_note(omission_remains: bool = True) -> str:
     return base + ", and the records it would have added are listed below as found"
 
 
-def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
+def _build_incomplete_answer_note(
+    omitted: list[Any], reported: int, *, summary_exists: bool = True
+) -> str:
     """T-4.5-07, F-4.5-06 breach 2: disclose that findings went unreported.
 
     Two things this note got wrong on its first version, both caught by the
@@ -5819,6 +5821,23 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     "NM_007294.4(BRCA1):c.190T>G" is full of periods, and the coverage
     grader splits sentences on periods, so inlining values would fragment the
     note into uncited pieces no matter how it was worded.
+
+    WRONG SUMMARY, found by the product owner reading a live answer
+    (2026-09-20). This note always said "not covered in the summary above",
+    which assumes a written summary exists. It does not when
+    `_build_structured_fallback_note` has already fired: that note says
+    plainly that the model's prose was discarded and the answer is a
+    code-built LIST, not a summary. The two notes shipped together read as
+    "there is no summary" immediately followed by "the summary above does
+    not cover this", which is incoherent, since the second sentence points
+    at something the first says does not exist.
+
+    `summary_exists` is how the caller (`write_node`) tells this builder
+    which case it is in: `not structured_fallback_used`. When it is False,
+    the closing clause names the LIST rather than the summary, matching
+    what the reader was actually just told. Every other property is
+    unchanged: still one sentence, still scale rather than values, still no
+    claim that the omitted rows are in the citations.
     """
     count = len(omitted)
 
@@ -5873,15 +5892,14 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     # whole answer. The note now names what it actually knows, that the
     # written summary above did not cover them, and nothing about where
     # else they may or may not appear.
-    if count == 1:
-        return (
-            f"Note: one further {label} was found for this question and is "
-            "not covered in the summary above"
-        )
-    return (
-        f"Note: {count} further {label}s were found for this question and "
-        "are not covered in the summary above"
+    closing = (
+        "not covered in the summary above"
+        if summary_exists
+        else "not included in the list above"
     )
+    if count == 1:
+        return f"Note: one further {label} was found for this question and is {closing}"
+    return f"Note: {count} further {label}s were found for this question and are {closing}"
 
 
 def _build_structured_fallback_note() -> str:
@@ -8650,12 +8668,20 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # structured fallback having already listed everything). The note and
     # the `ask` floor stay for exactly those cases, and the repair cap note
     # below says in its second clause whether an omission remained.
+    #
+    # `summary_exists=not structured_fallback_used`: when the structured
+    # fallback fired, `_build_structured_fallback_note` has already told the
+    # reader there is no written summary, only a code-built list, and this
+    # note must not then point at "the summary above" (2026-09-20, the
+    # product owner reading a live answer where the two notes contradicted).
     incomplete_answer_note: str | None = None
     repair_cap_note: str | None = None
     if omitted_findings and trust_outcome != "refuse":
         trust_outcome = aggregate([trust_outcome, "ask"])
         incomplete_answer_note = _build_incomplete_answer_note(
-            omitted_findings, len(synth_findings) - len(omitted_findings)
+            omitted_findings,
+            len(synth_findings) - len(omitted_findings),
+            summary_exists=not structured_fallback_used,
         )
     # F-4.5-A-04: a cap hit inside the repair is disclosed whether or not an
     # omission remains. Before the findings tail the two always coincided;

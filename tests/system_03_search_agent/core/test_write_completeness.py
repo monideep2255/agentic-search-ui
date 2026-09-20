@@ -876,6 +876,128 @@ async def test_the_structured_fallback_stays_out_of_a_grounded_answer(
 
 
 @pytest.mark.asyncio
+async def test_the_fallback_note_and_the_incomplete_note_do_not_contradict(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Product-owner defect (2026-09-20): a live answer showed
+
+        Note: the written summary of these records could not be verified
+        against them, so this answer lists the records found instead
+        Note: 5 further pubmed records were found for this question and
+        are not covered in the summary above
+
+    together. The first says no summary exists; the second points a reader
+    at "the summary above". Both can fire in the same answer: the
+    structured fallback fires when the model's prose grounds nothing, and
+    the incomplete-answer note fires whenever the fallback's own code-built
+    narrative still cannot ground every finding (a value the grounding pass
+    strips, here forced by dropping one finding's line from the fallback
+    builder the same way `test_a_repair_that_drops_a_reported_finding_is_
+    discarded` forces it).
+
+    MUTATION PROOF: reverting `_build_incomplete_answer_note` to always
+    return "...not covered in the summary above" (dropping the
+    `summary_exists` branch) turns this arm red on the last assertion,
+    reproducing exactly the reported defect.
+    """
+    # Both Synth calls ground nothing, so the structured fallback fires.
+    synth_pair(first=set(), repaired=set())
+    original_builder = graph_module.build_structured_fallback_narrative
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda findings: original_builder([f for f in findings if f.ref_index != 3]),
+    )
+
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+    narrative = _narrative(events)
+
+    assert graph_module._build_structured_fallback_note() in narrative, narrative
+    assert "not covered in the summary above" not in narrative, (
+        "the incomplete note must not point at a summary the fallback note "
+        f"just said does not exist: {narrative!r}"
+    )
+    assert "not included in the list above" in narrative, narrative
+
+
+def _assert_note_shape(note: str) -> None:
+    """Both `_build_structured_fallback_note` and `_build_incomplete_answer_
+    note` must open with "Note:", read as one sentence, and carry no
+    interior period or semicolon: the coverage grader splits sentences on
+    those and counts an unmarked continuation as an uncited claim.
+    """
+    assert note.startswith("Note:"), note
+    assert "." not in note, note
+    assert ";" not in note, note
+
+
+def test_the_incomplete_note_keeps_its_shape_with_and_without_a_summary() -> None:
+    """Offline pin on the builder directly: `summary_exists` only changes
+    the closing clause's wording, never the sentence shape both branches
+    are required to hold.
+
+    MUTATION PROOF: appending a second clause after a period in either
+    branch of `_build_incomplete_answer_note` turns this arm red.
+    """
+    omitted = [
+        SynthFinding(
+            ref_index=i,
+            citation_id=f"omitted-{i}",
+            layer="layer_1_graph",
+            tool="cypher_query",
+            field="curie",
+            field_value=f"MedGen:C{i}",
+            source_url=f"https://www.ncbi.nlm.nih.gov/medgen/C{i}",
+            entity_type="Disease",
+            curie=f"MedGen:C{i}",
+        )
+        for i in (1, 2)
+    ]
+    for summary_exists in (True, False):
+        for count in (1, 2):
+            note = graph_module._build_incomplete_answer_note(
+                omitted[:count], reported=2, summary_exists=summary_exists
+            )
+            _assert_note_shape(note)
+
+
+def test_the_incomplete_note_names_the_list_when_no_summary_exists() -> None:
+    """`summary_exists=False` is the caller's signal that
+    `_build_structured_fallback_note` already fired for this answer, so the
+    closing clause must name the LIST that note described rather than a
+    summary that, by that same note's own words, does not exist.
+
+    MUTATION PROOF: hardcoding the closing clause to "not covered in the
+    summary above" regardless of `summary_exists` turns this arm red.
+    """
+    omitted = [
+        SynthFinding(
+            ref_index=1,
+            citation_id="omitted-1",
+            layer="layer_1_graph",
+            tool="cypher_query",
+            field="curie",
+            field_value="MedGen:C1",
+            source_url="https://www.ncbi.nlm.nih.gov/medgen/C1",
+            entity_type="Disease",
+            curie="MedGen:C1",
+        )
+    ]
+    note = graph_module._build_incomplete_answer_note(
+        omitted, reported=4, summary_exists=False
+    )
+    assert "summary" not in note, note
+    assert "not included in the list above" in note, note
+
+    # The default (`summary_exists=True`, the ordinary caller not touched by
+    # this fix) is unchanged, pinned so this test would fail loudly if the
+    # default itself moved rather than only the new branch.
+    default_note = graph_module._build_incomplete_answer_note(omitted, reported=4)
+    assert "not covered in the summary above" in default_note, default_note
+
+
+@pytest.mark.asyncio
 async def test_a_grounding_refusal_is_never_reported_as_a_truncation(
     synth_pair, monkeypatch: pytest.MonkeyPatch
 ) -> None:
