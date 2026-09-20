@@ -699,51 +699,70 @@ Full account: `testing/Developer/reports/2026-09-20_breadth_merge/mcp_failure_ex
 
 ### The plan we agreed, and where each piece stands
 
-Updated through the afternoon of 2026-09-20. Everything below is either live, being
-built right now, or waiting on a named decision. Nothing here is a vague intention.
+Updated at the close of 2026-09-20, after the product owner tested every shipped
+feature live and reported back on each.
 
-Live on develop and testable now:
+Shipped today, tested live by the product owner, and APPROVED by them:
 
-| Item | Commit | What a person sees |
+| Item | Commit | Their verdict |
 |---|---|---|
-| 11.27, bold only the lead's main point | `aedf53d` | Table cells and list items read plain |
-| 11.17 and 11.21, the broad search | `2bb1925` | Every question searches the resources that fit it |
-| Bold in BOTH answer modes | `b1c7334` | Plain language bolds its main point too, it no longer bolds nothing |
-| 11.28, the paced handoff | `50ed55b` | The lead starts, hands off, helpers land, then writing |
+| Bold in both answer modes | `b1c7334` | Good |
+| The broad search, 11.17 and 11.21 | `2bb1925` | Working |
+| Pagination, ten rows a page | `7f62099` | "Pagination works" |
+| Relevance-sorted literature | `70a6c4e` | Confirmed on topic |
+| Every retrieved row shown | `9cc5d63` | Working, and it surfaced four new defects below |
+| Coherent notes | `e581a05` | Partly. See D-2 and D-4 below, the notes are still confusing |
+| Scientist names readable | `1d6293b` | "scientist names are readable now" |
+| Sources grouped by layer, deduplicated | `9d20438` | "Sources yes", with one follow-up: make the layers collapse |
 
 Being built right now, one agent each, no two sharing a file:
 
-| Item | Owns | Why it exists |
+| Item | Owns | Why |
 |---|---|---|
-| Pagination, 10 rows per page | `frontend/.../AnswerScreen.tsx` | Product-owner decision: if the data is relevant, show it and page it, do not truncate |
-| Split the prompt cap from the display cap | `core/graph.py`, `synthesis/findings.py` | One constant was doing two jobs. Bounding the MODEL's prompt is a hallucination control and stays. Bounding code-built table rows protects nothing, since the model never writes a table row |
-| Literature relevance | `core/breadth_plan.py` | Measured: a mulberry-leaf fermentation paper was returned for a GCK and MODY question. The ESearch call carries no sort, and ESearch defaults to most recent rather than most relevant |
+| GO process labels, and the false unaddressed-entity note | `synthesis/answer_layout.py`, `core/graph.py`, `tools/cypher_templates.py` | Defects D-1 and D-4, found by the product owner in a live TP53 answer |
+| Collapsible layer groups | `frontend/.../AnswerScreen.tsx` | Their follow-up: show the three layers first, expand on demand. A live answer now carries 78 sources, so the expanded list is a wall |
 
-Approved and not yet started:
+FOUR DEFECTS FOUND BY THE PRODUCT OWNER IN ONE LIVE ANSWER, all recorded with
+evidence in `testing/Developer/reports/2026-09-20_tp53_findings/findings.md`.
+Every one is a REPORTING defect rather than a retrieval defect: the agent found
+the records, cited them and rendered them, and what it says ABOUT what it found
+is wrong or unreadable.
 
-| Item | Decision taken | Note |
+| Id | Defect | State |
 |---|---|---|
-| Scientist spacing, spread across the real run | 2026-09-20 | The product owner picked the adaptive design over simply raising the constants. Today's pacing squeezes the whole narrative into `maxLagMs` 3500ms, so names are unreadable, and then leaves dead air while tools run. Spreading it across the actual run costs zero added time on a slow run |
-| Cite every retrieved finding | 2026-09-20 | Lands naturally once the caps are split, rather than fighting a ceiling |
-| Widen the citation host rule so OMIM can be cited | 2026-09-20 | `omim.org` as an EXACT additional host, never a loosened pattern |
-| PMC as a literature source | 2026-09-20 | DELIBERATELY SEQUENCED SECOND. It needs `core/graph.py`, which the cap-split agent holds, and adding a source while relevance is broken buys more irrelevant papers rather than better answers |
+| D-1 | Ten distinct GO biological processes all rendered as the word "TP53", because the row is cited to the gene and the process's own name never reaches the label | BEING FIXED. The worst of the four, since a reader reads it as incompetence rather than as a caveat |
+| D-2 | Three unexplained totals in one answer: 124 available, 78 sources, 59 table rows, ten a page. Each is true of something different and the answer never says which | NEEDS A PRODUCT DECISION, not a patch |
+| D-3 | The truncation note still says rows are "not shown above" while sitting directly above a pager, which a reader reads as "the pager is hiding them" | NEEDS A PRODUCT DECISION: is 100 the right display bound for a 124-row result, and does this wording still belong next to pagination |
+| D-4 | The answer says it did not address rs28934578, in an answer whose own lead sentence reads "for rs28934578 and TP53" | BEING FIXED. The worst of the four for TRUST: a false note teaches a reader to distrust the true ones |
+
+Approved and not yet started, in the product owner's own stated order:
+
+| Item | Why it is next |
+|---|---|
+| 11.22, abstracts as evidence | Approved to proceed 2026-09-20. The literature is now RELEVANT but is still a list of TITLES rather than findings, which is the difference between a bibliography and evidence. The largest remaining lever on their "surface level" verdict |
+| The fallback note's jargon | "the written summary of these records could not be verified against them" describes this system's own grounding check. A coordinated TWO-FILE change, since `frontend/src/hooks/useRunView.ts` matches that exact prefix to classify a system note, so changing one side alone makes the frontend render it as answer text |
+| 11.30, the Integrations page | Every surface responds, probed live. What is unproven is that each SNIPPET runs AS PRINTED, which no status code can show |
+| Cite every retrieved finding | Decided 2026-09-20, still unbuilt |
+| Widen the citation host rule so OMIM can be cited | Decided 2026-09-20, still unbuilt. `omim.org` as an EXACT additional host, never a loosened pattern |
+| PMC as a literature source | The schema already admits `pmc`, so this is smaller than first stated. It was sequenced behind relevance deliberately, since adding a source while relevance was broken would have bought more irrelevant papers |
 
 Open, with nobody on them:
 
 | Item | What is known |
 |---|---|
-| 11.22, abstracts as evidence | The biggest single lever on the "surface level" verdict, since today the answer lists literature TITLES rather than findings. Approved in principle, queued, awaiting the product owner's go-ahead |
-| 11.30, the Integrations page works end to end | Raised 2026-09-20 and called important. Every surface responds, probed live: `/health`, `/openapi.json` and `/docs` 200, `/graphql` and `/v1/history` 401 which is a protected route refusing an unauthenticated caller, `/mcp` 307 which is its documented redirect. So this is verification rather than repair until proven otherwise. The unproven part is that each SNIPPET on the page runs AS PRINTED, which no status code can show, and set 5 has form here: 5.2 corrected a wrong GraphQL example and 5.3 fixed the MCP server rejecting every request |
-| The MODY-genes grounding failure | "What genes are associated with MODY?" discards its synthesis on 5 of 6 runs, against 7 of 30 overall. A broad multi-entity list question defeats grounding in some specific way nobody has found |
+| The MODY-genes grounding failure | "What genes are associated with MODY?" discards its synthesis on 5 of 6 runs, against 7 of 30 overall. A broad multi-entity list question defeats grounding in some way nobody has found |
 | A 127.1 second run | Measured against a median of 13.6 and a stated budget of 53. Nothing owns it |
-| 10.2, history shows the saved answer | BLOCKED on a product-owner decision. It needs a schema migration, since no answer is stored anywhere today |
-| 10.3, the consistency run | 50 golden questions three times each. This is what would tell us whether the broad search actually fixed the wobble |
+| 10.2, history shows the saved answer | BLOCKED on a product-owner decision. No answer is stored anywhere today, so it needs a schema migration and a data-retention decision |
+| 10.3, the consistency run | 50 golden questions three times each. This is what would show whether the broad search actually fixed the wobble |
 | L-01 shape 1 | A whole graph result vanishing on some runs, hidden by graceful degradation. The instrument is written and has never run |
 | 11.29, hard and soft edges, RAG and vectors | Its own session. Its bar: not "does it cite" but "is it worth reading instead of a general chatbot" |
 
 The rule this plan follows, because it is the lesson of the overnight revert: ONE FEATURE PER PUSH. 11.27 and 11.28 shared a merge, CI failed on one, and the innocent one was reverted with it and sat unavailable for a week. Each item above lands alone, is confirmed live alone, and can be rolled back alone.
 
-The rule the parallel work follows: no two agents own one file. The fences are written into each brief, and the one shared resource that cannot be fenced, this machine's CPU, is handled by every agent checking load before it runs a suite.
+The rule the parallel work follows: no two agents own one file. File fencing held all day across eight agents with zero collisions. The one shared resource that cannot be fenced is this machine's CPU, and checking load before a run is a race rather than a queue: two agents both saw a quiet machine, started together, and drove the load average to 20. Any suite result measured there is not trustworthy and was re-run.
+
+THE VERIFICATION LESSON OF THE DAY, which cost a published correction. An arm that fails when a change is REVERTED has not been shown to test anything: it usually fails with a missing function, parameter or test id, before it ever evaluates its assertion. The honest check mutates ONE property and leaves every symbol intact. Applied across the day it found that one of three notes arms was load-bearing rather than three, and that six of eight source-grouping arms discriminate while two are deliberate invariants. The lead made this error too, in `9d20438`'s own message, and corrected it in `3a3c455` rather than leaving it.
+
 ### Decisions taken today
 
 Both are product-owner calls, both recorded in `DECISIONS.md` dated 2026-09-20, and NEITHER is built yet.
