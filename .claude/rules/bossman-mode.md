@@ -47,7 +47,26 @@ Ask:
 Deny:
 - Proceeding to the next phase without user MR approval
 - Ignoring a blocker by guessing
-- Pushing to develop directly (push to phase branch only, merge via MR), except through the sanctioned /ship release chain at phase end, where ship/SKILL.md's explicit user directive overrides this and permits pushing directly to develop
+- Pushing to develop directly (push to phase branch only, merge via MR). Two carve-outs, both narrow and both named, and nothing else:
+  - The sanctioned /ship release chain at phase end, where ship/SKILL.md's explicit user directive overrides this and permits pushing directly to develop
+  - UI fix mode, invoked as `/bossman --ui`, where the whole point of the cadence is that a product-owner defect lands on develop immediately and their retest is the verification step. Product-owner decision of 2026-09-12, re-confirmed on 2026-09-20
+
+THE CARVE-OUTS ARE BOUNDED BY MODE, NOT BY CONVENIENCE, and the wording above is
+deliberate. UI fix mode is a one-off cadence for defects the product owner hits
+while testing, not a standing licence: build-phase mode still branches, still
+opens a pull request, and still runs the judge and adversary rounds. An agent
+that wants to push to develop must be able to name which of the two carve-outs
+it is standing in, and `/bossman` with no `--ui` flag is neither of them.
+
+WHY THIS WAS AMENDED RATHER THAN LEFT, recorded because the amendment weakens a
+Deny entry and that should never be quiet. Between 2026-09-12 and 2026-09-20 the
+UI fix loop pushed to develop directly on every fix, by design, while this line
+forbade it outright. A Deny entry that the team's own sanctioned cadence breaks
+daily is worse than no entry: it trains the next reader to treat the whole Deny
+list as advisory, which is the one thing a Deny list cannot survive. The
+alternative, changing the practice back to match the rule, was rejected by the
+product owner, who established the cadence deliberately and re-confirmed it.
+Amended on their explicit sign-off, 2026-09-20.
 
 ### When bossman mode is NOT active
 
