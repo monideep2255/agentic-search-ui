@@ -656,33 +656,88 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 
 ## Where we stopped
 
-The 2026-09-20 day summary, what shipped and what to retest, is
-`testing/Shipped_2026-09-20.md`. This section stays the authoritative plan.
+The cutoff. It is updated at the end of every working session, so the next
+session starts here rather than reconstructing state. Last updated 2026-09-20,
+evening session, which closed with a production release. Read this, then the
+Set 11 table above.
 
-The cutoff. It is updated at the end of every working session, so the next session starts here rather than reconstructing it. Last updated 2026-09-20, afternoon session. Read this, then the Set 11 table above.
+This section is also the shared plan. What we agreed, what is done and what is
+next all live here rather than in a session that disappears, so the product
+owner and whoever picks this up read the same record.
 
-This section is also the shared plan. What we agreed, what is done, and what is next all live here rather than in a session that disappears, so you and I read the same record.
+The day's shipped list, with what to retest, is `testing/Shipped_2026-09-20.md`.
+That document is read once, start to finish, by someone catching up. This
+section is the authoritative plan and owns per-item status.
 
 ### The short version
 
 | # | Item | Outcome |
 |---|---|---|
-| 1 | Settle the broad-search branch (the overnight cutoff's item 1) | DONE. The unexplained failure is explained, and it was never this branch's code |
-| 2 | UI fix 11.27, the bold fix, landed alone | LIVE on develop at `aedf53d`, both services SUCCESS |
-| 3 | UI fixes 11.17 and 11.21, the broad search | MERGED and pushed at `2bb1925`. Deploying |
-| 4 | Two product-owner decisions taken | Recorded in `DECISIONS.md`, not yet built |
-| 5 | One stale row corrected, one discussion item opened | Row 11.16 was wrong; 11.29 is new |
+| 1 | The broad search, 11.17 and 11.21 | LIVE at `2bb1925`. Product owner verdict: working |
+| 2 | Nine further fixes across the day | All LIVE on develop, listed in `testing/Shipped_2026-09-20.md` |
+| 3 | 11.22, abstracts as evidence | LIVE at `9cf8572`, shipped the evening it was approved |
+| 4 | 11.30, the Integrations page | Fix A LIVE at `dca58e5`. Fix B open, a deployment decision |
+| 5 | PRODUCTION RELEASE v0.2.0 | SHIPPED. 241 commits, the first release since 2026-08-28 |
+| 6 | The harness | `bossman-mode` rebuilt as a router plus three reference files, merged as PR #94 |
+
+### The release, and what it means for tomorrow
+
+v0.2.0 is live in production. The version was DERIVED, not chosen: 46 `feat`
+commits and zero breaking changes between v0.1.2 and develop, which the
+checked-in script reads as a minor bump. The product owner asked for v0.1.3,
+was shown the derivation, and let the rule decide.
+
+| Fact | Value |
+|---|---|
+| Tag | `v0.2.0`, pointing at `cde4f59` |
+| Production API | `https://search-agent-api-production.up.railway.app`, `/health` returns `app_env: production` |
+| Production web | `https://search-agent-web-production.up.railway.app`, answering 200 |
+| Branch state | Local `develop` only. Remote `develop` and `production` only |
+| Delta | Develop is one commit ahead of production, the automated back-merge itself |
+
+Two things the release settled that were open before it. The `app_env` field
+that `docs/build/Release_flow.md` said would only become true at the first
+release after build phase 4.15 now reads `production`, so anyone holding a URL
+can tell the deployments apart by calling `/health` rather than guessing from
+the hostname. And the full ten-gate CI ran green on the release pull request,
+which is the first time those gates have run against a promotion into
+`production`.
 
 ### If you are testing right now, read this first
 
 | | |
 |---|---|
-| Where | `https://search-agent-web-develop-2aeb.up.railway.app` |
-| What is new | Two things you can see, for the first time since 2026-09-14 |
-| 11.27 | Only the lead claim's main point is bold. Table cells and list items read plain |
-| 11.17 and 11.21 | Every question now searches the resources that fit it, rather than a fixed plan of one graph query plus four live calls |
-| Worth testing | Tests 1, 7 and 12 in `testing/Product/Product_workflows.md`: basic search, answer mode, trust signals and sources |
+| Develop | `https://search-agent-web-develop-2aeb.up.railway.app` |
+| Production | `https://search-agent-web-production.up.railway.app`, now carrying everything develop had as of tonight |
+| What to retest | The six checks in `testing/Shipped_2026-09-20.md`, in the order given there |
 | The one measurement worth doing by hand | Ask the SAME question several times and watch whether the source count changes. That is finding L-01, and half of it should now be fixed |
+
+### What is waiting on the product owner
+
+Three things, and none of them should be decided by whoever builds next.
+
+| Waiting on | The question |
+|---|---|
+| 11.31, the two answer modes | Where it sits in "Next, in order". It was decided after that list was written. It is also carrying two sub-questions named in its own row |
+| D-2, the four totals | Four numbers appear in one answer, each true of something different, and the answer never says which. It needs a product decision rather than a patch |
+| The bossman rule contradiction | `.claude/rules/bossman-mode.md` still denies pushing to develop directly, which the UI fix loop does by design under the 2026-09-12 decision. The rule and the practice disagree in writing. It is a deny rule, so it needs explicit sign-off rather than a quiet edit |
+
+### Loose ends, named rather than left
+
+- Fix B of 11.30, the `/mcp` redirect emitting an `http://` Location behind
+  Railway's TLS-terminating proxy. Reproduced in
+  `tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py`.
+  It needs `FORWARDED_ALLOW_IPS` set to Railway's actual proxy range, which
+  nobody in the session knew and nobody guessed.
+- A 127.1 second run against a median of 13.6, measured 2026-09-20. Nothing
+  owns it.
+- The MODY-genes grounding failure, 5 of 6 runs. Unowned.
+- `testing/Developer/reports/2026-09-12_consistency_baseline/` is untracked
+  evidence from 2026-09-12, 96KB. It has sat untracked for eight days. Commit
+  it or bin it, but decide rather than leaving it.
+- The internal-MCP idea for Layer 2 and Layer 3, raised 2026-09-20. Backlog
+  only. It crosses the tool-integration boundary the locked technical
+  specification's Section 6 defines, so it is scoped before it is started.
 
 ### What was actually wrong, and why it took a week
 

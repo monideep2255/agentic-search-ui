@@ -38,9 +38,9 @@ The next action is always one line, kept current here. Right now it is:
   - So the first genuinely outstanding item on that list is ITEM 2, build 2a, cite every retrieved finding. Items 3, 5 and 6 follow it unchanged.
 - READ THE DAY'S SUMMARY BEFORE TOUCHING ANYTHING. `testing/Shipped_2026-09-20.md` is new and is the authoritative account of what shipped on 2026-09-20 and what to retest, in the terms a person notices. The develop app a tester sees is materially different from the one every earlier cutoff describes, so a session that skips it will retest the wrong things.
 - ONE ITEM IS NOT ON THE ORDERED LIST AT ALL AND NEEDS PLACING ON IT. Item 11.31, the two answer modes diverging, was decided on 2026-09-20 after "Next, in order" was written, so no document states where it sits in the order. It is DECIDED AND NOT BUILT. It carries two questions that whoever builds it must not answer on the product owner's behalf: whether a labelled explanatory sentence is ever permitted where no retrieved source supports it, and what replaces the removed word cap as an upper bound. Its constraints, including three failed directive versions it may not repeat, are in the Set 11 table's 11.31 row. Ask where it goes rather than assuming.
-- CI IS NOT GREEN AS OF THIS WRITING, and this is the claim most likely to have moved before you read it. The last two completed runs on develop failed, both on one test-isolation defect: an arm added with the MCP config fix entered the app's lifespan through `TestClient(app)`, and `StreamableHTTPSessionManager` refuses a second `.run()` in one process. The repair is pushed as `c35b545` and its run was still in progress when this was written. Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
+- CI IS GREEN ON DEVELOP, confirmed after the repair landed. It had failed on two runs, both on one test-isolation defect: an arm added with the MCP config fix entered the app's lifespan through `TestClient(app)`, and `StreamableHTTPSessionManager` refuses a second `.run()` in one process. The repair is `c35b545`, which switches the arm to `httpx.ASGITransport`, the form the repository already documents in `adapters/mcp/test_phase_4_1_production_mount.py`'s module docstring. The full ten-gate CI then ran green on the release pull request too. Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
 - TWO WORKTREES STILL EXIST AND NEITHER IS STILL NEEDED, which reverses what this file said on the morning of 2026-09-20. `breadth-wiring` is merged as `2bb1925`, and the live confirmation it was waiting on is done. `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`. Clearing a worktree is a deletion, so ask the product owner first: the reversal removes the reason to keep them, not the obligation to ask. Note that `testing/UI_fix_plan.md`'s "Known loose ends" still calls the second one needed, which contradicts its own 11.28 row.
-- PRODUCTION IS STILL ON `v0.1.2`, commit `ffa7cde` of 2026-08-28, with develop well over two hundred commits ahead. A v0.2.0 release was being prepared on the evening of 2026-09-20 and NO `v0.2.0` TAG EXISTED when this was written. Treat the release as unconfirmed and settle it with `git tag --sort=-creatordate | head` and `git log origin/production -1`, never from a document or a conversation.
+- PRODUCTION IS ON `v0.2.0`, released on the evening of 2026-09-20, the first release since v0.1.2 on 2026-08-28 and carrying 241 commits. The tag points at `cde4f59`, `GET /health` on the production API returns `app_env: production`, and the automated back-merge has already landed, so develop sits exactly one commit ahead of production. THE VERSION WAS DERIVED, NOT CHOSEN: 46 `feat` commits and zero breaking changes, which `.github/release/derive_version.sh` reads as a minor bump. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`, never from a document or a conversation.
 - SET 11 IS NOW MOSTLY LIVE, which reverses this file's earlier warning that it was not. 11.17, 11.21, 11.27 and 11.28 all merged on 2026-09-20, so the built-but-not-live set named here before is empty. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Sets 1 to 7 are approved, sets 8 and 9 are live on develop, and set 10 is untouched apart from item 10.1.
 - THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given directly by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation, and every remaining presentation fix leaves it untouched. It is the bar item 11.29 has to clear.
 - EVIDENCE for the day is under `testing/Developer/reports/2026-09-20_*`. Start with `2026-09-20_breadth_merge/mcp_failure_explained.md`, for why the biggest feature in the queue sat unmerged for a week over a failure that was never its own, and `2026-09-20_tp53_findings/findings.md`, for the four defects one live answer exposed.
@@ -83,14 +83,23 @@ written on the morning of 2026-09-20, which described a day that had not happene
 
 What is true on disk at the close:
 
-- Develop is pushed and the working tree carries no source changes. Two untracked folders remain: `.claude/skills/bossman-mode/reference/` and `testing/Developer/reports/2026-09-12_consistency_baseline/`.
-- CI is not green. Two completed runs failed on one test-isolation defect and the repair, `c35b545`, was mid-run. Verify before relying on either state.
-- Both worktrees still exist and neither is still needed. Neither is blocking anything, and clearing them is a deletion that needs asking first.
-- Production is unchanged on `v0.1.2`. No `v0.2.0` tag existed at this writing.
+- Develop is pushed and the working tree carries no source changes. One untracked folder remains, `testing/Developer/reports/2026-09-12_consistency_baseline/`, 96KB of evidence that has sat untracked for eight days. Commit it or bin it, but decide rather than leaving it.
+- CI is green on develop, and the full ten-gate CI ran green on the release pull request.
+- Both worktrees are gone, removed on the product owner's instruction that local carries only `develop`. The one uncommitted file in either was byte-compared against develop's copy first and was identical, so nothing was lost.
+- Branch state is the agreed steady state: local `develop` only, remote `develop` and `production` only.
+- Production is on `v0.2.0`, released 2026-09-20 and confirmed live, `app_env: production`. Develop is one commit ahead, the automated back-merge itself.
+- The harness changed: `bossman-mode` is a router plus three reference files, merged as PR #94.
 
 What the next session does first is `testing/UI_fix_plan.md`'s "Next, in order", read with
-Step 2's two corrections above: its items 1 and 4 are already done, so the work starts at
+Step 2's corrections above: its items 1 and 4 are already done, so the work starts at
 item 2, cite every retrieved finding.
+
+THREE THINGS ARE WAITING ON THE PRODUCT OWNER and none should be decided by whoever builds
+next. Where item 11.31 sits in the order, since it was decided after that list was written.
+The D-2 question, four totals in one answer each true of something different. And the fact
+that `.claude/rules/bossman-mode.md` still denies pushing to develop directly while the UI
+fix loop does exactly that by design under the 2026-09-12 decision, which is a deny rule and
+so needs explicit sign-off rather than a quiet edit. All three are in the fix plan's cutoff.
 
 What is waiting on the product owner, and none of it is blocked by engineering:
 
