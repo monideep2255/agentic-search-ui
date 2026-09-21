@@ -89,6 +89,9 @@ What is true on disk at the close:
 - Branch state is the agreed steady state: local `develop` only, remote `develop` and `production` only.
 - Production is on `v0.2.0`, released 2026-09-20 and confirmed live, `app_env: production`. Develop is one commit ahead, the automated back-merge itself.
 - The harness changed: `bossman-mode` is a router plus three reference files, merged as PR #94.
+- ONE PULL REQUEST IS OPEN AND WAITING: PR #97, which fixes `/ship`'s stray-file sweep so it walks the filesystem as well as asking git. Do not run `/ship`'s Step 1b from the old instructions and believe the result; check whether #97 merged first with `gh pr view 97`.
+- `testing/UI_fix_plan.md` was restructured the same night. Set 11 is now an index table plus `#### Detail 11.N` subsections, because single cells had reached 4,344 characters. Add to a detail subsection rather than widening a cell.
+- Item 11.32 is new: wrap the Layer 2 and Layer 3 API calls in internal MCP servers. Backlog only, nothing designed, and it is scoped against the locked technical specification's Section 6 before any work starts.
 
 What the next session does first is `testing/UI_fix_plan.md`'s "Next, in order", read with
 Step 2's corrections above: its items 1 and 4 are already done, so the work starts at

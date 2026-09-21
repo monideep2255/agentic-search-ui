@@ -1134,8 +1134,8 @@ that.
 
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state. Last updated 2026-09-20,
-evening session, which closed with a production release. Read this, then the
-Set 11 table above.
+late evening, after the production release and a readability pass on this
+document. Read this, then the Set 11 table above.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -1155,6 +1155,8 @@ section is the authoritative plan and owns per-item status.
 | 4 | 11.30, the Integrations page | Fix A LIVE at `dca58e5`. Fix B open, a deployment decision |
 | 5 | PRODUCTION RELEASE v0.2.0 | SHIPPED. 241 commits, the first release since 2026-08-28 |
 | 6 | The harness | `bossman-mode` rebuilt as a router plus three reference files, merged as PR #94 |
+| 7 | This document | Restructured so Set 11 is scannable again, and item 11.32 added |
+| 8 | `/ship`'s stray-file sweep | Fixed on a branch, OPEN as PR #97, waiting on the product owner |
 
 ### The release, and what it means for tomorrow
 
@@ -1197,6 +1199,7 @@ Three things, and none of them should be decided by whoever builds next.
 | 11.31, the two answer modes | Where it sits in "Next, in order". It was decided after that list was written. It is also carrying two sub-questions named in its own row |
 | D-2, the four totals | Four numbers appear in one answer, each true of something different, and the answer never says which. It needs a product decision rather than a patch |
 | The bossman rule contradiction | `.claude/rules/bossman-mode.md` still denies pushing to develop directly, which the UI fix loop does by design under the 2026-09-12 decision. The rule and the practice disagree in writing. It is a deny rule, so it needs explicit sign-off rather than a quiet edit |
+| PR #97, the ship sweep fix | Open and waiting on review. It changes `.claude/skills/ship/SKILL.md` so the stray-file sweep walks the filesystem as well as asking git. Merging it is what stops the duplicate-file problem recurring a fourth time |
 
 ### Loose ends, named rather than left
 
@@ -1227,7 +1230,10 @@ Three things, and none of them should be decided by whoever builds next.
   SessionStart, and these files were created mid-session. THE FIX IS ONE LINE OF
   INTENT, that Step 1b walk the filesystem rather than ask git, and it is not
   applied here because `/ship` lives under `.claude/` and `git-workflow` requires
-  a branch and a pull request for that.
+  a branch and a pull request for that. RAISED AS PR #97 ON 2026-09-20 and open
+  for review: the fixed step keeps BOTH sources, since git status is the only
+  view of a modified tracked file or a probe script just written, and the walk
+  is the only view of a path gitignore hides.
 - The internal-MCP idea for Layer 2 and Layer 3, raised 2026-09-20. Backlog
   only. It crosses the tool-integration boundary the locked technical
   specification's Section 6 defines, so it is scoped before it is started.
