@@ -4,10 +4,33 @@ The ordered work list for fixing the product after the first testing round on 20
 
 ## How to read this
 
+Start with [Where we stopped](#where-we-stopped). That section is the cutoff:
+what is live, what is waiting on the product owner, and what the next session
+does first. Everything above it is the record of how each item got to its
+current state.
+
+Marks used in the set tables:
+
 - ✅ built and passing checks
 - 🚀 live on develop
 - 👍 you retested and approved
 - An empty mark means not yet.
+
+The shape of a set, and why it changed on 2026-09-20. Each set is one table,
+one row per piece of feedback, and the table owns each item's status. That held
+until Set 11, where the newest items' stories outgrew a table cell: single cells
+had reached 4,344 characters and the table had stopped being scannable at all.
+
+So Set 11 now has two parts, and the split is worth knowing before you edit it:
+
+| Part | What it holds | Rule when editing |
+|---|---|---|
+| The table | Every item, its status, and a one-line summary | This is the index. Keep a cell short. If it grows past a couple of sentences, move the rest down |
+| "Detail for the long Set 11 items" | The full account for the items that needed one, as `#### Detail 11.N` | Add here rather than widening a cell. The table row keeps a pointer |
+
+Nothing was reworded when that split was made. It was verified by checking all
+720 substantive fragments of the previous version against the new one, with zero
+missing.
 
 ## Table of contents
 
@@ -381,7 +404,31 @@ Batch: answers.
 
 What you will see: "What variants cause it?" answers about BRCA1. "Yes, go deeper" continues the same search. A follow-up stays on the same screen, with the earlier answer shrinking above. Pushed and live on develop on 2026-09-13, approved by the product owner the same night after two retests. By product-owner decision at approval, set 10's reliability item (the same question returns the same sources every time) opens next, ahead of sets 8 and 9.
 
-What was actually wrong, measured by running the same follow-up twelve times locally before any change: the memory worked every time ("it" resolved to BRCA1), and the refusal came from two later steps. The guardrail judged the bare words "What variants cause it?" off topic about one run in three, because it never saw that the session remembered a gene. When it passed, the grounding gate dropped every claim whenever the answer model shortened a stored variant name, so a correct, fully retrieved answer was refused on phrasing and the error blamed a size cut that never happened. "Yes, go deeper" sent its own yes/no wording as the next search. Fixed on the backend by setting aside the guardrail's off-topic verdict in code when a question refers back to an entity the session remembers (a first cut put the memory into the guard's prompt instead, and live on develop that made the guard model answer the question in prose rather than classify it, so every follow-up failed; measured, reverted the same evening; the guard's model call also stopped carrying the agent's cached prefix ahead of the classifier's instruction, which had made the guard model answer the question in prose one call in ten locally and more often on develop), by answering from the retrieved records themselves in code when the model's wording will not ground, by an honest error for the grounding case, and by a real go-deeper question that lists the records the earlier answer did not show. Five of five consecutive follow-up runs answered afterwards with the real stored memory shape, and the go-deeper run showed ten records none of the earlier answers had.
+What was actually wrong, measured by running the same follow-up twelve times
+locally before any change: the memory worked every time ("it" resolved to
+BRCA1), and the refusal came from two later steps. The guardrail judged the bare
+words "What variants cause it?" off topic about one run in three, because it
+never saw that the session remembered a gene.
+
+When it passed, the grounding gate dropped every claim whenever the answer model
+shortened a stored variant name, so a correct, fully retrieved answer was
+refused on phrasing and the error blamed a size cut that never happened. "Yes,
+go deeper" sent its own yes/no wording as the next search. Fixed on the backend
+by setting aside the guardrail's off-topic verdict in code when a question
+refers back to an entity the session remembers (a first cut put the memory into
+the guard's prompt instead, and live on develop that made the guard model answer
+the question in prose rather than classify it, so every follow-up failed;
+measured, reverted the same evening; the guard's model call also stopped
+carrying the agent's cached prefix ahead of the classifier's instruction, which
+had made the guard model answer the question in prose one call in ten locally
+and more often on develop), by answering from the retrieved records themselves
+in code when the model's wording will not ground, by an honest error for the
+grounding case, and by a real go-deeper question that lists the records the
+earlier answer did not show.
+
+Five of five consecutive follow-up runs answered afterwards with the real stored
+memory shape, and the go-deeper run showed ten records none of the earlier
+answers had.
 
 ### 7.1 Follow-ups keep the earlier context (R20)
 
@@ -429,7 +476,25 @@ Batch: answers.
 
 What you will see: every question searches the knowledge graph, live NCBI records, and literature and trials at the same time. The progress screen shows a lead scientist handing off to three random scientists, with steps like "Franklin is searching…".
 
-Built 2026-09-13, overnight. A question that names a gene now plans four searches: the knowledge graph, the live NCBI gene record, the PubTator3 literature record, and ClinicalTrials.gov (recruiting trials only when the question says "recruit"); a variant written as an rs number adds dbSNP and LitVar2. The live searches run at the same time, each under its own time limit, and one that fails is disclosed rather than blanking the answer. Every search input comes from the question and the confirmed gene, and results are sorted and capped the same way every time, so a question still returns one set of sources. Trial and literature sources are cited under their own names (clinicaltrials.gov with the NCT number, PubTator3), not the tool's. Also fixed inside this set: "Variants in GCK causing MODY" no longer refuses when the model tags MODY as a gene or finds no gene at all. Measured locally on 16 runs over BRCA1, GCK, CFTR and EGFR: every run resolved its gene and cited at least two layers, GCK answered five of five, the trials question cited recruiting trials, 19 to 55 seconds, one source set per question; "BRCA9" still refuses by name. Full record: `testing/Developer/reports/2026-09-13_set_8/report.md`.
+Built 2026-09-13, overnight. A question that names a gene now plans four
+searches: the knowledge graph, the live NCBI gene record, the PubTator3
+literature record, and ClinicalTrials.gov (recruiting trials only when the
+question says "recruit"); a variant written as an rs number adds dbSNP and
+LitVar2. The live searches run at the same time, each under its own time limit,
+and one that fails is disclosed rather than blanking the answer.
+
+Every search input comes from the question and the confirmed gene, and results
+are sorted and capped the same way every time, so a question still returns one
+set of sources. Trial and literature sources are cited under their own names
+(clinicaltrials.gov with the NCT number, PubTator3), not the tool's. Also fixed
+inside this set: "Variants in GCK causing MODY" no longer refuses when the model
+tags MODY as a gene or finds no gene at all.
+
+Measured locally on 16 runs over BRCA1, GCK, CFTR and EGFR: every run resolved
+its gene and cited at least two layers, GCK answered five of five, the trials
+question cited recruiting trials, 19 to 55 seconds, one source set per question;
+"BRCA9" still refuses by name. Full record:
+`testing/Developer/reports/2026-09-13_set_8/report.md`.
 
 ### 8.1 Search all three layers at the same time (R29)
 
@@ -469,11 +534,54 @@ Batch: answers.
 
 What you will see: two modes, Plain language and Researcher, with an info button. Plain language answers run about 250 words in three paragraphs. Researcher answers run a full page with short topic headings. Answers stream in sentence by sentence and never open broken. One plain trust line replaces the pills, and the depth cannot change mid-search.
 
-Built 2026-09-13, overnight. Researcher answers follow your reference screenshot, which you chose over decision U2: an opening paragraph with key names in bold, short topic headings, then the records found as a bulleted list built in code, one citation per row. The screenshot's variant-to-disease table cannot be built, because the graph has no link from a variant to a disease; variants show as a list. Plain language answers have three paragraphs, no headings, and end with "This is a research summary, not medical advice." Answers stream in under the progress steps and Stop works mid-answer. The broken first sentence, notes that looked like claims, and inverted disease names are fixed by rules in code, never by rewording. One trust line replaces the pills. The tour and About page describe the two modes. GraphQL and the command line accept Plain language too; the MCP tool keeps its three depths, because the locked specification pins that list. Measured locally: every sentence and list row carried a citation, and the sources were identical across modes and runs. Two things for your decision rather than a fix: answers came out at 108 to 117 words in Plain language and 162 to 228 in Researcher, well short of the targets, because the citation check drops any sentence whose words no record carries; and the trust line reads "Based on 4 sources, not yet confirmed" on most answers. Full record: `testing/Developer/reports/2026-09-13_set_9/report.md`.
+Built 2026-09-13, overnight. Researcher answers follow your reference
+screenshot, which you chose over decision U2: an opening paragraph with key
+names in bold, short topic headings, then the records found as a bulleted list
+built in code, one citation per row. The screenshot's variant-to-disease table
+cannot be built, because the graph has no link from a variant to a disease;
+variants show as a list.
+
+Plain language answers have three paragraphs, no headings, and end with "This is
+a research summary, not medical advice." Answers stream in under the progress
+steps and Stop works mid-answer. The broken first sentence, notes that looked
+like claims, and inverted disease names are fixed by rules in code, never by
+rewording.
+
+One trust line replaces the pills. The tour and About page describe the two
+modes. GraphQL and the command line accept Plain language too; the MCP tool
+keeps its three depths, because the locked specification pins that list.
+Measured locally: every sentence and list row carried a citation, and the
+sources were identical across modes and runs.
+
+Two things for your decision rather than a fix: answers came out at 108 to 117
+words in Plain language and 162 to 228 in Researcher, well short of the targets,
+because the citation check drops any sentence whose words no record carries; and
+the trust line reads "Based on 4 sources, not yet confirmed" on most answers.
+Full record: `testing/Developer/reports/2026-09-13_set_9/report.md`.
 
 Live on develop 2026-09-14 as commit `537377d`, checked at 1280 and 390 wide (`testing/Developer/reports/2026-09-14_live_check/findings.md`). The live check found two answer-quality defects on the flagship questions, now being fixed: the BRCA1 disease answer's prose talked about trials while the diseases sat only in the record lines below, and the GCK Researcher answer restated records one by one instead of opening with a summary.
 
-Fixed 2026-09-14, overnight, measured on 55 local runs with the real models (`testing/Developer/reports/2026-09-14_answer_quality/report.md`). Every answer now opens on one cited sentence built in code from the records, for example "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4].", and the model's own prose follows, diseases before trials. Researcher answers no longer restate a record in prose that the list already shows, and no sentence reads "has a source URL of". The modes now ask for what the citation check actually keeps: about 120 words in Plain language and about 200 in Researcher. Sources did not change. Live on develop as commit `674b7b9` and measured there: the five flagship questions answered 25 of 25, one set of sources each, 13 to 71 seconds (22 of 25 before this fix). Still open, for your decision: before the fix, 3 of 25 runs ended with "A step in this query hit a temporary error" in the writing step, and none did after it, but the measured cause is unchanged: the answer-writing model's reasoning setting (`low`) sometimes spends its whole output allowance thinking and runs out the 45-second step limit; at `none`, 6 of 6 test calls finished in 5 to 7 seconds.
+Fixed 2026-09-14, overnight, measured on 55 local runs with the real models
+(`testing/Developer/reports/2026-09-14_answer_quality/report.md`). Every answer
+now opens on one cited sentence built in code from the records, for example
+"Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial
+breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4
+[3] and Fanconi anemia complementation group S [4].", and the model's own prose
+follows, diseases before trials.
+
+Researcher answers no longer restate a record in prose that the list already
+shows, and no sentence reads "has a source URL of". The modes now ask for what
+the citation check actually keeps: about 120 words in Plain language and about
+200 in Researcher. Sources did not change. Live on develop as commit `674b7b9`
+and measured there: the five flagship questions answered 25 of 25, one set of
+sources each, 13 to 71 seconds (22 of 25 before this fix).
+
+Still open, for your decision: before the fix, 3 of 25 runs ended with "A step
+in this query hit a temporary error" in the writing step, and none did after it,
+but the measured cause is unchanged: the answer-writing model's reasoning
+setting (`low`) sometimes spends its whole output allowance thinking and runs
+out the 45-second step limit; at `none`, 6 of 6 test calls finished in 5 to 7
+seconds.
 
 Follow-ups on 2026-09-14, from your review of the live answers ("the inline citations overwhelm the answer", "can we make the process quicker", "show people the answer is loading, like [scientist] is writing the answer"):
 - Decided: the answer-writing model's reasoning setting is now `none`. Over 35 local runs: no writing-step errors, answers unchanged in quality (`testing/Developer/reports/2026-09-14_synth_effort_none/report.md`).
@@ -590,7 +698,21 @@ Built: ✅ · Live: 🚀 · Approved:
 - Feature being tested: the two questions the product is judged on answer reliably every time.
 - What you noted: from the developer walkthrough, not your words: "Which diseases are associated with BRCA1?" answered 5 times and was refused 3 times, at different depths, minutes apart.
 - What's expected: BRCA1 and GCK answer every time, checked in tests 1 and 13.
-- Built 2026-09-13, first cut: for the known question shapes (a gene's diseases, variants, orthologs, processes, activities, components, organism and papers; a disease's genes and phenotypes; a paper's MeSH terms; the record itself; counts; several genes at once) the graph query is a code template with a stable ordering, chosen deterministically from the bound entities and the question's words, never a model draft, and it makes no model call. Measured locally: the BRCA1 disease question ran the identical query and returned the identical four MedGen records five times out of five; the variant follow-up returned the identical first twenty ClinVar records five of five. Before, on develop, the same questions returned two to four different source sets in five runs. Second cut, the same night: the answer cites every retrieved record on every run (a cited line is appended for each record the prose left out), and the multi-hop variant question now hits its template. Measured locally five runs each: one source set per question. Live on develop; the product owner's retest is the BRCA1 question three times in a row with the same sources.
+- Built 2026-09-13, first cut: for the known question shapes (a gene's diseases,
+  variants, orthologs, processes, activities, components, organism and papers; a
+  disease's genes and phenotypes; a paper's MeSH terms; the record itself;
+  counts; several genes at once) the graph query is a code template with a
+  stable ordering, chosen deterministically from the bound entities and the
+  question's words, never a model draft, and it makes no model call. Measured
+  locally: the BRCA1 disease question ran the identical query and returned the
+  identical four MedGen records five times out of five; the variant follow-up
+  returned the identical first twenty ClinVar records five of five. Before, on
+  develop, the same questions returned two to four different source sets in five
+  runs. Second cut, the same night: the answer cites every retrieved record on
+  every run (a cited line is appended for each record the prose left out), and
+  the multi-hop variant question now hits its template. Measured locally five
+  runs each: one source set per question. Live on develop; the product owner's
+  retest is the BRCA1 question three times in a row with the same sources.
 
 ### 10.2 History shows the saved answer instantly (R35)
 
@@ -634,25 +756,379 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.10 | Use parallel sub-agents, each on a model matched to the task | Done | Applied to every dispatch since |
 | 11.11 | Use your reference prototype for answer depth, formatting and structure; it writes with a different model family | In progress | The detail agent is modelling answers on it. The answer-writing model is unchanged: switching models is a separate decision |
 | 11.12 | The answer reads as one block; break it into readable paragraphs, headings and tables | Live | Commits `0e71188` and `28aa805`. Checked live at 1280: BRCA1 shows 4 headings and 4 tables in both modes. At 390 the tables become stacked rows and the page does not scroll sideways |
-| 11.13 | The same readable format in both Plain language and Researcher | Live, then REVERSED by 11.31 | Checked live: the same heading and table structure in both modes. SUPERSEDED 2026-09-20 by item 11.31, and the row is kept rather than edited because it is a historical record of what was asked for and delivered. The product owner tested the shipped result and reversed it: "why does the plain language and research both look same. Plain language is for the common man. Research is for researchers". What this row asked for is now the defect 11.31 fixes. Anyone reading this row alone would restore the sameness it describes, so read 11.31 before acting on it |
+| 11.13 | The same readable format in both Plain language and Researcher | Live, then REVERSED by 11.31 | Checked live: the same heading and table structure in both modes. Full detail: [11.13](#detail-1113) |
 | 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live | Checked live: a real selection of 1,703 characters holds no "Source N, layer" or "Sources X to" text |
 | 11.15 | The answer does not stream | Live in part | The screen reveals sentences one by one after the writing banner. The backend still sends the whole answer at once until 11.16 lands |
-| 11.16 | Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready | Live | CORRECTED 2026-09-20: this row said "In progress ... under independent review now; lands after review and when you say". It had already landed, as commit `b8980dc` and merge `345046b`, verified with `git merge-base --is-ancestor b8980dc develop`. Both halves are on develop: the screen parts, and the backend that sends a "writing has started" signal (the additive `step` event, which takes the payload taxonomy to twelve members) and each checked sentence live. Sentences still arrive close together, because checking needs the whole draft. ONE THING IS GENUINELY MISSING rather than tidied away: no independent review report was ever written for it, so the "667 core tests, 0 failed" figure this row used to quote has no report behind it |
+| 11.16 | Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready | Live | CORRECTED 2026-09-20: this row said "In progress ... Full detail: [11.16](#detail-1116) |
 | 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Live | Answered and built. The narrow search was our fixed plan in code, not the models. The broader plan was built on `worktree-breadth-wiring` and held with 11.21. MERGED AND LIVE 2026-09-20 as `2bb1925`, once the one unexplained test failure that held it turned out to belong to the branch's missing CI fix rather than to its code. Abstracts as written evidence remain out of scope, item 11.22 |
 | 11.18 | Search everything in all three layers, sources exact; is the harness or the open-source model to blame? | Answered | The harness: a fixed plan of one graph query and four live calls per gene, one fact per record. The models do not choose what is searched. Fix is 11.21 |
 | 11.19 | "Variants in GCK causing MODY" should answer every time | Live | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
 | 11.20 | "What genes are associated with MODY?" should answer | Live | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. On develop: 5 of 5 repeated runs, one source set, plus the browser check |
-| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, with two decisions still to build | The tool layer is on develop. The wiring that actually uses it is built and measured on `worktree-breadth-wiring` and is NOT merged: one test fails there that we cannot yet explain. Measured on that branch: retrieval returns the same findings on every run, the worst question spends 17 of its 20 allowed outside calls, latency is unchanged. Two caveats that are yours to settle, not engineering's: OMIM is never searched because its web address fails our citation rule, and the CITED set can still vary because the model picks which findings to cite. Separately, finding L-01 shows this requirement failing on the LIVE site today. MERGED AND LIVE 2026-09-20 as `2bb1925`, verified by a full suite of 5025 passed and 0 failed plus gates 2 and 3 green. BOTH CAVEATS ARE NOW DECIDED RATHER THAN OPEN, and both are decided the other way: the citation host rule will be widened so OMIM can be cited, and every retrieved finding will be cited so the source set is identical run to run. Neither is built yet; both are in `DECISIONS.md` dated 2026-09-20 and in the cutoff's plan table as waves 2a and 2b. The merge also fixes L-01 shape 2, the `collect(DISTINCT)` ordering, but NOT shape 1 |
+| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, with two decisions still to build | The tool layer is on develop. Full detail: [11.21](#detail-1121) |
 | 11.22 | PubMed and PMC should provide context for the answers | Queued, approved | Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
 | 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered | Measured from NCBI's own header: your key allows 10 per second (3 without a key). 100 needs a separate arrangement with NCBI. The limiter moves from 3 to 10 as part of 11.21 |
 | 11.24 | How do I test what is built so far? | Answered | A test walk-through is given once the current work is on develop |
 | 11.25 | What from Set 11 is on develop? | Answered | On develop at `e5947e0`: 11.5 to 11.9, 11.12 to 11.14, 11.19, 11.20, 11.26, and 11.15 in part. Live run record: 48 of 53 answered, and the 5 failures did not reproduce in 12 more runs. See `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/findings.md` |
 | 11.26 | The answers do not look like the approved mockup | Live | Commit `28aa805`. Checked live at 1280 and 390 against the mockup's structure |
-| 11.27 | Too much bold: only the title or main point should be bold | Live | LANDED ALONE 2026-09-20 as `aedf53d`, both develop services SUCCESS. Split out of `107bdcb`, which had carried it together with 11.28 and was reverted as `11e3348` when CI failed on 11.28. The split was verified at file level rather than assumed: the three bold files carry no pacing content and 11.28's files carry no bold content. `frontend/e2e/bold-and-stagger.spec.ts` covers both fixes and travels with 11.28 instead of being split twice. Verified before push, each check on its own exit code: frontend suite 465 passed across 49 files on an idle machine, `npm run build` exit 0. PREVIOUS NOTE, kept: built and verified: only the lead claim's main point is bold, table cells and list items plain. It was merged to develop overnight and then REVERTED, not because of this fix but because 11.28 shares the merge and failed CI. Branch `worktree-agent-a8393711bb57d579b` holds it. Splitting it out from 11.28 and landing it alone is the quickest win available |
-| 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Live | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten seconds into a design whose own guarantee is 3.5 seconds. Either a real stall when a stream closes with no `done`, which a dropped connection would hit, or event-loop starvation under load. RESOLVED AND LIVE 2026-09-20 as `50ed55b`, and IT WAS NEITHER. Run alone on an idle machine the premise test failed 3 of 3, which rules out starvation; instrumentation showed every event releasing well inside its bound (guard 5ms, think 627ms, plan 1325ms against a 3500ms ceiling) and the view hook holding the plan narrative at 1.3s, while the DOM never showed it. The real cause was the TEST FIXTURE describing a stream the backend cannot emit: `plan` with `tool_calls: []` followed by four `tool_result` frames, when every empty-`tool_calls` path in `core/graph.py` is a refusal that returns immediately. That empty array flipped `activeStep` to Write, which unmounted the reasoning log the test was holding a reference to. Before pacing the false Write lasted under a millisecond; pacing stretched it to about 700ms. So pacing introduced no defect, it made a pre-existing fixture inconsistency observable, and last week's revert was right for a better reason than anyone had. ONLY THE FIXTURE CHANGED, never the assertion or its timeout, and the arm was proven to still fail with the fixture reverted. ONE RESIDUAL RISK SHIPS OPEN: pacing changed the unmount path's blast radius from under a millisecond to about 700ms, and nobody has checked whether any other path produces a transient false Write. Full account: `testing/Developer/reports/2026-09-20_pacing_defect/findings.md` |
-| 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, not started | Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it needs its own session rather than a slot in the fix loop. Three things are worth settling before it opens. FIRST, most of the premise is not this repository's to decide: "everything is in the graph" is Systems 1 and 2, which live in a separate repository, and `.claude/rules/file-protection.md` forbids this repository writing into the graph at all, by direction of data flow. System 3 can only read. SECOND, vector embeddings, RAG pipelines and knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in `.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named trigger at all, so it stops and asks by rule. Discussing is free, building is not. THIRD, the multi-hop half is already real and measured rather than hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with SyntaxError, so the broad search traverses `participates_in` alone and GO molecular activities and cellular components are not reached (`2026-09-19_breadth_wiring/build.md`). That is a soft-edge limitation sitting in the product today, and it costs one graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20 when asked whether the product fails because the data is absent or because we cannot find the path between things that are present: BOTH, and the headline verdict is blunter than either: "the answers all look surface level and most chatbots like ChatGPT, Claude, Gemini can answer better". That is a judgement on the ANSWER PATH, not on presentation, and it is the bar 11.29 has to clear: not "does it cite" but "is it worth reading instead of a general chatbot". Every presentation-side fix in Set 11 leaves that bar untouched |
-| 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one snippet broken | Raised 2026-09-20 by the product owner, who called it important. SCOPED RATHER THAN GUESSED: the surfaces were probed live the same day and every one of them responds, so this is a verification job rather than a repair job until proven otherwise. `/health` 200, `/openapi.json` 200, `/docs` 200, `/graphql` 401, `/mcp` 307, `/v1/history` 401. The 401s and the 307 are almost certainly correct rather than broken: the two 401s are protected routes refusing an unauthenticated caller, and the 307 is the documented redirect the MCP sub-app produces because it mounts at `/mcp` with its route at `/`, which `test_r17_transport_security.py` already relies on. WHAT IS NOT YET PROVEN, and is the actual work: that each SNIPPET printed on the Integrations page runs as written, with a real token, and returns what the page says it will. Responding is not the same as working, and set 5 has history here: item 5.2 corrected a wrong GraphQL example and 5.3 fixed the MCP server rejecting every request, so both are exactly the kind of defect a status code cannot see. The test should execute the page's own copy buttons' contents rather than an equivalent the developer writes, since a snippet that is correct in spirit and wrong as printed is the failure mode. VERIFIED 2026-09-20, full evidence in `testing/Developer/reports/2026-09-20_integrations/findings.md`: every printed snippet was read out of `InfoScreens.tsx` and executed as printed against develop. THREE WORK: REST with SSE (202, real answer, five citations), GraphQL (200, cited multi-source answer) and the event-stream sample frame (shape matches a live first frame). TWO ARE BLOCKED rather than broken, the two CLI snippets, because no `s3` client is installed in this environment. ONE IS BROKEN, and it is exactly the defect class a status code cannot see: the MCP config prints `$API/mcp` with NO TRAILING SLASH, and a POST there returns 307 with `location: http://...`, a SCHEME DOWNGRADE from https to plaintext. Followed literally the http hop 301s back to https, a 301 drops the POST method and body, and the real MCP SDK client hangs in `initialize()` with or without a token, so auth was never the variable. `$API/mcp/` with the slash answers 200 immediately. So the MCP server is fine and the one-line config the page tells people to paste is what is broken. TWO SEPARATE THINGS TO FIX, and the first does not fix the second: add the trailing slash to the printed config, and stop the redirect emitting `http://` at all, since a public endpoint sending an HTTPS POST to plaintext is worth its own look. FIX A IS LIVE: the printed config now carries the trailing slash, so a pasted config never triggers the redirect at all. FIX B IS OPEN AND NEEDS A DEPLOYMENT DECISION FROM THE PRODUCT OWNER, not a code change. The downgrade's mechanism is now established rather than guessed, and reproduced in `tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py` against uvicorn's own `ProxyHeadersMiddleware`: Starlette builds the redirect's `Location` from `scope["scheme"]`, which uvicorn sets from the RAW connection unless it has been told to trust the forwarding proxy's address (`--forwarded-allow-ips`, default `127.0.0.1`). Railway terminates TLS at its edge and forwards in plain HTTP from an address that is not loopback, and `railway.json`'s `startCommand` passes no override, so `X-Forwarded-Proto: https` is never trusted. Flipping that one input, and nothing about the request, flips the `Location` to `https://`. THE FIX WAS DELIBERATELY NOT APPLIED: reading the header in `app.py` would trust it from every caller, proxied or not, which is the exact shape `auth/router.py::source_hash_for_request`'s own docstring rules out for this header family, and setting `FORWARDED_ALLOW_IPS` requires knowing which addresses Railway actually forwards from, which is a guess this session refused to make. It also widens what `ProxyHeadersMiddleware` rewrites beyond the scheme, including the client address that per-caller rate limiting reads, so it is not a one-line change with a one-line blast radius |
-| 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | DECIDED, not started. REVERSES 11.13 | Raised 2026-09-20. THIS IS A REQUIREMENT REVERSAL AND IS RECORDED AS ONE rather than quietly contradicting the earlier row: item 11.13 asked for "the same readable format in both Plain language and Researcher", is marked Live, and was verified as "the same heading and table structure in both modes". That is now the defect. WHY THEY LOOK THE SAME, established in code rather than guessed: the PROSE directives already differ a lot (`synthesis/findings.py`'s `_DEPTH_DIRECTIVES`: plain language is about 120 words in three short paragraphs with everyday words and NO headings, lists or tables, while researcher is about 200 words in `## Topic` sections). What does NOT differ is the code-built half, the tables and record listings under the prose, which is identical in both modes and is most of the page. So the difference that exists is swamped by the part that does not. THE TENSION THAT NEEDS A PRODUCT DECISION BEFORE THIS CAN BE BUILT: the same directive says "Every sentence must restate a finding and end with that finding's marker, because a sentence without one is deleted". That is cite-or-refuse, the trust moat. An explanatory example is BY DEFINITION not a restatement of a retrieved finding, so the grounding pass deletes it. DECIDED 2026-09-20, and the product owner rejected the binary the lead offered: "Why not both?", adding "You write the answer, do not limit to 120 words or whatever, it must be easy to understand. In plain language, the language is simple but should be grounded in facts, meaning sources." So simplicity and grounding are NOT a trade-off here. A plain-language answer gets LONGER than today, uses everyday words, explains the concept, and still ties every claim to a source. Researcher keeps the depth and the tables. CITE-OR-REFUSE IS NOT RELAXED by this decision. Two things remain open and must not be decided by whoever builds it: whether a labelled explanatory sentence is ever permitted where NO retrieved source supports the explanation, and what replaces the removed word cap as an upper bound, since the Synth budget already killed 3 of 25 researcher runs at 45 seconds when the ask was 700 words (F9-04). Full decision and reasoning: DECISIONS.md, 2026-09-20. THE DESIGN, written 2026-09-20 while the file was held by another task, and constrained by history rather than invented: `_DEPTH_DIRECTIVES` in `synthesis/findings.py` carries THREE failed versions of a depth directive in its own comments, and all three failed the same way, by trying to buy a property with an instruction about FORM. Version 1 forbade identifiers, so every claim failed the grounding pass's substring match and the depth REFUSED outright. Version 2 said "keep background to a minimum", and the depth reported three of four pinned diseases while looking confident and fully cited, which is worse because nothing in the output announced the loss. Version 3 tried to force completeness by wording and got a bare identifier list with no sentence answering the question, so the depth refused again with an EMPTY narrative. SO 11.31 MAY CHANGE REGISTER, ORDERING AND HOW MUCH IS EXPLAINED, AND MAY NOT CHANGE WHICH TOKENS MAY APPEAR OR WHICH FINDINGS ARE COVERED. Concretely that rules out the obvious shortcut of making plain language plainer by telling the model to drop identifiers, which is exactly version 1. WHERE THE SAMENESS ACTUALLY LIVES, measured rather than assumed: the prose directives already differ a lot, but the code-built half beneath the prose, the record tables, is built by `buildAnswerBlocks(claims)` in `AnswerScreen.tsx` from the same claim stream and NEVER consults depth, on the frontend or the backend. REMOVING THOSE RECORDS FROM PLAIN LANGUAGE IS REJECTED as a way to diverge, because they are the evidence trail and the product owner asked for plain language to stay "grounded in facts, meaning sources". The divergence therefore comes from the prose growing until it is no longer swamped, not from the evidence shrinking |
+| 11.27 | Too much bold: only the title or main point should be bold | Live | LANDED ALONE 2026-09-20 as `aedf53d`, both develop services SUCCESS. Full detail: [11.27](#detail-1127) |
+| 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Live | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten... Full detail: [11.28](#detail-1128) |
+| 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, not started | Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
+| 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one snippet broken | Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
+| 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | DECIDED, not started. REVERSES 11.13 | Raised 2026-09-20. Full detail: [11.31](#detail-1131) |
+| 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Not started | Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
+
+
+### Detail for the long Set 11 items
+
+The table above is the index and owns each item's status. These subsections
+carry the full account for the items whose story outgrew a table cell, moved
+here verbatim on 2026-09-20 because single cells had reached 4,344 characters
+and the table had stopped being scannable. Nothing was reworded in the move.
+
+#### Detail 11.13
+
+The ask: The same readable format in both Plain language and Researcher
+
+Status: Live, then REVERSED by 11.31
+
+Checked live: the same heading and table structure in both modes. SUPERSEDED
+2026-09-20 by item 11.31, and the row is kept rather than edited because it is a
+historical record of what was asked for and delivered. The product owner tested
+the shipped result and reversed it: "why does the plain language and research
+both look same.
+
+Plain language is for the common man. Research is for researchers". What this
+row asked for is now the defect 11.31 fixes. Anyone reading this row alone would
+restore the sameness it describes, so read 11.31 before acting on it
+
+#### Detail 11.16
+
+The ask: Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready
+
+Status: Live
+
+CORRECTED 2026-09-20: this row said "In progress ... under independent review
+now; lands after review and when you say". It had already landed, as commit
+`b8980dc` and merge `345046b`, verified with `git merge-base --is-ancestor
+b8980dc develop`. Both halves are on develop: the screen parts, and the backend
+that sends a "writing has started" signal (the additive `step` event, which
+takes the payload taxonomy to twelve members) and each checked sentence live.
+
+Sentences still arrive close together, because checking needs the whole draft.
+ONE THING IS GENUINELY MISSING rather than tidied away: no independent review
+report was ever written for it, so the "667 core tests, 0 failed" figure this
+row used to quote has no report behind it
+
+#### Detail 11.21
+
+The ask: Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources
+
+Status: Live, with two decisions still to build
+
+The tool layer is on develop. The wiring that actually uses it is built and
+measured on `worktree-breadth-wiring` and is NOT merged: one test fails there
+that we cannot yet explain. Measured on that branch: retrieval returns the same
+findings on every run, the worst question spends 17 of its 20 allowed outside
+calls, latency is unchanged.
+
+Two caveats that are yours to settle, not engineering's: OMIM is never searched
+because its web address fails our citation rule, and the CITED set can still
+vary because the model picks which findings to cite. Separately, finding L-01
+shows this requirement failing on the LIVE site today. MERGED AND LIVE
+2026-09-20 as `2bb1925`, verified by a full suite of 5025 passed and 0 failed
+plus gates 2 and 3 green.
+
+BOTH CAVEATS ARE NOW DECIDED RATHER THAN OPEN, and both are decided the other
+way: the citation host rule will be widened so OMIM can be cited, and every
+retrieved finding will be cited so the source set is identical run to run.
+Neither is built yet; both are in `DECISIONS.md` dated 2026-09-20 and in the
+cutoff's plan table as waves 2a and 2b.
+
+The merge also fixes L-01 shape 2, the `collect(DISTINCT)` ordering, but NOT
+shape 1
+
+#### Detail 11.27
+
+The ask: Too much bold: only the title or main point should be bold
+
+Status: Live
+
+LANDED ALONE 2026-09-20 as `aedf53d`, both develop services SUCCESS. Split out
+of `107bdcb`, which had carried it together with 11.28 and was reverted as
+`11e3348` when CI failed on 11.28. The split was verified at file level rather
+than assumed: the three bold files carry no pacing content and 11.28's files
+carry no bold content.
+
+`frontend/e2e/bold-and-stagger.spec.ts` covers both fixes and travels with 11.28
+instead of being split twice. Verified before push, each check on its own exit
+code: frontend suite 465 passed across 49 files on an idle machine, `npm run
+build` exit 0. PREVIOUS NOTE, kept: built and verified: only the lead claim's
+main point is bold, table cells and list items plain.
+
+It was merged to develop overnight and then REVERTED, not because of this fix
+but because 11.28 shares the merge and failed CI. Branch
+`worktree-agent-a8393711bb57d579b` holds it. Splitting it out from 11.28 and
+landing it alone is the quickest win available
+
+#### Detail 11.28
+
+The ask: The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write
+
+Status: Live
+
+Built and passing 474 of 474 locally, then merged and REVERTED the same night:
+CI failed on build phase 4.9's premise test with the reasoning log showing Guard
+and Think but never Plan, ten seconds into a design whose own guarantee is 3.5
+seconds. Either a real stall when a stream closes with no `done`, which a
+dropped connection would hit, or event-loop starvation under load.
+
+RESOLVED AND LIVE 2026-09-20 as `50ed55b`, and IT WAS NEITHER. Run alone on an
+idle machine the premise test failed 3 of 3, which rules out starvation;
+instrumentation showed every event releasing well inside its bound (guard 5ms,
+think 627ms, plan 1325ms against a 3500ms ceiling) and the view hook holding the
+plan narrative at 1.3s, while the DOM never showed it.
+
+The real cause was the TEST FIXTURE describing a stream the backend cannot emit:
+`plan` with `tool_calls: []` followed by four `tool_result` frames, when every
+empty-`tool_calls` path in `core/graph.py` is a refusal that returns
+immediately. That empty array flipped `activeStep` to Write, which unmounted the
+reasoning log the test was holding a reference to.
+
+Before pacing the false Write lasted under a millisecond; pacing stretched it to
+about 700ms. So pacing introduced no defect, it made a pre-existing fixture
+inconsistency observable, and last week's revert was right for a better reason
+than anyone had. ONLY THE FIXTURE CHANGED, never the assertion or its timeout,
+and the arm was proven to still fail with the fixture reverted.
+
+ONE RESIDUAL RISK SHIPS OPEN: pacing changed the unmount path's blast radius
+from under a millisecond to about 700ms, and nobody has checked whether any
+other path produces a transient false Write. Full account:
+`testing/Developer/reports/2026-09-20_pacing_defect/findings.md`
+
+#### Detail 11.29
+
+The ask: Think big about connecting the dots: if everything were in the
+knowledge graph, from PubMed literature to sequence, clinical and PubChem data,
+how do we find hard edges (direct relationships) and soft edges (indirect,
+through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid
+knowledge-graph model?
+
+Status: Discussion, not started
+
+Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it
+needs its own session rather than a slot in the fix loop. Three things are worth
+settling before it opens. FIRST, most of the premise is not this repository's to
+decide: "everything is in the graph" is Systems 1 and 2, which live in a
+separate repository, and `.claude/rules/file-protection.md` forbids this
+repository writing into the graph at all, by direction of data flow.
+
+System 3 can only read. SECOND, vector embeddings, RAG pipelines and
+knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in
+`.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named
+trigger at all, so it stops and asks by rule. Discussing is free, building is
+not. THIRD, the multi-hop half is already real and measured rather than
+hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
+SyntaxError, so the broad search traverses `participates_in` alone and GO
+molecular activities and cellular components are not reached
+(`2026-09-19_breadth_wiring/build.md`).
+
+That is a soft-edge limitation sitting in the product today, and it costs one
+graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
+when asked whether the product fails because the data is absent or because we
+cannot find the path between things that are present: BOTH, and the headline
+verdict is blunter than either: "the answers all look surface level and most
+chatbots like ChatGPT, Claude, Gemini can answer better".
+
+That is a judgement on the ANSWER PATH, not on presentation, and it is the bar
+11.29 has to clear: not "does it cite" but "is it worth reading instead of a
+general chatbot". Every presentation-side fix in Set 11 leaves that bar
+untouched
+
+#### Detail 11.30
+
+The ask: Make sure every integration on the Integrations page actually works, end to end
+
+Status: VERIFIED, one snippet broken
+
+Raised 2026-09-20 by the product owner, who called it important. SCOPED RATHER
+THAN GUESSED: the surfaces were probed live the same day and every one of them
+responds, so this is a verification job rather than a repair job until proven
+otherwise. `/health` 200, `/openapi.json` 200, `/docs` 200, `/graphql` 401,
+`/mcp` 307, `/v1/history` 401.
+
+The 401s and the 307 are almost certainly correct rather than broken: the two
+401s are protected routes refusing an unauthenticated caller, and the 307 is the
+documented redirect the MCP sub-app produces because it mounts at `/mcp` with
+its route at `/`, which `test_r17_transport_security.py` already relies on. WHAT
+IS NOT YET PROVEN, and is the actual work: that each SNIPPET printed on the
+Integrations page runs as written, with a real token, and returns what the page
+says it will.
+
+Responding is not the same as working, and set 5 has history here: item 5.2
+corrected a wrong GraphQL example and 5.3 fixed the MCP server rejecting every
+request, so both are exactly the kind of defect a status code cannot see. The
+test should execute the page's own copy buttons' contents rather than an
+equivalent the developer writes, since a snippet that is correct in spirit and
+wrong as printed is the failure mode.
+
+VERIFIED 2026-09-20, full evidence in
+`testing/Developer/reports/2026-09-20_integrations/findings.md`: every printed
+snippet was read out of `InfoScreens.tsx` and executed as printed against
+develop. THREE WORK: REST with SSE (202, real answer, five citations), GraphQL
+(200, cited multi-source answer) and the event-stream sample frame (shape
+matches a live first frame).
+
+TWO ARE BLOCKED rather than broken, the two CLI snippets, because no `s3` client
+is installed in this environment. ONE IS BROKEN, and it is exactly the defect
+class a status code cannot see: the MCP config prints `$API/mcp` with NO
+TRAILING SLASH, and a POST there returns 307 with `location: http://...`, a
+SCHEME DOWNGRADE from https to plaintext.
+
+Followed literally the http hop 301s back to https, a 301 drops the POST method
+and body, and the real MCP SDK client hangs in `initialize()` with or without a
+token, so auth was never the variable. `$API/mcp/` with the slash answers 200
+immediately. So the MCP server is fine and the one-line config the page tells
+people to paste is what is broken.
+
+TWO SEPARATE THINGS TO FIX, and the first does not fix the second: add the
+trailing slash to the printed config, and stop the redirect emitting `http://`
+at all, since a public endpoint sending an HTTPS POST to plaintext is worth its
+own look. FIX A IS LIVE: the printed config now carries the trailing slash, so a
+pasted config never triggers the redirect at all.
+
+FIX B IS OPEN AND NEEDS A DEPLOYMENT DECISION FROM THE PRODUCT OWNER, not a code
+change. The downgrade's mechanism is now established rather than guessed, and
+reproduced in
+`tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py`
+against uvicorn's own `ProxyHeadersMiddleware`: Starlette builds the redirect's
+`Location` from `scope["scheme"]`, which uvicorn sets from the RAW connection
+unless it has been told to trust the forwarding proxy's address
+(`--forwarded-allow-ips`, default `127.0.0.1`).
+
+Railway terminates TLS at its edge and forwards in plain HTTP from an address
+that is not loopback, and `railway.json`'s `startCommand` passes no override, so
+`X-Forwarded-Proto: https` is never trusted. Flipping that one input, and
+nothing about the request, flips the `Location` to `https://`. THE FIX WAS
+DELIBERATELY NOT APPLIED: reading the header in `app.py` would trust it from
+every caller, proxied or not, which is the exact shape
+`auth/router.py::source_hash_for_request`'s own docstring rules out for this
+header family, and setting `FORWARDED_ALLOW_IPS` requires knowing which
+addresses Railway actually forwards from, which is a guess this session refused
+to make.
+
+It also widens what `ProxyHeadersMiddleware` rewrites beyond the scheme,
+including the client address that per-caller rate limiting reads, so it is not a
+one-line change with a one-line blast radius
+
+#### Detail 11.31
+
+The ask: The two answer modes look the same, and they should not: "Plain
+language is for the common man. Research is for researchers". Plain language
+should carry MORE text, explain the concept or question in simple terms, give an
+easy-to-understand example and link the sources. Researcher means tables,
+specifics and depth
+
+Status: DECIDED, not started. REVERSES 11.13
+
+Raised 2026-09-20. THIS IS A REQUIREMENT REVERSAL AND IS RECORDED AS ONE rather
+than quietly contradicting the earlier row: item 11.13 asked for "the same
+readable format in both Plain language and Researcher", is marked Live, and was
+verified as "the same heading and table structure in both modes". That is now
+the defect.
+
+WHY THEY LOOK THE SAME, established in code rather than guessed: the PROSE
+directives already differ a lot (`synthesis/findings.py`'s `_DEPTH_DIRECTIVES`:
+plain language is about 120 words in three short paragraphs with everyday words
+and NO headings, lists or tables, while researcher is about 200 words in `##
+Topic` sections).
+
+What does NOT differ is the code-built half, the tables and record listings
+under the prose, which is identical in both modes and is most of the page. So
+the difference that exists is swamped by the part that does not. THE TENSION
+THAT NEEDS A PRODUCT DECISION BEFORE THIS CAN BE BUILT: the same directive says
+"Every sentence must restate a finding and end with that finding's marker,
+because a sentence without one is deleted".
+
+That is cite-or-refuse, the trust moat. An explanatory example is BY DEFINITION
+not a restatement of a retrieved finding, so the grounding pass deletes it.
+DECIDED 2026-09-20, and the product owner rejected the binary the lead offered:
+"Why not both?", adding "You write the answer, do not limit to 120 words or
+whatever, it must be easy to understand.
+
+In plain language, the language is simple but should be grounded in facts,
+meaning sources." So simplicity and grounding are NOT a trade-off here. A
+plain-language answer gets LONGER than today, uses everyday words, explains the
+concept, and still ties every claim to a source. Researcher keeps the depth and
+the tables. CITE-OR-REFUSE IS NOT RELAXED by this decision.
+
+Two things remain open and must not be decided by whoever builds it: whether a
+labelled explanatory sentence is ever permitted where NO retrieved source
+supports the explanation, and what replaces the removed word cap as an upper
+bound, since the Synth budget already killed 3 of 25 researcher runs at 45
+seconds when the ask was 700 words (F9-04).
+
+Full decision and reasoning: DECISIONS.md, 2026-09-20. THE DESIGN, written
+2026-09-20 while the file was held by another task, and constrained by history
+rather than invented: `_DEPTH_DIRECTIVES` in `synthesis/findings.py` carries
+THREE failed versions of a depth directive in its own comments, and all three
+failed the same way, by trying to buy a property with an instruction about FORM.
+
+Version 1 forbade identifiers, so every claim failed the grounding pass's
+substring match and the depth REFUSED outright. Version 2 said "keep background
+to a minimum", and the depth reported three of four pinned diseases while
+looking confident and fully cited, which is worse because nothing in the output
+announced the loss.
+
+Version 3 tried to force completeness by wording and got a bare identifier list
+with no sentence answering the question, so the depth refused again with an
+EMPTY narrative. SO 11.31 MAY CHANGE REGISTER, ORDERING AND HOW MUCH IS
+EXPLAINED, AND MAY NOT CHANGE WHICH TOKENS MAY APPEAR OR WHICH FINDINGS ARE
+COVERED. Concretely that rules out the obvious shortcut of making plain language
+plainer by telling the model to drop identifiers, which is exactly version 1.
+
+WHERE THE SAMENESS ACTUALLY LIVES, measured rather than assumed: the prose
+directives already differ a lot, but the code-built half beneath the prose, the
+record tables, is built by `buildAnswerBlocks(claims)` in `AnswerScreen.tsx`
+from the same claim stream and NEVER consults depth, on the frontend or the
+backend. REMOVING THOSE RECORDS FROM PLAIN LANGUAGE IS REJECTED as a way to
+diverge, because they are the evidence trail and the product owner asked for
+plain language to stay "grounded in facts, meaning sources".
+
+The divergence therefore comes from the prose growing until it is no longer
+swamped, not from the evidence shrinking
+
+#### Detail 11.32
+
+The ask, in the product owner's own words: "Why dont we wrap our layer 2 and
+layer 3, the api calls in internal mcps ... can understand from the API keys on
+how to setup things for each database. Maybe just add to the list for now."
+
+Status: Not started. Raised 2026-09-20, backlog only.
+
+THE SOURCE MATERIAL THEY NAMED, both verified to exist on 2026-09-20: <!-- local-refs: allow -->
+
+| What | Where |
+|---|---|
+| The connection maps and per-database deep dives | `reference/personal-os-work/NIH/NCBI Technical-development-workflow/Architecture-and-databases` <!-- local-refs: allow --> |
+| The databases paper | the `NCBI-databases-paper-09-2025` folder inside it |
+| Open this first | `NCBI_database_connection_map.md`, then `NCBI_databases_deep_dive.md` and `NCBI_enterprise_infrastructure_deep_dive.md` |
+
+NOTHING IS DESIGNED AND NOTHING IS PROMISED. This crosses the tool-integration
+boundary the locked technical specification's Section 6 defines, which names
+seven tools and their transports, so under `.claude/rules/v1-scope-boundary.md`
+it is scoped against that section and signed off before any work starts, never
+the other way round.
+
+Two questions to settle when it is scoped, neither decided here. Whether an
+internal MCP server is a TRANSPORT SWAP underneath the existing seven tools,
+which would leave every tool schema and call site unchanged the way build phase
+4.11's HTTPS graph service did, or a RE-CUT of what the tools are, which is a
+contract-version event under `system-design-patterns` pattern 10. And what it
+buys over the direct calls the tools make today, since
+`.claude/rules/supply-chain-security.md` treats every MCP server as an execution
+surface running with the app's own credentials, so the answer has to be worth
+that.
+
 
 ## Where we stopped
 
@@ -760,13 +1236,26 @@ Three things, and none of them should be decided by whoever builds next.
 
 The overnight session could not explain why one test, the MCP production-mount test, failed only in the broad-search branch's full suite run. That unexplained failure is the single reason the biggest feature in the queue sat unmerged.
 
-The cause was not in that branch at all. Develop's CI repair `a90ef25` fixed THREE test-isolation defects. The overnight worker ported TWO of them into the worktree by copying files across, watched the failure persist, and recorded the cause as unknown. The third fix lives in a file it never copied, `tests/e2e_support/test_real_model_mode.py`, and that fix's own docstring names this exact failure, this exact file and the collection order: it collects before the production-mount test, its `with TestClient(...)` entered the real app's lifespan, and the MCP session manager may be entered once per process.
+The cause was not in that branch at all. Develop's CI repair `a90ef25` fixed
+THREE test-isolation defects. The overnight worker ported TWO of them into the
+worktree by copying files across, watched the failure persist, and recorded the
+cause as unknown. The third fix lives in a file it never copied,
+`tests/e2e_support/test_real_model_mode.py`, and that fix's own docstring names
+this exact failure, this exact file and the collection order: it collects before
+the production-mount test, its `with TestClient(...)` entered the real app's
+lifespan, and the MCP session manager may be entered once per process.
 
 Every observed property follows from that with nothing left over: fails only in a full run, passes alone, passes inside its own directory, clean on develop.
 
 A merge cannot omit a file. Copying files out of one can. That is the transferable part.
 
-Two failures remained after the merge, and both had ONE cause that also had nothing to do with the branch: a gitignored macOS duplicate, `src/system_03_search_agent/tools/cypher_query 2.py`, byte-identical to the pre-branch file. `git status` can never show it, because `.gitignore` hides it; the coverage test sees it because it walks the filesystem rather than git. Moved to the Trash, recoverable there and from git.
+Two failures remained after the merge, and both had ONE cause that also had
+nothing to do with the branch: a gitignored macOS duplicate,
+`src/system_03_search_agent/tools/cypher_query 2.py`, byte-identical to the
+pre-branch file. `git status` can never show it, because `.gitignore` hides it;
+the coverage test sees it because it walks the filesystem rather than git.
+
+Moved to the Trash, recoverable there and from git.
 
 That also means the branch's earlier `2 failed, 5023 passed` was never reproducible in CI, since CI checks out from git and the artifact was not in git.
 
@@ -834,11 +1323,29 @@ Open, with nobody on them:
 | L-01 shape 1 | A whole graph result vanishing on some runs, hidden by graceful degradation. The instrument is written and has never run |
 | 11.29, hard and soft edges, RAG and vectors | Its own session. Its bar: not "does it cite" but "is it worth reading instead of a general chatbot" |
 
-The rule this plan follows, because it is the lesson of the overnight revert: ONE FEATURE PER PUSH. 11.27 and 11.28 shared a merge, CI failed on one, and the innocent one was reverted with it and sat unavailable for a week. Each item above lands alone, is confirmed live alone, and can be rolled back alone.
+The rule this plan follows, because it is the lesson of the overnight revert:
+ONE FEATURE PER PUSH. 11.27 and 11.28 shared a merge, CI failed on one, and the
+innocent one was reverted with it and sat unavailable for a week. Each item
+above lands alone, is confirmed live alone, and can be rolled back alone.
 
-The rule the parallel work follows: no two agents own one file. File fencing held all day across eight agents with zero collisions. The one shared resource that cannot be fenced is this machine's CPU, and checking load before a run is a race rather than a queue: two agents both saw a quiet machine, started together, and drove the load average to 20. Any suite result measured there is not trustworthy and was re-run.
+The rule the parallel work follows: no two agents own one file. File fencing
+held all day across eight agents with zero collisions. The one shared resource
+that cannot be fenced is this machine's CPU, and checking load before a run is a
+race rather than a queue: two agents both saw a quiet machine, started together,
+and drove the load average to 20.
 
-THE VERIFICATION LESSON OF THE DAY, which cost a published correction. An arm that fails when a change is REVERTED has not been shown to test anything: it usually fails with a missing function, parameter or test id, before it ever evaluates its assertion. The honest check mutates ONE property and leaves every symbol intact. Applied across the day it found that one of three notes arms was load-bearing rather than three, and that six of eight source-grouping arms discriminate while two are deliberate invariants. The lead made this error too, in `9d20438`'s own message, and corrected it in `3a3c455` rather than leaving it.
+Any suite result measured there is not trustworthy and was re-run.
+
+THE VERIFICATION LESSON OF THE DAY, which cost a published correction. An arm
+that fails when a change is REVERTED has not been shown to test anything: it
+usually fails with a missing function, parameter or test id, before it ever
+evaluates its assertion. The honest check mutates ONE property and leaves every
+symbol intact.
+
+Applied across the day it found that one of three notes arms was load-bearing
+rather than three, and that six of eight source-grouping arms discriminate while
+two are deliberate invariants. The lead made this error too, in `9d20438`'s own
+message, and corrected it in `3a3c455` rather than leaving it.
 
 ### Decisions taken today
 
@@ -853,7 +1360,11 @@ Asked whether the product fails because the data is absent or because we cannot 
 
 That is a judgement on the ANSWER PATH, not on presentation. It is recorded as the bar item 11.29 has to clear: not "does it cite" but "is it worth reading instead of a general chatbot".
 
-It also reframes this plan honestly. Wave 1b is the FIRST item in the queue that could plausibly move that bar, because it changes what gets retrieved. Everything else in Set 11 is presentation, and presentation cannot fix a thin answer. If answers still read thin once 1b is live, that is strong evidence that 11.29 is the real work rather than a nice-to-have.
+It also reframes this plan honestly. Wave 1b is the FIRST item in the queue that
+could plausibly move that bar, because it changes what gets retrieved.
+Everything else in Set 11 is presentation, and presentation cannot fix a thin
+answer. If answers still read thin once 1b is live, that is strong evidence that
+11.29 is the real work rather than a nice-to-have.
 
 ### Pushback recorded: 10.2 is not the small job it looks like
 
@@ -864,21 +1375,45 @@ Row 10.2 reads like a frontend change. It is not, and this was established by re
 - Nothing persists an answer client-side either. The `thread` state holds completed answers in React memory only, and dies with the tab.
 - Clicking a history item today re-asks the question, costing a fresh search. `App.tsx:1840` documents that as the only truthful option available.
 
-So 10.2 needs new persistence, either new columns plus a write path on `interactions` or a new table. That is a schema migration with a rollback plan, not an afternoon of UI work, and it needs a decision from you about whether to store rendered answers at all, which is a data-retention question as much as a technical one.
+So 10.2 needs new persistence, either new columns plus a write path on
+`interactions` or a new table. That is a schema migration with a rollback plan,
+not an afternoon of UI work, and it needs a decision from you about whether to
+store rendered answers at all, which is a data-retention question as much as a
+technical one.
 
 ### Next, in order
 
 1. DONE. Confirm 1b live. The product owner tested `2bb1925` on develop the same day and their verdict was "Working", recorded in the approved table above. The one measurement still worth doing by hand is asking one question several times and watching the source count hold, which is finding L-01.
 2. Build 2a, cite every retrieved finding.
 3. Build 2b, widen the citation host rule and dispatch OMIM.
-4. DONE. Settle 11.28. It landed as `50ed55b` and the answer was neither hypothesis: the instrumented run showed every event releasing well inside its bound, and the real cause was a test fixture describing a stream the backend cannot emit. The full account is the 11.28 row above and `testing/Developer/reports/2026-09-20_pacing_defect/findings.md`. ONE RESIDUAL RISK SHIPS OPEN: pacing stretched a transient false Write from under a millisecond to about 700ms, and nobody has checked whether another path produces one.
+4. DONE. Settle 11.28. It landed as `50ed55b` and the answer was neither
+hypothesis: the instrumented run showed every event releasing well inside its
+bound, and the real cause was a test fixture describing a stream the backend
+cannot emit. The full account is the 11.28 row above and
+`testing/Developer/reports/2026-09-20_pacing_defect/findings.md`.
+
+ONE RESIDUAL RISK SHIPS OPEN: pacing stretched a transient false Write from
+under a millisecond to about 700ms, and nobody has checked whether another path
+produces one.
 5. Run 10.3, the consistency run: each of the 50 golden questions three times, recording answered-or-refused, latency, sources and layers. This is what tells us whether 1b actually fixed the wobble rather than our believing it did.
 6. Establish L-01 shape 1, a whole graph result vanishing on some runs and hidden by graceful degradation. The instrument is written at `testing/Developer/reports/2026-09-20_L01/capture_tool_results.py` and has never run.
-7. UNPLACED, and the product owner has to place it: item 11.31, the two answer modes diverging. It was decided on 2026-09-20 after this list was written, so nothing states where it sits. It is the largest decided-and-unbuilt item on the board, and it carries two questions whoever builds it must not answer for the product owner. Its constraints are in the 11.31 row above.
+7. UNPLACED, and the product owner has to place it: item 11.31, the two answer
+modes diverging. It was decided on 2026-09-20 after this list was written, so
+nothing states where it sits. It is the largest decided-and-unbuilt item on the
+board, and it carries two questions whoever builds it must not answer for the
+product owner.
+
+Its constraints are in the 11.31 row above.
 
 ### What 11.28's diagnosis already found
 
-Reading `usePacedEvents.ts` mostly answers its open question. Each event's release target is `min(max(arrival, earliest), arrival + maxLagMs)`, computed from that event's OWN arrival, and the `setTimeout` loop drains the queue on wall-clock alone, needing no `done` event and no new arrivals. So the "real stall when a stream closes with no `done`" hypothesis does not hold while the component is mounted: nothing can hold an event past arrival plus 3.5 seconds except the event loop not running.
+Reading `usePacedEvents.ts` mostly answers its open question. Each event's
+release target is `min(max(arrival, earliest), arrival + maxLagMs)`, computed
+from that event's OWN arrival, and the `setTimeout` loop drains the queue on
+wall-clock alone, needing no `done` event and no new arrivals. So the "real
+stall when a stream closes with no `done`" hypothesis does not hold while the
+component is mounted: nothing can hold an event past arrival plus 3.5 seconds
+except the event loop not running.
 
 That points hard at event-loop starvation, consistent with the same suite failing 87 tests at load average 48 to 60 and passing only serially. It is still worth one confirming run rather than asserting it, which is step 4 above.
 
@@ -899,9 +1434,20 @@ That points hard at event-loop starvation, consistent with the same suite failin
 
 ## Developer detail
 
-Everything below is for whoever does the fixing, moved from earlier versions of this plan rather than dropped. This plan is built from everything in `testing/Developer/` and `testing/Product/`, and it is worked through the UI fix loop: fix on `develop`, run quick checks, push, confirm live, and the product owner retests.
+Everything below is for whoever does the fixing, moved from earlier versions of
+this plan rather than dropped. This plan is built from everything in
+`testing/Developer/` and `testing/Product/`, and it is worked through the UI fix
+loop: fix on `develop`, run quick checks, push, confirm live, and the product
+owner retests.
 
-Work one fix set at a time, in order. A set is 1 to 6 related changes that ship together. Each set below says the likely files, the checks run before pushing, and which tests in `Product/Product_workflows.md` to redo. File lists are where the change most likely lives, from the reading of the code on 2026-09-12. Treat them as a starting point, not a promise. When a set ships, its status changes above, and so do the matching requirements in section 11 of `Product/reports/2026-09-12_consistency_and_test_1.md`.
+Work one fix set at a time, in order. A set is 1 to 6 related changes that ship
+together. Each set below says the likely files, the checks run before pushing,
+and which tests in `Product/Product_workflows.md` to redo. File lists are where
+the change most likely lives, from the reading of the code on 2026-09-12. Treat
+them as a starting point, not a promise.
+
+When a set ships, its status changes above, and so do the matching requirements
+in section 11 of `Product/reports/2026-09-12_consistency_and_test_1.md`.
 
 ```mermaid
 flowchart LR
@@ -1076,4 +1622,13 @@ Stale or no longer relevant, so not carried into this plan:
 
 ### Consistency baseline
 
-Before any answer fix. Paused by the product owner on 2026-09-12 so screen fixes come first; rerun before set 6. Partly valid, rerun needed. Finished 2026-09-12, but only 85 of 150 runs really ran: 65 were refused before starting, most or all by the signed-in daily limit of 100, because all runs used one account. Of the 85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run (14%), 6 refused as off-topic. 15 of 32 questions gave different outcomes across runs, and only 2 answered every time. No Layer 3 call was seen. Next: rerun the 65 across fresh test accounts, recording each error's message.
+Before any answer fix. Paused by the product owner on 2026-09-12 so screen fixes
+come first; rerun before set 6. Partly valid, rerun needed. Finished 2026-09-12,
+but only 85 of 150 runs really ran: 65 were refused before starting, most or all
+by the signed-in daily limit of 100, because all runs used one account. Of the
+85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run
+(14%), 6 refused as off-topic. 15 of 32 questions gave different outcomes across
+runs, and only 2 answered every time.
+
+No Layer 3 call was seen. Next: rerun the 65 across fresh test accounts,
+recording each error's message.
