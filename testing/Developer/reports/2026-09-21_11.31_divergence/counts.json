@@ -1,0 +1,46 @@
+{
+  "brca1_plain_language.json": {
+    "question": "Which diseases are associated with BRCA1?",
+    "audience_depth": "plain_language",
+    "outcome": "ask",
+    "run_id": "70c95c9a-96d9-4282-96e2-0a247d9d979f",
+    "prose_word_count": 89,
+    "paragraph_count": 4,
+    "record_row_count": 66,
+    "prose_words_per_record_row": 1.3485,
+    "total_char_count": 6060
+  },
+  "brca1_researcher.json": {
+    "question": "Which diseases are associated with BRCA1?",
+    "audience_depth": "researcher",
+    "outcome": "ask",
+    "run_id": "b3a74435-1c64-4497-97f3-fe3b6496668e",
+    "prose_word_count": 164,
+    "paragraph_count": 4,
+    "record_row_count": 66,
+    "prose_words_per_record_row": 2.4848,
+    "total_char_count": 6671
+  },
+  "hnf1a_plain_language.json": {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "audience_depth": "plain_language",
+    "outcome": "ask",
+    "run_id": "6a020894-76e8-4478-bf60-46953f880a3c",
+    "prose_word_count": 135,
+    "paragraph_count": 6,
+    "record_row_count": 92,
+    "prose_words_per_record_row": 1.4674,
+    "total_char_count": 7771
+  },
+  "hnf1a_researcher.json": {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "audience_depth": "researcher",
+    "outcome": "ask",
+    "run_id": "a4d88b10-62ca-47d0-ac8e-5907e8d3fae1",
+    "prose_word_count": 127,
+    "paragraph_count": 5,
+    "record_row_count": 91,
+    "prose_words_per_record_row": 1.3956,
+    "total_char_count": 7633
+  }
+}
