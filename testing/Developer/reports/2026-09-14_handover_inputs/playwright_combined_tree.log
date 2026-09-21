@@ -1,0 +1,101 @@
+[WebServer] [09/14/26 14:00:56] INFO     MCP transport security: DNS-rebinding server.py:519
+[WebServer]                              protection on, allowed hosts                       
+[WebServer]                              ['127.0.0.1:*', 'localhost:*',                     
+[WebServer]                              '[::1]:*'] (from MCP_ALLOWED_HOSTS),               
+[WebServer]                              3 allowed origin(s) (from                          
+[WebServer]                              MCP_ALLOWED_ORIGINS)                               
+[WebServer] [09/14/26 14:00:57] INFO     StreamableHTTP       streamable_http_manager.py:151
+[WebServer]                              session manager                                    
+[WebServer]                              started                                            
+[WebServer] 
+[WebServer] > agentic-search-ui-frontend@0.0.0 dev
+[WebServer] > vite --port 5273 --strictPort --host 127.0.0.1
+[WebServer] 
+[WebServer] 
+[WebServer]   VITE v8.1.5  ready in 1099 ms
+[WebServer] 
+[WebServer]   ➜  Local:   http://127.0.0.1:5273/
+
+Running 49 tests using 1 worker
+
+  ✓   1 [chromium] › e2e/accessibility.spec.ts:65:3 › accessibility › the disclaimer gate is clean before anything else renders (2.8s)
+  ✓   2 [chromium] › e2e/accessibility.spec.ts:71:3 › accessibility › the disclaimer gate cannot be escaped with the keyboard (2.6s)
+  ✓   3 [chromium] › e2e/accessibility.spec.ts:130:3 › accessibility › the app fills the viewport rather than a leftover 720px column (1.7s)
+  ✓   4 [chromium] › e2e/accessibility.spec.ts:157:3 › accessibility › the landing screen is clean (2.4s)
+  ✓   5 [chromium] › e2e/accessibility.spec.ts:168:5 › accessibility › the integrations screen is clean (2.9s)
+  ✓   6 [chromium] › e2e/accessibility.spec.ts:168:5 › accessibility › the about screen is clean (2.8s)
+  ✓   7 [chromium] › e2e/accessibility.spec.ts:188:3 › accessibility › the architecture screen is clean (2.9s)
+  ✓   8 [chromium] › e2e/accessibility.spec.ts:201:3 › accessibility › the sign-in screen is clean (2.8s)
+  ✓   9 [chromium] › e2e/accessibility.spec.ts:218:3 › accessibility › the run and answer screens are clean (5.0s)
+  ✓  10 [chromium] › e2e/accessibility.spec.ts:246:3 › accessibility › no two visible controls share an accessible name (1.9s)
+[WebServer] 2:01:38 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+[WebServer] 2:01:38 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+  ✓  11 [chromium] › e2e/answer-layout.spec.ts:227:7 › answer layout at 1280px › the landed plain answer matches the approved structure (8.8s)
+[WebServer] 2:01:45 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+[WebServer] 2:01:46 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+  ✓  12 [chromium] › e2e/answer-layout.spec.ts:227:7 › answer layout at 1280px › the landed researcher answer matches the approved structure (8.9s)
+[WebServer] 2:01:54 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+[WebServer] 2:01:55 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+  ✓  13 [chromium] › e2e/answer-layout.spec.ts:227:7 › answer layout at 390px › the landed plain answer matches the approved structure (8.9s)
+[WebServer] 2:02:04 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+[WebServer] 2:02:04 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+  ✓  14 [chromium] › e2e/answer-layout.spec.ts:227:7 › answer layout at 390px › the landed researcher answer matches the approved structure (10.0s)
+[WebServer] 2:02:13 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+[WebServer] 2:02:14 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+  ✓  15 [chromium] › e2e/answer-layout.spec.ts:263:3 › copying the answer › yields prose with no 'Source N, layer L' strings (7.4s)
+[WebServer] 2:02:21 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+[WebServer] 2:02:21 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+  ✓  16 [chromium] › e2e/answer-layout.spec.ts:294:3 › findings-tail record lines › render as a record block, never as one run-on line (7.0s)
+  ✓  17 [chromium] › e2e/answer-layout.spec.ts:323:5 › the writing state › shows the banner in the gap after Act, then builds the answer one sentence at a time (1280px) (4.7s)
+  ✓  18 [chromium] › e2e/answer-layout.spec.ts:323:5 › the writing state › shows the banner in the gap after Act, then builds the answer one sentence at a time (390px) (5.0s)
+[WebServer] 2:02:37 PM [vite] (client) [console.error] The pseudo class ":first-child" is potentially unsafe when doing server-side rendering. Try changing it to ":first-of-type".
+  ✓  19 [chromium] › e2e/answer-layout.spec.ts:337:3 › the writing state › reveals a burst of sentences progressively under the banner (6.2s)
+  ✓  20 [chromium] › e2e/citation-host-allowlist.spec.ts:186:3 › citation host allowlist › an off-host citation renders unlinked, with the disclosure text (4.9s)
+  ✓  21 [chromium] › e2e/citation-host-allowlist.spec.ts:205:3 › citation host allowlist › a javascript: URL renders unlinked, with the disclosure text (4.5s)
+  ✓  22 [chromium] › e2e/citation-host-allowlist.spec.ts:221:3 › citation host allowlist › a citation on an allowed NCBI host renders as a real, clickable link (4.4s)
+  ✓  23 [chromium] › e2e/citation-host-allowlist.spec.ts:244:3 › citation host allowlist › the citation marker's card links only the allowed host (5.2s)
+  ✓  24 [chromium] › e2e/citations-and-writing.spec.ts:188:5 › at 1280px › a cited answer shows quiet superscript markers and a card on focus (6.3s)
+  ✓  25 [chromium] › e2e/citations-and-writing.spec.ts:215:5 › at 1280px › the Write step reads as the lead writing the answer (6.1s)
+  ✓  26 [chromium] › e2e/citations-and-writing.spec.ts:188:5 › at 390px › a cited answer shows quiet superscript markers and a card on focus (6.1s)
+  ✓  27 [chromium] › e2e/citations-and-writing.spec.ts:215:5 › at 390px › the Write step reads as the lead writing the answer (5.3s)
+  ✓  28 [chromium] › e2e/cite-or-refuse.spec.ts:244:3 › cite or refuse › a no-data refusal renders as a refusal notice, never as a claim (3.7s)
+  ✓  29 [chromium] › e2e/cite-or-refuse.spec.ts:280:3 › cite or refuse › an unresolved-entity refusal also renders as a refusal notice, never as a claim (2.8s)
+  ✓  30 [chromium] › e2e/cite-or-refuse.spec.ts:312:3 › cite or refuse › a genuinely grounded, cited answer is never swallowed into the refusal notice (4.9s)
+  ✓  31 [chromium] › e2e/query-stream-and-stop.spec.ts:100:3 › query stream and stop › a signed-in query streams through the pipeline and produces an answer (5.5s)
+  ✓  32 [chromium] › e2e/query-stream-and-stop.spec.ts:128:3 › query stream and stop › a second question shows the run's progress, not a jump to the answer (6.1s)
+  ✓  33 [chromium] › e2e/query-stream-and-stop.spec.ts:188:3 › query stream and stop › stop during a follow-up leaves the conversation on screen (14.4s)
+  ✓  34 [chromium] › e2e/query-stream-and-stop.spec.ts:234:3 › query stream and stop › stop halts the run on the server, not just in the browser (13.6s)
+  ✓  35 [chromium] › e2e/query-stream-and-stop.spec.ts:328:3 › query stream and stop › stop works while the answer is streaming in (14.6s)
+  ✓  36 [chromium] › e2e/query-stream-and-stop.spec.ts:391:3 › query stream and stop › stop stops being offered once the run has finished (9.1s)
+  ✓  37 [chromium] › e2e/second-turn.spec.ts:172:3 › a conversation continues past the first turn › a follow-up question from the answer screen produces a second answer (9.4s)
+  ✓  38 [chromium] › e2e/second-turn.spec.ts:211:3 › a conversation continues past the first turn › a guest can also take a second turn (25.7s)
+  ✘  39 [chromium] › e2e/second-turn.spec.ts:260:3 › a conversation continues past the first turn › an earlier turn stays on the page, collapsed, after a follow-up (42.2s)
+  ✓  40 [chromium] › e2e/second-turn.spec.ts:363:5 › a conversation continues past the first turn › the thread and the inline run fit the page at 390px (15.1s)
+  ✓  41 [chromium] › e2e/second-turn.spec.ts:363:5 › a conversation continues past the first turn › the thread and the inline run fit the page at 1280px (11.0s)
+  ✓  42 [chromium] › e2e/second-turn.spec.ts:425:3 › a conversation continues past the first turn › an opened earlier turn still carries its sources and its verdict at 1280px (9.3s)
+  ✓  43 [chromium] › e2e/second-turn.spec.ts:425:3 › a conversation continues past the first turn › an opened earlier turn still carries its sources and its verdict at 390px (8.7s)
+  ✓  44 [chromium] › e2e/second-turn.spec.ts:546:3 › a conversation continues past the first turn › New search starts a fresh conversation rather than extending one (8.3s)
+  ✓  45 [chromium] › e2e/trust-surface.spec.ts:136:3 › the trust surface › renders a cited claim, an uncited claim, and a source card (8.4s)
+  ✓  46 [chromium] › e2e/trust-surface.spec.ts:165:3 › the trust surface › each citation marker sits inside the claim it cites (4.6s)
+  ✓  47 [chromium] › e2e/trust-surface.spec.ts:193:3 › the trust surface › is clean under axe with a citation, a spine gap and a risk pill on screen (7.4s)
+  ✓  48 [chromium] › e2e/trust-surface.spec.ts:203:3 › the trust surface › conveys cited versus uncited without relying on colour (4.6s)
+  ✓  49 [chromium] › e2e/trust-surface.spec.ts:229:3 › the trust surface › the trust strip reports what the stream actually said (4.2s)
+
+
+  1) [chromium] › e2e/second-turn.spec.ts:260:3 › a conversation continues past the first turn › an earlier turn stays on the page, collapsed, after a follow-up 
+
+    Test timeout of 30000ms exceeded.
+
+    Error Context: test-results/second-turn-a-conversation-4fe3a-collapsed-after-a-follow-up-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/second-turn-a-conversation-4fe3a-collapsed-after-a-follow-up-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/second-turn-a-conversation-4fe3a-collapsed-after-a-follow-up-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/second-turn.spec.ts:260:3 › a conversation continues past the first turn › an earlier turn stays on the page, collapsed, after a follow-up 
+  48 passed (7.0m)

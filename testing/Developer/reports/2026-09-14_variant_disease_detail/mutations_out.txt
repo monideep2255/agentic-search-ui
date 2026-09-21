@@ -1,0 +1,10 @@
+M1 fold not applied: RED (arm caught it); restored byte-identical: True
+M2 placeholder findings kept: RED (arm caught it); restored byte-identical: True
+M3 organism not confirmed live: RED (arm caught it); restored byte-identical: True
+M4 fallback gate restored: RED (arm caught it); restored byte-identical: True
+M5 template fallback never run: RED (arm caught it); restored byte-identical: True
+M6 summary fold clause removed: RED (arm caught it); restored byte-identical: True
+M7 exact-title rule removed: RED (arm caught it); restored byte-identical: True
+M8 list suffix strip removed: RED (arm caught it); restored byte-identical: True
+M9 retry removed: RED (arm caught it); restored byte-identical: True
+M10 fallback rendered as run-on claims outside Researcher: RED (arm caught it) ; restored: True

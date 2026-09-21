@@ -30,6 +30,9 @@ from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
+from system_03_search_agent.adapters.mcp.server import (
+    transport_security_settings as mcp_transport_security_settings,
+)
 from system_03_search_agent.auth.dependencies import (
     _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
     _GUEST_SESSION_REVOKED_REASON,
@@ -47,7 +50,7 @@ from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.core.persona import persona_for_session
+from system_03_search_agent.core.persona import persona_record_for_session
 from system_03_search_agent.core.run_registry import (
     CONCURRENT_RUN_CAP_RETRY_AFTER_S,
     ConcurrentRunCapExceededError,
@@ -57,7 +60,6 @@ from system_03_search_agent.core.run_registry import (
     default_registry,
 )
 from system_03_search_agent.data.guest_sessions import (
-    ATTEMPT_ALLOWANCE,
     FREE_RUN_ALLOWANCE,
     SpendState,
     refund_one_run,
@@ -84,6 +86,7 @@ from system_03_search_agent.harness.cost_control import (
     per_user_daily_query_cap,
     sanitize_event_for_end_user,
 )
+from system_03_search_agent.observability.analytics import AnalyticsEvent, capture_event
 
 
 def _seconds_until_utc_midnight() -> int:
@@ -124,7 +127,26 @@ logger = logging.getLogger(__name__)
 # Full account of both findings below: `LEARNINGS.md`'s 2026-08-11 entry
 # "Mounting the mcp==2.0.0 SDK's streamable_http_app into FastAPI silently
 # fails three separate ways".
-_mcp_asgi_app = mcp_server.streamable_http_app(stateless_http=True, streamable_http_path="/")
+#
+# `transport_security=` is a FOURTH way this mount fails silently, on top of
+# the three that entry records, and it was found live on develop on
+# 2026-09-12 (R17) rather than by any gate here: leaving it None
+# while `host` also stays at its default `127.0.0.1` makes the SDK
+# auto-enable DNS-rebinding protection with a LOCALHOST-ONLY `Host`
+# allowlist, so every request to the deployed endpoint was refused `421
+# Invalid Host header` before reaching any handler. The protection stays on
+# and the allowlist is now configured from `MCP_ALLOWED_HOSTS`; the full
+# argument, the SDK lines it rests on and the unset-fails-closed default all
+# live at `transport_security_settings` in `adapters/mcp/server.py`.
+#
+# A malformed value raises `MCPTransportSecurityConfigError` from this line,
+# at import, so the process refuses to start instead of serving with an
+# allowlist nobody intended.
+_mcp_asgi_app = mcp_server.streamable_http_app(
+    stateless_http=True,
+    streamable_http_path="/",
+    transport_security=mcp_transport_security_settings(),
+)
 
 
 @asynccontextmanager
@@ -229,6 +251,17 @@ app.mount("/mcp", _mcp_asgi_app)
 # a run's own citation count is already implicitly bounded by Section 21's
 # at-most-20-tool-calls-per-query cap, so this is defense in depth, not the
 # primary bound.
+#
+# F-6.0-01, build phase 6.0: the sentence above was FALSE when it was
+# written and is true now. No such cap existed anywhere in `src/` between
+# build phase 4.0 and build phase 6.0, so for six phases this comment
+# justified a weaker bound by pointing at a stronger one that was not
+# there. The cap it names is
+# `harness/call_budget.py`'s `MAX_LAYER_2_3_CALLS_PER_QUERY`, charged at the
+# two Layer 2/3 transport chokepoints. Named here rather than left implicit
+# so the next reader can check the claim in one grep instead of trusting it,
+# which is the whole lesson build phase 4.15 drew from finding four of these
+# in one phase.
 _MAX_CITATIONS_PER_RUN = 50
 
 # F-4.0-A-02/A-03 (adversary round 1, build phase 4.0): the ONLY valid
@@ -390,7 +423,10 @@ class CreateRunRequest(BaseModel):
     # values behaves exactly as before, and a client that omits the field now
     # gets the account's preference instead of a hardcoded literal, which is
     # what Section 14.5 asked for.
-    audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] | None = None
+    # UI fix set 9 (2026-09-13): `plain_language` added, additive.
+    audience_depth: (
+        Literal["clinical_brief", "researcher", "deep_technical", "plain_language"] | None
+    ) = None
 
     @field_validator("text")
     @classmethod
@@ -455,6 +491,13 @@ _CONCURRENT_RUN_CAP_MESSAGES_BY_BOUND: dict[str, str] = {
 class CreateRunResponse(BaseModel):
     run_id: str
     persona_name: str
+    # Additive per Section 2.6 (product-owner request 2026-09-13): the one
+    # or two sentence "about" line and the host-pinned Wikipedia address
+    # behind the persona chip's info card. Read from the same curated
+    # record the name comes from, so they can never describe a different
+    # scientist than the one named.
+    persona_about: str
+    persona_wikipedia: str
 
 
 # T-4.10-04 (design decision 6's wire shape): {kind, used, total, counted}.
@@ -521,6 +564,9 @@ class PersonaResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     persona_name: str
+    # Same two additive fields as `CreateRunResponse`, same source record.
+    persona_about: str
+    persona_wikipedia: str
 
 
 # T-4.5-10, Section 14.2. Why this endpoint exists rather than the client
@@ -586,8 +632,11 @@ def get_v1_persona(
             user_id = resolve_caller_from_bearer_token(authorization, session).user_id
         except InvalidCallerError:
             user_id = None
+    record = persona_record_for_session(session_id=session_id, user_id=user_id)
     return PersonaResponse(
-        persona_name=persona_for_session(session_id=session_id, user_id=user_id)
+        persona_name=record.name,
+        persona_about=record.about,
+        persona_wikipedia=record.wikipedia,
     )
 
 
@@ -716,18 +765,9 @@ def get_v1_allowance(
             # fix; both values are true of that caller, and both send them to
             # the same sign-in wall.
             blocked = "anon_source_daily_cap_reached"
-        elif int(row[2]) >= ATTEMPT_ALLOWANCE and int(row[1]) < FREE_RUN_ALLOWANCE:
-            # F-4.10-R-01, and the same constraint-4 argument one bound
-            # further out: this guest has started as many runs as a guest may
-            # start, so the next request is refused 403 no matter what the
-            # dots say. The `runs_used < FREE_RUN_ALLOWANCE` half mirrors the
-            # refusal ordering in `data.guest_sessions._apply_spend`, which
-            # reports a spent ANSWER allowance first because that is the more
-            # informative refusal; reporting the two in a different order
-            # here than the enforcement path uses is how the two paths start
-            # disagreeing again.
-            blocked = "guest_attempt_limit_reached"
         else:
+            # Set 1 (R3, 2026-09-12): `guest_attempt_limit_reached` is no
+            # longer reported, because the query path no longer enforces it.
             blocked = None
         return AllowanceResponse(
             kind="guest",
@@ -1142,41 +1182,9 @@ async def post_v1_query(
                 },
                 headers={"Retry-After": str(_seconds_until_utc_midnight())},
             )
-        if spend.state is SpendState.EXHAUSTED:
-            # design decision 5: 403, never 429. The allowance is SPENT,
-            # not rate limited: retrying later does not help, so a 429
-            # with a Retry-After would be a lie the UI would repeat to the
-            # user. `guest_allowance_exhausted` is the machine-readable
-            # reason the UI branches the sign-in wall on.
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "reason": "guest_allowance_exhausted",
-                    "message": (
-                        "you have used all of your free searches; sign in or "
-                        "create an account to keep going"
-                    ),
-                },
-            )
-        if spend.state is SpendState.ATTEMPTS_EXHAUSTED:
-            # F-4.10-R-01. 403 like the exhausted personal allowance above,
-            # and for design decision 5's reason: this ceiling is permanent
-            # for this identity, so a 429 with a Retry-After would be a lie
-            # the UI would repeat as "try again soon". A DISTINCT
-            # machine-readable reason, because the two mean different things
-            # to the person reading them and the sign-in wall has to say
-            # something true for each: "you have used your free searches" is
-            # false for a caller who never got an answer at all.
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "reason": "guest_attempt_limit_reached",
-                    "message": (
-                        "you have asked as many questions as a guest can; "
-                        "sign in or create an account to keep going"
-                    ),
-                },
-            )
+        # Set 1 (R1, R3, 2026-09-12): no 403 `guest_allowance_exhausted` and
+        # no 403 `guest_attempt_limit_reached`. `spend_one_anonymous_run` no
+        # longer enforces a per-guest ceiling, so neither state can occur.
         if spend.state is SpendState.REVOKED_OR_UNKNOWN:
             # This guest session was migrated (and revoked) at signup/
             # login, or never existed. The token still decodes, so
@@ -1403,11 +1411,14 @@ async def post_v1_query(
     # session otherwise, so an anonymous session holds one for that session
     # and draws a new one next time. Delivered HERE, once, on the response
     # body, and never repeated on a streamed event.
+    record = persona_record_for_session(
+        session_id=request.session_id, user_id=caller.user_id
+    )
     return CreateRunResponse(
         run_id=run_id,
-        persona_name=persona_for_session(
-            session_id=request.session_id, user_id=caller.user_id
-        ),
+        persona_name=record.name,
+        persona_about=record.about,
+        persona_wikipedia=record.wikipedia,
     )
 
 
@@ -1640,8 +1651,9 @@ async def get_v1_query_citations(
     #
     # F-4.0-A-12 (adversary round 1, build phase 4.0, carried open): a
     # separate truncation disclosure exists upstream, `core/graph.py`'s
-    # `citations_capped` (the `_MAX_CITATIONS_PER_ANSWER` cut, F-2.1-C12's
-    # honesty guarantee), but it is currently only woven into the
+    # `citations_capped` (the `_MAX_FINDINGS_FOR_DISPLAY` cut, formerly
+    # `_MAX_CITATIONS_PER_ANSWER`, F-2.1-C12's honesty guarantee), but it is
+    # currently only woven into the
     # narrative `token` text or a non-fatal refusal `error`, never onto
     # `DonePayload`, so this endpoint (which reads only `citation`-typed
     # events) has no field to read it from. The correct fix threads a new
@@ -1674,14 +1686,29 @@ async def get_v1_query_citations(
         if len(citations) >= _MAX_CITATIONS_PER_RUN:
             break
     # F-4.0-A-13 (adversary round 1, build phase 4.0): the local
-    # `_MAX_CITATIONS_PER_RUN` break above is unreachable today (verified:
-    # `core/graph.py`'s own `_MAX_CITATIONS_PER_ANSWER = 20` is the only
-    # producer and cuts well below 50), but was itself an undisclosed
-    # silent truncation, the same shape phase 3.2's `_cap()` finding was
-    # fixed for, with nothing enforcing the 2.5x margin that makes it safe
-    # today. Disclosed defensively so raising the upstream cap past 50 in
-    # a later phase degrades to "the header says so" rather than "a live
-    # silent-truncation path with no failing test".
+    # `_MAX_CITATIONS_PER_RUN` break above was unreachable when this was
+    # written (verified: `core/graph.py`'s own `_MAX_CITATIONS_PER_ANSWER =
+    # 20` was the only producer and cut well below 50), but was itself an
+    # undisclosed silent truncation, the same shape phase 3.2's `_cap()`
+    # finding was fixed for, with nothing enforcing the 2.5x margin that
+    # made it safe at the time. Disclosed defensively so raising the
+    # upstream cap past 50 in a later phase would degrade to "the header
+    # says so" rather than "a live silent-truncation path with no failing
+    # test".
+    #
+    # That later phase arrived (answer quality fix, 2026-09-20): the
+    # upstream producer split into a model-prompt cap
+    # (`_MAX_FINDINGS_FOR_MODEL_PROMPT`, 20, unchanged) and a display cap
+    # (`_MAX_FINDINGS_FOR_DISPLAY`, 100, bounded by the tool's own
+    # `row_limit`), and an answer routinely carries more than 50 citations
+    # now that the code-built table and citation list are no longer bounded
+    # to what a model's own prompt could safely hold. This break is
+    # REACHABLE today, exactly as anticipated, and degrades exactly as
+    # designed: the header still fires, nothing here silently drops a
+    # citation with no signal. Whether `_MAX_CITATIONS_PER_RUN` and Section
+    # 13.2's `maxItems: 50` should themselves move is a separate,
+    # cross-surface decision (this endpoint, the MCP surface and its wire
+    # contract) and is left open rather than guessed at here.
     if citation_events_total > _MAX_CITATIONS_PER_RUN:
         response.headers["X-Citations-Export-Truncated"] = "true"
     return citations
@@ -1830,4 +1857,27 @@ async def post_v1_query_feedback(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="you do not own this run"
         ) from None
+
+    # T-5.0-05: Section 20.2's "feedback-button clicks" signal, fired only
+    # once `record_feedback` above has actually succeeded, never on the
+    # 409/403 paths, so this counts a feedback SUBMISSION, not an attempt.
+    # Aggregates only, per this ticket's binding constraint: never the
+    # comment text or the flagged_reason text itself, only whether one was
+    # present, and never citation_id/reason content from citation_flags,
+    # only their count. `capture_event` never raises (best-effort by its
+    # own contract), so this needs no try/except of its own and can never
+    # turn a successful feedback write into a failed response.
+    feedback_properties: dict[str, bool | int | str] = {
+        "has_comment": bool(payload.comment),
+        "was_flagged": bool(payload.flagged_reason),
+        "citation_flag_count": len(payload.citation_flags),
+    }
+    if payload.rating is not None:
+        feedback_properties["rating"] = payload.rating
+    await capture_event(
+        AnalyticsEvent.FEEDBACK_SUBMITTED,
+        distinct_id=caller.owner_id,
+        properties=feedback_properties,
+    )
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)

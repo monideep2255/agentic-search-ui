@@ -759,31 +759,26 @@ class TestRefuseArm:
     """Everything that must not be possible once the door is open."""
 
     @pytest.mark.asyncio
-    async def test_the_sixth_run_is_refused_with_a_reason_a_client_can_branch_on(self) -> None:
-        """403 rather than 429, deliberately.
+    async def test_a_guest_is_not_refused_after_five_runs(self) -> None:
+        """Set 1, R1 (2026-09-12, `testing/UI_fix_plan.md`): no guest allowance.
 
-        The allowance is spent, not rate limited: retrying later does not
-        help, so a 429 with a `Retry-After` would be a lie the UI would
-        then repeat to the user. The concurrent-run cap (F-4.0-A-10) is the
-        genuinely transient condition and is the one that gets a 429.
+        This clause used to assert the sixth run was refused 403
+        `guest_allowance_exhausted`. The product owner removed the five-search
+        allowance, so it now asserts the opposite, two runs past the old
+        boundary, with each run drained so the concurrent-run cap cannot be
+        what admits or refuses anything. The shared daily cap and the
+        per-connection share still bound anonymous spend; their own clauses
+        below are unchanged.
         """
         async with _client() as client:
             _guest_id, headers = await _mint_guest(client)
-            for _ in range(_EXPECTED_FREE_SEARCHES):
+            for number in range(_EXPECTED_FREE_SEARCHES + 2):
                 created = await _run(client, headers)
-                assert created.status_code == 202
+                assert created.status_code == 202, (
+                    f"guest run {number + 1} was refused {created.status_code}: "
+                    f"{created.text}; set 1 removed the per-guest allowance"
+                )
                 await _drain_run_task(created.json()["run_id"])
-
-            refused = await _run(client, headers)
-            assert refused.status_code == 403, (
-                "the sixth run must be refused by the SERVER; a client-side "
-                "counter is the dishonesty class build phase 4.8's judge filed"
-            )
-            body = refused.json()
-            assert "guest_allowance_exhausted" in str(body), (
-                "the refusal must carry a machine-readable reason so the UI shows "
-                "the sign-in wall for this specific case rather than for any 403"
-            )
 
     @pytest.mark.asyncio
     async def test_a_tampered_guest_token_is_rejected(self) -> None:
@@ -950,8 +945,16 @@ class TestRefuseArm:
             assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_the_allowance_holds_under_concurrency(self) -> None:
+    async def test_the_guest_count_holds_under_concurrency(self) -> None:
         """The property a read-then-write implementation silently fails.
+
+        SET 1 CHANGE, 2026-09-12. There is no allowance left to over-spend, so
+        this clause no longer asserts that one of the boundary pair is refused.
+        The rendezvous below is unchanged, and it now asserts that BOTH are
+        admitted and the server's count lands on exactly one more than the
+        pair started from each. A read-then-write increment loses one of the
+        two writes and lands one short, so the clause can still fail. The
+        history below describes the allowance version.
 
         Two tabs, two simultaneous requests, both observing four used and
         both taking the fifth, is a six-search allowance available to
@@ -1062,24 +1065,18 @@ class TestRefuseArm:
             lock_engine.dispose()
 
         accepted = [outcome for outcome in outcomes if outcome[0] == 202]
-        refused = [outcome for outcome in outcomes if outcome[0] == 403]
-        assert len(accepted) == 1, (
-            f"{len(accepted)} of 2 simultaneous requests took the last free search; "
-            f"exactly one may, or the allowance is not being spent atomically. "
+        assert len(accepted) == 2, (
+            f"{len(accepted)} of 2 simultaneous requests were admitted; set 1 removed "
+            f"the per-guest allowance, so both must be. "
             f"Statuses: {[outcome[0] for outcome in outcomes]}"
         )
-        assert len(refused) == 1, (
-            f"the losing request must be refused with the ALLOWANCE's own 403, not "
-            f"some other control. Statuses: {[outcome[0] for outcome in outcomes]}"
-        )
-        assert "guest_allowance_exhausted" in refused[0][1]
 
         async with _client() as client:
             final = await client.get("/v1/allowance", headers=headers)
             assert final.status_code == 200
-            assert final.json()["used"] == _EXPECTED_FREE_SEARCHES, (
-                "the server's own count must land on exactly the cap after the "
-                "boundary pair, never past it"
+            assert final.json()["used"] == _EXPECTED_FREE_SEARCHES + 1, (
+                "the server's own count must land on exactly four plus the boundary "
+                "pair; one short means one of two concurrent increments was lost"
             )
 
     @pytest.mark.asyncio
@@ -1206,25 +1203,21 @@ class TestRefuseArm:
 
 class TestAcceptedBehaviour:
     @pytest.mark.asyncio
-    async def test_clearing_the_guest_token_yields_a_fresh_allowance(self) -> None:
-        """Product-owner decision, 2026-08-14, taken knowingly.
+    async def test_a_fresh_guest_token_starts_its_own_count_at_zero(self) -> None:
+        """Product-owner decisions 2026-08-14 and, for set 1, 2026-09-12.
 
-        A signed token in the browser is clearable, and anyone who clears it
-        gets five more searches. This is asserted rather than left implicit
-        so that a later reviewer reading it as a defect finds the decision
-        attached to it, and so that anyone who decides to close it has to
-        change a test that states the tradeoff out loud.
-
-        Closing it would mean device or IP fingerprinting, which this
-        product declined for a prototype.
+        A signed token in the browser is clearable, and a fresh one starts
+        its own count. Since set 1 removed the five-search allowance, clearing
+        it no longer unlocks anything: the first token is not refused past
+        five either. The shared daily cap and the per-connection share are
+        what bound anonymous spend, whatever number of tokens are minted.
         """
         async with _client() as client:
             _first_id, first_headers = await _mint_guest(client)
-            for _ in range(_EXPECTED_FREE_SEARCHES):
+            for _ in range(_EXPECTED_FREE_SEARCHES + 1):
                 created = await _run(client, first_headers)
                 assert created.status_code == 202
                 await _drain_run_task(created.json()["run_id"])
-            assert (await _run(client, first_headers)).status_code == 403
 
             _second_id, second_headers = await _mint_guest(client)
             fresh = await client.get("/v1/allowance", headers=second_headers)
@@ -1645,11 +1638,17 @@ class TestOneGuestCannotTakeTheAnonymousProductOffline:
     ) -> None:
         """The attack itself, run against the fix.
 
-        A daily cap deliberately larger than the attempt ceiling, so the
-        only thing that can stop this loop is the per-identity bound. With
-        the cap at or below the ceiling the clause would pass for the wrong
-        reason, reporting on the shared ceiling it is supposed to be
-        protecting.
+        SET 1 CHANGE, 2026-09-12 (R3). The per-identity attempt ceiling this
+        clause used to rely on is removed, so the loop is no longer refused
+        at all. What keeps the day safe is part B of F-4.10-R-01, unchanged: a
+        free pre-filter refusal charges neither the shared day nor the
+        source's share, so a refusal loop spends nothing anyone else needs.
+        A refusal that did make a model call still charges both, and the
+        per-source share bounds that (`TestOneSourceCannotTakeTheWholeAnonymousDay`).
+
+        The daily cap is deliberately smaller than the loop, so a regression
+        that charged free refusals to the day would refuse this loop with a
+        429 and fail the first assertion, not only the day count.
         """
         from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
 
@@ -1669,18 +1668,12 @@ class TestOneGuestCannotTakeTheAnonymousProductOffline:
                 else:
                     refusals.append((response.status_code, str(response.json())))
 
-            assert accepted <= ATTEMPT_ALLOWANCE, (
-                f"one guest token started {accepted} runs against an attempt "
-                f"ceiling of {ATTEMPT_ALLOWANCE}; a refund that gives back the "
-                f"only counter a refused caller advances leaves them unbounded "
-                f"(F-4.10-R-01)"
+            assert refusals == [], (
+                f"one guest token was refused {len(refusals)} times, first "
+                f"{refusals[:2]}; set 1 removed the attempt ceiling, and a free "
+                f"refusal charges no shared counter, so nothing should refuse it"
             )
-            assert accepted > 0, (
-                "the attack loop was refused from its very first request, so "
-                "this clause proves nothing about a bound; a guest must still "
-                "be able to ask"
-            )
-            assert refusals, "the loop was never refused at all"
+            assert accepted == daily_cap + 5
 
             # The day is what the attack was after, and it must be intact.
             # Every refusal above was a free pre-filter one, so nothing was
@@ -1706,17 +1699,15 @@ class TestOneGuestCannotTakeTheAnonymousProductOffline:
             await _drain_run_task(victim.json()["run_id"])
 
     @pytest.mark.asyncio
-    async def test_the_attempt_ceiling_refuses_with_its_own_reason_and_status(
+    async def test_the_attempt_count_no_longer_refuses_a_guest(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """403 with a DISTINCT reason, not a 429 and not the allowance's own.
+        """Set 1, R3 (2026-09-12): the ten-attempt ceiling is removed.
 
-        Design decision 5's reasoning, applied to a third refusal: this one
-        is permanent for the identity, so a 429 with a `Retry-After` would
-        be a lie the UI would repeat as "try again soon". And it is not
-        `guest_allowance_exhausted`, because this visitor may have received
-        no answer at all, so the sign-in wall's own sentence would be false
-        for them.
+        This clause used to assert the eleventh attempt was refused 403
+        `guest_attempt_limit_reached`, and that `GET /v1/allowance` reported
+        it. Both directions now say the opposite: the eleventh attempt is
+        admitted, and the reporting path names no block.
         """
         from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
 
@@ -1725,34 +1716,22 @@ class TestOneGuestCannotTakeTheAnonymousProductOffline:
 
         async with _client() as client:
             _guest_id, headers = await _mint_guest(client)
-            for _ in range(ATTEMPT_ALLOWANCE):
+            for number in range(ATTEMPT_ALLOWANCE + 1):
                 response = await _run_text(client, headers, _INJECTION_REFUSAL_TEXT)
-                assert response.status_code == 202
+                assert response.status_code == 202, (
+                    f"attempt {number + 1} was refused {response.status_code}: "
+                    f"{response.text}; set 1 removed the attempt ceiling"
+                )
                 await _drain_run_task(response.json()["run_id"])
 
-            refused = await _run_text(client, headers, _INJECTION_REFUSAL_TEXT)
-            assert refused.status_code == 403, (
-                "the attempt ceiling is permanent for this identity, so a 429 "
-                "would promise a recovery that never comes"
-            )
-            detail = refused.json()["detail"]
-            assert detail["reason"] == "guest_attempt_limit_reached", (
-                "collapsing this into guest_allowance_exhausted makes the "
-                "sign-in wall tell a visitor they used searches they never got"
-            )
-            assert "Retry-After" not in refused.headers
-
-            # And the reporting path agrees, which is design decision 8's
-            # constraint 4 applied to this bound: the dots must not promise a
-            # search the very next request refuses.
             allowance = await client.get("/v1/allowance", headers=headers)
             assert allowance.status_code == 200
             body = allowance.json()
             assert body["used"] == 0, (
                 "the answers were refunded, which is F-4.10-A-04's guarantee "
-                "and must survive this fix"
+                "and must survive this change"
             )
-            assert body["blocked_reason"] == "guest_attempt_limit_reached"
+            assert body.get("blocked_reason") is None
 
     @pytest.mark.asyncio
     async def test_a_refused_run_gives_back_the_answer_and_never_the_attempt(

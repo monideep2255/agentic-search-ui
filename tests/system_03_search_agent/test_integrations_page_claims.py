@@ -88,8 +88,17 @@ def page_source() -> str:
     first, reporting "comment stripping removed the page body" about a page
     that was intact, and masked all four real failures. A fixture check
     must never assert the thing its arms assert, or a genuine defect
-    surfaces as a broken harness. It now counts `<Card` occurrences, which
-    is structural and cannot be changed by a wrong command string.
+    surfaces as a broken harness. It now counts `<IntegrationCard`
+    occurrences, which is structural and cannot be changed by a wrong
+    command string.
+
+    The marker was `<Card` until 2026-09-13. UI fix set 5 rebuilt the page
+    in the reference layout (commit 20a8688) with four `IntegrationCard`
+    elements and no bare `Card`, so this check reported "comment stripping
+    removed the page body" about an intact page for eight days, during
+    which no full Python run happened. The check was wrong, not the page:
+    it named a component the page no longer uses. Fixed here by naming the
+    component it does use, so the count stays structural.
     """
     assert _PAGE.is_file(), f"the integrations page moved: {_PAGE}"
     raw = _PAGE.read_text(encoding="utf-8")
@@ -107,7 +116,7 @@ def page_source() -> str:
     # empty string and passing, which is the exact vacuity this repository
     # keeps shipping. So the thing the arms actually read must be shown to
     # still contain the surfaces they are about to look for.
-    assert "IntegrationsScreen" in text and text.count("<Card") >= 4, (
+    assert "IntegrationsScreen" in text and text.count("<IntegrationCard") >= 4, (
         "populate-check failed: comment stripping removed the page body, so "
         "every arm below would search an empty string."
     )
@@ -164,12 +173,34 @@ def test_every_http_path_the_page_prints_is_a_real_route(page_source: str) -> No
     """The `POST /v1/export/kgx` defect: a route advertised, never built."""
     from system_03_search_agent.adapters.web_sse.app import app
 
+    # Walk INCLUDED routers as well as the top-level table. On the FastAPI
+    # this repository now resolves, `app.include_router(...)` leaves an
+    # `_IncludedRouter` entry on `app.routes` with no `path` of its own and
+    # the real `APIRoute`s under its `.routes`, so a flat read of
+    # `app.routes` saw none of the `/auth/*` or GraphQL paths and this arm
+    # reported `/auth/login`, a route the app has served since build phase
+    # 1.1, as fabricated (2026-09-13). The check was wrong, not the page.
     real: set[str] = set()
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        if isinstance(path, str):
-            real.add(path)
+
+    def collect(routes: list[object]) -> None:
+        for route in routes:
+            path = getattr(route, "path", None)
+            if isinstance(path, str):
+                real.add(path)
+            # `_IncludedRouter` keeps the router it wraps on
+            # `original_router`; a plain `Mount` keeps its children on
+            # `routes`. Either way the paths live one level down.
+            original = getattr(route, "original_router", None)
+            nested = getattr(original, "routes", None) or getattr(route, "routes", None)
+            if isinstance(nested, list) and not isinstance(path, str):
+                collect(nested)
+
+    collect(list(app.routes))
     assert real, "populate-check failed: the app exposes no routes to compare against."
+    assert "/auth/login" in real, (
+        "populate-check failed: the walk did not reach the auth router, so "
+        "every real route under an included router would read as fabricated."
+    )
 
     printed = set(re.findall(r"(?:POST|GET|PUT|DELETE)\s+(?:https?://[^\s/]+)?(/[\w/{}.-]+)", page_source))
     assert printed, (
@@ -214,13 +245,30 @@ def test_the_page_names_every_shipped_delivery_surface(page_source: str) -> None
         ("MCP server", "4.1"),
         ("Command line", "4.2"),
         ("GraphQL", "4.3"),
-        ("KGX export", "4.4"),
     ]:
-        assert f'title="{surface}"' in page_source, (
+        # A prefix rather than the closed literal: UI fix set 5 (2026-09-13)
+        # retitled the CLI card "Command line tools", which is the same
+        # surface, findable, under a fuller name. The closing quote was
+        # dropped so a longer title still counts, while the opening
+        # `title="` still rejects the renamed-or-misspelled card the
+        # mutation above caught.
+        assert f'title="{surface}' in page_source, (
             f"the integrations page has no card titled {surface!r}, which shipped in "
             f"build phase {phase}. A delivery surface nobody can find is not "
             "delivered."
         )
+    # KGX export (build phase 4.4) is a console script, and UI fix set 5
+    # (2026-09-13, commit 20a8688) folded it into the "Command line tools"
+    # card beside `s3` rather than keeping a card of its own, by product-
+    # owner decision on the reference layout. The surface is findable when
+    # the page prints its command, which is what a reader copies, so that is
+    # what this arm now pins. Deleting the KGX text from the card turns it
+    # red; a card titled "KGX export" with no command would not satisfy it.
+    assert "s3-kgx-export" in page_source, (
+        "the integrations page never prints the s3-kgx-export command, which "
+        "shipped in build phase 4.4. A delivery surface nobody can find is not "
+        "delivered."
+    )
 
 
 def test_the_page_never_prints_an_elided_placeholder_url(page_source: str) -> None:
@@ -230,4 +278,96 @@ def test_the_page_never_prints_an_elided_placeholder_url(page_source: str) -> No
     assert not elided, (
         f"the page prints {elided}, an elided placeholder a reader cannot copy. "
         "Quote the real origin the app itself is configured with."
+    )
+
+
+def test_the_mcp_config_prints_a_url_that_reaches_its_route_without_a_redirect(
+    page_source: str,
+) -> None:
+    """UI fix 11.30. `POST /mcp` (no trailing slash) 307-redirects to
+    `/mcp/`: `app.py`'s own comment above `app.mount("/mcp", ...)` documents
+    why (Starlette's mount-with-no-trailing-slash behavior). Followed
+    literally by a real client sitting behind Railway's TLS-terminating
+    proxy, that redirect's `Location` header comes back as a plaintext
+    `http://` URL (see `test_mcp_mount_redirect_scheme.py` for the
+    reproduction), so a config a reader pastes verbatim must reach the MCP
+    route directly, with no redirect anywhere in the path.
+
+    This does not assert the literal string "/mcp/" against a retyped copy
+    of the page. It extracts the actual path from `MCP_CONFIG`'s own `url`
+    field and fires a request at the running app with that exact string, so
+    a printed value that is right in spirit and wrong as printed, which is
+    this defect's whole shape, fails here rather than passing on a re-typed
+    equivalent.
+    """
+    match = re.search(r'"url":\s*"\$\{API_ORIGIN\}([^"]*)"', page_source)
+    assert match, (
+        "populate-check failed: the MCP card's config prints no "
+        "${API_ORIGIN}-relative url field for this arm to extract."
+    )
+    printed_path = match.group(1)
+    assert printed_path, (
+        "populate-check failed: the extracted MCP config path is empty, so "
+        "this arm would request the bare origin rather than the MCP route."
+    )
+
+    # ASGITransport, never `TestClient(app)` inside a `with`. The repository
+    # already documents this trap in `adapters/mcp/test_phase_4_1_production_
+    # mount.py` (its module docstring): the `with` form runs the app's
+    # lifespan, which starts `StreamableHTTPSessionManager`, and that manager
+    # refuses a second `.run()` in the same process. It passes alone and fails
+    # in the full suite behind any earlier test that already started it, which
+    # is exactly how this arm broke CI on 2026-09-20. ASGITransport sends no
+    # lifespan events at all.
+    import asyncio
+
+    import httpx
+
+    from system_03_search_agent.adapters.web_sse.app import app
+
+    async def _post(path: str) -> tuple[int | None, str | None]:
+        """Return (status, location), or (None, None) when the MCP sub-app
+        itself raised because its session manager was never started.
+
+        That exception is not noise to be swallowed: with no lifespan, only
+        a request that actually REACHED the mounted MCP app can raise it. A
+        path this app does not serve returns 404 from the router and never
+        touches the mount. So the three outcomes are distinguishable, which
+        is what lets the assertions below tell "the printed url works" apart
+        from "the printed url is merely not a redirect".
+        """
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://localhost"
+        ) as client:
+            try:
+                response = await client.post(path, follow_redirects=False)
+            except RuntimeError:
+                return None, None
+            return response.status_code, response.headers.get("location")
+
+    printed_status, printed_location = asyncio.run(_post(printed_path))
+
+    assert printed_status != 404, (
+        f"the integrations page tells a reader to configure {printed_path!r}, "
+        "and POSTing exactly that path returns 404. The printed url does not "
+        "name a route this app serves."
+    )
+    assert printed_status not in (307, 308), (
+        f"the integrations page tells a reader to configure {printed_path!r}, "
+        f"and POSTing exactly that path returns {printed_status} with a "
+        f"redirect to {printed_location!r}. A config a reader pastes must "
+        "reach its route directly, never through a redirect that a real MCP "
+        "client, and Railway's own proxy, can turn into a scheme downgrade."
+    )
+
+    # POPULATE-CHECK on the arm itself, not on the fixture: the bare,
+    # un-slashed path must still redirect, or this test would pass on any
+    # path at all, because nothing would distinguish "fixed" from "the
+    # redirect this arm exists to catch stopped firing".
+    bare_status, _ = asyncio.run(_post("/mcp"))
+    assert bare_status in (307, 308), (
+        "populate-check failed: POST /mcp (no trailing slash) no longer "
+        "redirects at all, so this arm cannot tell a correctly printed url "
+        "apart from one that merely stopped triggering the redirect it "
+        "exists to catch."
     )

@@ -27,11 +27,18 @@ supplies, which is the difference between testing the rule and restating it
   repair that covers more findings while dropping one), the shared Write
   budget, the repair's cost-cap disclosure, the incomplete-answer note's
   denominator, and the data framing on the completeness directive.
-- NOT exercised: how OFTEN the repair fires. That is F-4.5-J-18 and
-  F-4.5-A-05, it is unsettled between the two reports, and settling it needs
-  a live measurement neither round ran. This file deliberately does not pin
-  the trigger condition or the `ask` floor, so a later product decision to
-  change either is not blocked by an arm here.
+- Exercised since the speed fix (2026-09-14): the trigger GATE. The repair
+  is skipped when the code-built findings tail or Researcher listing will
+  cite every finding the model left out (`_code_built_lines_will_cite`),
+  and still fires when a code-built line cannot ground or when the model
+  grounded nothing. F-4.5-J-18 and F-4.5-A-05 were settled by measurement
+  first (33 of 33 answered live runs fired the repair, see
+  `testing/Developer/reports/2026-09-14_synth_effort_none/`), then gated.
+  The arms that drive the repair's OWN controls (the acceptance rule, the
+  shared budget, the cap disclosure) now make the tail unable to ground
+  first, since that is the only remaining way to reach the repair with a
+  grounded first answer.
+- NOT exercised: the `ask` floor's trigger beyond the cases above.
 - NOT exercised: the repair's `HarnessCallError` path beyond the fact that
   it is a separate handler from the cap path. The swallow is deliberate and
   its only observable is the answer surviving unchanged, which the cap arm
@@ -66,6 +73,9 @@ _SYNTH_MODEL = "test-provider/synth-model"
 
 _CORRECTION_MARKER = "COMPLETENESS CORRECTION"
 _FINDING_LINE = re.compile(r"^\[(\d+)\]\s+(.+)$", re.MULTILINE)
+#: The real builder, kept so an arm that replaced it can put it back
+#: mid-test.
+_ORIGINAL_FALLBACK_BUILDER = graph_module.build_structured_fallback_narrative
 
 #: Five distinct, citable Layer 1 rows. Five rather than two because the
 #: acceptance rule's failure mode needs room: a repair must be able to add
@@ -154,7 +164,9 @@ def synth_pair(monkeypatch: pytest.MonkeyPatch):
     return _install
 
 
-def _write_state(total_available: int = 5) -> dict[str, object]:
+def _write_state(
+    total_available: int = 5, truncated: bool = False, audience_depth: str = "clinical_brief"
+) -> dict[str, object]:
     from system_03_search_agent.harness.coordinator_worker import Finding
 
     query = Query(
@@ -162,7 +174,10 @@ def _write_state(total_available: int = 5) -> dict[str, object]:
         session_id="session-completeness",
         trace_id="trace-completeness",
         user_id=None,
-        audience_depth="researcher",
+        # UI fix set 9: a Researcher answer now lists every record in code in
+        # place of the findings-tail note, so the tail's own contract is
+        # pinned on a depth that still carries it.
+        audience_depth=audience_depth,
     )
     finding = Finding(
         call_id="cq-completeness",
@@ -173,7 +188,7 @@ def _write_state(total_available: int = 5) -> dict[str, object]:
             "status": "ok",
             "row_count": len(_ROWS),
             "total_available": total_available,
-            "truncated": False,
+            "truncated": truncated,
             "rows": _ROWS,
             "error": None,
         },
@@ -205,6 +220,32 @@ def _cited_values(events: list) -> set[str]:
     }
 
 
+def _tail_cannot_ground(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make every code-built line ungroundable, standing in for a value the
+    pass strips. With the tail unable to cite, the repair is the only thing
+    that can, so it fires (speed fix, 2026-09-14)."""
+    monkeypatch.setattr(
+        graph_module, "build_structured_fallback_narrative", lambda findings: "nothing here."
+    )
+
+
+def _record_synth_dispatches(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
+    """Wrap the real `_dispatch_tier_call`; one entry per Synth call, True
+    when that call carried the completeness correction."""
+    original = graph_module._dispatch_tier_call
+    dispatched: list[bool] = []
+
+    async def _recording(*args: object, **kwargs: object):
+        if len(args) > 2 and args[2] == "synth":
+            messages = kwargs.get("messages") if "messages" in kwargs else args[4]
+            joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
+            dispatched.append(_CORRECTION_MARKER in joined)
+        return await original(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _recording)
+    return dispatched
+
+
 # ---------------------------------------------------------------------------
 # F-4.5-J-13 / F-4.5-A-06: acceptance is a superset test, not a count test.
 # ---------------------------------------------------------------------------
@@ -212,7 +253,7 @@ def _cited_values(events: list) -> set[str]:
 
 @pytest.mark.asyncio
 async def test_a_repair_that_drops_a_reported_finding_is_discarded(
-    synth_pair,
+    synth_pair, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pins: the repair is accepted only when its finding set is a STRICT
     SUPERSET of the first answer's.
@@ -226,40 +267,77 @@ async def test_a_repair_that_drops_a_reported_finding_is_discarded(
     floors at `ask`, which outranks `flag`. That is what made the loss hard
     to see.
 
-    MUTATION PROOF. Restoring the shipped rule:
+    Speed fix (2026-09-14): the repair no longer runs when the tail would
+    cite every omitted finding, so this arm makes finding 3's code-built
+    line ungroundable (the builder skips it) and leaves 4 and 5 to the tail.
+    Finding 3 is then citeable only by the model, the repair fires, and the
+    rule under test is reached with a grounded first answer.
+
+    MUTATION PROOF, re-run 2026-09-14 after the gate. Restoring the shipped
+    rule:
 
         if repaired_grounding.claims and len(still_omitted) < len(
             omitted_findings
         ):
 
-    turns this arm red:
+    turns this arm red, now on the leak assertion, because the findings
+    tail carries the dropped finding 1 back in while the wrongly accepted
+    repair's finding 3 ships in the prose:
 
-        AssertionError: a repair that drops a reported finding must be
-        discarded; 'disease name number 1' is missing from the shipped
-        answer
+        AssertionError: the discarded repair's own content must not leak
+        into the answer
     """
     synth_pair(first={1, 2}, repaired={2, 3, 4, 5})
+    original_builder = graph_module.build_structured_fallback_narrative
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda findings: original_builder([f for f in findings if f.ref_index != 3]),
+    )
+    dispatched = _record_synth_dispatches(monkeypatch)
 
     result = await graph_module.write_node(_write_state())
     events = result["events"]
     narrative = _narrative(events)
 
+    assert dispatched == [False, True], dispatched
     assert "disease name number 1" in narrative, (
         "a repair that drops a reported finding must be discarded; "
         "'disease name number 1' is missing from the shipped answer"
     )
+    # The discarded repair was the only text that carried finding 3, and the
+    # tail cannot render it here, so it must appear nowhere: not in the
+    # prose, not in the tail, and not in the code-built summary sentence,
+    # which counts only the records the answer cites.
     assert "disease name number 3" not in narrative, (
         "the discarded repair's own content must not leak into the answer"
     )
+    # Product-owner direction 2026-09-14: the findings tail note is gone in
+    # every depth; the code-built listing under its heading carries what the
+    # tail used to report.
+    assert graph_module._FINDINGS_TAIL_NOTE not in narrative, narrative
+    note_at = narrative.index("Disease records found")
+    assert "disease name number 4" in narrative[note_at:], (
+        "the code-built listing must still report what the tail could ground"
+    )
+    assert "one further disease record was found" in narrative, narrative
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "ask", done.payload
 
 
 @pytest.mark.asyncio
-async def test_a_repair_that_adds_without_dropping_is_kept(synth_pair) -> None:
+async def test_a_repair_that_adds_without_dropping_is_kept(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Pins: the superset rule accepts a genuine improvement.
 
     The negative control for the arm above, and the one that stops the fix
     from degenerating into "never accept a repair", which would pass the
     first arm while deleting the feature.
+
+    Speed fix (2026-09-14): the tail is made unable to ground, so the repair
+    fires and its accepted prose is the only thing that can cite findings 3
+    to 5. A discarded repair would leave them undisclosed except by note.
 
     MUTATION PROOF. Changing the acceptance condition to `False` turns this
     arm red:
@@ -268,6 +346,7 @@ async def test_a_repair_that_adds_without_dropping_is_kept(synth_pair) -> None:
         must be kept; 'disease name number 4' is missing
     """
     synth_pair(first={1, 2}, repaired={1, 2, 3, 4, 5})
+    _tail_cannot_ground(monkeypatch)
 
     result = await graph_module.write_node(_write_state())
     events = result["events"]
@@ -283,6 +362,122 @@ async def test_a_repair_that_adds_without_dropping_is_kept(synth_pair) -> None:
         "a repair that recovered every omission leaves nothing to disclose"
     )
     assert "of the 5 findings" not in narrative
+    assert "further disease record" not in narrative
+
+
+# ---------------------------------------------------------------------------
+# Speed fix (2026-09-14): the repair is skipped exactly when the code-built
+# lines will cite every finding the model left out.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("audience_depth", ["clinical_brief", "researcher"])
+async def test_the_repair_is_skipped_when_the_code_built_lines_cite_every_omission(
+    synth_pair, monkeypatch: pytest.MonkeyPatch, audience_depth: str
+) -> None:
+    """Pins: with a grounded first answer whose omissions the findings tail
+    (every other depth) or the Researcher listing will cite, the second
+    Synth call is not made, and the cited set still equals the prepared set.
+
+    Measured before this gate (2026-09-14): the repair fired on 33 of 33
+    answered live runs, a median 4.8 seconds each, while the tail or listing
+    already cited every finding it regenerated for. The populate check is
+    the first dispatch and the five citations: a build that made no Synth
+    call at all would also record no repair.
+
+    MUTATION PROOF. Replacing `and not _code_built_lines_will_cite(...)` in
+    `write_node` with `and True` turns both cases red:
+
+        AssertionError: [False, True]
+    """
+    synth_pair(first={1, 2}, repaired={1, 2, 3, 4, 5})
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    result = await graph_module.write_node(_write_state(audience_depth=audience_depth))
+    events = result["events"]
+
+    assert dispatched == [False], dispatched
+    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
+    assert cited == {row["source_url"] for row in _ROWS}, cited
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "answer", done.payload
+    narrative = _narrative(events)
+    for row in _ROWS:
+        assert row["fields"]["name"] in narrative, narrative
+    assert "further disease record" not in narrative, narrative
+
+
+@pytest.mark.asyncio
+async def test_the_repair_still_runs_when_a_code_built_line_cannot_ground(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pins the gate's other side: a value the pass strips leaves the tail
+    unable to cite it, so only the model's own phrasing can, and the repair
+    fires. Here the repair recovers everything, so the answer is whole.
+
+    MUTATION PROOF. Making `_code_built_lines_will_cite` return True
+    unconditionally turns this arm red:
+
+        AssertionError: [False]
+    """
+    synth_pair(first={1, 2}, repaired={1, 2, 3, 4, 5})
+    _tail_cannot_ground(monkeypatch)
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    assert dispatched == [False, True], dispatched
+    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
+    assert cited == {row["source_url"] for row in _ROWS}, cited
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "answer", done.payload
+
+
+@pytest.mark.asyncio
+async def test_the_repair_still_runs_when_the_model_grounded_nothing(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pins: when nothing the model wrote survived, the repair is a second
+    chance for prose. Without it the structured fallback lists the records
+    and floors at `ask`; with a repair that grounds, the answer is `answer`.
+
+    MUTATION PROOF. Dropping `or not model_grounded` from
+    `_code_built_lines_will_cite` turns this arm red:
+
+        AssertionError: [False]
+    """
+    synth_pair(first=set(), repaired={1, 2, 3, 4, 5})
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    assert dispatched == [False, True], dispatched
+    done = next(event for event in events if event.type == "done")
+    assert done.payload["trust_outcome"] == "answer", done.payload
+    assert graph_module._build_structured_fallback_note() not in _narrative(events)
+    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
+    assert cited == {row["source_url"] for row in _ROWS}, cited
+
+
+def test_code_built_lines_will_cite_keeps_the_repair_off_the_ok_path() -> None:
+    """The unit half: any tool outcome the tail does not run on keeps the
+    repair, and so does an empty omission list."""
+    findings = [_synth_finding(index, f"disease name number {index}") for index in (1, 2)]
+    assert not graph_module._code_built_lines_will_cite(
+        findings, findings, tool_outcome="error", model_grounded=True,
+        lists_every_finding=False, question="",
+    )
+    assert not graph_module._code_built_lines_will_cite(
+        [], findings, tool_outcome="ok", model_grounded=True,
+        lists_every_finding=False, question="",
+    )
+    assert graph_module._code_built_lines_will_cite(
+        findings[1:], findings, tool_outcome="ok", model_grounded=True,
+        lists_every_finding=False, question="",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +508,9 @@ async def test_both_write_calls_share_the_steps_one_declared_budget(
         first=45.0 repair=45.0
     """
     synth_pair(first={1, 2}, repaired={2, 3, 4, 5})
+    # Speed fix (2026-09-14): the repair fires only when the tail cannot
+    # cite what the model left out, so make it unable to.
+    _tail_cannot_ground(monkeypatch)
 
     original = graph_module._dispatch_tier_call
     budgets: list[float] = []
@@ -391,6 +589,10 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
         graph_module.cost_control, "check_per_query_cap", _capped
     )
 
+    # Speed fix (2026-09-14): with a grounded first answer the repair now
+    # fires only when the tail cannot cite what was left out, so that is the
+    # case in which the cap can be hit, and the omission then remains.
+    _tail_cannot_ground(monkeypatch)
     result = await graph_module.write_node(_write_state())
     events = result["events"]
     narrative = _narrative(events)
@@ -401,8 +603,26 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
     assert "disease name number 1" in narrative, (
         "the grounded answer already in hand must survive the cap"
     )
+    assert "was not repaired" in narrative, narrative
     done = next(event for event in events if event.type == "done")
-    assert done.payload["trust_outcome"] == "ask"
+    assert done.payload["trust_outcome"] == "ask", done.payload
+
+    # The other clause: the repair also fires when the model grounded
+    # NOTHING (the structured fallback would otherwise floor at `ask`), and
+    # when the cap stops it there, the fallback lists every record, so the
+    # note says the records are listed below rather than claiming an
+    # omission the answer no longer has.
+    synth_preflights["count"] = 0
+    monkeypatch.setattr(
+        graph_module, "build_structured_fallback_narrative", _ORIGINAL_FALLBACK_BUILDER
+    )
+    synth_pair(first=set(), repaired={1, 2, 3, 4, 5})
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+    narrative = _narrative(events)
+    assert "cost limit" in narrative and "listed below as found" in narrative, narrative
+    assert "was not repaired" not in narrative, narrative
+    assert len([e for e in events if e.type == "citation"]) == len(_ROWS)
 
 
 # ---------------------------------------------------------------------------
@@ -412,10 +632,17 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
 
 @pytest.mark.asyncio
 async def test_the_incomplete_note_counts_findings_handed_to_synthesis(
-    synth_pair,
+    synth_pair, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pins: the note's denominator is the findings PREPARED for the answer,
     and says so.
+
+    UI fix set 10, item 10.1 (2026-09-13): the findings tail now reports
+    every prepared finding the model left out, so on the ordinary path this
+    note no longer fires. The arm keeps its property by making the tail
+    unable to ground (its code-built narrative is replaced with a sentence
+    carrying no marker, the same outcome as a value the pass strips), which
+    is exactly the case the note still exists for.
 
     It read "of the {total} findings retrieved for it", where `total` is
     `len(synth_findings)`, capped at `_MAX_CITATIONS_PER_ANSWER` after
@@ -430,23 +657,55 @@ async def test_the_incomplete_note_counts_findings_handed_to_synthesis(
     so a denominator that meant "retrieved" and a denominator that means
     "prepared" cannot both be right.
 
-    MUTATION PROOF. Restoring the word "retrieved" turns this arm red:
+    REWORDED, NOT WEAKENED, by build phase 6.2's T-6.2-03. The note no
+    longer prints a denominator at all, because "3 of the 5 findings
+    prepared for it" is this system's internal unit and a researcher hit it
+    on the live site and could act on none of it (`docs/build/UI_feedback.md`). This
+    arm therefore stopped asserting on the SENTENCE and started asserting
+    on the PROPERTY that sentence existed to carry, which is unchanged: the
+    number disclosed is derived from the prepared-findings set, so it is 3,
+    and it is never the 500 retrieved rows.
 
-        AssertionError: the note must say what it counts; got 'Note: this
-        answer reports 2 of the 5 findings retrieved for it, ...'
+    That property is what F-4.5-A-16 was about. Dropping this arm when the
+    wording changed would have retired the only check standing between this
+    disclosure and a 25x understatement, which is why it is rewritten here
+    rather than deleted.
+
+    MUTATION PROOF, re-derived against the new wording. Deriving the count
+    from `total_available` instead of `len(omitted)` turns this arm red:
+
+        AssertionError: the disclosed count is the prepared-findings
+        shortfall, not the retrieved row count; got 'Note: 498 further
+        disease records were found for this question ...'
     """
     synth_pair(first={1, 2}, repaired={1, 2})
 
+    monkeypatch.setattr(
+        graph_module, "build_structured_fallback_narrative", lambda findings: "nothing here."
+    )
     result = await graph_module.write_node(_write_state(total_available=500))
     narrative = _narrative(result["events"])
 
-    assert "of the 5 findings prepared for it" in narrative, (
-        f"the note must say what it counts; got {narrative!r}"
+    assert "3 further disease records" in narrative, (
+        f"the disclosed count is the prepared-findings shortfall (5 prepared "
+        f"minus 2 reported), not the retrieved row count; got {narrative!r}"
+    )
+    assert "498" not in narrative, (
+        f"the disclosure is counting retrieved rows, not prepared findings; "
+        f"got {narrative!r}"
+    )
+    assert "500" not in narrative, (
+        f"the disclosure is counting retrieved rows, not prepared findings; "
+        f"got {narrative!r}"
+    )
+
+    # The reader-facing half of T-6.2-03, asserted here rather than only in
+    # the premise gate, because this arm can drive the omission
+    # deterministically and the gate's live arm cannot (F-6.2-04).
+    assert "findings prepared for it" not in narrative, (
+        f"internal findings accounting reached the reader; got {narrative!r}"
     )
     assert "findings retrieved for it" not in narrative
-    assert "reports 2 of the 5" in narrative, (
-        "the denominator is the prepared-findings count, not the row count"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -550,3 +809,336 @@ def test_the_completeness_correction_stays_in_the_dynamic_suffix() -> None:
     )
     assert _CORRECTION_MARKER in user_content
     assert system_content == SYNTH_SYSTEM_INSTRUCTION
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.1 (2026-09-13): the structured fallback and the
+# refusal message that names the right cause.
+# ---------------------------------------------------------------------------
+
+
+def _events_of(events: list, event_type: str) -> list:
+    return [event for event in events if event.type == event_type]
+
+
+@pytest.mark.asyncio
+async def test_the_structured_fallback_answers_when_the_model_grounds_nothing(
+    synth_pair,
+) -> None:
+    """Twelve live runs measured this: correct prose, every value shortened,
+    zero grounded claims, refusal. The fallback builds the answer from the
+    findings themselves and runs it through the SAME grounding pass.
+
+    `synth_pair(set(), set())` makes both Synth calls, the first and the
+    completeness repair, return the refusal text with no marker, so the real
+    `run_grounding_pass` grounds nothing twice. Nothing here hands in the
+    fallback: the shipped code decides to fire it, builds it, and grounds it.
+
+    MUTATION PROOF: changing `if fallback_grounding.claims:` to `if False:`
+    in `write_node` turns this arm red: the run refuses, `error` is emitted,
+    and no citation exists.
+    """
+    mock = synth_pair(first=set(), repaired=set())
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    assert mock.await_count >= 1, "the model was never asked, so nothing was grounded"
+    assert not _events_of(events, "error"), [e.payload for e in _events_of(events, "error")]
+    done = _events_of(events, "done")[0].payload
+    assert done["trust_outcome"] == "ask", done
+
+    citations = _events_of(events, "citation")
+    assert len(citations) == len(_ROWS), "every finding must be cited, one sentence each"
+    cited_urls = {c.payload["source_url"] for c in citations}
+    assert cited_urls == {row["source_url"] for row in _ROWS}
+
+    narrative = _narrative(events)
+    for row in _ROWS:
+        assert row["fields"]["name"] in narrative, narrative
+    assert graph_module._build_structured_fallback_note() in narrative, narrative
+    assert "I could not find information on this." not in narrative
+
+
+@pytest.mark.asyncio
+async def test_the_structured_fallback_stays_out_of_a_grounded_answer(
+    synth_pair,
+) -> None:
+    """The negative control: when the model's own prose grounds, nothing
+    about this answer changes. No note, no `ask` floor."""
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+
+    done = _events_of(events, "done")[0].payload
+    assert done["trust_outcome"] == "answer", done
+    assert graph_module._build_structured_fallback_note() not in _narrative(events)
+    assert len(_events_of(events, "citation")) == len(_ROWS)
+
+
+@pytest.mark.asyncio
+async def test_the_fallback_note_and_the_incomplete_note_do_not_contradict(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Product-owner defect (2026-09-20): a live answer showed
+
+        Note: the written summary of these records could not be verified
+        against them, so this answer lists the records found instead
+        Note: 5 further pubmed records were found for this question and
+        are not covered in the summary above
+
+    together. The first says no summary exists; the second points a reader
+    at "the summary above". Both can fire in the same answer: the
+    structured fallback fires when the model's prose grounds nothing, and
+    the incomplete-answer note fires whenever the fallback's own code-built
+    narrative still cannot ground every finding (a value the grounding pass
+    strips, here forced by dropping one finding's line from the fallback
+    builder the same way `test_a_repair_that_drops_a_reported_finding_is_
+    discarded` forces it).
+
+    MUTATION PROOF: reverting `_build_incomplete_answer_note` to always
+    return "...not covered in the summary above" (dropping the
+    `summary_exists` branch) turns this arm red on the last assertion,
+    reproducing exactly the reported defect.
+    """
+    # Both Synth calls ground nothing, so the structured fallback fires.
+    synth_pair(first=set(), repaired=set())
+    original_builder = graph_module.build_structured_fallback_narrative
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda findings: original_builder([f for f in findings if f.ref_index != 3]),
+    )
+
+    result = await graph_module.write_node(_write_state())
+    events = result["events"]
+    narrative = _narrative(events)
+
+    assert graph_module._build_structured_fallback_note() in narrative, narrative
+    assert "not covered in the summary above" not in narrative, (
+        "the incomplete note must not point at a summary the fallback note "
+        f"just said does not exist: {narrative!r}"
+    )
+    assert "not included in the list above" in narrative, narrative
+
+
+def _assert_note_shape(note: str) -> None:
+    """Both `_build_structured_fallback_note` and `_build_incomplete_answer_
+    note` must open with "Note:", read as one sentence, and carry no
+    interior period or semicolon: the coverage grader splits sentences on
+    those and counts an unmarked continuation as an uncited claim.
+    """
+    assert note.startswith("Note:"), note
+    assert "." not in note, note
+    assert ";" not in note, note
+
+
+def test_the_incomplete_note_keeps_its_shape_with_and_without_a_summary() -> None:
+    """Offline pin on the builder directly: `summary_exists` only changes
+    the closing clause's wording, never the sentence shape both branches
+    are required to hold.
+
+    MUTATION PROOF: appending a second clause after a period in either
+    branch of `_build_incomplete_answer_note` turns this arm red.
+    """
+    omitted = [
+        SynthFinding(
+            ref_index=i,
+            citation_id=f"omitted-{i}",
+            layer="layer_1_graph",
+            tool="cypher_query",
+            field="curie",
+            field_value=f"MedGen:C{i}",
+            source_url=f"https://www.ncbi.nlm.nih.gov/medgen/C{i}",
+            entity_type="Disease",
+            curie=f"MedGen:C{i}",
+        )
+        for i in (1, 2)
+    ]
+    for summary_exists in (True, False):
+        for count in (1, 2):
+            note = graph_module._build_incomplete_answer_note(
+                omitted[:count], reported=2, summary_exists=summary_exists
+            )
+            _assert_note_shape(note)
+
+
+def test_the_incomplete_note_names_the_list_when_no_summary_exists() -> None:
+    """`summary_exists=False` is the caller's signal that
+    `_build_structured_fallback_note` already fired for this answer, so the
+    closing clause must name the LIST that note described rather than a
+    summary that, by that same note's own words, does not exist.
+
+    MUTATION PROOF: hardcoding the closing clause to "not covered in the
+    summary above" regardless of `summary_exists` turns this arm red.
+    """
+    omitted = [
+        SynthFinding(
+            ref_index=1,
+            citation_id="omitted-1",
+            layer="layer_1_graph",
+            tool="cypher_query",
+            field="curie",
+            field_value="MedGen:C1",
+            source_url="https://www.ncbi.nlm.nih.gov/medgen/C1",
+            entity_type="Disease",
+            curie="MedGen:C1",
+        )
+    ]
+    note = graph_module._build_incomplete_answer_note(
+        omitted, reported=4, summary_exists=False
+    )
+    assert "summary" not in note, note
+    assert "not included in the list above" in note, note
+
+    # The default (`summary_exists=True`, the ordinary caller not touched by
+    # this fix) is unchanged, pinned so this test would fail loudly if the
+    # default itself moved rather than only the new branch.
+    default_note = graph_module._build_incomplete_answer_note(omitted, reported=4)
+    assert "not covered in the summary above" in default_note, default_note
+
+
+@pytest.mark.asyncio
+async def test_a_grounding_refusal_is_never_reported_as_a_truncation(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The shipped branch order tested the truncation flag first, so a cut
+    result whose twenty citeable findings reached Synth and then failed
+    grounding told the operator the cut "left no row with a citeable
+    source_url". Every clause of that was false.
+
+    To reach the refusal with findings present, the fallback has to fail too,
+    and no real row value defeats it, so the fallback builder is stubbed to
+    return the refusal text. That is the seam; the branch under test is the
+    error-message selection after it.
+
+    MUTATION PROOF: restoring `elif truncated_ok_finding and trust_outcome ==
+    "refuse"` ahead of the findings check turns this arm red on the message
+    assertion.
+    """
+    synth_pair(first=set(), repaired=set())
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda findings: "I could not find information on this.",
+    )
+    state = _write_state(total_available=500)
+    state["findings"][0].structured_fields["truncated"] = True
+
+    result = await graph_module.write_node(state)
+    events = result["events"]
+    errors = _events_of(events, "error")
+    assert len(errors) == 1, [e.payload for e in errors]
+    error = errors[0].payload
+    assert error["message"] == graph_module._UNGROUNDED_SYNTHESIS_REFUSAL_MESSAGE, error
+    assert error["message"] != graph_module._TRUNCATED_REFUSAL_MESSAGE
+    assert error["source"] == "write" and error["scope"] == "step", error
+    assert _events_of(events, "done")[0].payload["trust_outcome"] == "refuse"
+
+
+@pytest.mark.asyncio
+async def test_a_truncation_that_left_nothing_citeable_is_still_reported_as_one(
+    synth_pair,
+) -> None:
+    """The truncation message keeps its one honest case: the cut happened
+    and no surviving row carried a `source_url`, so no finding reached
+    Synth. Here every row lacks a URL and the flag is set."""
+    synth_pair(first=set(), repaired=set())
+    state = _write_state(total_available=500)
+    fields = state["findings"][0].structured_fields
+    fields["truncated"] = True
+    fields["rows"] = [
+        {key: value for key, value in row.items() if key != "source_url"} for row in _ROWS
+    ]
+
+    result = await graph_module.write_node(state)
+    errors = _events_of(result["events"], "error")
+    assert len(errors) == 1, [e.payload for e in errors]
+    assert errors[0].payload["message"] == graph_module._TRUNCATED_REFUSAL_MESSAGE
+    assert errors[0].payload["source"] == "cypher_query"
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.2 (2026-09-13): the go-deeper follow-up.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_next_step_query_is_set_with_the_offer_and_names_the_entity(
+    synth_pair,
+) -> None:
+    """`next_step` is a yes/no question for the reader. `next_step_query` is
+    the real question the surface sends, built from the prepared findings'
+    shared record type plus the entity label `plan_node` recorded.
+
+    UI fix set 10, item 10.1 (2026-09-13): the offer keys on records beyond
+    the prepared list, so this state marks the tool result truncated with a
+    known total of 8 against 5 prepared and cited, and the offer names the
+    3 that remain.
+
+    MUTATION PROOF: dropping `next_step_query=` from the `DonePayload` in
+    `write_node` turns this arm red (the field reads None).
+    """
+    from system_03_search_agent.core.next_step import is_go_deeper_query
+
+    synth_pair(first={1, 2}, repaired={1, 2})
+    state = _write_state(total_available=8, truncated=True)
+    state["next_step_entity_label"] = "BRCA1"
+    result = await graph_module.write_node(state)
+    done = _events_of(result["events"], "done")[0].payload
+
+    assert done["next_step"] is not None, done
+    assert "3 further disease records" in done["next_step"], done
+    assert done["next_step_query"] == "Which other disease records are linked to BRCA1?", done
+    assert is_go_deeper_query(done["next_step_query"])
+    assert not is_go_deeper_query(done["next_step"]), (
+        "the offer text itself must never be what gets searched"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_complete_answer_offers_neither_field(synth_pair) -> None:
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    state = _write_state()
+    state["next_step_entity_label"] = "BRCA1"
+    done = _events_of((await graph_module.write_node(state))["events"], "done")[0].payload
+    assert done["next_step"] is None and done["next_step_query"] is None, done
+
+
+@pytest.mark.asyncio
+async def test_a_go_deeper_turn_puts_the_records_not_yet_shown_first(
+    synth_pair,
+) -> None:
+    """`deferred_record_ids` (set by `plan_node` only on a go-deeper turn)
+    sends the already-shown records to the back of the queue before the
+    citation cap bites, so the reader sees new records rather than the same
+    twenty again.
+
+    Rows 1 to 3 are marked as already shown. With the model reporting every
+    finding it is handed, the first citation must be row 4.
+
+    MUTATION PROOF: dropping `defer_source_urls=` from the
+    `build_synth_findings` call in `write_node` turns this arm red: the first
+    citation is row 1 again.
+    """
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    state = _write_state()
+    state["deferred_record_ids"] = [row["source_url"] for row in _ROWS[:3]]
+    result = await graph_module.write_node(state)
+
+    citations = sorted(
+        _events_of(result["events"], "citation"), key=lambda e: e.payload["display_index"]
+    )
+    urls = [c.payload["source_url"] for c in citations]
+    assert urls[:2] == [_ROWS[3]["source_url"], _ROWS[4]["source_url"]], urls
+    assert set(urls[2:]) == {row["source_url"] for row in _ROWS[:3]}, urls
+
+
+@pytest.mark.asyncio
+async def test_an_ordinary_turn_keeps_the_tools_own_order(synth_pair) -> None:
+    """No deferral on a turn that is not the go-deeper follow-up."""
+    synth_pair(first={1, 2, 3, 4, 5}, repaired=set())
+    result = await graph_module.write_node(_write_state())
+    citations = sorted(
+        _events_of(result["events"], "citation"), key=lambda e: e.payload["display_index"]
+    )
+    assert [c.payload["source_url"] for c in citations] == [r["source_url"] for r in _ROWS]

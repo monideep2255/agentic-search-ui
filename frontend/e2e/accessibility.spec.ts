@@ -25,8 +25,8 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 /** Dismiss the disclaimer, which gates every screen behind it. */
-async function enterApp(page: import("@playwright/test").Page) {
-  await page.goto("/");
+async function enterApp(page: import("@playwright/test").Page, path = "/") {
+  await page.goto(path);
   const dialog = page.getByTestId("disclaimer-modal");
   if (await dialog.isVisible().catch(() => false)) {
     await dialog.getByRole("checkbox").check();
@@ -44,7 +44,7 @@ async function signIn(page: import("@playwright/test").Page) {
     .click();
   await page.getByLabel("Email").fill(`a11y-${randomUUID()}@example.com`);
   await page.getByLabel("Password").fill("Str0ngPassw0rd!");
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
   await expect(
     page.getByRole("main").getByRole("textbox", { name: /question/i }),
   ).toBeVisible();
@@ -54,6 +54,14 @@ const analyse = (page: import("@playwright/test").Page) =>
   new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
 
 test.describe("accessibility", () => {
+  // Set 2, R10 (2026-09-12) added a 0.2s fade between screens. axe measures
+  // contrast at one instant, so a scan taken mid-fade read partly transparent
+  // text as low contrast: 3 of 3 repeated runs failed with the fade, 3 of 3
+  // passed with it switched off. The app turns the fade off for reduced
+  // motion, so scanning with that preference checks the settled colours a
+  // reader actually sees. Not covered: contrast during the 0.2s fade itself.
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
+
   test("the disclaimer gate is clean before anything else renders", async ({ page }) => {
     await page.goto("/");
     const results = await analyse(page);
@@ -153,14 +161,42 @@ test.describe("accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 
-  for (const screen of ["Integrations", "Docs", "About"] as const) {
+  // "Docs" left this list with the tab itself, fix set 5 (R18, 2026-09-13).
+  // Its content is now the "API documentation" section of the Integrations
+  // screen, so the Integrations run below covers it.
+  for (const screen of ["Integrations", "About"] as const) {
     test(`the ${screen.toLowerCase()} screen is clean`, async ({ page }) => {
       await enterApp(page);
-      await page.getByRole("navigation", { name: /main/i }).getByRole("button", { name: screen }).click();
+      // `exact: true` (2026-09-13): the persona chip's info button carries
+      // an accessible name of "About {persona name}", e.g. "About de Duve".
+      // Playwright's default string match for `name` is substring and
+      // case-insensitive, so an unqualified `{ name: "About" }` resolved to
+      // BOTH the nav item and the info button once the persona chip grew
+      // one, a strict-mode violation. The nav item's own accessible name is
+      // exactly "About", never a prefix of something longer, so pinning the
+      // match to exact is the correct fix here rather than renaming the info
+      // button's aria-label.
+      await page
+        .getByRole("navigation", { name: /main/i })
+        .getByRole("button", { name: screen, exact: true })
+        .click();
       const results = await analyse(page);
       expect(results.violations).toEqual([]);
     });
   }
+
+  test("the architecture screen is clean", async ({ page }) => {
+    // The page has no nav item (product-owner decision, 2026-09-13), so it is
+    // reached by its address. A screen the suite never visits has not been
+    // checked, however green the run looks, which is the lesson the sign-in
+    // arm below records.
+    await enterApp(page, "/architecture");
+    await expect(
+      page.getByRole("main").getByRole("heading", { name: /^Architecture$/ }),
+    ).toBeVisible();
+    const results = await analyse(page);
+    expect(results.violations).toEqual([]);
+  });
 
   test("the sign-in screen is clean", async ({ page }) => {
     // ADDED after this suite missed a real defect. AuthGate rendered its own

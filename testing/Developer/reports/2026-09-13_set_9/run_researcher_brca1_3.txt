@@ -1,0 +1,21 @@
+The diseases associated with BRCA1 are Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. 
+
+## Gene and Literature Identity
+The gene symbol is BRCA1 [5]. 
+The disease name Familial cancer of breast is associated with BRCA1 [1]. The disease name Familial breast-ovarian cancer susceptibility 1 is associated with BRCA1 [2]. The disease name Pancreatic cancer susceptibility 4 is associated with BRCA1 [3]. The disease name Fanconi anemia complementation group S is associated with BRCA1 [4]. 
+
+## Summary of Associations
+The literature entity name BRCA1 [6]. 
+
+## Gene records found
+- BRCA1
+
+## Literature entity records found
+- BRCA1
+
+## Clinical trial records found
+- Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer- BRCA1 Haploinsufficiency and Gene Expression- Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma- Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation- Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations
+
+## Disease records found
+- Familial cancer of breast- Familial breast-ovarian cancer susceptibility 1- Pancreatic cancer susceptibility 4- Fanconi anemia complementation group S
+{"depth": "researcher", "question": "Which diseases are associated with BRCA1?", "outcome": "ask", "words": 162, "paragraphs": 4, "headings": 6, "list_items": 11, "table_rows": 0, "unmarked_claims": 0, "trust_line": "Based on 4 sources, not yet confirmed", "sources": ["672", "MedGen:C0346153", "MedGen:C2676676", "MedGen:C3280442", "MedGen:C4554406", "unknown"], "notes": [], "errors": []}

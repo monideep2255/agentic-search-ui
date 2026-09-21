@@ -100,6 +100,13 @@ vi.mock("./lib/api", async () => {
     // Defaulted to empty directly here, matching `fetchPersona` above,
     // since no clause in this file needs a non-empty server history.
     fetchHistory: vi.fn(async () => ({ items: [], count: 0 })),
+    // Fix set 4, R46 (decision U8): App now restores a session on load and
+    // revokes the refresh token on log out. An api mock that omits an export
+    // App actually calls throws inside a useEffect or a handler and takes
+    // the render down, the same reasoning `fetchPersona` above already
+    // carries.
+    refreshSession: vi.fn(),
+    logoutSession: vi.fn(async () => ({ status: "ok" })),
   };
 });
 

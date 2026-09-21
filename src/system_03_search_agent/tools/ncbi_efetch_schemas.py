@@ -162,9 +162,19 @@ NCBI_EFETCH_RECORD_URL_PATTERN: Final = (
 # enum makes that response unreachable, which is the stronger reading, since a
 # request never sent cannot be misclassified and cannot spend a rate-limit
 # token. Carried to Step 6.2 rather than resolved by loosening the schema.
+#
+# `pmc` is the fifteenth value, additive, UI fix set 11 (search breadth,
+# 2026-09-14). Section 6.2 printed fourteen; a new enum value is the
+# additive change `system-design-patterns` pattern 10 permits inside v1,
+# and it lets the `link` action's ELink from PubMed to PMC (live-verified
+# the same day: `dbfrom=pubmed&db=pmc` returns linkname `pubmed_pmc`) be
+# followed by a PMC search or cited as a record. `pmc` is deliberately NOT
+# added to `FetchDb` or `SummaryDb`: neither path has been live-verified
+# for PMC, and an unverified enum value is a silent outage rather than a
+# capability.
 SearchDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
-    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh",
+    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh", "pmc",
 ]
 FetchDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
@@ -178,8 +188,31 @@ SummaryDb = Literal[
 class NcbiEfetchSearchInput(BaseModel):
     """ESearch: `db=<db>&term=<term>`. Section 6.2, the `search` branch.
 
-    `db` is a bounded string, not the spec's printed 14-value enum. See
-    `db` is the spec's closed 14-value enum. See the SearchDb comment above.
+    `db` is the spec's closed 14-value enum plus the additive `pmc` value.
+    See the SearchDb comment above.
+
+    `sort` (additive, UI fix loop, 2026-09-20) defaults to `"relevance"` so
+    every caller gets it without a code change, closing the defect where an
+    unsorted symbol-only PubMed search surfaced "Fermentation of mulberry
+    leaf extract by Aspergillus chevalieri" for a GCK query: ESearch with no
+    `sort` parameter orders by most-recently-added, not by relevance.
+    Live-verified against real ESearch while adding this field:
+    `GCK[Title/Abstract]` unsorted returned 1 of 5 relevant titles and
+    reproduced the exact mulberry-leaf paper; `sort=relevance` returned 5 of
+    5, led by "Glucokinase (GCK) in diabetes: from molecular mechanisms to
+    disease pathogenesis". `BRCA1[Title/Abstract] AND "breast cancer"
+    [Title/Abstract]` went from 3 of 5 on-topic unsorted to 5 of 5 sorted.
+    `Literal["relevance"]` rather than a bounded free string: ESearch does
+    not error on an unknown `sort` value, it answers HTTP 200 with
+    `warninglist.outputmessages: ["Unknown sort schema '<value>' ignored"]`
+    and silently falls back to the default order, live-verified for both
+    `sort=not_a_real_sort` and `sort=recently_added`. A bounded string field
+    would admit exactly that silent no-op, the same failure shape trap 1's
+    `field_tags` validation exists to close, so only the one value actually
+    proven to change ESearch's behavior is enum-legal here. Widen this enum
+    only after live-verifying a new value the same way: confirm ESearch
+    echoes it back with no `outputmessages` warning and the result order
+    actually changes.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -193,6 +226,7 @@ class NcbiEfetchSearchInput(BaseModel):
     ] = Field(default_factory=list)
     retmax: Annotated[int, Field(ge=1, le=500)] = 100
     use_history: bool = False
+    sort: Literal["relevance"] = "relevance"
 
 
 class NcbiEfetchFetchInput(BaseModel):

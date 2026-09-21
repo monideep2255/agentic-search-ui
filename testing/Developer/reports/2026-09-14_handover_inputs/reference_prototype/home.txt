@@ -1,0 +1,40 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+
+Ask a question above to get started. Your question will be translated into a Cypher query and executed against the NCBI Knowledge Graph.
+
+NCBI Knowledge Graph - Proof of Concept
+⚠️ Important Medical Disclaimer
+
+This tool provides information for research purposes only and does not provide medical advice, diagnosis, or treatment recommendations.
+
+The NCBI Knowledge Graph is designed to help researchers explore biomedical knowledge graphs and databases. It is NOT intended for personal medical decision-making.
+
+Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Never disregard professional medical advice or delay in seeking it because of information you obtained from this tool.
+
+Testing Environment
+This is a test instance of the NCBI Knowledge Graph, focused on genes and mutations related to glucose metabolism. Data includes gene-disease associations, clinical variants (ClinVar), gene ontology annotations, and Reactome pathway data. Not intended for production use.
+I understand this is a test environment and research tool that does not provide medical advice
+I Understand - Continue to Research Tool

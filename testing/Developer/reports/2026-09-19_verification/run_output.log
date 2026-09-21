@@ -1,0 +1,24 @@
+Which diseases are associated with BRCA1? [researcher]  run 1: ask          12.5s sources=11
+Which diseases are associated with BRCA1? [researcher]  run 2: ask          13.9s sources=11
+Which diseases are associated with BRCA1? [researcher]  run 3: ask          26.8s sources=11
+What diseases are caused by variants in the HNF1A gene? run 1: ask          16.2s sources=13
+What diseases are caused by variants in the HNF1A gene? run 2: ask           9.5s sources=13
+What diseases are caused by variants in the HNF1A gene? run 3: answer       14.1s sources=18
+Variants in GCK causing MODY [researcher]               run 1: ask          11.0s sources=20
+Variants in GCK causing MODY [researcher]               run 2: ask          11.3s sources=20
+Variants in GCK causing MODY [researcher]               run 3: ask          28.6s sources=20
+What genes are associated with MODY? [researcher]       run 1: ask          15.2s sources=13
+What genes are associated with MODY? [researcher]       run 2: ask           6.5s sources=13
+What genes are associated with MODY? [researcher]       run 3: ask           6.3s sources=13
+Which diseases are associated with BRCA1? [plain_langua run 1: ask           5.4s sources=11
+Which diseases are associated with BRCA1? [plain_langua run 2: ask          22.3s sources=11
+Which diseases are associated with BRCA1? [plain_langua run 3: ask           6.4s sources=11
+
+=== summary ===
+Which diseases are associated with BRCA1? [researcher]       answered 3 of 3 | distinct source sets 1 | sizes [11] | median 13.9s | max 26.8s
+What diseases are caused by variants in the HNF1A gene? [res answered 3 of 3 | distinct source sets 2 | sizes [13, 18] | median 14.1s | max 16.2s
+Variants in GCK causing MODY [researcher]                    answered 3 of 3 | distinct source sets 1 | sizes [20] | median 11.3s | max 28.6s
+What genes are associated with MODY? [researcher]            answered 3 of 3 | distinct source sets 1 | sizes [13] | median 6.5s | max 15.2s
+Which diseases are associated with BRCA1? [plain_language]   answered 3 of 3 | distinct source sets 1 | sizes [11] | median 6.4s | max 22.3s
+
+Full detail written to run_detail.json

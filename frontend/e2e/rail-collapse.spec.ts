@@ -53,7 +53,7 @@ async function signInAndAsk(page: Page): Promise<void> {
     .click();
   await page.getByLabel("Email").fill(`rail-${randomUUID()}@example.com`);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
 
   const main = page.getByRole("main");
   await main
@@ -189,7 +189,20 @@ test.describe("the stored-searches rail collapses", () => {
     const rail = (await page.getByTestId("history-rail").boundingBox())!;
     // The prototype's rail reaches the footer. The shipped rail stopped where
     // the answer card ended, leaving a torn edge down the left of the page.
-    expect(rail.height).toBeCloseTo(shell.height, -1);
+    //
+    // Since 2026-09-13 the rail is pinned to the viewport (product-owner
+    // feedback: the landing search bar sat low when signed in, because the
+    // rail's list stretched the row beside it). So "reaches the footer" is
+    // now measured as the space between the app bar and the footer, at
+    // every scroll position, rather than as the shell's whole height: on a
+    // page taller than the viewport the shell is taller than any one
+    // screenful, and a rail that filled it would be the defect again.
+    const viewport = page.viewportSize()!;
+    const header = (await page.getByRole("banner").boundingBox())!;
+    const footer = (await page.getByRole("contentinfo").boundingBox())!;
+    expect(rail.height).toBeCloseTo(viewport.height - header.height - footer.height, -1);
+    expect(rail.y).toBeCloseTo(header.height, -1);
+    await expect(page.getByTestId("history-rail")).toHaveCSS("position", "sticky");
 
     await toggle(page).click();
     const strip = (await page.getByTestId("collapsed-rail").boundingBox())!;
@@ -254,7 +267,7 @@ test.describe("the stored-searches rail collapses", () => {
       .click();
     await page.getByLabel("Email").fill(`rail-${randomUUID()}@example.com`);
     await page.getByLabel("Password").fill(TEST_PASSWORD);
-    await page.getByRole("button", { name: "Sign up" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
     await expect(page.getByTestId("history-rail")).toBeVisible({ timeout: 30_000 });
 
     /*
@@ -270,16 +283,158 @@ test.describe("the stored-searches rail collapses", () => {
     expect(hero.y + hero.height).toBeCloseTo(main.y + main.height, -1);
   });
 
-  test("hides rail and strip below the design's breakpoint", async ({ page }) => {
+  test("below the design's breakpoint, the rail moves into a sliding panel rather than vanishing", async ({
+    page,
+  }) => {
     await signInAndAsk(page);
+
+    // Collapse WHILE STILL WIDE, before resizing, and the reason is load-
+    // bearing rather than tidiness. `signInAndAsk` leaves the rail open, and
+    // a MUI `Drawer` marks everything OUTSIDE it `aria-hidden` while open,
+    // which is the standard, correct behaviour for any modal panel. Resizing
+    // narrow with the rail already open would carry that open state straight
+    // into the Drawer branch, so the very toggle this test means to check
+    // would be behind an open modal and invisible to a role query by design,
+    // not by defect. Collapsing first means the resize lands on a CLOSED
+    // rail, which is the state an actual phone visitor re-entering this
+    // screen narrow would be in too.
+    await toggle(page).click();
+    await expect(page.getByTestId("history-rail")).toBeHidden();
     await page.setViewportSize(NARROW_VIEWPORT);
 
-    // The prototype's own media query. jsdom cannot evaluate this, which is
-    // why the vitest gate declares it as NOT exercised rather than claiming it.
-    await expect(page.getByTestId("history-rail")).toBeHidden();
-
+    // REWRITTEN fix set 4 (R46, decision U9, 2026-09-13). This test used to
+    // assert the rail, the strip, and the toggle were ALL hidden below
+    // `md`, which was correct for what shipped on 2026-09-05 and is wrong
+    // now: `.claude/rules/goal-contracts.md`'s second case, the check was
+    // right for its own moment and the product moved. History is reachable
+    // on a phone as of this fix, so a signed-in user below `md` gets the
+    // toggle, visible, and the rail, inside a sliding panel rather than
+    // hidden. The strip alone keeps the old guarantee: `CollapsedRail`
+    // still has no phone design, the app bar toggle is the way back in
+    // below `md`, so the strip stays hidden there rather than occupying
+    // space beside content a phone has none to spare.
     await expect(toggle(page)).toBeVisible();
-    await toggle(page).click();
+    await expect(page.getByRole("dialog", { name: /your searches/i })).toBeHidden();
     await expect(page.getByTestId("collapsed-rail")).toBeHidden();
+
+    await toggle(page).click();
+    const panel = page.getByRole("dialog", { name: /your searches/i });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByTestId("history-rail")).toBeVisible();
+
+    // Closing through the PANEL'S OWN control, not the app bar toggle: the
+    // toggle sits outside the open modal and is `aria-hidden` while it is
+    // open, by the same MUI Modal behaviour this test's comment above
+    // explains, so a role query cannot reach it until the panel closes.
+    await panel.getByRole("button", { name: /^hide your searches$/i }).click();
+    await expect(panel).toBeHidden();
+  });
+});
+
+/*
+ * Fix set 4, R46 (decision U9, 2026-09-13): history reachable on a phone.
+ *
+ * A real phone viewport, not `NARROW_VIEWPORT` (800px, below `md` but wider
+ * than any phone this app actually ships to). 390px is the width the rest
+ * of this fix loop already measures against (see `AppShell.tsx`'s own
+ * comments), so this describe block uses the same number rather than a
+ * second, independently chosen one.
+ */
+test.describe("the stored-searches rail on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("opens as a sliding panel from the app bar and closes with no horizontal scroll", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const disclaimer = page.getByTestId("disclaimer-modal");
+    if (await disclaimer.isVisible().catch(() => false)) {
+      await disclaimer.getByRole("checkbox").check();
+      await disclaimer.getByRole("button", { name: /continue/i }).click();
+    }
+    await page
+      .getByRole("navigation", { name: /main/i })
+      .getByRole("button", { name: /log in/i })
+      .click();
+    await page.getByLabel("Email").fill(`rail-${randomUUID()}@example.com`);
+    await page.getByLabel("Password").fill(TEST_PASSWORD);
+    await page.getByRole("button", { name: "Log in" }).click();
+
+    const panel = page.getByRole("dialog", { name: /your searches/i });
+
+    /*
+     * Today, `railOpen` starts `true` EVEN ON A PHONE, so the panel opens
+     * the instant sign-in lands and, being an open modal, marks everything
+     * outside it, `<main>` included, `aria-hidden`: a real, temporary
+     * sequencing gap, not a defect in the panel itself, that the
+     * orchestrator's later change to `App.tsx` closes by starting the
+     * drawer CLOSED on a phone instead. Nothing INSIDE an open modal is
+     * inert, only what sits outside it, so the panel's own close control is
+     * still reachable, and closing it here is exactly what a real phone
+     * visitor would have to do today before asking anything. Once the
+     * orchestrator's change lands this `if` finds nothing open and does
+     * nothing, which is what lets this one test pass under both states
+     * rather than pinning whichever happened to be true the day it was
+     * written.
+     */
+    // A one-shot `isVisible()` here raced the panel's own mount: login
+    // resolves, then the rail mounts asynchronously a beat later, so a
+    // single immediate check can read "not open yet" moments before it
+    // opens and aria-hides `<main>` out from under an in-flight `.fill()`.
+    // `waitFor` POLLS, which is what lets this branch see the panel if it
+    // is going to open at all, rather than only if it already has.
+    const opened = await panel
+      .waitFor({ state: "visible", timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (opened) {
+      await panel.getByRole("button", { name: /^hide your searches$/i }).click();
+      await expect(panel).toBeHidden();
+    }
+
+    const main = page.getByRole("main");
+    await main
+      .getByRole("textbox", { name: /question/i })
+      .fill("Which diseases are associated with BRCA1?");
+    await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
+    await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
+
+    // NOW exercise the real open path from the app bar toggle, which is
+    // reachable here because the panel is closed and nothing is inert.
+    const alreadyOpen = (await toggle(page).getAttribute("aria-expanded")) === "true";
+    if (!alreadyOpen) {
+      await toggle(page).click();
+    }
+
+    await expect(panel).toBeVisible();
+    await expect(panel.getByTestId("history-rail")).toBeVisible();
+
+    /*
+     * NOT an absolute `scrollWidth <= innerWidth` assertion, and the reason
+     * is measured rather than assumed. At 390px this app already carries a
+     * pre-existing, already-documented horizontal bleed with no rail open
+     * at all: `AppShell.tsx`'s own comment on the brand button records the
+     * `<nav>` box staying a fixed, unshrinking width below `md`, and a
+     * direct check here (drawer open vs. drawer closed, same page, same
+     * login) measured IDENTICAL `scrollWidth` in both states, 604px against
+     * a 390px viewport either way. So an absolute assertion would fail for
+     * a reason this fix does not cause and is not scoped to repair, which
+     * is worse than not checking at all: it would point the next reader at
+     * the drawer for a defect that lives in the app bar. The property this
+     * fix actually owns, and the one worth pinning, is that OPENING THE
+     * DRAWER ADDS NO WIDTH the page did not already carry.
+     */
+    const scrollWidthOpen = await page.evaluate(() => document.documentElement.scrollWidth);
+
+    // Close button named "Hide your searches", the rail's own `.rtop`
+    // control, not a second one: the task's instruction is exactly one
+    // control carries that accessible name in each mode. Closed from
+    // INSIDE the panel, not the app bar toggle, which sits outside the open
+    // modal and is unreachable by role query while it is open.
+    await panel.getByRole("button", { name: /^hide your searches$/i }).click();
+    await expect(panel).toBeHidden();
+
+    const scrollWidthClosed = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidthOpen).toBe(scrollWidthClosed);
   });
 });

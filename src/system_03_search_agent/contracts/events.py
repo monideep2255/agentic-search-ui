@@ -1,6 +1,10 @@
-"""The event envelope and the eleven-member event payload taxonomy.
+"""The event envelope and the twelve-member event payload taxonomy.
 
-Sections 2.2 (envelope) and 2.3 (payload shapes), Technical_specification.md.
+Sections 2.2 (envelope) and 2.3 (payload shapes), Technical_specification.md,
+plus one additive member, `step` (UI fix set 11.16, 2026-09-14), a live
+progress marker that carries no answer content. Additive under
+system-design-patterns pattern 10: no existing member's fields or meaning
+changed, and every consumer that does not know it skips it by name.
 
 `Event.payload` is typed as a plain JSON object (`dict[str, Any]`), matching
 the envelope schema in Section 2.2 literally (`"payload": {"type": "object"}`).
@@ -22,7 +26,7 @@ enumerates a number.
 """
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -134,6 +138,18 @@ class ToolCall(BaseModel):
     tool: ToolName
     call_id: str = Field(..., max_length=64)
     layer: Layer
+    # UI fix set 8, item 8.2 (2026-09-13). The helper scientist this call is
+    # handed to on the progress screen: one name per data layer, drawn per
+    # run from the curated list excluding the session's lead, so the screen
+    # can read "Franklin is searching the knowledge graph". ADDITIVE and
+    # OPTIONAL, default None, so every consumer and every fixture built
+    # before this field validates unchanged (Section 2.6). PRESENTATION
+    # ONLY: `harness.coordinator_worker` copies only `call_id`, `tool` and
+    # `layer` onto a `Finding`, so the name can never reach a synthesis
+    # prompt or a grounding pass, and a test pins that.
+    persona: str | None = Field(None, max_length=64)
+    persona_about: str | None = Field(None, max_length=160)
+    persona_wikipedia: str | None = Field(None, max_length=256)
 
 
 class PlanPayload(BaseModel):
@@ -186,6 +202,14 @@ class ToolStartPayload(BaseModel):
     # word for the chip's detail text since build phase 4.8, against an event
     # nothing had ever emitted.
     status: Literal["running", "ok", "empty", "error"]
+    # UI fix set 8, item 8.2 (2026-09-13). The same helper the planned
+    # `ToolCall` carries, repeated on the start frame (and therefore on the
+    # result frame, which inherits it) so a surface that builds its tool
+    # chips from these two frames alone can name the scientist without
+    # joining back to the plan event. Optional, default None, additive.
+    persona: str | None = Field(None, max_length=64)
+    persona_about: str | None = Field(None, max_length=160)
+    persona_wikipedia: str | None = Field(None, max_length=256)
 
 
 class ToolResultPayload(ToolStartPayload):
@@ -211,6 +235,34 @@ class TokenPayload(BaseModel):
 
     text: str = Field(..., max_length=1000)
     marker_ids: list[str] = Field(default_factory=list, max_length=20)
+    # UI fix set 9, items 9.4 to 9.10 (2026-09-13). Additive and optional per
+    # Section 2.6, so every token built before this validates unchanged and
+    # a surface that joins `text` still reads the answer as prose.
+    #
+    # `kind` says what the chunk IS, so a surface never has to guess from
+    # its wording: a grounded `claim`, a system `note` (never a claim), a
+    # `heading` or `paragraph_break` (structure, never counted as a claim),
+    # or a code-built `list_item`, `table_header` or `table_row`, each of
+    # which carries a grounded sentence and its marker in `text` and the
+    # display values in `cells`. None means an older producer: classify as
+    # before. `emphasis` names substrings of `text` to bold, chosen in code
+    # from the run's own resolved entities and record values.
+    kind: (
+        Literal[
+            "claim",
+            "note",
+            "heading",
+            "paragraph_break",
+            "list_item",
+            "table_header",
+            "table_row",
+        ]
+        | None
+    ) = None
+    cells: list[Annotated[str, Field(max_length=500)]] | None = Field(None, max_length=2)
+    emphasis: list[Annotated[str, Field(max_length=200)]] | None = Field(
+        None, max_length=12
+    )
 
 
 class CitationPayload(BaseModel):
@@ -338,9 +390,110 @@ class DonePayload(BaseModel):
     elapsed_ms: int = Field(..., ge=0)
     trust_outcome: TrustOutcome
 
+    # UI fix set 9, item 9.9 (2026-09-13). The one plain trust line for the
+    # answer ("Based on 1 source, not yet confirmed"), built in code by
+    # `synthesis.trust.answer_trust_line` from the verdicts `trust_outcome`
+    # already summarises. Additive and optional; None on a refusal. Carried
+    # HERE rather than on `TrustSignalPayload` because the MCP surface
+    # projects that model whole under a pinned key allowlist, and a trust
+    # line is a statement about the finished answer, which is this event.
+    trust_line: Annotated[str | None, Field(default=None, max_length=200)] = None
+
+    next_step: Annotated[str | None, Field(default=None, max_length=200)] = None
+    """An offer of somewhere to go next, or None when there is nowhere honest.
+
+    Build phase 6.2, T-6.2-08, on the product-owner decision of 2026-09-01.
+    ADDITIVE and OPTIONAL, which is what keeps it inside v1: `system-design-
+    patterns` pattern 10 allows a new optional field within a major version
+    and requires a v2 for anything that removes a field or changes one's
+    meaning. Every existing consumer ignores it and behaves exactly as
+    before.
+
+    THREE THINGS THIS FIELD IS NOT, each of which it would be easy to turn
+    it into:
+
+    It is not model-generated text. `docs/build/UI_feedback.md` names that as the easy
+    and dangerous path: an offer to go deeper is a claim that there IS
+    something deeper, so a model-invented follow-up about data the graph does
+    not hold is a confident wrong answer wearing a question mark, and it
+    would defeat cite-or-refuse through a surface nothing checks. The value
+    is built in code from the findings retrieval actually returned and the
+    answer did not report.
+
+    It is not `ThinkPayload.clarifying_question`, and conflating the two is
+    the mistake this docstring exists to prevent. That field belongs to
+    Section 22.1's ambiguous-query path, fires BEFORE any tool runs, and
+    REPLACES the answer in order to disambiguate an entity. This one fires
+    after a complete, cited answer and ADDS to it.
+
+    It is not mandatory. `None` is the correct value for a refusal, an empty
+    retrieval, or a single-fact lookup, because none of those has an honest
+    next step and a system that always asks something will pad.
+    """
+
+    next_step_query: Annotated[str | None, Field(default=None, max_length=2000)] = None
+    """The question a surface sends when the reader accepts `next_step`.
+
+    UI fix set 7, item 7.2, 2026-09-13. `next_step` is a yes/no question
+    addressed to the reader ("Would you like me to go through the 10
+    further sequence variant records found for this question?"), and the
+    web UI used to send that sentence verbatim as the next query when the
+    reader clicked "Yes, go deeper". Think then classified it as a
+    meta-question with no entities, Synth answered a yes/no question, and
+    the grounding pass stripped every word of it, so accepting the offer
+    refused. The offer text is for the reader; this field is for the
+    system.
+
+    ADDITIVE and OPTIONAL like `next_step`, so it stays inside v1 under
+    `system-design-patterns` pattern 10. It is `None` exactly when
+    `next_step` is `None`, and it is built in code by
+    `core.next_step.build_next_step_query` from the omitted findings'
+    record type and the turn's resolved entity, never by a model, for the
+    same reason `next_step` is not: a generated follow-up is a claim about
+    what the graph holds. Its shape is the one `core.next_step.
+    is_go_deeper_query` recognises on the next turn, which is how that
+    turn knows to put the not-yet-reported records first.
+
+    `max_length=2000` matches `Query.text`, because this string becomes the
+    next `Query.text` unchanged.
+    """
+
+
+class StepPayload(BaseModel):
+    """A live progress marker: a loop step has begun.
+
+    UI fix set 11.16 (2026-09-14). Measured on develop, every answer event
+    arrived in one burst after a silent gap of 1.9 to 22.6 seconds, because
+    `write_node` buffered them until it returned. The tokens themselves
+    cannot be sent before the grounding pass has run (production-standards'
+    cite-or-refuse gate), so the first thing a reader can honestly be told
+    is that the Write step has started. This event says exactly that and
+    nothing else: no text, no citation, no verdict, so no surface can read
+    it as a claim.
+
+    ADDITIVE under system-design-patterns pattern 10. It is the twelfth
+    envelope type; nothing about the other eleven changed. Every surface
+    that predates it skips it: the web client by name
+    (`useAgentRun.ts`'s `FORWARD_COMPATIBLE_EVENT_NAMES`, which anticipated
+    exactly this frame and this payload shape), the CLI renderer through
+    its `_handle_<type>` lookup with a `None` default, and the MCP and
+    GraphQL folds by matching no branch.
+
+    Only `step="write"` with `status="started"` is produced today, from
+    `core/graph.py`'s `write_node` at the start of its normal answer path
+    and never on a refusal decided before the synth call. Both Literals
+    are deliberately narrow: widening either later is additive, while a
+    value declared here that nothing emits would be a claim.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    step: Literal["write"] = Field(..., max_length=16)
+    status: Literal["started"] = Field(..., max_length=16)
+
 
 # Binds each envelope `type` value to the Section 2.3 payload model that
-# `payload` must conform to. Keyed by the same eleven-member taxonomy as
+# `payload` must conform to. Keyed by the same twelve-member taxonomy as
 # `Event.type` below; keep the two in sync if the taxonomy ever grows.
 PAYLOAD_MODEL_BY_TYPE: dict[str, type[BaseModel]] = {
     "guard": GuardPayload,
@@ -354,6 +507,7 @@ PAYLOAD_MODEL_BY_TYPE: dict[str, type[BaseModel]] = {
     "cost": CostPayload,
     "error": ErrorPayload,
     "done": DonePayload,
+    "step": StepPayload,
 }
 
 
@@ -372,6 +526,7 @@ class Event(BaseModel):
         "cost",
         "error",
         "done",
+        "step",
     ]
     version: Literal["v1"]
     trace_id: str = Field(..., max_length=64)

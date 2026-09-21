@@ -168,12 +168,21 @@ if [ "$internal_total" -gt 0 ]; then
   # internal changes" under a bare version heading, which reads as a sentence
   # missing its first half. Found by exercising the all-internal path in a
   # throwaway repository before a release needed it, rather than by shipping it.
+  # Plural agreement. A release with exactly one internal commit read as
+  # "Plus 1 internal changes", which is a small thing that appears on a public
+  # release page and reads as carelessness about everything else on it.
+  if [ "$internal_total" -eq 1 ]; then
+    noun="change"
+  else
+    noun="changes"
+  fi
+
   listed="$(grep -c '^- ' "$section" || true)"
   if [ "$listed" -gt 0 ]; then
-    echo "Plus ${internal_total} internal changes not listed individually (${internal_parts}):" \
+    echo "Plus ${internal_total} internal ${noun} not listed individually (${internal_parts}):" \
          "chores, documentation, tests, refactors and build configuration." >> "$section"
   else
-    echo "No user-facing changes. ${internal_total} internal changes" \
+    echo "No user-facing changes. ${internal_total} internal ${noun}" \
          "(${internal_parts}): chores, documentation, tests, refactors and" \
          "build configuration." >> "$section"
   fi

@@ -50,6 +50,19 @@ MAX_CLAIM_SUMMARY_LENGTH = 280
 MAX_OPEN_THREAD_LENGTH = 200
 MAX_CITATION_ID_LENGTH = 64
 
+#: UI fix set 7 (2026-09-13). The records a session's answers have already
+#: shown, so that a "go deeper" turn can put the ones not yet shown first.
+#: Identity is the citation's `source_url`, which every emitted citation
+#: carries and which `synthesis.findings.SynthFinding` also carries, so the
+#: two sides of the comparison read the same field. Bounded on both axes
+#: like every other list on these models: 100 items is five full answers at
+#: the 20-citation cap, FIFO past that, and 512 characters matches
+#: `synthesis.findings.MAX_SOURCE_URL_CHARS`. This list is orchestration
+#: data only. `core.session_memory._render` never prints it, so it costs
+#: nothing against Section 14.3's token budget and can never reach a prompt.
+MAX_REPORTED_RECORD_IDS = 100
+MAX_REPORTED_RECORD_ID_LENGTH = 512
+
 
 def _bound_each_item(values: list[str], *, field: str, limit: int) -> list[str]:
     """Reject any item in a list of strings longer than `limit`.
@@ -149,6 +162,15 @@ class SessionMemorySummary(BaseModel):
     )
     open_threads: list[str] = Field(default_factory=list, max_length=MAX_OPEN_THREADS)
 
+    reported_record_ids: list[str] = Field(
+        default_factory=list, max_length=MAX_REPORTED_RECORD_IDS
+    )
+    """The `source_url` of every citation an answer in this session has
+    shown, oldest first. Additive within v1 (UI fix set 7, 2026-09-13): a
+    stored row written before this field existed loads with an empty list.
+    Read by `core.graph.plan_node` on a go-deeper turn to order the next
+    answer's findings, never by Write and never as a citation."""
+
     token_budget: int = Field(
         default=SESSION_MEMORY_TOKEN_BUDGET, ge=1, le=SESSION_MEMORY_TOKEN_BUDGET
     )
@@ -176,6 +198,14 @@ class SessionMemorySummary(BaseModel):
         """
         return _bound_each_item(
             value, field="open_thread", limit=MAX_OPEN_THREAD_LENGTH
+        )
+
+    @field_validator("reported_record_ids")
+    @classmethod
+    def _bound_each_reported_record_id(cls, value: list[str]) -> list[str]:
+        """The same per-item bound the other two lists of strings carry."""
+        return _bound_each_item(
+            value, field="reported_record_id", limit=MAX_REPORTED_RECORD_ID_LENGTH
         )
 
 
@@ -214,9 +244,12 @@ class Query(BaseModel):
     # Additive within v1, per `system-design-patterns` pattern 10: a new
     # optional field, no existing field's meaning changed.
     owner_id: str | None = Field(None, max_length=128)
-    audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] = (
-        "researcher"
-    )
+    # UI fix set 9, item 9.1 (2026-09-13): `plain_language` added, additive
+    # per pattern 10. The web UI offers only Plain language and Researcher;
+    # the other two stay accepted for GraphQL, the CLI and MCP.
+    audience_depth: Literal[
+        "clinical_brief", "researcher", "deep_technical", "plain_language"
+    ] = "researcher"
 
     @field_validator("text")
     @classmethod

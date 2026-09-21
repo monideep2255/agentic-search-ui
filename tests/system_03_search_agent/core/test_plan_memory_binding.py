@@ -405,7 +405,17 @@ async def test_a_refusals_fallback_link_never_names_a_remembered_entity(
                     "node_or_edge_type": "Gene",
                     "curie": _REMEMBERED,
                     "fields": {"name": "BRCA1 DNA repair associated"},
-                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+                    # No `source_url`, deliberately, since 2026-09-13 (UI fix
+                    # set 7). This arm used to reach the refusal through a
+                    # citeable row plus a Synth reply of "ok": every claim
+                    # stripped, so cite-or-refuse refused. The structured
+                    # fallback in `write_node` now answers that shape with a
+                    # code-built, grounded list instead of refusing, so the
+                    # refusal this arm inspects is reached the other way a
+                    # memory-bound run still reaches it: the graph returned a
+                    # row with nothing citeable. The property under test, that
+                    # a refusal's fallback link never names a remembered
+                    # entity, is unchanged and still asserted below.
                     "graph_snapshot_version": "v1",
                 }
             ],
@@ -569,3 +579,109 @@ def test_no_memory_leaves_the_prompt_byte_identical() -> None:
         )
         == ""
     ), "an empty summary renders nothing, so it must inject nothing"
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.2 (2026-09-13): what `plan_node` records for Write.
+# ---------------------------------------------------------------------------
+
+
+async def _plan_with_memory(
+    monkeypatch: pytest.MonkeyPatch, text: str, memory: SessionMemorySummary | None
+) -> dict[str, object]:
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from system_03_search_agent.contracts.query import Query, RequestContext
+    from system_03_search_agent.harness import harness as harness_module
+
+    monkeypatch.setenv("GUARD_MODEL", "test-provider/guard-model")
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "acompletion",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))],
+                usage=SimpleNamespace(prompt_tokens=10, completion_tokens=5),
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    query = Query(text=text, session_id="session-plan-deeper", trace_id="trace-plan-deeper")
+    state = {
+        "query": query,
+        "context": RequestContext(surface="rest_sse", session_memory=memory),
+        "harness": harness_module.Harness(trace_id=query.trace_id),
+        "seq": 0,
+        "start_monotonic": time.monotonic(),
+        "query_class": "lookup",
+        "resolved_entities": [],
+    }
+    return await graph_module.plan_node(state)  # type: ignore[arg-type]
+
+
+_SHOWN = [f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{i}/" for i in range(1, 4)]
+
+
+@pytest.mark.asyncio
+async def test_a_go_deeper_turn_carries_the_records_already_shown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`plan_node` is the one reader of memory on this path; Write gets a
+    plain list. MUTATION PROOF: removing the `is_go_deeper_query` branch turns
+    this arm red (the list is empty)."""
+    memory = _summary(reported_record_ids=_SHOWN)
+    result = await _plan_with_memory(
+        monkeypatch, "Which other sequence variant records are linked to BRCA1?", memory
+    )
+    assert result["deferred_record_ids"] == _SHOWN, result
+
+
+@pytest.mark.asyncio
+async def test_an_ordinary_follow_up_defers_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A fresh question in a session that has shown records is never
+    reordered: only the go-deeper sentence triggers the deferral."""
+    memory = _summary(reported_record_ids=_SHOWN)
+    result = await _plan_with_memory(monkeypatch, "What variants cause it?", memory)
+    assert result["deferred_record_ids"] == [], result
+
+
+@pytest.mark.asyncio
+async def test_a_memory_bound_turn_labels_the_next_step_with_the_remembered_mention(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The follow-up query should say "BRCA1", the word the reader used, not
+    the CURIE memory stored for it. MUTATION PROOF: replacing
+    `_remembered_mention_for(memory, first_curie)` with `None` turns this
+    arm red (the label falls back to the CURIE)."""
+    memory = _summary(
+        resolved_entities=[
+            ResolvedEntity(mention="BRCA1", curie=_REMEMBERED, entity_type="Gene")
+        ]
+    )
+    result = await _plan_with_memory(monkeypatch, "What variants cause it?", memory)
+    assert result["next_step_entity_label"] == "BRCA1", result
+    planned = result["tool_calls"][0]
+    assert planned.memory_bound is True
+
+
+@pytest.mark.asyncio
+async def test_with_no_remembered_mention_the_label_is_the_curie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    memory = _summary(
+        resolved_entities=[
+            ResolvedEntity(mention=" ", curie="NCBIGene:672", entity_type="Gene")
+        ]
+    )
+    result = await _plan_with_memory(monkeypatch, "What variants cause it?", memory)
+    assert result["next_step_entity_label"] == "NCBIGene:672", result

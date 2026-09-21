@@ -8,6 +8,8 @@ decision is actually made and where a lenient parse would do the damage.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from system_03_search_agent.guardrail.classifier import (
@@ -216,3 +218,24 @@ def test_the_models_reason_cannot_overflow_the_event_contract() -> None:
     )
     assert verdict.reason is not None
     assert len(verdict.reason) <= 256
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.1 (2026-09-13): the guard prompt carries no memory.
+# ---------------------------------------------------------------------------
+
+
+def test_the_user_message_is_the_tagged_query_and_nothing_else() -> None:
+    """Two cuts of set 7 appended a session-memory block here and both were
+    measured destabilising the Guard model (prose answers, then a
+    Think-shaped object). The follow-up rule now lives in `core.graph`, after
+    the verdict, and this arm pins that the prompt stayed as it was.
+
+    MUTATION PROOF: appending anything after the closing tag turns the
+    `fullmatch` red.
+    """
+    user = build_messages("What variants cause it?")[1]["content"]
+    assert re.fullmatch(
+        r"<query-[0-9a-f]{16}>\nWhat variants cause it\?\n</query-[0-9a-f]{16}>", user
+    ), user
+    assert "SESSION MEMORY" not in GUARD_SYSTEM_INSTRUCTION

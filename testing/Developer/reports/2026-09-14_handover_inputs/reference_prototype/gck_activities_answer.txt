@@ -1,0 +1,90 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+Q: Show me all molecular activities enabled by the GCK gene
+
+Query Pipeline
+
+7/7 steps · 7.5s
+
+The GCK gene is associated with 13 molecular activities in the query results. These activities describe binding, catalytic, kinase-related, and transferase functions, consistent with Gene Ontology-style molecular activity annotations.
+
+Molecular activities enabled by GCK
+Gene	Molecular activity
+GCK	ATP binding
+GCK	D-glucose binding
+GCK	catalytic activity
+GCK	fructokinase activity
+GCK	glucokinase activity
+GCK	glucose sensor activity
+GCK	hexokinase activity
+GCK	kinase activity
+GCK	mannokinase activity
+GCK	nucleotide binding
+GCK	phosphotransferase activity, alcohol group as acceptor
+GCK	protein binding
+GCK	transferase activity
+Summary by functional category
+
+Binding activities
+
+ATP binding
+D-glucose binding
+nucleotide binding
+protein binding
+
+Catalytic / kinase-related activities
+
+catalytic activity
+glucokinase activity
+hexokinase activity
+kinase activity
+fructokinase activity
+mannokinase activity
+
+Transferase-related activities
+
+phosphotransferase activity, alcohol group as acceptor
+transferase activity
+
+Sensor-related activity
+
+glucose sensor activity
+
+Source context: These molecular activity terms are consistent with Gene Ontology molecular function annotations linked to GCK.
+
+Sources:
+NCBI Gene
+Gene Ontology
+13 results
+7509ms
+Helpful?
+
+Generated Cypher
+
+Graph Visualization
+
+Raw Results (13)
+
+NCBI Knowledge Graph - Proof of Concept

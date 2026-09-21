@@ -41,23 +41,20 @@ import App from "./App";
 const mainArea = () => within(screen.getByRole("main"));
 
 describe("the landing screen matches the prototype's arrangement", () => {
-  it("labels the submit action Search, as the prototype does", () => {
+  it("submits with an icon-only button whose accessible name still says Search", () => {
     render(<App />);
 
     /*
-     * The prototype's `button.go` reads "Search" plus a right arrow. The
-     * shipped button read "Ask", a deliberate earlier deviation (F-4.8-L-03)
-     * taken because the nav already has a destination called Search and two
-     * visible controls sharing an accessible name is a real problem for
-     * anyone navigating by control list.
-     *
-     * That reasoning was sound and the remedy overshot: the visible label is
-     * the design's, and the collision is resolved on the ACCESSIBLE name
-     * instead, which WCAG 2.5.3 allows as long as the accessible name contains
-     * the visible text.
+     * The prototype's `button.go` reads "Search" plus a right arrow, and the
+     * shipped button matched it until 2026-09-13, when the product owner
+     * replaced the text with an up-arrow icon (testing/UI_fix_plan.md item
+     * 2.12). The visible text is gone; the accessible name is what every
+     * browser spec and screen reader uses, so that is what this pins.
      */
     const submit = mainArea().getByRole("button", { name: /^search\b/i });
-    expect(submit).toHaveTextContent(/^Search$/);
+    expect(submit).toHaveTextContent(/^$/);
+    expect(submit.querySelector("svg")).not.toBeNull();
+    expect(submit.getAttribute("type")).toBe("submit");
   });
 
   it("keeps the submit action's accessible name distinct from the nav's Search", () => {

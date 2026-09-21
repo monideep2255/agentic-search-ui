@@ -67,7 +67,9 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     return mock
 
 
-async def _run_guardrail(text: str) -> tuple[list[Any], dict[str, Any]]:
+async def _run_guardrail(
+    text: str, session_memory: Any | None = None
+) -> tuple[list[Any], dict[str, Any]]:
     """Invoke the real `guardrail_node` and return its events and state delta."""
     import time
 
@@ -82,7 +84,7 @@ async def _run_guardrail(text: str) -> tuple[list[Any], dict[str, Any]]:
     harness = harness_module.Harness(trace_id)
     state = {
         "query": query,
-        "context": RequestContext(surface="rest_sse"),
+        "context": RequestContext(surface="rest_sse", session_memory=session_memory),
         "harness": harness,
         "seq": 0,
         "start_monotonic": time.monotonic(),
@@ -248,3 +250,191 @@ async def test_a_prefilter_refusal_makes_no_model_call_at_all(
         "an off-topic query refused by the pre-filter still paid for a "
         "model call"
     )
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 7, item 7.1 (2026-09-13): the classifier sees the session's
+# remembered entities, as data.
+# ---------------------------------------------------------------------------
+
+
+def _user_content_of_the_guard_call(mock: AsyncMock) -> str:
+    messages = mock.call_args.kwargs["messages"]
+    return "\n".join(m["content"] for m in messages if m["role"] == "user")
+
+
+def _memory_with_brca1() -> Any:
+    from datetime import UTC, datetime
+
+    from system_03_search_agent.contracts.query import (
+        CompressedFinding,
+        ResolvedEntity,
+        SessionMemorySummary,
+    )
+
+    return SessionMemorySummary(
+        session_id="guardrail-node-test",
+        last_updated=datetime.now(UTC),
+        resolved_entities=[
+            ResolvedEntity(mention="BRCA1", curie="NCBIGene:672", entity_type="Gene")
+        ],
+        compressed_findings=[
+            CompressedFinding(
+                claim_summary="BRCA1 is associated with familial cancer of breast",
+                trace_id="trace-earlier",
+                citation_ids=["cq-earlier-1"],
+            )
+        ],
+        open_threads=["Which diseases are associated with BRCA1?"],
+    )
+
+
+def _off_topic_reply() -> Any:
+    import json
+
+    classification = json.loads(COMPLIANT_GUARD_CLASSIFICATION)
+    classification["is_off_topic"] = True
+    return fake_response(json.dumps(classification))
+
+
+@pytest.mark.asyncio
+async def test_an_off_topic_verdict_on_a_pronoun_follow_up_is_set_aside_when_memory_holds_an_entity(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """UI fix set 7, item 7.1. Measured 2026-09-13: "What variants cause it?"
+    after a BRCA1 turn was refused as off topic about one run in three, on
+    five bare words. Its subject is the remembered gene, so the off-topic
+    verdict is set aside in code and the question goes on to Think.
+
+    The guard PROMPT stays memory-free (asserted on the mock): two cuts that
+    put memory in the prompt were measured destabilising the model.
+
+    MUTATION PROOF: removing the `_is_memory_bound_follow_up` branch turns
+    the `passed` arm red; putting memory back into `build_messages` turns
+    the prompt arm red.
+    """
+    _mock_litellm.return_value = _off_topic_reply()
+    events, _ = await _run_guardrail("What variants cause it?", session_memory=_memory_with_brca1())
+
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+    user = _user_content_of_the_guard_call(_mock_litellm)
+    assert "BRCA1" not in user and "SESSION MEMORY" not in user and "Established" not in user, user
+
+
+@pytest.mark.asyncio
+async def test_the_guard_call_carries_no_stable_prefix_ahead_of_its_instruction(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Measured 2026-09-13: with the loop's stable prefix prepended as a
+    system message ahead of the classifier's instruction, the Guard model
+    sometimes acted as the agent and answered the question instead of
+    classifying it, one probe in ten locally and more on develop. The
+    classifier's instruction must be the FIRST and only system message.
+
+    MUTATION PROOF: passing `_STABLE_PREFIX` (or omitting `cache_prefix`)
+    at the guardrail's dispatch turns the first arm red.
+    """
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+    await _run_guardrail("Which diseases are associated with BRCA1?")
+    messages = _mock_litellm.call_args.kwargs["messages"]
+    assert messages[0] == {"role": "system", "content": GUARD_SYSTEM_INSTRUCTION}, messages[0]
+    assert len(messages) == 2 and messages[1]["role"] == "user", messages
+    # Populate-check: the prefix this arm guards against is real and non-empty.
+    assert graph_module._STABLE_PREFIX and "cypher_query" in graph_module._STABLE_PREFIX
+
+
+@pytest.mark.asyncio
+async def test_an_off_topic_verdict_stands_with_no_memory(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The counterfactual for the arm above: the same reply, no memory."""
+    _mock_litellm.return_value = _off_topic_reply()
+    events, _ = await _run_guardrail("What variants cause it?")
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+
+
+@pytest.mark.asyncio
+async def test_an_off_topic_verdict_stands_when_the_question_refers_to_nothing(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Memory does not make every question on topic: no referring word, no
+    set-aside. "Tell me a joke" stays refused in a BRCA1 session."""
+    _mock_litellm.return_value = _off_topic_reply()
+    events, _ = await _run_guardrail("Tell me a joke about weather", session_memory=_memory_with_brca1())
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+
+
+@pytest.mark.asyncio
+async def test_an_injection_verdict_is_never_set_aside_by_memory(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The rule is about a pronoun's subject, never about safety."""
+    import json
+
+    classification = json.loads(COMPLIANT_GUARD_CLASSIFICATION)
+    classification["is_injection"] = True
+    _mock_litellm.return_value = fake_response(json.dumps(classification))
+    # Biomedical wording with a referring word, so the deterministic
+    # prefilter admits it and the MODEL's verdict is the one under test.
+    events, _ = await _run_guardrail(
+        "Which variants of it are pathogenic?", session_memory=_memory_with_brca1()
+    )
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "injection"
+
+
+@pytest.mark.asyncio
+async def test_a_first_turn_sends_no_session_memory_block(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """No memory, no block: the guard prompt never carries session memory,
+    on a first turn or any other (see the set-aside arms above)."""
+    await _run_guardrail("Which diseases are associated with BRCA1?")
+    user = _user_content_of_the_guard_call(_mock_litellm)
+    assert "SESSION MEMORY" not in user, user
+    assert "session_memory" not in user, user
+
+
+@pytest.mark.asyncio
+async def test_one_unusable_reply_gets_one_more_attempt_and_a_parsed_one_is_final(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Measured 2026-09-13: one Guard reply in thirteen was not the JSON
+    object the instruction demands, and that run refused a question the
+    other twelve admitted. `think_node` already gives the same failure a
+    second attempt; the guardrail now does too.
+
+    A REPLY THAT PARSED IS FINAL. The second attempt is only for a reply
+    that said nothing usable, never a second opinion on a verdict, which is
+    why the next arm pins that two unusable replies still fail closed.
+
+    MUTATION PROOF: changing `for attempt in (1, 2)` to `(1,)` turns this arm
+    red on the `passed` assertion.
+    """
+    _mock_litellm.side_effect = [
+        fake_response("Sure! Here is my assessment: this looks on topic."),
+        fake_response(COMPLIANT_GUARD_CLASSIFICATION),
+    ]
+    events, result = await _run_guardrail("Which diseases are associated with BRCA1?")
+    assert _mock_litellm.await_count == 2
+    assert _payload(events, "guard")["passed"] is True
+    assert result.get("step_error") is None
+
+
+@pytest.mark.asyncio
+async def test_two_unusable_replies_still_fail_closed(
+    _mock_litellm: AsyncMock,
+) -> None:
+    _mock_litellm.side_effect = [
+        fake_response("I think this is fine, honestly"),
+        fake_response("still not json"),
+    ]
+    events, result = await _run_guardrail("Which diseases are associated with BRCA1?")
+    assert _mock_litellm.await_count == 2
+    assert result.get("step_error") is not None
+    assert result["step_error"]["source"] == "guardrail"
+    guard = _payload(events, "guard")
+    assert guard is None or guard["passed"] is False

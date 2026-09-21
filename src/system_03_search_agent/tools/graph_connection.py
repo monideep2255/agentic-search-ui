@@ -79,6 +79,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import uuid
 from collections.abc import Callable
 from typing import Any
@@ -87,6 +88,10 @@ import psycopg2
 import psycopg2.errors
 import psycopg2.extensions
 
+from system_03_search_agent.observability.audit import (
+    UNEXPECTED_ERROR_CODE,
+    record_tool_call,
+)
 from system_03_search_agent.tools.graph_schema_constants import (
     CYPHER_QUERY_TIMEOUT_SECONDS,
     DEFAULT_ROW_LIMIT,
@@ -209,6 +214,56 @@ class GraphTimeoutError(GraphError):
 
 class GraphAuthError(GraphError):
     """The kg_reader role failed authentication against the graph host."""
+
+
+#: Maps this module's typed GraphError family onto `audit.AUDIT_ERROR_CODES`.
+#:
+#: Keyed by class NAME rather than by class object, deliberately, for one
+#: reason: `graph_http_transport.GraphRateLimitedError` is a real member of
+#: this family, raised on the HTTPS transport that `execute_cypher`
+#: dispatches to, and it is defined in the module that imports THIS one.
+#: The circular-import resolution documented above `execute_cypher_over_http`
+#: means that class is not reliably importable at this module's import
+#: time, so binding the class object here would either reintroduce the
+#: cycle or silently drop the rate-limited mapping depending on import
+#: order. A name is available without importing anything, and a rename
+#: turns `test_audit.py`'s enumerating arm red rather than passing
+#: silently, which is the property that matters.
+#:
+#: The base `GraphError` maps to `unexpected` on purpose: it is the
+#: catch-all, so a NEW direct subclass added without a row here inherits
+#: `unexpected` by MRO. That is fail-closed, and the enumerating test
+#: asserts every direct subclass maps to something else, so the omission
+#: is a build failure rather than a silent downgrade.
+_AUDIT_ERROR_CODE_BY_CLASS_NAME: dict[str, str] = {
+    "GraphTimeoutError": "timeout",
+    "GraphAuthError": "auth",
+    "GraphRateLimitedError": "rate_limited",
+    "GraphConnectionError": "connection",
+    "GraphError": UNEXPECTED_ERROR_CODE,
+}
+
+
+def audit_error_code(exc: BaseException) -> str:
+    """Classify one exception into the audit log's closed vocabulary.
+
+    Walks the MRO so a subclass of an already-mapped error inherits its
+    parent's code rather than falling to the catch-all: a future
+    `GraphStatementTimeoutError(GraphTimeoutError)` should read as
+    `timeout`, not as `unexpected`.
+
+    Anything that is not a `GraphError` at all, a `ValueError` from
+    argument validation, or a driver exception that escaped classification,
+    returns `unexpected`. That is the fail-closed branch and it is why
+    `execute_cypher`'s `except Exception` no longer needs to be bounded by
+    provenance: whatever arrives, the audit line records a code chosen
+    here, never anything derived from the exception's message.
+    """
+    for klass in type(exc).__mro__:
+        code = _AUDIT_ERROR_CODE_BY_CLASS_NAME.get(klass.__name__)
+        if code is not None:
+            return code
+    return UNEXPECTED_ERROR_CODE
 
 
 def _redact(message: str, secret: str | None) -> str:
@@ -417,7 +472,7 @@ except ImportError as _import_exc:
     execute_cypher_over_http = None  # type: ignore[assignment]
 
 
-def execute_cypher(
+def _execute_cypher_impl(
     cypher: str,
     params: dict[str, Any] | None = None,
     row_limit: int = DEFAULT_ROW_LIMIT,
@@ -617,4 +672,77 @@ def execute_cypher(
     if truncated:
         rows = rows[:effective_row_limit]
 
+    return rows, total_available
+
+
+def execute_cypher(
+    cypher: str,
+    params: dict[str, Any] | None = None,
+    row_limit: int = DEFAULT_ROW_LIMIT,
+    timeout_s: float = CYPHER_QUERY_TIMEOUT_SECONDS,
+    connection_factory: ConnectionFactory | None = None,
+    as_clause: str = _DEFAULT_AS_CLAUSE,
+) -> tuple[list[dict[str, Any]], int]:
+    """Every Layer 1 read, on either transport. See `_execute_cypher_impl` for
+    the actual connection and query mechanics; this wrapper's only job is
+    T-5.0-05's audit chokepoint (audit.py's module docstring, tracker/
+    phase_5.0.md finding one): every caller reaches the graph through here,
+    including `cypher_query` AND the two `export/traversal.py` calls that
+    bypass the tool layer entirely (`act_node` sees neither), so hooking
+    this one function covers both by construction with no change needed in
+    either caller.
+
+    Timed around the actual call to `_execute_cypher_impl` only, per this
+    ticket's instruction, never around argument validation the impl does
+    internally. `endpoint` is the graph database name (`GRAPH_NAME`,
+    "ncbi_kg"), the same value on both the psycopg2 and HTTPS transports,
+    since a caller here has no visibility into which one actually ran; the
+    graph credential itself never has HTTP semantics for this audit line,
+    so `http_status` is always None (`record_tool_call`'s own docstring
+    names a graph query as exactly this case). `record_tool_call` never
+    raises by its own best-effort contract, so this is not wrapped in a
+    second try/except; the audit line is written and the real outcome,
+    success or a typed `GraphError`, is preserved unchanged either way.
+    """
+    audit_started = time.monotonic()
+    try:
+        rows, total_available = _execute_cypher_impl(
+            cypher,
+            params,
+            row_limit=row_limit,
+            timeout_s=timeout_s,
+            connection_factory=connection_factory,
+            as_clause=as_clause,
+        )
+    except Exception as exc:
+        record_tool_call(
+            tool="cypher_query",
+            layer=1,
+            endpoint=GRAPH_NAME,
+            latency_ms=(time.monotonic() - audit_started) * 1000,
+            authorization="kg_reader",
+            params={"cypher": cypher, "params": params or {}},
+            http_status=None,
+            # Classified, never stringified. `str(exc)` used to go here,
+            # and a psycopg2 or httpx exception's message can carry a DSN
+            # or a URL with a credential in it; the argument that today's
+            # messages happen to be pre-redacted is a provenance argument,
+            # and `except Exception` is bounded by nothing. A code from a
+            # closed vocabulary plus a class name are both chosen by this
+            # repository's own code, so neither can carry data at all.
+            error_code=audit_error_code(exc),
+            error_class=type(exc).__name__,
+        )
+        raise
+    record_tool_call(
+        tool="cypher_query",
+        layer=1,
+        endpoint=GRAPH_NAME,
+        latency_ms=(time.monotonic() - audit_started) * 1000,
+        authorization="kg_reader",
+        params={"cypher": cypher, "params": params or {}},
+        http_status=None,
+        error_code=None,
+        error_class=None,
+    )
     return rows, total_available

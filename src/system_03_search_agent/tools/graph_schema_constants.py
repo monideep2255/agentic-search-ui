@@ -93,6 +93,21 @@ EDGE_ENDPOINTS: Final[dict[str, tuple[str, str] | None]] = {
     "exact_match": None,
 }
 
+# Endpoint pairs the live graph carries under a label BESIDE the typical
+# pair the reference doc lists for it. Measured 2026-09-14 by read-only
+# parameterised queries (variant-to-disease detail work, `testing/Developer/
+# reports/2026-09-14_variant_disease_detail/`): `has_phenotype` joins a
+# SequenceVariant to a Disease, source "ClinVar", `source_url` the variant's
+# own ClinVar variation page. HNF1A alone has 2075 such rows over 1158
+# variants and 36 diseases. Kept SEPARATE from `EDGE_ENDPOINTS` on purpose:
+# `schema_slice` expands neighbourhoods along that table and the model
+# prompt is built from it, so widening the primary pair to `None` (mixed)
+# would silently drop the Disease-to-PhenotypicFeature expansion. Templates
+# consult both tables (`cypher_templates._assert_templates_name_real_labels`).
+ADDITIONAL_EDGE_ENDPOINTS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
+    "has_phenotype": (("SequenceVariant", "Disease"),),
+}
+
 # Section F. The prefix set the graph actually uses.
 CURIE_PREFIXES: Final[tuple[str, ...]] = (
     "NCBIGene",
@@ -173,3 +188,30 @@ CYPHER_QUERY_TIMEOUT_SECONDS: Final[float] = 90.0
 # any-subdomain form: a citation resolves to the human-facing record page,
 # never the eutils. or api. fetch host.
 NCBI_RECORD_URL_PATTERN: Final[str] = r"^https://(www\.|pubmed\.)?ncbi\.nlm\.nih\.gov/"
+
+# UI fix set 11 (search breadth, 2026-09-14). Of the nine CURIE prefixes,
+# three (GO, HP, MONDO) name ontologies hosted outside NCBI, so no record
+# page of their own exists on the pinned host and `cypher_provenance`
+# returns None for a bare CURIE of any of them. A GO term is different from
+# the other two in one respect that makes it citeable after all: the graph's
+# Gene-to-GO edges are NCBI's own gene2go annotations, and NCBI's Gene record
+# page (`https://www.ncbi.nlm.nih.gov/gene/<id>`) renders that record's Gene
+# Ontology table. Live-verified the same day through E-utilities: the Entrez
+# Gene record for gene 672 carries 117 GO cross-references (the human page
+# itself sits behind a browser check for non-browser clients, so the record
+# the page renders was read instead). So a GO vertex returned in the same
+# row as a Gene vertex, or by a query anchored on one, is attributed to that
+# gene's page, the page that carries the annotation, never to a fabricated
+# GO page. This table names which prefixes' record pages carry GO
+# annotations: today exactly one. HP and MONDO stay uncitable.
+GO_ANNOTATION_HOST_PREFIXES: Final[tuple[str, ...]] = ("NCBIGene",)
+GO_PREFIX: Final[str] = "GO"
+
+# Review F-02 (2026-09-14): the vertex labels the graph carries GO terms
+# under, derived from `LABEL_CURIE_PREFIXES` rather than retyped, so a
+# label added to that table with the `GO` prefix is a GO-term label here
+# too. A `GO:` id on any other label (a `Gene`, a `NamedThing` stub) is not
+# a GO term this system can attribute to a gene page.
+GO_TERM_LABELS: Final[tuple[str, ...]] = tuple(
+    label for label, prefixes in LABEL_CURIE_PREFIXES.items() if prefixes == (GO_PREFIX,)
+)

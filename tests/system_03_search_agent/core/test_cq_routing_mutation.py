@@ -565,12 +565,48 @@ async def test_p1_goes_red_whatever_span_the_model_returns(
 async def test_p2_goes_red_when_the_flagship_resolves_nothing(
     model: _Model,
 ) -> None:
+    """UI fix set 8 (2026-09-13) changed what this mutation has to break.
+
+    Emptying the model's spans alone no longer stops the flagship resolving,
+    because `think_node`'s gene-shaped fallback confirms BRCA1 live when the
+    model extracted nothing. Resolution is destroyed only when BOTH halves
+    are gone: no span from the model AND a lookup that confirms nothing.
+    The arm below this one pins the half this mutation used to cover.
+    """
     model.think_entities = [{"text": "BRCA1", "entity_type": "gene"}]
+
+    def _no_span_and_nothing_confirms() -> None:
+        model.think_entities = []
+        model.resolves = {}
+
     await _assert_arm_is_falsifiable(
         gate.test_p2_the_flagship_resolves_its_subject_from_raw_text,
         (),
-        lambda: setattr(model, "think_entities", []),
-        "P2 / nothing extracted",
+        _no_span_and_nothing_confirms,
+        "P2 / nothing extracted and nothing confirmed",
+    )
+
+
+@pytest.mark.asyncio
+async def test_p2_survives_an_empty_extraction_through_the_fallback_and_goes_red_without_it(
+    model: _Model, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fallback is a control of its own, so it gets a mutation of its own.
+
+    Clean: the model extracts NOTHING and P2 still passes, because the
+    fallback names `BRCA1` from the question and the lookup confirms it.
+    Mutated: the fallback's candidate extractor returns nothing, and P2 goes
+    red. An arm that stayed green here would mean the fallback is not what
+    is keeping the flagship alive under an empty extraction.
+    """
+    model.think_entities = []
+    await _assert_arm_is_falsifiable(
+        gate.test_p2_the_flagship_resolves_its_subject_from_raw_text,
+        (),
+        lambda: monkeypatch.setattr(
+            graph_module, "_gene_shaped_fallback_candidates", lambda text, exact: []
+        ),
+        "P2 / fallback extractor emptied",
     )
 
 

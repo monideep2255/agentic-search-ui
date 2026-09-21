@@ -157,3 +157,13 @@ class CypherQueryOutput(BaseModel):
     truncated: bool
     cypher_executed: Annotated[str | None, Field(default=None, max_length=2000)] = None
     error: Annotated[str | None, Field(default=None, max_length=500)] = None
+
+    # UI fix set 10, item 10.1 (R34): an additive, optional field, the same
+    # v1-additive pattern `CypherQueryRow.traversed_edge_type` used
+    # (system-design-patterns.md pattern 10). The name of the code-chosen
+    # template `cypher_templates.select_template` picked for this call, or
+    # None when the plan-tier model wrote the Cypher. An audit field like
+    # `cypher_executed`: it says HOW the query was chosen so a reader of a
+    # run log can tell a deterministic retrieval from a generated one, and
+    # nothing renders it to a user.
+    template: Annotated[str | None, Field(default=None, max_length=60)] = None

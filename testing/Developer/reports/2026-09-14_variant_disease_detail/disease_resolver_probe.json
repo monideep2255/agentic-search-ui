@@ -1,0 +1,78 @@
+{
+ "MODY": [
+  [
+   "MedGen:C0271653",
+   "MedGen:C0342277",
+   "MedGen:C1833382",
+   "MedGen:C1838100",
+   "MedGen:C1852093",
+   "MedGen:C4014962",
+   "MedGen:C4225299",
+   "MedGen:C4225365"
+  ],
+  8
+ ],
+ "Monogenic diabetes": [
+  [
+   "MedGen:C3888631"
+  ],
+  2
+ ],
+ "maturity-onset diabetes of the young": [
+  [
+   "MedGen:C0342276"
+  ],
+  3
+ ],
+ "breast cancer": [
+  [
+   "MedGen:C2938924",
+   "MedGen:C3495949",
+   "MedGen:C4528428",
+   "MedGen:C4528436",
+   "MedGen:C4528440",
+   "MedGen:C4528459",
+   "MedGen:C4528462",
+   "MedGen:C4528553"
+  ],
+  20
+ ],
+ "BRCA9": [
+  [],
+  0
+ ],
+ "cystic fibrosis": [
+  [
+   "MedGen:C1135342",
+   "MedGen:C3873179",
+   "MedGen:C3873257",
+   "MedGen:C3873270",
+   "MedGen:C3873281",
+   "MedGen:C3873346",
+   "MedGen:C3873356",
+   "MedGen:C4016407"
+  ],
+  20
+ ],
+ "MODY[all] OR x": [
+  [],
+  0
+ ],
+ "COMMODITY": [
+  [],
+  0
+ ],
+ "not provided": [
+  [
+   "MedGen:C4081517",
+   "MedGen:C5447759",
+   "MedGen:C5856369",
+   "MedGen:C1299670"
+  ],
+  4
+ ],
+ "GCK": [
+  [],
+  0
+ ]
+}

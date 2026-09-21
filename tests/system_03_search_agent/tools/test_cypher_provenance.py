@@ -1052,3 +1052,301 @@ def test_to_output_rows_never_attaches_ambiguous_high_risk_edge_touch_to_a_path_
 
     assert len(rows) == 3
     assert all(row["ambiguous_high_risk_edge_touch"] is False for row in rows)
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 11 (search breadth, 2026-09-14): a GO term is citeable ONLY by
+# explicit attribution to the gene record whose NCBI page carries the
+# annotation, passed by a caller that chose a single-gene GO template.
+# Review F-01 (2026-09-14, `testing/Developer/reports/
+# 2026-09-14_breadth_tool_layer/review.md`): the first version also cited a
+# GO vertex to whichever Gene vertex shared its raw row, so a BRCA1 to TP53
+# to GO row was cited to BRCA1, which does not carry that annotation, and
+# the choice followed column order. That rule is gone.
+#
+# Coverage statement: these arms exercise the reviewer's two-hop path through
+# another gene, two genes with column order swapped, a GO vertex beside one
+# gene, a GO vertex alone, the explicit CURIE with a valid, a malformed and
+# an absent value, a malformed GO id, a Gene-labelled vertex carrying a GO
+# id (F-02), HP and MONDO which must never be attributed, a GO vertex with
+# its own host-pinned stored URL, an edge beside a gene, and one GO vertex
+# repeated across three columns run through `cypher_query`'s own dedupe
+# (F-08). Not exercised: a real template's Cypher text, which
+# `cypher_query`, not this module, turns into the explicit CURIE.
+# ---------------------------------------------------------------------------
+
+_GENE_672 = (
+    '{"id": 1, "label": "Gene", "properties": '
+    '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+)
+_GENE_7157 = (
+    '{"id": 5, "label": "Gene", "properties": '
+    '{"id": "NCBIGene:7157", "symbol": "TP53"}}::vertex'
+)
+_GO_DNA_REPAIR = (
+    '{"id": 2, "label": "BiologicalProcess", "properties": '
+    '{"id": "GO:0006281", "name": "DNA repair", '
+    '"source_url": "http://purl.obolibrary.org/obo/GO_0006281"}}::vertex'
+)
+_GO_SECOND = (
+    '{"id": 3, "label": "MolecularActivity", "properties": '
+    '{"id": "GO:0003677", "name": "DNA binding"}}::vertex'
+)
+
+
+def _go_rows(rows: list[dict]) -> list[dict]:
+    return [row for row in rows if row["curie"].startswith("GO:")]
+
+
+def _assert_uncited(row: dict) -> None:
+    assert row["source_url"] is None
+    assert "_cited_via_gene_curie" not in row["fields"]
+
+
+def test_f01_go_term_reached_through_another_gene_is_not_cited_to_the_anchor() -> None:
+    """The reviewer's row: BRCA1 to TP53 to GO. Without an explicit
+    attribution the GO row is uncited; BRCA1 does not carry TP53's term.
+    """
+    edge_a = (
+        '{"id": 8, "label": "interacts_with", "start_id": 1, "end_id": 5, "properties": {}}'
+    )
+    edge_b = (
+        '{"id": 9, "label": "participates_in", "start_id": 5, "end_id": 2, "properties": {}}'
+    )
+    path = (
+        "["
+        + _GENE_672.removesuffix("::vertex")
+        + ", "
+        + edge_a
+        + ", "
+        + _GENE_7157.removesuffix("::vertex")
+        + ", "
+        + edge_b
+        + ", "
+        + _GO_DNA_REPAIR.removesuffix("::vertex")
+        + "]::path"
+    )
+
+    rows = to_output_rows({"result": path}, snapshot_version="v")
+
+    go = _go_rows(rows)
+    assert len(go) == 1
+    _assert_uncited(go[0])
+
+
+@pytest.mark.parametrize(
+    "raw_row",
+    [
+        {"c0": _GO_DNA_REPAIR, "c1": _GENE_7157, "c2": _GENE_672},
+        {"c0": _GO_DNA_REPAIR, "c1": _GENE_672, "c2": _GENE_7157},
+        {"c0": _GENE_672, "c1": _GO_DNA_REPAIR},
+    ],
+)
+def test_f01_a_gene_sharing_the_row_never_supplies_the_citation(raw_row: dict) -> None:
+    """Two genes in either column order, or one gene beside the term: the
+    GO row stays uncited, because a sibling vertex is not evidence that
+    THAT gene carries the annotation.
+    """
+    rows = to_output_rows(raw_row, snapshot_version="v")
+
+    go = _go_rows(rows)
+    assert len(go) == 1
+    _assert_uncited(go[0])
+
+
+def test_go_vertex_alone_stays_uncited() -> None:
+    rows = to_output_rows({"result": _GO_DNA_REPAIR}, snapshot_version="v")
+
+    assert len(rows) == 1
+    _assert_uncited(rows[0])
+
+
+def test_explicit_go_attribution_curie_cites_the_gene_page() -> None:
+    rows = to_output_rows(
+        {"result": _GO_DNA_REPAIR}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    assert rows[0]["curie"] == "GO:0006281"
+    assert rows[0]["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672"
+    assert rows[0]["fields"]["_cited_via_gene_curie"] == "NCBIGene:672"
+    assert re.match(NCBI_RECORD_URL_PATTERN, rows[0]["source_url"])
+    assert "obolibrary" not in rows[0]["source_url"]
+
+
+def test_explicit_attribution_applies_to_every_go_vertex_in_the_row_and_keeps_the_gene_row() -> None:
+    rows = to_output_rows(
+        {"c0": _GENE_672, "c1": _GO_DNA_REPAIR, "c2": _GO_SECOND},
+        snapshot_version="v",
+        go_attribution_curie="NCBIGene:672",
+    )
+
+    assert {row["curie"] for row in rows} == {"NCBIGene:672", "GO:0006281", "GO:0003677"}
+    assert all(row["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672" for row in rows)
+    gene_row = next(row for row in rows if row["curie"] == "NCBIGene:672")
+    assert "_cited_via_gene_curie" not in gene_row["fields"]
+
+
+def test_explicit_attribution_is_taken_verbatim_over_any_gene_in_the_row() -> None:
+    """The caller's template knowledge, not the row's contents, decides."""
+    rows = to_output_rows(
+        {"c0": _GENE_7157, "c1": _GO_DNA_REPAIR},
+        snapshot_version="v",
+        go_attribution_curie="NCBIGene:672",
+    )
+
+    go = _go_rows(rows)
+    assert go[0]["fields"]["_cited_via_gene_curie"] == "NCBIGene:672"
+    assert go[0]["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672"
+
+
+@pytest.mark.parametrize(
+    "bad_curie",
+    ["NCBIGene:672-related", "NCBIGene:", "MedGen:C0346153", "GO:0006281", "", "not a curie"],
+)
+def test_a_malformed_or_non_gene_explicit_attribution_is_refused(bad_curie: str) -> None:
+    rows = to_output_rows(
+        {"result": _GO_DNA_REPAIR}, snapshot_version="v", go_attribution_curie=bad_curie
+    )
+
+    _assert_uncited(rows[0])
+
+
+@pytest.mark.parametrize(
+    "go_id",
+    ["GO:anything <script>", "GO:6281", "GO:00062811", "GO:000628a", "GO:", "GO:０００６２８１"],
+)
+def test_f02_a_go_id_outside_the_seven_digit_shape_is_never_cited(go_id: str) -> None:
+    vertex = (
+        '{"id": 2, "label": "BiologicalProcess", "properties": {"id": "' + go_id + '"}}::vertex'
+    )
+
+    rows = to_output_rows(
+        {"result": vertex}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    assert len(rows) == 1
+    _assert_uncited(rows[0])
+
+
+def test_n02_a_go_id_with_a_trailing_newline_is_never_cited() -> None:
+    """Round 2, N-02: `re.match` with `$` accepts a trailing newline, so
+    `GO:0006281\\n` passed the seven-digit shape. The shape is a full match.
+    """
+    vertex = (
+        '{"id": 2, "label": "BiologicalProcess", "properties": {"id": "GO:0006281\\n"}}::vertex'
+    )
+
+    rows = to_output_rows(
+        {"result": vertex}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["curie"] == "GO:0006281\n"
+    _assert_uncited(rows[0])
+
+
+@pytest.mark.parametrize("label", ["Gene", "Disease", "NamedThing", "OntologyClass", ""])
+def test_f02_a_go_id_under_a_non_go_label_is_never_cited(label: str) -> None:
+    vertex = (
+        '{"id": 2, "label": "' + label + '", "properties": {"id": "GO:0006281"}}::vertex'
+    )
+
+    rows = to_output_rows(
+        {"result": vertex}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    assert len(rows) == 1
+    _assert_uncited(rows[0])
+
+
+@pytest.mark.parametrize("label", ["BiologicalProcess", "MolecularActivity", "CellularComponent"])
+def test_f02_every_go_term_label_the_graph_uses_is_citeable(label: str) -> None:
+    vertex = '{"id": 2, "label": "' + label + '", "properties": {"id": "GO:0006281"}}::vertex'
+
+    rows = to_output_rows(
+        {"result": vertex}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    assert rows[0]["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672"
+
+
+@pytest.mark.parametrize(
+    ("label", "curie"),
+    [("PhenotypicFeature", "HP:0001250"), ("Disease", "MONDO:0009861")],
+)
+def test_hp_and_mondo_vertices_are_never_attributed_to_a_gene(label: str, curie: str) -> None:
+    vertex = (
+        '{"id": 4, "label": "' + label + '", "properties": {"id": "' + curie + '"}}::vertex'
+    )
+
+    rows = to_output_rows(
+        {"c0": _GENE_672, "c1": vertex}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    other = next(row for row in rows if row["curie"] == curie)
+    _assert_uncited(other)
+
+
+def test_a_go_vertex_with_its_own_host_pinned_stored_url_keeps_it() -> None:
+    go_with_url = (
+        '{"id": 2, "label": "BiologicalProcess", "properties": '
+        '{"id": "GO:0006281", "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157"}}::vertex'
+    )
+
+    rows = to_output_rows(
+        {"result": go_with_url}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    assert rows[0]["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/7157"
+    assert "_cited_via_gene_curie" not in rows[0]["fields"]
+
+
+def test_edges_are_never_go_attributed() -> None:
+    edge = (
+        '{"id": 9, "label": "participates_in", "start_id": 1, "end_id": 2, '
+        '"properties": {}}::edge'
+    )
+
+    rows = to_output_rows(
+        {"c0": _GENE_672, "c1": edge}, snapshot_version="v", go_attribution_curie="NCBIGene:672"
+    )
+
+    for row in rows:
+        assert "_cited_via_gene_curie" not in row["fields"]
+
+
+def test_f08_one_go_vertex_in_three_columns_yields_one_row_end_to_end() -> None:
+    """Executed, not read: the shaped rows go through `cypher_query`'s own
+    `_dedupe_by_cited_record` exactly as `_run_pipeline` does, and one
+    repeated GO vertex must come out as one row at both levels.
+    """
+    from system_03_search_agent.tools.cypher_query import _cap_shaped_row, _dedupe_by_cited_record
+    from system_03_search_agent.tools.cypher_schemas import CypherQueryRow
+
+    rows = to_output_rows(
+        {"c0": _GO_DNA_REPAIR, "c1": _GO_DNA_REPAIR, "c2": _GO_DNA_REPAIR},
+        snapshot_version="v",
+        go_attribution_curie="NCBIGene:672",
+    )
+    assert len(rows) == 1, "provenance-level dedupe must collapse a repeated GO vertex"
+
+    mapped = _dedupe_by_cited_record([CypherQueryRow(**_cap_shaped_row(row)) for row in rows])
+    assert len(mapped) == 1
+    assert mapped[0].curie == "GO:0006281"
+    assert mapped[0].source_url == "https://www.ncbi.nlm.nih.gov/gene/672"
+
+
+def test_two_distinct_go_terms_survive_both_dedupes() -> None:
+    from system_03_search_agent.tools.cypher_query import _cap_shaped_row, _dedupe_by_cited_record
+    from system_03_search_agent.tools.cypher_schemas import CypherQueryRow
+
+    rows = to_output_rows(
+        {"c0": _GO_DNA_REPAIR, "c1": _GO_SECOND},
+        snapshot_version="v",
+        go_attribution_curie="NCBIGene:672",
+    )
+    mapped = _dedupe_by_cited_record([CypherQueryRow(**_cap_shaped_row(row)) for row in rows])
+
+    assert sorted(row.curie for row in mapped) == ["GO:0003677", "GO:0006281"]
+
+

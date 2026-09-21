@@ -188,7 +188,17 @@ test("a citation chip never repeats its own source", async ({ page }) => {
   const chip = page.getByTestId("citation-1");
   await expect(chip, "the citation chip did not render at all").toBeVisible();
 
-  const label = (await chip.textContent()) ?? "";
+  /*
+   * REQUIREMENT CHANGE, 2026-09-14. The source's name used to be printed on
+   * the chip itself. At the product owner's request the inline citation is
+   * now a small superscript number, and the name lives in the card the
+   * number opens on focus. The T-4.16-03 guard is unchanged; it reads the
+   * card rather than the chip, because that is where the name now is.
+   */
+  await chip.focus();
+  const card = page.getByTestId("cite-popover-1");
+  await expect(card, "focusing the citation marker opened no card").toBeVisible();
+  const label = (await card.textContent()) ?? "";
   expect(label, `populate-check failed: the chip carries no text. Saw: ${label}`).toMatch(
     /672/,
   );

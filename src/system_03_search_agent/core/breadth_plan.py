@@ -1,0 +1,357 @@
+"""Deterministic planning helpers for "search broad, cite exact" (UI fix set 11).
+
+The product owner approved widening every gene-anchored question from four
+fixed Layer 2 and 3 calls to a fan-out across the literature, live ClinVar
+and OMIM, with two constraints the audit in
+`testing/Developer/reports/2026-09-14_handover_inputs/breadth/findings.md`
+set: the same input must produce the same planned calls every run, and
+untrusted abstract text never becomes a finding on the model's say-so.
+This module is the planning half and nothing else (see the hold-back note
+below). It makes no network call and no model call; every
+function is a pure function of its arguments, so `plan_node` in
+`core/graph.py` can call it and hand the results to its own `_layer_call`
+without owning any of the logic here.
+
+Two stages, because the literature calls depend on PMIDs the planner does
+not hold until PubMed answers:
+
+- `plan_first_stage(gene_symbol, disease_title)`: the calls that need only
+  the resolved symbol or the disease title. A PubMed ESearch on the symbol
+  and title, capped at `PUBMED_RESULT_CAP`; for a symbol, a live ClinVar
+  ESearch on `SYMBOL[gene]` and an OMIM ESearch on the bare symbol, each
+  capped. Verified live 2026-09-14: all three term shapes are accepted and
+  translated by ESearch exactly as written. `hasabstract` was tried as a
+  PubMed filter and rejected here, because ESearch translated both its
+  bare and `[Filter]` forms into a plain text search for the word.
+- `plan_literature_follow_up(pmids)`: the abstract fetch and the PubTator3
+  `annotate_publications` call on the SAME PMIDs, after the ids are sorted
+  and capped, so both calls always name the identical paper set.
+- `plan_clinvar_follow_up(ids)` and `plan_omim_follow_up(ids)`: the
+  ESummary calls on the ids the first-stage searches returned, sorted and
+  capped the same way.
+
+Sorting: every id list is sorted numerically, highest first, before it is
+capped. ESearch returns PubMed ids in date-added order rather than id
+order (live-measured the same day: `33180404` ahead of `42470517`), and
+"most recently indexed" is not stable between runs, while "the five
+highest PMIDs among the hits" is a fixed function of the hit set. The
+planner never re-sorts by relevance.
+
+`filter_omim_titles(records, symbol)` keeps only OMIM summary records whose
+title names the symbol in one of its semicolon-separated symbol fields,
+exactly. An OMIM title reads `NAME; SYMBOL[; SYMBOL2...]`, so the symbol
+fields are every segment after the first. The audit found OMIM's first hit
+for `GCK` was `MAP4K2`, so an unfiltered OMIM result cites the wrong gene.
+Review F-07: a word-anywhere match let `T` keep `T-CELL RECEPTOR ALPHA
+LOCUS; TRA`, so the match is field-exact, never a word in the name.
+
+Held back by product-owner decision after review round 2 (2026-09-14):
+abstract sentences do not become findings until a new design exists. The
+abstract quote check this module first carried was removed outright,
+because a regex sentence rule accepted meaning-reversing fragments (N-01)
+and cannot see a refutation in the next sentence (N-03). The abstracts
+`plan_literature_follow_up` fetches are retrieved for the PubTator3 call on
+the same PMIDs and for the paper's citation, not for quotation.
+
+Depends on:
+    - system_03_search_agent.tools.ncbi_efetch_schemas (NcbiEfetchInput)
+    - system_03_search_agent.tools.pubtator_annotate_schemas
+      (PubtatorAnnotateInput)
+
+Reads:
+    - Nothing. Pure functions over their arguments.
+
+Writes:
+    - Nothing.
+
+Depended by:
+    - system_03_search_agent.core.graph (`plan_node`, the wiring that hands
+      each `PlannedCall` to `_layer_call`; not yet wired when this module
+      landed, see the report for UI fix set 11)
+"""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
+from typing import Any, Final
+
+from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
+from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateInput
+
+# Per-source caps, the "cap per source" the findings document sets. Five
+# papers is the audit's measured sweet spot (0.22 s for five abstracts,
+# 1,000 to 1,300 characters each); ten ClinVar and ten OMIM records match
+# the audit's own probe sizes.
+PUBMED_RESULT_CAP: Final[int] = 5
+CLINVAR_RESULT_CAP: Final[int] = 10
+OMIM_RESULT_CAP: Final[int] = 10
+
+# Bounds on the two free-text inputs. A gene symbol is at most 30
+# characters (`NcbiEfetchDatasetReportInput.symbol` uses the same bound) and
+# is restricted to the characters a real HGNC symbol or NCBI alias uses, so
+# no PubMed operator, bracket or quote can ride in on it. A disease title is
+# free text from a MedGen record, so it is not shape-validated, only
+# stripped of the characters that carry meaning in a PubMed term and capped.
+_MAX_SYMBOL_CHARS: Final[int] = 30
+_MAX_TITLE_CHARS: Final[int] = 200
+_SYMBOL_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.@-]{0,29}$", re.ASCII
+)
+_TITLE_STRIP_PATTERN: Final[re.Pattern[str]] = re.compile(r'["\[\]():*?]')
+_WHITESPACE_RUN: Final[re.Pattern[str]] = re.compile(r"\s+")
+
+# An E-utilities uid is a plain positive integer (`ncbi_efetch_schemas`
+# caps an id at 30 characters; PubTator3 at 15). Anything else is not an
+# id this module will plan a fetch for.
+_UID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[0-9]{1,15}$", re.ASCII)
+
+# Call id prefixes, matching the ones `core/graph.py` already stamps on the
+# same tools (`ne` for `ncbi_efetch`, `pa` for `pubtator_annotate`), so a
+# call planned here reads the same in the audit log as one planned there.
+_NCBI_EFETCH: Final[str] = "ncbi_efetch"
+_PUBTATOR: Final[str] = "pubtator_annotate"
+_LAYER_2: Final[str] = "layer_2_api"
+_LAYER_3: Final[str] = "layer_3_enrichment"
+
+
+@dataclass(frozen=True)
+class PlannedCall:
+    """One Layer 2 or 3 call the planner should issue, fully specified.
+
+    `tool_input` is an already-validated tool input model, so a value that
+    reaches `plan_node` has passed the tool's own schema bounds. `purpose`
+    names what the call is for in the fan-out, so Act and Write can route
+    its result (an OMIM summary to the title filter, for one) without
+    inspecting the input again.
+    """
+
+    tool: str
+    layer: str
+    prefix: str
+    purpose: str
+    tool_input: NcbiEfetchInput | PubtatorAnnotateInput
+
+
+def _normalise_symbol(gene_symbol: str | None) -> str | None:
+    """Uppercase, trimmed, shape-checked. None when nothing usable was given.
+
+    Raises `TypeError` for a non-string, and `ValueError` for a non-empty
+    symbol that is not symbol-shaped,
+    since a term like `BRCA1 OR cancer` planned silently would search for
+    something the caller never asked about.
+    """
+    if gene_symbol is None:
+        return None
+    if not isinstance(gene_symbol, str):
+        raise TypeError("gene_symbol must be a string or None")
+    trimmed = gene_symbol.strip()
+    if not trimmed:
+        return None
+    if len(trimmed) > _MAX_SYMBOL_CHARS or _SYMBOL_PATTERN.match(trimmed) is None:
+        raise ValueError(
+            f"gene_symbol {trimmed[:40]!r} is not a gene symbol shape "
+            "(letters, digits, '_', '.', '@' or '-', at most 30 characters); "
+            "pass the resolved symbol, never free text"
+        )
+    return trimmed.upper()
+
+
+def _normalise_title(disease_title: str | None) -> str | None:
+    """Lowercase, whitespace-collapsed, operator characters removed, capped.
+
+    None when nothing usable remains, so a title made only of quotes or
+    brackets plans no disease clause rather than an empty quoted string.
+    """
+    if disease_title is None:
+        return None
+    if not isinstance(disease_title, str):
+        raise TypeError("disease_title must be a string or None")
+    stripped = _TITLE_STRIP_PATTERN.sub(" ", disease_title)
+    collapsed = _WHITESPACE_RUN.sub(" ", stripped).strip().lower()
+    if not collapsed:
+        return None
+    return collapsed[:_MAX_TITLE_CHARS].strip()
+
+
+def build_pubmed_term(gene_symbol: str | None, disease_title: str | None) -> str | None:
+    """The PubMed ESearch term for a symbol, a title, or both. None for neither.
+
+    Shapes, each verified live on 2026-09-14 against ESearch's own
+    `querytranslation`:
+
+    - symbol only: `BRCA1[Title/Abstract]`
+    - title only: `"maturity-onset diabetes of the young"[Title/Abstract]`
+    - both: the two joined with ` AND `
+    """
+    symbol = _normalise_symbol(gene_symbol)
+    title = _normalise_title(disease_title)
+    clauses: list[str] = []
+    if symbol:
+        clauses.append(f"{symbol}[Title/Abstract]")
+    if title:
+        clauses.append(f'"{title}"[Title/Abstract]')
+    if not clauses:
+        return None
+    return " AND ".join(clauses)
+
+
+def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:
+    return PlannedCall(
+        tool=_NCBI_EFETCH,
+        layer=_LAYER_2,
+        prefix="ne",
+        purpose=purpose,
+        tool_input=NcbiEfetchInput.model_validate(
+            {"action": "search", "db": db, "term": term[:500], "retmax": retmax}
+        ),
+    )
+
+
+def plan_first_stage(
+    gene_symbol: str | None, disease_title: str | None
+) -> tuple[PlannedCall, ...]:
+    """The calls that need only the symbol or the title, in fixed order.
+
+    Order: PubMed search, then for a symbol the ClinVar search and the OMIM
+    search. An empty tuple when neither input is usable, which is the
+    planner's signal to plan nothing extra rather than an error: a question
+    that resolved no gene and bound no disease earns no fan-out.
+    """
+    symbol = _normalise_symbol(gene_symbol)
+    term = build_pubmed_term(symbol, disease_title)
+    calls: list[PlannedCall] = []
+    if term:
+        calls.append(_search_call("pubmed_search", "pubmed", term, PUBMED_RESULT_CAP))
+    if symbol:
+        calls.append(
+            _search_call("clinvar_search", "clinvar", f"{symbol}[gene]", CLINVAR_RESULT_CAP)
+        )
+        calls.append(_search_call("omim_search", "omim", symbol, OMIM_RESULT_CAP))
+    return tuple(calls)
+
+
+def select_ids(ids: Iterable[Any], cap: int) -> list[str]:
+    """Sort uids numerically, highest first, drop non-uids and repeats, cap.
+
+    Deterministic by construction: the output depends only on the SET of
+    valid ids in `ids`, never on the order or repetition they arrived in.
+    """
+    valid: set[str] = set()
+    for value in ids:
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            value = str(value)
+        if not isinstance(value, str):
+            continue
+        candidate = value.strip()
+        if _UID_PATTERN.match(candidate) is None:
+            continue
+        # Review F-06: a uid is a POSITIVE integer. `"0"` and `"000"` are
+        # digit strings and not ids; PMID 0 does not exist.
+        normalised = candidate.lstrip("0")
+        if not normalised:
+            continue
+        valid.add(normalised)
+    ordered = sorted(valid, key=int, reverse=True)
+    return ordered[:cap]
+
+
+def plan_literature_follow_up(pmids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+    """Abstract fetch plus PubTator3 annotation on the same sorted, capped PMIDs.
+
+    Both calls carry the identical id list, so the relations PubTator3
+    returns are for exactly the papers that were fetched. An empty tuple
+    when no valid PMID was given.
+    """
+    selected = select_ids(pmids, PUBMED_RESULT_CAP)
+    if not selected:
+        return ()
+    fetch = PlannedCall(
+        tool=_NCBI_EFETCH,
+        layer=_LAYER_2,
+        prefix="ne",
+        purpose="pubmed_abstracts",
+        tool_input=NcbiEfetchInput.model_validate(
+            {
+                "action": "fetch",
+                "db": "pubmed",
+                "ids": selected,
+                "rettype": "abstract",
+                "retmode": "xml",
+            }
+        ),
+    )
+    annotate = PlannedCall(
+        tool=_PUBTATOR,
+        layer=_LAYER_3,
+        prefix="pa",
+        purpose="pubtator_publications",
+        tool_input=PubtatorAnnotateInput.model_validate(
+            {"mode": "annotate_publications", "pmids": selected}
+        ),
+    )
+    return (fetch, annotate)
+
+
+def _summary_call(purpose: str, db: str, ids: list[str]) -> PlannedCall:
+    return PlannedCall(
+        tool=_NCBI_EFETCH,
+        layer=_LAYER_2,
+        prefix="ne",
+        purpose=purpose,
+        tool_input=NcbiEfetchInput.model_validate({"action": "summary", "db": db, "ids": ids}),
+    )
+
+
+def plan_clinvar_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+    """ClinVar ESummary on the sorted, capped uids a ClinVar search returned."""
+    selected = select_ids(ids, CLINVAR_RESULT_CAP)
+    if not selected:
+        return ()
+    return (_summary_call("clinvar_summary", "clinvar", selected),)
+
+
+def plan_omim_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+    """OMIM ESummary on the sorted, capped uids an OMIM search returned.
+
+    The caller filters the RESULT with `filter_omim_titles`; the ids
+    themselves cannot be filtered before the titles are known.
+    """
+    selected = select_ids(ids, OMIM_RESULT_CAP)
+    if not selected:
+        return ()
+    return (_summary_call("omim_summary", "omim", selected),)
+
+
+def filter_omim_titles(
+    records: Iterable[Mapping[str, Any]], gene_symbol: str | None
+) -> list[Mapping[str, Any]]:
+    """Keep only the OMIM records whose title names the symbol in a symbol field.
+
+    `records` are the `fields` mappings of `ncbi_efetch` summary records
+    (or the records themselves, since `fields` is read when present). An
+    OMIM title is `NAME; SYMBOL[; SYMBOL2...]`; every segment after the
+    first is a symbol field, and one of them must equal the symbol exactly
+    (case-insensitive, whitespace-trimmed). Review F-07: never a word
+    anywhere in the title, so `T` does not keep `T-CELL RECEPTOR ALPHA
+    LOCUS; TRA` and `GCK` does not keep `...; GCK, INCLUDED`. An unusable
+    symbol keeps nothing: with no symbol to check against, no OMIM title
+    can be stood behind.
+    """
+    symbol = _normalise_symbol(gene_symbol)
+    if symbol is None:
+        return []
+    kept: list[Mapping[str, Any]] = []
+    for record in records:
+        if not isinstance(record, Mapping):
+            continue
+        fields = record.get("fields")
+        source = fields if isinstance(fields, Mapping) else record
+        title = source.get("title")
+        if not isinstance(title, str):
+            continue
+        symbol_fields = [segment.strip().upper() for segment in title.split(";")[1:]]
+        if symbol in symbol_fields:
+            kept.append(record)
+    return kept

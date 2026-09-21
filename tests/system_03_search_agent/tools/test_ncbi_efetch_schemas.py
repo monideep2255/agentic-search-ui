@@ -927,3 +927,30 @@ def test_output_rejects_negative_candidates_checked() -> None:
             candidates_checked=-1,
             truncated=False,
         )
+
+
+# ---------------------------------------------------------------------------
+# UI fix set 11 (search breadth, 2026-09-14): `pmc` is an additive SearchDb
+# value and nothing else widened.
+# ---------------------------------------------------------------------------
+
+
+def test_search_accepts_pmc() -> None:
+    assert NcbiEfetchInput.model_validate({**SEARCH_DICT, "db": "pmc"}).root.db == "pmc"
+
+
+def test_search_db_vocabulary_is_the_spec_fourteen_plus_pmc() -> None:
+    from typing import get_args
+
+    from system_03_search_agent.tools.ncbi_efetch_schemas import SearchDb
+
+    values = get_args(SearchDb)
+    assert len(values) == 15
+    assert values[-1] == "pmc"
+
+
+@pytest.mark.parametrize("payload", [FETCH_DICT, SUMMARY_DICT])
+def test_fetch_and_summary_still_reject_pmc(payload: dict) -> None:
+    """Neither path is live-verified for PMC, so neither enum widened."""
+    with pytest.raises(ValidationError):
+        NcbiEfetchInput.model_validate({**payload, "db": "pmc"})

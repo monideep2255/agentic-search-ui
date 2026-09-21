@@ -204,9 +204,16 @@ describe("clause 1: token conformance", () => {
 });
 
 describe("clause 2: structure", () => {
-  it("the app shell renders the bar, the disclaimer strip and the persona", async () => {
-    // T-4.8-03. The disclaimer strip is permanent and not dismissible, so its
-    // absence is a compliance defect rather than a styling one.
+  it("the app shell renders the bar and the persona", async () => {
+    // T-4.8-03, UPDATED 2026-09-05. This clause used to also assert a
+    // permanent, non-dismissible disclaimer strip here, which was correct
+    // when the strip was part of the shell. Product-owner decision on
+    // 2026-09-05 removed that strip from `AppShell.tsx` entirely: the
+    // disclaimer now shows once per session, on the home page, from
+    // `DisclaimerModal.tsx`, which `AppShell` does not render and this
+    // clause therefore has nothing of that kind left to assert. Asserting
+    // the strip's absence would only prove a negative that changes shape
+    // with any future refactor, so it is dropped rather than inverted.
     const { AppShell } = await loadShell();
     // T-4.5-10: the shell no longer invents a persona. It used to default to
     // a hardcoded "Mendel", which meant this assertion passed whether or not
@@ -219,7 +226,6 @@ describe("clause 2: structure", () => {
       </AppShell>,
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
-    expect(screen.getByText(/not medical advice/i)).toBeInTheDocument();
     expect(screen.getByTestId("persona-chip")).toBeInTheDocument();
   });
 
@@ -276,7 +282,10 @@ describe("clause 2: structure", () => {
     }
   });
 
-  it("the provenance spine renders one segment per claim, carrying its layer", async () => {
+  // REQUIREMENT CHANGE, 2026-09-14 (approved answer layout): the spine bar is
+  // retired and each claim carries its own provenance. The guarantee is the
+  // same: one per claim, an uncited claim distinguishable.
+  it("every claim carries its own provenance, one per claim, with the gap visible", async () => {
     // T-4.8-06, and the product owner's settled decision to keep it always on.
     const { AnswerScreen } = await loadAnswer();
     render(
@@ -289,7 +298,7 @@ describe("clause 2: structure", () => {
         sources={[SOURCE]}
       />,
     );
-    const segments = screen.getAllByTestId(/^spine-segment-/);
+    const segments = screen.getAllByTestId(/^claim-text-\d+$/);
     expect(segments).toHaveLength(2);
     // An uncited claim must be visibly distinguishable, which is the whole
     // reason the spine exists rather than being decoration.
@@ -316,13 +325,20 @@ describe("clause 3: assembly", () => {
     render(<App />);
     // Scoped to the main navigation landmark rather than the whole document.
     // This is STRICTER, not looser: it now requires the landmark to exist as
-    // well as to hold all four. The unscoped version was ambiguous because the
-    // home screen's own submit button is also called "Search", which is itself
-    // a real accessibility problem and is why the landmark is now labelled.
+    // well as to hold all of them. The unscoped version was ambiguous because
+    // the home screen's own submit button is also called "Search", which is
+    // itself a real accessibility problem and is why the landmark is now
+    // labelled.
+    //
+    // `/docs/i` LEFT THE LOOP, fix set 5 (R18, 2026-09-13): the Docs screen no
+    // longer exists, its content is a section inside Integrations, and its tab
+    // is gone from the bar. Asserting its ABSENCE below rather than deleting
+    // the expectation, so a tab reappearing is a failure rather than a silence.
     const nav = screen.getByRole("navigation", { name: /main/i });
-    for (const name of [/search/i, /integrations/i, /docs/i, /about/i]) {
+    for (const name of [/search/i, /integrations/i, /about/i]) {
       expect(within(nav).getByRole("button", { name })).toBeInTheDocument();
     }
+    expect(within(nav).queryByRole("button", { name: /^docs$/i })).not.toBeInTheDocument();
   });
 });
 
@@ -346,6 +362,11 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
       refresh_token: "test-refresh",
       token_type: "bearer",
     } as never);
+    // Set 1, R5 (2026-09-12): Log in tries signup first, so signup must be
+    // mocked too. A 409 is the registered-email path, which goes on to login.
+    vi.spyOn(api, "signup").mockRejectedValue(
+      new api.ApiError(409, "signup failed with 409: email already registered"),
+    );
     vi.spyOn(api, "openEventStream").mockReturnValue(new Promise(() => {}) as never);
     // T-4.10-08/09: signing in now fetches the caller's real allowance
     // (`App.tsx`'s `onAuthenticated`) so the account menu can state the
@@ -501,8 +522,25 @@ describe("clause 3c: the screens render from the real event stream", () => {
     // assessed elevated risk where none was ever computed. Mutation that
     // turns this red: drop the `&& payload.risk_tier !== "unknown"` clause
     // from useRunView.ts's risk-pill condition.
+    //
+    // REWRITTEN 2026-09-12 for R13, product-owner decision U6: a refusal
+    // now carries NO trust pill at all, so the original first arm (a
+    // failed guard plus an "unknown" tier, asserting that "Not fully
+    // grounded" is present and "unknown risk claim" is not) can no longer
+    // distinguish a correct fix from a broken one. Neither half of what it
+    // guarded has been dropped, and both are now checked on the fixture
+    // that can still fail:
+    //
+    //   - The refusal half became STRONGER, arm 1 below: no pill of any
+    //     kind, which subsumes "no spurious unknown-risk pill".
+    //   - The `risk_tier` half moved to arm 2 below, a run with an
+    //     "unknown" tier and NO refusal, which is the only shape where
+    //     that clause is still reachable. The mutation named above still
+    //     turns arm 2 red.
     const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
 
+    // Arm 1: a refusal reports no grounding verdict, because it has no
+    // claims to report one about.
     const events = [
       { type: "guard", payload: { passed: false, category: "off_topic", reason: "outside biomedical research" } },
       {
@@ -520,10 +558,29 @@ describe("clause 3c: the screens render from the real event stream", () => {
     const { result } = renderHook(() => useRunView(events));
     const view = result.current;
 
-    const labels = view.trust.map((t: { label: string }) => t.label);
-    expect(labels.some((label: string) => /not fully grounded/i.test(label))).toBe(true);
-    expect(labels.some((label: string) => /unknown risk claim/i.test(label))).toBe(false);
-    // The second arm: a GENUINELY unrecognised (not "unknown") tier must
+    expect(view.trust).toHaveLength(0);
+    expect(view.refusalLabel).toBe("Outside biomedical research");
+
+    // Arm 2: the `risk_tier !== "unknown"` clause, on the one shape that
+    // still renders pills. `grounded: false` keeps the grounding pill
+    // present, so this arm also proves the strip did not simply vanish.
+    const unknownTierEvents = [
+      {
+        type: "trust_signal",
+        payload: {
+          outcome: "flag",
+          risk_tier: "unknown",
+          grounded: false,
+          triangulated: null,
+        },
+      },
+      { type: "done", payload: {} },
+    ];
+    const { result: unknownTier } = renderHook(() => useRunView(unknownTierEvents));
+    const unknownLabels = unknownTier.current.trust.map((t: { label: string }) => t.label);
+    expect(unknownLabels.some((label: string) => /not fully grounded/i.test(label))).toBe(true);
+    expect(unknownLabels.some((label: string) => /unknown risk claim/i.test(label))).toBe(false);
+    // The third arm: a GENUINELY unrecognised (not "unknown") tier must
     // still over-report, per F-4.8-A-19's own reasoning, so this is not a
     // control that silently stopped reporting every non-"low" tier.
     const escalatedEvents = [

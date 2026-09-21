@@ -1,0 +1,146 @@
+[
+  {
+    "item": "a_plain",
+    "width": 1280,
+    "question": "Which diseases are associated with BRCA1?",
+    "mode": "plain_language",
+    "bannerCheck": {
+      "bannerSeenAt": 1789411282130,
+      "bannerText": "Luria is writing the answer...\nPasteur, Delbruck and Nirenberg found 11 records",
+      "firstClaimSeenAt": 1789411285818,
+      "bannerBeforeFirstClaim": true,
+      "elapsed_s": 7.9
+    },
+    "measured": {
+      "headings": 4,
+      "tables": 4,
+      "table_rows": 11,
+      "list_items": 0,
+      "notes": 0,
+      "body_excerpt": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered3.0s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\n\nFound 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation",
+      "refusal": false,
+      "horizontal_overflow_scrollWidth_le_clientWidthPlus1": true
+    }
+  },
+  {
+    "item": "e_copy",
+    "width": 1280,
+    "selection_length": 1703,
+    "contains_source_layer_text": false,
+    "contains_sources_range_text": false,
+    "pass": true,
+    "selection_excerpt": "Which diseases are associated with BRCA1?\nNew search\n? Answered3.0s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\nFound 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.1–4\n\nBRCA1 is associated with Familial cancer of breast.1 BRCA1 is also associated with Famil"
+  },
+  {
+    "item": "a_researcher",
+    "width": 1280,
+    "question": "Which diseases are associated with BRCA1?",
+    "mode": "researcher",
+    "bannerCheck": {
+      "bannerSeenAt": 1789411303009,
+      "bannerText": "Avery is writing the answer...\nde Duve, Hodgkin and Khorana found 11 records",
+      "firstClaimSeenAt": 1789411308639,
+      "bannerBeforeFirstClaim": true,
+      "elapsed_s": 19.3
+    },
+    "measured": {
+      "headings": 4,
+      "tables": 4,
+      "table_rows": 11,
+      "list_items": 0,
+      "notes": 0,
+      "body_excerpt": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered12.1s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\n\nFound 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementatio",
+      "refusal": false,
+      "horizontal_overflow_scrollWidth_le_clientWidthPlus1": true
+    }
+  },
+  {
+    "item": "b_hnf1a",
+    "width": 1280,
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "mode": "researcher",
+    "headingTexts": [
+      "DISEASE RECORDS FOUND",
+      "VARIANT-TO-DISEASE MAPPING",
+      "GENE RECORDS FOUND",
+      "LITERATURE ENTITY RECORDS FOUND",
+      "CLINICAL TRIAL RECORDS FOUND"
+    ],
+    "hasVariantToDiseaseHeading": true,
+    "tableRowCount": 18,
+    "measured": {
+      "headings": 5,
+      "tables": 5,
+      "table_rows": 18,
+      "list_items": 3,
+      "notes": 3,
+      "body_excerpt": "What diseases are caused by variants in the HNF1A gene?\nNew search\n\n? Answered5.8s · 4 tools · 18 sources from 3 layers\n\nShow work ▾\n\nFound 5 sequence variant records for HNF1A: NM_000545.8(HNF1A):c.780G>A (p.Thr260=), NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del), NM_000545.8(HNF1A):c.58G>",
+      "refusal": false,
+      "horizontal_overflow_scrollWidth_le_clientWidthPlus1": true
+    }
+  },
+  {
+    "item": "c_gck_mody",
+    "width": 1280,
+    "question": "Variants in GCK causing MODY",
+    "answered": true,
+    "tableRowCount": 20,
+    "measured": {
+      "headings": 5,
+      "tables": 5,
+      "table_rows": 20,
+      "list_items": 2,
+      "notes": 2,
+      "body_excerpt": "Variants in GCK causing MODY\nNew search\n\n? Answered7.7s · 4 tools · 20 sources from 3 layers\n\nShow work ▾\n\nFound 12 sequence variant records for GCK and MODY, linked to 1 disease: Maturity-onset diabetes of the young type 2.⁠1–13\n\nAnother is ClinVar:1098819, named NM_000162.5(GCK):c.1139A>C (p.His38",
+      "refusal": false,
+      "horizontal_overflow_scrollWidth_le_clientWidthPlus1": true
+    }
+  },
+  {
+    "item": "d_mody_genes",
+    "width": 1280,
+    "question": "What genes are associated with MODY?",
+    "answered": true,
+    "tableRowCount": 13,
+    "measured": {
+      "headings": 2,
+      "tables": 2,
+      "table_rows": 13,
+      "list_items": 1,
+      "notes": 1,
+      "body_excerpt": "What genes are associated with MODY?\nNew search\n\n? Answered21.8s · 1 tool · 13 sources from 2 layers\n\nShow work ▾\n\nFound 6 gene records for MODY: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1, glucokinase, hepatocyte nuclear factor 4 alpha, pancreatic and duodenal ",
+      "refusal": false,
+      "horizontal_overflow_scrollWidth_le_clientWidthPlus1": true
+    }
+  },
+  {
+    "item": "f_phone_390",
+    "tableCount": 0,
+    "recordsListCount": 4,
+    "stackedLiCount": 11,
+    "stackedRowsConfirmed": true,
+    "width": 390,
+    "question": "Which diseases are associated with BRCA1?",
+    "bannerCheck": {
+      "bannerSeenAt": 1789411457624,
+      "bannerText": "Hershey is writing the answer...\nSabin, Ehrlich and Mendel found 15 records",
+      "firstClaimSeenAt": 1789411461589,
+      "bannerBeforeFirstClaim": true,
+      "elapsed_s": 11.5
+    },
+    "bannerOverflow": null,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "scrollWidth_le_clientWidthPlus1": true,
+    "measured": {
+      "headings": 4,
+      "tables": 0,
+      "table_rows": 0,
+      "list_items": 12,
+      "notes": 1,
+      "body_excerpt": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered6.5s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\n\nFound 4 disease records for BRCA1 and diseases: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia co",
+      "refusal": false,
+      "horizontal_overflow_scrollWidth_le_clientWidthPlus1": true
+    }
+  }
+]

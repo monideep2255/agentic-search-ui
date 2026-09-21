@@ -13,8 +13,8 @@
  * Source of truth: `docs/build/design/design-system/screens/home.html`.
  */
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import { Box, Button, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
@@ -60,25 +60,77 @@ export interface HomeScreenProps {
   depth?: AudienceDepth;
   /** Called instead of the internal setter when `depth` is supplied. */
   onDepthChange?: (depth: AudienceDepth) => void;
+  /**
+   * The onboarding tour's first-visit invite (2026-09-13 product-owner
+   * request), rendered under the seed chips. `App` decides whether it shows;
+   * this screen only gives it a place. Null or undefined renders nothing.
+   */
+  tourInvite?: React.ReactNode;
+  /**
+   * Adds a standout "Take the tour" pill under the seed chips, so the tour
+   * can be restarted at any time after the invite is gone. Absent by default,
+   * which keeps the standalone design-system mounts unchanged.
+   */
+  onTakeTour?: () => void;
+  /**
+   * A question the tour asks this screen to put in the box (its step 7,
+   * `OnboardingTour.tsx`). Applied ONLY when the box is empty, so a question
+   * the visitor has already typed is never overwritten; the tour's copy is
+   * written for both cases. Null or undefined leaves the box alone.
+   */
+  prefillQuestion?: string | null;
 }
 
-/** The prototype's `button.go` arrow, from `#s-landing`. */
-function ArrowIcon() {
+/**
+ * The submit icon: an up arrow, the shape every chat-style composer uses
+ * for "send". Product-owner decision 2026-09-13, replacing the prototype's
+ * "Search" text plus right arrow (`button.go` in `#s-landing`) with an
+ * icon-only button. The design system has no icon-only submit, so this is
+ * built from its nearest designed neighbours: the `.go` button's fill,
+ * radius and weight, and the icon-only `aria-label` buttons in
+ * `components/feedback.html`.
+ */
+function ArrowUpIcon() {
   return (
     <svg
-      width={13}
-      height={13}
+      width={18}
+      height={18}
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M2 8h11M9 4l4 4-4 4" />
+      <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" />
     </svg>
   );
 }
 
+/**
+ * Product-owner request, 2026-09-12: the search box should hold at least a
+ * tweet's worth of text, 240 characters, without scrolling. At the current
+ * 15.5px size that is about 3 visible rows; it then grows with the question
+ * up to about 6 rows before it scrolls, so a long question never crowds out
+ * the rest of the hero.
+ */
+const QUESTION_FONT_SIZE = 15.5;
+const QUESTION_LINE_HEIGHT = 1.5;
+const QUESTION_MIN_ROWS = 3;
+const QUESTION_MAX_ROWS = 6;
+const QUESTION_LINE_HEIGHT_PX = QUESTION_FONT_SIZE * QUESTION_LINE_HEIGHT;
+const QUESTION_MIN_HEIGHT = QUESTION_LINE_HEIGHT_PX * QUESTION_MIN_ROWS;
+const QUESTION_MAX_HEIGHT = QUESTION_LINE_HEIGHT_PX * QUESTION_MAX_ROWS;
+/**
+ * Phones get more rows before the box scrolls, measured on develop at 390px:
+ * with six rows a 240-character question scrolled, because the field is far
+ * narrower than on desktop.
+ */
+const QUESTION_MAX_ROWS_NARROW = 10;
+const QUESTION_MAX_HEIGHT_NARROW = QUESTION_LINE_HEIGHT_PX * QUESTION_MAX_ROWS_NARROW;
+/** The server truncates `text` at 2000 characters; the field matches it. */
+const QUESTION_MAX_LENGTH = 2000;
 function SearchIcon() {
   return (
     <svg
@@ -102,10 +154,13 @@ export function HomeScreen({
   footer,
   depth: controlledDepth,
   onDepthChange,
+  tourInvite = null,
+  onTakeTour,
+  prefillQuestion = null,
 }: HomeScreenProps) {
   const [question, setQuestion] = useState("");
   const [localDepth, setLocalDepth] = useState<AudienceDepth>("researcher");
-
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   // Controlled when the parent supplies a value, uncontrolled otherwise. One
   // `depth` and one `setDepth` below, so no call site has to know which mode
   // it is in and the two can never be read from different places.
@@ -115,11 +170,57 @@ export function HomeScreen({
     else setLocalDepth(next);
   };
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
+  // Shared by the form's onSubmit and the Enter-to-send key handler below, so
+  // there is exactly one place that decides an empty or whitespace-only
+  // question never submits.
+  const trySubmit = () => {
     const trimmed = question.trim();
     if (trimmed) onSubmit?.(trimmed, depth);
   };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    trySubmit();
+  };
+
+  // Enter sends the question, matching every chat-style composer; Shift+Enter
+  // inserts a newline, which is the one case that must NOT submit.
+  const handleQuestionKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      trySubmit();
+    }
+  };
+
+  // Auto-grow: reset to the CSS min-height, then read the content's natural
+  // height and grow to it. The `maxHeight` in sx below still clamps this, so
+  // growth past six rows turns into an internal scrollbar rather than an
+  // ever-taller box.
+  const resizeQuestionField = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  // Recompute on mount, in case the initial render already differs from the
+  // 3-row minimum (e.g. restored state), and on window resize, since the
+  // same text wraps at 720px and does not at 1280px.
+  useEffect(() => {
+    resizeQuestionField(textareaRef.current);
+    const handleResize = () => resizeQuestionField(textareaRef.current);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // The tour's step 7 fills the box, only while it is empty (see the prop).
+  useEffect(() => {
+    if (!prefillQuestion) return;
+    setQuestion((current) => (current.trim() === "" ? prefillQuestion : current));
+    // The auto-grow above reads the rendered textarea, so it runs after the
+    // state write has painted rather than in the same tick.
+    const frame = window.setTimeout(() => resizeQuestionField(textareaRef.current), 0);
+    return () => window.clearTimeout(frame);
+  }, [prefillQuestion]);
 
   return (
     // A flex column that claims the shell's remaining height, so the hero can
@@ -127,25 +228,37 @@ export function HomeScreen({
     // content-height and the landing shows a grey void below it, which only
     // became visible once the rail beside it ran full height.
     <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      {/*
+        Product-owner decision, 2026-09-12, overruling the design system's
+        navy landing hero (`screens/home.html`): "The home page contrast is
+        horrible. Lets have consistency." The home page now sits on the same
+        light `canvas` ground as every other screen, between the same blue
+        header and footer, with ink text and white controls.
+      */}
       <Box
         data-testid="home-hero"
         sx={{
           flex: 1,
-          bgcolor: designTokens.navy,
-          backgroundImage:
-            "radial-gradient(900px 340px at 50% -10%, rgba(32,84,147,.6), transparent 70%)",
+          bgcolor: designTokens.canvas,
           px: 3,
-          pt: { xs: 6, sm: 8 },
-          pb: { xs: 5, sm: 7 },
+          py: { xs: 5, sm: 6 },
           textAlign: "center",
+          // Product-owner feedback, 2026-09-12: centred between the header
+          // and footer, the same as the log-in screen. The inner wrapper
+          // below takes the full width, so its children keep their own
+          // `maxWidth` and `mx: auto` centring.
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
         }}
       >
-        <Typography variant="h1" component="h1" sx={{ color: "#FFFFFF", mb: 1.75 }}>
+        <Box sx={{ width: "100%" }}>
+        <Typography variant="h1" component="h1" sx={{ color: designTokens.ink, mb: 1.75 }}>
           Ask a biomedical question
         </Typography>
         <Typography
           sx={{
-            color: designTokens.inkOnNavyMute,
+            color: designTokens.inkMuted,
             maxWidth: "46ch",
             mx: "auto",
             mb: 3.75,
@@ -159,15 +272,21 @@ export function HomeScreen({
         <Box
           component="form"
           onSubmit={submit}
+          data-tour="search-box"
           sx={{
             display: "flex",
-            alignItems: "center",
+            // Top-aligned, not centred: the icon sits at the top-left of the
+            // box (`SearchIcon` below) and the submit button pins itself to
+            // the bottom-right with its own `alignSelf` (see below).
+            alignItems: "flex-start",
             gap: 1.25,
-            maxWidth: 620,
+            maxWidth: 720,
             mx: "auto",
             mb: 2.25,
             bgcolor: designTokens.surface,
-            border: "2px solid transparent",
+            // `search-bar.html`: a 2px `line-strong` border, so a white bar
+            // holds its own on the light ground.
+            border: `2px solid ${designTokens.lineStrong}`,
             borderRadius: 1,
             pl: 2,
             pr: 0.75,
@@ -176,62 +295,102 @@ export function HomeScreen({
             "&:focus-within": { borderColor: designTokens.link },
           }}
         >
-          <SearchIcon />
+          {/*
+            Centred on the QUESTION_LINE_HEIGHT_PX line box, with the same
+            top inset (0.75, matching the textarea's own `py`) so the glass
+            sits level with the first line of text, at 3 rows or grown, not
+            just nudged down by a fixed padding guess.
+          */}
           <Box
-            component="input"
-            type="text"
+            sx={{
+              // `mt`, not `pt`: padding on a border-box element eats into the
+              // fixed height below, shrinking the centred area and pulling
+              // the icon 3px above the text's first line. A margin pushes
+              // the whole line box down instead, so it lands exactly where
+              // the textarea's own padding puts its first line.
+              mt: 0.75,
+              height: `${QUESTION_LINE_HEIGHT_PX}px`,
+              flex: "none",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <SearchIcon />
+          </Box>
+          <Box
+            component="textarea"
+            ref={textareaRef}
             aria-label="Your question"
             placeholder="Which diseases are associated with BRCA1?"
             value={question}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-              setQuestion(event.target.value)
-            }
+            maxLength={QUESTION_MAX_LENGTH}
+            rows={QUESTION_MIN_ROWS}
+            onKeyDown={handleQuestionKeyDown}
+            onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {
+              setQuestion(event.target.value);
+              resizeQuestionField(event.target);
+            }}
             sx={{
               flex: 1,
               border: 0,
               outline: 0,
+              resize: "none",
               font: "inherit",
-              fontSize: 15.5,
+              fontSize: QUESTION_FONT_SIZE,
+              lineHeight: QUESTION_LINE_HEIGHT,
+              minHeight: QUESTION_MIN_HEIGHT,
+              maxHeight: QUESTION_MAX_HEIGHT,
+              minWidth: 0,
+              "@media (max-width:720px)": { maxHeight: QUESTION_MAX_HEIGHT_NARROW },
+              overflowY: "auto",
               color: designTokens.ink,
               bgcolor: "transparent",
               py: 0.75,
             }}
           />
           {/*
-            "Search", with the prototype's right arrow: `button.go` in
-            `#s-landing`.
+            Product-owner decision 2026-09-13, after trying the text button
+            top-right, bottom-right and flexible between the two: an icon-only
+            submit, always at the bottom-right corner, at every width. On
+            phones it no longer takes a full-width row of its own, since a
+            36px square leaves the field its width (measured 2026-09-12 it was
+            the 100px-plus text button that squeezed the field to 176px).
 
-            This read "Ask" until 2026-08-14. The reason was real (F-4.8-L-03):
-            the nav already has a destination called Search, and two visible
-            controls sharing an accessible name is a genuine problem for anyone
-            navigating by control list, which `e2e/accessibility.spec.ts`
-            enforces. The reasoning was sound and the remedy overshot, changing
-            what the user SEES to fix a problem that lives in the accessible
-            name.
-
-            So the visible label is the design's, and the collision is resolved
-            on the accessible name instead. WCAG 2.5.3 (Label in Name) requires
-            that name to CONTAIN the visible text, or a speech-input user
-            saying "Search" cannot operate the control, which is why it is not
-            renamed to something unrelated.
+            Accessible name: this read "Ask" until 2026-08-14 because the nav
+            already has a destination called Search, and two controls sharing
+            an accessible name is a real problem for anyone navigating by
+            control list, which `e2e/accessibility.spec.ts` enforces. With no
+            visible text, WCAG 2.5.3 (Label in Name) no longer constrains the
+            name, but it keeps "Search" in it so a speech-input user who reads
+            the page as a search box can still say the obvious word.
           */}
           <Button
             type="submit"
             variant="contained"
             aria-label="Search the knowledge graph"
-            sx={{ px: 2.25, py: 1.1, fontSize: 14, gap: 0.75 }}
+            sx={{
+              // A square: the `.go` button's 36px rendered height, with
+              // `minWidth` cleared so MUI's 64px text-button floor does not
+              // widen it.
+              width: 36,
+              height: 36,
+              minWidth: 0,
+              p: 0,
+              flex: "none",
+              alignSelf: "flex-end",
+            }}
           >
-            Search
-            <ArrowIcon />
+            <ArrowUpIcon />
           </Button>
         </Box>
 
         {/* `.depthwrap` sits BELOW the search bar in the prototype. */}
-        <Box sx={{ mb: 2.5 }}>
-          <DepthControl value={depth} onChange={setDepth} variant="onNavy" />
+        <Box data-tour="depth" sx={{ mb: 2.5, display: "inline-block" }}>
+          <DepthControl value={depth} onChange={setDepth} variant="onLight" />
         </Box>
 
         <Box
+          data-tour="seeds"
           sx={{
             display: "flex",
             flexWrap: "wrap",
@@ -256,10 +415,10 @@ export function HomeScreen({
                   py: 0.75,
                   borderRadius: 999,
                   cursor: "pointer",
-                  color: "#FFFFFF",
-                  border: "1px solid rgba(255,255,255,.35)",
-                  bgcolor: "rgba(255,255,255,.08)",
-                  "&:hover": { bgcolor: "rgba(255,255,255,.18)" },
+                  color: designTokens.ink,
+                  border: `1px solid ${designTokens.line}`,
+                  bgcolor: designTokens.surface,
+                  "&:hover": { borderColor: designTokens.lineStrong, bgcolor: designTokens.surfaceSunk },
                 }}
               >
                 {seed.text}
@@ -273,19 +432,61 @@ export function HomeScreen({
           })}
         </Box>
 
+        {tourInvite}
+
+        {onTakeTour ? (
+          // Product-owner feedback 2026-09-13: "Take the tour" must stand out
+          // rather than hide in the footer strip. An outlined pill in the
+          // link colour, centred under the seed chips, with a small compass
+          // mark: it reads as an action, not as small print, and stays out
+          // of the way of the search box above it. Built from the seed chip
+          // pill and the design system's outlined button; no new colour.
+          <Box sx={{ mt: 2.25, display: "flex", justifyContent: "center" }}>
+            <Box
+              component="button"
+              type="button"
+              onClick={onTakeTour}
+              data-testid="take-the-tour"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.9,
+                font: "inherit",
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: designTokens.link,
+                bgcolor: designTokens.surface,
+                border: `2px solid ${designTokens.link}`,
+                borderRadius: 999,
+                px: 2,
+                py: 0.85,
+                cursor: "pointer",
+                "&:hover": { bgcolor: designTokens.layer1Wash },
+                "&:focus-visible": { outline: `2px solid ${designTokens.navy}`, outlineOffset: 2 },
+              }}
+            >
+              <svg width={15} height={15} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true">
+                <circle cx={8} cy={8} r={6.3} />
+                <path d="M10.6 5.4 9.2 9.2 5.4 10.6 6.8 6.8z" fill="currentColor" stroke="none" />
+              </svg>
+              Take the tour
+            </Box>
+          </Box>
+        ) : null}
+
         <Box
           sx={{
             maxWidth: 900,
             mx: "auto",
             mt: 4.25,
             pt: 2.5,
-            borderTop: "1px solid rgba(255,255,255,.18)",
+            borderTop: `1px solid ${designTokens.line}`,
             display: "flex",
             flexWrap: "wrap",
             gap: "10px 28px",
             justifyContent: "center",
             fontSize: 12.5,
-            color: designTokens.inkOnNavyMute,
+            color: designTokens.inkMuted,
           }}
         >
           {[
@@ -294,12 +495,13 @@ export function HomeScreen({
             ["Literature and trials", "layered on top"],
           ].map(([label, detail]) => (
             <Box component="span" key={label}>
-              <Box component="b" sx={{ color: "#FFFFFF", fontWeight: 700 }}>
+              <Box component="b" sx={{ color: designTokens.ink, fontWeight: 700 }}>
                 {label}
               </Box>{" "}
               {detail}
             </Box>
           ))}
+        </Box>
         </Box>
       </Box>
 

@@ -69,7 +69,7 @@ async function signUpFreshAccount(page: Page): Promise<void> {
   await page.getByRole("navigation", { name: /main/i }).getByRole("button", { name: /log in/i }).click();
   await page.getByLabel("Email").fill(freshEmail());
   await page.getByLabel("Password").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Sign up" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
 
   /*
    * The landing's question field is the next real DOM after auth resolves, so
@@ -125,7 +125,7 @@ test.describe("query stream and stop", () => {
     await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible();
   });
 
-  test("a second question shows the run screen, not a jump to the answer", async ({ page }) => {
+  test("a second question shows the run's progress, not a jump to the answer", async ({ page }) => {
     // F-4.8-R-01. `useAgentRun` reset its event buffer in an effect, which runs
     // after commit, so a render could see the NEW run id beside the PREVIOUS
     // run's events. `landed` was already true, the navigation effect fired, and
@@ -139,6 +139,14 @@ test.describe("query stream and stop", () => {
     // needs a real stream that really lands. Two vitest attempts both produced
     // assertions that could not fail; this one was verified to fail with the
     // fix disabled.
+    //
+    // UI FIX SET 7 (R22) CHANGED WHERE THAT PROGRESS RENDERS, not whether
+    // it does. A follow-up now keeps the answer screen and shows the same
+    // stepper, counter and Stop inside it, so the title says "the run's
+    // progress" rather than "the run screen". THE GUARANTEE IS UNCHANGED
+    // and is if anything stronger: `step-Guard` must still be on screen,
+    // and the second assertion below additionally pins that it is there
+    // WITHOUT the conversation having been thrown away to make room.
     await signUpFreshAccount(page);
 
     await ask(page, "What gene is BRCA1?");
@@ -150,8 +158,77 @@ test.describe("query stream and stop", () => {
     await page.getByRole("textbox", { name: /follow-up/i }).fill("What gene is TP53?");
     await page.getByRole("button", { name: /^ask$/i }).click();
 
-    // The run screen must actually appear. `step-Guard` exists only there.
+    // The progress must actually appear. `step-Guard` exists only inside
+    // `RunProgress`, which both the full-screen run and the inline
+    // continuation render.
     await expect(page.getByTestId("step-Guard")).toBeVisible({ timeout: 10_000 });
+    // And it is INSIDE the answer screen. `data-tour="answer"` is on that
+    // screen's card and nowhere else.
+    await expect(page.locator('[data-tour="answer"]')).toBeVisible();
+  });
+
+  /**
+   * UI fix set 7 (R22): Stop during an INLINE follow-up run.
+   *
+   * NEW, not a rewrite: the arm below it keeps the first-run Stop coverage
+   * unchanged, including its server-side cancellation proof. This one
+   * exists because the inline run is a second place a Stop button is now
+   * rendered, and a control that exists in two places has two chances to be
+   * wired to nothing. The full-screen arm cannot see the inline one.
+   *
+   * What is asserted here is the CLIENT half plus the conversation: the
+   * stopped block replaces the stepper in place, it offers Run again, and
+   * the earlier turn is still on the page underneath it rather than having
+   * been discarded along with the run. The server-side `task_cancelled`
+   * proof is not duplicated: `stopCurrentRun` in `App.tsx` is one function
+   * called by both buttons, so the arm below already covers the half that
+   * reaches the server, and re-proving it here would be asserting the same
+   * line twice while pretending to cover two.
+   */
+  test("stop during a follow-up leaves the conversation on screen", async ({ page }) => {
+    await signUpFreshAccount(page);
+
+    await ask(page, "What gene is BRCA1?");
+    await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
+
+    // The follow-up carries the slow marker, so the run is still going when
+    // Stop is pressed rather than racing the click.
+    await page
+      .getByRole("textbox", { name: /follow-up/i })
+      .fill(`${SLOW_QUERY_MARKER} what gene is TP53?`);
+    await page.getByRole("button", { name: /^ask$/i }).click();
+
+    const stop = page.getByRole("button", { name: /^stop$/i });
+    await expect(stop).toBeEnabled({ timeout: 30_000 });
+
+    // POPULATE-CHECK, before the stop: the earlier turn must already be on
+    // the page, or "still there afterwards" would be true for the wrong
+    // reason.
+    await expect(
+      page.getByTestId("previous-turn-0"),
+      "the earlier turn was not archived when the follow-up started",
+    ).toBeVisible();
+
+    await stop.click();
+
+    await expect(page.getByTestId("run-stopped")).toBeVisible();
+    await expect(page.getByTestId("run-stopped")).toContainText("Search stopped");
+    await expect(page.getByRole("button", { name: "Run again" })).toBeVisible();
+
+    // THE POINT OF THIS ARM. Stopping a follow-up must not throw the
+    // conversation away, and the stopped block must be inside the answer
+    // screen rather than on a screen of its own.
+    await expect(
+      page.getByTestId("previous-turn-0"),
+      "stopping the follow-up discarded the earlier turn",
+    ).toBeVisible();
+    await expect(page.locator('[data-tour="answer"]')).toBeVisible();
+
+    // Exactly one New search on screen: the answer screen's own. The inline
+    // stopped block deliberately does not add a second, which is what
+    // `showNewSearch={false}` buys. A strict lookup with no `.first()` is
+    // the assertion: two would fail it.
+    await expect(page.getByRole("button", { name: "New search", exact: true })).toHaveCount(1);
   });
 
   test("stop halts the run on the server, not just in the browser", async ({ page, request }) => {
@@ -209,12 +286,106 @@ test.describe("query stream and stop", () => {
       )
       .toBe(true);
 
+    // Decision U7, requirement R45: Stop used to leave this frozen stepper
+    // on screen with nothing said about what happened. The browser itself
+    // now shows the replacement instead, not just the unit test's mock of
+    // it.
+    await expect(page.getByTestId("run-stopped")).toBeVisible();
+    await expect(page.getByTestId("run-stopped")).toContainText("Search stopped");
+    await expect(page.getByRole("button", { name: "Run again" })).toBeVisible();
+
     // CLIENT-SIDE PROOF, also restored. `think` needs another delayed call to
     // reach "done", which never fires because the run was stopped right after
-    // `guard`. Waiting past that point and finding it still not done shows no
-    // further events reached this page.
+    // `guard`. This used to wait and then read `step-Think`'s state, but the
+    // stopped block above REPLACES the stepper, so that locator now finds
+    // nothing and `not.toHaveAttribute` fails on absence rather than
+    // proving anything (caught by running this spec after the U7 change).
+    // The property it was guarding is "no further event reached this
+    // page": had one arrived, the run would have landed and the answer
+    // screen would have replaced the stopped block. So the proof is that,
+    // after waiting past the point `done` would have fired, the stopped
+    // block is still here and no answer meta strip ever appeared.
     await page.waitForTimeout(3_000);
-    await expect(page.getByTestId("step-Think")).not.toHaveAttribute("data-state", "done");
+    await expect(page.getByTestId("run-stopped")).toBeVisible();
+    await expect(page.getByTestId("answer-meta")).toHaveCount(0);
+    await expect(page.getByTestId("step-Think")).toHaveCount(0);
+  });
+
+  /**
+   * UI fix set 9, item 9.6: Stop works while the answer is visibly streaming.
+   *
+   * The e2e backend emits no claim token before a run ends, so the claims are
+   * scripted into the event stream the page reads, and the stream closes with
+   * NO terminal event, which leaves the run live exactly as a slow Write step
+   * does. The run itself is real and still running on the server (the slow
+   * marker), so the server-side proof is the same `task_cancelled` poll as
+   * the arm above.
+   *
+   * Three things are asserted: the answer builds on screen before the run
+   * lands; Stop is offered and works from that screen; and after Stop the
+   * partial answer is gone and the stopped block says no answer was written.
+   */
+  test("stop works while the answer is streaming in", async ({ page, request }) => {
+    const streamFrame = (seq: number, type: string, payload: unknown): string =>
+      `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+        type, version: "v1", trace_id: "stop-mid-stream", seq,
+        ts: "2026-09-13T00:00:00Z", payload,
+      })}\n\n`;
+    const partialStream = [
+      streamFrame(0, "guard", { passed: true, category: "ok", reason: null }),
+      streamFrame(1, "think", {
+        narrative: "Resolving the gene.", query_class: "single_hop",
+        resolved_entities: [], clarifying_question: null,
+      }),
+      streamFrame(2, "plan", { narrative: "Query the graph.", tool_calls: [] }),
+      streamFrame(3, "token", {
+        text: "BRCA1 is associated with familial cancer of breast [1]. ",
+        marker_ids: ["cid-1"], kind: "claim",
+      }),
+      streamFrame(4, "token", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+      streamFrame(5, "token", {
+        text: "It is a tumour suppressor gene [2]. ", marker_ids: ["cid-2"], kind: "claim",
+      }),
+    ].join("");
+
+    await signUpFreshAccount(page);
+    let runId: string | null = null;
+    await page.route("**/v1/query/*/events*", (route) => {
+      const match = /\/v1\/query\/([^/]+)\/events/.exec(route.request().url());
+      runId = match?.[1] ?? null;
+      return route.fulfill({
+        status: 200,
+        headers: { "content-type": "text/event-stream", "cache-control": "no-cache" },
+        body: partialStream,
+      });
+    });
+
+    await ask(page, `${SLOW_QUERY_MARKER} which diseases are associated with BRCA1?`);
+
+    const streaming = page.getByTestId("streaming-answer");
+    await expect(streaming).toBeVisible({ timeout: 30_000 });
+    await expect(streaming).toContainText("familial cancer of breast");
+    await expect(page.getByTestId("answer-meta")).toHaveCount(0);
+
+    const stop = page.getByRole("button", { name: /^stop$/i });
+    await expect(stop).toBeEnabled();
+    await stop.click();
+
+    await expect(page.getByTestId("run-stopped")).toBeVisible();
+    await expect(page.getByTestId("run-stopped")).toContainText("Search stopped");
+    await expect(page.getByTestId("streaming-answer")).toHaveCount(0);
+
+    expect(runId, "the page must have opened the run's event stream").not.toBeNull();
+    await expect
+      .poll(
+        async () => {
+          const statusResponse = await request.get(`${BACKEND_URL}/__e2e__/run_status/${runId}`);
+          const body = (await statusResponse.json()) as { task_cancelled: boolean };
+          return body.task_cancelled;
+        },
+        { message: "server-side run task never reported cancelled", timeout: 10_000 },
+      )
+      .toBe(true);
   });
 
   test("stop stops being offered once the run has finished", async ({ page }) => {

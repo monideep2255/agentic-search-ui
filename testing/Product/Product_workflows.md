@@ -1,0 +1,361 @@
+# Product workflows
+
+Tests to run by hand on the develop app: <https://search-agent-web-develop-2aeb.up.railway.app>
+
+Each test says what it checks, what to do, and what should happen. If something does not match, drop a screenshot in `feedback/inbox/`. Put the test number in the filename if you like.
+
+Tip: use a private or incognito window whenever a test says "as a guest". It gives you a fresh visitor who is not signed in.
+
+## Table of contents
+
+- [1. Basic search](#1-basic-search)
+- [2. Follow-up questions](#2-follow-up-questions)
+- [3. Log in and log out](#3-log-in-and-log-out)
+- [4. Guest limit of 5 searches (removed)](#4-guest-limit-of-5-searches-removed)
+- [5. Wrong password](#5-wrong-password)
+- [6. Search history](#6-search-history)
+- [7. Answer mode](#7-answer-mode)
+- [8. Off-topic question](#8-off-topic-question)
+- [9. Stop a search](#9-stop-a-search)
+- [10. Feedback on an answer](#10-feedback-on-an-answer)
+- [11. Other pages and phone width](#11-other-pages-and-phone-width)
+- [12. Trust signals and sources](#12-trust-signals-and-sources)
+- [13. Suggested next step and missing-information notes](#13-suggested-next-step-and-missing-information-notes)
+- [14. The scientist name at the top](#14-the-scientist-name-at-the-top)
+- [15. The disclaimer](#15-the-disclaimer)
+- [16. Guest searches moving into a new account (removed)](#16-guest-searches-moving-into-a-new-account-removed)
+- [17. A page address that does not exist](#17-a-page-address-that-does-not-exist)
+- [18. Search limit shown to a signed-in user](#18-search-limit-shown-to-a-signed-in-user)
+- [19. A question with no data](#19-a-question-with-no-data)
+- [20. Too many guest attempts (removed)](#20-too-many-guest-attempts-removed)
+- [21. Feedback when the connection drops](#21-feedback-when-the-connection-drops)
+- [22. The guided tour](#22-the-guided-tour)
+- [What this list does not cover](#what-this-list-does-not-cover)
+- [Already known, no need to report](#already-known-no-need-to-report)
+
+## 1. Basic search
+
+Testing: a first-time visitor can ask a question and get a cited answer.
+
+Query: `Which diseases are associated with BRCA1?`
+
+Steps: open the site as a guest → tick "I understand this is a research tool…" → Continue → type the query in the search box, or click the "Diseases linked to BRCA1" chip → Search
+
+Expected:
+
+- A progress screen with five steps and a seconds counter that keeps ticking.
+- During the search step, the scientist at the top says "{name} is handing off to {A}, {B} and {C}". Three lines appear under it: "{A} is searching the knowledge graph", "{B} is checking live NCBI records" and "{C} is reading the literature and trials". Each line has an L1, L2 or L3 badge that starts as an outline and fills in when that layer's results arrive. Each helper's name has the same small "i" as the lead's, which opens a card with a Wikipedia link.
+- The answer builds on screen sentence by sentence while the steps are still showing, then settles into short paragraphs, each sentence with its numbered citation chip, plus source cards. Typical time to the answer is 20 to 40 seconds, and never more than 90.
+- The answer never opens on a broken sentence, such as an unclosed bracket or "These are …" with nothing before it.
+- Notes, such as "Note: the records below were retrieved …", read as grey notes after the answer. They never look like an uncited sentence and never come first.
+- Diseases named in words that read naturally, such as "Familial breast-ovarian cancer susceptibility 1", never codes like `MedGen:C0346153` and never "susceptibility to, 1".
+- Clicking a citation or source link opens an ncbi.nlm.nih.gov page for that record.
+
+## 2. Follow-up questions
+
+Testing: the chat keeps context, so "it" means the gene from the last answer.
+
+Query: after test 1, ask `What variants cause it?`
+
+Steps: finish test 1 → type in "Ask a follow-up question", or click the "What variants cause it?" chip → submit → watch the search run → then click "New search"
+
+Expected:
+
+- You stay on the same screen. The first question and its answer fold into a collapsed row at the top, and the new search's progress (the steps, the scientist, the Stop button) appears below it in place of the answer. The page scrolls so the new question's heading is in view.
+- A second answer about BRCA1, without you typing BRCA1 again, grows where the progress was. It names ClinVar variants, each with a source. Sometimes the answer reads as a plain list of records with a note saying so; that is the honest form when the answer text could not be tied to its sources word for word, and it is still an answer, not a refusal.
+- Each folded row says "Show answer" on its right, and "Hide answer" once open. Clicking the row opens the earlier answer again, complete: its status line, notes, every claim with its chips, the full source cards and the trust pills, exactly as it looked when it was live. There is clear space between the folded rows and the new question.
+- From a fresh page with no earlier answer, "What variants cause it?" does not refuse: a grey "One more detail needed" label asks which gene, variant or condition you mean, and the follow-up field is ready for the answer.
+- Stop during the follow-up shows "Search stopped" in the same place, with "Run again".
+- "New search" clears the conversation and returns you to the home page.
+
+## 3. Log in and log out
+
+Testing: one Log in button creates an account for a new email, and logging out goes to the home page.
+
+Steps: click "Log in" at the top right → enter a new email and a password → Log in → reload the page → run test 1's query → click "Integrations" in the top bar → click your email at the top right → Log out → click "Log in" → enter the same email and password → Log in (or press Enter)
+
+Expected:
+
+- A sign-in screen titled "Log in" that says "Use your email and a password. A new email creates your account." It has one button, Log in, and no Sign up button.
+- After the first Log in, the top right shows your initials and email instead of "Log in".
+- Clicking your email opens a menu with your email, "Signed in", "API key and integrations", "Documentation" and a red "Log out".
+- Search and follow-ups work the same as tests 1 and 2.
+- Log out, even from the Integrations page, lands on the search home page, with the previous conversation gone.
+- Logging back in with the same email and password shows your email at the top right again.
+- After a reload you stay signed in: your initials and email are still at the top right, and your searches are still listed on the left.
+
+## 4. Guest limit of 5 searches (removed)
+
+Removed on 2026-09-12. Set 1 took away the guest limit, so there is nothing left to test here. Test 1 now covers searching as a guest, with no count and no sign-in card however many searches you run.
+
+## 5. Wrong password
+
+Testing: a wrong password gives a clear message, and the form still works afterwards.
+
+Steps: click "Log in" → enter your account's email with a wrong password → Log in → fix the password → Log in
+
+Expected:
+
+- A wrong password shows "That password does not match this email. Check it and try again."
+- Your email stays filled in, and the corrected password logs you in.
+- No raw error codes or technical messages.
+
+## 6. Search history
+
+Testing: a signed-in user can see and re-run earlier searches.
+
+Steps: log in → run 2 different searches → look at "Your searches" on the left → click an older one → click "Hide your searches", then "Show your searches"
+
+Expected:
+
+- Both searches are listed.
+- Clicking one runs that question again. It is a fresh run, not a saved copy.
+- The panel hides and comes back.
+- Guests see no history panel.
+- Reload the page: you stay signed in and both searches are still listed, without logging in again.
+
+## 7. Answer mode
+
+Testing: the two modes change how the answer is written, not what it finds.
+
+Query: `Which diseases are associated with BRCA1?`, asked twice.
+
+Steps: on the home page check that "Plain language" is selected → click the small "i" beside the mode and read the explanation → Search → while it runs, try to change the mode → New search → choose "Researcher" → Search
+
+Expected:
+
+- Plain language is the default. The "i" explains both modes.
+- Plain language: a short answer in about three paragraphs of everyday words, with no headings, lists or tables. It ends with the grey line "This is a research summary, not medical advice."
+- Researcher: an opening paragraph with key names in bold, short topic headings, then the records found as a bulleted list under a heading, each row with its citation chip. No medical-advice line.
+- The same sources appear in both modes. Compare the source count and the source list.
+- The mode cannot be changed while a search is running. A change applies to the next question.
+- Follow-up question: the handoff lines from test 1 appear again under the new question. The three helper scientists may differ from the first question's, and the lead stays the same.
+- Both modes open with one sentence counting what was found and naming it, such as "Found 4 disease records for BRCA1: Familial cancer of breast [1], …". Plain language then runs about 120 words, Researcher about 200 plus the list, because every sentence must be tied to a retrieved record.
+- Researcher never repeats a record in the prose that the list below already shows, and no sentence reads "has a source URL of".
+
+## 8. Off-topic question
+
+Testing: the product refuses rather than making something up.
+
+Query: `What is the capital of France?`
+
+Steps: type the query → Search
+
+Expected:
+
+- A refusal box with a calm grey label reading "Outside biomedical research".
+- A short sentence explaining the refusal.
+- No red "Not verified" or "Not fully grounded" pill.
+- No error styling.
+- Never an invented answer.
+
+## 9. Stop a search
+
+Testing: a search can be cancelled mid-way.
+
+Query: `Which diseases are associated with BRCA1?`
+
+Steps: Search → press Stop while the progress screen is running
+
+Expected:
+
+- The progress steps disappear.
+- A "Search stopped" message appears.
+- Two buttons appear: "Run again" and "New search".
+- Clicking "Run again" asks the same question again from the start.
+- Clicking "New search" returns to the home page.
+- No answer appears from the stopped search.
+
+## 10. Feedback on an answer
+
+Testing: a reader can rate an answer and flag a bad source.
+
+Steps: get any answer → click "Not helpful" → pick a reason, such as "Wrong answer" → type a comment → Send feedback → on a source, click "Flag: does not support"
+
+Expected:
+
+- Reasons appear only after "Not helpful", never after "Helpful".
+- Sending confirms that it went through.
+- The source changes to "Flagged".
+
+## 11. Other pages and phone width
+
+Testing: navigation works, including on a phone.
+
+Steps: click Integrations → About → press the browser back button → on Integrations, click a copy button → back on About, scroll to the bottom and click "Explore the architecture" → make the window phone-narrow, or open the site on your phone → open "More pages" → log in → tap the searches button at the top right
+
+Expected:
+
+- Each page opens, and back returns to the previous page. There is no Docs tab and no Architecture tab; the top bar shows Search, Integrations and About.
+- Integrations shows one title, four chips reading 115M nodes, 693M edges, 3 data layers and 7 tools, then four cards of the same height: REST and SSE, GraphQL, MCP server, and Command line tools. Each card has a round icon, a title, a short description, and buttons lined up along the bottom.
+- Below the cards, a short access notice, then an API documentation section.
+- About opens with "What happens to your question": seven numbered stops that follow one BRCA1 question from typing it, through the three model tiers, the search, the records coming back, the streamed answer, what you get, and what the system will not do. The closing line's "open Search" link returns to the home page.
+- About ends with a short "Where the data comes from" block: the knowledge graph is a snapshot finished on 22 April 2026, built from Gene, PubMed, ClinVar, Taxonomy and MedGen, holding 115,406,761 nodes and 693,295,991 edges, with layers 2 and 3 called live. Under it, "Explore the architecture" goes to the Architecture page without reloading, so you stay logged in. The page also opens directly at /architecture.
+- Architecture opens with the title "Architecture" and four numbered stops: Layer 1 the data pipelines and the knowledge graph, Layer 2 live NCBI APIs, Layer 3 enrichment, then "All three layers feed the search agent". The word "system" appears nowhere on the page.
+- Stop 1 shows the five pipeline steps, the four snapshot figures, one card per source database with its node count, then the graph facts and an example query, and it ends with the blue L1 card for cypher_query reading 90 seconds and at most 500 rows. Stops 2 and 3 each show their own coloured card, green L2 with ncbi_efetch, ncbi_dbsnp and pathogen_detection, purple L3 with pubtator_annotate, litvar2_lookup and clinicaltrials_search, each tool naming what it calls and its time limit.
+- Stop 4 says the agent reads layer 1 first and reaches layers 2 and 3 live while you wait, and that every fact arrives with a link to the record behind it.
+- The closing line on Architecture, "open About", goes back to About.
+- The copy button copies the snippet.
+- At phone width nothing scrolls sideways, and the other pages are reachable from "More pages".
+- At phone width, while logged in, the searches button at the top right opens your searches as a panel sliding in from the left. Tapping outside it, pressing Escape, or its close button closes it.
+
+## 12. Trust signals and sources
+
+Testing: an answer says in one line how much to trust it, and its sources come from more than one layer.
+
+Query: `Which diseases are associated with BRCA1?`, then `What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?`
+
+Steps: watch the answer being written → get the answer → hover, tap, or Tab to a small number after a sentence → read the card → press Escape → read the line under the answer → click its "i" → look through the sources → open "Show work"
+
+Expected:
+
+- While the answer is being written, the scientist's line reads "{name} is writing the answer…" with moving dots, and "writing…" follows the sentences as they appear. No raw bracket numbers such as "[1][2]" show while it writes. Both disappear when the answer lands or you press Stop.
+- Each cited sentence ends in small raised numbers, not boxes. A sentence with many sources shows one range, such as "1–13".
+- Hovering, tapping or tabbing to a number opens a small card naming each source, its id, its layer in words, and an "Open the record" link that opens on ncbi.nlm.nih.gov or clinicaltrials.gov. Escape or clicking elsewhere closes it.
+- Select the whole answer and paste it into a text editor. It reads as prose and table text with citation digits only, never "Source 1, layer 2" or "Sources 1 to 4". With a screen reader, each citation number still announces its source and layer.
+- On a phone, in Researcher mode, the tables become stacked rows: the name first with its citation number, the identifier underneath. The page never scrolls sideways.
+- Under the answer, one plain line such as "Based on 4 sources, not yet confirmed" or "Confirmed by 2 independent sources", with an "i" that explains how sources are counted. No row of pills, and no two trust signals that contradict each other: the status word says "Answered" when the line carries the caution.
+- A high-risk claim adds "High-risk claim" in red on the same line.
+- Sources come from more than one layer: live NCBI gene records (L2), the literature record from PubTator3 (L3), and up to five clinical trials from clinicaltrials.gov (L3). For the EGFR question, the trials shown are recruiting ones.
+- A trial source names clinicaltrials.gov and its NCT number, and opens that trial's page.
+- Any sentence with no source is shown in grey with no citation chip. It must never look like a cited claim.
+- "Show work" shows the steps and tools the search used, including the literature and trials tools.
+
+## 13. Suggested next step and missing-information notes
+
+Testing: the answer is honest about what it left out.
+
+Query: `Which diseases are associated with BRCA1?`, then `Variants in GCK causing MODY`
+
+Steps: get each answer → read the end of the answer
+
+Expected:
+
+- Sometimes one suggested next step, which makes sense for your question. Sometimes none, which is also fine.
+- If there is one, "Yes, go deeper" runs a real follow-up on the same screen (the earlier answer folds up above) about the same gene, and the new answer lists records the earlier answer did not show. It never refuses just because you clicked it.
+- If the answer left something out, a plain note says so in everyday words, with no internal jargon.
+- If the answer is a refusal instead, it shows a grey label such as "No answer found in NCBI records", and the NCBI search address inside it is a clickable link that opens in a new tab on ncbi.nlm.nih.gov.
+- No note ever appears as a normal cited sentence.
+
+## 14. The scientist name at the top
+
+Testing: the "Working as" name is decoration only, and a reader can learn who the scientist was.
+
+Steps: look at "Working as …" at the top right → click the small "i" next to the name → click "Learn more on Wikipedia" → close the card with Escape or by clicking elsewhere → run test 1's query in two separate private windows
+
+Expected:
+
+- A scientist's name, which may differ between visits.
+- The "i" opens a small card with one or two lines on what the scientist did, and a "Learn more on Wikipedia" link that opens their Wikipedia page in a new tab.
+- The card closes with Escape or a click elsewhere.
+- During each search, three helper scientists appear on the progress screen, one per layer, never the lead scientist. Their "i" cards work the same way. They may differ on every search, even in the same window.
+- The answer, and its list of sources, are the same whichever names are shown.
+
+## 15. The disclaimer
+
+Testing: nobody can use the product without accepting the disclaimer.
+
+Steps: open the site as a guest → try to click past the disclaimer, or press Escape, without ticking the box → tick the box → Continue → log in → Log out
+
+Expected:
+
+- The disclaimer is a wide box, about twice the width of the old one, titled "Important medical disclaimer".
+- It has a bold opening sentence, a paragraph that says to seek the advice of your physician, and a notice box titled "Prototype".
+- The continue button runs the full width of the box and reads "I understand, continue to the research tool". It stays greyed out until the box is ticked.
+- Escape does not close it.
+- After ticking and Continue, the product opens.
+- It does not come back while you use the site, and it appears again after Log out.
+
+## 16. Guest searches moving into a new account (removed)
+
+Removed on 2026-09-12. With no guest limit, there is no guest allowance to move into an account.
+
+## 17. A page address that does not exist
+
+Testing: a mistyped address does not break the site.
+
+Steps: open the site's address with `/nonsense` added to the end
+
+Expected: you land on the Search page, not a blank or error page.
+
+## 18. Search limit shown to a signed-in user
+
+Testing: a signed-in user sees their own search limit, and it is true.
+
+Steps: log in → click your email at the top right → look at the bottom of "Your searches"
+
+Expected:
+
+- The menu reads "Signed in", followed by your search limit.
+- The bottom of the history panel names your account and your search limit.
+- No "unlimited" claim anywhere.
+
+## 19. A question with no data
+
+Testing: when NCBI has nothing, the product says so instead of inventing an answer.
+
+Query: `Which diseases are associated with the gene FAKEGENE99?`
+
+Steps: type the query → Search
+
+Expected:
+
+- A refusal box with the grey label "No answer found in NCBI records".
+- A plain sentence saying nothing was found.
+- A clickable NCBI search link.
+- No diseases listed.
+- No citation chips.
+- No red "Not verified" or "Not fully grounded" pill.
+
+## 20. Too many guest attempts (removed)
+
+Removed on 2026-09-12. Set 1 took away the ten-attempt guest limit. Test 8 still covers an off-topic question being refused.
+
+## 21. Feedback when the connection drops
+
+Testing: feedback you wrote is not lost if sending fails.
+
+Steps: get any answer → click "Not helpful" → pick a reason and type a comment → turn off Wi-Fi → Send feedback → turn Wi-Fi back on → Retry
+
+Expected:
+
+- Your reason and comment stay on screen with a Retry button.
+- Retry sends it once you are back online.
+
+## 22. The guided tour
+
+Testing: a first-time visitor can take a tour of every feature that ends with a real answer.
+
+Steps: open the site in a private window → tick the disclaimer → Continue → on the home page, under the suggested questions, click "Start the tour" → read each card and press Next → on step 7, click "Run it for me" → wait for the answer → press Next to the end → Done → click the "Take the tour" button under the suggested questions on the home page
+
+Expected:
+
+- A card under the suggested questions reads "New here? Take the two-minute tour" with "Start the tour" and "Not now". "Not now" removes it for good on this browser.
+- The tour has nine steps with a "Step n of 9" counter. Each card explains one thing and highlights it with a blue ring: the question box, the answer depth, the suggested questions, the scientist name, the top bar, and Log in.
+- Step 7 fills the question box with the BRCA1 question. "Run it for me" runs it, and a small note follows the five steps while it runs; Stop stays reachable.
+- On the answer, step 8 points at the citation chips and step 9 at the sources and the follow-up field. Done closes the tour.
+- If the system refuses the question, the tour says so, explains that it refused rather than guess, and ends with Done.
+- Escape closes the tour at any point. The "Take the tour" button under the suggested questions starts it again any time.
+- At phone width the card sits at the bottom of the screen and nothing scrolls sideways.
+
+## What this list does not cover
+
+Three workflows cannot be triggered by hand, so they are tested on the developer side in `../Developer/Developer_workflows.md`:
+
+- A citation that points outside NCBI, which should be refused rather than linked.
+- The shared daily limit for all guests on one network.
+- How the answer text arrives on screen, sentence by sentence or all at once.
+- The GraphQL and MCP integrations, which need a developer's tools to call. They are checked on the developer side after every change to the Integrations page.
+
+## Already known, no need to report
+
+Found by the browser run on 2026-09-12. Full report with screenshots: `../Developer/reports/2026-09-12_walkthrough/index.html`, open it in a browser.
+
+- Follow-up questions used to get refused, including the suggested "What variants cause it?", 3 times out of 3. Fixed in set 7 on 2026-09-13; test 2 covers the retest.
+- "Which diseases are associated with BRCA1?" is refused with "I could not find grounded evidence" about one time in three. "Variants in GCK causing MODY" was refused too.
+- An answer can open with "These include…" without saying what "these" are, and a "one further gene record" note shows as a grey sentence with no source.
+- After sign-up, your guest searches do appear in your history, but no message says so.
+- Answers sometimes take more than 25 seconds.
+- A citation chip can read as a code such as `MedGen:C0346153` even though the sentence beside it names the disease in words. Found by the automated real-answer check on 2026-09-13.
+- An answer's first sentence can come out garbled, for example "BRCA1 (gene symbol BRCA1 [1]. These are…". Seen 2026-09-12.
+- A returning guest cannot see how many searches are left until they run one.

@@ -51,6 +51,13 @@ vi.mock("./lib/api", async () => {
     // useEffect and takes the whole render down, the same reasoning this
     // mock's own `fetchPersona` line already exists for.
     fetchHistory: vi.fn(async () => ({ items: [], count: 0 })),
+    // Fix set 4, R46 (decision U8): App now restores a session on load and
+    // revokes the refresh token on log out. An api mock that omits an export
+    // App actually calls throws inside a useEffect or a handler and takes
+    // the render down, the same reasoning `fetchPersona` above already
+    // carries.
+    refreshSession: vi.fn(),
+    logoutSession: vi.fn(async () => ({ status: "ok" })),
   };
 });
 
@@ -184,10 +191,14 @@ describe("the persona chip has one writer", () => {
     // `/auth/me` really did run and really did deliver its payload: the
     // depth control adopted the account's stored value. So this arm is not
     // passing merely because the request never happened.
+    //
+    // UI fix set 9: the control offers two modes, and a stored
+    // `deep_technical` lights the Researcher button (`displayedMode`). The
+    // default is Plain language, so Researcher pressed still proves delivery.
     await waitFor(() => expect(fetchMeMock).toHaveBeenCalled());
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /deep technical/i }),
+        screen.getByRole("button", { name: /^researcher$/i }),
       ).toHaveAttribute("aria-pressed", "true"),
     );
 
@@ -238,11 +249,18 @@ describe("the depth control starts where the account left it", () => {
     createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Franklin" });
   });
 
+  /*
+   * UI fix set 9 changed the control from three depths to two modes, Plain
+   * language (the default) and Researcher. These two arms keep every property
+   * they pinned and move the stored value to `researcher`, the one value that
+   * differs from the new default, so a pressed button still proves the seed
+   * rather than the default.
+   */
   it("shows the account's stored depth and sends it on the next question", async () => {
     fetchMeMock.mockResolvedValue({
       id: "u-1",
       email: "a@example.com",
-      audience_depth: "clinical_brief",
+      audience_depth: "researcher",
       persona_name: "Franklin",
     });
 
@@ -251,7 +269,7 @@ describe("the depth control starts where the account left it", () => {
     await signIn(user);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /clinical brief/i })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: /^researcher$/i })).toHaveAttribute(
         "aria-pressed",
         "true",
       ),
@@ -266,14 +284,14 @@ describe("the depth control starts where the account left it", () => {
     );
 
     await waitFor(() => expect(createRunMock).toHaveBeenCalled());
-    expect(createRunMock.mock.calls[0][0].audience_depth).toBe("clinical_brief");
+    expect(createRunMock.mock.calls[0][0].audience_depth).toBe("researcher");
   });
 
   it("stays changeable after it has been seeded", async () => {
     fetchMeMock.mockResolvedValue({
       id: "u-1",
       email: "a@example.com",
-      audience_depth: "clinical_brief",
+      audience_depth: "researcher",
       persona_name: "Franklin",
     });
 
@@ -281,15 +299,15 @@ describe("the depth control starts where the account left it", () => {
     render(<App />);
     await signIn(user);
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /clinical brief/i })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: /^researcher$/i })).toHaveAttribute(
         "aria-pressed",
         "true",
       ),
     );
 
-    await user.click(screen.getByRole("button", { name: /deep technical/i }));
+    await user.click(screen.getByRole("button", { name: /plain language/i }));
 
-    expect(screen.getByRole("button", { name: /deep technical/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /plain language/i })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -302,6 +320,6 @@ describe("the depth control starts where the account left it", () => {
     );
 
     await waitFor(() => expect(createRunMock).toHaveBeenCalled());
-    expect(createRunMock.mock.calls[0][0].audience_depth).toBe("deep_technical");
+    expect(createRunMock.mock.calls[0][0].audience_depth).toBe("plain_language");
   });
 });

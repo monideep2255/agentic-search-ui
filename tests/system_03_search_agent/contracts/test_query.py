@@ -8,6 +8,8 @@ from pydantic import ValidationError
 from system_03_search_agent.contracts.query import (
     MAX_COMPRESSED_FINDINGS,
     MAX_OPEN_THREADS,
+    MAX_REPORTED_RECORD_ID_LENGTH,
+    MAX_REPORTED_RECORD_IDS,
     MAX_RESOLVED_ENTITIES,
     SESSION_MEMORY_TOKEN_BUDGET,
     CompressedFinding,
@@ -221,3 +223,24 @@ class TestRequestContextSessionMemoryBound:
     def test_a_valid_summary_is_accepted(self) -> None:
         context = RequestContext(surface="web_ui", session_memory=_summary())
         assert context.session_memory is not None
+
+
+class TestReportedRecordIdsBound:
+    """UI fix set 7 (2026-09-13): the new list on the memory model is bounded
+    on both axes like the two it sits beside."""
+
+    def test_defaults_to_empty_and_loads_an_older_row(self) -> None:
+        assert _summary().reported_record_ids == []
+
+    def test_the_list_is_capped(self) -> None:
+        ok = _summary(reported_record_ids=[f"https://x/{i}" for i in range(MAX_REPORTED_RECORD_IDS)])
+        assert len(ok.reported_record_ids) == MAX_REPORTED_RECORD_IDS
+        with pytest.raises(ValidationError):
+            _summary(
+                reported_record_ids=[f"https://x/{i}" for i in range(MAX_REPORTED_RECORD_IDS + 1)]
+            )
+
+    def test_one_item_cannot_be_unbounded(self) -> None:
+        _summary(reported_record_ids=["u" * MAX_REPORTED_RECORD_ID_LENGTH])
+        with pytest.raises(ValidationError):
+            _summary(reported_record_ids=["u" * (MAX_REPORTED_RECORD_ID_LENGTH + 1)])

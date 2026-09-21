@@ -1,0 +1,71 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+Q: What diseases are caused by variants in the HNF1A gene?
+
+Query Pipeline
+
+7/7 steps · 11.6s
+
+Variants in HNF1A are linked in these results primarily to monogenic diabetes and maturity-onset diabetes of the young (MODY/MODY3), with one variant also associated with type 1 diabetes mellitus 20, type 2 diabetes mellitus, and nonpapillary renal cell carcinoma. Found 13 variants in HNF1A associated with 6 disease terms.
+
+Diseases linked to HNF1A variants
+monogenic diabetes
+Maturity-onset diabetes of the young type 3
+maturity-onset diabetes of the young
+type 1 diabetes mellitus 20
+type 2 diabetes mellitus
+nonpapillary renal cell carcinoma
+Variant-to-disease mapping
+Gene	Variant	Associated disease(s)
+HNF1A	NM_000545.8(HNF1A):c.1207del (p.Leu403fs)	monogenic diabetes
+HNF1A	NM_000545.8(HNF1A):c.1413del (p.Tyr472fs)	Maturity-onset diabetes of the young type 3
+HNF1A	NM_000545.8(HNF1A):c.1456C>T (p.Gln486Ter)	type 1 diabetes mellitus 20; nonpapillary renal cell carcinoma; type 2 diabetes mellitus
+HNF1A	NM_000545.8(HNF1A):c.1509C>G (p.Tyr503Ter)	maturity-onset diabetes of the young
+HNF1A	NM_000545.8(HNF1A):c.327_336del10	maturity-onset diabetes of the young
+HNF1A	NM_000545.8(HNF1A):c.339G>A (p.Trp113Ter)	monogenic diabetes
+HNF1A	NM_000545.8(HNF1A):c.526+2del	monogenic diabetes
+HNF1A	NM_000545.8(HNF1A):c.535dup (p.His179fs)	monogenic diabetes
+HNF1A	NM_000545.8(HNF1A):c.549_552del (p.Gly183_Gly184insTer)	monogenic diabetes
+HNF1A	NM_000545.8(HNF1A):c.620dup (p.Ala209fs)	monogenic diabetes
+HNF1A	NM_000545.8(HNF1A):c.68_69del (p.Lys23fs)	monogenic diabetes
+HNF1A	NM_000545.8(HNF1A):c.732_733del (p.Ser247fs)	Maturity-onset diabetes of the young type 3
+HNF1A	NM_000545.8(HNF1A):c.838A>T (p.Lys280Ter)	maturity-onset diabetes of the young
+Notes
+The disease names are reported exactly as returned by the graph and may include closely related or synonymous terms (for example, monogenic diabetes, maturity-onset diabetes of the young, and Maturity-onset diabetes of the young type 3).
+These associations are typically derived from variant/disease resources such as ClinVar and disease vocabularies such as MedGen.
+Sources:
+NCBI Gene
+NCBI ClinVar
+13 results
+11574ms
+Helpful?
+
+Generated Cypher
+
+Graph Visualization
+
+Raw Results (13)
+
+NCBI Knowledge Graph - Proof of Concept

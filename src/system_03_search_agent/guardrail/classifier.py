@@ -302,6 +302,13 @@ def build_messages(query_text: str) -> list[dict[str, str]]:
 
     This module is still not the only defense, and that has not changed: the
     pre-filter runs before it, and the NL-to-Cypher separation runs after it.
+
+    UI fix set 7, item 7.1 (2026-09-13) twice appended a session-memory
+    block after the query tag and measured the Guard model leaving its
+    schema both times (prose answers with the full block, a Think-shaped
+    object with an entity-only one). The messages therefore carry the query
+    and nothing else, exactly as before that set; the follow-up rule lives
+    in `core.graph._is_memory_bound_follow_up`, after the verdict.
     """
     tag = _query_block_tag()
     return [

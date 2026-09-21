@@ -1,0 +1,52 @@
+Total runs loaded: 35
+Runs with an error event: 2
+   r2.jsonl What variants cause disease in BRCA1? researcher [{'fatal': True, 'scope': 'step', 'source': 'plan', 'error_class': 'transient', 'message': 'A step in this query hit a temporary error. Retrying the query may succeed.'}]
+   p2.jsonl Variants in GCK causing MODY plain_language [{'fatal': True, 'scope': 'step', 'source': 'guardrail', 'error_class': 'transient', 'message': 'A step in this query hit a temporary error. Retrying the query may succeed.'}]
+
+Worst single Synth call: 22.9s (('r4.jsonl', 'Which diseases are associated with BRCA1'))
+Median elapsed: 21.2s, worst: 60.8s, best: 11.8s
+
+Per-step seconds (median / worst / n):
+  guard  median=2.45 worst=15.08 n=35
+  think  median=2.59 worst=14.15 n=34
+  plan   median=1.40 worst=45.20 n=34
+  act    median=1.04 worst=3.04 n=33
+  write  median=10.66 worst=44.69 n=33
+
+| Case | Mode | Run | Outcome | First sentence | Words | Headings | List rows | Sources | Synth1 s/w | Repair s/w | Elapsed | step_seconds | Errors |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| BRCA1 diseases | researcher | 1 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 129 | 4 | 11 | 11 | 11.3/201 | 10.1/215 | 60.8 | g4.54 t4.652 p27.004 a0.528 w24.094 | none |
+| BRCA1 diseases | researcher | 2 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 139 | 4 | 11 | 11 | 3.2/222 | 3.3/192 | 14.6 | g2.003 t3.265 p1.016 a1.259 w7.048 | none |
+| BRCA1 diseases | researcher | 3 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 142 | 5 | 11 | 11 | 4.8/230 | 11.1/240 | 20.1 | g1.064 t1.427 p1.073 a0.522 w16.002 | none |
+| BRCA1 diseases | researcher | 4 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 131 | 4 | 11 | 11 | 6.8/169 | 4.3/136 | 29.2 | g14.113 t2.533 p0.916 a0.514 w11.094 | none |
+| BRCA1 diseases | researcher | 5 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 146 | 4 | 11 | 11 | 7.1/236 | 4.8/263 | 17.5 | g1.085 t2.835 p1.138 a0.517 w11.881 | none |
+| BRCA1 variants (disease-cause) | researcher | 1 | refuse |  | 0 | 0 | 0 | 0 | none | none | 51.3 | g1.513 t4.48 p45.2 | [{'fatal': True, 'scope': 'step', 'source': 'plan', 'error_class': 'transient', 'message': 'A step in this query hit a temporary error. Retrying the query may succeed.'}] |
+| BRCA1 variants (disease-cause) | researcher | 2 | ask | Found 13 sequence variant records for BRCA1, of 15310 available. | 99 | 4 | 20 | 20 | 7.5/212 | 6.2/185 | 23.4 | g2.611 t3.096 p1.071 a2.559 w13.947 | none |
+| BRCA1 variants (disease-cause) | researcher | 3 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 132 | 4 | 20 | 20 | 7.7/188 | 6.9/218 | 35.2 | g13.175 t1.584 p2.814 a2.897 w14.672 | none |
+| BRCA1 variants (disease-cause) | researcher | 4 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 99 | 4 | 20 | 20 | 17.5/234 | 6.0/182 | 32.3 | g1.123 t3.217 p1.53 a2.766 w23.664 | none |
+| BRCA1 variants (disease-cause) | researcher | 5 | answer | Found 13 sequence variant records for BRCA1, of 15310 available. | 106 | 4 | 20 | 20 | 8.2/160 | 8.7/213 | 26.2 | g1.594 t2.639 p2.174 a2.53 w17.162 | none |
+| GCK MODY variants | researcher | 1 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 | 22.0/195 | 22.5/193 | 56.7 | g6.606 t2.044 p0.914 a2.307 w44.685 | none |
+| GCK MODY variants | researcher | 2 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 | 6.9/197 | 6.6/202 | 24.1 | g3.327 t3.407 p0.596 a3.043 w13.685 | none |
+| GCK MODY variants | researcher | 3 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 | 6.2/276 | 3.4/263 | 17.7 | g2.389 t1.552 p1.1 a2.824 w9.845 | none |
+| GCK MODY variants | researcher | 4 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 99 | 4 | 20 | 20 | 3.5/181 | 4.2/221 | 16.2 | g2.447 t2.463 p0.842 a2.453 w7.908 | none |
+| GCK MODY variants | researcher | 5 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 109 | 5 | 20 | 20 | 4.6/174 | 5.1/158 | 21.9 | g2.381 t6.715 p0.734 a2.338 w9.77 | none |
+| BRCA1 and BRCA2 diseases | researcher | 1 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 153 | 4 | 20 | 20 | 5.3/220 | 22.9/323 | 59.5 | g1.03 t3.672 p25.525 a0.492 w28.782 | none |
+| BRCA1 and BRCA2 diseases | researcher | 2 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 122 | 4 | 20 | 20 | 11.4/204 | 6.8/261 | 36.4 | g2.543 t14.152 p0.602 a0.635 w18.445 | none |
+| BRCA1 and BRCA2 diseases | researcher | 3 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 184 | 4 | 20 | 20 | 4.3/181 | 16.1/332 | 28.9 | g3.567 t1.663 p1.838 a1.037 w20.64 | none |
+| BRCA1 and BRCA2 diseases | researcher | 4 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 122 | 4 | 20 | 20 | 5.0/245 | 4.1/213 | 21.2 | g8.612 t0.754 p1.92 a0.712 w9.148 | none |
+| BRCA1 and BRCA2 diseases | researcher | 5 | ask | Found 2 gene records and 11 disease records for BRCA1 and BRCA2. | 122 | 4 | 20 | 20 | 4.6/201 | 3.3/178 | 15.4 | g2.509 t2.049 p2.019 a0.738 w8.062 | none |
+| BRCA1 diseases (lowercase phrasing) | researcher | 1 | ask | Found 4 disease records for brca1: Familial cancer of breast, Familial | 147 | 4 | 11 | 11 | 6.1/254 | 6.8/211 | 26.0 | g4.676 t1.511 p5.263 a0.65 w13.7 | none |
+| BRCA1 diseases (lowercase phrasing) | researcher | 2 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 106 | 4 | 11 | 11 | 2.1/144 | 6.5/240 | 15.8 | g1.608 t4.164 p0.828 a0.542 w8.615 | none |
+| BRCA1 diseases (lowercase phrasing) | researcher | 3 | ask | Found 4 disease records for brca1: Familial cancer of breast, Familial | 106 | 4 | 11 | 11 | 2.3/200 | 2.5/206 | 13.0 | g1.305 t4.554 p1.263 a0.803 w5.016 | none |
+| BRCA1 diseases (lowercase phrasing) | researcher | 4 | ask | Found 4 disease records for brca1: Familial cancer of breast, Familial | 116 | 5 | 11 | 11 | 6.2/204 | 1.7/127 | 20.1 | g5.818 t2.211 p1.409 a2.644 w7.989 | none |
+| BRCA1 diseases (lowercase phrasing) | researcher | 5 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 144 | 4 | 11 | 11 | 2.2/180 | 14.8/250 | 22.9 | g1.882 t1.868 p1.56 a0.511 w17.079 | none |
+| BRCA1 diseases | plain_language | 1 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 139 | 0 | 0 | 11 | 20.1/126 | 2.2/168 | 31.8 | g2.549 t2.95 p2.483 a0.525 w23.028 | none |
+| BRCA1 diseases | plain_language | 2 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 141 | 0 | 0 | 11 | 1.6/150 | 2.0/189 | 11.8 | g1.622 t1.585 p4.011 a0.851 w3.769 | none |
+| BRCA1 diseases | plain_language | 3 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 153 | 0 | 0 | 11 | 1.7/172 | 2.4/219 | 16.5 | g9.258 t1.106 p1.056 a0.797 w4.25 | none |
+| BRCA1 diseases | plain_language | 4 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 138 | 0 | 0 | 11 | 5.3/131 | 1.9/147 | 12.6 | g0.755 t0.74 p2.674 a1.14 w7.28 | none |
+| BRCA1 diseases | plain_language | 5 | ask | Found 4 disease records for BRCA1: Familial cancer of breast, Familial | 138 | 0 | 0 | 11 | 1.7/191 | 2.4/164 | 20.1 | g9.686 t4.418 p1.146 a0.597 w4.237 | none |
+| GCK MODY variants | plain_language | 1 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 154 | 0 | 0 | 20 | 2.4/167 | 2.4/161 | 21.4 | g2.486 t3.883 p7.53 a2.547 w4.919 | none |
+| GCK MODY variants | plain_language | 2 | refuse |  | 0 | 0 | 0 | 0 | none | none | 15.1 | g15.083 | [{'fatal': True, 'scope': 'step', 'source': 'guardrail', 'error_class': 'transient', 'message': 'A step in this query hit a temporary error. Retrying the query may succeed.'}] |
+| GCK MODY variants | plain_language | 3 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 154 | 0 | 0 | 20 | 2.2/210 | 4.4/221 | 13.9 | g2.035 t1.903 p1.084 a2.245 w6.591 | none |
+| GCK MODY variants | plain_language | 4 | answer | Found 13 sequence variant records for GCK, of 1333 available. | 143 | 0 | 0 | 20 | 4.7/176 | 5.9/214 | 18.4 | g0.967 t2.767 p1.638 a2.373 w10.659 | none |
+| GCK MODY variants | plain_language | 5 | ask | Found 13 sequence variant records for GCK, of 1333 available. | 154 | 0 | 0 | 20 | 2.5/141 | 4.2/228 | 13.5 | g2.335 t0.73 p1.385 a2.263 w6.736 | none |

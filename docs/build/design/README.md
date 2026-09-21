@@ -10,6 +10,7 @@ Split out of `docs/build/` on 2026-08-12, when that folder hit its own nine-file
 - [Reconciliation, closed 2026-08-18](#reconciliation-closed-2026-08-18)
 - [The files](#the-files)
 - [Which file answers which question](#which-file-answers-which-question)
+- [What is designed, and what is not](#what-is-designed-and-what-is-not)
 - [The one thing not allowed to go stale](#the-one-thing-not-allowed-to-go-stale)
 
 ## Open this first
@@ -60,6 +61,40 @@ One correction is applied locally but not yet pushed to Claude Design, deliberat
 
 That last row is the one people get wrong. A builder implementing the citation chip reads `design-system/identity/citation-chip.html`, because an isolated card is an unambiguous statement about one component in a way a running app never is. The prototype is where you decide whether the design is right, not where you read what it is.
 
+## What is designed, and what is not
+
+Added 2026-09-05, after two surfaces were rebuilt on the assumption that no design existed for them. One of those assumptions was right and the other was wrong, and telling them apart is the whole reason this section exists.
+
+READ THE PROTOTYPE, NOT ONLY THE COMPONENT CARD. `components/app-bar.html` carries no responsive rule, which was read as "the app bar has no mobile design". It has one, in `design-system/prototype/app.html`: line 403 hides every non-current nav item at 720px, and line 404 tightens the bar's padding and gap. A mobile app bar was invented before that was found, and the invention had to be reverted. A component card shows a component in isolation; the prototype shows the assembled product, including every media query. Both are the design system, and the prototype is the one that answers "what happens at 390px".
+
+The distinction that matters when a surface looks wrong:
+
+- Drifted: a design exists and the code does not match it. Fix the code.
+- Missing: no design exists anywhere, prototype included. Build from the foundations and the nearest designed neighbour, name the gap out loud, and add the result here.
+
+The two look identical in a browser and license opposite responses. Conflating them is how a second visual language gets started.
+
+### Coverage, measured 2026-09-05
+
+| Surface | Designed | Where |
+|---|---|---|
+| Home, answer, streaming | Yes | `screens/` |
+| App bar, including its 720px behaviour | Yes | `components/app-bar.html` plus `prototype/app.html:402-410` |
+| Search bar, depth control, feedback, source card, trust pills, pipeline stepper, persona | Yes | `components/` |
+| Citation chip, layer badges, provenance spine | Yes | `identity/` |
+| Disclaimer modal, guest states | Yes | `flows/` |
+| Colours, type, spacing | Yes | `foundations/` |
+| Sign-in and sign-up | NO | Built 2026-09-05 from the foundations plus the search bar's input treatment and the guest-states card. `flows/guest-states.html` designs the wall and carries zero input fields |
+| Nav overflow menu | NO | Built 2026-09-05. The design has no overflow menu at all, because it hides the nav items instead. Product-owner decision overruled that, since it made three screens unreachable on a phone |
+| Follow-up field | NO | Shipped since build phase 4.8, never designed as its own card |
+| History rail and its collapsed strip | NO | Shipped since build phase 4.13. `prototype/app.html` styles `#rail` and `#railStub`, so the prototype is the only reference |
+| Account menu | NO | Shipped since build phase 4.9 |
+| Integrations, docs and about | NO | Only ever inside `prototype/app.html` |
+
+The pattern is worth naming, because it predicts where the next gap will be: anything promoted to its own component card is designed, and anything that only ever lived inside the monolithic prototype is not.
+
+A KNOWN DEFECT IN THE DESIGN ITSELF, recorded rather than copied: `prototype/app.html:65` hides `#rail` and `#railStub` at 860px, `.ham` carries no media query, and `#railBtn` is toggled only by availability. So the rail toggle is a visible, enabled control operating something hidden, in the design as well as in the code. The code was fixed on 2026-09-05; the design was not, and a future reader must not "correct" the code back to it.
+
 ## The one thing not allowed to go stale
 
 `design-system/` is a fixture, not documentation. The build phase 4.8 premise gate asserts against it: token conformance against `foundations/colors.html`, structural checks that a citation chip carries a layer class and a source card renders all six provenance fields, WCAG 2.1 AA contrast on every token pair used, and an assembly check that every screen is reachable and renders from the real event stream. It does NOT do visual regression: a screenshot test was planned and deliberately never built, and pixel fidelity is the judge and adversary rounds' job. This line claimed the visual-regression gate until 2026-08-18, which advertised a gate nothing performed, the exact failure `Design_to_build_workflow.md` line 70 records deciding against.
@@ -68,4 +103,4 @@ Treat it the way you would treat a test's golden files. The prototype and the ar
 
 Each card is standalone HTML carrying its own copy of the token block, so it renders correctly in isolation in the Claude Design pane, and its first line is a `@dsCard` marker naming its group. The token duplication across files is deliberate: a shared stylesheet would not survive isolated-card rendering.
 
-Last updated: 2026-08-18
+Last updated: 2026-09-05.

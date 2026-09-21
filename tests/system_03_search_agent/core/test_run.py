@@ -133,6 +133,30 @@ def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _stub_layer3_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """UI fix set 8 (R29): a gene question now also plans pubtator_annotate
+    and clinicaltrials_search. Stubbed to genuine "empty" outputs, the same
+    discipline as `_stub_ncbi_efetch_dispatch` above, so no test here ever
+    reaches the network blocker and no pre-existing assertion about
+    citations or trust changes (an empty finding contributes nothing).
+    """
+    from system_03_search_agent.core import graph as graph_module
+    from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+        ClinicalTrialsSearchOutput,
+    )
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateOutput
+
+    async def _fake_pubtator(tool_input: object, **kwargs: object) -> PubtatorAnnotateOutput:
+        return PubtatorAnnotateOutput(status="empty", mode="entity_lookup")
+
+    async def _fake_trials(tool_input: object, **kwargs: object) -> ClinicalTrialsSearchOutput:
+        return ClinicalTrialsSearchOutput(status="empty")
+
+    monkeypatch.setattr(graph_module, "pubtator_annotate", _fake_pubtator)
+    monkeypatch.setattr(graph_module, "clinicaltrials_search", _fake_trials)
+
+
+@pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     # T-3.0-06: dispatches per tier. See `tests/system_03_search_agent/
     # model_stub.py` for why a single fixed response stopped working the
@@ -336,14 +360,24 @@ async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_quer
     tool_calls = plan_event.payload["tool_calls"]
     # T-3.4-05: BRCA1 resolves to a Gene CURIE, so plan_node also selects
     # ncbi_efetch as a second, Layer 2 call (stubbed to a genuine "empty"
-    # result by the autouse `_stub_ncbi_efetch_dispatch` fixture).
-    assert len(tool_calls) == 2
+    # result by the autouse `_stub_ncbi_efetch_dispatch` fixture). UI fix
+    # set 8 (R29): plus pubtator_annotate and clinicaltrials_search on
+    # Layer 3, stubbed "empty" by `_stub_layer3_dispatch`, so four in all.
+    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
+    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
+    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
+    # GO graph call; see test_breadth_wiring.py for the per-call arms.
+    assert len(tool_calls) == 10
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 
     done_event = events[-1]
     assert done_event.type == "done"
-    assert done_event.payload["total_tool_calls"] == 2
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert done_event.payload["total_tool_calls"] == 5
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:
@@ -359,14 +393,22 @@ async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answe
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    # T-3.4-05: see the sibling test_run_ (non-streaming) test above.
-    assert len(tool_calls) == 2
+    # T-3.4-05 and UI fix set 8: see the sibling non-streaming test above.
+    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
+    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
+    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
+    # GO graph call; see test_breadth_wiring.py for the per-call arms.
+    assert len(tool_calls) == 10
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 
     done_event = events[-1]
     assert done_event.type == "done"
-    assert done_event.payload["total_tool_calls"] == 2
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert done_event.payload["total_tool_calls"] == 5
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:
@@ -496,14 +538,16 @@ class TestRunStreamingIsGenuinelyIncremental:
     async def test_earlier_events_arrive_before_a_delayed_nodes_event_by_a_real_measurable_gap(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # The graph fires exactly four sequential model calls for one
-        # query, in this fixed order: guardrail (guard tier), think
-        # (guard tier), plan (plan tier), write (synth tier). Delaying the
-        # third call delays exactly the `plan` node's own emitted events
-        # (its `plan` and `cost` events), while `guardrail`'s `guard`/
-        # `cost` events and `think`'s `think`/`cost` events were already
-        # produced (and, under real streaming, already yielded to the
-        # caller) before that delay even begins.
+        # The graph fires exactly three sequential model calls for one
+        # no-tool query, in this fixed order: guardrail (guard tier), think
+        # (plan tier), write (synth tier). Four until 2026-09-14, when the
+        # speed fix deleted `plan_node`'s discarded Plan-tier call, which
+        # used to be the third; the delayed node is therefore `write` now.
+        # Delaying the third call delays exactly the `write` node's own
+        # emitted events (its `cost` and `done` events), while `guardrail`'s
+        # `guard`/`cost`, `think`'s `think`/`cost` and `plan`'s `plan`/`cost`
+        # events were already produced (and, under real streaming, already
+        # yielded to the caller) before that delay even begins.
         # T-3.0-06: the guardrail's call is a real classification now, so a
         # stub that answers every call identically fails to parse there and
         # the run never reaches `think`. The guard branch below is what keeps
@@ -537,7 +581,7 @@ class TestRunStreamingIsGenuinelyIncremental:
                 return _fake_response(COMPLIANT_GUARD_CLASSIFICATION)
             if _THINK_SYSTEM_INSTRUCTION in joined:
                 return _fake_response(compliant_think_classification(messages))  # type: ignore[arg-type]
-            if call_count == 3:  # the plan node's call_tier call
+            if call_count == 3:  # the write node's call_tier call
                 await asyncio.sleep(delay_s)
             return _fake_response()
 
@@ -547,17 +591,18 @@ class TestRunStreamingIsGenuinelyIncremental:
         async for event in run_streaming(_valid_query(), _valid_context()):
             arrival_time_by_type.setdefault(event.type, time.monotonic())
 
-        assert "think" in arrival_time_by_type
+        assert call_count == 3, call_count
         assert "plan" in arrival_time_by_type
-        gap_s = arrival_time_by_type["plan"] - arrival_time_by_type["think"]
+        assert "done" in arrival_time_by_type
+        gap_s = arrival_time_by_type["done"] - arrival_time_by_type["plan"]
         # A generous margin below the real delay (not the full delay_s),
         # so ordinary scheduling jitter cannot make a genuinely-streaming
         # implementation fail this assertion; a buffered implementation
         # would show a gap near 0, far below this margin, regardless of
         # jitter.
         assert gap_s >= delay_s * 0.6, (
-            f"expected the 'plan' event to arrive at least "
-            f"{delay_s * 0.6:.3f}s after 'think' (proving the delayed "
+            f"expected the 'done' event to arrive at least "
+            f"{delay_s * 0.6:.3f}s after 'plan' (proving the delayed "
             f"node's own call_tier sleep was actually awaited before its "
             f"event reached the caller), observed only {gap_s:.3f}s"
         )
@@ -632,3 +677,72 @@ async def test_run_streaming_crash_mid_stream_keeps_seq_monotonic_with_real_even
     assert len(seqs) == len(set(seqs))
     for event in events:
         PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+
+@pytest.mark.asyncio
+async def test_remember_turn_records_the_citations_the_answer_showed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """UI fix set 7, item 7.2 (2026-09-13). The end-of-run write hands memory
+    the `source_url` of every citation emitted, deduplicated, in order, so
+    the next go-deeper turn knows what the reader has already seen.
+
+    Read off the citation EVENTS, the same ones the chips were built from,
+    never off retrieval. MUTATION PROOF: dropping
+    `reported_record_ids=reported_record_ids` from the
+    `remember_turn_for_caller` call in `core/run.py` turns this arm red
+    (`KeyError: 'reported_record_ids'`).
+    """
+    from datetime import UTC, datetime
+
+    from system_03_search_agent.core import run as run_module
+    from system_03_search_agent.core import session_memory as session_memory_module
+
+    captured: dict[str, object] = {}
+
+    async def _fake_remember(**kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(session_memory_module, "remember_turn_for_caller", _fake_remember)
+
+    now = datetime.now(UTC)
+    url_a = "https://www.ncbi.nlm.nih.gov/clinvar/variation/1/"
+    url_b = "https://www.ncbi.nlm.nih.gov/clinvar/variation/2/"
+
+    def _event(seq: int, kind: str, payload: dict) -> Event:
+        return Event(type=kind, version="v1", trace_id="t-remember", seq=seq, ts=now, payload=payload)
+
+    def _citation(index: int, url: str, claim: str) -> dict:
+        from system_03_search_agent.contracts.events import CitationPayload
+
+        return CitationPayload(
+            citation_id=f"c-{index}",
+            display_index=index,
+            source="clinvar",
+            source_id=f"ClinVar:{index}",
+            source_url=url,
+            layer="layer_1_graph",
+            field="name",
+            claim_text=claim,
+            evidence_kind="graph_edge",
+            assertion_confidence="asserted",
+            license="public_domain",
+        ).model_dump(mode="json")
+
+    events = [
+        _event(0, "plan", {
+            "narrative": "selected cypher_query",
+            "tool_calls": [],
+            "resolved_entities": [{"text": "BRCA1", "curie": "NCBIGene:672", "confidence": 1.0}],
+        }),
+        _event(1, "citation", _citation(1, url_a, "a")),
+        _event(2, "citation", _citation(2, url_a, "a again")),
+        _event(3, "citation", _citation(3, url_b, "b")),
+    ]
+    query = Query(text="What variants cause it?", session_id="s", trace_id="t-remember",
+                  owner_id="guest:remember-test")
+
+    await run_module._remember_turn(query, events)
+
+    assert captured["reported_record_ids"] == [url_a, url_b], captured
+    assert captured["question"] == "What variants cause it?"

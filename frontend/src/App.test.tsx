@@ -60,16 +60,26 @@ vi.mock("./lib/api", async () => {
     // seeding effect and takes the whole render down, the same reasoning
     // the comment above `fetchPersona` already gives.
     fetchHistory: vi.fn(),
+    // Fix set 4, R46 (decision U8): App now restores a session on load and
+    // revokes the refresh token on log out. An api mock that omits an export
+    // App actually calls throws inside a useEffect or a handler and takes
+    // the render down, the same reasoning `fetchPersona` above already
+    // carries.
+    refreshSession: vi.fn(),
+    logoutSession: vi.fn(async () => ({ status: "ok" })),
   };
 });
 
 import {
   createRun,
   fetchHistory,
+  fetchMe,
   getAllowance,
   login,
+  logoutSession,
   mintGuest,
   openEventStream,
+  refreshSession,
 } from "./lib/api";
 
 const loginMock = vi.mocked(login);
@@ -78,6 +88,9 @@ const openEventStreamMock = vi.mocked(openEventStream);
 const mintGuestMock = vi.mocked(mintGuest);
 const getAllowanceMock = vi.mocked(getAllowance);
 const fetchHistoryMock = vi.mocked(fetchHistory);
+const fetchMeMock = vi.mocked(fetchMe);
+const refreshSessionMock = vi.mocked(refreshSession);
+const logoutSessionMock = vi.mocked(logoutSession);
 
 const mainArea = () => within(screen.getByRole("main"));
 const navArea = () => within(screen.getByRole("navigation", { name: /main/i }));
@@ -231,7 +244,7 @@ describe("App", () => {
 
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
-    expect(screen.queryByTestId(/^spine-segment-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^claim-text-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^trust-/)).not.toBeInTheDocument();
     // No NCBI record URL, and no grounding claim, may appear without a run.
@@ -304,6 +317,40 @@ describe("App", () => {
       expect.objectContaining({ text: "Which diseases are associated with BRCA1?" }),
       "guest-token-1",
     );
+  });
+
+  it("the tour's 'Run it for me' sends the BRCA1 question through the real ask", async () => {
+    // 2026-09-13 onboarding tour. Step 7 offers to run a question for the
+    // visitor; the assertion is that it reaches `createRun` with the tour's
+    // own question and the caller's real (guest) token, i.e. through the
+    // same `ask` every other surface uses, never a demo path.
+    window.sessionStorage.setItem("medicalDisclaimerAccepted", "true");
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Start the tour" }));
+    const tour = () => within(screen.getByRole("dialog"));
+    for (let index = 0; index < 6; index += 1) {
+      await user.click(tour().getByRole("button", { name: "Next" }));
+    }
+    await user.click(tour().getByRole("button", { name: "Run it for me" }));
+
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: "Which diseases are associated with BRCA1?",
+        // UI fix set 9, item 9.1: Plain language is the default mode.
+        audience_depth: "plain_language",
+      }),
+      "guest-token-1",
+    );
+    // The run screen took over, and the tour is now watching it rather than
+    // covering it with a card.
+    expect(
+      screen.getByRole("heading", { name: "Which diseases are associated with BRCA1?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("tour-watching")).toBeInTheDocument();
+    window.sessionStorage.removeItem("medicalDisclaimerAccepted");
   });
 });
 
@@ -876,7 +923,7 @@ describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () =
     //    vitest suites use; `answer-cap` is reached only by the browser
     //    suite, and waiting for it here made an earlier version of this
     //    clause fail for a reason unrelated to what it tests.
-    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 
     // The restored row must still report ITS OWN run. This run produced one
     // source today; if the nine-source row is gone, the landing run has
@@ -887,5 +934,611 @@ describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () =
     });
     const stillNine = rows.some((row) => /9 sources/i.test(row.textContent ?? ""));
     expect(stillNine).toBe(true);
+  });
+});
+
+describe("system notes: App forwards the run's disclosures to AnswerScreen", () => {
+  /**
+   * Regression test for a wiring gap, not a rendering gap.
+   *
+   * `useRunView` already lifted a truncation or unaddressed-entity token
+   * out of `claims` and into `systemNotes`, and `AnswerScreen` already
+   * rendered a `systemNotes` array as a notice. Neither piece was broken.
+   * `App` simply never passed `view.systemNotes` to `<AnswerScreen>`, so
+   * both disclosures were computed and then dropped on the floor between
+   * the two components that each handled their half correctly.
+   *
+   * This is deliberately an App-level test that drives a real SSE stream
+   * through `openEventStream`, the same path `useAgentRun` and
+   * `useRunView` consume, rather than a unit test that renders
+   * `AnswerScreen` directly with a hand-built `systemNotes` prop. A direct
+   * `AnswerScreen` test would pass against the broken code, because the
+   * broken code was entirely in `App`, one prop above `AnswerScreen`. Only
+   * a test that starts at the top of the tree can see whether the wiring
+   * between the two actually exists.
+   */
+  const frame = (seq: number, type: string, payload: unknown): string =>
+    `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+      type,
+      version: "v1",
+      trace_id: "sysnote-1",
+      seq,
+      ts: "2026-09-05T00:00:00Z",
+      payload,
+    })}\n\n`;
+
+  const STREAM = [
+    frame(0, "guard", { passed: true, category: "ok", reason: null }),
+    frame(1, "think", {
+      narrative: "Resolving the gene named in the question.",
+      query_class: "single_hop",
+      resolved_entities: [],
+      clarifying_question: null,
+    }),
+    frame(2, "plan", { narrative: "Read the curated edges.", tool_calls: [] }),
+    frame(3, "tool_result", {
+      call_id: "c1",
+      tool: "cypher_query",
+      layer: "layer_1_graph",
+      status: "ok",
+      summary: "",
+      result_count: 30,
+      truncated: true,
+    }),
+    frame(4, "token", { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["k1"] }),
+    frame(5, "citation", {
+      citation_id: "k1",
+      display_index: 1,
+      source: "NCBI Gene",
+      source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/672",
+      layer: "layer_1_graph",
+      field: "cypher_query",
+      claim_text: "x",
+      evidence_kind: "curated assertion",
+      assertion_confidence: "high",
+      population_ancestry_context: null,
+      license: "public domain",
+    }),
+    // The disclosure under test. `write_node` emits this as a bare token
+    // with no marker_ids, which `useRunView` recognises by prefix and
+    // lifts into `systemNotes` instead of the claim list.
+    frame(6, "token", {
+      text: "Note: this result was truncated. Showing 5 of 30 matching rows.",
+      marker_ids: [],
+    }),
+    frame(7, "trust_signal", {
+      outcome: "answer",
+      risk_tier: "low",
+      grounded: true,
+      triangulated: false,
+    }),
+    frame(8, "done", {
+      total_cost_usd: 0.0031,
+      total_tool_calls: 1,
+      elapsed_ms: 4200,
+      trust_outcome: "answer",
+    }),
+  ].join("");
+
+  function scriptedResponse(): Promise<Response> {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(STREAM));
+        controller.close();
+      },
+    });
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    );
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementation(() => scriptedResponse());
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1",
+      guest_id: "guest-1",
+      used: 0,
+      total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("renders the truncation disclosure once the run lands", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await ask(user, "What genes are associated with HBOC?");
+
+    // 2026-09-14: the answer reveal holds landing for at least 1.5s, so this
+    // waits as long as the other landed-answer arms in this file do.
+    const note = await screen.findByTestId("answer-note-0", undefined, { timeout: 10000 });
+    expect(note.textContent).toMatch(/showing 5 of 30 matching rows/i);
+  });
+});
+
+/**
+ * The privacy leak (W-identity-9). `setThread([])` used to appear only in
+ * the three New-search handlers, never in sign-out, so a shared browser
+ * kept the previous person's collapsed conversation turns, their
+ * questions, claims, sources and trust verdicts, on screen for whoever
+ * signed in next.
+ *
+ * Deliberately an App-level test that drives a real SSE stream through
+ * `openEventStream`, not a unit test that renders `AnswerScreen` directly
+ * with a hand-built `previousTurns` prop. The defect is entirely in
+ * `App.tsx`'s sign-out handler, one prop above `AnswerScreen`, which
+ * already renders whatever `previousTurns` it is given correctly; a direct
+ * `AnswerScreen` test would exercise none of that handler and would pass
+ * against the broken code.
+ */
+describe("privacy: the previous person's thread is cleared on sign-out", () => {
+  const frame = (seq: number, type: string, payload: unknown): string =>
+    `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+      type,
+      version: "v1",
+      trace_id: "privacy-1",
+      seq,
+      ts: "2026-09-05T00:00:00Z",
+      payload,
+    })}\n\n`;
+
+  const STREAM = [
+    frame(0, "guard", { passed: true, category: "ok", reason: null }),
+    frame(1, "think", {
+      narrative: "Resolving the gene named in the question.",
+      query_class: "single_hop",
+      resolved_entities: [],
+      clarifying_question: null,
+    }),
+    frame(2, "plan", { narrative: "Read the curated edges.", tool_calls: [] }),
+    frame(3, "tool_result", {
+      call_id: "c1", tool: "cypher_query", layer: "layer_1_graph",
+      status: "ok", summary: "", result_count: 25, truncated: false,
+    }),
+    frame(4, "token", { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["k1"] }),
+    frame(5, "citation", {
+      citation_id: "k1", display_index: 1, source: "NCBI Gene", source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/672", layer: "layer_1_graph",
+      field: "cypher_query", claim_text: "x", evidence_kind: "curated assertion",
+      assertion_confidence: "high", population_ancestry_context: null,
+      license: "public domain",
+    }),
+    frame(6, "trust_signal", {
+      outcome: "answer", risk_tier: "low", grounded: true, triangulated: false,
+    }),
+    frame(7, "done", {
+      total_cost_usd: 0.0031, total_tool_calls: 1, elapsed_ms: 11400,
+      trust_outcome: "answer",
+    }),
+  ].join("");
+
+  function scriptedResponse(): Promise<Response> {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(STREAM));
+        controller.close();
+      },
+    });
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    );
+  }
+
+  /** Sign out through the account menu, the same route `T-4.13-03` uses. */
+  async function signOut(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token", refresh_token: "test-refresh", token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementation(() => scriptedResponse());
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("does not show the next signed-in person the previous person's collapsed turns", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // 1. Land a real answer, then continue the conversation. Continuing
+    //    archives the landed turn into `thread`, so `thread` is non-empty
+    //    the instant sign-out fires below.
+    await ask(user, "What is BRCA1?");
+    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+    await user.type(
+      screen.getByLabelText(/ask a follow-up question/i),
+      "What variants cause it?",
+    );
+    await user.click(screen.getByRole("button", { name: /^ask$/i }));
+    // Continuing the thread starts a new run under the follow-up question;
+    // waiting for its heading confirms the archive above already ran,
+    // since it happens synchronously before this new run is dispatched.
+    await screen.findByRole("heading", { name: "What variants cause it?" });
+
+    // 2. The person at this workstation signs out.
+    await signOut(user);
+
+    // 3. The next person signs in and lands their OWN, unrelated answer.
+    await signIn(user);
+    await ask(user, "What variants cause cystic fibrosis?");
+    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+
+    // The first person's archived turn must not be here. `AnswerScreen`
+    // only renders the `data-testid="thread"` wrapper when `previousTurns`
+    // is non-empty, so its absence is a direct proof `thread` was cleared,
+    // not an inference from something else.
+    expect(screen.queryByTestId("thread")).not.toBeInTheDocument();
+    expect(screen.queryByText(/what is brca1\?/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The returning-guest allowance gap (W-GUEST-4). `allowance` was seeded
+ * `null` on every mount and the only two writers were a landed run and a
+ * fresh sign-in, so a guest whose token was restored from storage saw no
+ * dots at all until their NEXT ask spent a third search, even though the
+ * server already knew their count.
+ */
+describe("a returning guest's allowance is fetched at mount", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  // Set 1, R2 (2026-09-12): the allowance is still read at mount, so a
+  // shared daily cap can be stated, but no count or dots render.
+  it("reads the allowance at mount for a token restored from a prior visit, and shows no count", async () => {
+    // `persistGuestToken` writes through the same key `guestToken`'s own
+    // initializer reads (`loadPersistedGuestToken`), so this is exactly
+    // what a prior visit's mint would have left behind, not a hand-built
+    // storage key that could drift from the real one.
+    const { persistGuestToken } = await import("./lib/guestSession");
+    persistGuestToken("restored-guest-token");
+    // Two of five already spent, per the server, from a prior visit.
+    getAllowanceMock.mockResolvedValue({ kind: "guest", used: 2, total: 5, counted: true });
+
+    const user = userEvent.setup();
+    render(<App />);
+    void user; // not driving any interaction; the fetch must happen unasked
+
+    await waitFor(() => expect(getAllowanceMock).toHaveBeenCalledTimes(1));
+    expect(getAllowanceMock).toHaveBeenCalledWith(
+      "restored-guest-token",
+      expect.anything(),
+    );
+
+    await waitFor(() => expect(screen.queryByTestId("guest-allowance")).not.toBeInTheDocument());
+    expect(screen.queryByText(/\d+ searches? left/i)).not.toBeInTheDocument();
+    // Nothing was asked, so nothing should have minted a fresh identity or
+    // started a run: this is purely the mount-time read of an existing one.
+    expect(mintGuestMock).not.toHaveBeenCalled();
+    expect(createRunMock).not.toHaveBeenCalled();
+  });
+
+  it("does not change what a brand-new visitor with no persisted token sees", async () => {
+    // The control for the test above, and the boundary F-4.10-A-13
+    // (`tracker/phase_4.10.md`) leaves open: a visitor with NO persisted
+    // token still sees no footer at all before their first ask. Left alone
+    // deliberately, since that is a separate, open product-owner question.
+    render(<App />);
+
+    expect(getAllowanceMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("guest-allowance")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Honest copy that never reached the reader (W-GUEST-11). The backend
+ * emits `anon_daily_cap_reached` and `anon_source_daily_cap_reached` as
+ * 429s, each carrying a purpose-written sentence in
+ * `GuestAllowance.tsx`'s own `BLOCKED_COPY`, and `ask`'s catch block
+ * branched only on the two 403 personal-allowance reasons, so a guest
+ * hitting either shared daily ceiling saw the generic dispatch-failure
+ * fallback instead of the true, already-written reason.
+ */
+describe("a guest hitting a shared daily ceiling sees the true reason", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "guest", used: 0, total: 5, counted: true });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("shows GuestAllowance's own sentence for anon_daily_cap_reached, not the generic failure", async () => {
+    const { ApiError } = await import("./lib/api");
+    createRunMock.mockRejectedValueOnce(
+      new ApiError(429, "createRun failed with 429", "anon_daily_cap_reached"),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+
+    await ask(user, "What is BRCA1?");
+
+    const failure = await screen.findByTestId("answer-failure");
+    expect(failure.textContent).toMatch(/guest searches are paused for today/i);
+    expect(failure.textContent).not.toMatch(/could not be sent/i);
+  });
+
+  it("shows GuestAllowance's own sentence for anon_source_daily_cap_reached, not the generic failure", async () => {
+    const { ApiError } = await import("./lib/api");
+    createRunMock.mockRejectedValueOnce(
+      new ApiError(429, "createRun failed with 429", "anon_source_daily_cap_reached"),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+
+    await ask(user, "What is BRCA1?");
+
+    const failure = await screen.findByTestId("answer-failure");
+    expect(failure.textContent).toMatch(/this network has used its guest searches for today/i);
+    expect(failure.textContent).not.toMatch(/could not be sent/i);
+  });
+});
+
+/**
+ * Fix set 4, requirement R46, product-owner decision U8 (2026-09-12):
+ * "keep people signed in across a reload, with history where they left
+ * it."
+ *
+ * A reload is not directly reproducible in jsdom, so what these clauses
+ * exercise is the thing a reload actually produces: a FRESH mount with a
+ * refresh token already sitting in `localStorage` and no React state at
+ * all. That is exactly the state `App` wakes up in after `page.reload()`,
+ * and `e2e/history-reload.spec.ts` drives the real reload in a real
+ * browser against the real backend.
+ */
+describe("R46: a reload keeps the account signed in", () => {
+  const REFRESH_KEY = "agentic-search-ui.refresh-token.v1";
+  const STORED = "stored-refresh";
+  const ROTATED = "rotated-refresh";
+  const RESTORED_ACCESS = "restored-access";
+  const LOGIN_REFRESH = "login-refresh";
+
+  /** What `POST /auth/refresh` answers on the happy path. */
+  const rotatedPair = {
+    access_token: RESTORED_ACCESS,
+    refresh_token: ROTATED,
+    token_type: "bearer",
+  };
+
+  /** Sign in through the real gate, the way a user does. */
+  async function signInThroughGate(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(navArea().getByRole("button", { name: /log in/i }));
+    await user.type(screen.getByLabelText(/email/i), "person@example.com");
+    await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: /^log in$/i }));
+    await waitFor(() => expect(window.localStorage.getItem(REFRESH_KEY)).toBe(LOGIN_REFRESH));
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    refreshSessionMock.mockReset();
+    logoutSessionMock.mockReset();
+    fetchMeMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: LOGIN_REFRESH,
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+    logoutSessionMock.mockResolvedValue({ status: "ok" });
+    fetchMeMock.mockResolvedValue({
+      id: "u-1",
+      email: "restored@example.com",
+      audience_depth: "researcher",
+      persona_name: "Mendel",
+    });
+  });
+
+  it("restores the session from a persisted refresh token, with no sign-in", async () => {
+    // Mutation: removing the restore effect, or gating it on anything other
+    // than the stored token, leaves the app bar showing Log in and turns
+    // this red. This is the whole of R46 in one assertion: nobody typed a
+    // password in this test.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    expect(
+      await navArea().findByRole("button", { name: /restored@example\.com/i }),
+    ).toBeInTheDocument();
+    expect(navArea().queryByRole("button", { name: /log in/i })).toBeNull();
+    expect(screen.queryByLabelText(/password/i)).toBeNull();
+  });
+
+  it("sends the stored token exactly once and stores the rotated replacement", async () => {
+    // Mutation: persisting the token that was SENT rather than the one that
+    // came back, or sending the stored value twice, turns this red. Both are
+    // fatal against the real backend: `POST /auth/refresh` revokes the token
+    // it is given, and presenting a revoked one revokes the whole family
+    // (F-1.1-07), so a second send would sign the person out of every
+    // device.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    await waitFor(() => expect(refreshSessionMock).toHaveBeenCalledTimes(1));
+    expect(refreshSessionMock).toHaveBeenCalledWith(STORED);
+    await waitFor(() => expect(window.localStorage.getItem(REFRESH_KEY)).toBe(ROTATED));
+  });
+
+  it("fetches the restored account's search allowance with no user action", async () => {
+    // Measured on the live app the day the restore shipped: the rail footer
+    // sat on "Checking your search limit…" after a reload, because only the
+    // sign-in handler fetched the allowance and a restored session never
+    // passes through it. Mutation: keying the allowance fetch on the
+    // sign-in handler alone, or fetching it with the stored refresh token
+    // instead of the restored access token, turns this red.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    await waitFor(() => expect(getAllowanceMock).toHaveBeenCalled());
+    expect(getAllowanceMock.mock.calls.some((call) => call[0] === RESTORED_ACCESS)).toBe(true);
+  });
+
+  it("reads the account's email with the restored access token", async () => {
+    // Mutation: calling `fetchMe` with the refresh token, or with the token
+    // that was stored rather than the one just minted, turns this red.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+
+    render(<App />);
+
+    await waitFor(() => expect(fetchMeMock).toHaveBeenCalled());
+    expect(fetchMeMock.mock.calls.some((call) => call[0] === RESTORED_ACCESS)).toBe(true);
+  });
+
+  it("refills the history rail from the server on the restored token, with no user action", async () => {
+    // Mutation: this is the half of R46 the decision calls "with history
+    // where they left it". The seeding effect is keyed on `token`, so a
+    // restore that never sets `token` leaves the rail empty and turns this
+    // red.
+    window.localStorage.setItem(REFRESH_KEY, STORED);
+    refreshSessionMock.mockResolvedValue(rotatedPair);
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+
+    render(<App />);
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(
+      await within(rail).findByRole("button", { name: /what is brca1\?/i }),
+    ).toBeInTheDocument();
+    expect(fetchHistoryMock.mock.calls.some((call) => call[0] === RESTORED_ACCESS)).toBe(true);
+  });
+
+  it("stays a guest and clears the dead token when the refresh is refused", async () => {
+    // Mutation: surfacing the failure, retrying it, or leaving the rejected
+    // token in storage turns this red. A dead token left in storage is sent
+    // again on the next load, and a replay revokes the family, so clearing
+    // it is a correctness requirement rather than tidiness.
+    const { ApiError } = await import("./lib/api");
+    window.localStorage.setItem(REFRESH_KEY, "expired-refresh");
+    refreshSessionMock.mockRejectedValue(
+      new ApiError(401, "refreshSession failed with 401: invalid or expired refresh token"),
+    );
+
+    render(<App />);
+
+    await waitFor(() => expect(refreshSessionMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(window.localStorage.getItem(REFRESH_KEY)).toBeNull());
+    expect(navArea().getByRole("button", { name: /log in/i })).toBeInTheDocument();
+    // No error surface anywhere: the visitor never knew a credential
+    // existed, so there is nothing for them to act on.
+    expect(screen.queryByTestId("answer-failure")).toBeNull();
+  });
+
+  it("attempts no restore at all when nothing is stored", async () => {
+    // Mutation: calling `refreshSession` unconditionally on mount turns this
+    // red, and in the product it fires an unauthenticated write on every
+    // first visit.
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /ask a biomedical question/i });
+    expect(refreshSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("persists the refresh token at sign-in through the real gate", async () => {
+    // Mutation: dropping `persistRefreshToken` from the `onAuthenticated`
+    // handler, or persisting the access token instead, turns this red. This
+    // is the write the restore effect above reads back.
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signInThroughGate(user);
+
+    expect(window.localStorage.getItem(REFRESH_KEY)).not.toBe("test-token");
+  });
+
+  it("revokes the refresh token server-side on log out and clears it locally", async () => {
+    // Mutation: clearing local state without calling `POST /auth/logout`
+    // leaves a live 30-day credential in the browser after the person
+    // pressed Log out, which is the shared-workstation case the sign-out
+    // handler already exists for.
+    const user = userEvent.setup();
+    render(<App />);
+    await signInThroughGate(user);
+
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+
+    expect(logoutSessionMock).toHaveBeenCalledWith(LOGIN_REFRESH);
+    expect(window.localStorage.getItem(REFRESH_KEY)).toBeNull();
+    expect(navArea().getByRole("button", { name: /log in/i })).toBeInTheDocument();
+  });
+
+  it("signs out cleanly even when the revocation call fails", async () => {
+    // Mutation: awaiting the revocation, or letting its rejection escape,
+    // leaves the person apparently still signed in on a flaky connection.
+    logoutSessionMock.mockRejectedValue(new Error("network down"));
+    const user = userEvent.setup();
+    render(<App />);
+    await signInThroughGate(user);
+
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+
+    expect(window.localStorage.getItem(REFRESH_KEY)).toBeNull();
+    expect(navArea().getByRole("button", { name: /log in/i })).toBeInTheDocument();
   });
 });

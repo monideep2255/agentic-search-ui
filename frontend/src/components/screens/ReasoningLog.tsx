@@ -18,7 +18,11 @@
 import { Box, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
-import type { ReasoningStep } from "./RunScreen";
+// Imported from `RunProgress`, which is where the type now lives, rather
+// than from `RunScreen`, which re-exports it. `RunProgress` renders this
+// component, so reaching back through `RunScreen` would be a cycle, type-only
+// today and a real one the moment anything here stopped being a type.
+import type { ReasoningStep } from "./RunProgress";
 
 export interface ReasoningLogProps {
   steps: ReasoningStep[];

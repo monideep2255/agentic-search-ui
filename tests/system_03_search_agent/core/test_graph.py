@@ -165,6 +165,31 @@ def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
 
 
+@pytest.fixture(autouse=True)
+def _stub_layer3_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """UI fix set 8 (R29): a gene question now also plans pubtator_annotate
+    and clinicaltrials_search. Stubbed to genuine "empty" outputs, the same
+    discipline as `_stub_ncbi_efetch_dispatch` above, so no test here ever
+    reaches the network blocker and no pre-existing assertion about
+    citations or trust changes (an empty finding contributes nothing). A
+    test that needs a real Layer 3 result overrides the attribute itself,
+    exactly as the dual-plan tests override `ncbi_efetch`.
+    """
+    from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+        ClinicalTrialsSearchOutput,
+    )
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateOutput
+
+    async def _fake_pubtator(tool_input: object, **kwargs: object) -> PubtatorAnnotateOutput:
+        return PubtatorAnnotateOutput(status="empty", mode="entity_lookup")
+
+    async def _fake_trials(tool_input: object, **kwargs: object) -> ClinicalTrialsSearchOutput:
+        return ClinicalTrialsSearchOutput(status="empty")
+
+    monkeypatch.setattr(graph_module, "pubtator_annotate", _fake_pubtator)
+    monkeypatch.setattr(graph_module, "clinicaltrials_search", _fake_trials)
+
+
 # Matches a rendered findings line without assuming its internal shape.
 # An earlier version parsed "field: value" and broke silently the moment
 # `render_findings_block` started naming the record type, because a
@@ -400,6 +425,9 @@ async def test_happy_path_emits_the_expected_event_type_sequence() -> None:
         "cost",
         "plan",
         "cost",
+        # UI fix set 11.16 (2026-09-14): write_node announces its start
+        # before the synth call, once every pre-synth refusal has returned.
+        "step",
         "cost",
         "done",
     ]
@@ -468,13 +496,12 @@ async def test_guardrail_alone_calls_the_guard_tier_model(
 @pytest.mark.asyncio
 async def test_think_now_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> None:
     """T-4.7-04: `think_node`'s real classification call resolves to the
-    Plan-tier model, one of the two plan-tier calls a no-tool query makes
-    (the other is `plan_node`'s own, still-discarded stub call). Asserted
-    by content rather than by count alone, since `test_plan_calls_the_
-    plan_tier_model` already covers the count: this asserts a call whose
-    messages actually carry `_THINK_SYSTEM_INSTRUCTION` reached the plan
-    tier, distinguishing it from `plan_node`'s own plan-tier call, which
-    carries no system instruction of its own at all.
+    Plan-tier model, the ONLY plan-tier call a no-tool query makes since
+    `plan_node`'s discarded stub call was deleted (speed fix, 2026-09-14).
+    Asserted by content rather than by count alone, since
+    `test_plan_node_dispatches_no_model_call` covers the count: this
+    asserts a call whose messages actually carry `_THINK_SYSTEM_INSTRUCTION`
+    reached the plan tier.
     """
     from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
 
@@ -499,9 +526,10 @@ async def test_think_now_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> 
 
 @pytest.mark.asyncio
 async def test_plan_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> None:
-    """No-tool-selected path: two plan-tier calls fire, `think_node`'s real
-    classification (T-4.7-04) and `plan_node`'s own still-discarded stub
-    dispatch, since act_node never reaches cypher_query. See
+    """No-tool-selected path: ONE plan-tier call fires, `think_node`'s real
+    classification (T-4.7-04). `plan_node`'s own discarded stub dispatch,
+    the second until 2026-09-14, was deleted by the speed fix; see
+    `test_plan_node_dispatches_no_model_call` for the per-step count. See
     test_plan_calls_the_plan_tier_model_when_a_tool_runs below for the
     tool path, restored per the judge's T-2.1 rework finding.
     """
@@ -509,7 +537,50 @@ async def test_plan_calls_the_plan_tier_model(_mock_litellm: AsyncMock) -> None:
     plan_tier_calls = [
         call for call in _mock_litellm.call_args_list if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
     ]
-    assert len(plan_tier_calls) == 2  # think + plan
+    assert len(plan_tier_calls) == 1  # think only
+
+
+@pytest.mark.asyncio
+async def test_plan_node_dispatches_no_model_call(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Speed fix (2026-09-14): `plan_node` makes no model call.
+
+    Its Plan-tier call had discarded its reply since build phase 4.7
+    (F-4.5-A-09) and cost a median 1.4 seconds with a tail to 45, measured
+    live on 2026-09-14. Counted at `_dispatch_tier_call` per (tier, step)
+    on a template-shaped question that plans `cypher_query`, so the count
+    is of the loop's own dispatches rather than of every `litellm` call
+    (cypher generation's two attempts go through the harness directly).
+
+    Populate check: Think's plan-tier call and Write's synth call are both
+    present, so an empty count cannot pass. The reply nothing read is also
+    proven unread here: the stub's fixed reply text reaches no event.
+
+    MUTATION PROOF. Restoring a `_dispatch_tier_call(harness, trace_id,
+    "plan", "plan", ...)` in `plan_node` turns this arm red:
+
+        AssertionError: plan_node dispatched a model call: [('plan', 'plan')]
+    """
+    original = graph_module._dispatch_tier_call
+    dispatched: list[tuple[str, str]] = []
+
+    async def _counting(harness, trace_id, tier, step, messages, **kwargs):
+        dispatched.append((tier, step))
+        return await original(harness, trace_id, tier, step, messages, **kwargs)
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _counting)
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+
+    from_plan_node = [pair for pair in dispatched if pair[1] == "plan"]
+    assert from_plan_node == [], f"plan_node dispatched a model call: {from_plan_node}"
+    assert ("plan", "think") in dispatched, dispatched
+    assert ("synth", "write") in dispatched, dispatched
+    assert "plan" in [event.type for event in events]
+    plan_event = next(event for event in events if event.type == "plan")
+    assert plan_event.payload["tool_calls"], "the template-shaped question must still plan a tool"
 
 
 @pytest.mark.asyncio
@@ -518,15 +589,16 @@ async def test_plan_calls_the_plan_tier_model_when_a_tool_runs(_mock_litellm: As
     a weakened verify surface once commit 7c5b8d6 pinned the shared query
     fixture to the no-tool path ("hello"), where exactly one plan-tier
     call was always true and the assertion never exercised the tool path
-    the phase exists to build. On the tool path, four calls resolve to
-    the plan tier: think_node's real classification (T-4.7-04), plan_node's
-    own dispatch, plus cypher_query's two internal generate_cypher attempts
+    the phase exists to build. On the tool path, three calls resolve to
+    the plan tier: think_node's real classification (T-4.7-04) plus
+    cypher_query's two internal generate_cypher attempts
     (the generic "ok" mock response is not recoverable Cypher, so both the
     initial attempt and the one repair retry fire; see
     test_act_executes_the_selected_cypher_query_call's docstring for the
-    same mechanics). F-06 means neither of those two generate_cypher calls
-    carries the stable prefix, a documented, out-of-file-scope gap this
-    pass does not close (see
+    same mechanics). Four until 2026-09-14, when the speed fix deleted
+    plan_node's own discarded dispatch. F-06 means neither of the two
+    generate_cypher calls carries the stable prefix, a documented,
+    out-of-file-scope gap this pass does not close (see
     test_every_model_call_carries_the_stable_prefix_as_its_leading_message_when_a_tool_runs).
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
@@ -536,7 +608,7 @@ async def test_plan_calls_the_plan_tier_model_when_a_tool_runs(_mock_litellm: As
         for call in _mock_litellm.call_args_list
         if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
     ]
-    assert len(plan_tier_calls) == 4
+    assert len(plan_tier_calls) == 3
 
 
 @pytest.mark.asyncio
@@ -554,16 +626,42 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
 ) -> None:
     """F-2.0-03 fix: build_stable_prefix() has a real caller, not zero.
 
-    No-tool-selected path: all four calls (guardrail, think, plan, write)
-    reach litellm.acompletion with graph_module._STABLE_PREFIX prepended
+    No-tool-selected path: the write call (one of the three; the
+    guardrail and Think classification calls are the documented exceptions
+    below)
+    reaches litellm.acompletion with graph_module._STABLE_PREFIX prepended
     as a leading system-role message, proving the prompt-cache scaffold
     T-2.0-06 built is actually wired into the loop, not merely
     unit-tested in isolation. See the `_when_a_tool_runs` sibling below
     for the tool path, restored per the judge's T-2.1 rework finding.
     """
+    # Since 2026-09-13 (UI fix set 7, item 7.1) the GUARDRAIL call is the
+    # one deliberate exception: it carries the classifier's own instruction
+    # first and no stable prefix, because the prefix ahead of that
+    # instruction made the Guard model answer the question instead of
+    # classifying it (see `_dispatch_tier_call`). Section 4.2 names Think,
+    # Plan and Write as the prefix sharers. Since 2026-09-14 (the speed
+    # fix) Plan makes no call at all. So: three calls, the first one
+    # (the guardrail) leads with `GUARD_SYSTEM_INSTRUCTION`, Think with its
+    # own instruction, and Write with the prefix.
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
     await _run_graph(_valid_query(), _valid_context())
-    assert _mock_litellm.call_count == 4
-    for call in _mock_litellm.call_args_list:
+    assert _mock_litellm.call_count == 3
+    guard_call, think_call, *loop_calls = _mock_litellm.call_args_list
+    assert guard_call.kwargs["messages"][0] == {
+        "role": "system",
+        "content": GUARD_SYSTEM_INSTRUCTION,
+    }
+    # Think's classification call left the prefix the same day, for the
+    # same measured reason: the plan-tier model on develop answered it as
+    # the agent. Its own instruction is first and only.
+    assert think_call.kwargs["messages"][0] == {
+        "role": "system",
+        "content": graph_module._THINK_SYSTEM_INSTRUCTION,
+    }
+    assert len(loop_calls) == 1
+    for call in loop_calls:
         leading_message = call.kwargs["messages"][0]
         assert leading_message["role"] == "system"
         assert leading_message["content"] == graph_module._STABLE_PREFIX
@@ -578,54 +676,70 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
     carried the prefix, then asserted the filtered count was 4, a shape
     structurally incapable of failing regardless of how many calls fired
     in total or how many of them lacked the prefix. It concealed exactly
-    the gap F-06 documents: 2 of the 6 calls a tool-path query fires
+    the gap F-06 documents: 2 of the 5 calls a tool-path query fires
     (cypher_query's two internal generate_cypher attempts) never carry
     the prefix at all, since generate_cypher does not accept a
     cache_prefix parameter (a fix that belongs in cypher_generation.py,
     out of this file's scope). This restores a real assertion: the total
-    call count (6) is checked first, then exactly 4 of those 6, the
-    node-level calls (guardrail, think, plan, write), are asserted to
-    carry the prefix; the other 2 are the documented, known gap, not
-    silently absorbed by a filter.
+    call count (5 since 2026-09-14, 6 before plan_node's discarded call
+    was deleted) is checked first, then exactly 1 of those 5, the
+    node-level Write call, is asserted to carry the prefix; the other
+    calls are the documented exceptions, not silently absorbed by a
+    filter.
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
 
-    assert _mock_litellm.call_count == 6
+    assert _mock_litellm.call_count == 5
     prefixed_calls = [
         call
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    assert len(prefixed_calls) == 4
+    # One since 2026-09-14, two since 2026-09-13, four before: the guardrail
+    # and Think classification calls deliberately carry no prefix (see the
+    # no-tool sibling above) and Plan makes no call, and the two
+    # classification calls are asserted present separately so a missing
+    # call cannot hide in the count.
+    assert len(prefixed_calls) == 1
     for call in prefixed_calls:
         assert call.kwargs["messages"][0]["role"] == "system"
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+    assert _mock_litellm.call_args_list[0].kwargs["messages"][0]["content"] == (
+        GUARD_SYSTEM_INSTRUCTION
+    )
+    assert _mock_litellm.call_args_list[1].kwargs["messages"][0]["content"] == (
+        graph_module._THINK_SYSTEM_INSTRUCTION
+    )
 
 
 @pytest.mark.asyncio
-async def test_exactly_four_model_calls_fire_on_the_happy_path(
+async def test_exactly_three_model_calls_fire_on_the_happy_path(
     _mock_litellm: AsyncMock,
 ) -> None:
-    """No-tool-selected path: guardrail, think, plan, write each call_tier
-    once; act calls no model since no tool was selected. See
-    test_six_model_calls_fire_when_a_tool_runs below for the tool path,
-    restored per the judge's T-2.1 rework finding: this assertion was
+    """No-tool-selected path: guardrail, think and write each call_tier
+    once; plan makes no call since 2026-09-14 (the speed fix deleted its
+    discarded dispatch) and act calls no model since no tool was selected.
+    See test_five_model_calls_fire_when_a_tool_runs below for the tool
+    path, restored per the judge's T-2.1 rework finding: this assertion was
     "now only true on the no-tool path" with no sibling covering the
     other one.
     """
     await _run_graph(_valid_query(), _valid_context())
-    assert _mock_litellm.call_count == 4
+    assert _mock_litellm.call_count == 3
 
 
 @pytest.mark.asyncio
-async def test_six_model_calls_fire_when_a_tool_runs(_mock_litellm: AsyncMock) -> None:
-    """T-2.1 rework: on the tool path, the four node-level calls
-    (guardrail, think, plan, write) plus cypher_query's two internal
-    generate_cypher attempts (F-06's documented gap) total six, not four.
+async def test_five_model_calls_fire_when_a_tool_runs(_mock_litellm: AsyncMock) -> None:
+    """T-2.1 rework: on the tool path, the three node-level calls
+    (guardrail, think, write) plus cypher_query's two internal
+    generate_cypher attempts (F-06's documented gap) total five, not three.
+    Six until 2026-09-14, when plan_node's discarded call was deleted.
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
-    assert _mock_litellm.call_count == 6
+    assert _mock_litellm.call_count == 5
 
 
 # ---------------------------------------------------------------------------
@@ -713,9 +827,16 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
     assert done_event.payload["trust_outcome"] == "refuse"
     # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
     # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
-    # genuine "empty" result), so two tool calls are now attempted, not
-    # one; the cypher_query call still errors exactly as before.
-    assert done_event.payload["total_tool_calls"] == 2
+    # genuine "empty" result). UI fix set 8 (R29): the same gene also
+    # dispatches the two Layer 3 calls, pubtator_annotate and
+    # clinicaltrials_search (stubbed "empty" by `_stub_layer3_dispatch`),
+    # so four tool calls are attempted; the cypher_query call still errors
+    # exactly as before.
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert done_event.payload["total_tool_calls"] == 5
 
     citation_events = [event for event in events if event.type == "citation"]
     assert citation_events == [], "an errored tool call must never produce a citation"
@@ -785,9 +906,14 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     assert done_event.payload["trust_outcome"] == "answer"
     # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
     # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
-    # genuine "empty" result, which contributes no citation), so two tool
-    # calls are now attempted, not one.
-    assert done_event.payload["total_tool_calls"] == 2
+    # genuine "empty" result, which contributes no citation). UI fix set 8
+    # (R29): plus the two Layer 3 calls, stubbed "empty" the same way, so
+    # four tool calls are attempted and still exactly one citation exists.
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert done_event.payload["total_tool_calls"] == 5
 
 
 # ---------------------------------------------------------------------------
@@ -1036,15 +1162,23 @@ async def test_citation_cap_truncation_is_surfaced_even_when_tool_reports_no_tru
     _mock_litellm: AsyncMock,
 ) -> None:
     """F-2.1-C12: confirmed failing against the pre-fix code. Neither the
-    tool's own row-limit flag nor the byte ceiling fired here (25 small
-    rows, `truncated=False` at both levels), but `_MAX_CITATIONS_PER_ANSWER`
-    (20) is a third, independent truncation that still cuts what the user
+    tool's own row-limit flag nor the byte ceiling fired here (150 small
+    rows, `truncated=False` at both levels), but `_MAX_FINDINGS_FOR_DISPLAY`
+    is a third, independent truncation that still cuts what the user
     is shown. Before this fix, `_citations_from_findings` silently stopped
     at the cap with no signal at all.
+
+    Answer quality fix (2026-09-20): row count raised from 25 to 150, and
+    the assertion re-keyed from `_MAX_CITATIONS_PER_ANSWER` (20) to
+    `_MAX_FINDINGS_FOR_DISPLAY` (100). The two constants used to be the same
+    number under one name; splitting them means 25 rows no longer exercises
+    this cap at all; the display cap is bounded by the tool's own
+    `row_limit` (100), so this fixture has to exceed that to still prove the
+    cap fires.
     """
     harness = harness_module.Harness(trace_id="test-trace-citation-cap")
     call = ToolCall(tool="cypher_query", call_id="call-citation-cap", layer="layer_1_graph")
-    row_count = 25
+    row_count = 150
     structured_fields = {
         "status": "ok",
         "row_count": row_count,
@@ -1064,12 +1198,330 @@ async def test_citation_cap_truncation_is_surfaced_even_when_tool_reports_no_tru
     events = write_result["events"]
 
     citation_events = [event for event in events if event.type == "citation"]
-    assert len(citation_events) == graph_module._MAX_CITATIONS_PER_ANSWER
+    assert len(citation_events) == graph_module._MAX_FINDINGS_FOR_DISPLAY
 
     token_events = [event for event in events if event.type == "token"]
     assert any("truncat" in event.payload["text"].lower() for event in token_events), (
         "hitting the citation cap must be acknowledged even though neither the tool nor "
         "the byte ceiling reported a truncation"
+    )
+
+
+# ---------------------------------------------------------------------------
+# D-2/D-3 (2026-09-20, `testing/Developer/reports/2026-09-20_tp53_findings/
+# findings.md`): a live answer showed the graph's own MATCH count (124) next
+# to a DISPLAYED count (78) with a note that said "the rest are not shown
+# above", read by the product owner as the paginated table hiding rows it
+# was never given. `_build_truncated_answer_note` now takes a
+# `retrieval_limited` flag and a `retrieved` count so it can tell "never
+# retrieved" apart from "retrieved but not all included in this answer",
+# and never again phrases either one as something sitting "above" a list.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_truncated_answer_note_is_silent_when_everything_was_retrieved_and_shown(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Arm 1: when the graph tool fetched every matching row and none of
+    them were cut for display, `write_node` must never call
+    `_build_truncated_answer_note` at all. A note that fires on a
+    complete result is noise, and the product owner reading a live
+    answer is exactly what surfaced D-2/D-3, where a note fired and then
+    had to be reconciled against numbers that did not need reconciling.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-no-truncation")
+    call = ToolCall(tool="cypher_query", call_id="call-no-truncation", layer="layer_1_graph")
+    row_count = 3
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_light_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+    finding = findings[0]
+    assert finding.truncated is False
+    assert finding.structured_fields["truncated"] is False
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, [finding]))
+    events = write_result["events"]
+
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) == row_count, "every retrieved row must be displayed here"
+
+    token_events = [event for event in events if event.type == "token"]
+    assert not any("truncat" in event.payload["text"].lower() for event in token_events), (
+        "a complete result (every matching row retrieved and shown) must "
+        "never carry a truncation note"
+    )
+
+
+def test_truncated_answer_note_when_never_retrieved_does_not_blame_the_pager() -> None:
+    """Arm 2: rows that were genuinely never fetched from the graph must
+    be described as never retrieved, in words that make no claim about
+    anything being visually hidden. The pre-fix wording ("the rest are
+    not shown above") sits directly over a paginated table in the shipped
+    UI and reads as the pager hiding rows it was never given.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=10, total_available=42, retrieval_limited=True, retrieved=10
+    )
+    assert "shown above" not in note.lower(), (
+        f"a never-retrieved gap must not be phrased as something hidden "
+        f"above a list: {note!r}"
+    )
+    assert "retrieved" in note.lower(), (
+        f"the note must say the cause is retrieval, not display: {note!r}"
+    )
+    assert "42" in note and "10" in note, (
+        f"the note must state both the match count and the retrieved "
+        f"count so the gap is a number, not just a word: {note!r}"
+    )
+
+
+def test_truncated_answer_note_when_never_retrieved_and_total_unknown() -> None:
+    """The no-total sibling of the test above: `_known_total_available`
+    can return `None` (a UNION or aliased multi-item `DISTINCT` query
+    T-3.4-05 documents), and that case must stay honest about not
+    knowing the total rather than fabricating one, while still never
+    invoking a pager.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=10, total_available=None, retrieval_limited=True, retrieved=10
+    )
+    assert "shown above" not in note.lower()
+    assert "not available" in note.lower()
+    assert "retrieved" in note.lower()
+
+
+def test_truncated_answer_note_when_retrieved_but_not_all_displayed() -> None:
+    """The other cause the old note conflated with the one above: every
+    matching record WAS retrieved from the graph, and only the display
+    cap (`_MAX_FINDINGS_FOR_DISPLAY` shared across every layer's
+    findings) limited how many made it into this one answer. The note
+    must say retrieval was complete, distinguishing this from arm 2's
+    case, and must still never say anything is hidden "above".
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=78, total_available=124, retrieval_limited=False, retrieved=124
+    )
+    assert "shown above" not in note.lower()
+    assert "retrieved" in note.lower(), (
+        f"the note must say retrieval was complete, distinguishing this "
+        f"from the never-retrieved case: {note!r}"
+    )
+    assert "78" in note and "124" in note
+
+
+def test_truncated_answer_note_when_retrieved_but_not_all_displayed_total_unknown() -> None:
+    """Same display-only cause as the test above, but `total_available`
+    itself is unknown (or not comparably scoped to `shown`, e.g. a
+    breadth query's cross-layer citation count exceeding this query's
+    own Layer 1 total). The note must still say retrieval was complete
+    without inventing a match count it cannot support.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=78, total_available=None, retrieval_limited=False, retrieved=None
+    )
+    assert "shown above" not in note.lower()
+    assert "retrieved" in note.lower()
+    assert "78" in note
+
+
+@pytest.mark.parametrize(
+    ("shown", "total_available", "retrieval_limited", "retrieved"),
+    [
+        (10, 42, True, 10),
+        (10, None, True, 10),
+        (78, 124, False, 124),
+        (78, None, False, None),
+    ],
+)
+def test_truncated_answer_note_is_one_sentence_opening_with_note(
+    shown: int, total_available: int | None, retrieval_limited: bool, retrieved: int | None
+) -> None:
+    """Arm 3: every note this function can emit is exactly one sentence,
+    opens "Note:", and carries no interior period or semicolon, the shape
+    `_build_structured_fallback_note`'s own docstring documents: the
+    coverage grader (`tests/system_03_search_agent/eval/
+    test_write_step_eval_gate.py`) splits sentences on those characters
+    and counts an unmarked continuation as an uncited factual claim.
+    """
+    note = graph_module._build_truncated_answer_note(
+        shown=shown,
+        total_available=total_available,
+        retrieval_limited=retrieval_limited,
+        retrieved=retrieved,
+    )
+    assert note.startswith("Note:"), note
+    assert "." not in note, f"an interior period fragments the note into uncited claims: {note!r}"
+    assert ";" not in note, f"an interior semicolon fragments the note into uncited claims: {note!r}"
+
+
+# ---------------------------------------------------------------------------
+# Answer quality fix (2026-09-20): the prompt bound (how many findings a
+# Synth model call may see) and the display bound (how many code-built rows
+# the citation list, the table and the findings tail may carry) are now two
+# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20, unchanged) and
+# `_MAX_FINDINGS_FOR_DISPLAY` (100, bounded by the tool's own `row_limit`).
+# Before this split, one shared cap of 20 meant a table could never carry
+# more rows than a model prompt could safely hold, even though every row is
+# built entirely in code and a model never reads or writes it.
+# ---------------------------------------------------------------------------
+
+
+def _unique_citeable_row(index: int) -> dict[str, object]:
+    """Like `_light_citeable_row`, but with a `source_url` unique per row.
+
+    `_light_citeable_row` shares one constant `source_url` across every
+    row, which is fine for a pure row-count test but useless for a
+    citation-IDENTITY test: two tests below need to prove a SPECIFIC row's
+    citation still points at that row's own record, not a neighbour's, and
+    that is unprovable if every row resolves to the same URL.
+    """
+    return {
+        "node_or_edge_type": "Gene",
+        "curie": f"NCBIGene:{672 + index}",
+        "fields": {"name": f"Gene {index}"},
+        "source_url": f"https://www.ncbi.nlm.nih.gov/gene/{672 + index}",
+        "graph_snapshot_version": "v1",
+    }
+
+
+@pytest.mark.asyncio
+async def test_the_model_prompt_never_grows_past_the_prompt_bound(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The hallucination control: 150 admitted findings, comfortably past
+    the old shared cap of 20 and within the new display cap of 100, must
+    still hand the Synth model at most `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    findings in its own prompt. `_compliant_synth_narrative` (this file's
+    mock model) restates every `[N]` finding line it is actually SHOWN, so
+    counting the finding lines in the captured prompt is a direct read of
+    what the model received, not an inference from the answer.
+
+    Confirmed failing against the code as it stood before this fix: with
+    `max_findings=_MAX_CITATIONS_PER_ANSWER` (20) passed straight through as
+    both the admission cap and the prompt content, this assertion already
+    held at 20 by construction, because there was only one list. Reverting
+    the `prompt_findings` slice in `write_node` (passing `synth_findings`,
+    the full display list, to `build_synth_messages` instead) makes this
+    arm fail: the prompt would then carry all 100 admitted findings, or as
+    many as `MAX_FINDINGS_BLOCK_CHARS` allows, not 20.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-prompt-bound")
+    call = ToolCall(tool="cypher_query", call_id="call-prompt-bound", layer="layer_1_graph")
+    row_count = 150
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    synth_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if any(
+            "You write the final answer for a biomedical search system"
+            in (message.get("content") or "")
+            for message in (call.kwargs.get("messages") or [])
+        )
+    ]
+    assert synth_calls, "the write step must have made at least one synth call"
+    first_synth_prompt = "\n".join(
+        message.get("content") or "" for message in synth_calls[0].kwargs["messages"]
+    )
+    shown = _FINDING_LINE.findall(first_synth_prompt)
+    assert len(shown) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT, (
+        f"the model's own prompt must carry exactly "
+        f"{graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT} findings even though "
+        f"{row_count} rows were admitted for display; got {len(shown)}"
+    )
+
+    # The display side must still carry far more than the old shared cap:
+    # this is the other half of the split, proven together so a fix that
+    # narrows both bounds back to one number fails this test either way.
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) > graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
+    assert len(citation_events) <= graph_module._MAX_FINDINGS_FOR_DISPLAY
+
+
+@pytest.mark.asyncio
+async def test_a_citation_beyond_the_prompt_bound_still_points_at_its_own_row(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """THE HIGH-RISK CASE: citation identity must survive the prompt/display
+    split. `SynthFinding.ref_index` is the number Synth cites and
+    `CitationPayload.display_index` is what a surface renders, and the two
+    are allowed to diverge (`synthesis/findings.py`'s own module docstring).
+    Once the model is shown only the first `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    findings while the table and citations carry up to
+    `_MAX_FINDINGS_FOR_DISPLAY`, a row admitted for display but never shown
+    to the model (ref_index 60 of 150, for instance) reaches the reader only
+    through the code-built findings tail, never through the model's own
+    prose. This proves that row's citation still carries THAT row's own
+    `source_url` and `curie`, not a neighbour's and not the row the model
+    actually wrote about.
+
+    Confirmed failing against the code as it stood before this fix in the
+    same way as the arm above: reverting the `prompt_findings` slice (using
+    `synth_findings` for the model's own prompt and grounding pass) does not
+    break identity by itself, since every row's own value never moves, but
+    it does break the PROMPT BOUND this fix exists to restore, which is why
+    that arm is the one pinned red against the revert; this arm is pinned
+    to prove the fix that closes it does not introduce a wrong-chip defect
+    while doing so.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-citation-identity")
+    call = ToolCall(tool="cypher_query", call_id="call-citation-identity", layer="layer_1_graph")
+    row_count = 150
+    marked_index = 60  # past the 20-row prompt bound, inside the 100-row display bound
+    rows = [_unique_citeable_row(i) for i in range(row_count)]
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": rows,
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    marked_row = rows[marked_index]
+    citation_events = [event for event in events if event.type == "citation"]
+    matches = [
+        event
+        for event in citation_events
+        if event.payload["source_url"] == marked_row["source_url"]
+    ]
+    assert len(matches) == 1, (
+        f"row {marked_index}'s own source_url must appear on exactly one "
+        f"citation; got {len(matches)} out of {len(citation_events)} citations"
+    )
+    matching_citation = matches[0]
+    assert matching_citation.payload["source_id"] == marked_row["curie"], (
+        "the citation carrying this row's own source_url must also carry "
+        "this row's own curie, not a neighbour's: a chip pointing at the "
+        "wrong record is worse than a truncated answer"
     )
 
 
@@ -1825,12 +2277,29 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
     # T-3.4-05: BRCA1 resolves to a Gene CURIE, so plan_node also selects
     # ncbi_efetch as a second, Layer 2 answer-bearing call; see
     # test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query below
-    # for the dedicated test of that behavior.
-    assert len(tool_calls) == 2
+    # for the dedicated test of that behavior. UI fix set 8 (R29): the same
+    # gene also earns the two Layer 3 calls, so a gene question plans four.
+    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
+    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
+    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
+    # GO graph call; see test_breadth_wiring.py for the per-call arms.
+    assert len(tool_calls) == 10
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
     assert tool_calls[1]["layer"] == "layer_2_api"
+    # UI fix 11.21 wiring (2026-09-20): the tail is set 8's two Layer 3 calls,
+    # then the breadth plan in its fixed order: the PubMed and ClinVar
+    # searches, the abstract fetch, the PubTator3 publications, the ClinVar
+    # summary, and the context-only GO graph call.
+    assert [c["tool"] for c in tool_calls[2:]] == [
+        "pubtator_annotate", "clinicaltrials_search", "ncbi_efetch", "ncbi_efetch",
+        "ncbi_efetch", "pubtator_annotate", "ncbi_efetch", "cypher_query",
+    ]
+    assert [c["layer"] for c in tool_calls[2:]] == [
+        "layer_3_enrichment", "layer_3_enrichment", "layer_2_api", "layer_2_api",
+        "layer_2_api", "layer_3_enrichment", "layer_2_api", "layer_1_graph",
+    ]
 
 
 @pytest.mark.asyncio
@@ -1860,12 +2329,21 @@ async def test_act_executes_the_selected_cypher_query_call(
     tool_calls, results = calls[0]
     # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
     # (stubbed to a genuine "empty" result by the autouse
-    # `_stub_ncbi_efetch_dispatch` fixture), so two paired (tool_call,
-    # result) entries reach coordinator_worker_execute now, not one.
-    assert len(tool_calls) == 2
-    assert len(results) == 2
-    assert tool_calls[0].tool == "cypher_query"
-    assert tool_calls[1].tool == "ncbi_efetch"
+    # `_stub_ncbi_efetch_dispatch` fixture). UI fix set 8 (R29): plus the
+    # two Layer 3 calls, so four paired (tool_call, result) entries reach
+    # coordinator_worker_execute now, in LAYER order (2, 3, 1) so the
+    # small Layer 2/3 findings are offered to Synth ahead of a graph result
+    # that can fill every slot on its own.
+    # UI fix 11.21 wiring (2026-09-20): five dispatched pairs now. The search
+    # calls and the follow-ups closed `empty` by the stubs contribute no pair;
+    # the GO graph call contributes one (the two-argument stand-in here does
+    # not take the template keyword, so it closes as a disclosed error).
+    assert len(tool_calls) == 5
+    assert len(results) == 5
+    assert tool_calls[0].tool == "ncbi_efetch"
+    assert {tool_calls[1].tool, tool_calls[2].tool} == {"pubtator_annotate", "clinicaltrials_search"}
+    assert tool_calls[3].tool == "cypher_query"
+    assert tool_calls[4].tool == "cypher_query"
     for result in results:
         assert result.contains_untrusted_free_text is False  # structured data, never free text
 
@@ -1879,14 +2357,14 @@ async def test_stable_prefix_still_reaches_every_graph_node_call_when_a_tool_run
 ) -> None:
     """Guards the LEARNINGS row 28 regression for the scenario that
     actually exercises a tool, not only the no-tool-selected happy path:
-    the four established graph.py node calls (guardrail, think, plan,
-    write) must each still carry graph_module._STABLE_PREFIX as their
-    leading message, even though Act's cypher_query dispatch issues
-    additional plan-tier calls of its own (cypher_generation.
-    generate_cypher does not accept a cache_prefix, by that module's own
-    design, so those calls are expected to lack the leading system
-    message; this test asserts the count that DOES carry it, not the
-    total call count).
+    the established graph.py node call that shares the prefix (write, since
+    2026-09-14; plan and write before the speed fix deleted plan's call)
+    must still carry graph_module._STABLE_PREFIX as its leading message,
+    even though Act's cypher_query dispatch issues additional plan-tier
+    calls of its own (cypher_generation.generate_cypher does not accept a
+    cache_prefix, by that module's own design, so those calls are expected
+    to lack the leading system message; this test asserts the count that
+    DOES carry it, not the total call count).
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
@@ -1896,33 +2374,39 @@ async def test_stable_prefix_still_reaches_every_graph_node_call_when_a_tool_run
         for call in _mock_litellm.call_args_list
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
-    assert len(node_level_calls) == 4
+    # Write only. The guardrail and Think classification calls stopped
+    # carrying the prefix on 2026-09-13 (UI fix set 7, item 7.1; see
+    # `_dispatch_tier_call`) and are pinned by their own arms; Plan makes no
+    # call since 2026-09-14 (`test_plan_node_dispatches_no_model_call`).
+    assert len(node_level_calls) == 1
 
 
 @pytest.mark.asyncio
 async def test_cost_cap_breach_during_act_ships_partial_result_without_calling_the_tool(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Act's own pre-dispatch cost-cap check (the THIRD "plan"-tier check
-    for this query as of build phase 4.7: think_node's own real
-    classification call is the first, T-4.7-04, plan_node's own dispatch
-    is the second) breaches the cap, so cypher_query is never called at
-    all, and the query still ships a partial result via write_node's
-    existing cap-hit handling.
+    """Act's own pre-dispatch cost-cap check (the SECOND "plan"-tier check
+    for this query since 2026-09-14: think_node's own real classification
+    call is the first, T-4.7-04) breaches the cap, so cypher_query is never
+    called at all, and the query still ships a partial result via
+    write_node's existing cap-hit handling.
 
     The threshold below moved from 2 to 3 when `think_node` started
     dispatching a plan-tier call of its own (T-4.7-04): before that, the
     sequence was plan_node's dispatch (1st) then act's pre-dispatch check
-    (2nd); it is now think_node's dispatch (1st), plan_node's dispatch
-    (2nd), then act's pre-dispatch check (3rd).
+    (2nd); it became think_node's dispatch (1st), plan_node's dispatch
+    (2nd), then act's pre-dispatch check (3rd). It moved back to 2 on
+    2026-09-14 when the speed fix deleted plan_node's discarded dispatch,
+    which is where the per-query cost pre-flight now goes: Think's call
+    immediately before Plan, Act's own check immediately after it.
     """
     real_check = cost_control.check_per_query_cap
     plan_tier_check_count = {"n": 0}
 
-    def _raise_on_third_plan_tier_check(harness, trace_id, tier, **kwargs):
+    def _raise_on_second_plan_tier_check(harness, trace_id, tier, **kwargs):
         if tier == "plan":
             plan_tier_check_count["n"] += 1
-            if plan_tier_check_count["n"] == 3:
+            if plan_tier_check_count["n"] == 2:
                 raise QueryCapExceededError(
                     "forced for test",
                     query_cost_usd=0.05,
@@ -1931,7 +2415,7 @@ async def test_cost_cap_breach_during_act_ships_partial_result_without_calling_t
                 )
         return real_check(harness, trace_id, tier, **kwargs)
 
-    monkeypatch.setattr(cost_control, "check_per_query_cap", _raise_on_third_plan_tier_check)
+    monkeypatch.setattr(cost_control, "check_per_query_cap", _raise_on_second_plan_tier_check)
 
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     events = await _run_graph(query, _valid_context())
@@ -2538,7 +3022,13 @@ async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    assert len(tool_calls) == 2
+    # UI fix set 8 (R29): four now, the two Layer 3 calls behind these two.
+    # The dedicated per-layer selection tests live in test_layer_handoff.py.
+    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
+    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
+    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
+    # GO graph call; see test_breadth_wiring.py for the per-call arms.
+    assert len(tool_calls) == 10
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
@@ -4534,6 +5024,138 @@ def test_unaddressed_target_entities_reports_a_prefix_with_no_url_builder() -> N
     result = graph_module._unaddressed_target_entities(["GO:0003677"], citations)
 
     assert result == ["GO:0003677"]
+
+
+def test_unaddressed_target_entities_recognizes_a_cited_dbsnp_rsid() -> None:
+    """D-1 sibling defect, D-4 (`testing/Developer/reports/2026-09-20_
+    tp53_findings/findings.md`): `dbSNP:` is not one of `source_url_for_
+    curie`'s six graph-vertex prefixes, since the graph carries no dbSNP
+    vertex at all; an rsID is answered entirely through `ncbi_dbsnp`.
+    Before `_expected_source_url_for_target_entity`, this entity was
+    reported unaddressed unconditionally, even when the real dbSNP
+    citation for the SAME rsid was present."""
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_2_api", field="rsid",
+            claim_text="dbSNP:rs28934578 is the variant rs28934578.",
+            source_url="https://www.ncbi.nlm.nih.gov/snp/rs28934578",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(["dbSNP:rs28934578"], citations)
+
+    assert result == []
+
+
+def test_unaddressed_target_entities_still_flags_a_genuinely_uncited_rsid() -> None:
+    """The other half of the same fix: a real gap must still be reported.
+    Fixing the false positive must never turn into never checking dbSNP
+    coverage at all."""
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+            claim_text="NCBIGene:7157 has the name tumor protein p53.",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/7157",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(
+        ["dbSNP:rs28934578", "NCBIGene:7157"], citations
+    )
+
+    assert result == ["dbSNP:rs28934578"]
+
+
+def test_dbsnp_record_url_rejects_a_malformed_local_id() -> None:
+    """Never guess a URL for a target entity that merely starts with
+    `dbSNP:`: the local id must actually be a well-formed rsID."""
+    assert graph_module._dbsnp_record_url("dbSNP:not-an-rsid") is None
+    assert graph_module._dbsnp_record_url("NCBIGene:672") is None
+    assert graph_module._dbsnp_record_url("dbSNP:rs28934578") == (
+        "https://www.ncbi.nlm.nih.gov/snp/rs28934578"
+    )
+
+
+def test_row_for_resolves_a_go_row_to_its_own_fields_not_a_url_sibling() -> None:
+    """D-1 (`testing/Developer/reports/2026-09-20_tp53_findings/
+    findings.md`): every GO biological process row in a live TP53 answer
+    rendered the label "TP53" instead of its own process name, because
+    `_row_for` used to scan every finding's rows for the first one whose
+    `source_url` matched, and a GO row cited through its gene shares that
+    gene's own record URL with the gene's own row and with every other GO
+    row of the same gene. `_row_for` now delegates to `_row_behind_synth_
+    finding`, which narrows to the finding's own call and then its own
+    CURIE first. This pins that two DISTINCT GO rows sharing one URL each
+    resolve to their OWN fields, not to the gene row that also shares it
+    and would, under the old scan, have been the first (and only) match
+    reachable from any finding in the list.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis import answer_layout
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.tools import cypher_provenance
+
+    gene_url = "https://www.ncbi.nlm.nih.gov/gene/7157"
+    gene_row = {
+        "curie": "NCBIGene:7157", "node_or_edge_type": "Gene",
+        "fields": {"name": "TP53"}, "source_url": gene_url,
+    }
+    go_row_1 = {
+        "curie": "GO:0006281", "node_or_edge_type": "BiologicalProcess",
+        "fields": {"name": "DNA repair", cypher_provenance.CITED_VIA_GENE_FIELD: "NCBIGene:7157"},
+        "source_url": gene_url,
+    }
+    go_row_2 = {
+        "curie": "GO:0006974", "node_or_edge_type": "BiologicalProcess",
+        "fields": {
+            "name": "DNA damage response",
+            cypher_provenance.CITED_VIA_GENE_FIELD: "NCBIGene:7157",
+        },
+        "source_url": gene_url,
+    }
+    gene_finding = Finding(
+        call_id="cq-gene", tool="cypher_query", layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={"status": "ok", "rows": [gene_row]},
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+    go_finding = Finding(
+        call_id="cq-go", tool="cypher_query", layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={"status": "ok", "rows": [go_row_1, go_row_2]},
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+    findings = [gene_finding, go_finding]
+
+    synth_1 = SynthFinding(
+        ref_index=1, citation_id="cq-go-1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="DNA repair", source_url=gene_url,
+        entity_type="BiologicalProcess", curie="GO:0006281", call_id="cq-go",
+    )
+    synth_2 = SynthFinding(
+        ref_index=2, citation_id="cq-go-2", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="DNA damage response", source_url=gene_url,
+        entity_type="BiologicalProcess", curie="GO:0006974", call_id="cq-go",
+    )
+
+    row_1 = graph_module._row_for(synth_1, findings)
+    row_2 = graph_module._row_for(synth_2, findings)
+
+    assert row_1 is not None and row_2 is not None
+    assert row_1["fields"]["name"] == "DNA repair"
+    assert row_2["fields"]["name"] == "DNA damage response"
+    assert row_1["fields"]["name"] != row_2["fields"]["name"]
+
+    # Attribution is preserved: both GO rows still carry the citing
+    # gene's CURIE, the fact that makes them citeable at all (review F-01).
+    assert row_1["fields"][cypher_provenance.CITED_VIA_GENE_FIELD] == "NCBIGene:7157"
+    assert row_2["fields"][cypher_provenance.CITED_VIA_GENE_FIELD] == "NCBIGene:7157"
+
+    label_1 = answer_layout.record_label(synth_1, row_1["fields"])
+    label_2 = answer_layout.record_label(synth_2, row_2["fields"])
+    assert label_1 == "DNA repair"
+    assert label_2 == "DNA damage response"
+    assert label_1 != label_2
 
 
 def test_build_partial_answer_note_names_every_unaddressed_entity() -> None:

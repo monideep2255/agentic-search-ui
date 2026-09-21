@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #F0F0F0; color: #1B1B1B; font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: #0071BC; text-underline-offset: 2px; } a:hover { color: #112F4E; }
+    .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .p { margin: 0 0 18px; font-size: 16.5px; line-height: 1.68; max-width: 66ch; color: #1B1B1B; text-wrap: pretty; }
+    .ah { font-size: 11.5px; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: #666B70; margin: 32px 0 14px; padding-bottom: 7px; border-bottom: 1px solid #D6D7D9; }
+    .rtab { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0 0 16px; border: 1px solid #D6D7D9; background: #FFFFFF; }
+    .rtab th, .rtab td { text-align: left; padding: 8px 11px; border-bottom: 1px solid #D6D7D9; vertical-align: top; }
+    .rtab thead th { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #666B70; background: #F7F8F9; font-weight: 700; }
+    .rtab tbody tr:last-child td { border-bottom: 0; }
+    .rtab td.g { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; white-space: nowrap; color: #565C65; }
+    sup.c { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; font-weight: 700; letter-spacing: .06em; margin-left: 1px; line-height: 0; }
+    .l1 { color: #205493; } .l2 { color: #2E8540; } .l3 { color: #4C2C92; }
+    ul.notes { margin: 0; padding-left: 20px; font-size: 14.5px; line-height: 1.6; color: #565C65; max-width: 66ch; }
+    ul.notes li { margin: 0 0 6px; }
+  </style>
+</helmet>
+<div style="width: 1280px; min-height: 1700px; background: #F0F0F0; display: flex; flex-direction: column;">
+  <div style="height: 54px; background: #205493; color: #FFFFFF; display: flex; align-items: center; gap: 16px; padding: 0 18px;">
+    <div style="display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15px; letter-spacing: -.01em;">
+      <svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M6 2c0 6 9 11 9 17M15 2c0 6-9 11-9 17" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path><path d="M7 6h7M7 15h7" stroke="#CFE1F5" stroke-width="1.6" stroke-linecap="round"></path></svg>
+      <span>NCBI Agentic Search</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 18px; font-size: 13px;">
+      <span style="border-bottom: 2px solid #FFFFFF; padding: 6px 2px;">Search</span>
+      <span style="color: rgba(255,255,255,.86);">Integrations</span>
+      <span style="color: rgba(255,255,255,.86);">About</span>
+      <span style="border: 1px solid rgba(255,255,255,.55); border-radius: 999px; padding: 5px 13px;">Working as <strong>Levi-Montalcini</strong></span>
+      <span style="border: 1px solid rgba(255,255,255,.55); border-radius: 4px; padding: 5px 13px; font-weight: 600;">Log in</span>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; justify-content: center; padding: 28px 16px 48px;">
+    <div style="width: 852px; background: #FFFFFF; border: 1px solid #D6D7D9; border-radius: 8px; padding: 26px 32px 32px;">
+      <div style="display: flex; align-items: flex-start; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid #D6D7D9;">
+        <div style="font-size: 21px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3;">Which diseases are associated with BRCA1?</div>
+        <div style="margin-left: auto; background: #205493; color: #FFFFFF; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 4px; white-space: nowrap;">New search</div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; padding: 14px 0; border-bottom: 1px solid #D6D7D9; font-size: 13.5px; color: #565C65;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="#276E34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="color: #276E34; font-weight: 700;">Answered</span>
+        <span>7.4s · 4 tools · 11 sources from 2 layers</span>
+        <span style="margin-left: auto; display: flex; align-items: center; gap: 14px;">
+          <span style="display: flex; border: 1px solid #D6D7D9; border-radius: 4px; overflow: hidden; font-size: 12.5px;">
+            <span style="padding: 4px 10px; color: #565C65;">Plain language</span>
+            <span style="padding: 4px 10px; background: #E7EEF6; color: #205493; font-weight: 700;">Researcher</span>
+          </span>
+          <span style="color: #0071BC;">Show work</span>
+        </span>
+      </div>
+
+      <div style="padding-top: 24px;">
+        <p class="p">NCBI records link <strong>BRCA1</strong> (NCBI Gene 672) to four MedGen disease concepts, spanning hereditary breast and ovarian cancer susceptibility (<strong>familial cancer of breast</strong>, <strong>familial breast-ovarian cancer susceptibility 1</strong>), <strong>pancreatic cancer susceptibility 4</strong> and <strong>Fanconi anemia complementation group S</strong>.<sup class="c l2">1–5</sup></p>
+        <p class="p">The PubTator3 literature index holds one BRCA1 gene entity,<sup class="c l3">6</sup> and ClinicalTrials.gov lists five studies that name BRCA1, from germline mutation cohorts to breast cancer prevention trials in carriers.<sup class="c l3">7–11</sup></p>
+
+        <div class="ah">Diseases linked to BRCA1</div>
+        <table class="rtab">
+          <thead><tr><th style="width: 58%;">Disease</th><th>MedGen record</th><th>Source layer</th><th style="width: 36px;"></th></tr></thead>
+          <tbody>
+            <tr><td>Familial cancer of breast</td><td class="g">C0346153</td><td style="color: #2E8540; font-weight: 600; font-size: 12.5px;">L2 · live</td><td><sup class="c l2">1</sup></td></tr>
+            <tr><td>Familial breast-ovarian cancer susceptibility 1</td><td class="g">C2676676</td><td style="color: #2E8540; font-weight: 600; font-size: 12.5px;">L2 · live</td><td><sup class="c l2">2</sup></td></tr>
+            <tr><td>Pancreatic cancer susceptibility 4</td><td class="g">C3280442</td><td style="color: #2E8540; font-weight: 600; font-size: 12.5px;">L2 · live</td><td><sup class="c l2">3</sup></td></tr>
+            <tr><td>Fanconi anemia complementation group S</td><td class="g">C4554406</td><td style="color: #2E8540; font-weight: 600; font-size: 12.5px;">L2 · live</td><td><sup class="c l2">4</sup></td></tr>
+          </tbody>
+        </table>
+
+        <div class="ah">Gene and literature records</div>
+        <table class="rtab">
+          <thead><tr><th style="width: 58%;">Record</th><th>Identifier</th><th>Source layer</th><th style="width: 36px;"></th></tr></thead>
+          <tbody>
+            <tr><td>BRCA1, BRCA1 DNA repair associated</td><td class="g">NCBI Gene 672</td><td style="color: #2E8540; font-weight: 600; font-size: 12.5px;">L2 · live</td><td><sup class="c l2">5</sup></td></tr>
+            <tr><td>BRCA1 gene entity in the literature index</td><td class="g">@GENE_BRCA1</td><td style="color: #4C2C92; font-weight: 600; font-size: 12.5px;">L3 · literature</td><td><sup class="c l3">6</sup></td></tr>
+          </tbody>
+        </table>
+
+        <div class="ah">Related clinical trials</div>
+        <table class="rtab">
+          <thead><tr><th style="width: 72%;">Trial</th><th>Study</th><th style="width: 36px;"></th></tr></thead>
+          <tbody>
+            <tr><td>Germline BRCA1 and BRCA2 mutations in Jewish women affected by breast cancer</td><td class="g"><a href="#">NCT00590109</a></td><td><sup class="c l3">7</sup></td></tr>
+            <tr><td>BRCA1 haploinsufficiency and gene expression</td><td class="g"><a href="#">NCT00597987</a></td><td><sup class="c l3">8</sup></td></tr>
+            <tr><td>Treatment customized according to RAP80 and BRCA1 in advanced lung carcinoma</td><td class="g"><a href="#">NCT00617656</a></td><td><sup class="c l3">9</sup></td></tr>
+            <tr><td>Letrozole in preventing breast cancer in postmenopausal women with a BRCA1 or BRCA2 mutation</td><td class="g"><a href="#">NCT00673335</a></td><td><sup class="c l3">10</sup></td></tr>
+            <tr><td>Recombinant human chorionic gonadotropin in preventing breast cancer in premenopausal women with BRCA1 mutations</td><td class="g"><a href="#">NCT00700778</a></td><td><sup class="c l3">11</sup></td></tr>
+          </tbody>
+        </table>
+
+        <div class="ah">Notes</div>
+        <ul class="notes">
+          <li>Disease names are the MedGen concept titles, shown in reading order.</li>
+          <li>The trials are the five ClinicalTrials.gov studies that match BRCA1, in study-number order, not ranked by relevance.</li>
+          <li>The knowledge graph returned the same four diseases; their live NCBI records are cited because live wins for currency.</li>
+        </ul>
+
+        <div style="border-top: 1px solid #D6D7D9; margin-top: 26px; padding-top: 14px; display: flex; align-items: center; gap: 9px;">
+          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M3 1.5l4 3.5-4 3.5z" fill="#666B70"></path></svg>
+          <span style="font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #666B70; font-weight: 700;">Sources</span>
+          <span class="mono" style="font-size: 11px; font-weight: 700; border: 1px solid #D6D7D9; border-radius: 999px; padding: 0 7px; color: #565C65;">11</span>
+        </div>
+        <div style="margin-top: 14px; font-size: 12.5px; color: #565C65; display: flex; align-items: center; gap: 8px;">
+          <span>Based on 4 sources, not yet confirmed</span><span>·</span><span style="color: #981B1E; font-weight: 600;">High-risk claim</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 50px; background: #205493; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px;">NCBI Agentic Search</div>
+</div>
+</x-dc>
+</body>
+</html>

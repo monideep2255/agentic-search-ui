@@ -24,7 +24,13 @@ Depends on:
       mcp_types.INVALID_PARAMS, mcp_types.REQUEST_TIMEOUT): read from the
       installed wheel directly, not from memory or from context7 (indexed
       only to SDK v1.12.4, a different, incompatible import path). See
-      tracker/phase_4.1.md's pre-build source read.
+      tracker/phase_4.1.md's pre-build source read. Also
+      mcp.server.transport_security.TransportSecuritySettings, for
+      `transport_security_settings()` below.
+    - Environment variables MCP_ALLOWED_HOSTS and MCP_ALLOWED_ORIGINS:
+      read by `transport_security_settings()`, which the `/mcp` mount in
+      adapters/web_sse/app.py passes to `streamable_http_app`. Both
+      default to the SDK's own localhost-only lists when unset.
     - system_03_search_agent.auth.dependencies (resolve_user_from_bearer_
       token, has_bearer_scheme, InvalidBearerTokenError): the exact
       decode-then-lookup logic `get_current_user` uses, extracted so this
@@ -81,11 +87,15 @@ decision in DECISIONS.md.
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 import re
 import uuid
+from collections.abc import Callable
 from typing import Annotated, Literal
 
 from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp.shared.exceptions import MCPError
 from mcp_types import INVALID_PARAMS, INVALID_REQUEST, REQUEST_TIMEOUT
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
@@ -112,6 +122,8 @@ from system_03_search_agent.core.run_registry import (
 from system_03_search_agent.data.models import User
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.synthesis.trust import aggregate
+
+logger = logging.getLogger(__name__)
 
 # Section 13.2's locked output_schema: `citations` maxItems 50, `answer`
 # maxLength 8000. Applied twice: once as the Pydantic field constraint
@@ -295,6 +307,228 @@ server = MCPServer(
         "an honest refusal."
     ),
 )
+
+
+# ---------------------------------------------------------------------------
+# Transport security: which `Host` and `Origin` headers this surface admits.
+# ---------------------------------------------------------------------------
+#
+# R17, fix set 5 item 5.3, 2026-09-13. Every request to the deployed `/mcp`
+# endpoint was refused with `421 Invalid Host header`, signed in or not.
+#
+# THE CAUSE, confirmed by reading the installed wheel rather than inferred.
+# `mcp==2.0.0`'s `MCPServer.streamable_http_app()` takes `host: str =
+# "127.0.0.1"` and forwards it to `Server.streamable_http_app()`
+# (`mcp/server/lowlevel/server.py` lines 720 to 745), which contains:
+#
+#     if transport_security is None and host in ("127.0.0.1", "localhost", "::1"):
+#         transport_security = TransportSecuritySettings(
+#             enable_dns_rebinding_protection=True,
+#             allowed_hosts=["127.0.0.1:*", "localhost:*", "[::1]:*"],
+#             allowed_origins=["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
+#         )
+#
+# `adapters/web_sse/app.py` passed neither argument, so BOTH defaults
+# applied: the auto-enable branch fired and built a localhost-only
+# allowlist. `TransportSecurityMiddleware._validate_host`
+# (`mcp/server/transport_security.py` lines 43 to 63) then matched the
+# deployed hostname against that list, failed, and
+# `validate_request` returned `Response("Invalid Host header",
+# status_code=421)` at line 109, before any handler, any auth check and any
+# run. A public hostname could never have matched.
+#
+# THE FIX KEEPS THE PROTECTION ON and configures the allowlist, rather than
+# passing a non-localhost `host` (which would leave `transport_security`
+# None and disable the check outright) or constructing
+# `TransportSecuritySettings(enable_dns_rebinding_protection=False)`.
+# Reasoning recorded here because the cheaper option is the tempting one:
+# DNS rebinding aims a victim's own browser at a server the attacker cannot
+# otherwise route to, which is a localhost-development threat far more than
+# a public-HTTPS one, so switching it off for this deployment would be
+# defensible. It is still not free. The `Host` allowlist is also the control
+# that stops this API from answering on an unintended hostname, and
+# `allowed_origins` is the only same-origin check in front of a
+# bearer-authenticated JSON-RPC surface. An allowlist costs one environment
+# variable per deployment and keeps both; `attack-the-constraint` says fix
+# the configuration gap, not the control that exposed it.
+#
+# UNSET FAILS CLOSED, NOT OPEN. With neither variable set, this returns the
+# SDK's own localhost lists verbatim, so nothing about local development or
+# the test suite changes and a deployment that forgets the variable is
+# refused loudly rather than opened to every hostname.
+_ENV_MCP_ALLOWED_HOSTS = "MCP_ALLOWED_HOSTS"
+_ENV_MCP_ALLOWED_ORIGINS = "MCP_ALLOWED_ORIGINS"
+
+# Copied from `mcp/server/lowlevel/server.py`'s auto-enable branch, quoted
+# above. Kept as literals rather than imported: the SDK exposes them only
+# inside that function body, so there is nothing to import, and pinning them
+# here means an SDK upgrade that narrows them cannot silently narrow this
+# surface's unset default too.
+_SDK_DEFAULT_ALLOWED_HOSTS: tuple[str, ...] = ("127.0.0.1:*", "localhost:*", "[::1]:*")
+_SDK_DEFAULT_ALLOWED_ORIGINS: tuple[str, ...] = (
+    "http://127.0.0.1:*",
+    "http://localhost:*",
+    "http://[::1]:*",
+)
+
+# A `Host` header value: a DNS name, an IPv4 literal, or a bracketed IPv6
+# literal, with an optional port. `:*` is the SDK's own any-port wildcard
+# (`_validate_host`'s `allowed.endswith(":*")` branch) and is accepted here
+# so an operator can express it; a bare `*` is NOT, see `_parse_host_entry`.
+#
+# THE TWO SPELLINGS DO NOT COVER EACH OTHER, which is the trap worth naming
+# because a configuration that looks right still 421s. `_validate_host` tries
+# exact equality first and only then the `:*` suffix, so `example.test` does
+# not admit `example.test:443` and `example.test:*` does not admit the bare
+# `example.test`. Whether a proxy forwards a port is the proxy's business,
+# so `env.example` tells an operator to list each hostname in BOTH spellings.
+# Pinned by `test_the_value_env_example_recommends_admits_both_spellings`.
+_HOST_PATTERN = re.compile(
+    r"^(?:\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)"
+    r"(?::(?:\*|[0-9]{1,5}))?$"
+)
+_ORIGIN_SCHEMES = ("http://", "https://")
+
+
+class MCPTransportSecurityConfigError(ValueError):
+    """`MCP_ALLOWED_HOSTS` or `MCP_ALLOWED_ORIGINS` is set to a value this
+    surface cannot honour.
+
+    Raised at import time of `adapters/web_sse/app.py`, so the process
+    refuses to start rather than serving with a silently empty or silently
+    wide allowlist. That direction is deliberate: an empty `allowed_hosts`
+    with protection on refuses EVERY request, which is a 421 on every call
+    with nothing in the logs pointing at the variable, and R17 was exactly
+    that failure once already.
+    """
+
+
+def _parse_host_entry(entry: str, env_name: str) -> str:
+    """Validate one comma-separated `Host` allowlist entry."""
+    if entry == "*":
+        # Rejected rather than passed through, and this is the one arm most
+        # likely to be read as over-strict. The SDK matches a wildcard only
+        # as a `host:*` SUFFIX, so a bare `*` is compared for exact equality
+        # against the Host header, never matches, and refuses everything
+        # while the operator who typed it believes they allowed everything.
+        # It fails closed, so it is safe, and silent plus safe plus wrong is
+        # still a 421 nobody can explain.
+        raise MCPTransportSecurityConfigError(
+            env_name + " contains a bare '*', which allows nothing rather "
+            "than everything: the MCP SDK matches a wildcard only as a "
+            "'host:*' port suffix. List each hostname explicitly, for "
+            "example 'api.example.com,localhost:*'."
+        )
+    if not _HOST_PATTERN.match(entry):
+        raise MCPTransportSecurityConfigError(
+            env_name + " contains an entry that is not a Host header value: "
+            + repr(entry)
+            + ". Each entry is a hostname with an optional port, for example "
+            "'api.example.com' or 'api.example.com:443' or 'localhost:*'. No "
+            "scheme, no path, no credentials."
+        )
+    return entry
+
+
+def _parse_origin_entry(entry: str, env_name: str) -> str:
+    """Validate one comma-separated `Origin` allowlist entry."""
+    for scheme in _ORIGIN_SCHEMES:
+        if entry.startswith(scheme):
+            remainder = entry[len(scheme) :]
+            if remainder and _HOST_PATTERN.match(remainder):
+                return entry
+            break
+    raise MCPTransportSecurityConfigError(
+        env_name + " contains an entry that is not an origin: "
+        + repr(entry)
+        + ". Each entry is a scheme plus a host with an optional port and no "
+        "trailing path, for example 'https://app.example.com' or "
+        "'http://localhost:*'."
+    )
+
+
+def _parse_allowlist(
+    raw: str | None,
+    env_name: str,
+    defaults: tuple[str, ...],
+    parse_entry: Callable[[str, str], str],
+) -> list[str]:
+    """Split one comma-separated allowlist variable, or fall back to `defaults`.
+
+    Unset, or set to whitespace only, yields `defaults`. Set to anything that
+    LOOKS like a list but resolves to nothing usable (`","`, `", ,"`) raises
+    instead, because that is a typo rather than an intention and quietly
+    substituting the localhost defaults for it would reproduce this very
+    defect with the variable apparently set.
+    """
+    if raw is None or not raw.strip():
+        return list(defaults)
+    entries = [segment.strip() for segment in raw.split(",")]
+    if not any(entries):
+        raise MCPTransportSecurityConfigError(
+            env_name + " is set but lists no entry (found only separators and "
+            "whitespace). Unset it to admit localhost only, or list at least "
+            "one value."
+        )
+    parsed: list[str] = []
+    for entry in entries:
+        if not entry:
+            # A trailing or doubled comma in an otherwise valid list. Skipped
+            # rather than fatal: the operator's intent is unambiguous and every
+            # real entry still had to pass `parse_entry`.
+            continue
+        value = parse_entry(entry, env_name)
+        if value not in parsed:
+            parsed.append(value)
+    return parsed
+
+
+def transport_security_settings() -> TransportSecuritySettings:
+    """Build the `TransportSecuritySettings` the `/mcp` mount is served with.
+
+    Read fresh on every call, the same convention `harness/cost_control.py`'s
+    `_operator_user_ids` and `tools/graph_connection.py`'s `GRAPH_QUERY_URL`
+    dispatch already use: a plain `os.environ.get` at the point of use, no
+    settings object, no caching. The production call site is
+    `adapters/web_sse/app.py`'s module-level `streamable_http_app(...)`, which
+    runs exactly once per process, so "fresh" costs nothing there and lets a
+    test set the variable and re-read it without reloading a module.
+
+    Raises:
+        MCPTransportSecurityConfigError: either variable is set to a value
+            that is not a list of Host or Origin values.
+    """
+    allowed_hosts = _parse_allowlist(
+        os.environ.get(_ENV_MCP_ALLOWED_HOSTS),
+        _ENV_MCP_ALLOWED_HOSTS,
+        _SDK_DEFAULT_ALLOWED_HOSTS,
+        _parse_host_entry,
+    )
+    allowed_origins = _parse_allowlist(
+        os.environ.get(_ENV_MCP_ALLOWED_ORIGINS),
+        _ENV_MCP_ALLOWED_ORIGINS,
+        _SDK_DEFAULT_ALLOWED_ORIGINS,
+        _parse_origin_entry,
+    )
+    # Logged by name: the hostnames this surface admits, which travel in the
+    # clear in every request's own `Host` header and are therefore not
+    # sensitive, plus the variable each list came from. No credential, no
+    # token and no raw environment value is logged here, and the origin list
+    # is reported as a count rather than spelled out, since its only job in
+    # this line is telling an operator whether it was configured at all.
+    logger.info(
+        "MCP transport security: DNS-rebinding protection on, allowed hosts "
+        "%s (from %s), %d allowed origin(s) (from %s)",
+        allowed_hosts,
+        _ENV_MCP_ALLOWED_HOSTS,
+        len(allowed_origins),
+        _ENV_MCP_ALLOWED_ORIGINS,
+    )
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=allowed_hosts,
+        allowed_origins=allowed_origins,
+    )
 
 
 def _extract_bearer_header(ctx: Context) -> str | None:

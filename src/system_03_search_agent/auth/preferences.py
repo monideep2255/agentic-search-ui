@@ -26,7 +26,7 @@ _DEPTH_KEY = "audience_depth"
 #: untrusted input on the way back OUT: a row written by an older or buggier
 #: version, or edited by hand, must not be able to put an arbitrary string
 #: into a prompt directive. Anything unrecognised falls back to the default.
-_ALLOWED = frozenset({"clinical_brief", "researcher", "deep_technical"})
+_ALLOWED = frozenset({"clinical_brief", "researcher", "deep_technical", "plain_language"})
 _DEFAULT = "researcher"
 
 

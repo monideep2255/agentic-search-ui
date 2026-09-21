@@ -34,6 +34,8 @@ EVENT_TYPES = [
     "cost",
     "error",
     "done",
+    # UI fix set 11.16 (2026-09-14): the additive Write-started marker.
+    "step",
 ]
 
 
@@ -120,6 +122,7 @@ VALID_PAYLOAD_BY_TYPE: dict[str, dict[str, object]] = {
         "elapsed_ms": 6200,
         "trust_outcome": "answer",
     },
+    "step": {"step": "write", "status": "started"},
 }
 
 
@@ -155,8 +158,9 @@ class TestEventType:
         with pytest.raises(ValidationError):
             Event(**_envelope_kwargs(type="unknown_type"))
 
-    def test_eleven_taxonomy_values_exactly(self) -> None:
-        assert len(EVENT_TYPES) == 11
+    def test_twelve_taxonomy_values_exactly(self) -> None:
+        # Eleven from Section 2.3 plus the additive `step` marker (set 11.16).
+        assert len(EVENT_TYPES) == 12
 
 
 class TestEventVersion:
@@ -789,16 +793,46 @@ class TestDonePayload:
                 trust_outcome="answer",
             )
 
+    # UI fix set 7, item 7.2 (2026-09-13). Additive and optional within v1.
+    def test_next_step_query_is_optional_and_defaults_to_none(self) -> None:
+        payload = DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=0, trust_outcome="ask"
+        )
+        assert payload.next_step_query is None
+        assert payload.model_dump()["next_step_query"] is None
+
+    def test_next_step_query_is_carried_when_given(self) -> None:
+        payload = DonePayload(
+            total_cost_usd=0.0,
+            total_tool_calls=1,
+            elapsed_ms=1,
+            trust_outcome="ask",
+            next_step="Would you like me to go through the 3 further disease records found for this question?",
+            next_step_query="Which other disease records are linked to BRCA1?",
+        )
+        assert payload.next_step_query == "Which other disease records are linked to BRCA1?"
+
+    def test_next_step_query_is_bounded_like_query_text(self) -> None:
+        DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=0, trust_outcome="ask",
+            next_step_query="q" * 2000,
+        )
+        with pytest.raises(ValidationError):
+            DonePayload(
+                total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=0, trust_outcome="ask",
+                next_step_query="q" * 2001,
+            )
+
 
 class TestEventPayloadBoundToDeclaredType:
     """F-1.0-01: Event.payload must conform to the model matching Event.type.
 
     Regression coverage for the judge's two rejecting probes on ticket
     T-1.0-01, plus a positive check that a correctly-shaped payload for
-    every one of the eleven taxonomy members still validates.
+    every one of the twelve taxonomy members still validates.
     """
 
-    def test_eleven_valid_payloads_declared(self) -> None:
+    def test_twelve_valid_payloads_declared(self) -> None:
         assert set(VALID_PAYLOAD_BY_TYPE) == set(EVENT_TYPES)
 
     @pytest.mark.parametrize("event_type", EVENT_TYPES)

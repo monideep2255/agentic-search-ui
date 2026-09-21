@@ -357,12 +357,14 @@ class TestRemainingTypesConstruct:
 
 
 class TestAskInputAndAudienceDepth:
-    def test_audience_depth_has_exactly_querys_three_values(self) -> None:
+    def test_audience_depth_has_exactly_querys_values(self) -> None:
         # Mutation that turns this red: add, drop, or misspell a member,
         # which would desync from contracts.query.Query.audience_depth's
-        # own Literal.
+        # own Literal. UI fix set 9 (2026-09-13) added `plain_language` to
+        # that Literal, so the requirement this pins, "exactly Query's
+        # values", now means four.
         values = {member.value for member in types_module.AudienceDepth}
-        assert values == {"clinical_brief", "researcher", "deep_technical"}
+        assert values == {"clinical_brief", "researcher", "deep_technical", "plain_language"}
 
     def test_resolve_audience_depth_defaults_to_researcher(self) -> None:
         # Mutation that turns this red: default to a different literal, or

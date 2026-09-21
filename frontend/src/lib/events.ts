@@ -80,6 +80,16 @@ export interface ToolCall {
   tool: ToolName;
   call_id: string;
   layer: Layer;
+  /**
+   * UI fix set 8 (R30). The helper scientist this call is handed to, one
+   * per data layer, drawn per run on the server and excluding the lead.
+   * OPTIONAL AND NULLABLE on the wire, mirroring `contracts/events.py`: an
+   * older backend omits all three, and every consumer treats absent and
+   * null identically (no handoff line renders). Presentation only.
+   */
+  persona?: string | null;
+  persona_about?: string | null;
+  persona_wikipedia?: string | null;
 }
 
 export interface PlanPayload {
@@ -116,6 +126,10 @@ export interface ToolStartPayload {
   tool: ToolName;
   layer: Layer;
   status: ToolStartStatus;
+  /** UI fix set 8 (R30): the same helper the planned `ToolCall` carries. Optional, nullable. */
+  persona?: string | null;
+  persona_about?: string | null;
+  persona_wikipedia?: string | null;
 }
 
 export interface ToolResultPayload extends ToolStartPayload {
@@ -131,9 +145,29 @@ export interface ToolResultPayload extends ToolStartPayload {
   truncated: boolean;
 }
 
+/**
+ * UI fix set 9 (2026-09-13). What a token chunk IS, mirroring
+ * `TokenPayload.kind` in `contracts/events.py`. Absent or null means an older
+ * producer, classified as before.
+ */
+export const TOKEN_KINDS = [
+  "claim",
+  "note",
+  "heading",
+  "paragraph_break",
+  "list_item",
+  "table_header",
+  "table_row",
+] as const;
+export type TokenKind = (typeof TOKEN_KINDS)[number];
+
 export interface TokenPayload {
   text: string;
   marker_ids: string[];
+  // UI fix set 9, additive and optional per Section 2.6.
+  kind?: TokenKind | null;
+  cells?: string[] | null;
+  emphasis?: string[] | null;
 }
 
 export interface CitationPayload {
@@ -167,6 +201,23 @@ export interface TrustSignalPayload {
   risk_tier: string;
   grounded: boolean;
   triangulated: boolean | null;
+  // T-6.2 no-data-refusal fix. Additive per Section 2.6: `contracts/
+  // events.py`'s `TrustSignalPayload` has carried these three since build
+  // phase 2.2 (`scope`) and build phase 4.3 (`message`, `fallback_link`),
+  // and every payload built before that still validates unchanged because
+  // all three are optional here too.
+  //
+  // `scope` distinguishes Section 8.3's per-claim verdict ("claim") from
+  // Section 8.4's whole-response verdict ("answer"). `message` and
+  // `fallback_link` carry Section 8.4's refuse payload: the refusal
+  // sentence and its NCBI cross-database search link, as two separate,
+  // independently capped fields rather than one string a consumer would
+  // have to split. `useRunView` reads all three to find the answer-level
+  // refusal signal and render it through the same notice a guardrail
+  // refusal uses, instead of matching on the refusal SENTENCE's wording.
+  scope?: "claim" | "answer" | null;
+  message?: string | null;
+  fallback_link?: string | null;
 }
 
 export interface ErrorPayload {
@@ -188,6 +239,39 @@ export interface DonePayload {
   total_tool_calls: number;
   elapsed_ms: number;
   trust_outcome: TrustOutcome;
+  /**
+   * UI fix set 9, item 9.9. The one plain trust line for the answer ("Based
+   * on 1 source, not yet confirmed"), built in code by the backend. Optional
+   * and nullable; null on a refusal, absent from an older backend.
+   */
+  trust_line?: string | null;
+  /**
+   * T-6.2-08. An offer of somewhere to go next, or null when there is
+   * nowhere honest. OPTIONAL on the wire: an older backend omits it
+   * entirely, so this is `?` as well as nullable, and every consumer must
+   * treat absent and null identically.
+   *
+   * It is built in code from the findings the answer did not report, never
+   * generated, so it can never propose a topic the retrieval did not
+   * actually find. See `DonePayload.next_step` in `contracts/events.py`.
+   */
+  next_step?: string | null;
+  /**
+   * UI fix set 7 (R21). The QUESTION to send if the reader accepts the
+   * offer, as opposed to `next_step` above, which is the sentence the offer
+   * is made in.
+   *
+   * The two were one field, and accepting sent the offer's own wording to
+   * the agent: "Yes, go deeper" dispatched "Would you like me to go through
+   * the 3 further disease records found for this question?", a yes/no
+   * sentence about the interface rather than a question about biology.
+   *
+   * OPTIONAL AND NULLABLE, on the same terms as `next_step`: a backend that
+   * predates this field omits it, and every consumer must treat absent and
+   * null identically by falling back to `next_step`, which is exactly what
+   * was sent before this field existed.
+   */
+  next_step_query?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -319,12 +403,25 @@ function isThinkPayload(value: unknown): value is ThinkPayload {
   );
 }
 
+/**
+ * UI fix set 8: the three persona fields are optional on both frames that
+ * carry them, so absent and null both pass and any other type is refused.
+ */
+function hasOptionalPersonaFields(value: Record<string, unknown>): boolean {
+  return (
+    (value.persona === undefined || isNullableString(value.persona)) &&
+    (value.persona_about === undefined || isNullableString(value.persona_about)) &&
+    (value.persona_wikipedia === undefined || isNullableString(value.persona_wikipedia))
+  );
+}
+
 function isToolCall(value: unknown): value is ToolCall {
   return (
     isRecord(value) &&
     isToolName(value.tool) &&
     typeof value.call_id === "string" &&
-    isLayer(value.layer)
+    isLayer(value.layer) &&
+    hasOptionalPersonaFields(value)
   );
 }
 
@@ -349,7 +446,8 @@ function isToolStartPayload(value: unknown): value is ToolStartPayload {
     typeof value.call_id === "string" &&
     isToolName(value.tool) &&
     isLayer(value.layer) &&
-    isToolStartStatus(value.status)
+    isToolStartStatus(value.status) &&
+    hasOptionalPersonaFields(value)
   );
 }
 
@@ -379,8 +477,21 @@ function isToolResultPayload(value: unknown): value is ToolResultPayload {
   );
 }
 
+function isOptionalStringArray(value: unknown): boolean {
+  return value === undefined || value === null || isStringArray(value);
+}
+
 function isTokenPayload(value: unknown): value is TokenPayload {
-  return isRecord(value) && typeof value.text === "string" && isStringArray(value.marker_ids);
+  return (
+    isRecord(value) &&
+    typeof value.text === "string" &&
+    isStringArray(value.marker_ids) &&
+    (value.kind === undefined ||
+      value.kind === null ||
+      (TOKEN_KINDS as readonly unknown[]).includes(value.kind)) &&
+    isOptionalStringArray(value.cells) &&
+    isOptionalStringArray(value.emphasis)
+  );
 }
 
 function isCitationPayload(value: unknown): value is CitationPayload {
@@ -409,7 +520,13 @@ function isTrustSignalPayload(value: unknown): value is TrustSignalPayload {
     isTrustOutcome(value.outcome) &&
     typeof value.risk_tier === "string" &&
     typeof value.grounded === "boolean" &&
-    (value.triangulated === null || typeof value.triangulated === "boolean")
+    (value.triangulated === null || typeof value.triangulated === "boolean") &&
+    (value.scope === undefined ||
+      value.scope === null ||
+      value.scope === "claim" ||
+      value.scope === "answer") &&
+    (value.message === undefined || isNullableString(value.message)) &&
+    (value.fallback_link === undefined || isNullableString(value.fallback_link))
   );
 }
 
@@ -432,7 +549,8 @@ function isDonePayload(value: unknown): value is DonePayload {
     typeof value.total_cost_usd === "number" &&
     typeof value.total_tool_calls === "number" &&
     typeof value.elapsed_ms === "number" &&
-    isTrustOutcome(value.trust_outcome)
+    isTrustOutcome(value.trust_outcome) &&
+    (value.trust_line === undefined || isNullableString(value.trust_line))
   );
 }
 

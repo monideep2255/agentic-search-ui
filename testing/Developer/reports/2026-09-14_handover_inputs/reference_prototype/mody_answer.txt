@@ -1,0 +1,56 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+Q: What genes are associated with MODY?
+
+Query Pipeline
+
+7/7 steps · 6.0s
+
+Found 6 genes associated with Maturity-onset diabetes of the young (MODY) in the query results. These gene–disease associations link specific genes to named MODY subtypes or related MODY syndromes.
+
+Gene	Associated disease
+CEL	Maturity-onset diabetes of the young type 8
+GCK	Maturity-onset diabetes of the young type 2
+HNF1A	Maturity-onset diabetes of the young type 3
+HNF4A	Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young
+INS	Maturity-onset diabetes of the young type 10
+KCNJ11	Maturity-onset diabetes of the young type 13
+Notes
+The results come from gene–disease association data in the graph queried via the disease name containing “maturity-onset diabetes.”
+Relevant source types for these associations in this knowledge graph typically include resources such as NCBI Gene and MedGen.
+Sources:
+NCBI Gene
+NCBI MedGen
+6 results
+5965ms
+Helpful?
+
+Generated Cypher
+
+Graph Visualization
+
+Raw Results (6)
+
+NCBI Knowledge Graph - Proof of Concept

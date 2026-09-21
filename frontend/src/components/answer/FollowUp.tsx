@@ -19,16 +19,52 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Drawer, Typography, useMediaQuery, useTheme } from "@mui/material";
 
 import { designTokens } from "../../theme";
 
 export interface FollowUpProps {
   hints?: string[];
   onAsk?: (question: string) => void;
+  /**
+   * T-6.2-08. The backend's offer of somewhere to go next, or null.
+   *
+   * Rendered as ONE offer above the hint row rather than as a fourth hint,
+   * and the distinction is the point rather than styling. The hints are a
+   * fixed MENU that is the same on every answer; this is a single sentence
+   * about THIS answer, derived from what this retrieval actually left out.
+   * Folding it into the menu would make a specific, earned offer look like
+   * the generic three.
+   *
+   * Accepting it dispatches through the same `onAsk` as anything typed, so
+   * it continues the thread rather than starting over. That ordering was
+   * the product-owner's condition on this feature: an offer the system
+   * makes and then forgets making is worse than no offer.
+   */
+  nextStep?: string | null;
+  /**
+   * UI fix set 7 (R21). The question accepting the offer actually ASKS.
+   *
+   * The offer above is written to a reader: "Would you like me to go through
+   * the 3 further disease records found for this question?". Pressing "Yes,
+   * go deeper" used to send that sentence to the agent verbatim, so the
+   * search was run on a yes/no question about the interface rather than on
+   * anything about biology. The two strings have different jobs and are now
+   * two fields.
+   *
+   * Null or omitted means the backend sent no separate query, and the offer
+   * text is sent instead. That is exactly the behaviour before this field
+   * existed, so an older backend loses nothing.
+   */
+  nextStepQuery?: string | null;
 }
 
-export function FollowUp({ hints = [], onAsk }: FollowUpProps) {
+export function FollowUp({
+  hints = [],
+  onAsk,
+  nextStep = null,
+  nextStepQuery = null,
+}: FollowUpProps) {
   const [text, setText] = useState("");
 
   const submit = (event: FormEvent) => {
@@ -43,6 +79,7 @@ export function FollowUp({ hints = [], onAsk }: FollowUpProps) {
   return (
     <Box
       data-testid="follow-up"
+      data-tour="followup"
       sx={{ mt: 3, pt: 2.25, borderTop: `1px solid ${designTokens.line}` }}
     >
       {/*
@@ -115,6 +152,57 @@ export function FollowUp({ hints = [], onAsk }: FollowUpProps) {
           Ask
         </Box>
       </Box>
+
+      {nextStep ? (
+        <Box
+          data-testid="next-step-offer"
+          sx={{
+            mt: 1.75,
+            p: 1.5,
+            borderRadius: 0.5,
+            border: `1px solid ${designTokens.line}`,
+            bgcolor: designTokens.surfaceSunk,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            flexWrap: "wrap",
+          }}
+        >
+          <Typography sx={{ fontSize: 14, flex: 1, minWidth: 220 }}>
+            {nextStep}
+          </Typography>
+          {/*
+            A real button, not a chip styled like one. Accepting an offer is
+            the same action as typing the question, so it goes through the
+            same `onAsk` and therefore continues the thread.
+
+            WHAT IS SENT is the searchable question, falling back to the
+            offer's own wording only when the backend sent no separate one
+            (R21). The visible text above never changes with it: the offer is
+            addressed to a reader and the query is addressed to the agent.
+          */}
+          <Box
+            component="button"
+            type="button"
+            data-testid="next-step-accept"
+            onClick={() => onAsk?.(nextStepQuery ?? nextStep)}
+            sx={{
+              font: "inherit",
+              fontSize: 13.5,
+              fontWeight: 600,
+              px: 1.6,
+              py: 0.75,
+              borderRadius: 0.5,
+              cursor: "pointer",
+              color: "#FFFFFF",
+              bgcolor: designTokens.blue,
+              border: 0,
+            }}
+          >
+            Yes, go deeper
+          </Box>
+        </Box>
+      ) : null}
 
       {hints.length > 0 ? (
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.5 }}>
@@ -231,6 +319,17 @@ export interface CollapsedRailProps {
  * the page into a different shape than expanding restores.
  */
 export function CollapsedRail({ count, onExpand }: CollapsedRailProps) {
+  const theme = useTheme();
+  // Fix set 4 (R46, decision U9, 2026-09-13). A 40px strip beside phone
+  // content is not the design, only this component's own desktop fallback,
+  // and the app bar's rail toggle (now visible at every width, see
+  // `AppShell.tsx`) is the way back in below `md`. Returning null here
+  // rather than continuing to rely on the `display: { xs: "none" }` below
+  // matches what the mounting side in `App.tsx` now expects: a phone never
+  // renders this strip at all.
+  const isNarrow = useMediaQuery(theme.breakpoints.down("md"));
+  if (isNarrow) return null;
+
   return (
     <Box
       component="button"
@@ -250,7 +349,7 @@ export function CollapsedRail({ count, onExpand }: CollapsedRailProps) {
         bgcolor: designTokens.surface,
         color: designTokens.inkMuted,
         cursor: "pointer",
-        display: { xs: "none", md: "flex" },
+        display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: 1.75,
@@ -317,7 +416,21 @@ export function HistoryRail({
   accountEmail,
   searchLimitLabel,
 }: HistoryRailProps) {
-  return (
+  const theme = useTheme();
+  // Fix set 4 (R46, decision U9, 2026-09-13): history reachable on a phone.
+  //
+  // NO PHONE DESIGN EXISTS FOR THIS RAIL. `docs/build/design/README.md`
+  // records `prototype/app.html:65` simply hiding `#rail` at 860px and
+  // calling that a known defect, not a design. So this is built from the
+  // rail itself, unchanged, plus the nearest designed phone-pattern
+  // neighbour this app already has: `NavOverflowMenu` in
+  // `components/shell/AppShell.tsx`, a control that opens to reach content
+  // a narrow bar has no room for inline. The product owner's instruction
+  // (U9) was a panel that slides in and closes, which is what a MUI
+  // `Drawer` gives the same rail content without restyling it.
+  const isNarrow = useMediaQuery(theme.breakpoints.down("md"));
+
+  const rail = (
     <Box
       component="aside"
       aria-label="Your searches"
@@ -332,9 +445,41 @@ export function HistoryRail({
         // `display:flex;flex-direction:column` is what lets `.rfoot`'s
         // `margin-top:auto` push the footer to the bottom of a full-height
         // rail, so it is structural rather than cosmetic.
-        display: { xs: "none", md: "flex" },
+        //
+        // Unconditionally flex, not the old `{ xs: "none", md: "flex" }`.
+        // Below `md` this element now renders only inside the `Drawer`
+        // below, built by the `isNarrow` branch, which already decides
+        // whether this tree mounts at all; a second, CSS-level hide here
+        // would just fight that decision.
+        display: "flex",
         flexDirection: "column",
         overflowY: "auto",
+        // Product-owner feedback, 2026-09-13: signed in, the search bar sat
+        // low on the landing screen while a signed-out visitor saw it
+        // centred. The rail was the cause. Its history list is longer than
+        // the viewport, and a flex row is as tall as its tallest child, so
+        // the hero beside it grew to the list's height and centred its
+        // content halfway down a page that scrolled behind the sticky
+        // footer. Pinning the rail to the viewport, the same way the app
+        // bar and footer already are (set 2, R9 and R11), lets the row keep
+        // the viewport's height whatever the list holds, so the hero is
+        // centred exactly as it is with no rail at all, and the list
+        // scrolls inside the rail. The height is the space between the two
+        // bars, measured live on develop at 1280px: 64px is the app bar
+        // (MUI's regular toolbar at `sm` and up; the `minHeight: 54` on it
+        // is a floor, not the rendered height) and 51px the footer. An
+        // explicit height rather than a maximum, so the rail still reaches
+        // the footer when the list is short, which is the prototype's
+        // full-height rail and what `rail-collapse.spec.ts` pins. Not
+        // applied inside the phone drawer, which already gives the rail
+        // the full height on its own.
+        ...(isNarrow
+          ? {}
+          : {
+              position: "sticky",
+              top: 64,
+              height: "calc(100dvh - 64px - 51px)",
+            }),
       }}
     >
       {/* `.rtop`: the New search action and the collapse control, one row. */}
@@ -545,6 +690,44 @@ export function HistoryRail({
         </Box>
       ) : null}
     </Box>
+  );
+
+  if (!isNarrow) return rail;
+
+  // Below `md`: the same rail, sliding in over the page rather than sitting
+  // beside it. `open` is always true while this component is mounted;
+  // `App.tsx` decides whether `HistoryRail` mounts at all (the same
+  // `railOpen` state the desktop column already used), so the Drawer only
+  // ever needs to reflect that one decision, never track a second copy of
+  // it. `onClose` fires on a backdrop tap or Escape and runs through the
+  // same `onCollapse` the rail's own `.rtop` control already calls, so
+  // there is exactly one way to close this panel, not two competing ones.
+  return (
+    <Drawer
+      anchor="left"
+      variant="temporary"
+      open
+      onClose={onCollapse}
+      ModalProps={{ keepMounted: false }}
+      // `slotProps.paper`, not the deprecated `PaperProps`: this MUI major
+      // version stopped forwarding `PaperProps` to the paper slot at all
+      // (it already sets `role="dialog"` itself for a temporary drawer,
+      // which is how this panel gets that role), so `PaperProps` here would
+      // silently do nothing rather than merely being old-fashioned.
+      slotProps={{
+        paper: {
+          "aria-label": "Your searches",
+          sx: {
+            width: 280,
+            maxWidth: "85vw",
+            bgcolor: designTokens.surface,
+            borderRight: `1px solid ${designTokens.line}`,
+          },
+        },
+      }}
+    >
+      {rail}
+    </Drawer>
   );
 }
 

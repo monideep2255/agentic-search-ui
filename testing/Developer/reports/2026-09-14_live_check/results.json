@@ -1,0 +1,124 @@
+[
+  {
+    "width": 1280,
+    "case": "BRCA1 plain",
+    "default_mode_marker": "true",
+    "locked_marker_seen_during_run": 0,
+    "handoff": {
+      "lines": [
+        "Levi-Montalcini is handing off to Chain, Salk and Nightingale",
+        "L1\n\nChain is searching the knowledge graph\n\nL2\n\nSalk is checking live NCBI records\n\nL3\n\nNightingale is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": false
+    },
+    "elapsed_s": 43.1,
+    "answer": {
+      "headings": 0,
+      "list_items": 0,
+      "tables": 0,
+      "bold": 0,
+      "claims": 11,
+      "claims_without_marker": 0,
+      "citation_chips": 11,
+      "notes": 2,
+      "words_in_answer_block": 292,
+      "trust_line": "Based on 4 sources, not yet confirmed",
+      "medical_note": true,
+      "raw_medgen_code": true,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered7.3s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\n\nThere is a trial called Study to Evaluate Treatment Customized According to RAP8"
+    }
+  },
+  {
+    "width": 1280,
+    "case": "follow-up: What variants cause it?",
+    "handoff": {
+      "lines": [
+        "Levi-Montalcini is handing off to Chain, Crick and Fleming",
+        "L1\n\nChain is searching the knowledge graph\n\nL2\n\nCrick is checking live NCBI records\n\nL3\n\nFleming is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": true
+    },
+    "elapsed_s": 169.2,
+    "answer": {
+      "headings": 0,
+      "list_items": 0,
+      "tables": 0,
+      "bold": 0,
+      "claims": 26,
+      "claims_without_marker": 0,
+      "citation_chips": 31,
+      "notes": 5,
+      "words_in_answer_block": 423,
+      "trust_line": "Based on 4 sources",
+      "medical_note": true,
+      "raw_medgen_code": false,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "▶\nWhich diseases are associated with BRCA1?\n4 tools · 11 sources from 2 layers\nShow answer\nWhat variants cause it?\nNew search\n\n✓ Answered9.6s · 4 tools · 20 sources from 3 layers\n\nShow work ▾\n\nOther v"
+    }
+  },
+  {
+    "width": 1280,
+    "case": "GCK researcher",
+    "handoff": {
+      "lines": [
+        "Levi-Montalcini is handing off to Nirenberg, Ochoa and Koch",
+        "L1\n\nNirenberg is searching the knowledge graph\n\nL2\n\nOchoa is checking live NCBI records\n\nL3\n\nKoch is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": false
+    },
+    "elapsed_s": 69.3,
+    "answer": {
+      "headings": 4,
+      "list_items": 20,
+      "tables": 0,
+      "bold": 7,
+      "claims": 31,
+      "claims_without_marker": 0,
+      "citation_chips": 31,
+      "notes": 1,
+      "words_in_answer_block": 485,
+      "trust_line": "Based on 4 sources",
+      "medical_note": false,
+      "raw_medgen_code": false,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "Variants in GCK causing MODY\nNew search\n\n✓ Answered10.8s · 4 tools · 20 sources from 3 layers\n\nShow work ▾\n\nSequenceVariant ClinVar:1028584 is named NM_000162.5(GCK):c.415A>T (p.Met139Leu). \nSource 1,"
+    }
+  },
+  {
+    "width": 390,
+    "case": "BRCA1 plain",
+    "handoff": {
+      "lines": [
+        "Levi-Montalcini is handing off to Chase, Chain and McClintock",
+        "L1\n\nChase is searching the knowledge graph\n\nL2\n\nChain is checking live NCBI records\n\nL3\n\nMcClintock is reading the literature and trials"
+      ],
+      "badgesSeen": false,
+      "sawStreamingClaim": false
+    },
+    "elapsed_s": 51.7,
+    "answer": {
+      "headings": 0,
+      "list_items": 0,
+      "tables": 0,
+      "bold": 0,
+      "claims": 10,
+      "claims_without_marker": 0,
+      "citation_chips": 11,
+      "notes": 2,
+      "words_in_answer_block": 290,
+      "trust_line": "Based on 4 sources, not yet confirmed",
+      "medical_note": true,
+      "raw_medgen_code": true,
+      "refusal": false,
+      "horizontal_overflow": false,
+      "first_200": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered6.8s · 4 tools · 11 sources from 2 layers\n\nShow work ▾\n\nThe gene symbol BRCA1 and the literature entity name BRCA1. \nSource 1, layer 2; "
+    }
+  }
+]

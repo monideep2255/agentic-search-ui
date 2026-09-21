@@ -25,7 +25,7 @@
 
 import { useMemo } from "react";
 
-import type { AgentEvent, Layer } from "../lib/events";
+import type { AgentEvent, GuardPayload, Layer } from "../lib/events";
 import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
@@ -56,8 +56,33 @@ const CAP_NOTE_PREFIX = "This query reached its resource limit";
 const SYSTEM_NOTE_PREFIXES = [
   CAP_NOTE_PREFIX,
   "Note: this result was truncated",
+  // UI fix set 10, item 10.1 (2026-09-13): the findings tail. The write
+  // step appends one cited sentence per retrieved record the model's prose
+  // left out, preceded by this note, so every retrieved source is cited on
+  // every run. Same wording as `_FINDINGS_TAIL_NOTE` in core/graph.py.
+  "Note: the records below were retrieved for this question and are listed as found",
   "Note: this answer does not address the following entities",
+  // 2026-09-05 no-data-refusal fix. `_build_repair_cap_note`
+  // (`core/graph.py`) is a fourth system note, the same DISCLOSURE shape as
+  // its three siblings above, and it matched none of them: it rendered as
+  // an uncited grey claim on the provenance spine the same day this list's
+  // brittleness as a classification mechanism was the reason the no-data
+  // refusal below no longer uses a prefix list at all. Kept here anyway,
+  // because this note genuinely has no better signal on the wire, unlike
+  // the refusal case: it ships inside the normal grounded-answer branch,
+  // alongside real citations, so there is no scope="answer" trust_signal
+  // to key off. A prefix stays the only option for this one note.
+  "Note: this answer's completeness check could not run to the end",
+  // UI fix set 9 (2026-09-13). The backend now types every note
+  // (`TokenPayload.kind === "note"`), which is the classification this list
+  // could never be. These stay for a producer that sends no `kind`.
+  "Note: one further",
+  "Note: the written summary of these records could not be verified",
+  "This is a research summary, not medical advice",
 ];
+
+/** The findings-tail note's opening words, `_FINDINGS_TAIL_NOTE` in core/graph.py. */
+export const FINDINGS_TAIL_NOTE_PREFIX = "Note: the records below were retrieved for this question";
 
 const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
@@ -128,6 +153,66 @@ export function layerNumber(layer: Layer): 1 | 2 | 3 {
   }
 }
 
+/**
+ * The short neutral label a refusal leads with, per guard category.
+ *
+ * R13 and R44, product-owner decision U6 (2026-09-12): a refusal must not
+ * look like an error. It reads as a calm grey label naming the reason,
+ * followed by the reviewed sentence, with no red pill and no outcome word
+ * beside it.
+ *
+ * SAME DISCIPLINE AS `CATEGORY_COPY`, deliberately: a fixed `Record` with
+ * no interpolation slot anywhere in it. Section 12.6's no-cost-figure rule
+ * is guaranteed structurally rather than by careful wording, so a label
+ * cannot acquire a dollar figure even if a future backend put one in
+ * `guard.reason`. This table never reads that field, exactly as
+ * `CATEGORY_COPY` never does.
+ *
+ * `ok` is present only because `GuardPayload["category"]` requires an
+ * exhaustive `Record`. The server never emits `passed: false` with
+ * `category: "ok"`; if it ever did, the generic label ships rather than
+ * nothing.
+ */
+export const GUARD_REFUSAL_LABEL: Record<GuardPayload["category"], string> = {
+  ok: "Could not process the question",
+  off_topic: "Outside biomedical research",
+  medical_advice: "Not a source of medical advice",
+  injection: "Not a research question",
+  rate_limited: "Daily question limit reached",
+  cost_capped: "System at capacity",
+  write_seeking: "Read-only system",
+};
+
+/**
+ * The label for an answer-level refusal, both of its shapes.
+ *
+ * `write_node`'s two refusal sites, the unresolved-entity early exit and
+ * the general ungrounded-synthesis branch, are NOT distinguishable on the
+ * wire: both emit `scope: "answer"` with `outcome: "refuse"` and carry
+ * their difference only inside the free-form `message`, which this table
+ * cannot key on without becoming the prefix-matching bet
+ * `SYSTEM_NOTE_PREFIXES` above already demonstrates the cost of. One label
+ * covers both, and the sentence beneath it says which happened.
+ */
+export const ANSWER_REFUSAL_LABEL = "No answer found in NCBI records";
+
+/**
+ * The label for a clarification, UI fix set 7 item 7.5.
+ *
+ * The product owner on 2026-09-13: "the follow up must retain context or
+ * ask clarification if the question is not clear. Because if this is a
+ * discussion, it must flow."
+ *
+ * A clarification is a refusal to answer YET, so it renders through the
+ * same calm grey block as every other refusal rather than growing a second
+ * shape for "no answer this time". What the label has to do is say which
+ * kind it is: `ANSWER_REFUSAL_LABEL` reads as a dead end, and a question
+ * the reader can simply answer is not one. Fixed and interpolation-free,
+ * the same discipline as the two tables above, so no backend text and no
+ * cost figure can reach it.
+ */
+export const CLARIFICATION_LABEL = "One more detail needed";
+
 export interface RunView {
   /** The live step, or null when the run has reached a terminal event. */
   activeStep: StepName | null;
@@ -163,6 +248,25 @@ export interface RunView {
   outcome: string | null;
   /** Wall-clock the run reported, in ms, from `done.elapsed_ms`. */
   elapsedMs: number | null;
+  /**
+   * T-6.2-08. The backend's offer of somewhere to go next, or null.
+   *
+   * Read from the `done` payload, where it is OPTIONAL: a backend that
+   * predates this field omits it, so absent and null must behave
+   * identically and the `?? null` below is what guarantees that.
+   */
+  nextStep: string | null;
+  /**
+   * UI fix set 7 (R21). The question to ASK when the offer is accepted, or
+   * null.
+   *
+   * Separate from `nextStep`, which is the sentence the offer is WORDED in.
+   * Accepting used to send that sentence to the agent, so a yes/no question
+   * about the interface was searched for as if it were a question about
+   * biology. Null when the backend does not send one, in which case the
+   * surface falls back to `nextStep` and behaves exactly as it did before.
+   */
+  nextStepQuery: string | null;
   /** How the outcome word should read: a success, a caution, or a refusal. */
   outcomeTone: "good" | "warn" | "risk" | null;
   /**
@@ -178,14 +282,53 @@ export interface RunView {
   /** A refusal or fatal error message, if the run produced one. */
   failure: string | null;
   /**
-   * The guardrail's own refusal copy, when a guard event failed.
+   * The refusal SENTENCE, and only the sentence, or null.
    *
    * Reuses `GuardrailBanner`'s reviewed table rather than paraphrasing it. That
    * table is deliberately interpolation-free so no cost figure can ever reach a
    * refusal message, which is a structural guarantee rather than careful
    * wording, and reimplementing it here would quietly discard that.
+   *
+   * NO LONGER CARRIES THE NCBI ADDRESS. It used to be `message` and
+   * `fallback_link` joined with a space; the address now travels in
+   * `refusalLink` below, so a surface can make it clickable (R14).
    */
   refusal: string | null;
+  /**
+   * The question the agent asked back, or null (UI fix set 7 item 7.5).
+   *
+   * Read from the `think` payload's `clarifying_question`, a nullable
+   * string on the wire since the contract was written and, until now, read
+   * by nothing at all. It is exposed SEPARATELY from `refusal`, which also
+   * carries the text, because the two answer different questions: `refusal`
+   * is what to show, and this is whether what is showing is a question the
+   * reader can answer. Only the second one licenses putting the cursor in
+   * the follow-up field.
+   */
+  clarification: string | null;
+  /**
+   * The refusal's short neutral label, or null (R13, R44).
+   *
+   * SEPARATE FROM `refusal` rather than prepended to it, because the two
+   * read differently: the label is the heading a reader scans, the
+   * sentence is the explanation under it. Joining them into one string
+   * would force the surface to split prose apart again to style it, which
+   * is the shape of defect `sourceDisplayName` above exists to undo.
+   */
+  refusalLabel: string | null;
+  /**
+   * The refusal's NCBI fallback address, or null (R14).
+   *
+   * SEPARATE FROM `refusal` rather than joined onto the end of it. The old
+   * join put a URL inside the sentence, which is why it rendered as plain
+   * unclickable text: a surface handed one string cannot tell which part
+   * of it is an address. Carried as its own field so the answer screen can
+   * render a real link, host-pinned at the point it builds the anchor.
+   *
+   * Present only on an answer-level refusal. A guardrail refusal carries
+   * no `fallback_link` on the wire, because no search term was accepted.
+   */
+  refusalLink: string | null;
   /** Cap copy, when the run stopped early on its processing budget. */
   capMessage: string | null;
   /**
@@ -224,11 +367,16 @@ export const EMPTY_RUN_VIEW: RunView = {
   steps: [],
   outcome: null,
   elapsedMs: null,
+  nextStep: null,
+  nextStepQuery: null,
   outcomeTone: null,
   layerCount: 0,
   landed: false,
   failure: null,
   refusal: null,
+  clarification: null,
+  refusalLabel: null,
+  refusalLink: null,
   capMessage: null,
   systemNotes: [],
   stopEnabled: false,
@@ -246,8 +394,55 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     // Step derivation, latest-wins. Ordered from last to first so the most
     // advanced observed step is the live one.
+    /*
+     * 2026-09-14, WRITE BEGINS WHEN ACT ENDS, not when the first token lands.
+     *
+     * Measured on develop (6 live runs, 28 frames at 250ms): `write_node`
+     * holds every event until it returns, so all 14 to 33 tokens arrive
+     * within 217ms of each other after a SILENT gap of 1.9 to 22.6 seconds.
+     * Keyed on `has("token")`, the stepper sat on Act with an open ring for
+     * that whole gap and "is writing the answer" never appeared once.
+     *
+     * So Write is entered as soon as the run's own events say Act is over:
+     *   - every tool call the run opened (by `tool_start`, or by the plan's
+     *     own `tool_calls`) has a matching `tool_result`, and at least one
+     *     result arrived; or
+     *   - the plan selected no tool and none started (a no-data refusal
+     *     path, where Write follows Plan directly).
+     * A later `tool_start` reopens Act, which is the honest reading.
+     */
+    const planEvent = [...events].reverse().find((event) => event.type === "plan");
+    // `tool_calls` is validated on the wire, but a hand-built fixture may omit it.
+    const plannedCalls =
+      planEvent && planEvent.type === "plan" && Array.isArray(planEvent.payload.tool_calls)
+        ? planEvent.payload.tool_calls
+        : [];
+    const plannedIds = plannedCalls.map((call) => call.call_id);
+    const openedIds = new Set<string>();
+    const closedIds = new Set<string>();
+    for (const event of events) {
+      if (event.type === "tool_start") openedIds.add(event.payload.call_id);
+      if (event.type === "tool_result") {
+        openedIds.add(event.payload.call_id);
+        closedIds.add(event.payload.call_id);
+      }
+    }
+    const startedAnyTool = openedIds.size > 0;
+    // Planned ids count only once any of them has appeared on a tool frame:
+    // a plan whose ids never reach the wire must not hold Write back forever.
+    const plannedOnWire = plannedIds.some((id) => openedIds.has(id));
+    const idsToClose = new Set([...openedIds, ...(plannedOnWire ? plannedIds : [])]);
+    const actComplete =
+      startedAnyTool && closedIds.size > 0 && [...idsToClose].every((id) => closedIds.has(id));
+    const planSelectedNoTool =
+      planEvent !== undefined &&
+      planEvent.type === "plan" &&
+      plannedCalls.length === 0 &&
+      !startedAnyTool;
+    const writing = has("token") || actComplete || planSelectedNoTool;
+
     let activeStep: StepName | null = null;
-    if (has("token")) activeStep = "Write";
+    if (writing) activeStep = "Write";
     else if (has("tool_start")) activeStep = "Act";
     else if (has("plan")) activeStep = "Plan";
     else if (has("think")) activeStep = "Think";
@@ -258,7 +453,7 @@ export function useRunView(events: AgentEvent[]): RunView {
     if (has("think")) reachedSteps.push("Think");
     if (has("plan")) reachedSteps.push("Plan");
     if (has("tool_start") || has("tool_result")) reachedSteps.push("Act");
-    if (has("token")) reachedSteps.push("Write");
+    if (writing) reachedSteps.push("Write");
 
     const done = events.find((event) => event.type === "done");
     // Only a FATAL error is terminal. A non-fatal one (a cap notice, a degraded
@@ -272,18 +467,40 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     // Tool chips, one per started call, deduplicated by call_id because a
     // tool_result repeats its call's identity.
-    const seenCalls = new Set<string>();
+    // UI fix set 8 (R30, R31): an UPSERT keyed on call_id rather than
+    // first-frame-wins. The earlier loop kept the `tool_start` frame and
+    // skipped the `tool_result` that followed it, so a chip's detail read
+    // "running" for the life of the run; the handoff lines need the
+    // result's status to turn a layer's badge from working to done. The
+    // helper persona rides on both frames (set 8, additive), read here so
+    // `RunProgress` can name the scientist beside the layer.
+    const chipByCall = new Map<string, ToolCall>();
     const toolCalls: ToolCall[] = [];
     for (const event of events) {
       if (event.type !== "tool_start" && event.type !== "tool_result") continue;
       const payload = event.payload;
-      if (seenCalls.has(payload.call_id)) continue;
-      seenCalls.add(payload.call_id);
-      toolCalls.push({
+      const existing = chipByCall.get(payload.call_id);
+      const status = event.type === "tool_result" ? event.payload.status : "running";
+      const detail = event.type === "tool_result" ? `${event.payload.result_count} rows` : "running";
+      const resultCount = event.type === "tool_result" ? event.payload.result_count : undefined;
+      if (existing) {
+        existing.status = status;
+        existing.detail = detail;
+        if (resultCount !== undefined) existing.resultCount = resultCount;
+        continue;
+      }
+      const chip: ToolCall = {
         name: payload.tool,
-        detail: event.type === "tool_result" ? `${event.payload.result_count} rows` : "running",
+        detail,
         layer: layerNumber(payload.layer),
-      });
+        status,
+        ...(resultCount !== undefined ? { resultCount } : {}),
+        persona: payload.persona ?? null,
+        personaAbout: payload.persona_about ?? null,
+        personaWikipedia: payload.persona_wikipedia ?? null,
+      };
+      chipByCall.set(payload.call_id, chip);
+      toolCalls.push(chip);
     }
 
     // Sources come from citation events, in the order the agent numbered them.
@@ -362,10 +579,119 @@ export function useRunView(events: AgentEvent[]): RunView {
     // The general lesson, which this repository's `attack-the-constraint` rule
     // already states: when a component is fed by an assembly step, read what it
     // was GIVEN before debugging what it produced. The binding was on the wire.
+    // A NO-DATA refusal, 2026-09-05 product-owner decision.
+    //
+    // WHAT WENT WRONG. `write_node` (`core/graph.py`) has two sites that
+    // decide it cannot honestly answer: the unresolved-entity early exit
+    // (an entity never resolved) and the general `trust_outcome == "refuse"`
+    // branch (synthesis ran but produced nothing citeable). Both emit the
+    // refusal sentence as an ordinary `token` event, so with no other
+    // signal it fell through the claims loop below exactly like a real
+    // narrative sentence and rendered as ONE UNCITED GREY CLAIM on the
+    // provenance spine, the one surface whose entire job is to show a claim
+    // next to the source that backs it. A refusal has no source to show.
+    //
+    // CLASSIFICATION MECHANISM CHOSEN: a `trust_signal` event whose
+    // `scope === "answer"` and `outcome === "refuse"`. Rejected the obvious
+    // alternative, adding the refusal sentence's opening words to
+    // `SYSTEM_NOTE_PREFIXES` above, for the reason that list already
+    // demonstrates: a fourth system note, `_build_repair_cap_note`, was
+    // added to the backend without a matching prefix here and rendered as
+    // an uncited claim the same day this fix was written, and a prefix list
+    // is a bet that nobody reworks a sentence without knowing this file
+    // depends on its exact opening words. The `trust_signal` fields are not
+    // prose: `TrustSignalPayload.scope`, `.outcome`, `.message` and
+    // `.fallback_link` are a typed, schema-validated contract
+    // (`contracts/events.py`, Section 8.4's refuse payload, additive since
+    // build phases 2.2 and 4.3), and both refusal sites already emit one,
+    // proven by reading `core/graph.py` rather than guessing: the
+    // unresolved-entity branch at its `sink.emit("trust_signal", ...
+    // scope="answer")` call, and the general refuse branch at its own
+    // `scope="answer"` call a few hundred lines later. No third site emits
+    // a bare refusal token without this signal: the two `HarnessCallError`
+    // early exits ship `error` plus `done`, never a `token`, so they cannot
+    // reach the claims loop at all.
+    //
+    // Exhaustiveness this relies on: within `write_node`, the branch that
+    // emits `scope="answer"` with `outcome="refuse"` is mutually exclusive
+    // with the branch that emits real narrative tokens (`if trust_outcome
+    // == "refuse": ... else: for chunk in _narrative_chunks(...): ...`), so
+    // a run carrying this signal never also carries a genuine claim. Every
+    // token in such a run IS the refusal, in full, which is why the loop
+    // below skips all of them rather than trying to tell a refusal token
+    // apart from a claim token one at a time.
+    const answerRefusalSignal = events.find(
+      (event): event is Extract<AgentEvent, { type: "trust_signal" }> =>
+        event.type === "trust_signal" &&
+        event.payload.scope === "answer" &&
+        event.payload.outcome === "refuse",
+    );
+
     const claims: Claim[] = [];
     const systemNotes: string[] = [];
+    /*
+     * UI FIX SET 9 (2026-09-13): STRUCTURE FROM THE WIRE, NEVER FROM WORDING.
+     *
+     * `write_node` now types each token (`kind`). A paragraph break or a
+     * heading moves the paragraph counter and is never a claim; a note is
+     * never a claim and is shown in place when claims follow it (the
+     * findings-tail note) or after the answer when none do (item 9.8: notes
+     * render as notes, never first). A token with no `kind` comes from an
+     * older producer and is classified exactly as before.
+     */
+    let paragraph = 0;
+    let claimsInParagraph = 0;
+    let pendingHeading: string | null = null;
+    let pendingNotes: string[] = [];
+    let pendingTableHeader: string[] | null = null;
+    /*
+     * 2026-09-14: true after the findings-tail note, until a heading. Every
+     * claim in that span is a code-built record line ("Disease name: X"), so
+     * the answer screen groups them into a record block instead of prose.
+     * Set for a typed note and a kind-less one alike.
+     */
+    let inFindingsTail = false;
+    const isFindingsTailNote = (text: string) =>
+      text.trimStart().startsWith(FINDINGS_TAIL_NOTE_PREFIX);
+    const nextParagraph = () => {
+      if (claimsInParagraph > 0) {
+        paragraph += 1;
+        claimsInParagraph = 0;
+      }
+    };
     for (const event of events) {
       if (event.type !== "token") continue;
+      // The whole point of `answerRefusalSignal`: none of this run's tokens
+      // are a claim, so none are added to the spine or to `systemNotes`
+      // either. The refusal text itself is rendered through `refusal`
+      // below, from the trust_signal's own `message` and `fallback_link`
+      // fields, never from this token's text.
+      if (answerRefusalSignal) continue;
+      const kind = event.payload.kind ?? null;
+      if (kind === "paragraph_break") {
+        nextParagraph();
+        continue;
+      }
+      if (kind === "heading") {
+        nextParagraph();
+        inFindingsTail = false;
+        const heading = event.payload.text.trim();
+        if (heading) pendingHeading = heading;
+        continue;
+      }
+      if (kind === "table_header") {
+        const cells = event.payload.cells ?? [];
+        // 2026-09-14: any column count; the Researcher table carries a third.
+        pendingTableHeader = cells.length > 0 ? cells : null;
+        continue;
+      }
+      if (kind === "note") {
+        nextParagraph();
+        inFindingsTail = isFindingsTailNote(event.payload.text);
+        const note = event.payload.text.trim();
+        if (note) pendingNotes.push(note);
+        continue;
+      }
       // R-08: a repeated marker_id must not produce a repeated chip.
       const seenMarkers = new Set<string>();
       const cited = (event.payload.marker_ids ?? [])
@@ -393,22 +719,51 @@ export function useRunView(events: AgentEvent[]): RunView {
       const citedIndexes = new Set(
         cited.map((match) => (match.type === "citation" ? match.payload.display_index : -1)),
       );
+      /*
+       * 2026-09-14, product-owner complaint that the wait is cluttered: WHILE
+       * THE RUN IS STILL STREAMING, a token's `marker_ids` can name citations
+       * whose frames have not arrived yet, so their `[N]` markers matched
+       * nothing above and showed as raw "[1][2]" text beside a grey spine.
+       *
+       * The R-05 rule is kept: nothing is stripped by pattern alone. Only as
+       * many bracketed numbers as this token has UNRESOLVED marker ids are
+       * removed, and only before the run lands, so the landed answer is
+       * classified exactly as before. The count travels on the claim as
+       * `pendingCitations`, so the screen can show quiet pending markers and
+       * must not call the sentence uncited.
+       */
+      const unresolved = landed ? 0 : seenMarkers.size - cited.length;
+      let toStrip = unresolved;
       const text = event.payload.text
-        .replace(/\s*\[(\d{1,3})\]/g, (whole, digits) =>
-          citedIndexes.has(Number(digits)) ? "" : whole,
-        )
+        .replace(/\s*\[(\d{1,3})\]/g, (whole, digits) => {
+          if (citedIndexes.has(Number(digits))) return "";
+          if (toStrip > 0) {
+            toStrip -= 1;
+            return "";
+          }
+          return whole;
+        })
         .trim();
       if (!text) continue;
 
       // A system-status note is not an assertion about biology, so it must
       // never occupy a segment on the provenance spine. Collected instead, so
       // the disclosures are still shown, just not as claims.
-      if (isSystemNote(text)) {
+      //
+      // Set 9: a kind-less token with no citation that opens "Note:" is a
+      // system note too. The grounding pass strips any MODEL sentence that
+      // asserts something without a marker, so an uncited "Note:" chunk can
+      // only be one the harness wrote (item 9.8's "one further gene record").
+      if (
+        kind === null &&
+        (isSystemNote(text) || (cited.length === 0 && text.startsWith("Note:")))
+      ) {
+        inFindingsTail = isFindingsTailNote(text);
         systemNotes.push(text);
         continue;
       }
 
-      claims.push({
+      const claim: Claim = {
         text,
         // The spine colours a claim by the layer that backed it. With several
         // citations the first is used, which is the order the backend numbered
@@ -420,8 +775,34 @@ export function useRunView(events: AgentEvent[]): RunView {
         citations: cited.map((match) =>
           match.type === "citation" ? match.payload.display_index : 0,
         ),
-      });
+      };
+      if (unresolved > 0) claim.pendingCitations = unresolved;
+      if (inFindingsTail) claim.findingsTail = true;
+      if (kind !== null) {
+        claim.kind = kind === "list_item" || kind === "table_row" ? kind : "claim";
+        claim.paragraph = paragraph;
+        if (pendingHeading !== null) {
+          claim.heading = pendingHeading;
+          pendingHeading = null;
+        }
+        if (pendingNotes.length > 0) {
+          claim.noteBefore = pendingNotes.join(" ");
+          pendingNotes = [];
+        }
+        const cells = event.payload.cells;
+        if (cells && cells.length > 0) claim.cells = cells;
+        const emphasis = event.payload.emphasis;
+        if (emphasis && emphasis.length > 0) claim.emphasis = emphasis;
+        if (kind === "table_row" && pendingTableHeader !== null) {
+          claim.tableHeader = pendingTableHeader;
+          pendingTableHeader = null;
+        }
+        claimsInParagraph += 1;
+      }
+      claims.push(claim);
     }
+    // Notes with no claim after them are disclosures about the whole answer.
+    systemNotes.push(...pendingNotes);
 
     // Trust signals. Worst-wins is the server's job; this only renders what
     // arrived, and never manufactures a positive verdict from nothing.
@@ -494,6 +875,34 @@ export function useRunView(events: AgentEvent[]): RunView {
           (event) => event.type === "trust_signal" && event.payload.triangulated === true,
         ),
       };
+      /*
+       * UI FIX SET 9, ITEM 9.9 (decision U1): ONE PLAIN LINE.
+       *
+       * When the run's `done` event carries `trust_line`, built in code by
+       * `synthesis/trust.py`'s `answer_trust_line`, it replaces the pills,
+       * which could contradict each other ("Grounded · every claim cited"
+       * beside "Single source, not independently confirmed"). Two things
+       * are never dropped for it: an ungrounded verdict, and a high-risk
+       * tier, which stays visible in the risk colour. A run with no
+       * `trust_line` (an older backend) keeps the pills below, unchanged.
+       */
+      const summary =
+        done &&
+        done.type === "done" &&
+        typeof done.payload.trust_line === "string" &&
+        done.payload.trust_line.trim().length > 0
+          ? done.payload.trust_line.trim()
+          : null;
+      if (summary !== null) {
+        if (!payload.grounded) trust.push({ kind: "risk", label: "Not fully grounded" });
+        trust.push({ kind: summary.startsWith("Confirmed") ? "good" : "plain", label: summary });
+        if (payload.risk_tier && payload.risk_tier !== "low" && payload.risk_tier !== "unknown") {
+          trust.push({
+            kind: "risk",
+            label: payload.risk_tier === "high" ? "High-risk claim" : `${payload.risk_tier} risk claim`,
+          });
+        }
+      } else {
       trust.push(
         payload.grounded
           ? { kind: "good", label: "Grounded · every claim cited" }
@@ -526,6 +935,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         // `layerCount` is computed below from the run's own tool calls; the
         // pill is pushed after it exists.
         trust.push({ kind: "plain", label: "__LAYER_COUNT__" });
+      }
       }
     }
 
@@ -648,11 +1058,26 @@ export function useRunView(events: AgentEvent[]): RunView {
       ask: "warn",
       refuse: "risk",
     };
+    /*
+     * UI fix set 9, item 9.9. When the run carries a trust line, the caution
+     * is said THERE, once. Leaving the `ask` word in the status strip put
+     * "Single source, not independently confirmed" directly above "Based on 4
+     * sources, not yet confirmed", two signals contradicting each other on one
+     * screen, which is the defect the single line exists to remove. The tone
+     * stays `warn`, so the strip still marks the answer as cautious.
+     */
+    const hasTrustLine =
+      done !== undefined &&
+      done.type === "done" &&
+      typeof done.payload.trust_line === "string" &&
+      done.payload.trust_line.trim().length > 0;
     const outcome =
       fatalError !== undefined
         ? null
         : done && done.type === "done"
-          ? (OUTCOME_BY_TRUST[done.payload.trust_outcome] ?? "Answered")
+          ? hasTrustLine && done.payload.trust_outcome === "ask"
+            ? "Answered"
+            : (OUTCOME_BY_TRUST[done.payload.trust_outcome] ?? "Answered")
           : null;
     const outcomeTone =
       fatalError !== undefined || !done || done.type !== "done"
@@ -661,6 +1086,29 @@ export function useRunView(events: AgentEvent[]): RunView {
     const elapsedMs =
       done && done.type === "done" && typeof done.payload.elapsed_ms === "number"
         ? done.payload.elapsed_ms
+        : null;
+    // T-6.2-08. `?? null` rather than a truthiness check, so an offer is
+    // read when present and absent and null collapse to the same thing.
+    const nextStep =
+      done && done.type === "done" && typeof done.payload.next_step === "string"
+        ? (done.payload.next_step ?? null)
+        : null;
+    /*
+     * UI fix set 7 (R21). Read on the same terms as `next_step` above, and
+     * for the same reason: absent and null must collapse to one thing, so a
+     * backend that predates the field leaves this null and the surface
+     * falls back to the offer text, which is what it sent before.
+     *
+     * The type check is what makes an empty string fall through as well: a
+     * blank query is not a searchable question and would dispatch a run
+     * with nothing in it.
+     */
+    const nextStepQuery =
+      done &&
+      done.type === "done" &&
+      typeof done.payload.next_step_query === "string" &&
+      done.payload.next_step_query.trim() !== ""
+        ? done.payload.next_step_query
         : null;
 
     /*
@@ -737,10 +1185,139 @@ export function useRunView(events: AgentEvent[]): RunView {
     const failedGuard = events.find(
       (event) => event.type === "guard" && event.payload.passed === false,
     );
+    // The two refusal shapes read identically from here down (2026-09-05
+    // product-owner decision): both set `refusal` and `refusalLabel`, both
+    // render through the same block in `AnswerScreen` (`data-testid=
+    // "answer-refusal"`) and the same notice in `RunScreen`
+    // (`"guardrail-notice"`), and neither's text can reach the claims
+    // list, since a guardrail refusal never emits a `token` at all and a
+    // no-data refusal's tokens were removed from `claims` above.
+    //
+    // Guardrail copy stays exactly as it was: a fixed, interpolation-free
+    // table keyed on `category`, never the backend's free-form `reason`.
+    // The no-data refusal has no such table for its SENTENCE, because the
+    // sentence itself (unresolved entity, withdrawn record, no groundable
+    // finding) is the content, not a category to look up; it is read from
+    // the `answerRefusalSignal` trust_signal's own `message` field rather
+    // than from the token text, for the reason given at
+    // `answerRefusalSignal`'s definition above. Its LABEL does come from a
+    // table, `ANSWER_REFUSAL_LABEL`, which has exactly one entry for the
+    // reason stated there.
+    //
+    // R13, R14 and R44, product-owner decision U6 (2026-09-12). The join
+    // that used to live here put `fallback_link` INSIDE the sentence, one
+    // space after `message`, so the NCBI address arrived at every surface
+    // as an indistinguishable run of characters in a prose string and
+    // rendered as plain unclickable text. A reader was shown an address and
+    // given no way to follow it, on the one screen whose entire job is to
+    // say where to look next.
+    //
+    // The three parts are now carried separately: the label a reader
+    // scans, the sentence explaining it, and the address as an address.
+    // Nothing is lost in the split, because the surface renders all three.
+    /*
+     * THE QUESTION THE AGENT ASKED BACK (UI fix set 7 item 7.5).
+     *
+     * `clarifying_question` has been a nullable string on `ThinkPayload`
+     * since the contract was written, validated by `isThinkPayload`, and
+     * read by NOTHING: a run that could not tell which of two readings of a
+     * question was meant asked its question into the void and then refused
+     * as though it had nothing to say. This is where that field starts
+     * mattering.
+     *
+     * READ FROM `think`, NOT FROM THE REFUSAL TEXT. The backend also puts
+     * the question into the refusal sentence, so the words would be
+     * recoverable from `refusal` by matching prose. That is the
+     * prefix-matching bet `SYSTEM_NOTE_PREFIXES` already demonstrates the
+     * cost of, and it would make every surface depend on a sentence nobody
+     * knows is load-bearing. The typed field is the contract; the sentence
+     * is copy.
+     *
+     * Trimmed and length-checked, so a backend sending `""` or whitespace
+     * is treated exactly as one sending `null`. Absent and empty must
+     * behave identically or a whitespace payload would put a blank label on
+     * the screen and move the cursor for nothing.
+     */
+    const clarifyingThink = events.find(
+      (event): event is Extract<AgentEvent, { type: "think" }> =>
+        event.type === "think" &&
+        typeof event.payload.clarifying_question === "string" &&
+        event.payload.clarifying_question.trim().length > 0,
+    );
+    const clarification =
+      clarifyingThink !== undefined
+        ? (clarifyingThink.payload.clarifying_question as string).trim()
+        : null;
+
+    /*
+     * PRECEDENCE, stated rather than left to the order of the ternaries.
+     *
+     *   A failed guardrail wins outright. The question never reached Think,
+     *   so any `clarifying_question` on this run would belong to a
+     *   different one, and the guardrail's own reviewed copy is what a
+     *   refused question must say.
+     *
+     *   A clarification beats the generic answer-level refusal. Both can be
+     *   present on the same run, because the backend emits the clarification
+     *   through the refusal path (`trust_outcome: "refuse"`), and showing
+     *   "No answer found in NCBI records" above a question the reader could
+     *   answer in one word is the defect item 7.5 exists to close.
+     *
+     *   The answer-level refusal is the remaining case, unchanged.
+     */
     const refusal =
       failedGuard && failedGuard.type === "guard"
         ? (CATEGORY_COPY[failedGuard.payload.category] ?? CATEGORY_COPY.ok)
+        : clarification !== null
+          ? clarification
+          : answerRefusalSignal && answerRefusalSignal.type === "trust_signal"
+            ? typeof answerRefusalSignal.payload.message === "string" &&
+              answerRefusalSignal.payload.message.length > 0
+              ? answerRefusalSignal.payload.message
+              : null
+            : null;
+    const refusalLabel =
+      failedGuard && failedGuard.type === "guard"
+        ? (GUARD_REFUSAL_LABEL[failedGuard.payload.category] ?? GUARD_REFUSAL_LABEL.ok)
+        : clarification !== null
+          ? CLARIFICATION_LABEL
+          : answerRefusalSignal
+            ? ANSWER_REFUSAL_LABEL
+            : null;
+    // Read only from the answer-level signal. A guardrail refusal has no
+    // accepted search term, so there is nothing to point an NCBI search at.
+    const refusalLink =
+      !failedGuard &&
+      answerRefusalSignal &&
+      answerRefusalSignal.type === "trust_signal" &&
+      typeof answerRefusalSignal.payload.fallback_link === "string" &&
+      answerRefusalSignal.payload.fallback_link.length > 0
+        ? answerRefusalSignal.payload.fallback_link
         : null;
+
+    /*
+     * A REFUSAL IS NOT A FAILURE (R13, R44).
+     *
+     * The trust strip and the outcome word were both written for an
+     * ANSWER: they report how well a set of claims is grounded. A refusal
+     * has no claims at all, so every verdict they could offer is about an
+     * absence. In practice that produced "Not fully grounded" and "Not
+     * verified" in red under a calm, correct, deliberate refusal, with a
+     * red "⚠ Refused" above them: four separate signals, none of them
+     * wrong on its own terms, together reading as a system malfunction.
+     * `docs/build/design/design-system/components/trust-pills.html` states
+     * the intent in its own note: "Refusal is a first-class state, not an
+     * error."
+     *
+     * A FATAL RUN IS DELIBERATELY EXCLUDED. "Not verified · the run did
+     * not finish" is about a run that died, which IS a failure, and
+     * F-4.9-A-01 is the finding that put it there: a crashed run kept
+     * whatever positive verdict it had emitted before crashing. Silencing
+     * the strip on a fatal run would reopen that critical, so the fatal
+     * path keeps its pill and its precedence here.
+     */
+    const isRefusal =
+      fatalError === undefined && (refusal !== null || refusalLabel !== null);
 
     // F-4.8-A-14. `_partial_result_for_cap` emits only a `token` plus
     // `done{trust_outcome:"flag"}` and NO error event, so `isCapShapedError`
@@ -770,16 +1347,21 @@ export function useRunView(events: AgentEvent[]): RunView {
       toolCalls,
       claims,
       sources,
-      trust,
+      trust: isRefusal ? [] : trust,
       meta,
       steps,
-      outcome,
-      outcomeTone,
+      outcome: isRefusal ? null : outcome,
+      outcomeTone: isRefusal ? null : outcomeTone,
       elapsedMs,
+      nextStep,
+      nextStepQuery,
       layerCount,
       landed,
       failure,
       refusal,
+      clarification,
+      refusalLabel,
+      refusalLink,
       capMessage,
       // The cap note is already surfaced as `capMessage`, so it is not
       // repeated here.

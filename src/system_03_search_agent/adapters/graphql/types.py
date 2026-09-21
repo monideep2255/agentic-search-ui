@@ -413,6 +413,8 @@ class AudienceDepth(enum.Enum):
     CLINICAL_BRIEF = "clinical_brief"
     RESEARCHER = "researcher"
     DEEP_TECHNICAL = "deep_technical"
+    # UI fix set 9 (2026-09-13): additive enum value.
+    PLAIN_LANGUAGE = "plain_language"
 
 
 # contracts.query.Query.audience_depth's own default, restated here so

@@ -26,6 +26,41 @@ host-pinned record page for one of these three is confirmed later, add it
 here as a new mapping entry, never by loosening `NCBI_RECORD_URL_PATTERN`
 itself.
 
+GO terms ARE citeable since UI fix set 11 (search breadth, 2026-09-14),
+by attribution rather than by a GO page. A bare `GO:` CURIE still maps to
+None. But the graph's Gene-to-GO edges are NCBI's own gene2go annotations,
+and NCBI's Gene record page renders that record's Gene Ontology table, so
+a GO vertex has a real NCBI page that carries the annotation: the page of
+the gene it is annotated to. `to_output_rows` attributes a GO vertex to
+the caller's explicit `go_attribution_curie`, and to nothing else. The
+caller passes it only when it KNOWS the query is a single-gene traversal
+along that gene's own GO edge: a code-chosen template whose one bound
+entity is the gene and whose one hop is `Gene` to GO term. The row keeps
+its own `GO:` CURIE as the record's identity, carries
+`fields["_cited_via_gene_curie"]` naming the gene, and takes the gene page
+as `source_url`. Nothing here is fetched or guessed: with no explicit
+attribution the GO row stays uncited and is dropped by the caller's
+cite-or-refuse gate, exactly as before this fix set.
+
+Review F-01 (2026-09-14, critical): the first version ALSO attributed a GO
+vertex to whichever Gene vertex shared its raw row. That is not evidence.
+A BRCA1 to TP53 to GO path returns BRCA1 in the same row as TP53's term,
+and `RETURN go, tp53, brca1` versus `RETURN go, brca1, tp53` picked a
+different gene by column order. A sibling vertex says a gene was in the
+query, not that the gene carries the annotation, so that rule was removed
+outright rather than narrowed. `derived_source_curie` is likewise not
+reused: with a Cypher text supplied, `cypher_query._derived_source_curie`
+grants the anchor only to an aggregates-only query, and a model-generated
+two-hop query anchored on one gene can return another gene's terms.
+
+Review F-02 (2026-09-14): a GO row is accepted for attribution only when
+its local id matches `^GO:\\d{7}$` in ASCII digits AND its vertex label is
+one of `graph_schema_constants.GO_TERM_LABELS`. A `GO:` id under a `Gene`
+label, or a `GO:` id that is not seven digits, is never cited.
+
+See `graph_schema_constants.GO_ANNOTATION_HOST_PREFIXES` for the live
+verification behind the gene page and for why HP and MONDO get no route.
+
 `to_output_rows` (plural), added for finding F-2.1-A1/F-01/A2's fix, is the
 real integration path: it takes one raw AGE result row keyed by column name
 (`c0`, `c1`, ... or `result`), each value the unparsed agtype wire text
@@ -165,10 +200,25 @@ from typing import Any
 
 from system_03_search_agent.tools.agtype import is_vertex_or_edge, parse_agtype
 from system_03_search_agent.tools.graph_schema_constants import (
+    GO_ANNOTATION_HOST_PREFIXES,
+    GO_TERM_LABELS,
     NCBI_RECORD_URL_PATTERN,
 )
 
 _HOST_PATTERN = re.compile(NCBI_RECORD_URL_PATTERN)
+
+# Review F-02: the one shape a Gene Ontology id takes, `GO:` plus exactly
+# seven ASCII digits. `re.ASCII` for the same reason as
+# `_CURIE_LOCAL_ID_SHAPES` (F-2.1-A5-07): a fullwidth digit must not pass.
+# Round 2, N-02: applied with `fullmatch`, never `match` against `$`, because
+# `$` accepts a trailing newline and `GO:0006281\n` passed.
+_GO_CURIE_SHAPE = re.compile(r"GO:\d{7}", re.ASCII)
+
+# UI fix set 11: the row field that marks a GO vertex cited through the
+# gene record whose page carries the annotation. Named beside
+# `_cited_via_endpoint_curie` (an edge citing an endpoint) so a downstream
+# reader can tell the two attributions apart.
+CITED_VIA_GENE_FIELD: str = "_cited_via_gene_curie"
 
 # One URL-building function per documented prefix. Each receives the
 # already-quoted local id (the part of the CURIE after the first colon)
@@ -205,6 +255,9 @@ def _mesh_url(local_id: str) -> str:
 # module docstring for why: no verified NCBI-hosted record page exists for
 # any of the three, so they fall through to the None-returning default in
 # `source_url_for_curie` rather than appearing here with a guessed path.
+# A GO term is cited by attribution to its gene's page instead, and only
+# on the caller's explicit say-so (`_go_attribution_curie`,
+# `_shape_entity`), never by an entry here.
 _CURIE_URL_BUILDERS: dict[str, Callable[[str], str]] = {
     "NCBIGene": _ncbigene_url,
     "ClinVar": _clinvar_url,
@@ -546,12 +599,59 @@ def _attributed_endpoint_curie(
     return None
 
 
+def _curie_prefix(curie: str) -> str:
+    """The text before the first colon, or an empty string."""
+    prefix, separator, _ = curie.partition(":")
+    return prefix if separator else ""
+
+
+def _is_go_annotation_host_curie(curie: str) -> bool:
+    """True when `curie` names a record whose NCBI page carries GO annotations.
+
+    Reuses `source_url_for_curie`'s own prefix and shape checks, so a
+    malformed `NCBIGene:` local id is refused here exactly as it is there,
+    and a GO term can never be attributed to a gene page that does not
+    resolve.
+    """
+    return (
+        _curie_prefix(curie) in GO_ANNOTATION_HOST_PREFIXES
+        and source_url_for_curie(curie) is not None
+    )
+
+
+def _go_attribution_curie(explicit_curie: str | None) -> str | None:
+    """The gene every GO vertex in this row is attributed to, or None.
+
+    UI fix set 11 (search breadth), narrowed by review F-01: the ONLY
+    source is the caller's explicit `go_attribution_curie`, accepted when
+    it is a resolvable annotation-host CURIE. The caller passes it only for
+    a query it knows is a single-gene traversal along that gene's own GO
+    edge, so the gene's page carries every GO term the row returns. A gene
+    vertex that merely shares the row is never used (F-01: a two-hop path
+    through another gene put the wrong gene in the row). Nothing here
+    fetches or guesses; with no explicit CURIE the GO row stays uncited. A
+    malformed explicit CURIE (`NCBIGene:672-related`) is refused by the
+    same shape check `source_url_for_curie` applies.
+    """
+    if explicit_curie and _is_go_annotation_host_curie(explicit_curie):
+        return explicit_curie
+    return None
+
+
+def _is_go_term_vertex(node_or_edge_type: str, curie: str) -> bool:
+    """Review F-02: a GO term is a `GO:` id of exactly seven ASCII digits
+    under one of the graph's GO-term labels. Both halves are required.
+    """
+    return node_or_edge_type in GO_TERM_LABELS and _GO_CURIE_SHAPE.fullmatch(curie) is not None
+
+
 def _shape_entity(
     entity: dict[str, Any],
     snapshot_version: str,
     endpoint_curies: dict[Any, str] | None = None,
     traversed_edge_type: str | None = None,
     ambiguous_high_risk_edge_touch: bool = False,
+    go_attribution_curie: str | None = None,
 ) -> dict:
     """Shape one parsed AGE vertex or edge dict into the output row shape.
 
@@ -609,6 +709,17 @@ def _shape_entity(
     column `_traversed_edge_type_by_column` left unresolved), but this
     function does not need to know that invariant to stay correct: it
     shapes exactly what it is handed, nothing more.
+
+    UI fix set 11 (search breadth): `go_attribution_curie` is the gene the
+    caller passed `to_output_rows` as the one every GO term in this query
+    is annotated to (`_go_attribution_curie`). It applies only to a VERTEX
+    that `_is_go_term_vertex` accepts (review F-02: a GO-term label and a
+    `GO:` plus seven-digit id) and that resolved no `source_url` of its
+    own; the row then takes that gene's record page as its citation, keeps
+    its own `GO:` CURIE as its identity, and marks
+    `fields[CITED_VIA_GENE_FIELD]` with the gene's CURIE. An edge, a
+    non-GO vertex, a `GO:` id under a non-GO label, or a GO vertex with a
+    host-pinned stored URL of its own is untouched by it.
     """
     node_or_edge_type = str(entity.get("label") or "")
     properties = entity.get("properties")
@@ -644,6 +755,19 @@ def _shape_entity(
             resolved_source_url = None
     else:
         resolved_source_url = _resolve_source_url(curie, properties.get("source_url"))
+        if (
+            resolved_source_url is None
+            and go_attribution_curie
+            and _is_go_term_vertex(node_or_edge_type, curie)
+        ):
+            # UI fix set 11: a GO term cited through the gene record whose
+            # page carries the annotation. The URL is re-derived from the
+            # gene's verified CURIE, the same discipline the edge branch
+            # above applies, so a stored value's formatting never leaks in.
+            attributed_url = source_url_for_curie(go_attribution_curie)
+            if attributed_url is not None:
+                resolved_source_url = attributed_url
+                fields[CITED_VIA_GENE_FIELD] = go_attribution_curie
 
     return {
         "node_or_edge_type": node_or_edge_type,
@@ -670,8 +794,29 @@ def _iter_entities(parsed: Any) -> list[dict[str, Any]]:
     if isinstance(parsed, dict):
         return [parsed] if is_vertex_or_edge(parsed) else []
     if isinstance(parsed, list):
-        return [item for item in parsed if isinstance(item, dict) and is_vertex_or_edge(item)]
+        entities = [item for item in parsed if isinstance(item, dict) and is_vertex_or_edge(item)]
+        # L-01 shape 2 (2026-09-20, `testing/Developer/reports/2026-09-19_
+        # live_measure/findings.md`): a `collect(DISTINCT x)` list arrives in
+        # whatever order the aggregate produced, which neither AGE nor
+        # Postgres holds stable between executions, and the caller keeps
+        # the FIRST row per CURIE before it cuts to `row_limit`. Measured
+        # live: six identical runs of the HNF1A question returned a
+        # different six MedGen concepts on one of them. A list of vertices
+        # is therefore emitted in CURIE order, a property of the records
+        # rather than of the execution. A path (a list that carries edges)
+        # is left in its own order, since its adjacency is meaningful.
+        if entities and not any(_is_edge_entity(entity) for entity in entities):
+            entities.sort(key=_vertex_sort_key)
+        return entities
     return []
+
+
+def _vertex_sort_key(entity: dict[str, Any]) -> tuple[str, str]:
+    """CURIE first, then the graph-internal id, both as text, so two
+    vertices with the same CURIE (or none) still sort the same way twice."""
+    properties = entity.get("properties")
+    curie = str(properties.get("id") or "") if isinstance(properties, dict) else ""
+    return curie, str(entity.get("id") or "")
 
 
 
@@ -762,8 +907,18 @@ def to_output_rows(
     column_labels: dict[str, str] | None = None,
     traversed_edge_type_by_column: dict[str, str] | None = None,
     ambiguous_high_risk_edge_touch_by_column: frozenset[str] | None = None,
+    go_attribution_curie: str | None = None,
 ) -> list[dict]:
     """Shape one raw AGE result row into zero or more output row shapes.
+
+    UI fix set 11 (search breadth): `go_attribution_curie` is the optional
+    gene CURIE every GO-term vertex in this row is cited to. Pass it ONLY
+    from a caller that knows the query is a single-gene traversal along
+    that gene's own GO edge (a code-chosen template); never from a
+    model-generated query, whose hops may reach another gene's terms. See
+    `_go_attribution_curie`. Absent, a GO vertex stays uncited whatever
+    else shares the row (review F-01), exactly as before this parameter
+    existed.
 
     `raw_row` is a dict keyed by the AGE output column name(s) declared in
     `execute_cypher`'s `as_clause` (for example `result` for a single
@@ -888,8 +1043,19 @@ def to_output_rows(
             derived[column] = parsed
 
     endpoint_curies = _endpoint_curies_by_internal_id(all_entities)
+    # UI fix set 11: the gene every GO vertex in this row is attributed to,
+    # from the caller's explicit CURIE alone (review F-01), so two GO
+    # vertices in one row always cite the same gene page.
+    go_attribution = _go_attribution_curie(go_attribution_curie)
     shaped_rows = [
-        _shape_entity(entity, snapshot_version, endpoint_curies, edge_type, ambiguous_touch)
+        _shape_entity(
+            entity,
+            snapshot_version,
+            endpoint_curies,
+            edge_type,
+            ambiguous_touch,
+            go_attribution_curie=go_attribution,
+        )
         for entity, edge_type, ambiguous_touch in zip(
             all_entities,
             entity_traversed_edge_types,
@@ -950,11 +1116,31 @@ def _dedupe_rows_by_record_identity(rows: list[dict]) -> list[dict]:
     to drop in the first place, so there is no record identity to compare
     it against, and it must not be collapsed with an unrelated uncitable
     row just because both happen to have `source_url is None`.
+
+    UI fix set 11 (search breadth): a GO row cited through its gene
+    (`fields[CITED_VIA_GENE_FIELD]` set) is keyed by its own `GO:` CURIE
+    rather than by URL, and never counted toward another row's URL
+    identity. It shares the gene page's URL with the gene row and with
+    every other GO row of the same gene by construction, and each is a
+    distinct fact (a different GO term) the gene row does not itself carry,
+    the same argument that keeps a derived row. Review F-08: the SAME GO
+    vertex returned in three columns is one record, so it collapses to one
+    row here, by CURIE, before `cypher_query._dedupe_by_cited_record`
+    applies the same CURIE key downstream.
     """
     seen_urls: set[str] = set()
+    seen_go_curies: set[str] = set()
     deduped: list[dict] = []
     for row in rows:
         if row.get("node_or_edge_type") == "derived":
+            deduped.append(row)
+            continue
+        fields = row.get("fields")
+        if isinstance(fields, dict) and fields.get(CITED_VIA_GENE_FIELD):
+            go_curie = str(row.get("curie") or "")
+            if go_curie in seen_go_curies:
+                continue
+            seen_go_curies.add(go_curie)
             deduped.append(row)
             continue
         source_url = row.get("source_url")

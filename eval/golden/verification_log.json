@@ -1,0 +1,748 @@
+{
+  "built_on": "2026-08-31",
+  "specs": 50,
+  "verified": 50,
+  "unverified": 0,
+  "live_calls": 43,
+  "elapsed_seconds": 10.1,
+  "entries": [
+    {
+      "id": "G-001",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-002",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-003",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "4292",
+            "symbol": "MLH1"
+          },
+          "observed": {
+            "name": "MLH1",
+            "description": "mutL homolog 1"
+          }
+        },
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "4436",
+            "symbol": "MSH2"
+          },
+          "observed": {
+            "name": "MSH2",
+            "description": "mutS homolog 2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-004",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "taxon",
+            "id": "28901",
+            "scientific_name": "Salmonella enterica"
+          },
+          "observed": {
+            "scientificname": "Salmonella enterica"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-005",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "taxon",
+            "id": "2697049",
+            "scientific_name": "Severe acute respiratory syndrome coronavirus 2"
+          },
+          "observed": {
+            "scientificname": "Severe acute respiratory syndrome coronavirus 2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-006",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "pubmed",
+            "id": "11237011"
+          },
+          "observed": {
+            "title": "Initial sequencing and analysis of the human genome."
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-007",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-008",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-009",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-010",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-011",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        },
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "675",
+            "symbol": "BRCA2"
+          },
+          "observed": {
+            "name": "BRCA2",
+            "description": "BRCA2 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-012",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-013",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-014",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-015",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-016",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "7157",
+            "symbol": "TP53"
+          },
+          "observed": {
+            "name": "TP53",
+            "description": "tumor protein p53"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-017",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-018",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "7157",
+            "symbol": "TP53"
+          },
+          "observed": {
+            "name": "TP53",
+            "description": "tumor protein p53"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-019",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "pubmed",
+            "id": "11237011"
+          },
+          "observed": {
+            "title": "Initial sequencing and analysis of the human genome."
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-020",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "1080",
+            "symbol": "CFTR"
+          },
+          "observed": {
+            "name": "CFTR",
+            "description": "CF transmembrane conductance regulator"
+          }
+        },
+        {
+          "spec": {
+            "kind": "taxon",
+            "id": "9606",
+            "scientific_name": "Homo sapiens"
+          },
+          "observed": {
+            "scientificname": "Homo sapiens"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-021",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "1080",
+            "symbol": "CFTR"
+          },
+          "observed": {
+            "name": "CFTR",
+            "description": "CF transmembrane conductance regulator"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-022",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "2200",
+            "symbol": "FBN1"
+          },
+          "observed": {
+            "name": "FBN1",
+            "description": "fibrillin 1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-023",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "1080",
+            "symbol": "CFTR"
+          },
+          "observed": {
+            "name": "CFTR",
+            "description": "CF transmembrane conductance regulator"
+          }
+        },
+        {
+          "spec": {
+            "kind": "snp",
+            "id": "rs113993960"
+          },
+          "observed": {
+            "snp_id": 113993960
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-024",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "snp",
+            "id": "rs334"
+          },
+          "observed": {
+            "snp_id": 334
+          }
+        },
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "3043",
+            "symbol": "HBB"
+          },
+          "observed": {
+            "name": "HBB",
+            "description": "hemoglobin subunit beta"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-025",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "snp",
+            "id": "rs1801133"
+          },
+          "observed": {
+            "snp_id": 1801133
+          }
+        },
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "4524",
+            "symbol": "MTHFR"
+          },
+          "observed": {
+            "name": "MTHFR",
+            "description": "methylenetetrahydrofolate reductase"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-026",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "1080",
+            "symbol": "CFTR"
+          },
+          "observed": {
+            "name": "CFTR",
+            "description": "CF transmembrane conductance regulator"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-027",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "3064",
+            "symbol": "HTT"
+          },
+          "observed": {
+            "name": "HTT",
+            "description": "huntingtin"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-028",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "348",
+            "symbol": "APOE"
+          },
+          "observed": {
+            "name": "APOE",
+            "description": "apolipoprotein E"
+          }
+        },
+        {
+          "spec": {
+            "kind": "snp",
+            "id": "rs429358"
+          },
+          "observed": {
+            "snp_id": 429358
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-029",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "7157",
+            "symbol": "TP53"
+          },
+          "observed": {
+            "name": "TP53",
+            "description": "tumor protein p53"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-030",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "1956",
+            "symbol": "EGFR"
+          },
+          "observed": {
+            "name": "EGFR",
+            "description": "epidermal growth factor receptor"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-031",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "3845",
+            "symbol": "KRAS"
+          },
+          "observed": {
+            "name": "KRAS",
+            "description": "KRas proto-oncogene, GTPase"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-032",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "5728",
+            "symbol": "PTEN"
+          },
+          "observed": {
+            "name": "PTEN",
+            "description": "phosphatase and tensin homolog"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-033",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "4292",
+            "symbol": "MLH1"
+          },
+          "observed": {
+            "name": "MLH1",
+            "description": "mutL homolog 1"
+          }
+        },
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "4436",
+            "symbol": "MSH2"
+          },
+          "observed": {
+            "name": "MSH2",
+            "description": "mutS homolog 2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-034",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-035",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "taxon",
+            "id": "562",
+            "scientific_name": "Escherichia coli"
+          },
+          "observed": {
+            "scientificname": "Escherichia coli"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-036",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "taxon",
+            "id": "1773",
+            "scientific_name": "Mycobacterium tuberculosis"
+          },
+          "observed": {
+            "scientificname": "Mycobacterium tuberculosis"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-037",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "7157",
+            "symbol": "TP53"
+          },
+          "observed": {
+            "name": "TP53",
+            "description": "tumor protein p53"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-038",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "taxon",
+            "id": "9606",
+            "scientific_name": "Homo sapiens"
+          },
+          "observed": {
+            "scientificname": "Homo sapiens"
+          }
+        },
+        {
+          "spec": {
+            "kind": "taxon",
+            "id": "28901",
+            "scientific_name": "Salmonella enterica"
+          },
+          "observed": {
+            "scientificname": "Salmonella enterica"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-039",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-040",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-041",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-042",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-043",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-044",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-045",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-046",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-047",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-048",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-049",
+      "status": "verified",
+      "evidence": []
+    },
+    {
+      "id": "G-050",
+      "status": "verified",
+      "evidence": [
+        {
+          "spec": {
+            "kind": "gene",
+            "id": "672",
+            "symbol": "BRCA1"
+          },
+          "observed": {
+            "name": "BRCA1",
+            "description": "BRCA1 DNA repair associated"
+          }
+        }
+      ]
+    }
+  ]
+}

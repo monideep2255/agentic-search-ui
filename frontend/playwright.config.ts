@@ -57,7 +57,26 @@ export default defineConfig({
       // the frontend build.
       command: "python3 -m tests.e2e_support.mock_llm_backend",
       cwd: REPO_ROOT,
-      env: { PORT: String(BACKEND_PORT) },
+      // Fix set 6 item 6.1 (requirement D3): S3_E2E_REAL_MODEL is passed
+      // THROUGH when it is set, and absent otherwise, so an ordinary run is
+      // byte-for-byte the run it always was. `webServer.env` replaces the
+      // inherited environment rather than extending it, which is why the
+      // flag has to be forwarded by name here; it also means nothing else
+      // from a developer's shell reaches the backend, which is the property
+      // that keeps the default suite offline.
+      //
+      // `reuseExistingServer` is the trap worth naming: a fake-mode backend
+      // already listening on this port is REUSED, flag or no flag, so
+      // setting the flag alone does not guarantee a real backend.
+      // `e2e/real-answer.spec.ts` therefore asks `/__e2e__/mode` before it
+      // asks a question, and fails loudly rather than passing against the
+      // fake.
+      env: {
+        PORT: String(BACKEND_PORT),
+        ...(process.env.S3_E2E_REAL_MODEL
+          ? { S3_E2E_REAL_MODEL: process.env.S3_E2E_REAL_MODEL }
+          : {}),
+      },
       url: `${BACKEND_URL}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
@@ -81,7 +100,19 @@ export default defineConfig({
       // different address than the one Playwright actually probes.
       command: `npm run dev -- --port ${FRONTEND_PORT} --strictPort --host 127.0.0.1`,
       cwd: __dirname,
-      env: { VITE_API_BASE_URL: BACKEND_URL },
+      // T-6.2-11: overridable, default UNCHANGED. A journey that films a
+      // frontend change needs the real API behind it, because the mock
+      // backend answers in milliseconds and the whole subject of journey 2
+      // is a 12 to 14 second wait. Pointing the local frontend at a
+      // deployed API is the only way to film a frontend change BEFORE it is
+      // deployed, which is exactly when someone wants to look at it.
+      //
+      // Every ordinary run is unaffected: without the variable this is the
+      // mock backend it always was, so no suite silently starts reaching
+      // the internet.
+      env: {
+        VITE_API_BASE_URL: process.env.S3_E2E_API_BASE_URL ?? BACKEND_URL,
+      },
       url: FRONTEND_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,

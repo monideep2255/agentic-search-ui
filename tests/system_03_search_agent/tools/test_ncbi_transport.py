@@ -653,10 +653,30 @@ def test_get_rate_limiter_reads_env_override(monkeypatch: pytest.MonkeyPatch) ->
     assert limiter.requests_per_second == pytest.approx(7.5)
 
 
-def test_get_rate_limiter_default_is_the_conservative_floor() -> None:
-    """Not 10, not 100: the conservative, independently-verified floor per the unresolved conflict."""
+def test_get_rate_limiter_default_is_the_keyed_ceiling() -> None:
+    """10 per second: the keyed E-utilities ceiling, measured from NCBI's own
+    rate-limit header with the project key and confirmed by the product
+    owner on 2026-09-14 (UI fix set 11). Until then this arm pinned 3.0,
+    the unauthenticated floor. Not 100: the admin-key figure was never
+    measured live and the rule says not to split the difference.
+    """
     limiter = ncbi_transport.get_rate_limiter("eutils")
-    assert limiter.requests_per_second == pytest.approx(3.0)
+    assert limiter.requests_per_second == pytest.approx(10.0)
+    assert ncbi_transport.DEFAULT_EUTILS_REQUESTS_PER_SECOND == pytest.approx(10.0)
+
+
+def test_get_rate_limiter_keyless_deployment_can_pin_the_unauthenticated_floor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The override the module docstring tells a keyless deployment to set."""
+    monkeypatch.setenv("NCBI_EUTILS_RPS", "3")
+    ncbi_transport.reset_rate_limiters_for_tests()
+    assert ncbi_transport.get_rate_limiter("eutils").requests_per_second == pytest.approx(3.0)
+
+
+def test_get_rate_limiter_eutils_queue_depth_unchanged_by_the_rate_change() -> None:
+    """The rate rose from 3 to 10 on 2026-09-14; the bounded fail-fast queue did not move."""
+    assert ncbi_transport.get_rate_limiter("eutils")._queue_depth == 15
 
 
 # ===========================================================================
@@ -1438,8 +1458,11 @@ async def test_rate_limiter_variation_fails_fast_when_queue_depth_exceeded() -> 
 def test_variation_family_does_not_alter_existing_families(monkeypatch: pytest.MonkeyPatch) -> None:
     """Additive-only per the ticket: eutils/datasets/pubchem defaults and
     queue depths are exactly what they were before this family was added.
+    The eutils figure here is 10.0 since 2026-09-14 (UI fix set 11, the
+    keyed ceiling), a deliberate change recorded in `ncbi_transport.py`'s
+    module docstring, not drift introduced by the variation family.
     """
-    assert ncbi_transport.get_rate_limiter("eutils").requests_per_second == pytest.approx(3.0)
+    assert ncbi_transport.get_rate_limiter("eutils").requests_per_second == pytest.approx(10.0)
     assert ncbi_transport.get_rate_limiter("datasets").requests_per_second == pytest.approx(5.0)
     assert ncbi_transport.get_rate_limiter("pubchem").requests_per_second == pytest.approx(5.0)
     assert ncbi_transport.get_rate_limiter("eutils")._queue_depth == 15

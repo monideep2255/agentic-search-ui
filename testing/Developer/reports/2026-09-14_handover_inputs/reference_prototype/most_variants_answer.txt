@@ -1,0 +1,82 @@
+Skip to main content
+NCBI Knowledge Graph
+ABOUT
+CHAT
+ADVANCED QUERY
+INTEGRATIONS
+TEST: Currently optimized for genes and mutations related to glucose metabolism - Not for personal medical advice
+Ask a Question
+
+Type a natural language question about the knowledge graph. Your question will be translated to Cypher and executed against the graph database.
+
+Which genes are located in the mitochondria?
+What diseases are caused by variants in the HNF1A gene?
+Show me all molecular activities enabled by the GCK gene
+What genes are associated with MODY?
+Which genes have the most disease-causing variants?
+What pathways does the GCK gene participate in?
+What proteins are produced by genes involved in insulin signaling?
+Which genes have both deletions and single nucleotide variants?
+What is the MANE Select protein for the GCK gene?
+Which diseases have the most causal variants?
+What genes enable kinase activity?
+What biological processes are shared across MODY genes?
+​
+Q: Which genes have the most disease-causing variants?
+
+Query Pipeline
+
+7/7 steps · 10.9s
+
+The genes with the highest counts of disease-causing variants are led by DMD, PKD1, and TSC2. This query found the top 20 genes ranked by the number of distinct variants linked to diseases through gene–variant–disease relationships.
+
+Top genes by disease-causing variant count
+Rank	Gene	Gene name	Disease-causing variants
+1	DMD	dystrophin	1495
+2	PKD1	polycystin 1, transient receptor potential channel interacting	1136
+3	TSC2	TSC complex subunit 2	962
+4	TP53	tumor protein p53	608
+5	DICER1	dicer 1, ribonuclease III	607
+6	BRIP1	BRCA1 interacting DNA helicase 1	542
+7	DNAH5	dynein axonemal heavy chain 5	529
+8	DYSF	dysferlin	429
+9	CHD7	chromodomain helicase DNA binding protein 7	426
+10	RPGR	retinitis pigmentosa GTPase regulator	408
+11	EXT1	exostosin glycosyltransferase 1	406
+12	PKHD1	PKHD1 ciliary IPT domain containing fibrocystin/polyductin	392
+13	BARD1	BRCA1 associated RING domain 1	383
+14	DNAH11	dynein axonemal heavy chain 11	361
+15	BLM	BLM RecQ like helicase	335
+16	RAD50	RAD50 double strand break repair protein	314
+17	LZTR1	leucine zipper like post translational regulator 1	302
+18	ABCA4	ATP binding cassette subfamily A member 4	300
+19	ACVRL1	activin A receptor like type 1	291
+20	MSH3	mutS homolog 3	262
+Key takeaways
+DMD has the highest count with 1495 distinct disease-causing variants.
+PKD1 and TSC2 also stand out, with 1136 and 962 variants, respectively.
+The top 5 genes are:
+DMD
+PKD1
+TSC2
+TP53
+DICER1
+Data notes
+The query counts distinct sequence variants connected to a Gene and a Disease via :IS_SEQUENCE_VARIANT_OF and :CAUSES relationships.
+Gene symbols and names are typically sourced from resources such as NCBI Gene, while variant–disease assertions commonly align with sources like ClinVar and disease concepts from MedGen, depending on the graph build.
+
+Showing 20 of 20 total results.
+
+Sources:
+NCBI Gene
+20 results
+10862ms
+Helpful?
+
+Generated Cypher
+
+Graph Visualization
+
+Raw Results (20)
+
+NCBI Knowledge Graph - Proof of Concept

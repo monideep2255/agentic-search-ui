@@ -88,6 +88,13 @@ vi.mock("./lib/api", async () => {
     // useEffect and takes the whole render down, the same reasoning
     // `fetchPersona`'s own comment above already gives.
     fetchHistory: vi.fn(async () => ({ items: [], count: 0 })),
+    // Fix set 4, R46 (decision U8): App now restores a session on load and
+    // revokes the refresh token on log out. An api mock that omits an export
+    // App actually calls throws inside a useEffect or a handler and takes
+    // the render down, the same reasoning `fetchPersona` above already
+    // carries.
+    refreshSession: vi.fn(),
+    logoutSession: vi.fn(async () => ({ status: "ok" })),
   };
 });
 
@@ -149,7 +156,37 @@ const STREAM = [
     narrative: "Resolving the gene named in the question.",
     query_class: "single_hop", resolved_entities: [], clarifying_question: null,
   }),
-  frame(2, "plan", { narrative: "Read the curated edges, then confirm live.", tool_calls: [] }),
+  /*
+   * FIXTURE FIX, this session. `tool_calls` was `[]` here, which does not
+   * match what `plan_node` actually sends on the wire: `core/graph.py` line
+   * 3913 populates `tool_calls` with the real planned calls at the moment
+   * Plan fires, always in step with what Act goes on to run
+   * (`useRunView.writeState.test.tsx`'s `PLAN_TWO` pins the same shape and
+   * asserts "stays on Plan while a planned tool has not started").
+   *
+   * An empty array here told `useRunView`'s Write-begins-when-Act-ends logic
+   * (`planSelectedNoTool`, `useRunView.ts`) that the plan selected NO tool at
+   * all, the no-data-refusal shape, which is a real and intentional path but
+   * not what this fixture is. Before UI fix 11.28's pacing, `plan` and the
+   * first `tool_result` landed in the same events snapshot, so the resulting
+   * false "Write" activeStep lasted one recompute, invisible. Pacing holds
+   * `plan` on screen alone for up to `PACING.planMs` + `PACING.handoffMs`
+   * before the next event releases, long enough for `RunProgress` to see
+   * `writingNow` true and UNMOUNT `<ReasoningLog>`, then remount it as a new
+   * DOM node once the real tool_start arrived and reopened Act. Any
+   * already-captured reference to the old node (exactly what
+   * `findByTestId("reasoning-log")` holds in the test below) never saw the
+   * update, frozen at whatever `steps` had rendered before the unmount.
+   */
+  frame(2, "plan", {
+    narrative: "Read the curated edges, then confirm live.",
+    tool_calls: [
+      { tool: "cypher_query", call_id: "c1", layer: "layer_1_graph" },
+      { tool: "ncbi_efetch", call_id: "c2", layer: "layer_2_api" },
+      { tool: "pubtator_annotate", call_id: "c3", layer: "layer_3_enrichment" },
+      { tool: "clinicaltrials_search", call_id: "c4", layer: "layer_3_enrichment" },
+    ],
+  }),
   frame(3, "tool_result", { call_id: "c1", tool: "cypher_query", layer: "layer_1_graph", status: "ok", summary: "", result_count: 25, truncated: false }),
   frame(4, "tool_result", { call_id: "c2", tool: "ncbi_efetch", layer: "layer_2_api", status: "ok", summary: "", result_count: 1, truncated: false }),
   frame(5, "tool_result", { call_id: "c3", tool: "pubtator_annotate", layer: "layer_3_enrichment", status: "ok", summary: "", result_count: 1, truncated: false }),
@@ -203,7 +240,7 @@ async function landAnAnswer(user: ReturnType<typeof userEvent.setup>) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
-  await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+  await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 }
 
 describe("build phase 4.9: the app presents what the prototype presents", () => {
@@ -228,7 +265,12 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
 
     // ORDER, not membership. The app had all four and the last two swapped,
     // which every membership assertion in this repository accepted.
-    expect(labels.slice(0, 4)).toEqual(["Search", "Integrations", "About", "Docs"]);
+    //
+    // THREE, not four, since fix set 5 (R18, 2026-09-13) removed the Docs tab
+    // and folded its content into the Integrations page. The surviving three
+    // keep the prototype's own order, which is what this arm exists to pin.
+    expect(labels.slice(0, 3)).toEqual(["Search", "Integrations", "About"]);
+    expect(labels).not.toContain("Docs");
   });
 
   // ---------------------------------------------------------------- F-4.8-D-05
@@ -299,7 +341,17 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     openEventStreamMock.mockImplementation(() => {
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode(STREAM.slice(0, STREAM.indexOf("event: token"))));
+          /*
+           * REQUIREMENT CHANGE, 2026-09-14 (approved `Streaming.dc.html`):
+           * once every tool result is in, the run is in Write and the writing
+           * banner stands in for the reasoning log. So this stream now ends
+           * DURING Act, with one call still open, which is where the log is
+           * still what a reader sees while the run is going.
+           */
+          const live =
+            STREAM.slice(0, STREAM.indexOf("event: tool_result")) +
+            frame(3, "tool_start", { call_id: "c1", tool: "cypher_query", layer: "layer_1_graph", status: "running" });
+          controller.enqueue(new TextEncoder().encode(live));
           /*
            * CLOSE it. The first version left the controller open to simulate a
            * run still in flight, which left a reader pending for the rest of
@@ -321,9 +373,42 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
     await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
 
-    const reasoning = await screen.findByTestId("reasoning-log", undefined, { timeout: 5000 });
-    expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
-    expect(reasoning).toHaveTextContent(/read the curated edges/i);
+    /*
+     * PACING, UI fix 11.28 (2026-09-14): guard, think and plan are staggered
+     * over up to ~2s of dwell (`PACING.guardMs` + `thinkMs` + `planMs` in
+     * `usePacedEvents.ts`), so `reasoning-log` exists as soon as guard
+     * passes but still reads "Guard" only until think and plan release.
+     * `findByTestId` waits for the ELEMENT, not for its content, so it
+     * resolves immediately on the guard-only text and the assertion below
+     * used to run before pacing caught up.
+     *
+     * This is judged NOT a regression, and the fix is a `waitFor` on the
+     * content rather than a shorter dwell or an extra flush trigger for a
+     * closed-with-no-`done` stream. `usePacedEvents` already guarantees "no
+     * event is ever held more than `maxLagMs` (3500ms) behind its own
+     * arrival" (its own module docstring), so ANY staleness this scenario
+     * can produce, including a genuine permanent stall, is already bounded
+     * and self-healing under a mechanism four other unit tests in
+     * `usePacedEvents.test.ts` cover directly. Here the burst is guard,
+     * think, plan and one `tool_start`, so the worst case is the ~2s sum of
+     * their three dwells, well inside that 3.5s ceiling and inside 11.28's
+     * own "adds at most about 4 seconds total" bound. Reaching for a new
+     * flush trigger keyed on "the connection closed with no `done` and no
+     * `error`" would special-case an already-bounded condition and add a
+     * distinction (a genuine permanent stall vs. a closed-but-answered run)
+     * the rest of the pacing design does not need. What this test still
+     * proves, unchanged: the think and plan detail shows up WHILE the run is
+     * going, never only after it lands, since `landed` stays false for the
+     * whole test (no `done` event is ever sent on this stream).
+     */
+    const reasoning = await screen.findByTestId("reasoning-log", undefined, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
+        expect(reasoning).toHaveTextContent(/read the curated edges/i);
+      },
+      { timeout: 10000 },
+    );
   });
 
   // ---------------------------------------------------------------- F-4.8-D-01
@@ -387,8 +472,20 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     // The prototype's id-bearing chip: the index AND what it points at.
     // Citation 1 is the LAYER 3 PubMed source and citation 2 is the Layer 1
     // Gene source, so an index-keyed or position-keyed label cannot pass.
-    expect(screen.getByTestId("citation-1")).toHaveTextContent(/PubMed\s*21990134/);
-    expect(screen.getByTestId("citation-2")).toHaveTextContent(/Gene\s*672/);
+    //
+    // REQUIREMENT CHANGE, 2026-09-14: at the product owner's request the
+    // inline citation is a superscript number, and what it points at moved
+    // from the chip's face into the card the number opens. The identity rule
+    // is unchanged; it is read from the card now, and each card must name its
+    // OWN source, never its neighbour's.
+    await user.click(screen.getByTestId("citation-1"));
+    const one = screen.getByTestId("cite-popover-1");
+    expect(one).toHaveTextContent(/PubMed\s*21990134/);
+    expect(one).not.toHaveTextContent(/Gene\s*672/);
+    await user.click(screen.getByTestId("citation-2"));
+    const two = screen.getByTestId("cite-popover-2");
+    expect(two).toHaveTextContent(/Gene\s*672/);
+    expect(two).not.toHaveTextContent(/PubMed\s*21990134/);
   });
 
   // ---------------------------------------------------------------- F-4.8-D-11
@@ -478,15 +575,37 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
   }
 
   it("does not dress a refusal in a success tick (F-4.9-A-03)", async () => {
+    /*
+     * F-4.9-A-03 was a green "✓ Refused": a tick and the success green on
+     * every outcome, which at a glance says "done, fine" beside a refusal.
+     * The fix at the time was a per-outcome glyph and colour, so the word
+     * read "⚠ Refused" in red.
+     *
+     * R13 and R44, product-owner decision U6 (2026-09-12), went further:
+     * a refusal is not an error either, so there is no outcome word in the
+     * meta line at all now, and no pill under it. The original property is
+     * unchanged and asserted more strongly below, since a word that is
+     * absent cannot be dressed in anything. What replaced it is the calm
+     * grey label, asserted here THROUGH `App` because the defect class
+     * this file exists for is a prop that never arrives: a component test
+     * with a hand-built `refusalLabel` would pass with `App` passing none.
+     */
     const user = userEvent.setup();
     openEventStreamMock.mockImplementation(serve(variant({ guardPassed: false })));
     render(<App />);
     await askIt(user);
 
-    const strip = await screen.findByTestId("answer-meta");
-    expect(strip).toHaveTextContent(/refused/i);
-    // A green tick beside "Refused" reads as "done, fine" at a glance.
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    const strip = await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
+    expect(strip).not.toHaveTextContent(/refused/i);
     expect(strip).not.toHaveTextContent("✓");
+    expect(strip).not.toHaveTextContent("⚠");
+
+    // The refusal itself, as a labelled neutral block rather than an alarm.
+    const refusal = screen.getByTestId("answer-refusal");
+    expect(refusal).toHaveTextContent("Outside biomedical research");
+    // And no red verdict beside it: this run refused, it did not fail.
+    expect(screen.queryByTestId("trust-risk")).not.toBeInTheDocument();
   });
 
   it("never reports a grounding verdict the run did not give (F-4.9-A-02)", async () => {
@@ -495,7 +614,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     render(<App />);
     await askIt(user);
 
-    await screen.findByTestId("answer-meta");
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     /*
      * In a cite-or-refuse system the ABSENCE of a grounding verdict must read
      * as "not verified", never as silence. A dropped or never-emitted
@@ -535,7 +655,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     render(<App />);
     await askIt(user);
 
-    await screen.findByTestId("citation-1");
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    await screen.findByTestId("citation-1", undefined, { timeout: 10000 });
     /*
      * F-4.9-R-04. This asserted `data-layer` ALONE, which is a test hook no
      * user meets. The two harms the finding actually named are what a reader
@@ -549,13 +670,24 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     expect(two).toHaveAttribute("data-layer", "3");
 
     // What the reader sees: layer 1 navy versus layer 3 violet, never equal.
-    const colourOf = (el: HTMLElement) => getComputedStyle(el).borderLeftColor;
+    //
+    // REQUIREMENT CHANGE, 2026-09-14: the boxed chip's 4px left edge carried
+    // the layer colour; the superscript marker that replaced it carries the
+    // layer colour on the number itself. So the property read is `color`,
+    // and it is pinned to each layer's own token, not merely "different".
+    const colourOf = (el: HTMLElement) => getComputedStyle(el).color;
     expect(colourOf(one)).not.toBe(colourOf(two));
+    expect(colourOf(one)).toBe("rgb(32, 84, 147)");
+    expect(colourOf(two)).toBe("rgb(76, 44, 146)");
 
     // What a screen reader hears: each source named with its OWN layer.
-    const claim = screen.getByTestId("claim-text-0");
-    expect(claim).toHaveTextContent(/Source 1, layer 1/i);
-    expect(claim).toHaveTextContent(/Source 2, layer 3/i);
+    //
+    // REQUIREMENT CHANGE, 2026-09-14 (clean copy): the name is each marker's
+    // `aria-label`, so it is asserted as the accessible name, and it must not
+    // be selectable text inside the claim.
+    expect(one).toHaveAccessibleName("Source 1, layer 1");
+    expect(two).toHaveAccessibleName("Source 2, layer 3");
+    expect(screen.getByTestId("claim-text-0").textContent).not.toMatch(/Source \d+, layer/);
   });
 
   /*
@@ -585,7 +717,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     render(<App />);
     await askIt(user);
 
-    await screen.findByTestId("answer-meta");
+    // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
+    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
     /*
      * The A-05 fix MOVED this nonsense rather than removing it: counting from
      * tool calls gave "0 layers agreed" when citations arrived without tool

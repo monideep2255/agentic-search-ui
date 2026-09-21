@@ -508,6 +508,7 @@ def trust_for_claims(
     types = node_or_edge_type_by_citation_id or {}
     seen: set[str] = set()
     out: list[ClaimTrust] = []
+
     for claim in claims:
         citation_id = claim.finding.citation_id
         if citation_id in seen:
@@ -526,3 +527,62 @@ def trust_for_claims(
             )
         )
     return out
+
+
+def _origin_database(finding: SynthFinding) -> str:
+    """The database a finding's record belongs to, for counting sources.
+
+    Read from the record's CURIE prefix when it has one, so a Layer 1 snapshot
+    row and a Layer 2 live fetch of the same database count ONCE, which is
+    Section 8.3.2's independence rule. Falls back to the tool name only when
+    the finding carries no CURIE at all.
+    """
+    curie = finding.curie.strip()
+    if ":" in curie:
+        return curie.split(":", 1)[0].lower()
+    return finding.tool.lower()
+
+
+def answer_trust_line(
+    trust_outcome: TrustOutcome,
+    claim_trusts: list[ClaimTrust],
+    claims: list[GroundedClaim],
+) -> str | None:
+    """UI fix set 9, item 9.9 (decision U1): one plain line for an answer.
+
+    Replaces a row of pills that could contradict each other ("Grounded ·
+    every claim cited" beside "Single source, not independently confirmed").
+    Every clause is derived from verdicts Section 8.3 already computed; this
+    function decides nothing new about trust, it only says it once.
+
+    - `refuse`, or nothing grounded: None. A refusal has its own block.
+    - `flag`: the sources disagree, which outranks any count.
+    - `answer` with at least one high-risk claim, every high-risk claim
+      concordant, and two or more independent databases: "Confirmed by N
+      independent sources". This is the only line that says "confirmed",
+      because concordance is the only verdict that means it.
+    - `ask`: "Based on N source(s), not yet confirmed".
+    - Otherwise (every claim low risk): "Based on N source(s)". Low-risk
+      claims are never triangulated, so "not yet confirmed" would imply a
+      check that does not apply to them.
+
+    N counts independent origin databases across the grounded claims, never
+    records, so twenty ClinVar rows are one source.
+    """
+    if trust_outcome == "refuse" or not claims:
+        return None
+    count = len({_origin_database(claim.finding) for claim in claims})
+    noun = "source" if count == 1 else "sources"
+    if trust_outcome == "flag":
+        return "Sources disagree on at least one claim"
+    high = [trust for trust in claim_trusts if trust.risk_tier == "high"]
+    if (
+        trust_outcome == "answer"
+        and high
+        and all(trust.triangulation == "concordant" for trust in high)
+        and count >= 2
+    ):
+        return f"Confirmed by {count} independent sources"
+    if trust_outcome == "ask":
+        return f"Based on {count} {noun}, not yet confirmed"
+    return f"Based on {count} {noun}"

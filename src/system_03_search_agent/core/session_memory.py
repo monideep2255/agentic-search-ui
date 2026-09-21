@@ -36,17 +36,20 @@ than by asking a model nicely:
     fresh retrieval. Never Write, because memory must never become a citable
     source.
 
-What has no producer today, stated here so a reader does not mistake a dead
-branch for a live one (F-4.5-A-10). `SessionMemorySummary.open_threads` is
-written by NOTHING in `src/`. `merge_turn` carries an existing list forward
-and has no parameter to add to it, and no other module constructs one. So
+`open_threads` HAS A PRODUCER as of build phase 6.2, T-6.2-07, and this
+paragraph replaces the one that said it did not. Build phase 4.5 left the
+field on the contract and rendered by `_render` with nothing writing it, and
+required IN WRITING that whoever added a producer delete that note in the
+same change. This is that change.
+
+`merge_turn` now takes the turn's `question` and appends it, so an open
+thread is what it sounds like: a question this conversation has not closed.
+Two consequences worth stating rather than leaving to be rediscovered.
 Section 14.3's first compaction rule, "drop the oldest open_threads first",
-cannot fire on real data: real compaction always starts at step 2, the
-findings merge, which the section names as the more expensive loss. The
-branch is kept because the section specifies it and because a producer is a
-later phase's work, not because it runs. Adding a producer is out of scope
-for build phase 4.5 under `.claude/rules/v1-scope-boundary.md`; whoever adds
-one must delete this paragraph in the same change.
+NOW FIRES ON REAL DATA, where before compaction always began at the more
+expensive findings merge. And the thread is what lets a follow-up resolve a
+pronoun: "what variants cause it" reaches Think with the earlier questions
+in order, not only the entities they resolved to.
 
 Depends on:
     - system_03_search_agent.contracts.query (SessionMemorySummary and its caps)
@@ -73,6 +76,10 @@ from system_03_search_agent.contracts.query import (
     MAX_CITATION_IDS_PER_FINDING,
     MAX_CLAIM_SUMMARY_LENGTH,
     MAX_COMPRESSED_FINDINGS,
+    MAX_OPEN_THREAD_LENGTH,
+    MAX_OPEN_THREADS,
+    MAX_REPORTED_RECORD_ID_LENGTH,
+    MAX_REPORTED_RECORD_IDS,
     MAX_RESOLVED_ENTITIES,
     SESSION_MEMORY_TOKEN_BUDGET,
     CompressedFinding,
@@ -85,6 +92,13 @@ from system_03_search_agent.harness.tiers import Tier, resolve_model
 #: tuple is the declaration, not a comment: `injected_steps` returns it and
 #: the premise gate asserts on it, so adding "act" here is a visible change
 #: that turns a gate arm red rather than a quiet one-line edit in a caller.
+#:
+#: Think and Plan only, as Section 14.4 states. UI fix set 7, item 7.1
+#: (2026-09-13) briefly added "guardrail" here while a memory block was
+#: injected into the Guard prompt; both cuts of that block were measured
+#: destabilising the Guard model, so the guardrail no longer receives one.
+#: It reads memory only for a deterministic rule applied after its verdict
+#: (`core.graph._is_memory_bound_follow_up`), which is not an injection.
 _INJECTED_STEPS: tuple[str, ...] = ("think", "plan")
 
 #: The model tiers those steps actually resolve to. `core/graph.py` dispatches
@@ -773,6 +787,8 @@ def merge_turn(
     now: datetime,
     resolved: list[ResolvedEntity],
     findings: list[CompressedFinding],
+    question: str = "",
+    reported_record_ids: list[str] | None = None,
 ) -> SessionMemorySummary:
     """Fold one finished turn into the session's memory (T-4.5-04).
 
@@ -814,7 +830,19 @@ def merge_turn(
     """
     base = existing or SessionMemorySummary(session_id=session_id, last_updated=now)
 
-    entities = list(base.resolved_entities)
+    # A re-mentioned entity MOVES TO THE END rather than keeping its
+    # original place (UI fix set 7, 2026-09-13, the product owner's
+    # "if this is a discussion, it must flow"). `_antecedent_curie` binds a
+    # pronoun to the LAST entity here, so under the old rule a session that
+    # went BRCA1, then TP53, then back to BRCA1 by name still bound the next
+    # "it" to TP53, because BRCA1 had kept its first position. Now "most
+    # recent" means most recently mentioned. Still keyed by CURIE, still
+    # idempotent: replaying a turn moves the same entities to the same end.
+    entities = [
+        entity
+        for entity in base.resolved_entities
+        if entity.curie not in {mention.curie for mention in resolved}
+    ]
     seen_curies = {entity.curie for entity in entities}
     for entity in resolved:
         if entity.curie not in seen_curies:
@@ -836,12 +864,57 @@ def merge_turn(
         merged_findings.append(finding)
         seen_exact.add(key)
 
+    # Build phase 6.2, T-6.2-07. THE PRODUCER `open_threads` never had.
+    #
+    # The product-owner decision of 2026-09-01 is that a follow-up carries
+    # the WHOLE THREAD forward. Most of that already existed and simply was
+    # not obvious: `compressed_findings` carries what each turn ESTABLISHED
+    # and `resolved_entities` carries what it resolved. What nothing carried
+    # was what the user actually ASKED, so a follow-up saying "what variants
+    # cause it" reached Think holding the entities and no record of the
+    # sentence the pronoun points back at.
+    #
+    # An open thread IS a question the conversation has not closed, so this
+    # needs no new field and no contract change: the entry is the question
+    # text and `_render` already prints it as "Open: <question>".
+    #
+    # THE BOUNDS ARE THE ONES ALREADY DECLARED, which is what keeps "the
+    # whole thread" inside Section 14.3's hard 1500-token budget.
+    # `MAX_OPEN_THREADS` is 10 and `MAX_OPEN_THREAD_LENGTH` is 200, both
+    # enforced by the contract's own validator, and `compact` drops the
+    # OLDEST threads first when the budget bites. So the thread is carried
+    # until the cap is reached and then the oldest turns fall off.
+    #
+    # Deduplicated only against the IMMEDIATELY PREVIOUS entry: asking the
+    # same question twice in a row adds nothing, while asking it again after
+    # three other turns is a real return to a topic and the thread should
+    # show that it happened.
+    threads = list(base.open_threads)
+    trimmed = " ".join(question.split())[:MAX_OPEN_THREAD_LENGTH]
+    if trimmed and (not threads or threads[-1] != trimmed):
+        threads.append(trimmed)
+
+    # UI fix set 7, item 7.2 (2026-09-13). The records this turn's answer
+    # SHOWED, so a later go-deeper turn can put the ones not yet shown
+    # first. Keyed by `source_url`, deduplicated against what is already
+    # remembered, newest last, FIFO past the ceiling, and never rendered
+    # into a prompt (`_render` does not read it). Bounded per item by the
+    # contract's own validator.
+    reported = list(base.reported_record_ids)
+    seen_reported = set(reported)
+    for record_id in reported_record_ids or []:
+        record_id = record_id[:MAX_REPORTED_RECORD_ID_LENGTH]
+        if record_id and record_id not in seen_reported:
+            reported.append(record_id)
+            seen_reported.add(record_id)
+
     return compact(
         SessionMemorySummary(
             session_id=session_id,
             resolved_entities=entities[-MAX_RESOLVED_ENTITIES:],
             compressed_findings=merged_findings[-MAX_COMPRESSED_FINDINGS:],
-            open_threads=list(base.open_threads),
+            open_threads=threads[-MAX_OPEN_THREADS:],
+            reported_record_ids=reported[-MAX_REPORTED_RECORD_IDS:],
             token_budget=base.token_budget,
             last_updated=now,
         )
@@ -904,6 +977,8 @@ async def remember_turn_for_caller(
     now: datetime,
     resolved: list[ResolvedEntity],
     findings: list[CompressedFinding],
+    question: str = "",
+    reported_record_ids: list[str] | None = None,
     store: SessionMemoryStore | None = None,
 ) -> SessionMemorySummary | None:
     """Load, fold one turn in, and save, as a single locked operation.
@@ -938,6 +1013,8 @@ async def remember_turn_for_caller(
             now=now,
             resolved=resolved,
             findings=findings,
+            question=question,
+            reported_record_ids=reported_record_ids,
         )
         return written.model_dump(mode="json")
 

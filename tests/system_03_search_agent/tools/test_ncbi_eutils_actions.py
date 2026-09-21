@@ -160,6 +160,33 @@ class TestSearch:
         assert output.record_count == 1
 
     @pytest.mark.asyncio
+    async def test_relevance_sort_is_forwarded_to_esearch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """UI fix loop, 2026-09-20: the ESearch request must carry `sort=relevance`.
+
+        Live-verified against the real API (not exercised here, no network
+        in this file): ESearch with no `sort` parameter orders by
+        most-recently-added rather than relevance, which is how a GCK query
+        surfaced "Fermentation of mulberry leaf extract by Aspergillus
+        chevalieri" instead of a paper about the gene. This pins the wiring
+        that closes it: `NcbiEfetchSearchInput`'s default `sort="relevance"`
+        must actually reach the transport call's params, not just exist on
+        the schema. Reverting the `request_params["sort"] = params.sort`
+        line in `ncbi_eutils_actions.search` fails this test with a
+        `KeyError` on `scripted.calls[0]["params"]["sort"]`, confirmed
+        while writing this test.
+        """
+        scripted = _install(
+            monkeypatch,
+            [_json_response({"esearchresult": {"count": "1", "idlist": ["7157"]}})],
+        )
+        await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="gene", term="GCK", retmax=10)
+        )
+        assert scripted.calls[0]["params"]["sort"] == "relevance"
+
+    @pytest.mark.asyncio
     async def test_zero_hit_is_empty_not_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Trap 4, half of the near-miss pair: count 0, no ERROR key, no records fabricated."""
         _install(
@@ -1225,6 +1252,215 @@ class TestLink:
         ids = [record.id for record in output.records]
         assert ids == ["21376230"]
         assert "99999999" not in ids
+
+    @pytest.mark.asyncio
+    async def test_pubmed_to_pmc_keeps_only_the_direct_linkname(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """UI fix set 11, trap 3's second half. The fixture below is a
+        CONSTRUCTED response shape, not a live capture (round 2, N-05): on
+        2026-09-14 the live ELink for PMID 31452104 returned only
+        `pubmed_pmc_refs`, so the ids here are illustrative. What is live-
+        verified is the two-linkname shape itself: `dbfrom=pubmed&db=pmc`
+        can answer `pubmed_pmc` (the paper's own PMC copy) beside
+        `pubmed_pmc_refs` (every PMC paper citing it), both under
+        `dbto: "pmc"`. Only the direct one may contribute, and the record
+        URL is the PMC article page.
+        """
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "linksets": [
+                            {
+                                "dbfrom": "pubmed",
+                                "ids": ["31452104"],
+                                "linksetdbs": [
+                                    {
+                                        "dbto": "pmc",
+                                        "linkname": "pubmed_pmc",
+                                        "links": ["7184428"],
+                                    },
+                                    {
+                                        "dbto": "pmc",
+                                        "linkname": "pubmed_pmc_refs",
+                                        "links": ["13547197", "13490894", "13465198"],
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.link(
+            NcbiEfetchLinkInput(action="link", dbfrom="pubmed", db="pmc", ids=["31452104"])
+        )
+        assert output.status == "ok"
+        assert [record.id for record in output.records] == ["7184428"]
+        assert output.records[0].db == "pmc"
+        assert (
+            output.records[0].source_url
+            == "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7184428/"
+        )
+
+    @pytest.mark.asyncio
+    async def test_f03_gene_to_pubmed_keeps_every_matching_linkset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Review F-03 (2026-09-14): preferring `<dbfrom>_<db>` for every pair
+        dropped `gene_pubmed_citedinomim`, 120 of 477 ids live for gene
+        2645. The preference is an allowlist of verified pairs, today only
+        (pubmed, pmc); gene to pubmed keeps all matching linksets.
+        """
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "linksets": [
+                            {
+                                "dbfrom": "gene",
+                                "ids": ["2645"],
+                                "linksetdbs": [
+                                    {
+                                        "dbto": "pubmed",
+                                        "linkname": "gene_pubmed",
+                                        "links": ["21376230", "11111111"],
+                                    },
+                                    {
+                                        "dbto": "pubmed",
+                                        "linkname": "gene_pubmed_citedinomim",
+                                        "links": ["22222222", "33333333"],
+                                    },
+                                    {
+                                        "dbto": "pubmed",
+                                        "linkname": "gene_pubmed_rif",
+                                        "links": ["44444444"],
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.link(
+            NcbiEfetchLinkInput(action="link", dbfrom="gene", db="pubmed", ids=["2645"])
+        )
+        assert sorted(record.id for record in output.records) == [
+            "11111111",
+            "21376230",
+            "22222222",
+            "33333333",
+            "44444444",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_f03_pubmed_to_pubmed_keeps_citedin_beside_similar_articles(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "linksets": [
+                            {
+                                "dbfrom": "pubmed",
+                                "ids": ["1"],
+                                "linksetdbs": [
+                                    {"dbto": "pubmed", "linkname": "pubmed_pubmed", "links": ["2"]},
+                                    {
+                                        "dbto": "pubmed",
+                                        "linkname": "pubmed_pubmed_citedin",
+                                        "links": ["3"],
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.link(
+            NcbiEfetchLinkInput(action="link", dbfrom="pubmed", db="pubmed", ids=["1"])
+        )
+        assert sorted(record.id for record in output.records) == ["2", "3"]
+
+    @pytest.mark.asyncio
+    async def test_without_a_direct_linkname_every_matching_dbto_still_contributes(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A pair outside the allowlist keeps every matching linkset."""
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "linksets": [
+                            {
+                                "dbfrom": "gene",
+                                "ids": ["7157"],
+                                "linksetdbs": [
+                                    {
+                                        "dbto": "pubmed",
+                                        "linkname": "gene_pubmed_rif",
+                                        "links": ["21376230"],
+                                    },
+                                    {
+                                        "dbto": "pubmed",
+                                        "linkname": "gene_pubmed_pmc",
+                                        "links": ["11111111"],
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.link(
+            NcbiEfetchLinkInput(action="link", dbfrom="gene", db="pubmed", ids=["7157"])
+        )
+        assert sorted(record.id for record in output.records) == ["11111111", "21376230"]
+
+    @pytest.mark.asyncio
+    async def test_pmc_direct_linkname_with_no_links_is_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Null case: a paper with no PMC copy answers `empty`, never the
+        citing-paper set in its place.
+        """
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "linksets": [
+                            {
+                                "dbfrom": "pubmed",
+                                "ids": ["1"],
+                                "linksetdbs": [
+                                    {"dbto": "pmc", "linkname": "pubmed_pmc", "links": []},
+                                    {
+                                        "dbto": "pmc",
+                                        "linkname": "pubmed_pmc_refs",
+                                        "links": ["13547197"],
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.link(
+            NcbiEfetchLinkInput(action="link", dbfrom="pubmed", db="pmc", ids=["1"])
+        )
+        assert output.status == "empty"
+        assert output.records == []
 
     @pytest.mark.asyncio
     async def test_no_links_is_empty_not_error(self, monkeypatch: pytest.MonkeyPatch) -> None:

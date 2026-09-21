@@ -1,0 +1,33 @@
+Which diseases are associated with BRCA1?     run 1: ask         48.9s sources=11
+Which diseases are associated with BRCA1?     run 2: ask         52.0s sources=11
+Which diseases are associated with BRCA1?     run 3: ask         47.8s sources=11
+Which diseases are associated with BRCA1?     run 4: ask         52.2s sources=11
+Which diseases are associated with BRCA1?     run 5: ask         38.2s sources=11
+What variants cause disease in BRCA1?         run 1: ask         49.5s sources=20
+What variants cause disease in BRCA1?         run 2: answer      47.2s sources=20
+What variants cause disease in BRCA1?         run 3: answer      47.2s sources=20
+What variants cause disease in BRCA1?         run 4: error       51.3s sources=0
+What variants cause disease in BRCA1?         run 5: answer      47.0s sources=20
+Variants in GCK causing MODY                  run 1: answer      37.8s sources=20
+Variants in GCK causing MODY                  run 2: answer      41.6s sources=20
+Variants in GCK causing MODY                  run 3: ask         53.1s sources=20
+Variants in GCK causing MODY                  run 4: answer      37.9s sources=20
+Variants in GCK causing MODY                  run 5: answer      21.7s sources=20
+Which diseases are associated with BRCA1 and  run 1: ask         48.7s sources=20
+Which diseases are associated with BRCA1 and  run 2: error       49.6s sources=0
+Which diseases are associated with BRCA1 and  run 3: error       51.7s sources=0
+Which diseases are associated with BRCA1 and  run 4: ask         44.7s sources=20
+Which diseases are associated with BRCA1 and  run 5: ask         49.9s sources=20
+what diseases are linked to brca1?            run 1: ask         38.4s sources=11
+what diseases are linked to brca1?            run 2: ask         39.5s sources=11
+what diseases are linked to brca1?            run 3: ask         44.0s sources=11
+what diseases are linked to brca1?            run 4: ask         40.0s sources=11
+what diseases are linked to brca1?            run 5: ask         30.4s sources=11
+
+=== summary ===
+Which diseases are associated with BRCA1?          answered 5 of 5 | distinct source sets 1 | sizes [11]
+What variants cause disease in BRCA1?              answered 4 of 5 | distinct source sets 1 | sizes [20]
+Variants in GCK causing MODY                       answered 5 of 5 | distinct source sets 1 | sizes [20]
+Which diseases are associated with BRCA1 and BRCA2 answered 3 of 5 | distinct source sets 1 | sizes [20]
+what diseases are linked to brca1?                 answered 5 of 5 | distinct source sets 1 | sizes [11]
+flagship exit 0

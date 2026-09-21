@@ -1,0 +1,42 @@
+Which diseases are associated with BRCA1?
+New search
+? Answered3.0s · 4 tools · 11 sources from 2 layers
+
+Show work ▾
+Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.1–4
+
+BRCA1 is associated with Familial cancer of breast.1 BRCA1 is also associated with Familial breast-ovarian cancer susceptibility 1.2 BRCA1 is further associated with Pancreatic cancer susceptibility 4.3
+
+DISEASE RECORDS FOUND
+Familial cancer of breast	1
+Familial breast-ovarian cancer susceptibility 1	2
+Pancreatic cancer susceptibility 4	3
+Fanconi anemia complementation group S	4
+GENE RECORDS FOUND
+BRCA1	5
+LITERATURE ENTITY RECORDS FOUND
+BRCA1	6
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	STATUS	
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	COMPLETED	7
+BRCA1 Haploinsufficiency and Gene Expression	COMPLETED	8
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma	TERMINATED	9
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation	COMPLETED	10
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations	TERMINATED	11
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+11
+Based on 4 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+Was this answer helpful?

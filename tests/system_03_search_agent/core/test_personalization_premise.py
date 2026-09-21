@@ -107,8 +107,9 @@ one") and it had been applied to exactly one arm.
   memory-to-Write path to delete and build phase 2.2's grounding pass caught
   the rest (F-4.5-J-05).
 - The prompt-cache stable prefix, by SHA-256, on both axes the tickets name:
-  as depth varies (P7, Synth) and as session memory varies (P7b, Think and
-  Plan). The memory half did not exist at all before this fix branch
+  as depth varies (P7, Synth) and as session memory varies (P7b, Think;
+  Plan too until its model call was deleted on 2026-09-14). The memory
+  half did not exist at all before this fix branch
   (F-4.5-J-08), and P7b carries a negative control so it cannot be satisfied
   by a build that stopped assembling the block.
 - The hard token cap AND the tokenizer, measured against an independent
@@ -291,7 +292,31 @@ _DEPTH_LENGTH_RATIO = 1.4
 #: this exact phrase, not merely "some note appeared", so a generic caveat
 #: cannot satisfy the disclosure branch: build phase 4.3 found four gate arms
 #: that passed because SOMETHING arrived rather than the right thing.
-_INCOMPLETE_NOTE_MARKER = "not reported are absent from the citations"
+#:
+#: Moved by build phase 6.2's T-6.2-03, which reworded that note from the
+#: system's side to the reader's: it said "the 2 not reported are absent from
+#: the citations as well as from the text above" and then said "2 further
+#: disease records were found for this question and are not described above".
+#: The PROPERTY this constant guards is unchanged, that an answer omitting a
+#: pinned disease says so, and only the phrase carrying it moved.
+#:
+#: Moved again, answer quality fix (2026-09-20): "not described above" read
+#: as "these are missing" once the prompt/display split let the findings
+#: tail admit far more rows than the model's prompt bounds, and a finding
+#: this note names is now routinely listed in the code-built table below
+#: even though the model's own prose never covered it. The note now says
+#: "are not covered in the summary above", true either way: it never claims
+#: the finding is missing from the whole answer, only that the written
+#: summary did not restate it.
+#:
+#: The comment at the assertion below warns that a fingerprint a grammar fix
+#: can invalidate is testing the wording rather than the control, and that
+#: warning applies to this line as much as to the count it replaced. "not
+#: covered in the summary above" is the clause that states the omission, so
+#: it is the last part of the sentence a rewording would keep; it is still a
+#: phrase rather than a property, which is the residual this comment exists
+#: to flag.
+_INCOMPLETE_NOTE_MARKER = "not covered in the summary above"
 
 # F-4.5-03. Live gene-symbol resolution goes to E-utilities, whose
 # unauthenticated pool is 3 requests per second, and this file fires several
@@ -1591,10 +1616,11 @@ def test_p7b_the_stable_prefix_is_byte_identical_as_session_memory_varies() -> N
     prefix raises nothing, it just re-bills every request at the uncached
     rate.
 
-    Asserted where memory is actually injected, which is Think and Plan, not
-    Synth. `build_synth_messages` takes no memory argument at all, so hashing
-    ITS system block across two memory values would be trivially green and
-    would prove nothing about the two prompts that do carry the block.
+    Asserted where memory is actually injected, which is Think (and Plan,
+    until 2026-09-14), not Synth. `build_synth_messages` takes no memory
+    argument at all, so hashing ITS system block across two memory values
+    would be trivially green and would prove nothing about the prompt that
+    does carry the block.
 
     The messages are the real ones the two nodes assembled, captured at
     `_dispatch_tier_call` and then aborted, so nothing reaches a network.
@@ -1624,7 +1650,11 @@ def test_p7b_the_stable_prefix_is_byte_identical_as_session_memory_varies() -> N
         last_updated=_now(),
     )
 
-    for step in ("think", "plan"):
+    # Think only since 2026-09-14: the speed fix deleted `plan_node`'s
+    # discarded Plan-tier call, the prompt this arm used to capture for
+    # "plan". Plan's use of memory is now `_memory_curies` in code, with no
+    # prompt and therefore no prefix to keep byte-identical.
+    for step in ("think",):
         without = asyncio.run(_step_messages_for(step, None))
         with_memory = asyncio.run(_step_messages_for(step, memory))
 
@@ -1849,6 +1879,19 @@ _MEMORY_READERS_ALLOWED = {
     # `write_node`, because memory must never become a citable source.
     "think_node",
     "plan_node",
+    # Added 2026-09-13 (UI fix set 7, item 7.1): the guardrail reads memory
+    # through `_is_memory_bound_follow_up`, a deterministic rule that sets
+    # aside an OFF-TOPIC verdict on a pronoun follow-up when the session has
+    # resolved an entity. Nothing from memory enters the guard PROMPT (two
+    # cuts that injected a block were measured destabilising the model).
+    # The two forbidden steps are unchanged, and the two assertions below
+    # still hold that neither `act_node` nor `write_node` reads memory.
+    "guardrail_node",
+    "_is_memory_bound_follow_up",
+    # Item 7.5 (2026-09-13): Think asks a clarifying question only when no
+    # remembered antecedent exists, so the rule must read memory; it reads
+    # the same accessor Plan's binding reads and injects nothing.
+    "_needs_clarification",
     # The helpers, which are the memory accessors themselves.
     "_memory_curies",
     "_memory_suffix",
@@ -1973,7 +2016,11 @@ def test_p10_memory_is_never_injected_into_the_act_or_write_step() -> None:
         "was removed or this walk has stopped seeing the real call sites and "
         f"the assertion above is vacuous. sites={sorted(sites)}"
     )
-    assert "_memory_suffix" in sites.get("plan_node", set()), (
+    # Since 2026-09-14 (the speed fix) plan_node makes no model call, so it
+    # no longer renders memory into a prompt through `_memory_suffix`; it
+    # reads memory in code, through `_memory_curies` (and `_session_memory`
+    # for the remembered mention), which is the site this control pins now.
+    assert sites.get("plan_node", set()) & {"_memory_curies", "_session_memory"}, (
         "plan_node no longer reads session memory, so either the feature was "
         "removed or this walk has stopped seeing the real call sites and the "
         f"assertion above is vacuous. sites={sorted(sites)}"

@@ -72,13 +72,13 @@ export const STUB_REGISTRY: StubEntry[] = [
   {
     surface: "guest-allowance",
     rendersToday:
-      "REAL as of build phase 4.10 (T-4.10-08): an anonymous visitor mints a " +
-      "guest identity on the first question asked, gets a real, server-counted " +
-      "five-search allowance (guest_sessions.runs_used, spent by one atomic " +
-      "UPDATE), and the five dots render that server count, never a client " +
-      "guess. The sign-in wall now appears only when the server refuses a run " +
-      "with the reason guest_allowance_exhausted, never merely because the " +
-      "visitor has no account. What is NOT real yet: durable history across a " +
+      "REMOVED in set 1 (2026-09-12, testing/UI_fix_plan.md): there is no " +
+      "guest allowance, no dots and no sign-in wall. An anonymous visitor still " +
+      "mints a guest identity on the first question asked, and the server still " +
+      "counts its runs, but only the shared anonymous daily cap and the " +
+      "per-connection share can refuse one; the landing states either in words. " +
+      "Build phase 4.10 history: a five-search allowance with dots and a wall. " +
+      "What is NOT real yet: durable history across a " +
       "reload. Nothing persists a run today (the run registry is in-memory and " +
       "evicts, and the browser's history list is React state); signing in " +
       "while holding a guest token re-points that guest's LIVE runs to the new " +
@@ -101,7 +101,18 @@ export const STUB_REGISTRY: StubEntry[] = [
   },
   {
     surface: "kgx-export",
-    rendersToday: "A request button that acknowledges and does nothing.",
+    rendersToday:
+      "REAL as of build phase 4.4 (T-4.4-01, s3-kgx-export): the integrations " +
+      "page card names it correctly as a batch command over the existing Layer " +
+      "1 graph, never a live endpoint, and its code block is the actual " +
+      "`s3-kgx-export` invocation, copyable with the card's own copy control " +
+      "(T-6.2-09). There never was a request button here that acknowledged and " +
+      "did nothing; F-6.2-09 traced that description to production lagging " +
+      "develop by a release, not to a defect in this code. What is honestly " +
+      "NOT offered, by design: no download button and no in-browser 'try it' " +
+      "console, because KGX export has no HTTP route to call. Advertising one " +
+      "would repeat the exact fabricated-endpoint failure T-4.16-04 already " +
+      "found and removed.",
     wiredBy: "4.4",
     realSource:
       "The KGX export utility, specified as a batch job over the existing " +

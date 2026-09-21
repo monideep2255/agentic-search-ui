@@ -23,6 +23,18 @@ import { login, signup } from "../../lib/api";
 const loginMock = vi.mocked(login);
 const signupMock = vi.mocked(signup);
 
+const TOKENS = { access_token: "test-token", refresh_token: "test-refresh", token_type: "bearer" };
+const EMAIL_TAKEN = new ApiError(409, "signup failed with 409: email already registered");
+
+async function fillAndSubmit(email: string, password: string) {
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText(/email/i), email);
+  await user.type(screen.getByLabelText(/password/i), password);
+  await user.click(screen.getByRole("button", { name: /^log in$/i }));
+}
+
+// Set 1, R5 and X3 (2026-09-12): one Log in button. It tries signup first,
+// so a new email creates the account and a registered email logs in.
 describe("AuthGate", () => {
   beforeEach(() => {
     loginMock.mockReset();
@@ -33,79 +45,115 @@ describe("AuthGate", () => {
     vi.restoreAllMocks();
   });
 
-  it("disables both buttons until an email and a password are entered", () => {
+  it("offers one Log in button and no Sign up button, disabled until both fields are filled", () => {
     render(<AuthGate onAuthenticated={vi.fn()} />);
 
     expect(screen.getByRole("button", { name: /^log in$/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /^sign up$/i })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /sign up/i })).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
-  it("logs in and calls onAuthenticated with the access token on success", async () => {
-    loginMock.mockResolvedValue({
-      access_token: "test-token",
-      refresh_token: "test-refresh",
-      token_type: "bearer",
-    });
-    const user = userEvent.setup();
+  it("creates the account for a new email, then logs in without resending the guest token", async () => {
+    signupMock.mockResolvedValue({ id: "user-1", email: "new@example.com" });
+    loginMock.mockResolvedValue(TOKENS);
     const onAuthenticated = vi.fn();
 
-    render(<AuthGate onAuthenticated={onAuthenticated} />);
-    await user.type(screen.getByLabelText(/email/i), "person@example.com");
-    await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
-    await user.click(screen.getByRole("button", { name: /^log in$/i }));
+    render(<AuthGate onAuthenticated={onAuthenticated} guestToken="guest-abc" />);
+    await fillAndSubmit("new@example.com", "correct horse battery staple");
 
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
-    expect(loginMock).toHaveBeenCalledWith({
-      email: "person@example.com",
-      password: "correct horse battery staple",
-    });
-    expect(signupMock).not.toHaveBeenCalled();
-  });
-
-  it("signs up, then logs in with the same credentials, and calls onAuthenticated with the access token", async () => {
-    signupMock.mockResolvedValue({ id: "user-1", email: "person@example.com" });
-    loginMock.mockResolvedValue({
-      access_token: "test-token",
-      refresh_token: "test-refresh",
-      token_type: "bearer",
-    });
-    const user = userEvent.setup();
-    const onAuthenticated = vi.fn();
-
-    render(<AuthGate onAuthenticated={onAuthenticated} />);
-    await user.type(screen.getByLabelText(/email/i), "person@example.com");
-    await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
-    await user.click(screen.getByRole("button", { name: /^sign up$/i }));
-
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
+    await waitFor(() =>
+      expect(onAuthenticated).toHaveBeenCalledWith(
+        "test-token",
+        "new@example.com",
+        "test-refresh",
+      ),
+    );
     expect(signupMock).toHaveBeenCalledWith({
-      email: "person@example.com",
+      email: "new@example.com",
       password: "correct horse battery staple",
+      guest_token: "guest-abc",
     });
+    // Signup already migrated the guest session, so login carries none.
     expect(loginMock).toHaveBeenCalledWith({
-      email: "person@example.com",
+      email: "new@example.com",
       password: "correct horse battery staple",
     });
   });
 
-  it("shows a fixed, generic error on a failed login, without crashing and without ever rendering the raw backend response", async () => {
-    loginMock.mockRejectedValue(new ApiError(401, "login failed with 401: invalid email or password"));
-    const user = userEvent.setup();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  // Fix set 4, requirement R46 (decision U8): the refresh token is what
+  // keeps the account signed in across a reload, and this component is the
+  // only place it is ever in hand.
+  it("hands the parent the refresh token from the login response, not only the access token", async () => {
+    // Mutation: calling `onAuthenticated(result.access_token, email)` with
+    // the third argument dropped, or passing `result.access_token` twice,
+    // turns this red. Both are how a reload started signing people out.
+    signupMock.mockRejectedValue(EMAIL_TAKEN);
+    loginMock.mockResolvedValue({
+      access_token: "access-xyz",
+      refresh_token: "refresh-xyz",
+      token_type: "bearer",
+    });
+    const onAuthenticated = vi.fn();
+
+    render(<AuthGate onAuthenticated={onAuthenticated} />);
+    await fillAndSubmit("person@example.com", "correct horse battery staple");
+
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalled());
+    const [access, email, refresh] = onAuthenticated.mock.calls[0] as [string, string, string];
+    expect(access).toBe("access-xyz");
+    expect(email).toBe("person@example.com");
+    expect(refresh).toBe("refresh-xyz");
+    expect(refresh).not.toBe(access);
+  });
+
+  it("logs a registered email in when signup answers 409, carrying the guest token on login", async () => {
+    signupMock.mockRejectedValue(EMAIL_TAKEN);
+    loginMock.mockResolvedValue(TOKENS);
+    const onAuthenticated = vi.fn();
+
+    render(<AuthGate onAuthenticated={onAuthenticated} guestToken="guest-abc" />);
+    await fillAndSubmit("person@example.com", "correct horse battery staple");
+
+    await waitFor(() =>
+      expect(onAuthenticated).toHaveBeenCalledWith(
+        "test-token",
+        "person@example.com",
+        "test-refresh",
+      ),
+    );
+    expect(loginMock).toHaveBeenCalledWith({
+      email: "person@example.com",
+      password: "correct horse battery staple",
+      guest_token: "guest-abc",
+    });
+  });
+
+  it("omits guest_token from both calls for a visitor who never held a guest session", async () => {
+    signupMock.mockRejectedValue(EMAIL_TAKEN);
+    loginMock.mockResolvedValue(TOKENS);
 
     render(<AuthGate onAuthenticated={vi.fn()} />);
-    await user.type(screen.getByLabelText(/email/i), "person@example.com");
-    await user.type(screen.getByLabelText(/password/i), "wrong-password");
-    await user.click(screen.getByRole("button", { name: /^log in$/i }));
+    await fillAndSubmit("person@example.com", "pw");
+
+    await waitFor(() => expect(loginMock).toHaveBeenCalled());
+    expect(signupMock).toHaveBeenCalledWith({ email: "person@example.com", password: "pw" });
+    expect(loginMock).toHaveBeenCalledWith({ email: "person@example.com", password: "pw" });
+  });
+
+  it("says the password does not match on a 401, and never renders or logs the raw backend response", async () => {
+    signupMock.mockRejectedValue(EMAIL_TAKEN);
+    loginMock.mockRejectedValue(new ApiError(401, "login failed with 401: invalid email or password"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onAuthenticated = vi.fn();
+
+    render(<AuthGate onAuthenticated={onAuthenticated} />);
+    await fillAndSubmit("person@example.com", "wrong-password");
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/could not log in/i);
-    // The raw ApiError message ("invalid email or password", the backend's
-    // own uniform anti-enumeration string) never reaches the DOM, even
-    // though it happens to be safe text today; only the fixed sentence
-    // above does.
+    expect(alert).toHaveTextContent(/password does not match this email/i);
     expect(alert).not.toHaveTextContent(/invalid email or password/i);
     expect(alert).not.toHaveTextContent("wrong-password");
+    expect(onAuthenticated).not.toHaveBeenCalled();
 
     // Logged for operator visibility (status only), never with the
     // password or the raw caught error's message.
@@ -116,50 +164,56 @@ describe("AuthGate", () => {
     expect(loggedArgs).toContain("401");
   });
 
-  it("shows a fixed, generic error on a failed signup, and never falls through to login", async () => {
-    signupMock.mockRejectedValue(new ApiError(409, "signup failed with 409: email already registered"));
-    const user = userEvent.setup();
+  it("asks for a valid email on a 422, and does not try to log in", async () => {
+    signupMock.mockRejectedValue(new ApiError(422, "signup failed with 422"));
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
     render(<AuthGate onAuthenticated={vi.fn()} />);
-    await user.type(screen.getByLabelText(/email/i), "person@example.com");
-    await user.type(screen.getByLabelText(/password/i), "some-password");
-    await user.click(screen.getByRole("button", { name: /^sign up$/i }));
+    await fillAndSubmit("not-an-email", "pw");
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/could not create that account/i);
-    expect(alert).not.toHaveTextContent(/email already registered/i);
+    expect(alert).toHaveTextContent(/enter a valid email address/i);
     expect(loginMock).not.toHaveBeenCalled();
   });
 
-  it("disables both buttons while a request is in flight, and calls onAuthenticated once it resolves", async () => {
+  it("shows a connection message for any other failure", async () => {
+    signupMock.mockRejectedValue(new ApiError(500, "signup failed with 500"));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    render(<AuthGate onAuthenticated={vi.fn()} />);
+    await fillAndSubmit("person@example.com", "pw");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/could not log in right now/i);
+    expect(loginMock).not.toHaveBeenCalled();
+  });
+
+  it("disables the button while a request is in flight, and calls onAuthenticated once it resolves", async () => {
+    signupMock.mockRejectedValue(EMAIL_TAKEN);
     let resolveLogin: (() => void) | undefined;
     loginMock.mockReturnValue(
       new Promise((resolve) => {
-        resolveLogin = () =>
-          resolve({ access_token: "test-token", refresh_token: "test-refresh", token_type: "bearer" });
+        resolveLogin = () => resolve(TOKENS);
       }),
     );
-    const user = userEvent.setup();
     const onAuthenticated = vi.fn();
 
     render(<AuthGate onAuthenticated={onAuthenticated} />);
-    await user.type(screen.getByLabelText(/email/i), "person@example.com");
-    await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
-    await user.click(screen.getByRole("button", { name: /^log in$/i }));
+    await fillAndSubmit("person@example.com", "correct horse battery staple");
 
-    const pendingButtons = screen.getAllByRole("button", { name: /working/i });
-    expect(pendingButtons).toHaveLength(2);
-    pendingButtons.forEach((button) => expect(button).toBeDisabled());
+    const pending = await screen.findByRole("button", { name: /working/i });
+    expect(pending).toBeDisabled();
     expect(onAuthenticated).not.toHaveBeenCalled();
 
-    // On success this component intentionally never resets `pending`
-    // itself (see the component's own docstring): the parent stops
-    // rendering `AuthGate` once it holds a token, so there is nothing left
-    // to reset. The observable contract from here is that
-    // `onAuthenticated` fires with the token, not that the buttons
-    // re-enable in place.
+    // On success this component intentionally never resets `pending`: the
+    // parent stops rendering `AuthGate` once it holds a token.
     resolveLogin?.();
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
+    await waitFor(() =>
+      expect(onAuthenticated).toHaveBeenCalledWith(
+        "test-token",
+        "person@example.com",
+        "test-refresh",
+      ),
+    );
   });
 });

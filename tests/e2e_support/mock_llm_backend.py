@@ -17,7 +17,10 @@ Depends on:
 Reads:
     - Environment: PORT (backend listen port, default 8931), everything
       listed in `_ENV_DEFAULTS` below (only set if not already present in
-      the environment, so a caller can still override any of them).
+      the environment, so a caller can still override any of them),
+      S3_E2E_REAL_MODEL (the opt-in real-model flag, see below).
+    - The repository root `.env` file, ONLY when S3_E2E_REAL_MODEL=1, and
+      never overriding a value already present in the environment.
 
 Writes:
     - Nothing. This process holds no state beyond what `run_registry`
@@ -56,7 +59,65 @@ enforcement, the LangGraph loop itself), stays completely real. Only the
 one network call that would otherwise leave this machine is faked.
 
 ---------------------------------------------------------------------------
+THE OPT-IN REAL-MODEL MODE (S3_E2E_REAL_MODEL=1), FIX SET 6 ITEM 6.1
+---------------------------------------------------------------------------
+Everything above describes the DEFAULT mode, and the default does not
+change. Fix-set-6 requirement D3 names the gap the default leaves behind:
+because the outbound model call is faked, no automated run in this
+repository has ever asserted on a REAL answer body. The graph has been real
+for a while (Layer 1 goes over HTTPS whenever GRAPH_QUERY_URL and
+GRAPH_QUERY_TOKEN are set), so the model was the last faked half, and the
+answer fixes arriving in fix sets 7 to 10 could only be checked by hand.
+
+Setting S3_E2E_REAL_MODEL=1 changes exactly three things and nothing else:
+
+- The repository root `.env` is loaded into the process environment,
+  WITHOUT overriding anything already set, so the real provider key, the
+  real tier model ids and the real graph pair are present. The ordinary
+  suite never reads `.env`, and that stays true.
+- The model fakes are not installed. `_patch_litellm` is skipped, so
+  `litellm.acompletion` is the real one and every guard, think, plan and
+  write call leaves this machine.
+- The fake-path env defaults that only exist to force the fake path are not
+  applied (see `_REAL_MODEL_EXCLUDED_DEFAULTS`).
+
+Every other extension this file makes stays: the CORS middleware, the
+`/__e2e__/run_status` route, the user-database reachability probe, and the
+remaining env defaults.
+
+WHY THIS IS OPT-IN AND MUST NEVER BECOME THE DEFAULT. Three reasons, each
+sufficient on its own:
+
+- It spends real money. Four real model calls per query, on the synth tier
+  for the answer itself, against the per-query cost cap read from `.env`.
+- It reaches the public internet. The provider, the graph query service and
+  (through the agent's own tools) live NCBI endpoints. A suite that does
+  that on every run is a suite that trips somebody else's rate limit, and
+  `tool-call-budgets.md` forbids exactly that.
+- It is not deterministic. A real answer differs run to run, so it can
+  only be asserted on by SHAPE, never by content. Every existing spec in
+  `frontend/e2e/` depends on the fixed fake response and would become
+  flaky the moment this mode became the default.
+
+HOW A MISCONFIGURED RUN FAILS. Loudly, at startup, before the port is
+bound: `_missing_real_model_env` checks each variable this mode genuinely
+needs and `main` exits non-zero naming the missing VARIABLE NAMES. No
+value of any variable is ever printed, here or anywhere in this file
+(`ai-security-standards.md`). The alternative, starting anyway, produces a
+run that fails four calls deep with a provider error, which reads like a
+product defect and is not one.
+
+HOW A CALLER PROVES THE MODE IS ACTUALLY ON. `/__e2e__/mode` reports
+`{"model": "real"}` or `{"model": "fake"}`. This route exists because
+`playwright.config.ts` sets `reuseExistingServer`, so a mock backend
+already listening on the port is silently REUSED: without an out-of-band
+answer, a real-model spec would run against the fake backend and pass,
+which is the worst available outcome. The route is added in both modes, so
+it cannot itself be the thing that is missing.
+
+---------------------------------------------------------------------------
 WHY PER_QUERY_COST_CAP_USD IS SET TO 0.02, NOT A GENEROUS VALUE
+(DEFAULT MODE ONLY: not applied when S3_E2E_REAL_MODEL=1)
 ---------------------------------------------------------------------------
 This is the least obvious design choice in this file, so it is spelled out
 in full rather than left to be reverse-engineered from a magic number.
@@ -267,9 +328,105 @@ _ENV_DEFAULTS = {
 }
 
 
-def _apply_env_defaults() -> None:
+#: The flag that opts a run into the real model. Exactly the string "1", not
+#: any truthy value: an opt-in that also fires on "0" or "false" is not an
+#: opt-in.
+_REAL_MODEL_ENV_FLAG = "S3_E2E_REAL_MODEL"
+
+#: Defaults from `_ENV_DEFAULTS` that real-model mode must NOT apply, with the
+#: reason per entry rather than as one blanket claim:
+#:
+#: - The three tier model ids are fake provider strings. Applying them would
+#:   send every real call to a provider route that does not exist, AND would
+#:   make `_missing_real_model_env`'s check on those three names vacuous,
+#:   since the names would always be present by this file's own hand. A gate
+#:   arm that cannot distinguish a configured tier from an unconfigured one is
+#:   not an arm (build phase 4.11's populate-check lesson).
+#: - `PER_QUERY_COST_CAP_USD=0.02` exists solely to force the cap-exceeded
+#:   code path that emits a `token` event under the fake response's fixed
+#:   token counts. Under a real model it would trip before the synth call and
+#:   there would be no answer at all.
+_REAL_MODEL_EXCLUDED_DEFAULTS = frozenset(
+    {"GUARD_MODEL", "PLAN_MODEL", "SYNTH_MODEL", "PER_QUERY_COST_CAP_USD"}
+)
+
+#: The variables real-model mode genuinely cannot run without. Each one was
+#: established by reading the code that consumes it, not assumed:
+#:
+#: - GUARD_MODEL, PLAN_MODEL, SYNTH_MODEL: `harness/tiers.py`'s
+#:   `resolve_model` reads one per tier and falls back to a `_DEFAULT_MODELS`
+#:   entry, so an unset tier does not raise. It is still required here,
+#:   because a real-answer check must run against the models this repository
+#:   is actually configured for, not against whichever ids happen to be
+#:   compiled in as a fallback.
+#: - OPENROUTER_API_KEY: the product's model provider. `harness/harness.py`
+#:   calls `openrouter/<model_id>` through LiteLLM, which reads the key from
+#:   the environment itself, so nothing in this repository names it at a call
+#:   site; `env.example`'s harness section and `tracker/preflight.py`'s
+#:   product-model probe are what identify it.
+#: - GRAPH_QUERY_URL, GRAPH_QUERY_TOKEN: the read-only HTTPS graph query
+#:   service (`tools/graph_connection.py`, build phase 4.11). Without the
+#:   pair, Layer 1 is unreachable and an answer has nothing to cite.
+#: - PER_QUERY_COST_CAP_USD: there is no app-side default to fall back on.
+#:   `harness/cost_control.py`'s `_read_float_env` RAISES when the variable is
+#:   unset, so an absent cap is not a generous cap, it is a 500 at the guard
+#:   step.
+_REAL_MODEL_REQUIRED_ENV = (
+    "GUARD_MODEL",
+    "PLAN_MODEL",
+    "SYNTH_MODEL",
+    "OPENROUTER_API_KEY",
+    "GRAPH_QUERY_URL",
+    "GRAPH_QUERY_TOKEN",
+    "PER_QUERY_COST_CAP_USD",
+)
+
+
+def real_model_mode_enabled() -> bool:
+    """Whether this process should reach a real model provider."""
+    return os.environ.get(_REAL_MODEL_ENV_FLAG) == "1"
+
+
+def _apply_env_defaults(*, real_model: bool = False) -> None:
     for key, value in _ENV_DEFAULTS.items():
+        if real_model and key in _REAL_MODEL_EXCLUDED_DEFAULTS:
+            continue
         os.environ.setdefault(key, value)
+
+
+def _load_repo_dotenv() -> bool:
+    """Load the repository root `.env` without overriding the environment.
+
+    Returns True when a file was found and read, False when there is none.
+
+    `override=False` is the load-bearing argument. Playwright hands this
+    process its own PORT, and a caller may hand it anything else; a `.env`
+    that won over an explicit environment value would silently move the
+    backend off the port the suite is waiting on.
+
+    python-dotenv is a declared dependency of this project (`pyproject.toml`),
+    so this uses it rather than hand-rolling a parser that would have to get
+    quoting, comments and blank lines right on its own.
+    """
+    dotenv_path = _REPO_ROOT / ".env"
+    if not dotenv_path.is_file():
+        return False
+
+    from dotenv import load_dotenv
+
+    load_dotenv(dotenv_path, override=False)
+    return True
+
+
+def _missing_real_model_env() -> list[str]:
+    """Names of the required real-model variables that are unset or blank.
+
+    Names only. A value is never returned, printed or logged from this
+    module (`ai-security-standards.md`).
+    """
+    return [
+        name for name in _REAL_MODEL_REQUIRED_ENV if not (os.environ.get(name) or "").strip()
+    ]
 
 
 # A query's own text opts into an artificial per-call delay by containing
@@ -317,6 +474,33 @@ _GUARD_ADMIT_JSON = (
 )
 
 
+#: Think's own structured contract, added 2026-09-05. `_ThinkClassification`
+#: (`core/graph.py:981`) is `extra="forbid"`, so this carries exactly its three
+#: fields and nothing else.
+#:
+#: `entities` is deliberately EMPTY rather than naming a gene. A populated
+#: entity list sends `think_node` on to live NCBI confirmation, and this backend
+#: exists precisely so a run touches no network. An empty list keeps the run
+#: offline and deterministic, at the cost of never exercising the resolution
+#: path, which is stated here rather than left for a reader to discover.
+_THINK_CLASSIFICATION_JSON = (
+    '{"query_class": "lookup", '
+    '"narrative": "Classified as a lookup with no entities to resolve.", '
+    '"entities": []}'
+)
+
+
+def _looks_like_think_call(blob: str) -> bool:
+    """Whether this call is `think_node`'s query-shape classification.
+
+    Matched on the prompt's own marker, the literal `query_class` it asks the
+    model to return (`core/graph.py:1068`), for the same reason
+    `_looks_like_guard_call` matches on `is_injection`: this helper replaces
+    `litellm.acompletion` and never sees which tier the harness resolved.
+    """
+    return "query_class" in blob.lower()
+
+
 def _looks_like_guard_call(blob: str) -> bool:
     """Whether this call is the guardrail's own classification request.
 
@@ -352,6 +536,30 @@ async def _fake_acompletion(*_args: object, **kwargs: object):
     The lesson worth keeping: a test double is a contract with the code it
     stands in for, and changing that contract without updating the double
     leaves a suite that cannot pass. A suite that cannot RUN hides it.
+
+    THE SAME FAILURE THEN HAPPENED AGAIN, ONE STEP LATER IN THIS FILE, and it
+    is recorded here rather than quietly repaired because the recurrence is
+    more interesting than either instance. Build phase 4.7 gave `think_node` a
+    strict JSON classification contract exactly as build phase 3.0 had given
+    one to the guard, and this double was again not updated, so from 4.7 until
+    2026-09-05 every real run through this backend died at the THINK step with
+    "the plan tier did not return valid JSON for query classification". The
+    paragraph above, stating the lesson, was already sitting in this docstring
+    the whole time.
+
+    WHAT HID IT IS THE PART WORTH CARRYING FORWARD. The suite ran and looked
+    healthy, because most specs assert on things that are present whether or
+    not a run produces an answer: `second-turn.spec.ts` checks that the
+    follow-up field is visible, and the answer screen renders that field on a
+    failed run too. Only `query-stream-and-stop.spec.ts`'s answer assertion
+    actually required a completed run, and it was the single failure everyone
+    read as flake. A green suite meant "the interface renders", never "the
+    agent answers".
+
+    There was a second, quieter consequence: because the run ended having
+    produced nothing, `run_registry` REFUNDED the guest's answer allowance on
+    every attempt, so the five-answer wall could not be reached by any real run
+    and could not be tested at all.
     """
     messages = kwargs.get("messages", [])
     blob = " ".join(
@@ -363,6 +571,8 @@ async def _fake_acompletion(*_args: object, **kwargs: object):
         await asyncio.sleep(_SLOW_QUERY_DELAY_S)
     if _looks_like_guard_call(blob):
         return _fake_response(_GUARD_ADMIT_JSON)
+    if _looks_like_think_call(blob):
+        return _fake_response(_THINK_CLASSIFICATION_JSON)
     return _fake_response()
 
 
@@ -377,7 +587,18 @@ def _patch_litellm() -> None:
     harness_module.litellm.get_model_info = _fake_get_model_info
 
 
-def _build_app():
+def mode_payload(*, real_model: bool) -> dict[str, str]:
+    """The body `/__e2e__/mode` answers with.
+
+    A separate function, not an inline expression, so both arms can be pinned
+    by a unit test. `_build_app` extends the ONE module-level `app` object and
+    Starlette refuses `add_middleware` once that app has served a request, so
+    a test cannot build a second app to see the other arm over HTTP.
+    """
+    return {"model": "real" if real_model else "fake"}
+
+
+def _build_app(*, real_model: bool = False):
     from fastapi.middleware.cors import CORSMiddleware
 
     from system_03_search_agent.adapters.web_sse.app import app
@@ -409,12 +630,44 @@ def _build_app():
             "task_cancelled": entry.task.cancelled(),
         }
 
+    # See this module's docstring, "HOW A CALLER PROVES THE MODE IS ACTUALLY
+    # ON". Reports the mode this process was BUILT with, so a spec that
+    # reached a reused backend from an earlier run gets the earlier run's
+    # answer rather than the flag it set itself.
+    @app.get("/__e2e__/mode")
+    async def _e2e_mode() -> dict[str, str]:
+        return mode_payload(real_model=real_model)
+
     return app
 
 
 def main() -> None:
-    _apply_env_defaults()
+    real_model = real_model_mode_enabled()
+    if real_model:
+        _load_repo_dotenv()
+    _apply_env_defaults(real_model=real_model)
     backend_port = int(os.environ.get("PORT", "8931"))
+
+    # Checked BEFORE the database probe, so a missing model or graph variable
+    # reports itself rather than hiding behind an unrelated database failure.
+    if real_model:
+        missing = _missing_real_model_env()
+        if missing:
+            print(
+                "mock_llm_backend: "
+                f"{_REAL_MODEL_ENV_FLAG}=1 was set, but these environment "
+                "variables are unset or blank: " + ", ".join(missing) + ". Set "
+                "them in the repository root .env (see env.example) before "
+                "running a real-model check.",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
+        print(
+            "mock_llm_backend: model mode REAL "
+            f"({_REAL_MODEL_ENV_FLAG}=1). Outbound model calls reach the "
+            "configured provider, spend real budget and leave this machine.",
+            file=sys.stderr,
+        )
 
     if not _can_connect_to_user_db():
         print(
@@ -427,8 +680,9 @@ def main() -> None:
         )
         raise SystemExit(1)
 
-    _patch_litellm()
-    app = _build_app()
+    if not real_model:
+        _patch_litellm()
+    app = _build_app(real_model=real_model)
 
     import uvicorn
 

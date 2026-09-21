@@ -48,11 +48,20 @@ had not enumerated, fixed only by inverting to an allowlist).
 ## Rate limiting
 
 Per `.claude/rules/tool-call-budgets.md`, the E-utilities requests/second
-ceiling is an unresolved conflict (3 vs 10 vs 100, depending on source) and
-this module deliberately does NOT lock a specific constant into the
-"correct" one. `DEFAULT_EUTILS_REQUESTS_PER_SECOND` is the conservative,
-independently-verified floor (3/s), overridable via `NCBI_EUTILS_RPS`
-without a code change once the real ceiling is confirmed. Datasets v2 and
+ceiling was an unresolved conflict (3 vs 10 vs 100, depending on source)
+and this module shipped with the conservative, independently-verified
+floor (3/s) as its default. Settled 2026-09-14, UI fix set 11 (search
+breadth): the ceiling was read off NCBI's own rate-limit response header
+with the project's `NCBI_API_KEY` present and measured at 10 requests per
+second, and the product owner confirmed locking that figure, which is the
+rule's own "10 requests/second with an API key" row.
+`DEFAULT_EUTILS_REQUESTS_PER_SECOND` is therefore 10.0, still overridable
+via `NCBI_EUTILS_RPS` without a code change. A deployment that runs with
+NO `NCBI_API_KEY` is on NCBI's unauthenticated pool, whose ceiling is 3,
+and must set `NCBI_EUTILS_RPS=3` itself: the default states the
+keyed figure because every deployment of this product carries the key,
+and the bounded fail-fast queue (`RateLimiter`, queue depth 15) is
+unchanged either way. Datasets v2 and
 PubChem get the rule's provisional ~5 req/s throttle for undocumented
 interactive APIs, via `NCBI_DATASETS_RPS` / `NCBI_PUBCHEM_RPS`.
 
@@ -278,6 +287,18 @@ from xml.etree import ElementTree
 
 import httpx
 
+# Imported as a module rather than by name. `execute_get` already has a
+# parameter called `wait_ceiling_s`, so a bare `from ... import
+# wait_ceiling_s` would shadow it, and the alias that avoids the shadowing
+# is the one form isort and ruff disagree about here (build phase 5.0's
+# F-5.0-30 recorded that isort is not idempotent in this repository). The
+# module-qualified call is unambiguous and settles both.
+from system_03_search_agent.harness import call_budget
+from system_03_search_agent.observability.audit import (
+    UNEXPECTED_ERROR_CODE,
+    record_tool_call,
+)
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -287,10 +308,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT_S: Final[float] = 15.0
 DEFAULT_BACKOFF_S: Final[float] = 1.0
 
-# See the module docstring's "Rate limiting" section: this is the
-# conservative, independently-verified floor, not a resolution of the
-# 3-vs-10-vs-100 conflict. Configurable via NCBI_EUTILS_RPS.
-DEFAULT_EUTILS_REQUESTS_PER_SECOND: Final[float] = 3.0
+# See the module docstring's "Rate limiting" section: the keyed E-utilities
+# ceiling, measured from NCBI's own rate-limit header with the project key
+# and confirmed by the product owner on 2026-09-14 (UI fix set 11). Was 3.0,
+# the unauthenticated floor, from build phase 3.1 until then. Configurable
+# via NCBI_EUTILS_RPS; a keyless deployment sets it to 3.
+DEFAULT_EUTILS_REQUESTS_PER_SECOND: Final[float] = 10.0
 # Datasets v2 and PubChem have no published numeric rate limit; both get
 # the rule's provisional ~5 req/s throttle for undocumented interactive
 # HTTPS APIs.
@@ -329,6 +352,21 @@ RateLimitFamily = Literal[
 RATE_LIMIT_FAMILIES: Final[tuple[RateLimitFamily, ...]] = (
     "eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2", "clinicaltrials",
 )
+
+# T-5.0-05: which Section 20.3 data-access layer each family belongs to
+# (system-design-patterns.md pattern 3). "eutils", "datasets", "pubchem"
+# and "variation" are NCBI's own on-demand APIs (Layer 2); "pubtator",
+# "litvar2" and "clinicaltrials" are the non-NCBI-or-enrichment services
+# named Layer 3 in the three-layer architecture doc.
+_LAYER_BY_FAMILY: Final[dict[str, int]] = {
+    "eutils": 2,
+    "datasets": 2,
+    "pubchem": 2,
+    "variation": 2,
+    "pubtator": 3,
+    "litvar2": 3,
+    "clinicaltrials": 3,
+}
 
 _ENV_NCBI_API_KEY: Final[str] = "NCBI_API_KEY"
 
@@ -389,6 +427,47 @@ class TransportRateLimitedError(TransportError):
         super().__init__(message)
         self.family = family
         self.retry_after = retry_after
+
+
+#: Maps this module's typed TransportError family onto
+#: `audit.AUDIT_ERROR_CODES`. Every member of the family is defined in this
+#: file, so unlike `graph_connection`'s equivalent this one binds class
+#: OBJECTS: there is no circular import to route around, and a class object
+#: cannot be defeated by a rename the way a name string can.
+#:
+#: The base `TransportError` maps to `unexpected` on purpose. It is the
+#: catch-all, so a NEW direct subclass added without a row here inherits
+#: `unexpected` by MRO rather than leaking anything, and `test_audit.py`'s
+#: enumerating arm turns red because it asserts every direct subclass maps
+#: to something other than the catch-all.
+_AUDIT_ERROR_CODE_BY_CLASS: dict[type[BaseException], str] = {
+    TransportTimeoutError: "timeout",
+    TransportConnectionError: "connection",
+    TransportRateLimitedError: "rate_limited",
+    TransportError: UNEXPECTED_ERROR_CODE,
+}
+
+
+def audit_error_code(exc: BaseException) -> str:
+    """Classify one exception into the audit log's closed vocabulary.
+
+    Walks the MRO so a subclass of an already-mapped error inherits its
+    parent's code rather than falling to the catch-all.
+
+    Anything that is not a `TransportError`, an `httpx` exception that
+    escaped `_execute_with_retry`'s own classification, or a failure while
+    building the client, returns `unexpected`. That fail-closed branch is
+    why `execute_get`'s `except Exception` needs no provenance argument:
+    whatever arrives, the audit line records a code chosen here rather
+    than anything derived from the exception's message, which for this
+    module is the one place a URL carrying `_append_api_key`'s appended
+    credential could otherwise have appeared.
+    """
+    for klass in type(exc).__mro__:
+        code = _AUDIT_ERROR_CODE_BY_CLASS.get(klass)
+        if code is not None:
+            return code
+    return UNEXPECTED_ERROR_CODE
 
 
 @dataclass(frozen=True)
@@ -1131,6 +1210,20 @@ def _host_of(url: str) -> str:
     return urllib.parse.urlparse(url).hostname or "unknown-host"
 
 
+def _endpoint_for_audit(url: str) -> str:
+    """Host plus path for an audit line, per F-5.0-08. Never the query string.
+
+    `_host_of` alone drops the path, and the path is useful diagnostic
+    context that carries no secret of its own; only the query string can
+    carry `_append_api_key`'s appended credential, so this stops at the
+    path and goes no further. `redact_params` in `observability/audit.py`
+    is a second, independent layer against the same leak; this is the
+    first and the one this ticket is directly responsible for.
+    """
+    parsed = urllib.parse.urlparse(url)
+    return (parsed.hostname or "unknown-host") + (parsed.path or "")
+
+
 async def execute_get(
     base_url: str,
     params: Mapping[str, Any],
@@ -1202,25 +1295,94 @@ async def execute_get(
         url = base_url
 
     limiter = get_rate_limiter(family)
-    effective_ceiling = wait_ceiling_s if wait_ceiling_s is not None else timeout_s
+    # T-6.0-02, Section 21.4: "The queue reads the caller's remaining
+    # per-step time budget rather than applying one constant across every
+    # query class." Resolution order, most specific first:
+    #
+    #   1. An explicit `wait_ceiling_s` from the caller. Unchanged, and it
+    #      still wins, because a caller that names a ceiling knows something
+    #      this function does not (`ncbi_coordinate_overlap` splits one
+    #      budget across a two-step traversal).
+    #   2. The running query's own class budget, when a query scope is bound.
+    #      This is the branch Section 21.4 describes and the branch that did
+    #      not exist before this ticket.
+    #   3. `timeout_s`, the per-call default. Reached only outside a query,
+    #      which is exactly where there is no query class to read.
+    #
+    # Step 2 is what makes a lookup fail fast against a saturated pool while
+    # a deep-research query waits. Before it, every class took step 3 and
+    # got the identical ceiling, which is the "one constant" 21.4 rules out.
+    effective_ceiling = wait_ceiling_s
+    if effective_ceiling is None:
+        effective_ceiling = call_budget.wait_ceiling_s()
+    if effective_ceiling is None:
+        effective_ceiling = timeout_s
 
-    if client is not None:
-        return await _execute_with_retry(
-            client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
-            sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
-            time_fn=time_fn,
+    # T-5.0-05: this is one of the three transport chokepoints (audit.py's
+    # module docstring, tracker/phase_5.0.md finding one), so it and not
+    # `act_node` is where every Layer 2/Layer 3 HTTPS access, including the
+    # five call sites that bypass `act_node` entirely, gets its one audit
+    # line. Timed around the actual await only, per this ticket's
+    # instruction, never around URL/query-string assembly above.
+    audit_started = time_fn()
+    try:
+        if client is not None:
+            response = await _execute_with_retry(
+                client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
+                sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
+                time_fn=time_fn,
+            )
+        else:
+            # No caller-supplied client: build one scoped to exactly this
+            # call, bound to whichever event loop is running THIS await, and
+            # close it before returning. Never stored at module level, so no
+            # later call from a different loop can ever inherit it.
+            async with httpx.AsyncClient() as fresh_client:
+                response = await _execute_with_retry(
+                    fresh_client, url, family=family, timeout_s=timeout_s,
+                    backoff_s=backoff_s, sleep_fn=sleep_fn, limiter=limiter,
+                    wait_budget_s=effective_ceiling, time_fn=time_fn,
+                )
+    except Exception as exc:
+        # `record_tool_call` never raises (best-effort by its own contract),
+        # so this is not wrapped in a second try/except here; the audit line
+        # is written and then the real failure propagates unchanged.
+        record_tool_call(
+            tool="ncbi_transport:" + family,
+            layer=_LAYER_BY_FAMILY.get(family, 2),
+            endpoint=_endpoint_for_audit(url),
+            latency_ms=(time_fn() - audit_started) * 1000,
+            authorization="ncbi_api_key" if include_api_key else "none",
+            # `params` is the caller-supplied dict, never the built query
+            # string, so it never carries the api_key `_append_api_key`
+            # appends separately from `params`. `redact_params` still
+            # applies its own key-name and value-scanning rules on top.
+            params=dict(params),
+            http_status=None,
+            # Classified, never stringified. `str(exc)` used to go here.
+            # `_host_of` keeps this module's OWN diagnostics free of the
+            # api_key `_append_api_key` appends, but an exception raised
+            # by httpx or by any future caller is not bound by that
+            # convention, and `except Exception` is bounded by nothing. A
+            # code from a closed vocabulary plus a class name are both
+            # chosen by this repository's own code, so neither can carry
+            # a URL, a query string, or a response body at all.
+            error_code=audit_error_code(exc),
+            error_class=type(exc).__name__,
         )
-
-    # No caller-supplied client: build one scoped to exactly this call,
-    # bound to whichever event loop is running THIS await, and close it
-    # before returning. Never stored at module level, so no later call
-    # from a different loop can ever inherit it.
-    async with httpx.AsyncClient() as fresh_client:
-        return await _execute_with_retry(
-            fresh_client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
-            sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
-            time_fn=time_fn,
-        )
+        raise
+    record_tool_call(
+        tool="ncbi_transport:" + family,
+        layer=_LAYER_BY_FAMILY.get(family, 2),
+        endpoint=_endpoint_for_audit(url),
+        latency_ms=(time_fn() - audit_started) * 1000,
+        authorization="ncbi_api_key" if include_api_key else "none",
+        params=dict(params),
+        http_status=response.status_code,
+        error_code=None,
+        error_class=None,
+    )
+    return response
 
 
 async def _execute_with_retry(
@@ -1281,6 +1443,24 @@ async def _execute_with_retry(
     wait_spent = 0.0
 
     for attempt_index in range(2):
+        # T-6.0-01, Section 21.3's per-query Layer 2/3 call ceiling. Charged
+        # here, inside the attempt loop, rather than once per `execute_get`,
+        # because 21.3 names "a retry" first in its own list of where a 21st
+        # call comes from. A charge hoisted out of this loop would let a
+        # query issue 40 requests against a 20-call ceiling and report 20.
+        #
+        # Charged BEFORE `limiter.acquire`, so a refused call spends neither
+        # a rate-limit token nor queue depth on its way to being refused,
+        # and never reaches the network at all. Same ordering discipline as
+        # `act_node`'s cost check: refuse before dispatch, never after.
+        #
+        # No-ops outside a query scope; see `charge_one_call`'s docstring
+        # for why unscoped work (a KGX export batch) is deliberately not
+        # bounded by a per-query ceiling.
+        call_budget.charge_one_call(
+            tool="ncbi_transport:" + family, layer=_LAYER_BY_FAMILY.get(family, 2)
+        )
+
         remaining_wait_budget = max(0.0, wait_budget_s - wait_spent)
         acquire_started = time_fn()
         try:

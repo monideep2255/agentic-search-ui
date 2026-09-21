@@ -133,10 +133,22 @@ _DATASETS_BASE: Final[str] = "https://api.ncbi.nlm.nih.gov/datasets/v2/"
 
 # Section 6.2 line 959, gene report. Only these keys leave the raw upstream
 # payload; see the module docstring's "bounded allowlist" section.
+#
+# `summary` is additive, UI fix set 11 (search breadth, 2026-09-14): the
+# Datasets gene record carries the RefSeq summary paragraph (1,253
+# characters for BRCA1, live-measured in
+# `testing/Developer/reports/2026-09-14_handover_inputs/breadth/findings.md`)
+# and this allowlist dropped it, so the whole Layer 2 record contributed one
+# fact, the symbol. It is untrusted free text like `description`, and it
+# rides the same `_cap_field_value` walk, so it is bounded to
+# `_MAX_FIELD_VALUE_CHARS` before it can reach a prompt. `gene_ontology`
+# stays: the same fix set makes those terms citeable
+# (`cypher_provenance`, GO attribution to the gene record's page).
 _GENE_REPORT_FIELDS: Final[tuple[str, ...]] = (
     "gene_id",
     "symbol",
     "description",
+    "summary",
     "taxname",
     "tax_id",
     "omim_ids",

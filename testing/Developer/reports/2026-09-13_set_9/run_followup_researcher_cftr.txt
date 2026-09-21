@@ -1,0 +1,37 @@
+
+## Gene records found
+
+- CFTR
+
+## Literature entity records found
+
+- CFTR
+
+## Clinical trial records found
+
+- NPDT Evaluation in Children With CFTR and (PSC)
+- Study of VX-809 in Cystic Fibrosis Subjects With the ∆F508-CFTR Gene Mutation
+- Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects
+- Effects of Sildenafil on CFTR-dependent Ion Transport Activity
+- Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators
+
+## Sequence variant records found
+
+- NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)
+- NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)
+- NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)
+- NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)
+- NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)
+- NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)
+- NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)
+- NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)
+- NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)
+- https://www.ncbi.nlm.nih.gov/clinvar/variation/1012571
+- https://www.ncbi.nlm.nih.gov/clinvar/variation/1012572
+- NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn)
+- NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp)
+
+(Note: this result was truncated. Showing 20 of 6030 matching rows; the rest are not shown above.)
+
+(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)
+{"depth": "researcher", "question": "Which clinically significant variants have been reported in CFTR?", "outcome": "ask", "words": 79, "paragraphs": 0, "headings": 4, "list_items": 20, "table_rows": 0, "unmarked_claims": 0, "trust_line": "Based on 4 sources, not yet confirmed", "sources": ["1080", "@GENE_CFTR", "ClinVar:1000823", "ClinVar:1002760", "ClinVar:1003660", "ClinVar:1007213", "ClinVar:1009171", "ClinVar:1009391", "ClinVar:1009463", "ClinVar:1010196", "ClinVar:1011536", "ClinVar:1012571", "ClinVar:1012572", "ClinVar:1018653", "ClinVar:1018890", "NCT00179439", "NCT00865904", "NCT01078740", "NCT01132482", "NCT01348204"], "notes": ["Note: this result was truncated. Showing 20 of 6030 matching rows; the rest are not shown above.", "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead"], "errors": []}

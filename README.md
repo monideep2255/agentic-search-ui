@@ -93,7 +93,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | Caching | Redis |
 | Frontend | React |
 | Auth | PyJWT (HS256 access tokens), argon2-cffi (argon2id password hashing) |
-| Observability | LangSmith |
+| Observability | LangSmith, PostHog, an append-only JSONL tool-call audit log |
 
 ---
 
@@ -103,7 +103,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), now as TWO separate deployments with a release-branch flow between them, and CI running Section 24's ten gates on every pull request and on both deployment branches. Next: the first real release, which is the only end-to-end proof the promotion path works, then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.16, and 5.0. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), now as TWO separate deployments with a release-branch flow between them, and CI running Section 24's ten gates on every pull request and on both deployment branches. Three releases are cut (v0.1.0 through v0.1.2, 2026-08-28), proving the promotion path works end to end. Build phase 5.0, observability (LangSmith tracing, PostHog analytics, the append-only tool-call audit log), MERGED as PR #83 on 2026-08-30 with all four CI gates green. Build phases 5.1, 5.2 and 5.3 all merged on 2026-08-30 and 2026-08-31, and the evaluation track was CLOSED at that point by product-owner decision: the 50-query golden dataset is sound, the grading harness is merged and PARKED because it does not work, and the follow-up sits in `requirements/Plan.md` Phase 7 rather than on the board. Build phase 6.0, rate limiting and concurrency, MERGED as PR #91 on 2026-08-31, all four CI jobs green; build phases 6.0 and 6.1 moved BEHIND the prototype the same day, because a live run showed answers reading `MedGen:C0346153` where a disease name should be. Build phase 6.2, answer readability and the single UI pass, MERGED as PR #92 on 2026-09-01, closing that disease-name defect. Their verdict on `docs/build/UI_feedback.md` produced PR #93, MERGED on 2026-09-05, not a numbered build phase: a designed sign-in screen, the permanent disclaimer band removed, a nav overflow menu below 720px, a usable integrations page, one shape for every refusal, a session-state privacy leak closed, and `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers. The next action is not a build phase: the product owner is testing against that new spec, and findings land in `testing/Product/feedback/inbox/`. See `tracker/BOARD.md` for per-phase status, `requirements/phase_6/Continuation_prompt.md` for what to do next, and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -138,6 +138,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 4.14 | CI: the ten gates from Section 24, advisory rather than merge-blocking since branch protection needs GitHub Pro or a public repository | Merged into develop, PR #68, 2026-08-26, after three review rounds and a Rule 4 stop |
 | 4.15 | Two SEPARATE Railway projects and a release-branch flow, plus release automation: a semantic version derived from the Conventional Commit subjects, a CHANGELOG.md section, an annotated tag, a GitHub Release, and an automated back-merge into develop | Merged into develop, PR #71, 2026-08-28, after four review rounds and two Rule 4 stops. Two projects rather than two environments because a Railway service's git branch is service-level, measured rather than assumed |
 | 4.16 | The seven UI defects the first live session surfaced. The largest was backend, not frontend: the Act step emitted no events at all, so eleven seconds of a run were silent and no tool chip had ever rendered | Merged into develop, PR #63, 2026-08-25. Inserted by product-owner decision |
+| 5.0 | Observability: technical specification Section 20 in full, as three records with one job each, LangSmith per-run tracing joined on `trace_id`, PostHog behavioural analytics as aggregates only, and the append-only JSONL tool-call audit log | Merged into develop, PR #83, 2026-08-30, after a judge round, an adversary round, and five fix-and-verify rounds on one control |
 
 Per-phase narrative, including what each review round found and what it cost, is `requirements/Plan.md`'s Revision history. Per-phase tickets and evidence are `tracker/phase_N.M.md`.
 
@@ -212,6 +213,7 @@ agentic-search-ui/
       tools/                    # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
       export/                   # KGX subgraph export (build phase 4.4)
       feedback/                 # Interaction capture and the weekly review ritual (build phase 4.6), plus the durable history read path (build phase 4.13)
+      observability/            # LangSmith tracing, PostHog analytics, the append-only tool-call audit log (build phase 5.0)
       adapters/
         web_sse/                # FastAPI plus SSE, the public API surface
         graphql/                # Strawberry schema over the same core
@@ -232,6 +234,7 @@ agentic-search-ui/
       stubs/                    # The stub registry: every surface still rendering from a local stand-in
     e2e/                        # Playwright specs, including the live diagnostics gated behind RUN_LIVE_DIAGNOSTICS
   tests/                        # pytest suite, including the per-phase premise gates and mutation harnesses
+  testing/                      # UI testing entry point: manual workflows, the ranked spec, evidence and feedback capture (see testing/Developer/Developer_workflows.md)
   docs/                         # Architecture, NCBI, build cadence, and the design system
   reference/                    # Symlink to agentic-search-data-engineering (System 1 and 2)
   requirements/                 # Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
@@ -279,6 +282,8 @@ agentic-search-ui/
 | [Build workflow cadence](docs/build/Build_workflow_cadence.md) | The quick reference for how a build phase runs: the twelve stages, who acts at each, the model and effort per stage. Stage 5, the premise gate, is mandatory and blocking for a model-generating phase |
 | [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build cadence as a visual page, also published as a Claude artifact |
 | [CI gate scripts](.github/gates/README.md) | Why the CI workflow contains no inline shell: one script per Section 24 gate, and the premise-gate defeats that forced the design |
+| [Debugging guide](docs/build/Debugging_guide.md) | Which file to open when something is wrong: a symptom index, then what every source file does |
+| [NCBI design system migration assessment](docs/build/design/NCBI_design_system_migration_assessment.md) | Assessment, not a decision, answering four questions: this app's current design system, what the NCBI design system is, which parts could migrate, and whether the work can be done off the NCBI network |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 
 ---
@@ -344,4 +349,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-28
+Last updated: 2026-09-08

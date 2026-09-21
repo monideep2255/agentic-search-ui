@@ -1,32 +1,52 @@
 /**
- * Audience-level depth control, build phase 4.8, ticket T-4.8-04.
+ * The answer mode control. Build phase 4.8 ticket T-4.8-04, reshaped by UI fix
+ * set 9, items 9.1, 9.2 and 9.12 (2026-09-13).
  *
- * Technical specification 12.9. Three-way, mirroring `Query.audience_depth`
- * exactly: clinical_brief, researcher as the default, deep_technical.
+ * The product owner: "The researcher and deep technical modes can be combined
+ * into one." So the control offers two modes, Plain language (the default) and
+ * Researcher. `Query.audience_depth` still accepts `clinical_brief` and
+ * `deep_technical` for GraphQL, the CLI and MCP; this control never sends them,
+ * and `displayedMode` shows either one as the nearer of the two buttons.
  *
- * The disabled state is the part that matters and is easy to skip. The depth a
- * run was dispatched with is LOCKED for that run, so the Write step never has
- * to reconcile a depth change against tokens it has already streamed. A user
- * who changes depth mid-answer would otherwise get a paragraph in one register
- * followed by a paragraph in another, with no way to tell which one the
- * citations were chosen for.
+ * The disabled state still matters. The mode a run was dispatched with is
+ * LOCKED for that run, so the Write step never reconciles a change against
+ * tokens it has already streamed. A change made afterwards applies to the next
+ * question, because `App` reads the mode when a question is asked.
  *
- * STUB: the value is held locally. Wired by build phase 4.5, which sends it on
- * POST /v1/query. See `stubs/registry.ts`.
+ * DESIGN SOURCES, per `design-consistency`: `components/depth-control.html` and
+ * the prototype's `.depth` and `.depthwrap .lock` rules for the buttons and the
+ * lock line; the info affordance is `PersonaInfo`, the circled "i" and its card
+ * the persona chip already ships, reused rather than rebuilt. No new colour,
+ * radius or type size: 12.5px and 12px are the prototype's own.
  */
 
 import { Box, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
+import { PersonaInfo } from "../shell/PersonaChip";
 
-/** Mirrors Query.audience_depth. Do not add a fourth without a spec change. */
-export type AudienceDepth = "clinical_brief" | "researcher" | "deep_technical";
+/** Mirrors Query.audience_depth. The UI offers two of these four. */
+export type AudienceDepth = "plain_language" | "researcher" | "clinical_brief" | "deep_technical";
 
-const OPTIONS: { value: AudienceDepth; label: string }[] = [
-  { value: "clinical_brief", label: "Clinical brief" },
+/** The web UI's default mode, decision A3. */
+export const DEFAULT_ANSWER_MODE: AudienceDepth = "plain_language";
+
+const OPTIONS: { value: "plain_language" | "researcher"; label: string }[] = [
+  { value: "plain_language", label: "Plain language" },
   { value: "researcher", label: "Researcher" },
-  { value: "deep_technical", label: "Deep technical" },
 ];
+
+/** What the info card says about the two modes (item 9.2). */
+export const ANSWER_MODE_EXPLAINER =
+  "Plain language: a short answer of about 250 words in three paragraphs, in everyday words, " +
+  "with every sentence tied to its source. Researcher: a full page under short topic headings, " +
+  "with the records found listed or tabled and every claim cited. " +
+  "A change applies to your next question.";
+
+/** The button a stored or wire value lights up. */
+export function displayedMode(value: AudienceDepth): "plain_language" | "researcher" {
+  return value === "researcher" || value === "deep_technical" ? "researcher" : "plain_language";
+}
 
 export interface DepthControlProps {
   value?: AudienceDepth;
@@ -38,15 +58,17 @@ export interface DepthControlProps {
 }
 
 export function DepthControl({
-  value = "researcher",
+  value = DEFAULT_ANSWER_MODE,
   onChange,
   locked = false,
   variant = "onNavy",
 }: DepthControlProps) {
   const onNavy = variant === "onNavy";
+  const shown = displayedMode(value);
   return (
     <Box
       sx={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
         gap: 1.5,
@@ -60,13 +82,15 @@ export function DepthControl({
         id="depth-label"
         sx={{ color: onNavy ? designTokens.inkOnNavyMute : designTokens.inkMuted }}
       >
-        Answer depth
+        Answer mode
       </Typography>
 
       <Box
         role="group"
-        aria-labelledby="depth-label"
-        aria-label="Audience-level depth"
+        // The visible label is "Answer mode"; the accessible name carries it
+        // (WCAG 2.5.3, label in name) plus the contract's own term, so a
+        // screen reader and every existing query for the depth control agree.
+        aria-label="Answer mode, audience-level depth"
         sx={{
           display: "inline-flex",
           border: `1px solid ${designTokens.line}`,
@@ -76,7 +100,7 @@ export function DepthControl({
         }}
       >
         {OPTIONS.map(({ value: option, label }, index) => {
-          const selected = option === value;
+          const selected = option === shown;
           return (
             <Box
               key={option}
@@ -105,6 +129,26 @@ export function DepthControl({
           );
         })}
       </Box>
+
+      <Box component="span" sx={{ position: "relative", display: "inline-flex" }}>
+        <PersonaInfo
+          name="Answer modes"
+          about={ANSWER_MODE_EXPLAINER}
+          wikipedia={null}
+          variant={variant}
+          align="left"
+        />
+      </Box>
+
+      {locked ? (
+        <Typography
+          component="span"
+          data-testid="depth-locked"
+          sx={{ fontSize: 12, color: designTokens.inkFaint }}
+        >
+          Locked while this search runs
+        </Typography>
+      ) : null}
     </Box>
   );
 }

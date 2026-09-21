@@ -26,8 +26,15 @@ export interface AccountMenuProps {
   /** The signed-in account. Shown in the pill and again in the menu header. */
   email: string;
   onSignOut?: () => void;
-  /** Navigate to a screen the menu links to. */
-  onNavigate?: (screen: "integrations" | "docs") => void;
+  /**
+   * Navigate to a screen the menu links to.
+   *
+   * `"docs"` was the second value until fix set 5 (R18, 2026-09-13) folded
+   * the Docs screen into Integrations. The menu's two separate rows became
+   * one, "Integrations and API documentation", since both now reach the same
+   * page, so `"integrations"` is the only destination left.
+   */
+  onNavigate?: (screen: "integrations") => void;
   /**
    * The account's real search standing, in words, e.g. "no search limit in
    * effect yet" (T-4.10-09 closing F-4.9-A-16, corrected by F-4.10-A-06:
@@ -103,6 +110,13 @@ export function AccountMenu({ email, onSignOut, onNavigate, limitCopy }: Account
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
+        // The accessible name is the email at every width, even below 720px
+        // where the visible email is hidden (see the span below), so a
+        // screen reader, a speech-input user and every browser spec that
+        // finds this control by the account's email keep working on a
+        // phone. The initials the phone still shows are the email's first
+        // two characters, so the visible text stays inside the name.
+        aria-label={email}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -145,7 +159,17 @@ export function AccountMenu({ email, onSignOut, onNavigate, limitCopy }: Account
         >
           {initialsOf(email)}
         </Box>
-        {email}
+        {/*
+          Fix set 4 (R46, 2026-09-13), measured on the live app at 390px
+          signed in: the full email in this pill pushed the bar to 465px
+          and the page scrolled sideways. Below 720px, the same breakpoint
+          the nav items and the overflow menu use, the pill shows the
+          initials and the chevron only; the email stays in the menu this
+          opens and in the control's accessible name above.
+        */}
+        <Box component="span" sx={{ "@media (max-width:720px)": { display: "none" } }}>
+          {email}
+        </Box>
         <Box component="span" aria-hidden="true" sx={{ fontSize: 10, opacity: 0.8 }}>
           ▾
         </Box>
@@ -222,20 +246,17 @@ export function AccountMenu({ email, onSignOut, onNavigate, limitCopy }: Account
             }}
             sx={item}
           >
-            API key and integrations
+            Integrations and API documentation
           </Box>
-          <Box
-            component="button"
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onNavigate?.("docs");
-            }}
-            sx={item}
-          >
-            Documentation
-          </Box>
+          {/*
+            ONE item rather than two, fix set 5 (R18, 2026-09-13). This menu
+            carried "API key and integrations" and "Documentation" as separate
+            rows. Both now reach the same page, since the Docs screen's
+            content is the "API documentation" section inside Integrations, and
+            two rows with one destination is a menu that lies about how many
+            places it can take you. The label also drops "API key", a surface
+            the product-owner decision of 2026-08-13 removed.
+          */}
           <Box
             component="button"
             type="button"
