@@ -311,44 +311,63 @@ def test_the_mcp_config_prints_a_url_that_reaches_its_route_without_a_redirect(
         "this arm would request the bare origin rather than the MCP route."
     )
 
-    from starlette.testclient import TestClient
+    # ASGITransport, never `TestClient(app)` inside a `with`. The repository
+    # already documents this trap in `adapters/mcp/test_phase_4_1_production_
+    # mount.py` (its module docstring): the `with` form runs the app's
+    # lifespan, which starts `StreamableHTTPSessionManager`, and that manager
+    # refuses a second `.run()` in the same process. It passes alone and fails
+    # in the full suite behind any earlier test that already started it, which
+    # is exactly how this arm broke CI on 2026-09-20. ASGITransport sends no
+    # lifespan events at all.
+    import asyncio
+
+    import httpx
 
     from system_03_search_agent.adapters.web_sse.app import app
 
-    with TestClient(app, base_url="http://localhost") as client:
-        printed_response = client.post(printed_path, follow_redirects=False)
+    async def _post(path: str) -> tuple[int | None, str | None]:
+        """Return (status, location), or (None, None) when the MCP sub-app
+        itself raised because its session manager was never started.
 
-        # The printed path must REACH A ROUTE, not merely avoid a redirect.
-        # Checked first, and separately, because "not a redirect" alone is
-        # satisfied by a 404: a mutation that prints a path this app does
-        # not serve at all passes a redirect-only assertion, which was
-        # measured on 2026-09-20 rather than reasoned about. A 400 here is
-        # the pass: the MCP route was reached and rejected this arm's empty
-        # body, which is exactly what proves the route exists.
-        assert printed_response.status_code != 404, (
-            f"the integrations page tells a reader to configure "
-            f"{printed_path!r}, and POSTing exactly that path returns 404. "
-            "The printed url does not name a route this app serves."
-        )
-        assert printed_response.status_code not in (307, 308), (
-            f"the integrations page tells a reader to configure "
-            f"{printed_path!r}, and POSTing exactly that path returns "
-            f"{printed_response.status_code} with a redirect to "
-            f"{printed_response.headers.get('location')!r}. A config a "
-            "reader pastes must reach its route directly, never through a "
-            "redirect that a real MCP client, and Railway's own proxy, can "
-            "turn into a scheme downgrade."
-        )
+        That exception is not noise to be swallowed: with no lifespan, only
+        a request that actually REACHED the mounted MCP app can raise it. A
+        path this app does not serve returns 404 from the router and never
+        touches the mount. So the three outcomes are distinguishable, which
+        is what lets the assertions below tell "the printed url works" apart
+        from "the printed url is merely not a redirect".
+        """
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://localhost"
+        ) as client:
+            try:
+                response = await client.post(path, follow_redirects=False)
+            except RuntimeError:
+                return None, None
+            return response.status_code, response.headers.get("location")
 
-        # POPULATE-CHECK on the arm itself, not on the fixture: the bare,
-        # un-slashed path must still redirect, or this test would pass on
-        # any path at all, including one the app does not serve, because
-        # nothing would distinguish "fixed" from "the redirect this arm
-        # exists to catch stopped firing".
-        bare_response = client.post("/mcp", follow_redirects=False)
-        assert bare_response.status_code in (307, 308), (
-            "populate-check failed: POST /mcp (no trailing slash) no longer "
-            "redirects at all, so this arm cannot tell a correctly printed "
-            "url apart from one that merely stopped triggering the "
-            "redirect it exists to catch."
-        )
+    printed_status, printed_location = asyncio.run(_post(printed_path))
+
+    assert printed_status != 404, (
+        f"the integrations page tells a reader to configure {printed_path!r}, "
+        "and POSTing exactly that path returns 404. The printed url does not "
+        "name a route this app serves."
+    )
+    assert printed_status not in (307, 308), (
+        f"the integrations page tells a reader to configure {printed_path!r}, "
+        f"and POSTing exactly that path returns {printed_status} with a "
+        f"redirect to {printed_location!r}. A config a reader pastes must "
+        "reach its route directly, never through a redirect that a real MCP "
+        "client, and Railway's own proxy, can turn into a scheme downgrade."
+    )
+
+    # POPULATE-CHECK on the arm itself, not on the fixture: the bare,
+    # un-slashed path must still redirect, or this test would pass on any
+    # path at all, because nothing would distinguish "fixed" from "the
+    # redirect this arm exists to catch stopped firing".
+    bare_status, _ = asyncio.run(_post("/mcp"))
+    assert bare_status in (307, 308), (
+        "populate-check failed: POST /mcp (no trailing slash) no longer "
+        "redirects at all, so this arm cannot tell a correctly printed url "
+        "apart from one that merely stopped triggering the redirect it "
+        "exists to catch."
+    )
