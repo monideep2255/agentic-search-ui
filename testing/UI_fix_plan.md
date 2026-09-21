@@ -1170,8 +1170,9 @@ that.
 
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state. Last updated 2026-09-20,
-late evening, after the production release and a readability pass on this
-document. Read this, then the Set 11 table above.
+late evening, after the production release, two harness fixes merged as PR #97
+and PR #98, and a readability pass on this document and on the continuation
+prompt. Read this, then the Set 11 table above.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -1192,7 +1193,9 @@ section is the authoritative plan and owns per-item status.
 | 5 | PRODUCTION RELEASE v0.2.0 | SHIPPED. 241 commits, the first release since 2026-08-28 |
 | 6 | The harness | `bossman-mode` rebuilt as a router plus three reference files, merged as PR #94 |
 | 7 | This document | Restructured so Set 11 is scannable again, and item 11.32 added |
-| 8 | `/ship`'s stray-file sweep | Fixed on a branch, OPEN as PR #97, waiting on the product owner |
+| 8 | `/ship`'s stray-file sweep | FIXED and MERGED as PR #97. It walks the filesystem as well as asking git |
+| 9 | The bossman deny rule | FIXED and MERGED as PR #98, on explicit sign-off. Two carve-outs, bounded by mode |
+| 10 | This document and the continuation prompt | Both run through `/doc-readability`, with a fresh-context auditor on each |
 
 ### The release, and what it means for tomorrow
 

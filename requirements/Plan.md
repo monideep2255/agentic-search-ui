@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-20.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is the first item under "Next, in order" in `testing/UI_fix_plan.md`'s "Where we stopped" section, which owns the cutoff. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 580 (DECISIONS.md).
+Decisions logged: 582 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,15 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-20, LATEST, TWO HARNESS FIXES AND TWO DOCUMENT PASSES. No product code changed. The result worth carrying forward is a limit of the verify surfaces rather than anything about either document.
+
+- PR #97 AND PR #98 MERGED, both under `.claude/`, both therefore on branches with pull requests as `git-workflow` requires. PR #97 fixes `/ship`'s stray-file sweep, which read `git status` and was blind by construction to 163 duplicate-copy files including nine under `src/`, because this repository's own `.gitignore` hides `* [0-9]` for eight extensions. PR #98 amends `.claude/rules/bossman-mode.md`'s Deny list, which had forbidden pushing to develop while the UI fix loop did exactly that daily, by design, for eight days; the carve-outs are bounded by MODE rather than by convenience, at the product owner's own framing, and a Deny entry the sanctioned cadence breaks daily was judged worse than no entry because it trains the next reader to treat the whole list as advisory.
+- TWO DOCUMENTS RAN THROUGH `/doc-readability`, each with a fresh-context auditor, and BOTH FAILED THEIR AUDIT BEFORE PASSING. THE TRANSFERABLE RESULT IS THAT BOTH SCRIPTS WERE GREEN WHILE MEANING CHANGED. On `testing/UI_fix_plan.md`, twenty walls were converted and `check_preservation.py` read `0 lost | 0 additions | retention 1.000` throughout, yet bulleting had been over-applied in six places and had detached a governing qualifier or moved who was acting: "at the same time" ended up governing only the third of three layers, "never by rewording" only the last of three things, and a product owner's quoted ask became three imperatives addressed to the reader. A lexical no-loss check cannot see an attribution swap, and its own docstring says so. All six were reverted.
+- A SECOND LIMIT, on the style gate: `check_style.py` evaluates PHYSICAL lines and never rejoins a wrapped paragraph, so a wall hard-wrapped at 80 characters is invisible to it. Three consecutive audit rounds on `requirements/phase_6/Continuation_prompt.md` each found a DIFFERENT tier of pre-existing wall while that script reported 0 hard the whole time.
+- THE LEAD INVENTED CONTENT TWICE IN A STRUCTURE-ONLY PASS, recorded because it is one habit rather than two incidents. Round 2 caught a bridging sentence asserting that one list carried all three items named above it, which was FALSE. Round 3 caught a second of the same shape, "Three things about those commands", which was not false but was loose. Both reached for a sentence explaining how a list relates to itself, which is exactly what a structure-only constraint forbids.
+- SIX HARD FINDINGS ARE ACCEPTED AND ANNOTATED rather than fixed, every one a case where obeying the checker makes the document worse. Five are the reverted sentences. The sixth is an en dash in `"1–13"` that quotes verbatim what `CitationMarkers.tsx` line 141 renders and two tests pin, so changing it would make the plan misquote the product. Changing the product, and loosening the checker, were both rejected as the inversion this repository already forbids.
+- FOUR PRODUCT-OWNER DECISIONS CLOSED: item 11.31 placed next on a dependency argument rather than a preference, D-2 resolved as all four totals each labelled, the bossman carve-out signed off, and the eight-day-old consistency baseline committed after its 67 secret-scan matches were read and found to be `"token":N` event counters.
 
 2026-09-20 LATE, A READABILITY PASS AND A HARNESS DEFECT THE PRODUCT OWNER'S QUESTION EXPOSED. No product code changed; everything here is documentation and harness.
 
