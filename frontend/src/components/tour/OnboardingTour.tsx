@@ -181,7 +181,7 @@ export const TOUR_STEPS: TourStep[] = [
     // info card (`ANSWER_MODE_EXPLAINER` in `controls/DepthControl.tsx`).
     title: "Answer mode",
     body: [
-      "Plain language, the default, is a short answer of about 250 words in three paragraphs, in everyday words. Researcher is a full page under short topic headings, with the records found listed.",
+      "Plain language, the default, is written for a reader with no biology background, in everyday words. Researcher is for someone who knows the field and NCBI, with the specifics and the records listed.",
       "The sources stay the same in both modes, and every claim is cited. A change applies to your next question.",
     ],
     targets: ["depth"],

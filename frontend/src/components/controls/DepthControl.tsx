@@ -36,11 +36,24 @@ const OPTIONS: { value: "plain_language" | "researcher"; label: string }[] = [
   { value: "researcher", label: "Researcher" },
 ];
 
-/** What the info card says about the two modes (item 9.2). */
+/** What the info card says about the two modes (item 9.2).
+ *
+ * REWRITTEN 2026-09-21 for item 11.31. The previous wording promised "about
+ * 250 words in three paragraphs", which described a depth directive that no
+ * longer exists: every length instruction was removed that day, because the
+ * product owner's criterion is audience fit rather than a count ("Number of
+ * words do not define an answer"). A number here is also a promise the
+ * product cannot keep, since the same question at the same mode measured 66,
+ * 101 and 113 words on three consecutive runs.
+ *
+ * So this now describes WHO EACH MODE IS FOR, which is the thing that
+ * actually differs and the thing a reader is choosing between.
+ */
 export const ANSWER_MODE_EXPLAINER =
-  "Plain language: a short answer of about 250 words in three paragraphs, in everyday words, " +
-  "with every sentence tied to its source. Researcher: a full page under short topic headings, " +
-  "with the records found listed or tabled and every claim cited. " +
+  "Plain language: for a reader with no biology background, in everyday words, " +
+  "covering everything the sources show with every sentence tied to its source. " +
+  "Researcher: for someone who knows the field and NCBI, with the specifics, " +
+  "the detail and the records listed or tabled, every claim cited. " +
   "A change applies to your next question.";
 
 /** The button a stored or wire value lights up. */

@@ -413,6 +413,43 @@ export const LAYER_GROUP_LABEL: Record<Layer, string> = {
   3: "Enrichment",
 };
 
+/**
+ * Notes the answer still CARRIES but the web UI does not SHOW.
+ *
+ * Product-owner decision, 2026-09-21: "the Notes section is super confusing.
+ * remove it", naming these two exactly. They asked for them deleted
+ * outright and that is what this does on screen.
+ *
+ * HIDDEN HERE RATHER THAN REMOVED IN THE BACKEND, and the reason is worth
+ * keeping. Both notes are produced by `core/graph.py`, which floors
+ * `trust_outcome` at `ask` in the same branch that builds them. Suppressing
+ * them at the source meant rewriting five tests that guard a real property:
+ * F-4.5-06 breach 2, an answer that silently reports a subset of its
+ * findings while looking complete. Those tests and that floor are untouched,
+ * so an incomplete answer still reaches this screen saying "not yet
+ * confirmed" on its trust line, and the API, CLI and MCP surfaces still
+ * carry the sentences for a programmatic caller.
+ *
+ * What the reader loses is the two sentences they called confusing. What
+ * nobody loses is the disclosure that the answer is unconfirmed.
+ *
+ * Matched by pattern rather than in full because both carry a count or a
+ * record type in the middle ("5 further pubmed records", "one further
+ * disease record").
+ */
+export const HIDDEN_NOTE_PATTERNS: RegExp[] = [
+  /^Note: the written summary of these records could not be verified/,
+  // "Note: 5 further pubmed records were found ...", and its singular
+  // "Note: one further disease record was found ...". Written as one
+  // pattern because the count and the record type both vary, and a prefix
+  // list got this wrong on the first attempt by matching only the singular.
+  /^Note: (?:one|\d+) further /,
+];
+
+/** Whether the web UI hides this note (see `HIDDEN_NOTE_PATTERNS`). */
+export const isHiddenNote = (text: string): boolean =>
+  HIDDEN_NOTE_PATTERNS.some((pattern) => pattern.test(text.trimStart()));
+
 /** One row in the grouped, deduplicated source list: `Source` plus every
  * citation marker that pointed at the same record. */
 export interface MergedSource {
@@ -1382,7 +1419,9 @@ export function AnswerBody({
   };
 
   const medicalNotes = systemNotes.filter((note) => note.trimStart().startsWith(MEDICAL_NOTE_PREFIX));
-  const otherNotes = systemNotes.filter((note) => !note.trimStart().startsWith(MEDICAL_NOTE_PREFIX));
+  const otherNotes = systemNotes
+    .filter((note) => !note.trimStart().startsWith(MEDICAL_NOTE_PREFIX))
+    .filter((note) => !isHiddenNote(note));
 
   return (
     /*
