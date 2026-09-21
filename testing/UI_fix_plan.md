@@ -744,9 +744,9 @@ Approved and not yet started, in the product owner's own stated order:
 
 | Item | Why it is next |
 |---|---|
-| 11.22, abstracts as evidence | Approved to proceed 2026-09-20. The literature is now RELEVANT but is still a list of TITLES rather than findings, which is the difference between a bibliography and evidence. The largest remaining lever on their "surface level" verdict |
+| 11.22, abstracts as evidence, LANDED `9cf8572` | Shipped the same evening it was approved. The whole retrieved abstract is citeable and nothing picks a sentence out of it. Whether it moves the "surface level" verdict is untested |
 | The fallback note's jargon | "the written summary of these records could not be verified against them" describes this system's own grounding check. A coordinated TWO-FILE change, since `frontend/src/hooks/useRunView.ts` matches that exact prefix to classify a system note, so changing one side alone makes the frontend render it as answer text |
-| 11.30, the Integrations page | Every surface responds, probed live. What is unproven is that each SNIPPET runs AS PRINTED, which no status code can show |
+| 11.30, the Integrations page, FIX A LANDED `dca58e5` | Every printed snippet was executed as printed. Three work, two are blocked for want of an installed `s3` client, and one was broken and is fixed: the MCP config printed no trailing slash. FIX B IS OPEN and is a deployment decision rather than a code change, the redirect's scheme downgrade |
 | Cite every retrieved finding | Decided 2026-09-20, still unbuilt |
 | Widen the citation host rule so OMIM can be cited | Decided 2026-09-20, still unbuilt. `omim.org` as an EXACT additional host, never a loosened pattern |
 | PMC as a literature source | The schema already admits `pmc`, so this is smaller than first stated. It was sequenced behind relevance deliberately, since adding a source while relevance was broken would have bought more irrelevant papers |
@@ -796,12 +796,13 @@ So 10.2 needs new persistence, either new columns plus a write path on `interact
 
 ### Next, in order
 
-1. Confirm 1b live: the Railway deployment for `2bb1925` reports SUCCESS, the served app carries the change, and a live browser check at 1280px and 390px. Then ask one question several times and watch the source count hold.
+1. DONE. Confirm 1b live. The product owner tested `2bb1925` on develop the same day and their verdict was "Working", recorded in the approved table above. The one measurement still worth doing by hand is asking one question several times and watching the source count hold, which is finding L-01.
 2. Build 2a, cite every retrieved finding.
 3. Build 2b, widen the citation host rule and dispatch OMIM.
-4. Settle 11.28. Instrument `usePacedEvents` to log scheduled-at and released-at per event, then run `phase49Premise.test.tsx` alone on an idle machine. Releases within 3.5s means the CI failure was event-loop starvation and it can land; if it does not release there is a mechanism nobody has found, and that is a stop-and-report rather than a patch.
+4. DONE. Settle 11.28. It landed as `50ed55b` and the answer was neither hypothesis: the instrumented run showed every event releasing well inside its bound, and the real cause was a test fixture describing a stream the backend cannot emit. The full account is the 11.28 row above and `testing/Developer/reports/2026-09-20_pacing_defect/findings.md`. ONE RESIDUAL RISK SHIPS OPEN: pacing stretched a transient false Write from under a millisecond to about 700ms, and nobody has checked whether another path produces one.
 5. Run 10.3, the consistency run: each of the 50 golden questions three times, recording answered-or-refused, latency, sources and layers. This is what tells us whether 1b actually fixed the wobble rather than our believing it did.
 6. Establish L-01 shape 1, a whole graph result vanishing on some runs and hidden by graceful degradation. The instrument is written at `testing/Developer/reports/2026-09-20_L01/capture_tool_results.py` and has never run.
+7. UNPLACED, and the product owner has to place it: item 11.31, the two answer modes diverging. It was decided on 2026-09-20 after this list was written, so nothing states where it sits. It is the largest decided-and-unbuilt item on the board, and it carries two questions whoever builds it must not answer for the product owner. Its constraints are in the 11.31 row above.
 
 ### What 11.28's diagnosis already found
 
@@ -811,7 +812,7 @@ That points hard at event-loop starvation, consistent with the same suite failin
 
 ### Known loose ends
 
-- Two worktrees are deliberately kept. `agent-a8393711bb57d579b` holds 11.28 and is still needed. `breadth-wiring` is now merged into develop and can be cleared once 1b is confirmed live.
+- DONE, both worktrees are gone, removed 2026-09-20 on the product owner's instruction that local carries only `develop`. Neither was still needed: `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`, while `breadth-wiring` merged as `2bb1925`. The one uncommitted file in either worktree was byte-compared against develop's copy before removal and was identical, so nothing was lost.
 - Row 11.16 said it was in progress and under review. It had already landed, as `b8980dc` and merge `345046b`, verified rather than assumed. What is genuinely missing: no review report was ever written, so the "667 core tests, 0 failed" figure that row quoted has nothing behind it.
 - Set 10 is otherwise untouched. Its baseline folder `testing/Developer/reports/2026-09-12_consistency_baseline/` is still uncommitted.
 - Review findings N-04 and N-06 remain open and minor, with owners, in the 11.21 review file.

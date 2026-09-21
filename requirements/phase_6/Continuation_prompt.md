@@ -32,20 +32,21 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", rewritten after the unattended run of 2026-09-19 into 2026-09-20. Start with its "Next, in order" item 1, then work down the list.
-  - CI IS GREEN on develop, all four jobs. First green run since 2026-09-14, and the three causes were real test-isolation defects rather than CI being fussy. The last commit that changes any CODE is `11e3348`; everything after it is documentation, so `git log --oneline` is the authority for the tip rather than a hash pinned here.
-  - NOTHING A TESTER SEES CHANGED OVERNIGHT. The only code change that stands is the test-isolation fix. The develop app at `https://search-agent-web-develop-2aeb.up.railway.app` is functionally the same product as on 2026-09-14, now on a green build.
-  - TWO WORKTREES ARE DELIBERATELY KEPT AND NEITHER IS MERGED. Do not clear either away.
-    - `agent-a8393711bb57d579b` holds 11.27 and 11.28, merged then reverted the same night over one unresolved question: on a stream that closes with no `done`, paced events may never release. CI showed the reasoning log holding at Guard and Think, ten seconds into a design whose own guarantee is 3.5 seconds. Real stall or event-loop starvation was not separable that night.
-    - `breadth-wiring` holds the 11.21 broad search, built and measured. Its full suite DID run, at `2 failed, 5023 passed`. One failure is explained (the debugging-guide manifest, fixed on develop). The OTHER IS NOT: the MCP production-mount test fails only in that branch's full run, passes alone and passes with its own directory, and copying develop's fix in did NOT clear it. Its verify surface is therefore NOT MET.
-  - Live reliability is NOT REPRODUCING rather than fixed: 45 consecutive clean runs with the error instrumentation live and never firing. A different defect was found instead, finding L-01, where one question returns three different source sets across six identical runs. Every varying source is graph-derived. One of its two shapes has a code mechanism and a fix on the wiring branch; the other is unestablished.
-  - ONE CORRECTION THE OVERNIGHT SESSION MADE AGAINST ITSELF, worth reading before trusting any claim in its reports: it first wrote that both of the wiring branch's failures were pre-existing and called that "checked rather than assumed". It was not checked. Only the absence of develop's fix had been confirmed, which proves nothing about whether the failures would clear. A worker tested the inference directly and it did not hold. Both documents were corrected and pushed.
-  - As of that close, testers use the develop app. Production stays on `v0.1.2` by product-owner decision (DECISIONS.md, 2026-09-14).
-  - The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
-  - Sets 1 to 7 are approved. Sets 8 and 9 are live on develop, awaiting the product owner's retest. SET 11 IS ONLY PARTLY LIVE and must not be described as live as a whole: 11.5 to 11.9, 11.12 to 11.14, 11.19, 11.20, 11.26 and part of 11.15 are on develop, while 11.17, 11.21, 11.27 and 11.28 are built and NOT live. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Set 10 is untouched apart from item 10.1.
-  - Evidence is under `testing/Developer/reports/2026-09-14_*` and `2026-09-19_*`. Start with `2026-09-19_overnight/session_log.md`, which points at the other three.
-  - When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
-  Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, and never let two builders own one file region.
+- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", last updated at the close of 2026-09-20. Start there, with two corrections this file makes to its "Next, in order" list, because that list was written in the afternoon and the evening's work landed after it.
+  - ITEM 1, confirm the broad search live, IS DONE. The product owner tested `2bb1925` on develop and their verdict was "Working", recorded in that same section's own approved table.
+  - ITEM 4, settle 11.28, IS DONE. It landed as `50ed55b`, and the Set 11 table's 11.28 row carries the real cause and the fix.
+  - So the first genuinely outstanding item on that list is ITEM 2, build 2a, cite every retrieved finding. Items 3, 5 and 6 follow it unchanged.
+- READ THE DAY'S SUMMARY BEFORE TOUCHING ANYTHING. `testing/Shipped_2026-09-20.md` is new and is the authoritative account of what shipped on 2026-09-20 and what to retest, in the terms a person notices. The develop app a tester sees is materially different from the one every earlier cutoff describes, so a session that skips it will retest the wrong things.
+- ONE ITEM IS NOT ON THE ORDERED LIST AT ALL AND NEEDS PLACING ON IT. Item 11.31, the two answer modes diverging, was decided on 2026-09-20 after "Next, in order" was written, so no document states where it sits in the order. It is DECIDED AND NOT BUILT. It carries two questions that whoever builds it must not answer on the product owner's behalf: whether a labelled explanatory sentence is ever permitted where no retrieved source supports it, and what replaces the removed word cap as an upper bound. Its constraints, including three failed directive versions it may not repeat, are in the Set 11 table's 11.31 row. Ask where it goes rather than assuming.
+- CI IS NOT GREEN AS OF THIS WRITING, and this is the claim most likely to have moved before you read it. The last two completed runs on develop failed, both on one test-isolation defect: an arm added with the MCP config fix entered the app's lifespan through `TestClient(app)`, and `StreamableHTTPSessionManager` refuses a second `.run()` in one process. The repair is pushed as `c35b545` and its run was still in progress when this was written. Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
+- TWO WORKTREES STILL EXIST AND NEITHER IS STILL NEEDED, which reverses what this file said on the morning of 2026-09-20. `breadth-wiring` is merged as `2bb1925`, and the live confirmation it was waiting on is done. `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`. Clearing a worktree is a deletion, so ask the product owner first: the reversal removes the reason to keep them, not the obligation to ask. Note that `testing/UI_fix_plan.md`'s "Known loose ends" still calls the second one needed, which contradicts its own 11.28 row.
+- PRODUCTION IS STILL ON `v0.1.2`, commit `ffa7cde` of 2026-08-28, with develop well over two hundred commits ahead. A v0.2.0 release was being prepared on the evening of 2026-09-20 and NO `v0.2.0` TAG EXISTED when this was written. Treat the release as unconfirmed and settle it with `git tag --sort=-creatordate | head` and `git log origin/production -1`, never from a document or a conversation.
+- SET 11 IS NOW MOSTLY LIVE, which reverses this file's earlier warning that it was not. 11.17, 11.21, 11.27 and 11.28 all merged on 2026-09-20, so the built-but-not-live set named here before is empty. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Sets 1 to 7 are approved, sets 8 and 9 are live on develop, and set 10 is untouched apart from item 10.1.
+- THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given directly by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation, and every remaining presentation fix leaves it untouched. It is the bar item 11.29 has to clear.
+- EVIDENCE for the day is under `testing/Developer/reports/2026-09-20_*`. Start with `2026-09-20_breadth_merge/mcp_failure_explained.md`, for why the biggest feature in the queue sat unmerged for a week over a failure that was never its own, and `2026-09-20_tp53_findings/findings.md`, for the four defects one live answer exposed.
+- When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
+- The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
+  Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, and never let two builders own one file region. File fencing held across eight agents on 2026-09-20 with zero collisions. The one resource that cannot be fenced is this machine's CPU, and checking load before a run is a race rather than a queue.
 
 THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-phase cadence for UI fixes, and it overrides `.claude/rules/git-workflow.md`'s branch requirement and the judge and adversary rounds for this work only:
 
@@ -63,31 +64,48 @@ WHERE TO LOOK, in the order a fresh session should read them:
 
 | Question | File |
 |---|---|
+| What shipped on 2026-09-20, and what to retest | `testing/Shipped_2026-09-20.md`, the day's summary |
+| Where the last session stopped, and what is next | `testing/UI_fix_plan.md`, section "Where we stopped", read with the two corrections in Step 2 above |
 | Per-item status: built, live, approved, what to retest | `testing/UI_fix_plan.md`, the single owner of this fact |
 | What the product owner tests by hand | `testing/Product/Product_workflows.md`, 21 tests in plain steps |
 | What must the product do, and what is broken | `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers |
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
 | What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
-| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and four rows dated 2026-09-20 on the CI fix, the 11.27 and 11.28 revert, the OMIM exclusion and the third `/phase-checkpoint` mode |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and seven rows dated 2026-09-20. The last three of those seven are the ones that change what gets built: widen the citation host rule so OMIM can be cited (which reverses an earlier row the same day), cite every retrieved finding, and the two answer modes diverge |
+| What happened on 2026-09-20 | `testing/Shipped_2026-09-20.md` for the summary, then the evidence folders under `testing/Developer/reports/2026-09-20_*` |
 | What happened overnight on 2026-09-19 | `testing/Developer/reports/2026-09-19_overnight/session_log.md`, then the three reports it points to |
-| Where the last session stopped | `testing/UI_fix_plan.md`, section "Where we stopped" |
 
-### The session boundary, 2026-09-20
+### The session boundary, close of 2026-09-20
 
-Work stopped here deliberately and resumes in a NEW session. Nothing is half-finished on
-disk: the working tree is clean, develop is pushed, CI is green and both develop services
-are SUCCESS. The two worktrees are the only work in flight and both are parked on purpose,
-each with a written reason above.
+Work stopped here deliberately and resumes in a NEW session. This section replaces the one
+written on the morning of 2026-09-20, which described a day that had not happened yet.
 
-What the next session should do first, in order, is `testing/UI_fix_plan.md`'s "Next, in
-order". Its item 1 is the broad-search wiring decision, and it needs the unexplained MCP
-failure understood before anything merges, not after.
+What is true on disk at the close:
 
-Three decisions are waiting on the product owner and none of them are blocked by
-engineering: split the bold fix out and land it alone, settle whether OMIM can ever be
-cited, and settle whether every retrieved source should be cited. The full list, each
-written to be answerable yes, no or pick-one, is in the cutoff's "Waiting on you".
+- Develop is pushed and the working tree carries no source changes. Two untracked folders remain: `.claude/skills/bossman-mode/reference/` and `testing/Developer/reports/2026-09-12_consistency_baseline/`.
+- CI is not green. Two completed runs failed on one test-isolation defect and the repair, `c35b545`, was mid-run. Verify before relying on either state.
+- Both worktrees still exist and neither is still needed. Neither is blocking anything, and clearing them is a deletion that needs asking first.
+- Production is unchanged on `v0.1.2`. No `v0.2.0` tag existed at this writing.
+
+What the next session does first is `testing/UI_fix_plan.md`'s "Next, in order", read with
+Step 2's two corrections above: its items 1 and 4 are already done, so the work starts at
+item 2, cite every retrieved finding.
+
+What is waiting on the product owner, and none of it is blocked by engineering:
+
+- Where item 11.31 sits in the build order, since it was decided after the ordered list was written.
+- The two open questions inside 11.31 itself, named in Step 2 above and in its Set 11 row.
+- D-2, the four unexplained totals in one answer, and D-3, whether 100 is the right display bound for a 124-row result. Both need a product decision rather than a patch, with evidence in `testing/Developer/reports/2026-09-20_tp53_findings/findings.md`.
+- The MCP redirect's scheme downgrade, which is a deployment decision rather than a code change. The mechanism is established and reproduced in `tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py`.
+- Item 10.2, opening a past answer from history, which needs new persistence and therefore a data-retention decision.
+- The longer standing list, unchanged: the three `theme.ts` logo tokens, the six undesigned surfaces, whether answers carry a medical-advice notice, the 720px nav, the 20-source citation cap, the provenance note, the mode toggle's placement, and the trust-line wording.
+
+Three decisions this file listed as waiting on the morning of 2026-09-20 are now TAKEN and
+must not be re-asked: splitting the bold fix out and landing it alone (done, `aedf53d`),
+whether OMIM can ever be cited (yes, as an exact additional host), and whether every
+retrieved source should be cited (yes). The last two are recorded in `DECISIONS.md` dated
+2026-09-20 and NEITHER IS BUILT.
 
 ### Process lessons from the fix-loop sessions, already applied
 
@@ -129,7 +147,7 @@ THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong
 
 Two consequences for whoever picks this up. THE ASSISTANT DRIVES THE BROWSER WHEN ASKED, and on 2026-09-12 the product owner asked it to: every push in the UI fix loop is checked on develop with Playwright screenshots and measurements at 1280px and 390px. The eight journeys under `frontend/e2e/journeys/` still stay gated behind `RUN_LIVE_JOURNEYS=1`, since they spend real model calls, and run on request. And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
 
-Everything else on this page is context for that one line, and it describes the state at the close of 2026-09-14, with Set 11 of the UI fix loop in progress. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
+Everything else on this page is context for that one line, and it describes the state at the close of 2026-09-20, with Set 11 of the UI fix loop mostly live and two of its items decided but unbuilt. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
 
 ### What the sections below used to say, and where that content lives now
 
@@ -263,8 +281,8 @@ One decision below is still waiting on the product owner: whether `security/` st
 | NCBI design system stages 2 and 3 blocked | `@ncbi-design-system/base` and `@ncbi-design-system/react` are internal to NCBI and 404 on public npm, so stages 2 and 3 cannot run from outside the NCBI network | Whoever next has NCBI-network access |
 | Consistency baseline, paused | Run on 2026-09-12: 150 planned searches, only 85 really ran (65 refused by the signed-in daily limit of 100 because every run used one account). Of the 85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run (14%, likely the Think JSON failure item 2.11 has since fixed), 6 refused off-topic; 15 of 32 questions gave different outcomes across runs, only 2 answered every time, no Layer 3 call seen. Paused by the product owner so screen fixes come first. Results in `testing/Developer/reports/2026-09-12_consistency_baseline/` (untracked) | Rerun before fix set 6, across fresh test accounts |
 | Account menu overclaims "no search limit" | The account menu says "no search limit in effect yet" while the signed-in daily limit of 100 does refuse searches (it counts now) | Whoever next touches the account menu copy |
-| Only 2 of 7 tools run, no Layer 3 reached | Live queries reach only `cypher_query` and `ncbi_efetch`. Fix set 8 owns wiring in the rest | Fix set 8 |
-| MCP rejects every request, "Invalid Host header" | On develop, MCP calls fail outright with this error. Fix set 5 owns it | Fix set 5 |
+| Only 2 of 7 tools run, no Layer 3 reached, SUPERSEDED | Written when live queries reached only `cypher_query` and `ncbi_efetch`. Fix set 8 wired the three-layer search on 2026-09-13, and items 11.17 and 11.21 merged the broad search on 2026-09-20 as `2bb1925`, so `core/graph.py` now dispatches six of the seven tools and `pathogen_detection` is the one it does not. WHAT IS STILL UNPROVEN is what a live question actually reaches run after run, which is what item 10.3's consistency run measures | Item 10.3, the consistency run |
+| MCP rejects every request, "Invalid Host header", RESOLVED | Fix set 5's item 5.3 fixed it and the product owner approved it. Re-probed live on 2026-09-20 under item 11.30: `/mcp` responds. A SEPARATE defect was found in the same probe and is open, the redirect's scheme downgrade, which is a deployment decision rather than a code change | Closed, with the scheme downgrade tracked under item 11.30 |
 | Load-dependent test flakiness (D4) | Frontend tests fail under machine load rather than from a real regression: `railCollapsePremise` timed out once in a full run on 2026-09-13 and passed 20 of 20 alone three times; rail-collapse and query-stream end-to-end specs failed 4 while a second agent's test run shared the machine, then passed 14 of 14 alone. Re-run a failing spec alone before concluding it is a real defect | Whoever next hits a flaky frontend run |
 | Think step retry, and a remaining transient timeout | Item 2.11 (commit `e67323a`) makes the Think step retry once when the model's classification reply is not valid JSON. Measured live after deploy: 5 of 6 guest searches finished; the one failure was a different, transient timeout, not the JSON failure the retry fixes | Whoever next investigates Think-step reliability |
 | `GCK` resolves locally and is refused on the deployed API | Recorded as an unproven HYPOTHESIS rather than a finding, because its traceback could not be read: Railway's log stream returns container startup and `/health` lines and no request-level logs. The behaviour differs on IDENTICAL code, which is what makes it worth keeping. `tracker/phase_4.12.md` names what would settle it. Lifted here 2026-08-30 from the superseded "Read before opening the next phase" section before that section was archived | Whichever phase next touches entity resolution |
