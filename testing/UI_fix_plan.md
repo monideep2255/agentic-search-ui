@@ -804,8 +804,10 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Live | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten... Full detail: [11.28](#detail-1128) |
 | 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, not started | Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
 | 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one snippet broken | Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
-| 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | DECIDED, not started. REVERSES 11.13 | Raised 2026-09-20. Full detail: [11.31](#detail-1131) |
+| 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | BUILT, not yet live | Raised 2026-09-20. Both open questions answered by the product owner on 2026-09-21, and the cause turned out to be upstream of the directive the item names. Full detail: [11.31](#detail-1131) |
 | 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Not started | Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
+| 11.33 | PubMed abstracts reach the answer page cut off MID-WORD, for example "...inherited breast and/or ovarian c [29]" and "...has been uncle [33]" | Diagnosed, UNRESOLVED, not started | Found 2026-09-21 on develop at `46fff40`. Every character cap in the codebase was ruled out BY EXECUTION, including `_cap_text`, which appends a literal " [truncated]" that appears nowhere in the capture. The sentence splitter cannot cut mid-word either. The remaining hypothesis, that the model itself emitted the fragment while attempting a long verbatim quote, could NOT be reproduced, because `claim_introduces_no_new_content` rejects the reconstruction. Deliberately left unfixed rather than patched speculatively. What closes it, and the defensive fix that was considered and not applied, are in `testing/Developer/reports/2026-09-21_11.31_divergence/truncation/findings.md` |
+| 11.34 | A multi-sentence abstract LOSES ITS CITATION entirely in the code-built tail and fallback listing: both fragments are stripped and the marker is orphaned on an empty trailing "[27]." | Found, not started | Found 2026-09-21 while diagnosing 11.33, and unrelated to it. This is a cite-or-refuse defect rather than a presentation one, so it ranks above the cosmetic items: a record that was retrieved and shown loses the link that makes it verifiable. Reproduced by driving `run_grounding_pass` over constructed multi-sentence abstract findings |
 
 
 ### Detail for the long Set 11 items
@@ -1132,6 +1134,68 @@ plain language to stay "grounded in facts, meaning sources".
 
 The divergence therefore comes from the prose growing until it is no longer
 swamped, not from the evidence shrinking
+
+### 11.31 resolved, 2026-09-21
+
+BOTH OPEN QUESTIONS ARE ANSWERED and neither needs re-asking.
+
+- May a labelled explanatory sentence survive with no retrieved source? NO,
+  never, at either depth. The product owner's words: "Everything has to have
+  a source. The synthesis can be in simple terms". A code-owned glossary and
+  a labelled unsourced slot were both offered and both declined.
+- What replaces the word cap? A SHAPE, paragraphs and sentences per
+  paragraph, rather than a number. The hard backstops stay the 4000-token
+  synth ceiling and the 45-second step budget, both already in code.
+
+THE CAUSE WAS NOT THE DEPTH DIRECTIVE, and this is the part worth carrying
+forward, because the item named the wrong file. `grounding.ground_claim`
+accepts a claim only on contiguous containment. For a short structured
+finding the `b in a` direction does the work and a sentence can wrap the
+value in ordinary English. For a long free-text finding, such as the whole
+abstracts that became citeable on 2026-09-20, that direction is unreachable
+and only `a in b` remains, a verbatim excerpt.
+
+So against long source text the gate permits QUOTING and forbids EXPLAINING.
+A faithful paraphrase using only the source's own words, merely reordered, is
+stripped. Measured, not argued: an offline probe of 19 candidate sentences
+across 8 shapes returned 3 survivors, all literal excerpts.
+
+That is why both modes read as restatement, and it is the mechanism behind
+the product owner's "surface level, chatbots answer better" verdict: the only
+prose the gate can pass is a record dump.
+
+WHAT WAS REJECTED. Dropping contiguity and leaning on the content-token
+allowlist alone was measured and does not hold: three of four reorderings of
+an abstract's own words ship with every word licensed and the meaning wrong.
+The allowlist defends against INVENTED words and never defended against
+REARRANGED ones, because contiguity was carrying that half.
+
+WHAT WAS BUILT INSTEAD, which is `attack-the-constraint` applied to the
+assembly step rather than to the model: change the input. NCBI publishes a
+plain-English `summary` for every gene in its Gene ESummary response, and the
+field allowlist omitted it, so the product never saw it. It is now retrieved
+and emitted as its own finding beside the gene symbol, so a plain-language
+answer explains by quoting prose that is already plain. Verified live against
+gene 672, and verified through the gate: the summary passes verbatim.
+
+- Retrieval: `summary` added to `_SUMMARY_FIELDS_BY_DB["gene"]`. This is a
+  deliberate addition beyond the locked Section 6.2 table, recorded rather
+  than crossed silently, and a Step 6.2 reconciliation item.
+- Findings: `explanatory_value_for_row` emits a second finding per row,
+  numbered next to its own record. Depth-independent by construction, which
+  Section 14.1's firewall requires, and an arm fails loudly if anyone gives
+  `build_synth_findings` a depth argument.
+- Directive: version 4 of `plain_language`. It is the first version that does
+  not try to fix the product by rewording an instruction, and it asks for
+  nothing the gate cannot pass: quote the plain description exactly rather
+  than rewording it.
+
+STILL TO DO: no live run has yet been made at either depth against the new
+code, so the divergence is built and unproven. The baseline to beat is in
+`testing/Developer/reports/2026-09-21_11.31_divergence/baseline.md`: at both
+depths the record dump was 66 rows for BRCA1 and about 92 for HNF1A and
+identical across depths, against 89 to 164 words of prose.
+
 
 #### Detail 11.32
 

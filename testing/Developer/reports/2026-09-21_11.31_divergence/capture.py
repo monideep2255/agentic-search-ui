@@ -75,7 +75,7 @@ def main():
         path = RAW_DIR / fname
         data = json.loads(path.read_text())
         text = data["answer_text"]
-        prose_words, paragraphs, rows, prose_text = classify_and_count(text)
+        prose_words, paragraphs, rows, _prose_text = classify_and_count(text)
         ratio = prose_words / rows if rows else float("inf")
         results[fname] = {
             "question": data["question"],

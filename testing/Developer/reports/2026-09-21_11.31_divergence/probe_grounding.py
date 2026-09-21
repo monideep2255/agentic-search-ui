@@ -28,7 +28,6 @@ from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import (
     _canonicalize_relational,
     _licensed_question_content,
-    claim_introduces_no_new_content,
     content_tokens,
     ground_claim,
     numbers_are_supported,
@@ -160,160 +159,160 @@ def run_case(case: dict) -> dict:
 CASES: list[dict] = [
     # --- Shape 1: restates the abstract's mechanism, everyday syntax, only
     # words present in the abstract itself.
-    dict(
-        name="shape1_restate_mechanism_abstract_words_only",
-        shape="1",
-        narrative="BRCA1 encodes a tumor suppressor [1].",
-        claim_text="BRCA1 encodes a tumor suppressor",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
-    dict(
-        name="shape1b_restate_recombination_abstract_words_only",
-        shape="1",
-        narrative="Pathogenic BRCA1 variants abolish homologous recombination in this cohort [1].",
-        claim_text="Pathogenic BRCA1 variants abolish homologous recombination in this cohort",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
+    {
+        "name": "shape1_restate_mechanism_abstract_words_only",
+        "shape": "1",
+        "narrative": "BRCA1 encodes a tumor suppressor [1].",
+        "claim_text": "BRCA1 encodes a tumor suppressor",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
+    {
+        "name": "shape1b_restate_recombination_abstract_words_only",
+        "shape": "1",
+        "narrative": "Pathogenic BRCA1 variants abolish homologous recombination in this cohort [1].",
+        "claim_text": "Pathogenic BRCA1 variants abolish homologous recombination in this cohort",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
     # --- Shape 2: everyday synonym for a technical word that IS in the
     # abstract ("tumor suppressor" -> "brake on cell growth").
-    dict(
-        name="shape2_synonym_brake_on_cell_growth",
-        shape="2",
-        narrative="BRCA1 acts as a brake on cell growth [1].",
-        claim_text="BRCA1 acts as a brake on cell growth",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
-    dict(
-        name="shape2b_synonym_stops_tumors_forming",
-        shape="2",
-        narrative="BRCA1 helps stop tumors from forming [1].",
-        claim_text="BRCA1 helps stop tumors from forming",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
+    {
+        "name": "shape2_synonym_brake_on_cell_growth",
+        "shape": "2",
+        "narrative": "BRCA1 acts as a brake on cell growth [1].",
+        "claim_text": "BRCA1 acts as a brake on cell growth",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
+    {
+        "name": "shape2b_synonym_stops_tumors_forming",
+        "shape": "2",
+        "narrative": "BRCA1 helps stop tumors from forming [1].",
+        "claim_text": "BRCA1 helps stop tumors from forming",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
     # --- Shape 3: a general definitional sentence with no source behind it.
-    dict(
-        name="shape3_general_definition_marked",
-        shape="3",
-        narrative="A gene is a stretch of DNA that carries instructions [1].",
-        claim_text="A gene is a stretch of DNA that carries instructions",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
-    dict(
-        name="shape3b_general_definition_unmarked",
-        shape="3",
+    {
+        "name": "shape3_general_definition_marked",
+        "shape": "3",
+        "narrative": "A gene is a stretch of DNA that carries instructions [1].",
+        "claim_text": "A gene is a stretch of DNA that carries instructions",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
+    {
+        "name": "shape3b_general_definition_unmarked",
+        "shape": "3",
         # No marker at all: tests the framing/no-narrative-only-claims path
         # rather than the allowlist path.
-        narrative="A gene is a stretch of DNA that carries instructions.",
-        findings=[ABSTRACT_FINDING],
-    ),
+        "narrative": "A gene is a stretch of DNA that carries instructions.",
+        "findings": [ABSTRACT_FINDING],
+    },
     # --- Shape 4: draws on BOTH the user's question wording and the
     # abstract's/record's wording, via an open (wh-) question so its
     # content is licensed.
-    dict(
-        name="shape4_question_plus_abstract_wording",
-        shape="4",
-        narrative="Which mechanism does BRCA1 disrupt in tumors [1]?",
-        claim_text="Which mechanism does BRCA1 disrupt in tumors",
-        findings=[ABSTRACT_FINDING],
-        question=QUESTION_WH_OPEN,
-        primary_finding=ABSTRACT_FINDING,
-    ),
-    dict(
-        name="shape4b_disease_question_plus_record_wording_same_order",
-        shape="4",
+    {
+        "name": "shape4_question_plus_abstract_wording",
+        "shape": "4",
+        "narrative": "Which mechanism does BRCA1 disrupt in tumors [1]?",
+        "claim_text": "Which mechanism does BRCA1 disrupt in tumors",
+        "findings": [ABSTRACT_FINDING],
+        "question": QUESTION_WH_OPEN,
+        "primary_finding": ABSTRACT_FINDING,
+    },
+    {
+        "name": "shape4b_disease_question_plus_record_wording_same_order",
+        "shape": "4",
         # Same subject/predicate order as the finding's own field_value, so
         # ground_claim's substring/equality step also passes, isolating the
         # allowlist question-licensing behaviour.
-        narrative="BRCA1 is associated with MedGen:C0346153, which the question asks about [2].",
-        claim_text="BRCA1 is associated with MedGen:C0346153, which the question asks about",
-        findings=[DISEASE_FINDING],
-        question=QUESTION_DISEASE_WH_OPEN,
-        primary_finding=DISEASE_FINDING,
-    ),
-    dict(
-        name="shape4c_disease_question_reordered_fails_ground_claim",
-        shape="4",
+        "narrative": "BRCA1 is associated with MedGen:C0346153, which the question asks about [2].",
+        "claim_text": "BRCA1 is associated with MedGen:C0346153, which the question asks about",
+        "findings": [DISEASE_FINDING],
+        "question": QUESTION_DISEASE_WH_OPEN,
+        "primary_finding": DISEASE_FINDING,
+    },
+    {
+        "name": "shape4c_disease_question_reordered_fails_ground_claim",
+        "shape": "4",
         # Reordered relative to the finding's own field_value: demonstrates
         # that ground_claim (equality-or-substring) is a SEPARATE, stricter
         # gate than the content-token allowlist, and reordering alone can
         # strip a claim whose every word is licensed.
-        narrative="MedGen:C0346153 is associated with BRCA1 [2].",
-        claim_text="MedGen:C0346153 is associated with BRCA1",
-        findings=[DISEASE_FINDING],
-        question=QUESTION_DISEASE_WH_OPEN,
-        primary_finding=DISEASE_FINDING,
-    ),
+        "narrative": "MedGen:C0346153 is associated with BRCA1 [2].",
+        "claim_text": "MedGen:C0346153 is associated with BRCA1",
+        "findings": [DISEASE_FINDING],
+        "question": QUESTION_DISEASE_WH_OPEN,
+        "primary_finding": DISEASE_FINDING,
+    },
     # --- Shape 5: one dense Layer 1 record finding, split into 2-3 short
     # one-idea sentences, each carrying the same marker.
-    dict(
-        name="shape5_split_two_sentences_same_marker",
-        shape="5",
-        narrative="BRCA1 is associated with a disease [2]. That disease is MedGen:C0346153 [2].",
-        findings=[DISEASE_FINDING],
-    ),
-    dict(
-        name="shape5b_split_reusing_finding_words_verbatim",
-        shape="5",
+    {
+        "name": "shape5_split_two_sentences_same_marker",
+        "shape": "5",
+        "narrative": "BRCA1 is associated with a disease [2]. That disease is MedGen:C0346153 [2].",
+        "findings": [DISEASE_FINDING],
+    },
+    {
+        "name": "shape5b_split_reusing_finding_words_verbatim",
+        "shape": "5",
         # Each sentence individually is an exact substring of the finding's
         # field_value ("BRCA1 is associated with MedGen:C0346153"), so this
         # isolates whether SPLITTING a dense finding into several short
         # verbatim fragments survives, independent of paraphrase.
-        narrative="BRCA1 is associated with [2]. MedGen:C0346153 [2].",
-        findings=[DISEASE_FINDING],
-    ),
+        "narrative": "BRCA1 is associated with [2]. MedGen:C0346153 [2].",
+        "findings": [DISEASE_FINDING],
+    },
     # --- Shape 6: a relational synonym where the finding uses a different
     # one of the four (associated <-> related / linked / connected).
-    dict(
-        name="shape6a_related_vs_associated_synonym",
-        shape="6",
-        narrative="BRCA1 is related to MedGen:C0346153 [2].",
-        claim_text="BRCA1 is related to MedGen:C0346153",
-        findings=[DISEASE_FINDING],
-        primary_finding=DISEASE_FINDING,
-    ),
-    dict(
-        name="shape6b_linked_vs_associated_synonym",
-        shape="6",
-        narrative="BRCA1 is linked to MedGen:C0346153 [2].",
-        claim_text="BRCA1 is linked to MedGen:C0346153",
-        findings=[DISEASE_FINDING],
-        primary_finding=DISEASE_FINDING,
-    ),
-    dict(
-        name="shape6c_causes_vs_associated_not_in_synonym_set",
-        shape="6",
+    {
+        "name": "shape6a_related_vs_associated_synonym",
+        "shape": "6",
+        "narrative": "BRCA1 is related to MedGen:C0346153 [2].",
+        "claim_text": "BRCA1 is related to MedGen:C0346153",
+        "findings": [DISEASE_FINDING],
+        "primary_finding": DISEASE_FINDING,
+    },
+    {
+        "name": "shape6b_linked_vs_associated_synonym",
+        "shape": "6",
+        "narrative": "BRCA1 is linked to MedGen:C0346153 [2].",
+        "claim_text": "BRCA1 is linked to MedGen:C0346153",
+        "findings": [DISEASE_FINDING],
+        "primary_finding": DISEASE_FINDING,
+    },
+    {
+        "name": "shape6c_causes_vs_associated_not_in_synonym_set",
+        "shape": "6",
         # `causes` is deliberately EXCLUDED from _RELATIONAL_SYNONYMS
         # (grounding.py docstring above _RELATIONAL_SYNONYMS): a stronger
         # clinical claim than the finding supports. Included to mark the
         # boundary of shape 6, not just its interior.
-        narrative="BRCA1 causes MedGen:C0346153 [2].",
-        claim_text="BRCA1 causes MedGen:C0346153",
-        findings=[DISEASE_FINDING],
-        primary_finding=DISEASE_FINDING,
-    ),
+        "narrative": "BRCA1 causes MedGen:C0346153 [2].",
+        "claim_text": "BRCA1 causes MedGen:C0346153",
+        "findings": [DISEASE_FINDING],
+        "primary_finding": DISEASE_FINDING,
+    },
     # --- Shape 7: a framing opener with nothing content-bearing after it,
     # and a framing opener followed by a factual claim.
-    dict(
-        name="shape7a_framing_opener_nothing_after",
-        shape="7",
-        narrative="In summary, the following was found [1].",
-        findings=[ABSTRACT_FINDING],
-    ),
-    dict(
-        name="shape7b_framing_opener_then_factual_claim_unmarked",
-        shape="7",
-        narrative="In summary, BRCA1 encodes a tumor suppressor.",
-        findings=[ABSTRACT_FINDING],
-    ),
-    dict(
-        name="shape7c_framing_opener_then_factual_claim_marked",
-        shape="7",
-        narrative="In summary, BRCA1 encodes a tumor suppressor [1].",
+    {
+        "name": "shape7a_framing_opener_nothing_after",
+        "shape": "7",
+        "narrative": "In summary, the following was found [1].",
+        "findings": [ABSTRACT_FINDING],
+    },
+    {
+        "name": "shape7b_framing_opener_then_factual_claim_unmarked",
+        "shape": "7",
+        "narrative": "In summary, BRCA1 encodes a tumor suppressor.",
+        "findings": [ABSTRACT_FINDING],
+    },
+    {
+        "name": "shape7c_framing_opener_then_factual_claim_marked",
+        "shape": "7",
+        "narrative": "In summary, BRCA1 encodes a tumor suppressor [1].",
         # NOTE: the real claim clause run_grounding_pass extracts here is
         # the WHOLE segment before the marker, "In summary, BRCA1 encodes
         # a tumor suppressor" (_clean_claim only lstrips ",;: " characters,
@@ -321,27 +320,27 @@ CASES: list[dict] = [
         # claim_text="BRCA1 encodes a tumor suppressor" here, which made
         # the diagnosis disagree with the real run_grounding_pass verdict.
         # Fixed so the diagnostic checks the same string the real pass does.
-        claim_text="In summary, BRCA1 encodes a tumor suppressor",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
+        "claim_text": "In summary, BRCA1 encodes a tumor suppressor",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
     # --- Shape 8: adds a cautious hedge or an interpretation.
-    dict(
-        name="shape8a_hedge_this_suggests_plus_grounded_fact",
-        shape="8",
-        narrative="This suggests BRCA1 encodes a tumor suppressor [1].",
-        claim_text="This suggests BRCA1 encodes a tumor suppressor",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
-    dict(
-        name="shape8b_hedge_may_be_higher_ungrounded_interpretation",
-        shape="8",
-        narrative="This suggests the risk may be higher [1].",
-        claim_text="This suggests the risk may be higher",
-        findings=[ABSTRACT_FINDING],
-        primary_finding=ABSTRACT_FINDING,
-    ),
+    {
+        "name": "shape8a_hedge_this_suggests_plus_grounded_fact",
+        "shape": "8",
+        "narrative": "This suggests BRCA1 encodes a tumor suppressor [1].",
+        "claim_text": "This suggests BRCA1 encodes a tumor suppressor",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
+    {
+        "name": "shape8b_hedge_may_be_higher_ungrounded_interpretation",
+        "shape": "8",
+        "narrative": "This suggests the risk may be higher [1].",
+        "claim_text": "This suggests the risk may be higher",
+        "findings": [ABSTRACT_FINDING],
+        "primary_finding": ABSTRACT_FINDING,
+    },
 ]
 
 

@@ -804,9 +804,16 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
     # uses `dataset_report`, a different action, so widening this row cannot
     # put either field into a citation a user sees. Both are small scalars
     # and go through `_cap_value` like every other allowlisted field.
+    # `summary` is a further ADDITION beyond Section 6.2's table, live-probed
+    # 2026-09-21 against `esummary.fcgi?db=gene&id=672&retmode=json` (BRCA1).
+    # It is the only plain-English explanatory text NCBI publishes per gene,
+    # where every other field here is a code, a coordinate, or an id. The
+    # product's grounding gate can only pass source text through verbatim,
+    # so a plain-language answer needs plainer source text to draw from, or
+    # it has nothing citable to explain a gene's function in words.
     "gene": (
         "name", "description", "chromosome", "maplocation", "genomicinfo", "mim", "organism",
-        "status", "currentid",
+        "status", "currentid", "summary",
     ),
     # variation_set carries canonical_spdi nested inside it (Section 6.2
     # names "variation_set.canonical_spdi"); passed through as one object

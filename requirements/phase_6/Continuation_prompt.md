@@ -35,14 +35,16 @@ The next action is always one line, kept current here. Right now it is:
 - WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", last updated at the close of 2026-09-20. Start there, with two corrections this file makes to its "Next, in order" list, because that list was written in the afternoon and the evening's work landed after it.
   - ITEM 1, confirm the broad search live, IS DONE. The product owner tested `2bb1925` on develop and their verdict was "Working", recorded in that same section's own approved table.
   - ITEM 4, settle 11.28, IS DONE. It landed as `50ed55b`, and the Set 11 table's 11.28 row carries the real cause and the fix.
-  - So the first genuinely outstanding item on that list is ITEM 2, build 2a, cite every retrieved finding. Items 3, 5 and 6 follow it unchanged.
+  - ITEM 2 IN THE PLACED ORDER, item 11.31, IS BUILT as of 2026-09-21 and needs a live run at both depths to prove the divergence. See the 11.31 entry below.
+  - So the next unstarted item is build 2a, cite every retrieved finding. The rest follow it unchanged.
 - READ THE DAY'S SUMMARY BEFORE TOUCHING ANYTHING. `testing/Shipped_2026-09-20.md` is new and is the authoritative account of what shipped on 2026-09-20 and what to retest, in the terms a person notices. The develop app a tester sees is materially different from the one every earlier cutoff describes, so a session that skips it will retest the wrong things.
-- ONE ITEM IS NOT ON THE ORDERED LIST AT ALL AND NEEDS PLACING ON IT. Item 11.31, the two answer modes diverging, was decided on 2026-09-20 after "Next, in order" was written, so no document states where it sits in the order. It is DECIDED AND NOT BUILT. It carries two questions that whoever builds it must not answer on the product owner's behalf:
+- ITEM 11.31 IS BUILT AND NOT YET LIVE, as of 2026-09-21, and BOTH of its open questions are answered so neither may be re-asked. Every sentence keeps a source at both depths, and the plain-language bound is a SHAPE rather than a word count. Both are recorded in `DECISIONS.md` dated 2026-09-21.
 
-  - Whether a labelled explanatory sentence is ever permitted where no retrieved source supports it.
-  - What replaces the removed word cap as an upper bound.
+  THE ITEM NAMED THE WRONG FILE, and this is the part a later session most needs. The cause was never the depth directive. `grounding.ground_claim` accepts a claim only on contiguous containment, so against a long free-text finding such as a whole abstract the only surviving form is a VERBATIM EXCERPT. The gate permits quoting and forbids explaining, which is why both depths read as restatement and why a fourth reworded directive would have been stripped like the three before it.
 
-  Its constraints, including three failed directive versions it may not repeat, are in the Set 11 table's 11.31 row. Ask where it goes rather than assuming.
+  The fix changed the INPUT rather than the gate: NCBI's own plain-English Gene ESummary `summary` field is now retrieved and emitted as its own finding, so a plain-language answer explains by quoting prose that is already plain. Relaxing the gate was measured and REJECTED, because three of four reorderings of an abstract's own words ship with every word licensed and the meaning wrong.
+
+  WHAT IS LEFT: no live run has been made at either depth against the new code, so the divergence is built and unproven. The baseline to beat is `testing/Developer/reports/2026-09-21_11.31_divergence/baseline.md`, where the record dump was identical across depths at 66 rows for BRCA1 and about 92 for HNF1A, against 89 to 164 words of prose. The full account is that folder's `findings.md`.
 - CI IS GREEN ON DEVELOP, confirmed after the repair landed:
 
   - It had failed on two runs, both on one test-isolation defect.
@@ -483,4 +485,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-20.
+Last updated: 2026-09-21.

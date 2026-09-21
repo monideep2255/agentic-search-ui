@@ -93,6 +93,44 @@ MAX_FIELD_NAME_CHARS = 128
 MAX_SOURCE_URL_CHARS = 512
 MAX_CITATION_ID_CHARS = 64
 
+# Item 11.31 (2026-09-21). Fields that EXPLAIN a record rather than name or
+# classify it, and the reason a second finding is emitted for them at all.
+#
+# `_pick_representative_field` returns exactly one field per row and prefers
+# `name`, which is right for identifying a record and is why a gene row
+# reaches the model as "gene symbol: BRCA1" and nothing else. That leaves the
+# one piece of plain-English prose NCBI publishes about a gene, the Gene
+# ESummary `summary` field, retrieved and then discarded before synthesis.
+#
+# WHY THAT MATTERS MORE THAN IT LOOKS, measured on 2026-09-21 and recorded
+# because the next reader will otherwise treat this as a nice-to-have:
+# `grounding.ground_claim` accepts a claim only on contiguous containment.
+# For a short value the `b in a` direction does the work, so a sentence can
+# wrap the value in ordinary English. For a long free-text value, such as a
+# whole abstract, that direction is unreachable and only `a in b` remains,
+# which means a verbatim excerpt. So against long source text the gate
+# permits QUOTING and forbids EXPLAINING: a faithful paraphrase using only
+# the source's own words, merely reordered, is stripped.
+#
+# The product therefore cannot explain in its own words at any depth, and
+# three successive rewrites of the plain-language depth directive failed for
+# this reason before the cause was located (see `_DEPTH_DIRECTIVES`). The
+# fix is not to relax the gate, which was measured and ships reversed claims
+# (three of four reorderings of an abstract's own words pass the content
+# allowlist with the meaning wrong). The fix is `attack-the-constraint`'s:
+# change the INPUT. Retrieve source text that is already plain, and quoting
+# it verbatim is both grounded and readable.
+#
+# Additive and depth-independent by construction, which Section 14.1's
+# firewall requires: this emits the same findings at every audience depth.
+# A depth may change register, ordering and how much is explained, never
+# which findings exist.
+_EXPLANATORY_FIELDS: tuple[str, ...] = ("summary",)
+
+# Below this a "summary" is a label rather than an explanation, and pairing
+# a second finding with a row for a few words duplicates the first one.
+_MIN_EXPLANATORY_CHARS = 80
+
 # The hard ceiling on how many findings reach one Synth prompt. Section 7 of
 # system-design-patterns ("never inline large result sets into the agent's
 # context - it causes hallucination of the remaining data") is the reason
@@ -391,6 +429,49 @@ def _citable_value_for_row(
     return str(field_name), str(field_value), False, False
 
 
+def explanatory_value_for_row(
+    row: dict[str, Any], picked_field_name: str
+) -> tuple[str, str] | None:
+    """The row's explanatory prose field, when it has one worth citing.
+
+    Returns `(field_name, field_value)`, or `None` when the row carries no
+    explanatory field, when its value is too short to be an explanation, or
+    when `_citable_value_for_row` already picked that very field (in which
+    case a second finding would be the same claim twice).
+
+    Item 11.31 (2026-09-21). See `_EXPLANATORY_FIELDS` above for why this
+    exists: the grounding gate can only pass source text verbatim, so the
+    only way a plain-language answer explains anything is by quoting source
+    text that is already plain. This is the retrieval half of that.
+
+    Deliberately NOT depth-aware, and that is the load-bearing property
+    rather than an oversight. Section 14.1's firewall says a depth directive
+    may change register, ordering and how much is explained, and may never
+    change which findings were retrieved or which claims can be made. A
+    version of this keyed on `audience_depth` would put the answer set
+    itself under a presentation control, which is the breach
+    `_DEPTH_DIRECTIVES`' own history records twice.
+    """
+    fields = row.get("fields") or {}
+    if not isinstance(fields, dict):
+        return None
+    for name in _EXPLANATORY_FIELDS:
+        if name == picked_field_name:
+            continue
+        value = fields.get(name)
+        # `isinstance(value, str)` first, deliberately: a JSON null, a bool
+        # and a container all reach this dict, and finding J-10 and
+        # F-2.2-R-06 both record what happens when a non-string value is
+        # let through on a truthiness test alone.
+        if not isinstance(value, str):
+            continue
+        text = value.strip()
+        if len(text) < _MIN_EXPLANATORY_CHARS:
+            continue
+        return name, text
+    return None
+
+
 def build_synth_findings(
     findings: list[Finding],
     pick_representative_field: Any,
@@ -511,6 +592,35 @@ def build_synth_findings(
         collected.append(
             (source_url, row, (field_name, field_value, is_suspect, curie_fallback), finding)
         )
+
+        # Item 11.31: the row's explanatory prose, as a SECOND finding
+        # rather than instead of the first. Placed immediately after its
+        # own row's primary finding so the two are numbered adjacently and
+        # read together, rather than appended at the end where the prompt
+        # slice can cut it off.
+        #
+        # It goes through the same `seen` dedup and the same cap as every
+        # other finding, so it can never smuggle a row past a bound: a
+        # record that did not fit still does not fit.
+        explanatory = explanatory_value_for_row(row, field_name)
+        if explanatory is not None:
+            explanatory_name, explanatory_value = explanatory
+            explanatory_identity = (source_url, explanatory_name, explanatory_value)
+            if explanatory_identity not in seen:
+                seen.add(explanatory_identity)
+                total_citable += 1
+                if not (
+                    (lead_quota is None or not lead_call_ids)
+                    and len(collected) >= max_findings
+                ):
+                    collected.append(
+                        (
+                            source_url,
+                            row,
+                            (explanatory_name, explanatory_value, False, False),
+                            finding,
+                        )
+                    )
 
     if lead_quota is not None and lead_call_ids:
         collected = _allot_with_lead_quota(collected, lead_call_ids, lead_quota, max_findings)
@@ -984,13 +1094,56 @@ _DEPTH_DIRECTIVES: dict[str, str] = {
     # paragraph and a few short sections, since the code-built list under
     # the prose carries every record. Register, length and shape only, as
     # before; nothing about which tokens may appear.
+    # VERSION 4, item 11.31 (2026-09-21), and the first version of this
+    # directive whose change is NOT an attempt to fix the product by
+    # rewording an instruction. The three failures above all did that, and
+    # this one only exists because the cause was finally located one layer
+    # upstream, in what the model is handed rather than in what it is told.
+    #
+    # WHAT THE PRODUCT OWNER ASKED FOR: plain language is for the common
+    # man, carries MORE text than today, explains the concept in simple
+    # terms, and still links every claim to a source. Two decisions the same
+    # day bound it: every sentence keeps a source at both depths ("Everything
+    # has to have a source. The synthesis can be in simple terms"), and the
+    # 120-word cap is removed in favour of a shape.
+    #
+    # WHY THE WORD CAP IS GONE RATHER THAN RAISED. The cap was pinned by a
+    # regression tied to the write-step timeout (F9-04, 3 of 25 researcher
+    # runs dying at the 45-second budget on a 700-word ask). That premise
+    # went stale the same day it was written: `harness/harness.py` attributes
+    # those deaths to synth reasoning effort `low` burning the whole
+    # 4000-token ceiling on reasoning, and records 6 of 6 completions in 5.2
+    # to 7.2 seconds once effort became `none`, which is what ships. Two
+    # fixes landed for one symptom and each claimed the cause; only the
+    # effort claim carries a control experiment. The hard bounds that remain
+    # are real and enforced in code: the 4000-token synth ceiling and the
+    # 45-second step budget. A paragraph count constrains neither which
+    # tokens may appear nor which findings are covered, so it is the one
+    # shape control that does not touch Section 14.1's firewall.
+    #
+    # WHY IT CAN NOW ASK FOR EXPLANATION AT ALL. `grounding.ground_claim`
+    # accepts only contiguous containment, so against long source text the
+    # gate permits quoting and forbids paraphrase (see `_EXPLANATORY_FIELDS`
+    # for the measurement). Asking this depth to "explain in simpler words"
+    # would therefore be version 1's mistake again: the explanation would be
+    # stripped and the depth would refuse. What changed is the INPUT. The
+    # Gene ESummary `summary` field, NCBI's own plain-English description of
+    # a gene, is now retrieved and emitted as its own finding, so the model
+    # can explain by quoting prose that is already plain. The directive
+    # points at that material and asks for nothing the gate cannot pass.
     "plain_language": (
         "AUDIENCE DEPTH: plain_language. Write for a reader with no biology "
-        "background, about 120 words, in three short paragraphs separated by "
-        "a blank line: first the direct answer, then what it means, then one "
-        "or two sentences of background. Use everyday words. Every sentence "
-        "must restate a finding and end with that finding's marker, because "
-        "a sentence without one is deleted. No headings, no lists, no tables."
+        "background. Use everyday words and short sentences of one idea "
+        "each. Open with one paragraph that answers the question directly. "
+        "Then give each finding its own sentence saying in plain words what "
+        "that record is, grouped into paragraphs of three to five sentences "
+        "separated by a blank line. Write as many paragraphs as the findings "
+        "support, and do not pad beyond them. When a finding is a plain "
+        "description of a record, such as a gene summary, use its own words "
+        "to explain what the answer means, quoting it exactly rather than "
+        "rewording it. Every sentence must restate a finding and end with "
+        "that finding's marker, because a sentence without one is deleted. "
+        "No headings, no lists, no tables."
     ),
     "researcher": (
         "AUDIENCE DEPTH: researcher. Write for a working researcher, about "
@@ -1141,8 +1294,10 @@ def build_answer_context_directive(
         "from them, and the whole answer comes before anything else.\n"
         f"CONTEXT FINDINGS: {_marker_span(context)} are supporting records "
         "retrieved for the same subject (its live record, the literature "
-        "index, the trials registry). Mention them only after the answer, "
-        "briefly, as context."
+        "index, the trials registry). Mention them only after the answer. "
+        "Keep them brief, except where one is a plain description of a "
+        "record, such as a gene summary: use that one's own words to "
+        "explain what the answer means, quoting it exactly."
     )
 
 

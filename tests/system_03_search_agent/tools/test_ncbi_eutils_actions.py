@@ -660,6 +660,65 @@ class TestSummary:
         assert output.records[0].source_url == "https://www.ncbi.nlm.nih.gov/gene/7157"
 
     @pytest.mark.asyncio
+    async def test_gene_summary_field_passes_through_the_allowlist(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`summary` is an addition beyond Section 6.2's table (see the
+        comment beside `_SUMMARY_FIELDS_BY_DB["gene"]`): the only
+        plain-English explanatory text NCBI publishes per gene. This is the
+        populate-check that the addition actually reaches the caller, not
+        just that the constant contains the string.
+
+        The mutation arm for this check is `_SUMMARY_FIELDS_BY_DB["gene"]`
+        itself: remove `"summary"` from that tuple and this assertion goes
+        red, because the field is no longer allowlisted through. Verified by
+        hand while writing this test, then restored; there is no separate
+        mutation-harness file for this module, so the arm is the allowlist
+        constant itself rather than a parametrized mutation table like
+        `core/test_discontinued_gene_mutation.py` uses for `status` and
+        `currentid`.
+        """
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "result": {
+                            "uids": ["672"],
+                            "672": {
+                                "uid": "672",
+                                "name": "BRCA1",
+                                "summary": (
+                                    "This gene encodes a 190 kD nuclear "
+                                    "phosphoprotein that plays a role in "
+                                    "maintaining genomic stability, and it "
+                                    "also acts as a tumor suppressor."
+                                ),
+                                "an_unlisted_field": "should not appear",
+                            },
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.summary(
+            NcbiEfetchSummaryInput(action="summary", db="gene", ids=["672"])
+        )
+        assert output.status == "ok"
+        fields = output.records[0].fields
+        assert "summary" in fields, (
+            "`summary` must reach the caller for `db=gene`, but it was "
+            f"filtered out; fields returned: {sorted(fields)}"
+        )
+        assert fields["summary"].startswith(
+            "This gene encodes a 190 kD nuclear phosphoprotein"
+        )
+        assert "an_unlisted_field" not in fields, (
+            "the allowlist must still filter everything not named in it, "
+            "even with `summary` added"
+        )
+
+    @pytest.mark.asyncio
     async def test_clinvar_germline_classification_passed_through_as_object(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
