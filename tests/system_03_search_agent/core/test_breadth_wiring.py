@@ -35,8 +35,13 @@ fakes whose bytes the test controls (the same discipline as
     THE LAYER 2 CITATION. A claim on the second record of a two-record
     `ncbi_efetch` output cites the second record's URL and id.
 
-    ABSTRACTS. The abstract text never reaches the synthesis prompt; the
-    title does. (11.22 reserved.)
+    ABSTRACTS (UI fix 11.22). The abstract text now reaches the synthesis
+    prompt too, verbatim and alongside the title, never in place of it; a
+    clause Synth writes that is not drawn verbatim from a retrieved
+    abstract is stripped by the unmodified grounding pass rather than
+    shipped. See `tests/system_03_search_agent/synthesis/test_pubmed_
+    abstract_grounding.py` for the grounding-level proof; this file only
+    proves the abstract is actually wired into the live prompt.
 
     THE ALLOTMENT. With a lead quota, the answer-shape rows are admitted
     first up to the quota and the context calls then share the remaining
@@ -443,18 +448,26 @@ async def test_a_follow_up_that_raises_degrades_to_an_error_result(
 
 
 @pytest.mark.asyncio
-async def test_the_abstract_never_reaches_the_prompt_but_the_title_does(
+async def test_the_abstract_now_reaches_the_prompt_beside_the_title(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """UI fix 11.22 reverses the pre-11.22 premise this test used to pin
+    (see the module docstring's ABSTRACTS section): the retrieved abstract
+    text is now wired into the live prompt, additively, beside the title
+    that was already there. The grounding-level proof that a fabricated
+    sentence still cannot ride along on this new content lives in
+    `tests/system_03_search_agent/synthesis/test_pubmed_abstract_
+    grounding.py`; this test only proves the wiring reaches the real
+    coordinator-worker to Write path, with every tool and the model faked.
+    """
     spy = _ModelSpy(monkeypatch)
     _install_lookup(monkeypatch)
     _ToolSpy(monkeypatch)
     await _events(_GENE_QUESTION)
     assert spy.synth_prompts, "populate-check: no synthesis prompt was captured"
     joined = "\n".join(spy.synth_prompts)
-    assert "BRCA1 paper 30000003" in joined
-    assert _ABSTRACT not in joined
-    assert "abolishes homologous" not in joined
+    assert "BRCA1 paper 30000003" in joined, "the pre-existing title finding must be unaffected"
+    assert _ABSTRACT in joined, "the retrieved abstract text must now reach the prompt"
 
 
 # ---------------------------------------------------------------------------

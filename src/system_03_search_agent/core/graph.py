@@ -4392,13 +4392,75 @@ _NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id"})
 
 #: UI fix 11.21 wiring: per breadth purpose, the record fields that reach
 #: synthesis, in the order they are offered (the first is the cited claim).
-#: PubMed keeps the title and never the abstract, which is reserved for
-#: 11.22 by product-owner decision (2026-09-14); ClinVar leads with the
+#: PubMed keeps the title here; the abstract text is added SEPARATELY, as
+#: its own row, by `_pubmed_abstract_rows` below (UI fix 11.22), never by
+#: widening this tuple, because `_pick_representative_field` only ever
+#: returns ONE field per row and title must keep winning that pick so the
+#: pre-11.22 title-only finding is unaffected. ClinVar leads with the
 #: variant title and drops the nested `variation_set`.
 _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     "pubmed_abstracts": ("title",),
     "clinvar_summary": ("title", "germline_classification", "accession", "genes"),
 }
+
+#: UI fix 11.22. The purpose whose records carry a real abstract, and the
+#: raw `fields` key `ncbi_eutils_actions._extract_pubmed_articles` already
+#: writes it under (`fields["abstract"]`, capped by that module's own
+#: `_cap_text`, long before this function ever runs).
+_PUBMED_ABSTRACTS_PURPOSE: Final[str] = "pubmed_abstracts"
+_PUBMED_ABSTRACT_FIELD: Final[str] = "abstract"
+
+
+def _pubmed_abstract_rows(
+    records: list[Any], title_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """UI fix 11.22: one additional citeable row per admitted title row,
+    carrying that record's own retrieved abstract text verbatim.
+
+    Why the whole retrieved abstract, and not a sentence the code picks:
+    `core/breadth_plan.py`'s module docstring records that a prior design
+    tried exactly that, a regex rule choosing one "representative"
+    sentence, and it was held back by product-owner decision (2026-09-14)
+    because the rule accepted meaning-reversing fragments and could not
+    see a refutation sitting in the next sentence. This function asserts
+    nothing about which sentence of an abstract matters and selects none
+    of them; `fields["abstract"]` here is the record's retrieved text,
+    unedited beyond the cap `ncbi_eutils_actions._cap_text` already
+    applied at fetch time. Whether a clause of Synth's narrative becomes a
+    citeable quote from it is decided entirely by
+    `synthesis/grounding.py`'s deterministic `ground_claim`: a clause
+    grounds only when it equals, or is contained in, this exact string,
+    never by any similarity score, so a sentence Synth did not lift
+    verbatim from the abstract cannot pass as a cited claim.
+
+    Emitted as an ADDITIONAL row, never a replacement: `title_rows` (this
+    purpose's existing, unchanged `_BREADTH_FIELDS_BY_PURPOSE` output) is
+    walked as-is, so a record already admitted through the title cap gets
+    a second row only when it also carries a non-blank abstract, and a
+    record with no abstract keeps exactly the single title row it always
+    had. Matched to `title_rows` by `source_url`, the same identity
+    `build_synth_findings` already dedupes findings on, so this can only
+    add a row for a paper the title path already let through the cap,
+    never widen the paper set itself.
+    """
+    by_url = {record.source_url: record for record in records if record.source_url}
+    abstract_rows: list[dict[str, Any]] = []
+    for row in title_rows:
+        record = by_url.get(row["source_url"])
+        if record is None:
+            continue
+        abstract = record.fields.get(_PUBMED_ABSTRACT_FIELD)
+        if not isinstance(abstract, str) or not abstract.strip():
+            continue
+        abstract_rows.append(
+            {
+                "curie": "",
+                "node_or_edge_type": row["node_or_edge_type"],
+                "fields": {_PUBMED_ABSTRACT_FIELD: abstract},
+                "source_url": row["source_url"],
+            }
+        )
+    return abstract_rows
 
 
 def _ncbi_efetch_output_to_structured_fields(
@@ -4421,6 +4483,12 @@ def _ncbi_efetch_output_to_structured_fields(
     the honest state here. `source_url` and every surviving `fields` value
     are the record's own real data, never fabricated; only
     `_NCBI_EFETCH_ROW_IDENTITY_FIELDS` is withheld, see that constant.
+
+    UI fix 11.22: for `purpose == "pubmed_abstracts"`, `_pubmed_abstract_
+    rows` appends one abstract row per title row whose own record carries a
+    non-blank abstract, after the title rows are picked and capped, so it
+    can only ever add to the fixed five-paper set the title path already
+    admits, never widen it.
     """
     allowed = _BREADTH_FIELDS_BY_PURPOSE.get(purpose)
     rows = [
@@ -4447,6 +4515,8 @@ def _ncbi_efetch_output_to_structured_fields(
         rows = [row for row in rows if row["source_url"]]
         rows.sort(key=lambda row: str(row["source_url"]))
         rows = rows[:_BREADTH_ROW_CAP]
+        if purpose == _PUBMED_ABSTRACTS_PURPOSE:
+            rows = rows + _pubmed_abstract_rows(output.records, rows)
     return {
         "status": output.status,
         "row_count": len(rows),
