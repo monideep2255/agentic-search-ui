@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-20.
+Last updated: 2026-09-21.
 
 ## Table of contents
 
@@ -153,7 +153,29 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 20 SEPTEMBER, in one sentence: answers now hit their own ceiling of twenty sources and then tell you they were cut short, so a good answer still reads as a thin one.
+THE HONEST HEADLINE AS OF 21 SEPTEMBER, in one sentence: the system can quote its sources but it cannot explain them in its own words, so answers read like a list of records no matter which setting you pick.
+
+That is not a writing problem, and it took most of a day to establish that. The system has a safety rule that every sentence must be checkable against a source. The way it checks is strict: the sentence has to repeat the source's words exactly, in the same order. That works fine for a short record, where a sentence can quote the whole thing. It breaks for a long piece of text like a research abstract, because a single sentence cannot contain four hundred words, so the only sentence that passes is one that copies a chunk of the abstract word for word.
+
+Explaining something means saying it differently. So every explanatory sentence the system writes gets quietly deleted before you see it, and what arrives looks thin rather than censored. We tested nineteen different ways of writing such a sentence. Three survived, and all three were straight copies.
+
+We have now tried five separate times to fix this by rewording the instructions we give the system, two of those attempts today. All five failed, and each failed differently. One made it refuse to answer at all. One made it quietly drop a quarter of what it found. One produced two hundred words of "One disease is called this. Another disease is called that." A sixth attempt is not the answer.
+
+We also caught ourselves measuring the wrong thing. We reported one attempt as a success because the answer got longer. Then we ran the same question three times without changing anything and got 113, 66 and 101 words. The length was noise, and the thing we actually care about, whether a person understands the answer, was never measured at all. The product owner's words, which are now written into the code: "Number of words do not define an answer."
+
+What we shipped instead of a sixth rewrite: we went and fetched better raw material. NCBI writes a plain-English description of every gene, and we had simply never asked for it. It now comes back with every search and is shown as a source. The honest limit is that the system still does not use it to explain anything, so this is half a fix.
+
+The other things we know are wrong today:
+
+- One search in ten quietly loses an entire source of information. We proved this today over twenty live runs. One run came back with nothing at all from the knowledge graph, while every internal signal said the search was healthy, and the answer simply had half as many sources. Nothing on the screen tells you this happened. You cannot tell a search that went wrong from a question that genuinely had fewer sources.
+- The tool we built a week ago to catch exactly that had a one-word bug and had been reporting "nothing wrong" on every single run. It was looking for the word "layer_1" and the system says "layer_1_graph".
+- Long quotes from research papers are still cut off in the middle of a word, like "has been uncle". We shipped a fix for this today, checked it on the live site, and it did not work. We know much more about where the cut happens and it is now a small job, but it is not done, and we have written it down as not done rather than claiming it.
+- One useful source of gene-to-disease information, OMIM, is still switched off. We switched it on today and switched it straight back off, because we found that a safety filter written for it had never actually been connected. Without that filter, asking about one gene can return records about a completely different gene, correctly labelled and completely wrong. That is the worst kind of error this product can make, so it stays off until the filter is wired in.
+- One search out of thirty took 127 seconds. The usual is about 13. Nobody has found out why.
+- Clicking one of your past searches asks the question again from scratch instead of showing the answer you already read, because answers are not stored anywhere.
+- One security-shaped loose end in how an AI tool connects to the product, described below.
+
+THE HONEST HEADLINE AS OF 20 SEPTEMBER, kept for the record, in one sentence: answers now hit their own ceiling of twenty sources and then tell you they were cut short, so a good answer still reads as a thin one.
 
 That is measured rather than felt. We ran thirty real searches on the live practice site and counted what each answer said about itself. Twenty-four of the thirty ended by telling the reader the result had been trimmed. Twenty-two of the thirty said some of what was found is not described above. The number of sources used ranged from thirteen to twenty, averaging sixteen, and twenty is exactly the limit we set. So answers are pressed up against that limit most of the time, and then apologising for it. Nobody has yet decided whether twenty is the right number.
 
@@ -238,6 +260,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Finding out why the answers read thinly, and fixing a real loss of sources | Discovered that the system is only allowed to quote its sources word for word, never to explain them, which is why every answer reads like a list. Tried five ways of instructing it differently; all five failed. Went and fetched better raw material instead: NCBI writes a plain-English description of every gene and we had never asked for it. Separately, found and fixed a genuine loss: a quote from a research paper that ran to more than one sentence was being thrown away completely, contributing nothing and losing its source link, with nothing on screen to say so. Also removed a confusing Notes block the product owner flagged, and proved that one search in ten quietly loses a whole source of information | 21 September |
 | Twelve fixes, and the first release in three weeks | Answers can quote what a paper found. Every question now searches what suits it rather than following one fixed plan. Long tables turn a page at a time. The source list folds into three groups instead of running to seventy-eight entries. Research searches ask for the most relevant papers first. The scientist names during the wait are readable. The integrations instructions work as printed. Then all three weeks of work went to the public site as release v0.2.0, 241 changes. What the day taught was uncomfortable: every problem the product owner had reported turned out to be the product describing itself badly rather than failing to find things. On the one question we took apart in detail, it was already finding 124 records where it used to find 44 | 20 September |
 | Getting the safety checks working again, and measuring what is really wrong | The automatic checks that run on every change had been failing for five days. The cause turned out to be three separate problems in the tests themselves, not in the product, one of which could have pointed the system at the wrong database. Fixed all three without weakening any check. Then measured the live site properly and found that the same question can return three different sets of sources | 20 September |
 | Making it easier on the eye, and writing down what it must do | Rebuilt the sign-in screen, which had never been designed at all and looked like a raw form. Removed a permanent warning strip that sat on every screen and took up a tenth of a phone display. Made the top bar work on a phone instead of overlapping itself. Gave the integrations page working copy buttons and real links, where before it was text you could only read. Fixed a privacy problem where one person's conversation stayed on screen for the next person. And wrote down, for the first time, the fifty things the product must be able to do, ranked so the most important come first | 5 September |
@@ -519,17 +542,17 @@ One more thing happened at the very end, and it is recorded because a reader lea
 
 Where the finished work sits against what is still ahead:
 
-THE IMMEDIATE NEXT STEP IS ALREADY UNDERWAY. The product owner is testing the product directly against a written plan, and their findings are what decide the order below, rather than a number on an old list.
+THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. Retest everything that went out today, on the practice site, and say what is still wrong. A dozen changes landed in one day and the product owner has not yet seen most of them. Until they are tried by a person, we have our own word for it and nothing else.
-2. Make the two answer settings genuinely different. Plain language should be longer, explain the idea in ordinary words, and still tie every claim to a source. Researcher keeps the tables and the depth. This is decided and written down, and it is the largest decided-but-unbuilt item we have.
-3. Decide whether twenty sources is the right ceiling. Answers are hitting it on most questions and then telling the reader they were cut short, which is the single biggest reason a good answer reads as a thin one. This is a product decision, not a piece of building.
-4. Find out why one search in thirty took 127 seconds when the rest took about 13. Nobody owns it today.
-5. Work out why broad "what genes are associated with X" questions fail our own fact-check five times out of six, so the reader gets a list of records instead of a written answer.
-6. Catch the intermittent failure in the act. About one search in ten used to fail a week ago and none have failed in seventy-five tries since, but nothing was fixed, so it is hiding rather than gone.
+1. Run every one of our fifty test questions three times over and write down what comes back. We have never done this. It matters more now than it did yesterday, because the way answers get their sources changed twice in one day, and because we now know for certain that the same question can come back with half its sources missing. Three runs each is the point: one run tells you nothing, as we learned the hard way.
+2. Finish the cut-off-mid-word problem. Long quotes from papers still break in the middle of a word. We know almost exactly where it happens now and it is one careful measurement away from being fixed.
+3. Decide what to do about the one search in ten that loses a whole source of information. This is as much a product question as an engineering one: the cheapest honest fix is to tell the reader it happened, rather than to stop it happening.
+4. Decide whether twenty sources is the right ceiling. Answers hit it on most questions and then tell the reader they were cut short, which is a large part of why a good answer reads as a thin one.
+5. Switch OMIM back on, once its safety filter is actually connected. It is a genuinely useful source of gene-to-disease information and it is switched off for a good reason.
+6. Find out why one search in thirty took 127 seconds when the rest took about 13. Nobody owns it today.
 7. The rest of the screen work: a bigger, clearer disclaimer notice, and the smaller items on the tester's list that nobody has objected to yet.
 
-Two previous first steps have left this list because they are done: the held-back search improvement went live today, and the two changes that had been put in and taken back out are both back in and shipped.
+NOT ON THIS LIST, deliberately: making the two answer settings genuinely different. It was item 2 yesterday and it was worked on all day. The product owner has seen where it got to and accepted it as it stands. There is a way forward written down, which is to have the system place the plain-English description itself rather than asking it to write one, but it is an option on the table rather than a queued job.
 
 The previous next step, still true and now further down the list: are the fifty test questions the right fifty?
 
@@ -614,7 +637,10 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
 | Answers reach their own ceiling of twenty sources and then tell the reader the result was cut short. Across thirty measured searches, twenty-four ended with a note about being trimmed and twenty-two said some of what was found is not described. This is the single biggest reason a good answer reads as a thin one | Needs a product decision first: is twenty the right number? Nobody has set it deliberately. Raising it is not free, because every extra source costs time and money on each question |
-| The two answer settings, plain language and researcher, produce almost the same page. Plain language should be longer and explain the idea in ordinary words; researcher should carry the tables and the depth | Decided on 20 September and written down, including two things whoever builds it is not allowed to decide alone. Not started. It is the largest decided-but-unbuilt item we have |
+| The system can quote its sources word for word but cannot explain them in its own words, because every sentence has to repeat a source exactly to pass the safety check. This is why both answer settings read like a list of records | Worked on all day on 21 September and accepted as it stands by the product owner. Five attempts to fix it by rewording the instructions all failed. There is a way forward written down, which is to have the system place the plain-English text itself instead of asking it to write one, but it is an option rather than a queued job |
+| One search in ten quietly loses a whole source of information. Proved over twenty live runs on 21 September: one run came back with nothing from the knowledge graph while every internal signal read healthy, and the answer simply had half as many sources. Nothing on screen says it happened | Needs a decision before any building. The cheapest honest fix is to tell the reader, rather than to stop it happening |
+| Long quotes from research papers are cut off in the middle of a word, like "has been uncle". A fix was written and shipped on 21 September and did NOT work | Narrowed to one careful measurement. Written down as open rather than claimed as fixed |
+| OMIM, a useful source of gene-to-disease information, is switched off. It was switched on and straight back off on 21 September, because a safety filter written for it had never been connected, and without it a question about one gene can return records about a different gene, correctly labelled and completely wrong | Stays off until the filter is connected. The steps are written into the code beside the switch |
 | One search out of thirty took 127 seconds, where the usual is about 13. No cause found | Nobody owns it. Raised 20 September |
 | Broad questions of the shape "what genes are associated with X" fail our own fact-check five times out of six, so the reader is handed a list of records instead of a written answer. Refusing to show unverified writing is right; needing to refuse that often is not | Unowned. It is narrow, which is itself a finding: four other question shapes we tried barely do this at all |
 | Clicking one of your past searches asks the question again from scratch instead of showing the answer you already read | Blocked on a decision about people's data. No answer text is stored anywhere today, so this needs somewhere to keep answers and a decision about whether we should keep them at all |

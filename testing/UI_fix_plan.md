@@ -73,7 +73,7 @@ missing.
 | 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | | Tests 1, 7, 12, 14 |
 | 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
-| 11. Live feedback, 2026-09-13 and 14 | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-20: the bold is quieter (11.27) and every question now searches the resources that fit it rather than a fixed plan (11.17 and 11.21) | Partly | Mostly | | Tests 1, 7, 12 |
+| 11. Live feedback, 2026-09-13 onward | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-21: a quote from a paper that runs to more than one sentence is no longer thrown away and now keeps its source link (11.34), NCBI's own plain-English gene description is retrieved and shown as a source (11.31), the confusing Notes block is gone (11.35), and the answer-modes info button no longer promises a word count (11.36) | Partly | Mostly | | Tests 1, 7, 12 |
 
 ## Set 1: let people in
 
@@ -1263,35 +1263,116 @@ that.
 ## Where we stopped
 
 The cutoff. It is updated at the end of every working session, so the next
-session starts here rather than reconstructing state. Last updated 2026-09-20,
-late evening, after the production release, two harness fixes merged as PR #97
-and PR #98, and a readability pass on this document and on the continuation
-prompt. Read this, then the Set 11 table above.
+session starts here rather than reconstructing state. LAST UPDATED 2026-09-21,
+at the close of a session that worked item 11.31 to a decision, fixed the
+citation-loss defect behind it, closed item 2a by measurement, half-built 2b,
+and confirmed L-01. Read this, then the Set 11 table above.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
 owner and whoever picks this up read the same record.
 
-The day's shipped list, with what to retest, is `testing/Shipped_2026-09-20.md`.
-That document is read once, start to finish, by someone catching up. This
-section is the authoritative plan and owns per-item status.
+The 2026-09-20 shipped list, with what to retest, is
+`testing/Shipped_2026-09-20.md`. This section owns per-item status.
 
-### The short version
+### The 2026-09-21 session, in one table
 
-| # | Item | Outcome |
+| Item | State at close | The one thing to know |
 |---|---|---|
-| 1 | The broad search, 11.17 and 11.21 | LIVE at `2bb1925`. Product owner verdict: working |
-| 2 | Nine further fixes across the day | All LIVE on develop, listed in `testing/Shipped_2026-09-20.md` |
-| 3 | 11.22, abstracts as evidence | LIVE at `9cf8572`, shipped the evening it was approved |
-| 4 | 11.30, the Integrations page | Fix A LIVE at `dca58e5`. Fix B open, a deployment decision |
-| 5 | PRODUCTION RELEASE v0.2.0 | SHIPPED. 241 commits, the first release since 2026-08-28 |
-| 6 | The harness | `bossman-mode` rebuilt as a router plus three reference files, merged as PR #94 |
-| 7 | This document | Restructured so Set 11 is scannable again, and item 11.32 added |
-| 8 | `/ship`'s stray-file sweep | FIXED and MERGED as PR #97. It walks the filesystem as well as asking git |
-| 9 | The bossman deny rule | FIXED and MERGED as PR #98, on explicit sign-off. Two carve-outs, bounded by mode |
-| 10 | This document and the continuation prompt | Both run through `/doc-readability`, with a fresh-context auditor on each |
+| 11.31, the two answer modes | DECIDED and BUILT, product owner approved as is | Both open questions answered. The cause was never the depth directive: the grounding gate only passes verbatim source text, so the product cannot explain in its own words at any depth |
+| 11.34, a multi-sentence finding loses its citation | FIXED, live | A retrieved record was rendered, stripped whole, and contributed no text and no citation, with nothing telling the reader. Now cited |
+| 2a, cite every retrieved finding | CLOSED by measurement, no code written | The mechanism already existed. Its entire residual gap was 11.34 |
+| 2b, OMIM | HALF done, deliberately | The citation host rule is widened. The DISPATCH is reverted and must stay reverted until `filter_omim_titles` is wired |
+| L-01, a graph result vanishing | CONFIRMED over 20 live runs | One run in ten returned zero graph rows with every other signal reading healthy. Nothing tells the reader |
+| 11.33, values cut mid-word | STILL OPEN, narrowed | A fix was written, shipped and did NOT close it. Recorded as still open rather than claimed |
+| 11.35, the Notes section | LIVE | Both notes gone from the screen by product-owner decision |
+| 11.36, the answer-modes info card | LIVE | It promised "about 250 words in three paragraphs", describing a directive that no longer exists |
+| 11.37, missing Layer 1 sources | ACCEPTED, not a defect to fix | The graph IS cited, 40 of 67. Dedup by URL absorbs all of them into a Live NCBI row |
 
-### The release, and what it means for tomorrow
+### The result that should shape what happens next
+
+THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING, and this is the
+session's most transferable finding. `ground_claim` accepts a claim against a
+finding only on contiguous containment. For a short record that is healthy: a
+sentence wraps the value verbatim. For a long free-text value, such as an
+abstract or a gene summary, only a verbatim excerpt survives, because a
+sentence cannot contain a 400-word abstract.
+
+Explaining means using different words. So every explanatory sentence the
+model writes is deleted silently, and the answer arrives looking thin rather
+than censored. Measured: 19 candidate sentences across 8 shapes returned 3
+survivors, all literal excerpts.
+
+FIVE VERSIONS OF THE DEPTH DIRECTIVE HAVE NOW FAILED, two of them written this
+session, each by instructing the model about form:
+
+| Version | Instructed | Result |
+|---|---|---|
+| 1 | Do not print identifiers | The depth refused outright |
+| 2 | Keep background to a minimum | Reported three of four findings, looking confident |
+| 3 | State identifiers exactly, say less | Refused with an empty narrative |
+| 4 | Give each finding its own sentence | 206 words of enumeration, explaining nothing |
+| 5 | Explain, quote exactly, no length rule | 58 words, still explaining nothing |
+
+A sixth version is not the fix. The lever that remains, recorded and NOT
+built because it changes what an answer is composed of rather than how a model
+is instructed: have the CODE place the plain source text verbatim and cited,
+the way the record tables under every answer are already built, where no model
+touches the text so it can neither hallucinate nor be stripped. The product
+owner reviewed this and approved the current state as is, so it is a standing
+option rather than a queued task.
+
+### What is live on develop
+
+- Item 11.34's fix, so a multi-sentence abstract or gene summary is cited
+  rather than silently dropped.
+- NCBI's own plain-English gene summary, retrieved, cited and rendered. It is
+  NOT used by the model to explain, which is the half that did not land.
+- The citation host rule widened to `omim.org`, with `www.` admitted.
+- The Notes section gone from the screen, and the answer-modes info card
+  rewritten to describe who each mode is for.
+- `clip_to_word` at all five character slices in `answer_layout.py`.
+
+### What is parked, and why
+
+- THE OMIM DISPATCH. Enabled and reverted in the same session.
+  `breadth_plan.filter_omim_titles` exists and NOTHING CALLS IT, so an
+  unfiltered OMIM result would cite a different gene than the question asked
+  about. Do not re-enable it without wiring that filter. The steps are written
+  into `_BREADTH_FOLLOW_UPS`'s own comment.
+- ITEM 11.33. A word-boundary clip was written, shipped and did not close it: a
+  live run still shows every known fragment and zero ellipses. The cut is at
+  exactly 500 characters of the source value, and the value is 1253 characters
+  at the tool, after shaping, and on the finding, so the truncation happens on
+  the live path between the tool result and the tail render. A local
+  reconstruction does not reproduce it. Next step: one instrumented live run
+  printing `len(finding.field_value)` where the tail narrative is built.
+- THE EXPLANATION HALF OF 11.31, above.
+
+### What is waiting on the product owner
+
+Nothing is blocking. The three questions this session raised were all answered
+and are recorded in `DECISIONS.md` dated 2026-09-21. The longer standing list
+is unchanged: the three `theme.ts` logo tokens, the six undesigned surfaces,
+whether answers carry a medical-advice notice, the 720px nav, the 20-source
+citation cap, the provenance note, the mode toggle's placement, and the
+trust-line wording.
+
+### Loose ends, named rather than left
+
+- L-01 is CONFIRMED and NOT FIXED. One run in ten returned zero graph rows
+  while every other signal read healthy, and nothing tells the reader.
+- The 2026-09-20 L-01 instrument filtered on `layer_1` while the API emits
+  `layer_1_graph`, so its own anomaly field read zero on every run. Any
+  instrument that reports "no anomalies" deserves a populate-check.
+- A multi-sentence record can now render as several list rows under one record
+  heading, a consequence of 11.34's fix. Not a grounding or citation defect,
+  and no test covers it.
+- Item 10.3, the consistency run, has never been run, and L-01 says to expect
+  real variance in its results.
+
+
+### History, 2026-09-20: the release and what it meant
 
 v0.2.0 is live in production. The version was DERIVED, not chosen: 46 `feat`
 commits and zero breaking changes between v0.1.2 and develop, which the
@@ -1314,71 +1395,7 @@ the hostname. And the full ten-gate CI ran green on the release pull request,
 which is the first time those gates have run against a promotion into
 `production`.
 
-### If you are testing right now, read this first
-
-| | |
-|---|---|
-| Develop | `https://search-agent-web-develop-2aeb.up.railway.app` |
-| Production | `https://search-agent-web-production.up.railway.app`, now carrying everything develop had as of tonight |
-| What to retest | The six checks in `testing/Shipped_2026-09-20.md`, in the order given there |
-| The one measurement worth doing by hand | Ask the SAME question several times and watch whether the source count changes. That is finding L-01, and half of it should now be fixed |
-
-### What is waiting on the product owner
-
-NOTHING FROM THIS LIST, as of the close of 2026-09-20. All four are settled, and
-they are kept here with their outcomes so the next session does not re-ask them.
-The heading previously said "Three things" above a table of four, which is the
-shape of a list that has been added to without its own count being updated.
-
-| Was waiting on | What was decided |
-|---|---|
-| 11.31, the two answer modes | PLACED. The product owner delegated the position to the tech lead, and it goes NEXT, ahead of cite-every-retrieved-finding. The argument is dependency-shaped: the old next item increases how much cited material every answer carries, and if both modes render it identically that makes the sameness worse rather than better |
-| D-2, the four totals | DECIDED, not built. "All 4 with labels, all info": an answer shows every total, each labelled with what it counts, rather than hiding three |
-| The bossman rule contradiction | RESOLVED 2026-09-20 on the product owner's explicit sign-off, merged as PR #98. Two named carve-outs, the `/ship` release chain and `/bossman --ui`, bounded by mode rather than by convenience |
-| PR #97, the ship sweep fix | MERGED. It changes `.claude/skills/ship/SKILL.md` so the stray-file sweep walks the filesystem as well as asking git, which is what stops the duplicate-file problem recurring a fourth time |
-
-Two sub-questions inside 11.31 itself remain genuinely open and are NOT covered
-above, so whoever builds it must not answer them on the product owner's behalf.
-They are named in the 11.31 row of the Set 11 table.
-
-### Loose ends, named rather than left
-
-- Fix B of 11.30, the `/mcp` redirect emitting an `http://` Location behind
-  Railway's TLS-terminating proxy. Reproduced in
-  `tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py`.
-  It needs `FORWARDED_ALLOW_IPS` set to Railway's actual proxy range, which
-  nobody in the session knew and nobody guessed.
-- A 127.1 second run against a median of 13.6, measured 2026-09-20. Nothing
-  owns it.
-- The MODY-genes grounding failure, 5 of 6 runs. Unowned.
-- `testing/Developer/reports/2026-09-12_consistency_baseline/` is untracked
-  evidence from 2026-09-12, 96KB. It has sat untracked for eight days. Commit
-  it or bin it, but decide rather than leaving it.
-- THE DUPLICATE-COPY SWEEP IN `/ship` IS BROKEN AND IT IS THE THIRD TIME THIS
-  FAMILY HAS COST REAL TIME. On 2026-09-20 a filesystem walk found 163
-  duplicate-copy files, `<name> 2.<ext>`, including nine under `src/` and one
-  stale copy of this very document. The `/ship` skill's Step 1b builds its list
-  from `git status --porcelain`, and this repository's OWN `.gitignore` lines 85
-  to 94 hide `* [0-9]` for `.py`, `.md`, `.json`, `.ts`, `.tsx`, `.js`, `.jsx`
-  and `.mako`, so git never lists them and the sweep is structurally blind to
-  exactly the extensions that matter most. The 119 it did catch that day were
-  `.txt`, `.png`, `.jsonl` and `.log`, which no rule covers, which is why the
-  sweep looked like it was working. This is the same blindness that hid
-  `src/system_03_search_agent/tools/cypher_query 2.py` and cost a day of
-  debugging earlier in the week. `.claude/hooks/scan-duplicate-copies.sh` is NOT
-  the defect: it walks the filesystem correctly, but it only fires at
-  SessionStart, and these files were created mid-session. THE FIX IS ONE LINE OF
-  INTENT, that Step 1b walk the filesystem rather than ask git, and it is not
-  applied here because `/ship` lives under `.claude/` and `git-workflow` requires
-  a branch and a pull request for that. RAISED AS PR #97 ON 2026-09-20 and open
-  for review: the fixed step keeps BOTH sources, since git status is the only
-  view of a modified tracked file or a probe script just written, and the walk
-  is the only view of a path gitignore hides.
-- The internal-MCP idea for Layer 2 and Layer 3, raised 2026-09-20. Backlog
-  only. It crosses the tool-integration boundary the locked technical
-  specification's Section 6 defines, so it is scoped before it is started.
-
-### What was actually wrong, and why it took a week
+### History, 2026-09-20: what was actually wrong, and why it took a week
 
 The overnight session could not explain why one test, the MCP production-mount test, failed only in the broad-search branch's full suite run. That unexplained failure is the single reason the biggest feature in the queue sat unmerged.
 
@@ -1413,108 +1430,7 @@ One more thing worth knowing: the 726 lines of broad-search work were UNCOMMITTE
 
 Full account: `testing/Developer/reports/2026-09-20_breadth_merge/mcp_failure_explained.md`.
 
-### The plan we agreed, and where each piece stands
-
-Updated at the close of 2026-09-20, after the product owner tested every shipped
-feature live and reported back on each.
-
-#### Shipped today, tested live by the product owner, and APPROVED by them
-
-| Item | Commit | Their verdict |
-|---|---|---|
-| Bold in both answer modes | `b1c7334` | Good |
-| The broad search, 11.17 and 11.21 | `2bb1925` | Working |
-| Pagination, ten rows a page | `7f62099` | "Pagination works" |
-| Relevance-sorted literature | `70a6c4e` | Confirmed on topic |
-| Every retrieved row shown | `9cc5d63` | Working, and it surfaced four new defects below |
-| Coherent notes | `e581a05` | Partly. See D-2 and D-4 below, the notes are still confusing |
-| Scientist names readable | `1d6293b` | "scientist names are readable now" |
-| Sources grouped by layer, deduplicated | `9d20438` | "Sources yes", with one follow-up: make the layers collapse |
-
-Being built right now, one agent each, no two sharing a file:
-
-| Item | Owns | Why |
-|---|---|---|
-| GO process labels, and the false unaddressed-entity note | `synthesis/answer_layout.py`, `core/graph.py`, `tools/cypher_templates.py` | Defects D-1 and D-4, found by the product owner in a live TP53 answer |
-| Collapsible layer groups | `frontend/.../AnswerScreen.tsx` | Their follow-up: show the three layers first, expand on demand. A live answer now carries 78 sources, so the expanded list is a wall |
-
-FOUR DEFECTS FOUND BY THE PRODUCT OWNER IN ONE LIVE ANSWER, all recorded with
-evidence in `testing/Developer/reports/2026-09-20_tp53_findings/findings.md`.
-Every one is a REPORTING defect rather than a retrieval defect:
-
-- The agent found the records
-- Cited them and rendered them
-- And what it says ABOUT what it found is wrong or unreadable
-
-| Id | Defect | State |
-|---|---|---|
-| D-1 | Ten distinct GO biological processes all rendered as the word "TP53", because the row is cited to the gene and the process's own name never reaches the label | BEING FIXED. The worst of the four, since a reader reads it as incompetence rather than as a caveat |
-| D-2 | Three unexplained totals in one answer: 124 available, 78 sources, 59 table rows, ten a page. Each is true of something different and the answer never says which | DECIDED 2026-09-20, not built. The product owner: "All 4 with labels, all info". An answer shows every total, each labelled with what it counts, rather than hiding three. Reasoning in DECISIONS.md |
-| D-3 | The truncation note still says rows are "not shown above" while sitting directly above a pager, which a reader reads as "the pager is hiding them" | NEEDS A PRODUCT DECISION: is 100 the right display bound for a 124-row result, and does this wording still belong next to pagination |
-| D-4 | The answer says it did not address rs28934578, in an answer whose own lead sentence reads "for rs28934578 and TP53" | BEING FIXED. The worst of the four for TRUST: a false note teaches a reader to distrust the true ones |
-
-#### Approved and not yet started, in the product owner's own stated order
-
-| Item | Why it is next |
-|---|---|
-| 11.22, abstracts as evidence, LANDED `9cf8572` | Shipped the same evening it was approved. The whole retrieved abstract is citeable and nothing picks a sentence out of it. Whether it moves the "surface level" verdict is untested |
-| The fallback note's jargon | "the written summary of these records could not be verified against them" describes this system's own grounding check. A coordinated TWO-FILE change, since `frontend/src/hooks/useRunView.ts` matches that exact prefix to classify a system note, so changing one side alone makes the frontend render it as answer text |
-| 11.30, the Integrations page, FIX A LANDED `dca58e5` | Every printed snippet was executed as printed. Three work, two are blocked for want of an installed `s3` client, and one was broken and is fixed: the MCP config printed no trailing slash. FIX B IS OPEN and is a deployment decision rather than a code change, the redirect's scheme downgrade |
-| Cite every retrieved finding | Decided 2026-09-20, still unbuilt |
-| Widen the citation host rule so OMIM can be cited | Decided 2026-09-20, still unbuilt. `omim.org` as an EXACT additional host, never a loosened pattern |
-| PMC as a literature source | The schema already admits `pmc`, so this is smaller than first stated. It was sequenced behind relevance deliberately, since adding a source while relevance was broken would have bought more irrelevant papers |
-
-Open, with nobody on them:
-
-| Item | What is known |
-|---|---|
-| The MODY-genes grounding failure | "What genes are associated with MODY?" discards its synthesis on 5 of 6 runs, against 7 of 30 overall. A broad multi-entity list question defeats grounding in some way nobody has found |
-| A 127.1 second run | Measured against a median of 13.6 and a stated budget of 53. Nothing owns it |
-| 10.2, history shows the saved answer | BLOCKED on a product-owner decision. No answer is stored anywhere today, so it needs a schema migration and a data-retention decision |
-| 10.3, the consistency run | 50 golden questions three times each. This is what would show whether the broad search actually fixed the wobble |
-| L-01 shape 1 | A whole graph result vanishing on some runs, hidden by graceful degradation. The instrument is written and has never run |
-| 11.29, hard and soft edges, RAG and vectors | Its own session. Its bar: not "does it cite" but "is it worth reading instead of a general chatbot" |
-
-The rule this plan follows, because it is the lesson of the overnight revert:
-ONE FEATURE PER PUSH.
-
-- 11.27 and 11.28 shared a merge
-- CI failed on one
-- And the innocent one was reverted with it and sat unavailable for a week
-
-Each item above:
-
-- Lands alone
-- Is confirmed live alone
-- And can be rolled back alone
-
-The rule the parallel work follows: no two agents own one file. File fencing
-held all day across eight agents with zero collisions. The one shared resource
-that cannot be fenced is this machine's CPU, and checking load before a run is a
-race rather than a queue: two agents both saw a quiet machine, started together,
-and drove the load average to 20.
-
-Any suite result measured there is not trustworthy and was re-run.
-
-THE VERIFICATION LESSON OF THE DAY, which cost a published correction. An arm
-that fails when a change is REVERTED has not been shown to test anything: it
-usually fails with a missing function, parameter or test id, before it ever
-evaluates its assertion. The honest check mutates ONE property and leaves every
-symbol intact.
-
-Applied across the day it found that one of three notes arms was load-bearing
-rather than three, and that six of eight source-grouping arms discriminate while
-two are deliberate invariants. The lead made this error too, in `9d20438`'s own
-message, and corrected it in `3a3c455` rather than leaving it.
-
-### Decisions taken today
-
-Both are product-owner calls, both recorded in `DECISIONS.md` dated 2026-09-20, and NEITHER is built yet:
-
-- Widen the citation host rule so OMIM can be cited. This REVERSES a row taken earlier the same day. That row stays as the historical record it is; the reversal is its own row. Two boundaries are held rather than crossed quietly: editing the locked `requirements/Technical_specification.md` needs explicit product-owner sign-off, which the row now carries, and `omim.org` goes in as an EXACT additional host rather than a loosened pattern, because the host pin is a control against spoofed citation URLs.
-- Cite every retrieved finding, so a question's source set is identical run to run. This is what 11.21 actually asked for. Retrieval is deterministic after 1b; this closes the remaining gap, where the model chooses which findings to ground a claim on. Known cost, to be reported rather than hidden: answers may grow a tail of cited-but-unused records.
-
-### The verdict that matters most, and what it means
+### History, 2026-09-20: the verdict that matters most
 
 Asked whether the product fails because the data is absent or because we cannot find the path between things that are present:
 
@@ -1546,40 +1462,36 @@ technical one.
 
 ### Next, in order
 
-1. DONE. Confirm 1b live. The product owner tested `2bb1925` on develop the same day and their verdict was "Working", recorded in the approved table above. The one measurement still worth doing by hand is asking one question several times and watching the source count hold, which is finding L-01.
-2. Build 2a, cite every retrieved finding.
-3. Build 2b, widen the citation host rule and dispatch OMIM.
-4. DONE. Settle 11.28. It landed as `50ed55b` and the answer was neither
-hypothesis: the instrumented run showed every event releasing well inside its
-bound, and the real cause was a test fixture describing a stream the backend
-cannot emit. The full account is the 11.28 row above and
-`testing/Developer/reports/2026-09-20_pacing_defect/findings.md`.
+Rewritten at the close of 2026-09-21. Every item the previous list carried is
+now done, closed by measurement, or parked with its reason, so this is a new
+list rather than the old one with items struck through. The previous list's
+own history is in this document's git log and in `requirements/Plan.md`.
 
-ONE RESIDUAL RISK SHIPS OPEN: pacing stretched a transient false Write from
-under a millisecond to about 700ms, and nobody has checked whether another path
-produces one.
-5. Run 10.3, the consistency run: each of the 50 golden questions three times, recording answered-or-refused, latency, sources and layers. This is what tells us whether 1b actually fixed the wobble rather than our believing it did.
-6. Establish L-01 shape 1, a whole graph result vanishing on some runs and hidden by graceful degradation. The instrument is written at `testing/Developer/reports/2026-09-20_L01/capture_tool_results.py` and has never run.
-PLACED 2026-09-20. The product owner delegated the position to the tech lead.
-Item 11.31, the two answer modes diverging, goes NEXT: it becomes item 2 and
-everything previously numbered 2 to 6 shifts down one.
+1. RUN 10.3, THE CONSISTENCY RUN. Each of the 50 golden questions three times,
+   recording answered-or-refused, latency, sources and layers. It is first
+   because the citation path changed twice on 2026-09-21, and because L-01 is
+   now confirmed rather than suspected, so the run has something specific to
+   measure rather than a general worry. Expect real variance: the same
+   question at the same depth returned 66, 101 and 113 prose words on three
+   consecutive runs, and one HNF1A run in ten returned zero graph rows.
+2. CLOSE ITEM 11.33. It is narrowed to one instrumented live run: print
+   `len(finding.field_value)` where the tail narrative is built, which
+   separates a truncation upstream of the render from one inside it. The cut
+   is at exactly 500 characters and the value is 1253 at every local hop, so
+   the live path is doing something the local reconstruction does not.
+3. DECIDE WHETHER TO FIX L-01, now that it is measured. One run in ten losing
+   an entire layer while every signal reads healthy is a product decision
+   about disclosure as much as an engineering one, since the cheapest honest
+   fix is to tell the reader rather than to make retrieval deterministic.
+4. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
+   `filter_omim_titles` wired into the act result path first. The steps are in
+   `_BREADTH_FOLLOW_UPS`'s own comment.
 
-THE ARGUMENT IS DEPENDENCY-SHAPED RATHER THAN A PREFERENCE, which is what makes
-it decidable at all. The old item 2, cite every retrieved finding, increases how
-much cited material every answer carries. If both modes still render that
-material identically, it makes the sameness WORSE rather than better, because
-there is simply more of the identical thing. So 11.31 is upstream of it in
-effect, even though nothing in the plan said so.
+NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
+product owner approved the current state as is on 2026-09-21. The remaining
+lever is recorded in "The result that should shape what happens next" above as
+a standing option, not as queued work.
 
-Two supporting reasons. It speaks directly to the product owner's strongest
-stated complaint, that answers look surface level and that a common-man mode and
-a researcher mode read alike. And 11.22 landed on 2026-09-20, so a plain-language
-answer now has abstract text to explain from, which is the material 11.31 needs
-and did not have when this list was written.
-
-It is the largest decided-and-unbuilt item on the board, and it carries two
-questions whoever builds it must not answer for the product owner. Its
-constraints are in the 11.31 row above.
 
 ### What 11.28's diagnosis already found
 
@@ -1593,20 +1505,17 @@ except the event loop not running.
 
 That points hard at event-loop starvation, consistent with the same suite failing 87 tests at load average 48 to 60 and passing only serially. It is still worth one confirming run rather than asserting it, which is step 4 above.
 
-### Known loose ends
-
-- DONE, both worktrees are gone, removed 2026-09-20 on the product owner's instruction that local carries only `develop`. Neither was still needed: `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`, while `breadth-wiring` merged as `2bb1925`. The one uncommitted file in either worktree was byte-compared against develop's copy before removal and was identical, so nothing was lost.
-- Row 11.16 said it was in progress and under review. It had already landed, as `b8980dc` and merge `345046b`, verified rather than assumed. What is genuinely missing: no review report was ever written, so the "667 core tests, 0 failed" figure that row quoted has nothing behind it.
-- Set 10 is otherwise untouched. Its baseline folder `testing/Developer/reports/2026-09-12_consistency_baseline/` is still uncommitted.
-- Review findings N-04 and N-06 remain open and minor, with owners, in the 11.21 review file.
-- The nine test files that hardcode a credential-less `USER_DB_URL` are harmless behind the conftest guard, but switching them to the ambient form is a worthwhile tidy-up.
-- Still waiting on you, unchanged: the three `theme.ts` logo tokens, the six undesigned surfaces, whether answers carry a medical-advice notice, the 720px nav, the 20-source citation cap, the provenance note, the mode toggle's placement, and the trust-line wording.
-
 ### How to start the next session
 
-1. Read this section, then the Set 11 table above.
-2. Run `git status` and `git worktree list`.
-3. Pick up "Next, in order" at item 1.
+1. Read "Where we stopped" above, starting with the one-table summary of the
+   2026-09-21 session, then the Set 11 table.
+2. Run `git status` and `git worktree list`. Both should be clean, with local
+   carrying only `develop`.
+3. Read "What is parked, and why" before picking anything up. Two items there
+   look finished and are not: the OMIM dispatch is reverted on purpose and
+   must not be re-enabled without wiring `filter_omim_titles`, and item 11.33
+   had a fix shipped that did not close it.
+4. Pick up "Next, in order" at item 1.
 
 ## Developer detail
 

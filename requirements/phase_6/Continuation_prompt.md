@@ -32,12 +32,11 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK SET 11 FROM ITS CUTOFF. The next action, in order, is owned by `testing/UI_fix_plan.md`, section "Where we stopped", last updated at the close of 2026-09-20. Start there, with two corrections this file makes to its "Next, in order" list, because that list was written in the afternoon and the evening's work landed after it.
-  - ITEM 1, confirm the broad search live, IS DONE. The product owner tested `2bb1925` on develop and their verdict was "Working", recorded in that same section's own approved table.
-  - ITEM 4, settle 11.28, IS DONE. It landed as `50ed55b`, and the Set 11 table's 11.28 row carries the real cause and the fix.
-  - ITEM 2 IN THE PLACED ORDER, item 11.31, IS BUILT as of 2026-09-21 and needs a live run at both depths to prove the divergence. See the 11.31 entry below.
-  - So the next unstarted item is build 2a, cite every retrieved finding. The rest follow it unchanged.
-- READ THE DAY'S SUMMARY BEFORE TOUCHING ANYTHING. `testing/Shipped_2026-09-20.md` is new and is the authoritative account of what shipped on 2026-09-20 and what to retest, in the terms a person notices. The develop app a tester sees is materially different from the one every earlier cutoff describes, so a session that skips it will retest the wrong things.
+- WORK SET 11 FROM ITS CUTOFF. The next action is owned by `testing/UI_fix_plan.md`, section "Where we stopped", REWRITTEN AT THE CLOSE OF 2026-09-21. This file no longer carries corrections to that list, because the list itself is new rather than the old one with items struck through: every item the previous ordered list carried is now done, closed by measurement, or parked with its reason.
+  - Item 1 is RUN 10.3, THE CONSISTENCY RUN, 50 golden questions three times each.
+  - Read "What is parked, and why" BEFORE picking anything up. Two things there look finished and are not.
+- THE 2026-09-21 SESSION CHANGED THE ANSWER PATH TWICE, so a tester coming back to develop is looking at a different product from the one `testing/Shipped_2026-09-20.md` describes. That file remains the authoritative account of the 2026-09-20 release; the 2026-09-21 changes are in the fix plan's cutoff table.
+- THE RESULT MOST WORTH CARRYING FORWARD is not a feature. THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING: `ground_claim` accepts a claim against a finding only on contiguous containment, so against a long free-text value such as an abstract only a verbatim excerpt survives. Explaining means different words, so an explanatory sentence is deleted silently and the answer looks thin rather than censored. FIVE versions of the plain-language depth directive have now failed, each by instructing the model about form. A sixth is not the fix. The remaining lever, recorded and deliberately NOT built because the product owner approved the current state as is: have the CODE place plain source text verbatim and cited, the way the record tables already are.
 - ITEM 11.31 IS BUILT AND NOT YET LIVE, as of 2026-09-21, and BOTH of its open questions are answered so neither may be re-asked. Every sentence keeps a source at both depths, and the plain-language bound is a SHAPE rather than a word count. Both are recorded in `DECISIONS.md` dated 2026-09-21.
 
   THE ITEM NAMED THE WRONG FILE, and this is the part a later session most needs. The cause was never the depth directive. `grounding.ground_claim` accepts a claim only on contiguous containment, so against a long free-text finding such as a whole abstract the only surviving form is a VERBATIM EXCERPT. The gate permits quoting and forbids explaining, which is why both depths read as restatement and why a fourth reworded directive would have been stripped like the three before it.
@@ -118,66 +117,58 @@ WHERE TO LOOK, in the order a fresh session should read them:
 | What happened on 2026-09-20 | `testing/Shipped_2026-09-20.md` for the summary, then the evidence folders under `testing/Developer/reports/2026-09-20_*` |
 | What happened overnight on 2026-09-19 | `testing/Developer/reports/2026-09-19_overnight/session_log.md`, then the three reports it points to |
 
-### The session boundary, close of 2026-09-20
+### The session boundary, close of 2026-09-21
 
-Work stopped here deliberately and resumes in a NEW session. This section replaces the one
-written on the morning of 2026-09-20, which described a day that had not happened yet.
+Work stopped here deliberately and resumes in a NEW session. This replaces the
+2026-09-20 boundary, which described a state two sessions of work have since
+moved past.
 
 What is true on disk at the close:
 
-- Develop is pushed and the working tree carries no source changes. One untracked folder remains, `testing/Developer/reports/2026-09-12_consistency_baseline/`, 96KB of evidence that has sat untracked for eight days. Commit it or bin it, but decide rather than leaving it.
-- CI is green on develop, and the full ten-gate CI ran green on the release pull request.
-- Both worktrees are gone, removed on the product owner's instruction that local carries only `develop`. The one uncommitted file in either was byte-compared against develop's copy first and was identical, so nothing was lost.
-- Branch state is the agreed steady state: local `develop` only, remote `develop` and `production` only.
-- Production is on `v0.2.0`, released 2026-09-20 and confirmed live, `app_env: production`.
-- THE FOUR THINGS THAT WERE WAITING ON THE PRODUCT OWNER AT THE LAST CHECKPOINT ARE ALL SETTLED, and `testing/UI_fix_plan.md`'s "What is waiting on the product owner" now records each outcome so nobody re-asks. Item 11.31 is PLACED next, D-2 is decided as all four totals each labelled, the bossman deny rule is amended, and the eight-day-old evidence folder is committed. Two sub-questions inside 11.31 itself are the only things genuinely still open, and whoever builds it must not answer them on the product owner's behalf.
-- The harness changed: `bossman-mode` is a router plus three reference files, merged as PR #94.
-- TWO HARNESS FIXES MERGED LATE ON 2026-09-20. PR #97 fixes `/ship`'s stray-file sweep so it walks the filesystem as well as asking git, because `.gitignore` hides `* [0-9]` for eight extensions and the old git-status-only sweep was blind to 163 duplicate files including nine under `src/`. PR #98 amends `.claude/rules/bossman-mode.md`'s Deny list, which had forbidden pushing to develop while the UI fix loop did exactly that daily; there are now two named carve-outs, `/ship`'s release chain and `/bossman --ui`, and nothing else.
-- BOTH THIS FILE AND `testing/UI_fix_plan.md` WERE RUN THROUGH `/doc-readability` with a fresh-context auditor. The transferable result is a warning about the gates rather than about either document: on the fix plan, bulleting was over-applied in six places and detached a governing qualifier or moved who was acting, while `check_preservation.py` read 0 lost and retention 1.000 and `check_style.py` read clean. A lexical no-loss check cannot see an attribution swap. Do not read a green pair of scripts as proof a restructure preserved meaning.
-- `testing/UI_fix_plan.md` was restructured the same night. Set 11 is now an index table plus `#### Detail 11.N` subsections, because single cells had reached 4,344 characters. Add to a detail subsection rather than widening a cell.
-- Item 11.32 is new: wrap the Layer 2 and Layer 3 API calls in internal MCP servers. Backlog only, nothing designed, and it is scoped against the locked technical specification's Section 6 before any work starts.
+- Develop is pushed and the working tree is clean. Local carries only
+  `develop`; the remote carries `develop` and `production`.
+- The full Python suite is green, and `ruff check` over the whole repository
+  exits 0. Counts are in the Priority-2 row of `CLAUDE.md`, computed rather
+  than asserted.
+- Production is unchanged, still on `v0.2.0`. Nothing from 2026-09-21 has been
+  released; it is all on develop.
 
-What the next session does first is `testing/UI_fix_plan.md`'s "Next, in order", read with
-Step 2's corrections above: its items 1 and 4 are already done, so the work starts at
-item 2, cite every retrieved finding.
+WHAT LANDED, in the terms a person notices:
 
-THREE THINGS ARE WAITING ON THE PRODUCT OWNER and none should be decided by whoever builds
-next:
+| Item | What changed |
+|---|---|
+| 11.34 | A multi-sentence abstract or gene summary is CITED rather than silently dropped. It used to be rendered, stripped whole, and contribute no text and no citation |
+| 11.31 | NCBI's own plain-English gene summary is retrieved, cited and rendered. The product owner approved the state as is |
+| 2b, host half | `omim.org` is a citeable host, `www.` included |
+| 11.35, 11.36 | The Notes section is gone from the screen, and the answer-modes info card describes who each mode is for rather than promising a word count |
 
-- Where item 11.31 sits in the order, since it was decided after that list was written.
-- The D-2 question, four totals in one answer each true of something different.
-- The fact that `.claude/rules/bossman-mode.md` still denies pushing to develop directly
-  while the UI fix loop does exactly that by design under the 2026-09-12 decision, which is
-  a deny rule and so needs explicit sign-off rather than a quiet edit.
+WHAT DID NOT LAND, and each is recorded rather than rounded up:
 
-All three are in the fix plan's cutoff.
+- THE EXPLANATION. The gene summary reaches the page and the model does not
+  use it to explain. Five directive versions have failed at this.
+- ITEM 11.33. A word-boundary clip was written, shipped, and did NOT close it.
+  The board says STILL OPEN.
+- THE OMIM DISPATCH. Enabled and REVERTED the same session, because
+  `filter_omim_titles` exists and nothing calls it.
 
-What is waiting on the product owner, and none of it is blocked by engineering:
+TWO THINGS A LATER SESSION MUST NOT UNDO CASUALLY:
 
-- Where item 11.31 sits in the build order, since it was decided after the ordered list was written.
-- The two open questions inside 11.31 itself, named in Step 2 above and in its Set 11 row.
-- D-2, the four unexplained totals in one answer, and D-3, whether 100 is the right display bound for a 124-row result. Both need a product decision rather than a patch, with evidence in `testing/Developer/reports/2026-09-20_tp53_findings/findings.md`.
-- The MCP redirect's scheme downgrade, which is a deployment decision rather than a code change. The mechanism is established and reproduced in `tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py`.
-- Item 10.2, opening a past answer from history, which needs new persistence and therefore a data-retention decision.
-- The longer standing list, unchanged:
+- Do not re-enable the OMIM dispatch without wiring `filter_omim_titles`. The
+  first OMIM hit for `GCK` is `MAP4K2`, so an unfiltered result cites a
+  different gene than the question asked, fully and correctly cited.
+- Do not add a word count or a paragraph shape back to the plain-language
+  directive. Both were tried on 2026-09-21 and both failed, and the arms in
+  `tests/system_03_search_agent/synthesis/test_answer_quality.py` fail if one
+  returns.
 
-  - The three `theme.ts` logo tokens.
-  - The six undesigned surfaces.
-  - Whether answers carry a medical-advice notice.
-  - The 720px nav.
-  - The 20-source citation cap.
-  - The provenance note.
-  - The mode toggle's placement.
-  - The trust-line wording.
+L-01 IS CONFIRMED AND NOT FIXED. Over 20 live runs, one HNF1A run returned
+zero graph rows while every other tool succeeded and the trust outcome read
+identically to a healthy run. Nothing tells the reader. Evidence:
+`testing/Developer/reports/2026-09-21_L01/`.
 
-Three decisions this file listed as waiting on the morning of 2026-09-20 are now TAKEN and
-must not be re-asked:
+What the next session does first is `testing/UI_fix_plan.md`'s "Next, in
+order", item 1, the consistency run.
 
-- Splitting the bold fix out and landing it alone (done, `aedf53d`).
-- Whether OMIM can ever be cited (yes, as an exact additional host).
-- Whether every retrieved source should be cited (yes).
-
-The last two are recorded in `DECISIONS.md` dated 2026-09-20 and NEITHER IS BUILT.
 
 ### Process lessons from the fix-loop sessions, already applied
 
