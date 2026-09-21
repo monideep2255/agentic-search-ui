@@ -1190,11 +1190,34 @@ gene 672, and verified through the gate: the summary passes verbatim.
   nothing the gate cannot pass: quote the plain description exactly rather
   than rewording it.
 
-STILL TO DO: no live run has yet been made at either depth against the new
-code, so the divergence is built and unproven. The baseline to beat is in
-`testing/Developer/reports/2026-09-21_11.31_divergence/baseline.md`: at both
-depths the record dump was 66 rows for BRCA1 and about 92 for HNF1A and
-identical across depths, against 89 to 164 words of prose.
+MEASURED LIVE at `7d7b109`, four runs, two questions at both depths, same
+instrument and counter as the baseline. Full account:
+`testing/Developer/reports/2026-09-21_11.31_divergence/after/results.md`.
+
+| Run | Prose words before | After |
+|---|---|---|
+| BRCA1, plain language | 89 | 206 |
+| BRCA1, researcher | 164 | 85 |
+| HNF1A, plain language | 135 | 171 |
+| HNF1A, researcher | 127 | 127 |
+
+THE ORDERING REVERSED, which is the actual ask: plain language was SHORTER
+than researcher and is now more than twice as long on BRCA1. Record rows are
+unchanged at 66 to 67 and 92 across both depths, as intended, since removing
+the evidence trail from plain language was rejected.
+
+WHAT IS NOT DONE, and it is the half the product owner asked for most
+directly. The gene summary is retrieved, cited and rendered, `[15]` in the
+BRCA1 answer, and the model DOES NOT USE IT TO EXPLAIN. The prose walks the
+disease, trial and ClinVar records and never reaches for it. Two candidate
+causes, neither confirmed: it lands at `[15]` among 67 findings, and
+`build_answer_context_directive` still tells the model to keep context
+findings brief, which the new "except where one is a plain description"
+clause may be too weak to override.
+
+AND ITEM 11.33 NOW DAMAGES THIS FEATURE: `[15]` renders cut mid-word, "through
+the C-terminal d", exactly as the abstracts do. That raises 11.33 from
+cosmetic to a defect that degrades the explanation 11.31 exists to provide.
 
 
 #### Detail 11.32
