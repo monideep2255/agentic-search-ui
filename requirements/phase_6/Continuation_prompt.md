@@ -39,14 +39,25 @@ The next action is always one line, kept current here. Right now it is:
 - READ THE DAY'S SUMMARY BEFORE TOUCHING ANYTHING. `testing/Shipped_2026-09-20.md` is new and is the authoritative account of what shipped on 2026-09-20 and what to retest, in the terms a person notices. The develop app a tester sees is materially different from the one every earlier cutoff describes, so a session that skips it will retest the wrong things.
 - ONE ITEM IS NOT ON THE ORDERED LIST AT ALL AND NEEDS PLACING ON IT. Item 11.31, the two answer modes diverging, was decided on 2026-09-20 after "Next, in order" was written, so no document states where it sits in the order. It is DECIDED AND NOT BUILT. It carries two questions that whoever builds it must not answer on the product owner's behalf: whether a labelled explanatory sentence is ever permitted where no retrieved source supports it, and what replaces the removed word cap as an upper bound. Its constraints, including three failed directive versions it may not repeat, are in the Set 11 table's 11.31 row. Ask where it goes rather than assuming.
 - CI IS GREEN ON DEVELOP, confirmed after the repair landed. It had failed on two runs, both on one test-isolation defect: an arm added with the MCP config fix entered the app's lifespan through `TestClient(app)`, and `StreamableHTTPSessionManager` refuses a second `.run()` in one process. The repair is `c35b545`, which switches the arm to `httpx.ASGITransport`, the form the repository already documents in `adapters/mcp/test_phase_4_1_production_mount.py`'s module docstring. The full ten-gate CI then ran green on the release pull request too. Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
-- TWO WORKTREES STILL EXIST AND NEITHER IS STILL NEEDED, which reverses what this file said on the morning of 2026-09-20. `breadth-wiring` is merged as `2bb1925`, and the live confirmation it was waiting on is done. `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`. Clearing a worktree is a deletion, so ask the product owner first: the reversal removes the reason to keep them, not the obligation to ask. Note that `testing/UI_fix_plan.md`'s "Known loose ends" still calls the second one needed, which contradicts its own 11.28 row.
+- BOTH WORKTREES ARE GONE, removed on 2026-09-20 on the product owner's instruction that local carries only `develop`. Neither was still needed by then:
+  - `breadth-wiring` was merged as `2bb1925`, and the live confirmation it was waiting on is done.
+  - `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`.
+
+  Clearing a worktree is a deletion, so it was asked first, and the one uncommitted file in either was byte-compared against develop's copy before removal and was identical.
 - PRODUCTION IS ON `v0.2.0`, released on the evening of 2026-09-20, the first release since v0.1.2 on 2026-08-28 and carrying 241 commits. The tag points at `cde4f59`, `GET /health` on the production API returns `app_env: production`, and the automated back-merge has already landed, so develop sits exactly one commit ahead of production. THE VERSION WAS DERIVED, NOT CHOSEN: 46 `feat` commits and zero breaking changes, which `.github/release/derive_version.sh` reads as a minor bump. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`, never from a document or a conversation.
 - SET 11 IS NOW MOSTLY LIVE, which reverses this file's earlier warning that it was not. 11.17, 11.21, 11.27 and 11.28 all merged on 2026-09-20, so the built-but-not-live set named here before is empty. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Sets 1 to 7 are approved, sets 8 and 9 are live on develop, and set 10 is untouched apart from item 10.1.
 - THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given directly by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation, and every remaining presentation fix leaves it untouched. It is the bar item 11.29 has to clear.
 - EVIDENCE for the day is under `testing/Developer/reports/2026-09-20_*`. Start with `2026-09-20_breadth_merge/mcp_failure_explained.md`, for why the biggest feature in the queue sat unmerged for a week over a failure that was never its own, and `2026-09-20_tp53_findings/findings.md`, for the four defects one live answer exposed.
 - When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
 - The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
-  Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, and never let two builders own one file region. File fencing held across eight agents on 2026-09-20 with zero collisions. The one resource that cannot be fenced is this machine's CPU, and checking load before a run is a race rather than a queue.
+  Carry forward for any future parallel fix pass:
+
+  - Split builders by the files they write
+  - Pin any new wire contract first
+  - Give each a goal contract
+  - Never let two builders own one file region
+
+  File fencing held across eight agents on 2026-09-20 with zero collisions. The one resource that cannot be fenced is this machine's CPU, and checking load before a run is a race rather than a queue.
 
 THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-phase cadence for UI fixes, and it overrides `.claude/rules/git-workflow.md`'s branch requirement and the judge and adversary rounds for this work only:
 
@@ -98,11 +109,15 @@ Step 2's corrections above: its items 1 and 4 are already done, so the work star
 item 2, cite every retrieved finding.
 
 THREE THINGS ARE WAITING ON THE PRODUCT OWNER and none should be decided by whoever builds
-next. Where item 11.31 sits in the order, since it was decided after that list was written.
-The D-2 question, four totals in one answer each true of something different. And the fact
-that `.claude/rules/bossman-mode.md` still denies pushing to develop directly while the UI
-fix loop does exactly that by design under the 2026-09-12 decision, which is a deny rule and
-so needs explicit sign-off rather than a quiet edit. All three are in the fix plan's cutoff.
+next:
+
+- Where item 11.31 sits in the order, since it was decided after that list was written.
+- The D-2 question, four totals in one answer each true of something different.
+- The fact that `.claude/rules/bossman-mode.md` still denies pushing to develop directly
+  while the UI fix loop does exactly that by design under the 2026-09-12 decision, which is
+  a deny rule and so needs explicit sign-off rather than a quiet edit.
+
+All three are in the fix plan's cutoff.
 
 What is waiting on the product owner, and none of it is blocked by engineering:
 
@@ -114,10 +129,13 @@ What is waiting on the product owner, and none of it is blocked by engineering:
 - The longer standing list, unchanged: the three `theme.ts` logo tokens, the six undesigned surfaces, whether answers carry a medical-advice notice, the 720px nav, the 20-source citation cap, the provenance note, the mode toggle's placement, and the trust-line wording.
 
 Three decisions this file listed as waiting on the morning of 2026-09-20 are now TAKEN and
-must not be re-asked: splitting the bold fix out and landing it alone (done, `aedf53d`),
-whether OMIM can ever be cited (yes, as an exact additional host), and whether every
-retrieved source should be cited (yes). The last two are recorded in `DECISIONS.md` dated
-2026-09-20 and NEITHER IS BUILT.
+must not be re-asked:
+
+- Splitting the bold fix out and landing it alone (done, `aedf53d`).
+- Whether OMIM can ever be cited (yes, as an exact additional host).
+- Whether every retrieved source should be cited (yes).
+
+The last two are recorded in `DECISIONS.md` dated 2026-09-20 and NEITHER IS BUILT.
 
 ### Process lessons from the fix-loop sessions, already applied
 
@@ -141,7 +159,12 @@ FOUR THINGS ARE WAITING ON THE PRODUCT OWNER, and none should be decided for the
 - Whether answers should carry any medical-advice notice, now that the permanent band is gone by their own instruction.
 - Whether hiding the nav below 720px is right, given the design provides no menu and the overflow menu that now exists overrules it.
 
-THE LARGEST UNFIXED THING IS THE TEST HARNESS, not the product. Since build phase 4.7 every real run through `tests/e2e_support/mock_llm_backend.py` died at the THINK step, because 4.7 gave `think_node` a strict JSON contract and the double was never updated. That is now fixed, and the run gets further, but it still cannot produce an answer: the double fakes the MODEL and not Layer 1, so `act_node` reaches for a graph that is not there. Until that is closed, no layer A test can assert on a real answer, and `query-stream-and-stop.spec.ts`'s answer case stays red.
+THE LARGEST UNFIXED THING IS THE TEST HARNESS, not the product.
+
+- What broke: since build phase 4.7 every real run through `tests/e2e_support/mock_llm_backend.py` died at the THINK step, because 4.7 gave `think_node` a strict JSON contract and the double was never updated
+- What is fixed: that is now fixed, and the run gets further
+- What is still broken: it still cannot produce an answer, because the double fakes the MODEL and not Layer 1, so `act_node` reaches for a graph that is not there
+- What it costs: until that is closed, no layer A test can assert on a real answer, and `query-stream-and-stop.spec.ts`'s answer case stays red
 
 WHAT HID IT FOR SEVEN BUILD PHASES is the transferable part. The suite ran green because almost every spec asserts on something present whether or not a run produces an answer: `second-turn.spec.ts` checks that the follow-up field is visible, and the answer screen renders that field on a failed run too. A green suite meant "the interface renders", never "the agent answers". The identical failure had already happened one node earlier at build phase 3.0, and the docstring recording that lesson was sitting in the file the whole time.
 
@@ -157,13 +180,26 @@ THE LOOP CHANGED ON 2026-09-01, and this is the part most likely to be got wrong
 - The PRODUCT OWNER runs it on develop and records what they saw.
 - Feedback comes back, it gets discussed, and the cycle repeats.
 
-Two consequences for whoever picks this up. THE ASSISTANT DRIVES THE BROWSER WHEN ASKED, and on 2026-09-12 the product owner asked it to: every push in the UI fix loop is checked on develop with Playwright screenshots and measurements at 1280px and 390px. The eight journeys under `frontend/e2e/journeys/` still stay gated behind `RUN_LIVE_JOURNEYS=1`, since they spend real model calls, and run on request. And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
+Two consequences for whoever picks this up.
+
+THE ASSISTANT DRIVES THE BROWSER WHEN ASKED, and on 2026-09-12 the product owner asked it to:
+
+- Every push in the UI fix loop is checked on develop with Playwright screenshots and measurements at 1280px and 390px
+- The eight journeys under `frontend/e2e/journeys/` still stay gated behind `RUN_LIVE_JOURNEYS=1`, since they spend real model calls, and run on request
+
+And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
 
 Everything else on this page is context for that one line, and it describes the state at the close of 2026-09-20, with Set 11 of the UI fix loop mostly live and two of its items decided but unbuilt. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
 
 ### What the sections below used to say, and where that content lives now
 
-REWRITTEN 2026-09-01, not appended to. This spot held three sections written on 2026-08-31: why fixing the disease names was the next action, what build phase 6.0 delivered, and why build phase 6.1 should be split rather than opened. The first is DONE, so an instruction to go do it would send the next session to redo finished work. The other two are still true and are no longer this file's to carry.
+REWRITTEN 2026-09-01, not appended to. This spot held three sections written on 2026-08-31:
+
+- Why fixing the disease names was the next action
+- What build phase 6.0 delivered
+- Why build phase 6.1 should be split rather than opened
+
+The first is DONE, so an instruction to go do it would send the next session to redo finished work. The other two are still true and are no longer this file's to carry.
 
 Each fact now has exactly one owner:
 
@@ -207,13 +243,25 @@ Build phase 6.2 (PR #92, 2026-09-01) and PR #93 (2026-09-05) are recorded in CLA
 
 ### The unit of work is no longer a build phase
 
-Product-owner decision, 2026-08-31, and the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM open flags and, since 2026-09-12, from `testing/UI_fix_plan.md`, the ordered fix sets built from the product owner's testing, not from Section 25's build order.
+Product-owner decision, 2026-08-31. This is the most important line on this page for whoever reads it next. WORK IS NOW PICKED FROM:
+
+- Open flags
+- Since 2026-09-12, `testing/UI_fix_plan.md`, the ordered fix sets built from the product owner's testing
+
+Not from Section 25's build order.
 
 Section 25 has run its course as a driver. Every numbered phase has merged or moved to `requirements/Plan.md` Phase 7, and `tracker/BOARD.md` carries NO open phase at all. What remains is of two kinds and neither is phase-shaped: findings attached to code, which are conditional and become work only when someone touches that code; and defects a real person hit on the live site.
 
 Build phase 6.0 is the argument for the change rather than an aside. It was opened because the board said it was next. It delivered contention protection that is invisible with one user, and measuring its own specification section first showed five of its eight requirements were already built. Meanwhile the defect that makes every disease answer unreadable sat in `docs/build/UI_feedback.md` the whole time. A phase number is a poor proxy for value once the specification is mostly built.
 
-WHAT DOES NOT CHANGE, and do not let this be quietly lost: the premise gate written before the code and watched failing, the judge round, the write-first rule for findings, and a goal contract before any autonomous run. Those apply to a piece of work whatever it is called. `docs/build/Build_workflow_cadence.md` is scoped to a build phase and now needs a smaller sibling for flag-sized work. That sibling is NOT yet written, which is recorded here rather than assumed to exist.
+WHAT DOES NOT CHANGE, and do not let this be quietly lost:
+
+- The premise gate written before the code and watched failing
+- The judge round
+- The write-first rule for findings
+- A goal contract before any autonomous run
+
+Those apply to a piece of work whatever it is called. `docs/build/Build_workflow_cadence.md` is scoped to a build phase and now needs a smaller sibling for flag-sized work. That sibling is NOT yet written, which is recorded here rather than assumed to exist.
 
 WHAT WOULD REVERSE IT: a genuinely phase-sized deliverable, most likely whatever user feedback asks for that does not exist yet.
 

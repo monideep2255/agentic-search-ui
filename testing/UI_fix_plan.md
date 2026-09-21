@@ -1403,13 +1403,26 @@ under a millisecond to about 700ms, and nobody has checked whether another path
 produces one.
 5. Run 10.3, the consistency run: each of the 50 golden questions three times, recording answered-or-refused, latency, sources and layers. This is what tells us whether 1b actually fixed the wobble rather than our believing it did.
 6. Establish L-01 shape 1, a whole graph result vanishing on some runs and hidden by graceful degradation. The instrument is written at `testing/Developer/reports/2026-09-20_L01/capture_tool_results.py` and has never run.
-7. UNPLACED, and the product owner has to place it: item 11.31, the two answer
-modes diverging. It was decided on 2026-09-20 after this list was written, so
-nothing states where it sits. It is the largest decided-and-unbuilt item on the
-board, and it carries two questions whoever builds it must not answer for the
-product owner.
+PLACED 2026-09-20. The product owner delegated the position to the tech lead.
+Item 11.31, the two answer modes diverging, goes NEXT: it becomes item 2 and
+everything previously numbered 2 to 6 shifts down one.
 
-Its constraints are in the 11.31 row above.
+THE ARGUMENT IS DEPENDENCY-SHAPED RATHER THAN A PREFERENCE, which is what makes
+it decidable at all. The old item 2, cite every retrieved finding, increases how
+much cited material every answer carries. If both modes still render that
+material identically, it makes the sameness WORSE rather than better, because
+there is simply more of the identical thing. So 11.31 is upstream of it in
+effect, even though nothing in the plan said so.
+
+Two supporting reasons. It speaks directly to the product owner's strongest
+stated complaint, that answers look surface level and that a common-man mode and
+a researcher mode read alike. And 11.22 landed on 2026-09-20, so a plain-language
+answer now has abstract text to explain from, which is the material 11.31 needs
+and did not have when this list was written.
+
+It is the largest decided-and-unbuilt item on the board, and it carries two
+questions whoever builds it must not answer for the product owner. Its
+constraints are in the 11.31 row above.
 
 ### What 11.28's diagnosis already found
 
