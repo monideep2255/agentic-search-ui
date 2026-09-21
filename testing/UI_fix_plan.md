@@ -656,6 +656,9 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 
 ## Where we stopped
 
+The 2026-09-20 day summary, what shipped and what to retest, is
+`testing/Shipped_2026-09-20.md`. This section stays the authoritative plan.
+
 The cutoff. It is updated at the end of every working session, so the next session starts here rather than reconstructing it. Last updated 2026-09-20, afternoon session. Read this, then the Set 11 table above.
 
 This section is also the shared plan. What we agreed, what is done, and what is next all live here rather than in a session that disappears, so you and I read the same record.
