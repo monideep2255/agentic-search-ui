@@ -119,6 +119,6 @@ def test_every_named_arm_goes_red_when_the_directive_is_reverted() -> None:
 
     # And the real directive must be back, or this harness has poisoned
     # every arm that runs after it.
-    assert "paragraphs of three to five sentences" in (
+    assert "as much as they need to understand it and no more" in (
         findings_module._DEPTH_DIRECTIVES["plain_language"]
     ), "the real directive was not restored after mutation"

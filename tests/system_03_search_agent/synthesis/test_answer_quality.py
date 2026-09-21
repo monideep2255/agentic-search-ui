@@ -429,14 +429,29 @@ def test_plain_language_is_bounded_by_shape_rather_than_by_a_word_count() -> Non
     directive = findings_module._DEPTH_DIRECTIVES["plain_language"]
 
     assert not _WORD_ASK.search(directive), (
-        "plain_language must not name a word target; the cap was removed by "
-        f"product decision on 2026-09-21: {directive!r}"
+        "plain_language must not name a word target: "
+        f"{directive!r}"
     )
-    assert "paragraphs of three to five sentences" in directive, (
-        f"populate-check: the shape bound is missing: {directive!r}"
-    )
-    assert "as many paragraphs as the findings support" in directive, (
-        f"populate-check: length must scale with the findings: {directive!r}"
+    # Version 5 (2026-09-21) went further than removing the word count, and
+    # this arm is the record of why. Version 4 replaced the count with a
+    # paragraph shape, which produced 206 words of "One disease is called X.
+    # Another disease is called Y." The product owner's verdict: "Number of
+    # words do not define an answer" and "it is not the words that matter but
+    # the content and how easy is it to explain and understand". So NO length
+    # instruction of any kind survives, not a word target and not a shape.
+    for banned in (
+        "paragraph", "sentences separated", "three to five", "two to four",
+        "how long", "at least", "at most", "no more than",
+    ):
+        assert banned not in directive.lower(), (
+            f"plain_language must carry no length instruction; found "
+            f"{banned!r}. Length is bounded in code by the 4000-token "
+            f"ceiling and the 45-second step budget, and the right length "
+            f"is audience fit rather than a number: {directive!r}"
+        )
+    assert "as much as they need to understand it and no more" in directive, (
+        f"populate-check: the audience-fit instruction is missing, which is "
+        f"what replaced the count: {directive!r}"
     )
 
 
@@ -460,7 +475,7 @@ def test_plain_language_keeps_every_sentence_sourced_and_asks_for_no_paraphrase(
     assert "must restate a finding and end with that finding's marker" in directive, (
         f"populate-check: cite-or-refuse is not stated: {directive!r}"
     )
-    assert "quoting it exactly rather than rewording it" in directive, (
+    assert "rather than rewording" in directive, (
         f"populate-check: the no-paraphrase instruction is missing, and "
         f"without it the explanation is stripped by the gate: {directive!r}"
     )
@@ -496,8 +511,25 @@ def test_the_two_depths_ask_for_materially_different_shapes() -> None:
     # Researcher synthesises ACROSS records under headings; plain language
     # walks them one at a time with no headings. Opposite instructions, not
     # two dial settings.
+    # BOTH depths now forbid enumeration, and that is the point rather than
+    # an oversight in this arm. Version 4 told plain language to give each
+    # finding its own sentence, which is the OPPOSITE of the one clause
+    # already known to stop a depth listing its own records, and it produced
+    # exactly the enumeration that clause exists to prevent.
     assert "Do not restate the records one by one" in researcher
-    assert "give each finding its own sentence" in plain
+    assert "do NOT restate the records one by one" in plain
+    assert "give each finding its own sentence" not in plain, (
+        "version 4's enumeration instruction must not come back: it is what "
+        f"produced 'One disease is called X. Another disease is...': {plain!r}"
+    )
+
+    # They differ by WHO IS READING, which is what actually diverges them.
+    assert "no biology background and no familiarity with NCBI" in plain
+    assert "working researcher" in researcher
+    assert "explain what the answer MEANS" in plain, (
+        f"populate-check: plain language must be told to explain, not just "
+        f"to report: {plain!r}"
+    )
 
     assert "'## Topic'" in researcher, (
         f"populate-check: researcher's heading structure is missing: {researcher!r}"
