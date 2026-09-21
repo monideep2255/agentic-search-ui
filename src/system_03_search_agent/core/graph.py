@@ -2639,12 +2639,45 @@ def _build_layer_tool_calls(
 
 
 #: The first-stage purposes whose ids feed a follow-up, and the follow-ups
-#: each one feeds, in the fixed order they are planned. OMIM is deliberately
-#: absent: `ncbi_eutils_actions._RECORD_URL_TEMPLATES["omim"]` is
-#: `omim.org`, which `contracts.events.NCBI_SOURCE_URL_PATTERN` rejects, so
-#: an OMIM record can never carry a citation on an answer
-#: (`_layer2_citation_for_synth_finding`, F-3.4-T05-04) and two calls
-#: whose records would feed only uncited claims are not issued.
+#: each one feeds, in the fixed order they are planned.
+#:
+#: OMIM WAS DELIBERATELY ABSENT UNTIL 2026-09-21, and the reason is kept
+#: here rather than deleted, because it explains why the entry looks newer
+#: than its neighbours. `ncbi_eutils_actions._RECORD_URL_TEMPLATES["omim"]`
+#: is `omim.org`, which `contracts.events.NCBI_SOURCE_URL_PATTERN` used to
+#: reject, so an OMIM record could never carry a citation
+#: (`_layer2_citation_for_synth_finding`, F-3.4-T05-04). Issuing two calls
+#: whose records could only feed UNCITED claims would have fed the one
+#: thing cite-or-refuse exists to prevent, so they were not issued.
+#:
+#: The product owner reversed that on 2026-09-20 (DECISIONS.md, "widen the
+#: citation host rule so OMIM can be cited"), and `omim.org` is now an
+#: exact additional host in that pattern, so the CITATION half of the
+#: blocker is gone as of 2026-09-21.
+#:
+#: OMIM IS STILL NOT DISPATCHED, and this is the part a later reader must
+#: not undo casually. Enabling it was tried on 2026-09-21 and reverted the
+#: same session, because a second control is missing rather than because
+#: the citation rule still blocks it.
+#:
+#: `breadth_plan.filter_omim_titles` exists to keep only the OMIM records
+#: whose title names the queried symbol in a symbol field, and NOTHING
+#: CALLS IT. It has been dead code for as long as OMIM has been dropped,
+#: which is why its absence was invisible. Its own docstring records the
+#: failure it prevents: the first OMIM hit for `GCK` is `MAP4K2`, so an
+#: unfiltered OMIM result cites a DIFFERENT GENE than the question asked
+#: about, fully and correctly cited, which is the confident wrong answer
+#: this product exists to avoid.
+#:
+#: Wiring it needs the resolved gene symbol threaded into the act step's
+#: result handling, where `_ncbi_efetch_output_to_structured_fields` shapes
+#: an `omim_summary` result into rows. That is a real change to the result
+#: path and was not worth rushing, so it is written down instead.
+#:
+#: To finish it: add an `omim_search` branch to `_follow_up_planned_call`
+#: (it returns None today), thread the symbol to the shaping step, apply
+#: `filter_omim_titles` to the `omim_summary` records before they become
+#: rows, and add an arm proving a wrong-gene OMIM record is dropped.
 _BREADTH_FOLLOW_UPS: Final[dict[str, tuple[tuple[str, str, str, str], ...]]] = {
     # source purpose: ((tool, layer, prefix, follow-up purpose), ...)
     "pubmed_search": (

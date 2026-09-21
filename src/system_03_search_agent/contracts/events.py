@@ -89,9 +89,34 @@ TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
 # to begin with.
 _URL_REMAINDER_CHARS = r"[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]"
 
+# 2026-09-20 DECISIONS.md row ("REVERSES the row above: widen the citation
+# host rule so OMIM can be cited"): `omim.org` is added as an EXACT
+# additional host, never as a loosened pattern that would admit arbitrary
+# domains. Unlike the NCBI alternative, which allows a wildcard subdomain
+# prefix, `omim\.org/` carries no such prefix, so a subdomain of omim.org
+# (for example `sub.omim.org`) does not match, matching the decision's own
+# words.
+#
+# `www.` IS admitted, and that is not a widening of the decision but a
+# closing of a silent-drop path found on 2026-09-21. The tool schema's own
+# `NCBI_EFETCH_RECORD_URL_PATTERN` accepts `(www\.)?omim\.org`, so a record
+# arriving as `https://www.omim.org/entry/113705` is schema-valid at the
+# tool boundary. Had this pattern admitted only the bare host, such a record
+# would have failed `CitationPayload` construction and been dropped
+# UNCITED and in silence, which is the failure the widening exists to end.
+# `clinicaltrials.gov` is already handled with the identical `(?:www\.)?`
+# for the same reason, so this follows the precedent rather than inventing
+# one. It is still an exact host: `www.` only, never a wildcard.
+#
+# This is a product-owner decision on a locked document
+# (`requirements/Technical_specification.md`), taken under
+# `.claude/rules/v1-scope-boundary.md`, and the host-pinned structure this
+# pattern already had stays intact: one more literal host in the
+# alternation, nothing generic added.
 NCBI_SOURCE_URL_PATTERN = (
     r"^https://(?:([A-Za-z0-9-]+\.)*ncbi\.nlm\.nih\.gov/"
-    r"|(?:www\.)?clinicaltrials\.gov/study/)"
+    r"|(?:www\.)?clinicaltrials\.gov/study/"
+    r"|(?:www\.)?omim\.org/)"
     + _URL_REMAINDER_CHARS
     + r"*$"
 )

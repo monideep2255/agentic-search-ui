@@ -973,28 +973,116 @@ def render_finding_body(finding: SynthFinding) -> str:
     return f"{label}{finding.field}: {finding.field_value}"
 
 
+def _mark_sentence(sentence: str, ref_index: int) -> str:
+    """One sentence of a finding's body, its own trailing punctuation
+    replaced by the finding's marker and a period.
+
+    Returns "" for a sentence that is blank once stripped, so a caller can
+    filter it out rather than emit a bare marker with no claim in front of
+    it (`_asserts_something` in `grounding.py` would strip that anyway, but
+    there is no reason to emit it in the first place).
+    """
+    text = sentence.strip()
+    if not text:
+        return ""
+    if text[-1] in ".;?!":
+        text = text[:-1].rstrip()
+    if not text:
+        return ""
+    return f"{text} [{ref_index}]."
+
+
 def build_structured_fallback_narrative(synth_findings: list[SynthFinding]) -> str:
-    """A narrative built in code, one sentence per finding, for grounding.
+    """A narrative built in code, one marked sentence per finding SENTENCE,
+    for grounding.
 
     UI fix set 7, item 7.1 (2026-09-13). `core.graph.write_node` calls this
     when the model's answer grounded nothing although findings reached it,
     then runs the result through `run_grounding_pass` exactly as it would a
-    model answer. Each sentence is the finding's own rendered body, the text
-    the model was shown, followed by that finding's marker. Because the
-    claim text IS the field value with its type and field label, and every
-    content token in it comes from the finding, `ground_claim`,
-    `numbers_are_supported` and `claim_introduces_no_new_content` all hold
-    by construction for a well-formed value. A value that breaks one of them
-    (for example one containing a sentence boundary) is stripped by the pass
-    like any other claim, so nothing here bypasses the gate.
+    model answer. Each finding's own rendered body, the text the model was
+    shown, is split on the SAME sentence boundary `run_grounding_pass` reads
+    a narrative with (`grounding.split_into_sentences`, the public wrapper
+    over its own `_split_sentences`), and every sentence gets its own copy
+    of the finding's marker. Because the claim text of each marked sentence
+    is drawn verbatim from the field value, `ground_claim` grounds it by
+    the `a in b` containment direction (a single sentence is always a
+    substring of the whole value it was cut from), and `numbers_are_
+    supported` and `claim_introduces_no_new_content` hold for the same
+    reason: nothing in a substring of the field value can be content the
+    field value itself does not already contain. A sentence that still
+    breaks one of those checks is stripped by the pass like any other
+    claim, so nothing here bypasses the gate.
 
-    Sentences are joined with a space and each ends with a period, which is
-    the boundary `run_grounding_pass` splits on.
+    ## Item 11.34: why this replaced "one marker at the end of the body"
+
+    The previous version appended one marker after the WHOLE rendered body,
+    on the documented assumption that a finding's body is one sentence
+    ending in one period, which `run_grounding_pass` would then split on to
+    recover the marked clause. That assumption broke on 2026-09-20 (commit
+    `9cf8572`), when a whole retrieved PubMed abstract, routinely several
+    sentences, became a single finding's `field_value`. Given a three-
+    sentence body followed by one trailing marker, `run_grounding_pass`
+    splits the narrative into three sentences with NO marker plus a fourth
+    "sentence" that is the marker alone: the first three are unmarked prose
+    and are stripped as uncited claims, and the marker's own segment carries
+    no text to ground, so the finding contributes nothing, not even a
+    partial claim, and no citation reaches the reader. Marking every
+    sentence closes that: each one is its own clause with its own marker,
+    exactly as `run_grounding_pass` already expects a clause to be.
+
+    A finding whose body is genuinely one sentence is unaffected: this
+    function still renders it as `render_finding_body(finding)` plus one
+    trailing marker, byte-identical to what the previous version produced.
+
+    ## Why the split runs on `field_value`, never on `render_finding_body`
+
+    The first attempt at this fix split the RENDERED body, label included
+    ("Publication PMID:1, abstract: <sentence one>. <sentence two>. ..."),
+    and marked each resulting piece. Measured, not assumed: that put the
+    label ("Publication PMID:1, abstract:") inside sentence one's own claim
+    text, and the label is not a substring of `field_value`, so `ground_
+    claim` correctly rejected sentence one on the one finding this fix
+    exists for. Losing sentence one then took sentence two down with it
+    for an unrelated, correct reason: sentence two opened "It participates
+    ...", the bare-pronoun rule (item 9.7, `grounding.
+    _opens_on_bare_pronoun`) drops a sentence opening on a pronoun whose
+    PRECEDING sentence did not survive, because the pronoun's antecedent
+    would otherwise be missing from the page. That rule is not a bug to
+    route around; a real antecedent really was missing, because the
+    labelled sentence had just been stripped.
+
+    So a multi-sentence value's own SENTENCES are what gets marked, split on
+    `finding.field_value` directly, with the record-type label left off
+    them. The label was never part of the retrieved fact; it is metadata
+    this renderer adds for a single-sentence value, where it rides inside
+    the one clause because `ground_claim`'s `b in a` direction (the field
+    value contained in the longer claim) tolerates a prefix. That direction
+    is unavailable once the value is split into several separate clauses,
+    each grounding only the narrower `a in b` way, so a label glued onto
+    any one of them breaks exactly that clause. Dropping the label costs
+    nothing citation-wise: the record type and identifier are still on the
+    `SynthFinding` and on the citation chip a reader clicks, the same
+    "identifier is not lost, only removed from the prose" reasoning
+    `render_finding_body`'s own docstring already gives for the
+    `name_resolved` branch above.
     """
-    return " ".join(
-        f"{render_finding_body(finding)} [{finding.ref_index}]."
-        for finding in synth_findings
-    )
+    from system_03_search_agent.synthesis.grounding import split_into_sentences
+
+    parts: list[str] = []
+    for finding in synth_findings:
+        value_sentences = split_into_sentences(finding.field_value)
+        if len(value_sentences) <= 1:
+            # Single sentence (or no sentence-ending punctuation at all):
+            # unchanged behaviour, label and all.
+            marked = _mark_sentence(render_finding_body(finding), finding.ref_index)
+            if marked:
+                parts.append(marked)
+            continue
+        for sentence in value_sentences:
+            marked = _mark_sentence(sentence, finding.ref_index)
+            if marked:
+                parts.append(marked)
+    return " ".join(parts)
 
 
 # T-4.5-07, Section 14.5. The depth directives live in the DYNAMIC SUFFIX,

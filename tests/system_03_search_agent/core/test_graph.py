@@ -3317,13 +3317,26 @@ def test_layer2_citation_falls_back_gracefully_when_the_raw_output_is_missing() 
 # ---------------------------------------------------------------------------
 
 
-def test_layer2_citation_returns_none_rather_than_crash_on_an_omim_source_url() -> None:
-    """F-3.4-T05-04: an OMIM-sourced ncbi_efetch record is schema-valid at
-    the tool level (NcbiEfetchRecord.source_url's pattern allows
-    omim.org), but CitationPayload's own NCBI_SOURCE_URL_PATTERN does not.
-    Neither the primary build_layer2_citation attempt nor this function's
-    own fallback can honestly cite it, and both must fail closed to
-    `None`, never an uncaught pydantic.ValidationError.
+def test_layer2_citation_now_cites_an_omim_source_url() -> None:
+    """REVERSED 2026-09-21, and reversed deliberately rather than deleted.
+
+    This arm used to assert the OPPOSITE: that an OMIM-sourced record fails
+    closed to `None`, because `CitationPayload`'s `NCBI_SOURCE_URL_PATTERN`
+    admitted only NCBI and clinicaltrials.gov hosts while the tool schema
+    allowed `omim.org`. That was F-3.4-T05-04, and failing closed was the
+    honest behaviour while OMIM could not be cited at all.
+
+    The product owner reversed that constraint on 2026-09-20 (DECISIONS.md,
+    "widen the citation host rule so OMIM can be cited"), and `omim.org` is
+    now an exact additional host. So the record IS citeable and failing
+    closed would now DROP a citation the product is meant to show.
+
+    The fail-closed property this arm used to carry has not been retired
+    with it: `test_layer2_citation_still_fails_closed_on_a_host_the_
+    citation_contract_rejects` below holds it against a host that is still
+    rejected. Deleting this arm when its premise flipped would have retired
+    the only check standing between a rejected URL and an uncaught
+    `pydantic.ValidationError`, which is why it is rewritten in pairs.
     """
     from system_03_search_agent.harness.coordinator_worker import Finding
     from system_03_search_agent.synthesis.findings import SynthFinding
@@ -3383,9 +3396,62 @@ def test_layer2_citation_returns_none_rather_than_crash_on_an_omim_source_url() 
         "the gene is BRCA1",
     )
 
+    assert citation is not None, (
+        "an OMIM-sourced record must now be cited: the citation host rule "
+        "was widened on 2026-09-20 so OMIM records could stop shipping "
+        "uncited"
+    )
+    assert citation.source_url == "https://omim.org/entry/113705"
+    assert citation.layer == "layer_2_api"
+
+
+def test_layer2_citation_still_fails_closed_on_a_host_the_citation_contract_rejects() -> None:
+    """The half of F-3.4-T05-04 that survives the OMIM reversal.
+
+    A `source_url` the citation contract rejects must still produce `None`
+    rather than an uncaught `pydantic.ValidationError`. Only the example
+    changed: OMIM is admitted now, so the arm is retargeted at a host that
+    is genuinely still rejected.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    rejected_url = "https://example.org/entry/113705"
+    synth_finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-bad-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="title",
+        field_value="BREAST CANCER 1 GENE; BRCA1",
+        source_url=rejected_url,
+    )
+    ncbi_finding = Finding(
+        call_id="ne-bad",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "rows": [{
+                "curie": "",
+                "node_or_edge_type": "omim",
+                "fields": {"title": "BREAST CANCER 1 GENE; BRCA1"},
+                "source_url": rejected_url,
+            }],
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    citation = graph_module._layer2_citation_for_synth_finding(
+        synth_finding, [ncbi_finding], {}, "ne-bad-1", 1, "the gene is BRCA1",
+    )
+
     assert citation is None, (
-        "an OMIM-sourced record must fail closed to no citation, never "
-        f"crash or fabricate one; got {citation!r}"
+        "a host the citation contract rejects must fail closed to no "
+        f"citation, never crash or fabricate one; got {citation!r}"
     )
 
 

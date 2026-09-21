@@ -591,6 +591,25 @@ def _split_sentences(narrative: str) -> list[str]:
     return [s for s in _SENTENCE_BOUNDARY.split(narrative.strip()) if s.strip()]
 
 
+def split_into_sentences(text: str) -> list[str]:
+    """Public wrapper around the exact sentence boundary `run_grounding_pass`
+    itself reads narratives with (`_split_sentences`, above).
+
+    Item 11.34. Any code that BUILDS a narrative for this pass, rather than
+    reading its output, needs the same boundary this pass will later split
+    on, or a multi-sentence value it renders as one uninterrupted span ends
+    up with only its last sentence carrying a marker: every sentence ahead
+    of it is unmarked prose to this pass and is stripped as an uncited
+    claim (`synthesis/findings.py`'s `build_structured_fallback_narrative`
+    is exactly that caller; see its docstring for the failure this closes).
+    Exporting the same private splitter under a public name keeps the two
+    modules using one definition of "a sentence" rather than two that can
+    drift apart; nothing about `_split_sentences` itself, or what this pass
+    accepts as grounded, changes.
+    """
+    return _split_sentences(text)
+
+
 # A closed (yes/no) question is a PROPOSED predicate, not an ask for one.
 # "Is MedGen:C0346153 treated with pembrolizumab?" and "MedGen:C0346153 is
 # treated with pembrolizumab [1]." share every content word, and only the

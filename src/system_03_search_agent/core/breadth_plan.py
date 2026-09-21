@@ -365,7 +365,7 @@ def plan_gene_summary(gene_curie: str | None) -> tuple[PlannedCall, ...]:
     HOLDS the uid: `NCBIGene:672` is Entrez gene 672. Planning an ESearch to
     rediscover an identifier the question already resolved would add a
     round trip and a second chance to resolve the wrong gene, which is the
-    failure `_filter_omim_records` exists to undo for OMIM.
+    failure `filter_omim_titles` exists to undo for OMIM.
 
     WHY THIS EXISTS AT ALL, since a reader will reasonably ask why the
     product needs a gene record it already has a graph row for:

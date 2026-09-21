@@ -1,11 +1,13 @@
 """Tests for the Event envelope and the Section 2.3 payload taxonomy."""
 
+import re
 from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
 
 from system_03_search_agent.contracts.events import (
+    NCBI_SOURCE_URL_PATTERN,
     CitationPayload,
     CostPayload,
     DonePayload,
@@ -544,6 +546,122 @@ class TestCitationPayload:
                     layer="layer_3_enrichment",
                 )
             )
+
+    def test_omim_entry_url_accepted(self) -> None:
+        """2026-09-20 DECISIONS.md row ("REVERSES the row above: widen the
+        citation host rule so OMIM can be cited"): `omim.org` is an exact
+        additional host, so an OMIM record's citation URL now validates
+        and can ship cited (closes F-3.4-T05-04).
+        """
+        payload = CitationPayload(
+            **self._valid_kwargs(
+                source_url="https://omim.org/entry/123456",
+                layer="layer_2_api",
+            )
+        )
+        assert payload.source_url == "https://omim.org/entry/123456"
+
+    def test_omim_dotted_suffix_host_rejected(self) -> None:
+        """`omim.org.evil.com` is not `omim.org`: the exact-host rule must
+        not degrade into a prefix match on the real host's own text.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://omim.org.evil.com/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_lookalike_host_rejected(self) -> None:
+        """`evilomim.org` shares the `omim.org` suffix but is a different
+        registrable domain and must not be admitted by a careless
+        substring or suffix match.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://evilomim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_similarly_named_host_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://notomim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_http_scheme_rejected(self) -> None:
+        """Plain HTTP is rejected for every host this pattern admits, OMIM
+        included: the scheme check is not host-specific.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="http://omim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_www_host_accepted(self) -> None:
+        """Added 2026-09-21, closing a silent-drop path rather than widening
+        the decision.
+
+        The tool schema's own `NCBI_EFETCH_RECORD_URL_PATTERN` accepts the
+        OMIM host with an optional `www.` prefix, so a record arriving as
+        `https://www.omim.org/entry/113705` is schema-valid at the tool
+        boundary. With only the bare host admitted here, such a record
+        would fail `CitationPayload` construction and be dropped UNCITED
+        and in silence, which is the exact failure the host widening was
+        taken to end. `clinicaltrials.gov` is already handled with the
+        identical optional `www.` prefix for the same reason.
+
+        Still an exact host: `www.` only, never a wildcard, which
+        `test_omim_subdomain_rejected` below holds.
+        """
+        payload = CitationPayload(
+            **self._valid_kwargs(source_url="https://www.omim.org/entry/113705")
+        )
+        assert payload.source_url == "https://www.omim.org/entry/113705"
+
+    def test_omim_subdomain_rejected(self) -> None:
+        """The decision names `omim.org` as an EXACT additional host, never
+        a loosened pattern. Unlike the NCBI alternative, which deliberately
+        allows a wildcard subdomain prefix, OMIM gets no such prefix, so a
+        subdomain must not match. If OMIM subdomains are ever needed, that
+        is a new, separately justified decision, not a default.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://sub.omim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_host_mutation_arm_can_go_red(self) -> None:
+        """Mutation arm for the OMIM host addition: with `omim.org`
+        removed from the pattern, the exact URL this phase exists to admit
+        must fail. This proves the assertion above is actually anchored to
+        the new alternative and is not a vacuous arm that would pass
+        whether or not `omim.org` were ever added.
+        """
+        mutated_pattern = NCBI_SOURCE_URL_PATTERN.replace(r"|(?:www\.)?omim\.org/)", ")")
+        assert mutated_pattern != NCBI_SOURCE_URL_PATTERN, (
+            "the mutation replaced nothing, so this arm proves nothing. The "
+            "OMIM alternative's exact text changed on 2026-09-21 when `www.` "
+            "was admitted, and a mutation arm that silently stops mutating "
+            "is the vacuous arm it exists to prevent"
+        )
+        assert re.match(mutated_pattern, "https://omim.org/entry/123456") is None
+        assert re.match(mutated_pattern, "https://www.omim.org/entry/123456") is None
+        # The populate-check: the real, unmutated pattern still admits both.
+        assert re.match(NCBI_SOURCE_URL_PATTERN, "https://omim.org/entry/123456")
+        assert re.match(NCBI_SOURCE_URL_PATTERN, "https://www.omim.org/entry/123456")
 
     def test_claim_text_over_max_length_rejected(self) -> None:
         with pytest.raises(ValidationError):
