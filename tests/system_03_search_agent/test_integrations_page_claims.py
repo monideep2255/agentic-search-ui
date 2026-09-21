@@ -279,3 +279,76 @@ def test_the_page_never_prints_an_elided_placeholder_url(page_source: str) -> No
         f"the page prints {elided}, an elided placeholder a reader cannot copy. "
         "Quote the real origin the app itself is configured with."
     )
+
+
+def test_the_mcp_config_prints_a_url_that_reaches_its_route_without_a_redirect(
+    page_source: str,
+) -> None:
+    """UI fix 11.30. `POST /mcp` (no trailing slash) 307-redirects to
+    `/mcp/`: `app.py`'s own comment above `app.mount("/mcp", ...)` documents
+    why (Starlette's mount-with-no-trailing-slash behavior). Followed
+    literally by a real client sitting behind Railway's TLS-terminating
+    proxy, that redirect's `Location` header comes back as a plaintext
+    `http://` URL (see `test_mcp_mount_redirect_scheme.py` for the
+    reproduction), so a config a reader pastes verbatim must reach the MCP
+    route directly, with no redirect anywhere in the path.
+
+    This does not assert the literal string "/mcp/" against a retyped copy
+    of the page. It extracts the actual path from `MCP_CONFIG`'s own `url`
+    field and fires a request at the running app with that exact string, so
+    a printed value that is right in spirit and wrong as printed, which is
+    this defect's whole shape, fails here rather than passing on a re-typed
+    equivalent.
+    """
+    match = re.search(r'"url":\s*"\$\{API_ORIGIN\}([^"]*)"', page_source)
+    assert match, (
+        "populate-check failed: the MCP card's config prints no "
+        "${API_ORIGIN}-relative url field for this arm to extract."
+    )
+    printed_path = match.group(1)
+    assert printed_path, (
+        "populate-check failed: the extracted MCP config path is empty, so "
+        "this arm would request the bare origin rather than the MCP route."
+    )
+
+    from starlette.testclient import TestClient
+
+    from system_03_search_agent.adapters.web_sse.app import app
+
+    with TestClient(app, base_url="http://localhost") as client:
+        printed_response = client.post(printed_path, follow_redirects=False)
+
+        # The printed path must REACH A ROUTE, not merely avoid a redirect.
+        # Checked first, and separately, because "not a redirect" alone is
+        # satisfied by a 404: a mutation that prints a path this app does
+        # not serve at all passes a redirect-only assertion, which was
+        # measured on 2026-09-20 rather than reasoned about. A 400 here is
+        # the pass: the MCP route was reached and rejected this arm's empty
+        # body, which is exactly what proves the route exists.
+        assert printed_response.status_code != 404, (
+            f"the integrations page tells a reader to configure "
+            f"{printed_path!r}, and POSTing exactly that path returns 404. "
+            "The printed url does not name a route this app serves."
+        )
+        assert printed_response.status_code not in (307, 308), (
+            f"the integrations page tells a reader to configure "
+            f"{printed_path!r}, and POSTing exactly that path returns "
+            f"{printed_response.status_code} with a redirect to "
+            f"{printed_response.headers.get('location')!r}. A config a "
+            "reader pastes must reach its route directly, never through a "
+            "redirect that a real MCP client, and Railway's own proxy, can "
+            "turn into a scheme downgrade."
+        )
+
+        # POPULATE-CHECK on the arm itself, not on the fixture: the bare,
+        # un-slashed path must still redirect, or this test would pass on
+        # any path at all, including one the app does not serve, because
+        # nothing would distinguish "fixed" from "the redirect this arm
+        # exists to catch stopped firing".
+        bare_response = client.post("/mcp", follow_redirects=False)
+        assert bare_response.status_code in (307, 308), (
+            "populate-check failed: POST /mcp (no trailing slash) no longer "
+            "redirects at all, so this arm cannot tell a correctly printed "
+            "url apart from one that merely stopped triggering the "
+            "redirect it exists to catch."
+        )

@@ -134,10 +134,27 @@ export const GRAPHQL_EXAMPLE = `curl -X POST ${API_ORIGIN}/graphql \\
   -H "Content-Type: application/json" \\
   -d '{"query": "mutation { ask(input: { text: \\"Which diseases are associated with BRCA1?\\", sessionId: \\"demo-1\\" }) { answer citations { source sourceUrl } } }"}'`;
 
+// The trailing slash is load-bearing, not cosmetic. `app.py` mounts the MCP
+// SDK's Starlette sub-app at `/mcp` (see the comment above `app.mount("/mcp",
+// ...)` there), so a bare `POST /mcp` 307-redirects to `/mcp/`. Every
+// spec-compliant HTTP client follows that redirect transparently over a
+// same-scheme hop, which is why the route itself was never wrong. But behind
+// Railway's TLS-terminating proxy, this app's `Location` header comes back as
+// a plaintext `http://` URL (uvicorn's `forwarded_allow_ips` does not trust
+// Railway's proxy IP by default, so the redirect is built from the
+// unencrypted scheme of the connection the container actually sees), and a
+// client that honors that literally sends its next request, bearer token
+// included, over plaintext before the following redirect brings it back to
+// https. Printing the URL with the slash already on it means a pasted config
+// never triggers that redirect at all. Verified live against
+// `https://search-agent-api-develop-43b3.up.railway.app` on 2026-09-20:
+// `POST /mcp` 307s to a plaintext Location, `POST /mcp/` returns 200 with a
+// valid initialize response. Full account:
+// `testing/Developer/reports/2026-09-20_integrations/findings.md`.
 export const MCP_CONFIG = `{
   "mcpServers": {
     "ncbi-search": {
-      "url": "${API_ORIGIN}/mcp"
+      "url": "${API_ORIGIN}/mcp/"
     }
   }
 }`;
