@@ -1197,8 +1197,8 @@ Three things, and none of them should be decided by whoever builds next.
 | Waiting on | The question |
 |---|---|
 | 11.31, the two answer modes | Where it sits in "Next, in order". It was decided after that list was written. It is also carrying two sub-questions named in its own row |
-| D-2, the four totals | Four numbers appear in one answer, each true of something different, and the answer never says which. It needs a product decision rather than a patch |
-| The bossman rule contradiction | `.claude/rules/bossman-mode.md` still denies pushing to develop directly, which the UI fix loop does by design under the 2026-09-12 decision. The rule and the practice disagree in writing. It is a deny rule, so it needs explicit sign-off rather than a quiet edit |
+| D-2, the four totals | DECIDED 2026-09-20 and not built: all four, each labelled with what it counts. The product owner's words were "All 4 with labels, all info" |
+| The bossman rule contradiction | RESOLVED 2026-09-20 on the product owner's explicit sign-off, open as PR #98. Two named carve-outs, the `/ship` release chain and `/bossman --ui`, bounded by mode rather than by convenience, since the product owner asked that bossman not lose the protection permanently |
 | PR #97, the ship sweep fix | Open and waiting on review. It changes `.claude/skills/ship/SKILL.md` so the stray-file sweep walks the filesystem as well as asking git. Merging it is what stops the duplicate-file problem recurring a fourth time |
 
 ### Loose ends, named rather than left
@@ -1303,7 +1303,7 @@ is wrong or unreadable.
 | Id | Defect | State |
 |---|---|---|
 | D-1 | Ten distinct GO biological processes all rendered as the word "TP53", because the row is cited to the gene and the process's own name never reaches the label | BEING FIXED. The worst of the four, since a reader reads it as incompetence rather than as a caveat |
-| D-2 | Three unexplained totals in one answer: 124 available, 78 sources, 59 table rows, ten a page. Each is true of something different and the answer never says which | NEEDS A PRODUCT DECISION, not a patch |
+| D-2 | Three unexplained totals in one answer: 124 available, 78 sources, 59 table rows, ten a page. Each is true of something different and the answer never says which | DECIDED 2026-09-20, not built. The product owner: "All 4 with labels, all info". An answer shows every total, each labelled with what it counts, rather than hiding three. Reasoning in DECISIONS.md |
 | D-3 | The truncation note still says rows are "not shown above" while sitting directly above a pager, which a reader reads as "the pager is hiding them" | NEEDS A PRODUCT DECISION: is 100 the right display bound for a 124-row result, and does this wording still belong next to pagination |
 | D-4 | The answer says it did not address rs28934578, in an answer whose own lead sentence reads "for rs28934578 and TP53" | BEING FIXED. The worst of the four for TRUST: a false note teaches a reader to distrust the true ones |
 
