@@ -735,6 +735,23 @@ Three things, and none of them should be decided by whoever builds next.
 - `testing/Developer/reports/2026-09-12_consistency_baseline/` is untracked
   evidence from 2026-09-12, 96KB. It has sat untracked for eight days. Commit
   it or bin it, but decide rather than leaving it.
+- THE DUPLICATE-COPY SWEEP IN `/ship` IS BROKEN AND IT IS THE THIRD TIME THIS
+  FAMILY HAS COST REAL TIME. On 2026-09-20 a filesystem walk found 163
+  duplicate-copy files, `<name> 2.<ext>`, including nine under `src/` and one
+  stale copy of this very document. The `/ship` skill's Step 1b builds its list
+  from `git status --porcelain`, and this repository's OWN `.gitignore` lines 85
+  to 94 hide `* [0-9]` for `.py`, `.md`, `.json`, `.ts`, `.tsx`, `.js`, `.jsx`
+  and `.mako`, so git never lists them and the sweep is structurally blind to
+  exactly the extensions that matter most. The 119 it did catch that day were
+  `.txt`, `.png`, `.jsonl` and `.log`, which no rule covers, which is why the
+  sweep looked like it was working. This is the same blindness that hid
+  `src/system_03_search_agent/tools/cypher_query 2.py` and cost a day of
+  debugging earlier in the week. `.claude/hooks/scan-duplicate-copies.sh` is NOT
+  the defect: it walks the filesystem correctly, but it only fires at
+  SessionStart, and these files were created mid-session. THE FIX IS ONE LINE OF
+  INTENT, that Step 1b walk the filesystem rather than ask git, and it is not
+  applied here because `/ship` lives under `.claude/` and `git-workflow` requires
+  a branch and a pull request for that.
 - The internal-MCP idea for Layer 2 and Layer 3, raised 2026-09-20. Backlog
   only. It crosses the tool-integration boundary the locked technical
   specification's Section 6 defines, so it is scoped before it is started.
