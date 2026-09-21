@@ -37,15 +37,44 @@ The next action is always one line, kept current here. Right now it is:
   - ITEM 4, settle 11.28, IS DONE. It landed as `50ed55b`, and the Set 11 table's 11.28 row carries the real cause and the fix.
   - So the first genuinely outstanding item on that list is ITEM 2, build 2a, cite every retrieved finding. Items 3, 5 and 6 follow it unchanged.
 - READ THE DAY'S SUMMARY BEFORE TOUCHING ANYTHING. `testing/Shipped_2026-09-20.md` is new and is the authoritative account of what shipped on 2026-09-20 and what to retest, in the terms a person notices. The develop app a tester sees is materially different from the one every earlier cutoff describes, so a session that skips it will retest the wrong things.
-- ONE ITEM IS NOT ON THE ORDERED LIST AT ALL AND NEEDS PLACING ON IT. Item 11.31, the two answer modes diverging, was decided on 2026-09-20 after "Next, in order" was written, so no document states where it sits in the order. It is DECIDED AND NOT BUILT. It carries two questions that whoever builds it must not answer on the product owner's behalf: whether a labelled explanatory sentence is ever permitted where no retrieved source supports it, and what replaces the removed word cap as an upper bound. Its constraints, including three failed directive versions it may not repeat, are in the Set 11 table's 11.31 row. Ask where it goes rather than assuming.
-- CI IS GREEN ON DEVELOP, confirmed after the repair landed. It had failed on two runs, both on one test-isolation defect: an arm added with the MCP config fix entered the app's lifespan through `TestClient(app)`, and `StreamableHTTPSessionManager` refuses a second `.run()` in one process. The repair is `c35b545`, which switches the arm to `httpx.ASGITransport`, the form the repository already documents in `adapters/mcp/test_phase_4_1_production_mount.py`'s module docstring. The full ten-gate CI then ran green on the release pull request too. Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
+- ONE ITEM IS NOT ON THE ORDERED LIST AT ALL AND NEEDS PLACING ON IT. Item 11.31, the two answer modes diverging, was decided on 2026-09-20 after "Next, in order" was written, so no document states where it sits in the order. It is DECIDED AND NOT BUILT. It carries two questions that whoever builds it must not answer on the product owner's behalf:
+
+  - Whether a labelled explanatory sentence is ever permitted where no retrieved source supports it.
+  - What replaces the removed word cap as an upper bound.
+
+  Its constraints, including three failed directive versions it may not repeat, are in the Set 11 table's 11.31 row. Ask where it goes rather than assuming.
+- CI IS GREEN ON DEVELOP, confirmed after the repair landed:
+
+  - It had failed on two runs, both on one test-isolation defect.
+  - The defect: an arm added with the MCP config fix entered the app's lifespan through `TestClient(app)`, and `StreamableHTTPSessionManager` refuses a second `.run()` in one process.
+  - The repair is `c35b545`, which switches the arm to `httpx.ASGITransport`, the form the repository already documents in `adapters/mcp/test_phase_4_1_production_mount.py`'s module docstring.
+  - The full ten-gate CI then ran green on the release pull request too.
+
+  Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
 - BOTH WORKTREES ARE GONE, removed on 2026-09-20 on the product owner's instruction that local carries only `develop`. Neither was still needed by then:
   - `breadth-wiring` was merged as `2bb1925`, and the live confirmation it was waiting on is done.
   - `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`.
 
   Clearing a worktree is a deletion, so it was asked first, and the one uncommitted file in either was byte-compared against develop's copy before removal and was identical.
-- PRODUCTION IS ON `v0.2.0`, released on the evening of 2026-09-20, the first release since v0.1.2 on 2026-08-28 and carrying 241 commits. The tag points at `cde4f59`, `GET /health` on the production API returns `app_env: production`, and the automated back-merge has already landed, so develop sits exactly one commit ahead of production. THE VERSION WAS DERIVED, NOT CHOSEN: 46 `feat` commits and zero breaking changes, which `.github/release/derive_version.sh` reads as a minor bump. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`, never from a document or a conversation.
-- SET 11 IS NOW MOSTLY LIVE, which reverses this file's earlier warning that it was not. 11.17, 11.21, 11.27 and 11.28 all merged on 2026-09-20, so the built-but-not-live set named here before is empty. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Sets 1 to 7 are approved, sets 8 and 9 are live on develop, and set 10 is untouched apart from item 10.1.
+- PRODUCTION IS ON `v0.2.0`, released on the evening of 2026-09-20:
+
+  | Fact | Value |
+  |---|---|
+  | First release since | v0.1.2 on 2026-08-28 |
+  | Commits carried | 241 |
+  | Tag points at | `cde4f59` |
+  | Production health | `GET /health` on the production API returns `app_env: production` |
+  | Back-merge | Already landed, so develop sits exactly one commit ahead of production |
+  | How the version was chosen | THE VERSION WAS DERIVED, NOT CHOSEN: 46 `feat` commits and zero breaking changes, which `.github/release/derive_version.sh` reads as a minor bump |
+
+  Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`, never from a document or a conversation.
+- SET 11 IS NOW MOSTLY LIVE, which reverses this file's earlier warning that it was not. 11.17, 11.21, 11.27 and 11.28 all merged on 2026-09-20, so the built-but-not-live set named here before is empty. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. The other sets:
+
+  | Sets | State |
+  |---|---|
+  | 1 to 7 | Approved |
+  | 8 and 9 | Live on develop |
+  | 10 | Untouched apart from item 10.1 |
 - THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given directly by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation, and every remaining presentation fix leaves it untouched. It is the bar item 11.29 has to clear.
 - EVIDENCE for the day is under `testing/Developer/reports/2026-09-20_*`. Start with `2026-09-20_breadth_merge/mcp_failure_explained.md`, for why the biggest feature in the queue sat unmerged for a week over a failure that was never its own, and `2026-09-20_tp53_findings/findings.md`, for the four defects one live answer exposed.
 - When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
@@ -126,7 +155,16 @@ What is waiting on the product owner, and none of it is blocked by engineering:
 - D-2, the four unexplained totals in one answer, and D-3, whether 100 is the right display bound for a 124-row result. Both need a product decision rather than a patch, with evidence in `testing/Developer/reports/2026-09-20_tp53_findings/findings.md`.
 - The MCP redirect's scheme downgrade, which is a deployment decision rather than a code change. The mechanism is established and reproduced in `tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py`.
 - Item 10.2, opening a past answer from history, which needs new persistence and therefore a data-retention decision.
-- The longer standing list, unchanged: the three `theme.ts` logo tokens, the six undesigned surfaces, whether answers carry a medical-advice notice, the 720px nav, the 20-source citation cap, the provenance note, the mode toggle's placement, and the trust-line wording.
+- The longer standing list, unchanged:
+
+  - The three `theme.ts` logo tokens.
+  - The six undesigned surfaces.
+  - Whether answers carry a medical-advice notice.
+  - The 720px nav.
+  - The 20-source citation cap.
+  - The provenance note.
+  - The mode toggle's placement.
+  - The trust-line wording.
 
 Three decisions this file listed as waiting on the morning of 2026-09-20 are now TAKEN and
 must not be re-asked:
@@ -166,7 +204,12 @@ THE LARGEST UNFIXED THING IS THE TEST HARNESS, not the product.
 - What is still broken: it still cannot produce an answer, because the double fakes the MODEL and not Layer 1, so `act_node` reaches for a graph that is not there
 - What it costs: until that is closed, no layer A test can assert on a real answer, and `query-stream-and-stop.spec.ts`'s answer case stays red
 
-WHAT HID IT FOR SEVEN BUILD PHASES is the transferable part. The suite ran green because almost every spec asserts on something present whether or not a run produces an answer: `second-turn.spec.ts` checks that the follow-up field is visible, and the answer screen renders that field on a failed run too. A green suite meant "the interface renders", never "the agent answers". The identical failure had already happened one node earlier at build phase 3.0, and the docstring recording that lesson was sitting in the file the whole time.
+WHAT HID IT FOR SEVEN BUILD PHASES is the transferable part:
+
+- The suite ran green because almost every spec asserts on something present whether or not a run produces an answer.
+- `second-turn.spec.ts` checks that the follow-up field is visible, and the answer screen renders that field on a failed run too.
+- So a green suite meant "the interface renders", never "the agent answers".
+- The identical failure had already happened one node earlier at build phase 3.0, and the docstring recording that lesson was sitting in the file the whole time.
 
 TWO PROCESS FAILURES FROM THIS SESSION, recorded because both will recur:
 
@@ -250,7 +293,10 @@ Product-owner decision, 2026-08-31. This is the most important line on this page
 
 Not from Section 25's build order.
 
-Section 25 has run its course as a driver. Every numbered phase has merged or moved to `requirements/Plan.md` Phase 7, and `tracker/BOARD.md` carries NO open phase at all. What remains is of two kinds and neither is phase-shaped: findings attached to code, which are conditional and become work only when someone touches that code; and defects a real person hit on the live site.
+Section 25 has run its course as a driver. Every numbered phase has merged or moved to `requirements/Plan.md` Phase 7, and `tracker/BOARD.md` carries NO open phase at all. What remains is of two kinds and neither is phase-shaped:
+
+- Findings attached to code, which are conditional and become work only when someone touches that code.
+- Defects a real person hit on the live site.
 
 Build phase 6.0 is the argument for the change rather than an aside. It was opened because the board said it was next. It delivered contention protection that is invisible with one user, and measuring its own specification section first showed five of its eight requirements were already built. Meanwhile the defect that makes every disease answer unreadable sat in `docs/build/UI_feedback.md` the whole time. A phase number is a poor proxy for value once the specification is mostly built.
 
@@ -265,7 +311,14 @@ Those apply to a piece of work whatever it is called. `docs/build/Build_workflow
 
 WHAT WOULD REVERSE IT: a genuinely phase-sized deliverable, most likely whatever user feedback asks for that does not exist yet.
 
-THE BOARD CARRIES NO OPEN PHASE AT ALL, as of later the same day: 6.1 left it too, joining 7.0 and 7.1. That is the honest state rather than a gap, because the thing standing between this product and a v1 real people can use is not a build phase. 6.1 needed handling the 7.x removals did not: those rows had EMPTY flag cells, while 6.1 carried two live findings, so their mentions moved to the phases that FOUND them (F-1.2-04 to build phase 1.2, ADV-03/06/07 to build phase 3.0) rather than being orphaned or deleted. What orders the work is this table.
+THE BOARD CARRIES NO OPEN PHASE AT ALL, as of later the same day: 6.1 left it too, joining 7.0 and 7.1. That is the honest state rather than a gap, because the thing standing between this product and a v1 real people can use is not a build phase.
+
+6.1 needed handling the 7.x removals did not:
+
+- The 7.x rows had EMPTY flag cells.
+- 6.1 carried two live findings, so their mentions moved to the phases that FOUND them rather than being orphaned or deleted: F-1.2-04 to build phase 1.2, and ADV-03/06/07 to build phase 3.0.
+
+What orders the work is this table.
 
 ### The evaluation track is CLOSED, and that is a decision rather than an oversight
 
@@ -322,7 +375,9 @@ Three rules that are not negotiable, each with a reason:
 
 Why this needs a separate session rather than a per-dispatch model argument: on the alternate backend a session-wide subagent model overrides both the per-invocation model parameter and any subagent's own frontmatter, so a judge dispatched at Depth silently runs on the builder's model. Role tiering there is done by launching a different command, full stop.
 
-The capability bands and the alternate-backend column are in `docs/build/Build_workflow_cadence.md` under "Provider mapping". The three commands above are local wrappers; the model identifiers, prices and credential location behind them are deliberately not in any tracked file and live in a local, uncommitted note under `docs/build/multi-model-harness/`. If the wrappers are not on this machine, that folder will not be either, and plain `claude` is unaffected.
+- The capability bands and the alternate-backend column are in `docs/build/Build_workflow_cadence.md` under "Provider mapping".
+- The three commands above are local wrappers. The model identifiers, prices and credential location behind them are deliberately not in any tracked file and live in a local, uncommitted note under `docs/build/multi-model-harness/`.
+- If the wrappers are not on this machine, that folder will not be either, and plain `claude` is unaffected.
 
 ## Finished phases
 
