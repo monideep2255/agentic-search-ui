@@ -1,13 +1,22 @@
 # UI fix plan
 
-The ordered work list for fixing the product after the first testing round on 2026-09-12. Each set says what you will see, what was noted, and what to expect, so you can check progress without reading the code.
+The ordered work list for fixing the product after the first testing round on 2026-09-12. Each set says:
+
+- What you will see
+- What was noted
+- And what to expect
+
+So you can check progress without reading the code.
 
 ## How to read this
 
 Start with [Where we stopped](#where-we-stopped). That section is the cutoff:
-what is live, what is waiting on the product owner, and what the next session
-does first. Everything above it is the record of how each item got to its
-current state.
+
+- What is live
+- What is waiting on the product owner
+- And what the next session does first
+
+Everything above it is the record of how each item got to its current state.
 
 Marks used in the set tables:
 
@@ -268,7 +277,11 @@ Batch: screens and pages.
 
 What you will see: refusals show a calm grey label naming the reason, and the NCBI search address is a link. Pressing Stop shows "Search stopped" with Run again and New search.
 
-Pushed as commit `4026282`, live on develop on 2026-09-13 and checked on the live app at 1280px and 390px: an off-topic question shows the grey label with no pill, a made-up gene shows "No answer found in NCBI records" with a working NCBI link, and Stop shows the block with both buttons, Run again restarting the run.
+Pushed as commit `4026282`, live on develop on 2026-09-13 and checked on the live app at 1280px and 390px:
+
+- An off-topic question shows the grey label with no pill
+- A made-up gene shows "No answer found in NCBI records" with a working NCBI link
+- And Stop shows the block with both buttons, Run again restarting the run.
 
 ### 3.1 Remove the red refusal pills (R13)
 
@@ -308,7 +321,10 @@ Batch: screens and pages.
 
 What you will see: a reload keeps you signed in. On a phone, the history button opens your searches in a panel that slides in.
 
-Pushed as commits `26274db` and `82bf080`, live on develop on 2026-09-13 and checked on the live app: at 1280px a reload keeps the account signed in with the rail restored and the search limit shown, and Log out clears it; at 390px, signed in, the page no longer scrolls sideways, the account pill shows initials only, the searches panel starts closed, opens from the top-right button and closes from its own button.
+Pushed as commits `26274db` and `82bf080`, live on develop on 2026-09-13 and checked on the live app:
+
+- At 1280px a reload keeps the account signed in with the rail restored and the search limit shown, and Log out clears it
+- At 390px, signed in, the page no longer scrolls sideways, the account pill shows initials only, the searches panel starts closed, opens from the top-right button and closes from its own button.
 
 ### 4.1 Stay signed in on reload, and history on phones (R46)
 
@@ -324,7 +340,13 @@ Batch: screens and pages.
 
 What you will see: an Integrations page in the reference layout with four equal cards, summary chips and API documentation below. The Docs tab is gone. A larger disclaimer with fuller wording. The GraphQL example works as printed, and MCP accepts connections.
 
-Pushed as commit `20a8688`, live on develop on 2026-09-13 and checked on the live app at 1280px and 390px: the disclaimer shows the new title, wording and full-width button and stays greyed out until ticked; the top bar reads Search, Integrations, About; `/docs` lands on Integrations; four chips and four cards render with no sideways scroll; the MCP endpoint answers an initialize request with 200 where it answered 421 before the deploy, with `MCP_ALLOWED_HOSTS` set on the develop API service; the GraphQL example was run as printed against develop and returned a BRCA1 answer with five citations.
+Pushed as commit `20a8688`, live on develop on 2026-09-13 and checked on the live app at 1280px and 390px:
+
+- The disclaimer shows the new title, wording and full-width button and stays greyed out until ticked
+- The top bar reads Search, Integrations, About; `/docs` lands on Integrations
+- Four chips and four cards render with no sideways scroll
+- The MCP endpoint answers an initialize request with 200 where it answered 421 before the deploy, with `MCP_ALLOWED_HOSTS` set on the develop API service
+- The GraphQL example was run as printed against develop and returned a BRCA1 answer with five citations.
 
 ### 5.1 Rebuild the Integrations page from the reference layout (R15)
 
@@ -413,18 +435,26 @@ never saw that the session remembered a gene.
 When it passed, the grounding gate dropped every claim whenever the answer model
 shortened a stored variant name, so a correct, fully retrieved answer was
 refused on phrasing and the error blamed a size cut that never happened. "Yes,
-go deeper" sent its own yes/no wording as the next search. Fixed on the backend
-by setting aside the guardrail's off-topic verdict in code when a question
-refers back to an entity the session remembers (a first cut put the memory into
-the guard's prompt instead, and live on develop that made the guard model answer
-the question in prose rather than classify it, so every follow-up failed;
-measured, reverted the same evening; the guard's model call also stopped
-carrying the agent's cached prefix ahead of the classifier's instruction, which
-had made the guard model answer the question in prose one call in ten locally
-and more often on develop), by answering from the retrieved records themselves
-in code when the model's wording will not ground, by an honest error for the
-grounding case, and by a real go-deeper question that lists the records the
-earlier answer did not show.
+go deeper" sent its own yes/no wording as the next search.
+
+Fixed on the backend:
+
+- By setting aside the guardrail's off-topic verdict in code when a question
+  refers back to an entity the session remembers.
+- By answering from the retrieved records themselves in code when the model's
+  wording will not ground.
+- By an honest error for the grounding case.
+- By a real go-deeper question that lists the records the earlier answer did
+  not show.
+
+Two notes on the first of those:
+
+- A first cut put the memory into the guard's prompt instead, and live on
+  develop that made the guard model answer the question in prose rather than
+  classify it, so every follow-up failed. Measured, reverted the same evening.
+- The guard's model call also stopped carrying the agent's cached prefix ahead
+  of the classifier's instruction, which had made the guard model answer the
+  question in prose one call in ten locally and more often on develop.
 
 Five of five consecutive follow-up runs answered afterwards with the real stored
 memory shape, and the go-deeper run showed ten records none of the earlier
@@ -474,7 +504,10 @@ Built: ✅ · Live: 🚀 · Approved: 👍
 
 Batch: answers.
 
-What you will see: every question searches the knowledge graph, live NCBI records, and literature and trials at the same time. The progress screen shows a lead scientist handing off to three random scientists, with steps like "Franklin is searching…".
+What you will see: every question searches the knowledge graph, live NCBI records,
+and literature and trials at the same time.
+
+The progress screen shows a lead scientist handing off to three random scientists, with steps like "Franklin is searching…".
 
 Built 2026-09-13, overnight. A question that names a gene now plans four
 searches: the knowledge graph, the live NCBI gene record, the PubTator3
@@ -542,10 +575,12 @@ cannot be built, because the graph has no link from a variant to a disease;
 variants show as a list.
 
 Plain language answers have three paragraphs, no headings, and end with "This is
-a research summary, not medical advice." Answers stream in under the progress
-steps and Stop works mid-answer. The broken first sentence, notes that looked
-like claims, and inverted disease names are fixed by rules in code, never by
-rewording.
+a research summary, not medical advice."
+
+Answers stream in under the progress steps and Stop works mid-answer.
+
+The broken first sentence, notes that looked like claims, and inverted disease
+names are fixed by rules in code, never by rewording.
 
 One trust line replaces the pills. The tour and About page describe the two
 modes. GraphQL and the command line accept Plain language too; the MCP tool
@@ -559,7 +594,10 @@ because the citation check drops any sentence whose words no record carries; and
 the trust line reads "Based on 4 sources, not yet confirmed" on most answers.
 Full record: `testing/Developer/reports/2026-09-13_set_9/report.md`.
 
-Live on develop 2026-09-14 as commit `537377d`, checked at 1280 and 390 wide (`testing/Developer/reports/2026-09-14_live_check/findings.md`). The live check found two answer-quality defects on the flagship questions, now being fixed: the BRCA1 disease answer's prose talked about trials while the diseases sat only in the record lines below, and the GCK Researcher answer restated records one by one instead of opening with a summary.
+Live on develop 2026-09-14 as commit `537377d`, checked at 1280 and 390 wide (`testing/Developer/reports/2026-09-14_live_check/findings.md`). The live check found two answer-quality defects on the flagship questions, now being fixed:
+
+- The BRCA1 disease answer's prose talked about trials while the diseases sat only in the record lines below
+- And the GCK Researcher answer restated records one by one instead of opening with a summary.
 
 Fixed 2026-09-14, overnight, measured on 55 local runs with the real models
 (`testing/Developer/reports/2026-09-14_answer_quality/report.md`). Every answer
@@ -586,6 +624,7 @@ seconds.
 Follow-ups on 2026-09-14, from your review of the live answers ("the inline citations overwhelm the answer", "can we make the process quicker", "show people the answer is loading, like [scientist] is writing the answer"):
 - Decided: the answer-writing model's reasoning setting is now `none`. Over 35 local runs: no writing-step errors, answers unchanged in quality (`testing/Developer/reports/2026-09-14_synth_effort_none/report.md`).
 - Quicker: the second writing pass now runs only when it can change the answer, and the Plan step no longer makes a model call whose reply was thrown away. Over the same 35 runs, the typical search fell from 21.2 to 16.6 seconds and the slowest from 60.8 to 46.5, with zero errors and the same sources (`testing/Developer/reports/2026-09-14_speed_fix/report.md`).
+<!-- The dash here is U+2013 and is DELIBERATE: it quotes verbatim what the product renders. `CitationMarkers.tsx` line 141 builds the label with that character and `CitationMarkers.test.tsx` lines 65 and 113 pin it. check_style.py flags it as a house-style dash, which is the one standing hard finding on this file. Do not "fix" it to a hyphen: that would make this document misquote the product. Changing the product, or exempting a digit-dash-digit range in the checker, are the only two real options and both are the product owner's call. -->
 - Quieter citations: sentences end in small raised numbers in the layer colour instead of boxes; many sources collapse to one marker such as "1–13"; hovering, tapping or tabbing to a number opens a small card with each source and a record link. No raw "[1][2]" shows while the answer is being written (`testing/Developer/reports/2026-09-14_citations_and_writing/report.md`).
 - Writing state: during the writing step the scientist's line reads "{name} is writing the answer…" with moving dots, and "writing…" follows the sentences as they appear.
 
@@ -698,21 +737,12 @@ Built: ✅ · Live: 🚀 · Approved:
 - Feature being tested: the two questions the product is judged on answer reliably every time.
 - What you noted: from the developer walkthrough, not your words: "Which diseases are associated with BRCA1?" answered 5 times and was refused 3 times, at different depths, minutes apart.
 - What's expected: BRCA1 and GCK answer every time, checked in tests 1 and 13.
-- Built 2026-09-13, first cut: for the known question shapes (a gene's diseases,
-  variants, orthologs, processes, activities, components, organism and papers; a
-  disease's genes and phenotypes; a paper's MeSH terms; the record itself;
-  counts; several genes at once) the graph query is a code template with a
-  stable ordering, chosen deterministically from the bound entities and the
-  question's words, never a model draft, and it makes no model call. Measured
-  locally: the BRCA1 disease question ran the identical query and returned the
-  identical four MedGen records five times out of five; the variant follow-up
-  returned the identical first twenty ClinVar records five of five. Before, on
-  develop, the same questions returned two to four different source sets in five
-  runs. Second cut, the same night: the answer cites every retrieved record on
-  every run (a cited line is appended for each record the prose left out), and
-  the multi-hop variant question now hits its template. Measured locally five
-  runs each: one source set per question. Live on develop; the product owner's
-  retest is the BRCA1 question three times in a row with the same sources.
+- Built 2026-09-13, first cut: for the known question shapes (a gene's diseases, variants, orthologs, processes, activities, components, organism and papers; a disease's genes and phenotypes; a paper's MeSH terms; the record itself; counts; several genes at once) the graph query is a code template with a stable ordering, chosen deterministically from the bound entities and the question's words, never a model draft, and it makes no model call.
+  - Measured locally: the BRCA1 disease question ran the identical query and returned the identical four MedGen records five times out of five; the variant follow-up returned the identical first twenty ClinVar records five of five.
+  - Before, on develop, the same questions returned two to four different source sets in five runs.
+  - Second cut, the same night: the answer cites every retrieved record on every run (a cited line is appended for each record the prose left out), and the multi-hop variant question now hits its template.
+  - Measured locally five runs each: one source set per question.
+  - Live on develop; the product owner's retest is the BRCA1 question three times in a row with the same sources.
 
 ### 10.2 History shows the saved answer instantly (R35)
 
@@ -872,7 +902,8 @@ landing it alone is the quickest win available
 
 #### Detail 11.28
 
-The ask: The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write
+The ask: The move from searching to the streamed answer is too quick; stagger it
+so people can watch the lead start, hand off to the helpers, and then write.
 
 Status: Live
 
@@ -959,10 +990,12 @@ otherwise. `/health` 200, `/openapi.json` 200, `/docs` 200, `/graphql` 401,
 The 401s and the 307 are almost certainly correct rather than broken: the two
 401s are protected routes refusing an unauthenticated caller, and the 307 is the
 documented redirect the MCP sub-app produces because it mounts at `/mcp` with
-its route at `/`, which `test_r17_transport_security.py` already relies on. WHAT
-IS NOT YET PROVEN, and is the actual work: that each SNIPPET printed on the
-Integrations page runs as written, with a real token, and returns what the page
-says it will.
+its route at `/`, which `test_r17_transport_security.py` already relies on.
+
+WHAT IS NOT YET PROVEN, and is the actual work:
+
+That each SNIPPET printed on the Integrations page runs as written, with a real
+token, and returns what the page says it will.
 
 Responding is not the same as working, and set 5 has history here: item 5.2
 corrected a wrong GraphQL example and 5.3 fixed the MCP server rejecting every
@@ -1031,10 +1064,13 @@ specifics and depth
 Status: DECIDED, not started. REVERSES 11.13
 
 Raised 2026-09-20. THIS IS A REQUIREMENT REVERSAL AND IS RECORDED AS ONE rather
-than quietly contradicting the earlier row: item 11.13 asked for "the same
-readable format in both Plain language and Researcher", is marked Live, and was
-verified as "the same heading and table structure in both modes". That is now
-the defect.
+than quietly contradicting the earlier row:
+
+Item 11.13 asked for "the same readable format in both Plain language and
+Researcher", is marked Live, and was verified as "the same heading and table
+structure in both modes".
+
+That is now the defect.
 
 WHY THEY LOOK THE SAME, established in code rather than guessed: the PROSE
 directives already differ a lot (`synthesis/findings.py`'s `_DEPTH_DIRECTIVES`:
@@ -1192,14 +1228,21 @@ which is the first time those gates have run against a promotion into
 
 ### What is waiting on the product owner
 
-Three things, and none of them should be decided by whoever builds next.
+NOTHING FROM THIS LIST, as of the close of 2026-09-20. All four are settled, and
+they are kept here with their outcomes so the next session does not re-ask them.
+The heading previously said "Three things" above a table of four, which is the
+shape of a list that has been added to without its own count being updated.
 
-| Waiting on | The question |
+| Was waiting on | What was decided |
 |---|---|
-| 11.31, the two answer modes | Where it sits in "Next, in order". It was decided after that list was written. It is also carrying two sub-questions named in its own row |
-| D-2, the four totals | DECIDED 2026-09-20 and not built: all four, each labelled with what it counts. The product owner's words were "All 4 with labels, all info" |
-| The bossman rule contradiction | RESOLVED 2026-09-20 on the product owner's explicit sign-off, open as PR #98. Two named carve-outs, the `/ship` release chain and `/bossman --ui`, bounded by mode rather than by convenience, since the product owner asked that bossman not lose the protection permanently |
-| PR #97, the ship sweep fix | Open and waiting on review. It changes `.claude/skills/ship/SKILL.md` so the stray-file sweep walks the filesystem as well as asking git. Merging it is what stops the duplicate-file problem recurring a fourth time |
+| 11.31, the two answer modes | PLACED. The product owner delegated the position to the tech lead, and it goes NEXT, ahead of cite-every-retrieved-finding. The argument is dependency-shaped: the old next item increases how much cited material every answer carries, and if both modes render it identically that makes the sameness worse rather than better |
+| D-2, the four totals | DECIDED, not built. "All 4 with labels, all info": an answer shows every total, each labelled with what it counts, rather than hiding three |
+| The bossman rule contradiction | RESOLVED 2026-09-20 on the product owner's explicit sign-off, merged as PR #98. Two named carve-outs, the `/ship` release chain and `/bossman --ui`, bounded by mode rather than by convenience |
+| PR #97, the ship sweep fix | MERGED. It changes `.claude/skills/ship/SKILL.md` so the stray-file sweep walks the filesystem as well as asking git, which is what stops the duplicate-file problem recurring a fourth time |
+
+Two sub-questions inside 11.31 itself remain genuinely open and are NOT covered
+above, so whoever builds it must not answer them on the product owner's behalf.
+They are named in the 11.31 row of the Set 11 table.
 
 ### Loose ends, named rather than left
 
@@ -1243,9 +1286,13 @@ Three things, and none of them should be decided by whoever builds next.
 The overnight session could not explain why one test, the MCP production-mount test, failed only in the broad-search branch's full suite run. That unexplained failure is the single reason the biggest feature in the queue sat unmerged.
 
 The cause was not in that branch at all. Develop's CI repair `a90ef25` fixed
-THREE test-isolation defects. The overnight worker ported TWO of them into the
-worktree by copying files across, watched the failure persist, and recorded the
-cause as unknown. The third fix lives in a file it never copied,
+THREE test-isolation defects.
+
+- The overnight worker ported TWO of them into the worktree by copying files across
+- Watched the failure persist
+- And recorded the cause as unknown
+
+The third fix lives in a file it never copied,
 `tests/e2e_support/test_real_model_mode.py`, and that fix's own docstring names
 this exact failure, this exact file and the collection order: it collects before
 the production-mount test, its `with TestClient(...)` entered the real app's
@@ -1274,7 +1321,7 @@ Full account: `testing/Developer/reports/2026-09-20_breadth_merge/mcp_failure_ex
 Updated at the close of 2026-09-20, after the product owner tested every shipped
 feature live and reported back on each.
 
-Shipped today, tested live by the product owner, and APPROVED by them:
+#### Shipped today, tested live by the product owner, and APPROVED by them
 
 | Item | Commit | Their verdict |
 |---|---|---|
@@ -1296,9 +1343,11 @@ Being built right now, one agent each, no two sharing a file:
 
 FOUR DEFECTS FOUND BY THE PRODUCT OWNER IN ONE LIVE ANSWER, all recorded with
 evidence in `testing/Developer/reports/2026-09-20_tp53_findings/findings.md`.
-Every one is a REPORTING defect rather than a retrieval defect: the agent found
-the records, cited them and rendered them, and what it says ABOUT what it found
-is wrong or unreadable.
+Every one is a REPORTING defect rather than a retrieval defect:
+
+- The agent found the records
+- Cited them and rendered them
+- And what it says ABOUT what it found is wrong or unreadable
 
 | Id | Defect | State |
 |---|---|---|
@@ -1307,7 +1356,7 @@ is wrong or unreadable.
 | D-3 | The truncation note still says rows are "not shown above" while sitting directly above a pager, which a reader reads as "the pager is hiding them" | NEEDS A PRODUCT DECISION: is 100 the right display bound for a 124-row result, and does this wording still belong next to pagination |
 | D-4 | The answer says it did not address rs28934578, in an answer whose own lead sentence reads "for rs28934578 and TP53" | BEING FIXED. The worst of the four for TRUST: a false note teaches a reader to distrust the true ones |
 
-Approved and not yet started, in the product owner's own stated order:
+#### Approved and not yet started, in the product owner's own stated order
 
 | Item | Why it is next |
 |---|---|
@@ -1330,9 +1379,17 @@ Open, with nobody on them:
 | 11.29, hard and soft edges, RAG and vectors | Its own session. Its bar: not "does it cite" but "is it worth reading instead of a general chatbot" |
 
 The rule this plan follows, because it is the lesson of the overnight revert:
-ONE FEATURE PER PUSH. 11.27 and 11.28 shared a merge, CI failed on one, and the
-innocent one was reverted with it and sat unavailable for a week. Each item
-above lands alone, is confirmed live alone, and can be rolled back alone.
+ONE FEATURE PER PUSH.
+
+- 11.27 and 11.28 shared a merge
+- CI failed on one
+- And the innocent one was reverted with it and sat unavailable for a week
+
+Each item above:
+
+- Lands alone
+- Is confirmed live alone
+- And can be rolled back alone
 
 The rule the parallel work follows: no two agents own one file. File fencing
 held all day across eight agents with zero collisions. The one shared resource
@@ -1355,14 +1412,17 @@ message, and corrected it in `3a3c455` rather than leaving it.
 
 ### Decisions taken today
 
-Both are product-owner calls, both recorded in `DECISIONS.md` dated 2026-09-20, and NEITHER is built yet.
+Both are product-owner calls, both recorded in `DECISIONS.md` dated 2026-09-20, and NEITHER is built yet:
 
 - Widen the citation host rule so OMIM can be cited. This REVERSES a row taken earlier the same day. That row stays as the historical record it is; the reversal is its own row. Two boundaries are held rather than crossed quietly: editing the locked `requirements/Technical_specification.md` needs explicit product-owner sign-off, which the row now carries, and `omim.org` goes in as an EXACT additional host rather than a loosened pattern, because the host pin is a control against spoofed citation URLs.
 - Cite every retrieved finding, so a question's source set is identical run to run. This is what 11.21 actually asked for. Retrieval is deterministic after 1b; this closes the remaining gap, where the model chooses which findings to ground a claim on. Known cost, to be reported rather than hidden: answers may grow a tail of cited-but-unused records.
 
 ### The verdict that matters most, and what it means
 
-Asked whether the product fails because the data is absent or because we cannot find the path between things that are present, the product owner answered BOTH, and added the blunter judgement: the answers look surface level, and general chatbots answer better.
+Asked whether the product fails because the data is absent or because we cannot find the path between things that are present:
+
+- The product owner answered BOTH
+- And added the blunter judgement: the answers look surface level, and general chatbots answer better.
 
 That is a judgement on the ANSWER PATH, not on presentation. It is recorded as the bar item 11.29 has to clear: not "does it cite" but "is it worth reading instead of a general chatbot".
 
@@ -1465,8 +1525,10 @@ and which tests in `Product/Product_workflows.md` to redo. File lists are where
 the change most likely lives, from the reading of the code on 2026-09-12. Treat
 them as a starting point, not a promise.
 
-When a set ships, its status changes above, and so do the matching requirements
-in section 11 of `Product/reports/2026-09-12_consistency_and_test_1.md`.
+When a set ships:
+
+- Its status changes above
+- And so do the matching requirements in section 11 of `Product/reports/2026-09-12_consistency_and_test_1.md`
 
 ```mermaid
 flowchart LR
