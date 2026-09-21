@@ -23,14 +23,69 @@ Wait for docs-sync to complete before proceeding. Its edits may add files to the
 
 ## Step 1b: stray file sweep
 
-Run `git status --porcelain` and account for EVERY untracked path before anything is staged. Each one is either work that belongs in the commit, work that belongs in `.gitignore`, or a leftover to remove. There is no fourth category, and "I did not look" is not one of them.
+Account for EVERY stray file before anything is staged. Each one is either work that belongs in the commit, work that belongs in `.gitignore`, or a leftover to remove. There is no fourth category, and "I did not look" is not one of them.
 
-Where scratch actually lives, because this is the part that gets assumed wrongly in both directions:
+### Why this step needs two sources
 
-- The session scratchpad is OUTSIDE the repository, under the harness's own temp directory. Nothing in it is tracked, nothing in it can be committed, and committing does not touch it. There is no cleanup to do there and no risk to guard against.
-- The risk is a file written INSIDE the repository by mistake: a probe script, a measurement dump, a log, an `out.txt`, a half-written report. That one is invisible to the reasoning above and is exactly what this sweep is for.
+This step used to run `git status --porcelain` alone. That is structurally blind, and it failed in production on 2026-09-20: a filesystem walk found 163 macOS duplicate-copy files of the shape `<name> 2.<ext>`, nine of them under `src/`, one a stale copy of a live document, and `git status` listed NONE of them. This repository's own `.gitignore` lines 85 to 94 carry rules of the form `* [0-9].py` and `* [0-9].md`, so git is instructed to hide the exact shape this sweep exists to catch.
 
-For each untracked path, say which it is and why, in one clause:
+Worse, the sweep looked like it was working. The 119 files it did surface that day were `.txt`, `.png`, `.jsonl` and `.log`, extensions no ignore rule covers. A check that catches the easy half and silently drops the half that matters is more dangerous than one that catches nothing. The same blindness hid `src/system_03_search_agent/tools/cypher_query 2.py` and cost a day of debugging, and duplicate `test_*.py` files collected by pytest inflated the tracked test count from 5222 to 6016.
+
+`.claude/hooks/scan-duplicate-copies.sh` is NOT the defect. It already walks the filesystem with `find` and would have caught every one of the 163. It fires at SessionStart only, and these files appeared mid-session, which is the gap this step covers.
+
+So run both sources. Neither one alone is sufficient:
+
+- `git status --porcelain`: authoritative for what the commit will contain. It is the only source that sees a modified, staged or deleted tracked file, and it surfaces ordinary untracked work such as the probe script or report you just wrote. It cannot see an ignored path, by design.
+- The filesystem walk below: the only source that sees a path `.gitignore` hides. It cannot see a modification to a tracked file, or anything in the index, at all.
+
+### The walk
+
+Paste this as is, from anywhere in the repository. It prints duplicate-copy candidates with a verdict for each, then every other file on disk that git does not track.
+
+```bash
+python3 - <<'PY'
+import filecmp, os, re, subprocess
+root = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                      capture_output=True, text=True).stdout.strip()
+prune = {".git", "node_modules", "venv", ".venv", "__pycache__", ".pytest_cache",
+         ".ruff_cache", ".mypy_cache", "dist", "build"}
+dup = re.compile(r"^(?P<stem>.+) \d{1,2}(?P<ext>\.[^.]+)?$")
+tracked = set(subprocess.run(["git", "-C", root, "ls-files"],
+                             capture_output=True, text=True).stdout.splitlines())
+dups, strays = [], []
+for base, dirs, files in os.walk(root):
+    dirs[:] = [d for d in dirs if d not in prune and not d.endswith(".egg-info")]
+    for name in files:
+        path = os.path.join(base, name)
+        rel = os.path.relpath(path, root)
+        m = dup.match(name)
+        if m:
+            mate = os.path.join(base, m.group("stem") + (m.group("ext") or ""))
+            if not os.path.exists(mate):
+                verdict = "NO COUNTERPART, classify by hand"
+            elif filecmp.cmp(path, mate, shallow=False):
+                verdict = "byte-identical to counterpart, safe to Trash"
+            else:
+                verdict = "DIFFERS from counterpart, diff before touching"
+            dups.append(f"{rel}: {verdict}")
+        elif rel not in tracked:
+            strays.append(rel)
+print(f"duplicate-copy candidates: {len(dups)}")
+for d in sorted(dups):
+    print("  " + d)
+print(f"untracked or ignored files on disk: {len(strays)}")
+for s in sorted(strays):
+    print("  " + s)
+PY
+```
+
+The pruned directories are named in the script so the walk stays fast. The three cache directories beyond the base set (`.ruff_cache`, `.mypy_cache`, `*.egg-info`) are the same category of generated output and are pruned for the same reason.
+
+Use this rather than a `find ... | grep` pipeline. Every one of these filenames contains a space, and feeding `find` output into a shell loop splits each path into fragments: `./sub`, `dir/beta`, `2.md`, none of which exist. Verified by running it on 2026-09-20.
+
+### Classifying an ordinary stray
+
+For each path in either list, say which it is and why, in one clause:
 
 | What it is | What to do |
 |---|---|
@@ -38,6 +93,21 @@ For each untracked path, say which it is and why, in one clause:
 | Output worth keeping but not committing (a large dump, a local measurement) | Add it to `.gitignore`, or move it under a path already ignored |
 | A leftover probe, log or temp file | Remove it, and SAY SO in the report rather than removing it silently |
 | Something you did not create and cannot classify | Leave it, name it in the report, and ask. Never remove a file whose purpose you do not know |
+
+Where scratch actually lives, because this is the part that gets assumed wrongly in both directions:
+
+- The session scratchpad is OUTSIDE the repository, under the harness's own temp directory. Nothing in it is tracked, nothing in it can be committed, and committing does not touch it. There is no cleanup to do there and no risk to guard against.
+- The risk is a file written INSIDE the repository by mistake: a probe script, a measurement dump, a log, an `out.txt`, a half-written report. That one is invisible to the reasoning above and is exactly what this sweep is for.
+
+### Classifying a duplicate-copy candidate
+
+This family is now a three-time recurrence, so it gets its own verdicts rather than being folded into the table above:
+
+| The walk's verdict | What to do |
+|---|---|
+| Byte-identical to counterpart | A true duplicate. Move it to the Trash and say so. The content comparison is what makes this safe, not the filename shape |
+| Differs from counterpart | NOT deletable on sight. Diff it line by line against its counterpart and prove nothing is lost before anything moves. The one found on 2026-09-20 was a stale snapshot of a live document |
+| No counterpart | Not a duplicate at all, and the digit may be part of a real name. Leave it, name it in the report, and ask |
 
 Removing a leftover follows `file-protection`: inform first, and prefer moving to the Trash over `rm`, so a wrong call is recoverable.
 
@@ -100,7 +170,7 @@ This step is deletion, so it follows `file-protection`: say what is going before
 - If docs-sync says "no changes needed" but there are uncommitted code changes, still proceed to git-sync
 - If there is nothing to commit at all, report that and stop
 - Do NOT push if the commit would include `.env`, secrets, or anything in the gitignore. Block and ask
-- Do NOT push with an unexplained untracked file in the tree. Every path from `git status --porcelain` is classified at Step 1b, or the push waits.
+- Do NOT push with an unexplained stray file in the tree. Every path from BOTH of Step 1b's sources, `git status --porcelain` and the filesystem walk, is classified there, or the push waits. A clean `git status` is not evidence the tree is clean, since `.gitignore` hides the duplicate-copy family from it.
 - Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
 
 ## Output
