@@ -320,13 +320,58 @@ def condition_titles(
         if is_placeholder_condition_title(title):
             placeholders += 1
             continue
-        readable = readable_disease_name(title.strip())[:200]
+        readable = clip_to_word(readable_disease_name(title.strip()), 200)
         if readable not in titles:
             titles.append(readable)
     return titles, placeholders, unresolved
 
 
 # Fields that NAME a record, in preference order, for a list label.
+#: The longest a record's own value may run in a label or a summary line.
+#: Unchanged at 500; what changed on 2026-09-21 is WHERE it cuts.
+MAX_LABEL_CHARS = 500
+
+
+def clip_to_word(value: str, limit: int = MAX_LABEL_CHARS) -> str:
+    """Clip `value` to `limit` characters WITHOUT cutting a word in half.
+
+    Item 11.33. Measured live on develop: the BRCA1 gene summary rendered
+    as "... and through the C-terminal d", and PubMed abstracts rendered as
+    "... or 'mutational signatures', wer" and "... has been uncle". Every
+    one of those is this function's caller slicing at exactly 500
+    characters and landing mid-word, which makes the product look like it
+    is quoting NCBI badly.
+
+    The cause took two attempts to find, and the first investigation ruled
+    this slice out on a measurement that looked decisive: the visible
+    fragments were 49 to 153 characters, far short of 500, so a 500-char
+    cap "could not" be responsible. What that missed is that a fragment
+    began at the last sentence boundary INSIDE the 500-char slice, so the
+    fragment's length says nothing about where the slice fell. The way it
+    was finally settled is worth repeating: fetch the real source value and
+    find the offset of the rendered fragment's end in it. It was 500
+    exactly.
+
+    Cuts at the last word boundary at or before `limit` and appends a
+    single-character ellipsis, so the reader can see the value continues.
+    A value with no whitespace before `limit` (a long identifier, an HGVS
+    name) is cut at `limit` unchanged, because breaking such a value at an
+    arbitrary point is worse than a hard cut and there is no word boundary
+    to honour.
+
+    Returns the value unchanged when it already fits, so nothing that fits
+    today renders differently tomorrow.
+    """
+    text = value.strip()
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    cut = head.rfind(" ")
+    if cut <= 0:
+        return head
+    return head[:cut].rstrip(" ,;:") + "\u2026"
+
+
 _LABEL_FIELDS = ("name", "title", "symbol", "preferred_name")
 _URL_PREFIX = re.compile(r"^\s*https?://", re.IGNORECASE)
 
@@ -356,7 +401,7 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
     # "NM_000162.5(GCK):c.363+318G>A". The row's name is retrieved data
     # shown verbatim.
     if finding.name_resolved and finding.field_value.strip():
-        return finding.field_value.strip()[:500]
+        return clip_to_word(finding.field_value)
     for key in _LABEL_FIELDS:
         value = (row_fields or {}).get(key)
         if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
@@ -544,7 +589,7 @@ def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
     the finding's own value when that value names the record, else the same
     label the list row shows. `row` is the dumped tool row, or None."""
     if finding.name_resolved or finding.field in _LABEL_FIELDS:
-        return finding.field_value.strip()[:500]
+        return clip_to_word(finding.field_value)
     fields = (row or {}).get("fields")
     return record_label(finding, fields if isinstance(fields, dict) else None)
 
@@ -623,7 +668,7 @@ def answer_summary_sentence(
 
     parts = [plural(noun, count) for noun, count in counts.items()]
     what = joined(parts)
-    subject = f" for {entity_label.strip()[:200]}" if entity_label and entity_label.strip() else ""
+    subject = f" for {clip_to_word(entity_label, 200)}" if entity_label and entity_label.strip() else ""
     head = f"Found {what}{subject}"
     markers = sorted(display_slots[f.citation_id] for f in counted)
     if total_available is not None and total_available > len(counted):
@@ -645,7 +690,7 @@ def answer_summary_sentence(
     if not titles:
         return body + "."
     named_diseases = [
-        f"{f.field_value.strip()[:200]} [{display_slots[f.citation_id]}]"
+        f"{clip_to_word(f.field_value, 200)} [{display_slots[f.citation_id]}]"
         for f in sorted(cited, key=lambda f: display_slots[f.citation_id])
         if f.curie in linked_set
         and f.name_resolved
