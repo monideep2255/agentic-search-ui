@@ -355,3 +355,41 @@ def filter_omim_titles(
         if symbol in symbol_fields:
             kept.append(record)
     return kept
+
+
+def plan_gene_summary(gene_curie: str | None) -> tuple[PlannedCall, ...]:
+    """The Gene ESummary call that carries NCBI's plain-English description.
+
+    Item 11.31 (2026-09-21). One call, not the search-then-summary pair the
+    ClinVar and OMIM follow-ups use, because a resolved gene CURIE ALREADY
+    HOLDS the uid: `NCBIGene:672` is Entrez gene 672. Planning an ESearch to
+    rediscover an identifier the question already resolved would add a
+    round trip and a second chance to resolve the wrong gene, which is the
+    failure `_filter_omim_records` exists to undo for OMIM.
+
+    WHY THIS EXISTS AT ALL, since a reader will reasonably ask why the
+    product needs a gene record it already has a graph row for:
+    `grounding.ground_claim` accepts a claim only on contiguous containment,
+    so against long source text the gate permits quoting and forbids
+    paraphrase. The product therefore cannot explain a record in its own
+    words at any depth. NCBI's Gene ESummary `summary` field is the only
+    plain-English explanatory prose NCBI publishes per gene, so quoting it
+    is the one way a plain-language answer explains anything while every
+    sentence keeps a source. Measured evidence:
+    `testing/Developer/reports/2026-09-21_11.31_divergence/findings.md`.
+
+    Returns an empty tuple for anything that is not an `NCBIGene:` CURIE
+    with a positive integer uid, which is the planner's own signal to plan
+    nothing rather than an error, matching `plan_first_stage`'s contract.
+    """
+    if not isinstance(gene_curie, str):
+        return ()
+    prefix, _, uid = gene_curie.strip().partition(":")
+    if prefix.lower() != "ncbigene":
+        return ()
+    # Digits only, and non-zero: an Entrez uid is a positive integer, and a
+    # value like "672abc" or "-1" is a malformed CURIE rather than a gene
+    # this call should go and ask NCBI about.
+    if not uid.isdigit() or int(uid) <= 0:
+        return ()
+    return (_summary_call("gene_summary", "gene", [uid]),)

@@ -4069,6 +4069,18 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # question itself asks for a GO shape, which the primary call's
         # own template already answers.
         planned_tool_calls.extend(_build_breadth_calls(gene_symbol))
+
+        # Item 11.31 (2026-09-21): NCBI's own plain-English gene summary,
+        # planned from the RESOLVED CURIE rather than from the symbol, so it
+        # costs one call and cannot resolve a different gene than the one
+        # Think already settled. Planned after the breadth fan-out for the
+        # same reason that fan-out is planned after set 8's calls: under the
+        # Section 21.3 ceiling the newest calls are the ones admission skips
+        # first, so adding this can never displace an answer call.
+        planned_tool_calls.extend(
+            _planned_from_breadth(call)
+            for call in breadth_plan.plan_gene_summary(gene_curie)
+        )
         if gene_curie is not None and not (
             set(matched_shapes(query.text, "Gene")) & _GO_SHAPES
         ):

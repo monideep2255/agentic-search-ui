@@ -342,12 +342,13 @@ async def test_a_resolved_gene_plans_the_breadth_calls_beside_the_existing_ones(
     tools = _plan_tools(events)
     assert tools[0] == ("cypher_query", "layer_1_graph"), "the primary graph call stays first"
     assert tools.count(("cypher_query", "layer_1_graph")) == 2, "the GO template is a second graph call"
-    # Set 8's four, unchanged, plus five breadth calls: two searches and
-    # three follow-ups.
-    assert tools.count(("ncbi_efetch", "layer_2_api")) == 1 + 2 + 2, tools
+    # Set 8's four, unchanged, plus five breadth calls (two searches and
+    # three follow-ups), plus item 11.31's Gene ESummary, which is planned
+    # DIRECTLY from the resolved CURIE and is not a follow-up of any search.
+    assert tools.count(("ncbi_efetch", "layer_2_api")) == 1 + 2 + 2 + 1, tools
     assert tools.count(("pubtator_annotate", "layer_3_enrichment")) == 2, tools
     assert tools.count(("clinicaltrials_search", "layer_3_enrichment")) == 1, tools
-    assert len(tools) == 10, tools
+    assert len(tools) == 11, tools
 
 
 def test_the_breadth_plan_never_dispatches_omim_and_needs_a_symbol() -> None:
@@ -392,9 +393,17 @@ async def test_follow_ups_run_on_the_sorted_capped_ids_the_searches_returned(
     events = await _events(_GENE_QUESTION)
     fetches = [i for i in spy.efetch_inputs if i["action"] == "fetch"]
     summaries = [i for i in spy.efetch_inputs if i["action"] == "summary"]
-    assert len(fetches) == 1 and len(summaries) == 1, spy.efetch_inputs
+    # Two summaries now: ClinVar's, whose ids come from its search, and item
+    # 11.31's Gene ESummary, whose id comes from the resolved CURIE. Selected
+    # by db rather than by position, so a planning-order change cannot make
+    # this arm assert the wrong call's ids.
+    clinvar_summaries = [i for i in summaries if i["db"] == "clinvar"]
+    gene_summaries = [i for i in summaries if i["db"] == "gene"]
+    assert len(fetches) == 1 and len(summaries) == 2, spy.efetch_inputs
+    assert len(clinvar_summaries) == 1 and len(gene_summaries) == 1, summaries
     assert fetches[0]["ids"] == ["30000003", "30000002", "30000001"], fetches
-    assert summaries[0]["ids"] == ["13", "12", "11"], summaries
+    assert clinvar_summaries[0]["ids"] == ["13", "12", "11"], clinvar_summaries
+    assert gene_summaries[0]["ids"] == ["672"], gene_summaries
     annotations = [i for i in spy.pubtator_inputs if i["mode"] == "annotate_publications"]
     assert len(annotations) == 1 and annotations[0]["pmids"] == fetches[0]["ids"]
     # The searches ran before the follow-ups: the follow-up inputs are
@@ -404,7 +413,7 @@ async def test_follow_ups_run_on_the_sorted_capped_ids_the_searches_returned(
     # Every planned call started and closed, the premise gate's A1 and A2.
     starts = [e for e in events if e.type == "tool_start"]
     results = _results(events)
-    assert len(starts) == 10 == len(results), (len(starts), len(results))
+    assert len(starts) == 11 == len(results), (len(starts), len(results))
     # The new sources reach the answer.
     sources = _sources(events)
     assert "https://www.ncbi.nlm.nih.gov/clinvar/variation/13/" in sources, sources
@@ -420,11 +429,16 @@ async def test_a_failed_search_closes_its_follow_ups_empty_and_the_run_still_ans
     _install_lookup(monkeypatch)
     spy = _ToolSpy(monkeypatch, search_status="error")
     events = await _events(_GENE_QUESTION)
-    assert not any(i["action"] in ("fetch", "summary") for i in spy.efetch_inputs), (
-        "a follow-up must never be issued without ids"
-    )
+    # Item 11.31's Gene ESummary is excluded by db, deliberately: it is NOT a
+    # follow-up. Its id comes from the CURIE the question already resolved,
+    # so it is correct for it to run when every search fails, which is the
+    # whole reason it was planned from the CURIE rather than from a search.
+    assert not any(
+        i["action"] in ("fetch", "summary") and i.get("db") != "gene"
+        for i in spy.efetch_inputs
+    ), "a follow-up must never be issued without ids"
     results = _results(events)
-    assert len(results) == 10, [r["tool"] for r in results]
+    assert len(results) == 11, [r["tool"] for r in results]
     empties = [r for r in results if r["status"] == "empty" and "no ids" in r["summary"]]
     assert len(empties) == 3, [(r["tool"], r["status"], r["summary"]) for r in results]
     done = next(e for e in events if e.type == "done")
@@ -442,7 +456,10 @@ async def test_a_follow_up_that_raises_degrades_to_an_error_result(
     events = await _events(_GENE_QUESTION)
     results = _results(events)
     errors = [r for r in results if r["status"] == "error"]
-    assert len(errors) == 1 and errors[0]["tool"] == "ncbi_efetch", errors
+    # Two `ncbi_efetch` errors now: the raising ClinVar summary this test
+    # induces, and item 11.31's Gene ESummary, which the same stub makes
+    # raise because it keys on the action rather than on the db.
+    assert len(errors) == 2 and {e["tool"] for e in errors} == {"ncbi_efetch"}, errors
     assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
     assert "https://pubmed.ncbi.nlm.nih.gov/30000003/" in _sources(events)
 
@@ -495,7 +512,13 @@ async def test_three_runs_with_shuffled_ids_produce_one_plan_and_one_source_set(
         plans.append(_plan_tools(events))
         sources.append(_sources(events))
         fetch = next(i for i in spy.efetch_inputs if i["action"] == "fetch")["ids"]
-        summary = next(i for i in spy.efetch_inputs if i["action"] == "summary")["ids"]
+        # By db, not by position: item 11.31 added a second `summary` call
+        # (the Gene ESummary), and this arm is about the ClinVar follow-up's
+        # ids being stable across shuffles.
+        summary = next(
+            i for i in spy.efetch_inputs
+            if i["action"] == "summary" and i["db"] == "clinvar"
+        )["ids"]
         follow_up_ids.append((fetch, summary))
     assert plans[0] == plans[1] == plans[2], plans
     assert sources[0] == sources[1] == sources[2], sources

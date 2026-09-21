@@ -238,3 +238,56 @@ class TestTheFeatureIsDepthIndependent:
             f"presentation control, which is Section 14.1's firewall and a "
             f"breach `_DEPTH_DIRECTIVES`' own history records twice"
         )
+
+
+class TestPlanGeneSummary:
+    """The retrieval half: the call that fetches the explanatory text.
+
+    Found live rather than by reading: after the allowlist and the finding
+    were both in place and green, a real run at both depths still carried no
+    gene summary, because `_summary_call` was wired only for `clinvar` and
+    `omim` and NOTHING ever asked NCBI for a gene ESummary. The feature was
+    correct and unreachable. That is why these arms exist and why they check
+    the planner rather than the constant.
+    """
+
+    def test_a_resolved_gene_curie_plans_one_summary_call(self) -> None:
+        from system_03_search_agent.core import breadth_plan
+
+        planned = breadth_plan.plan_gene_summary("NCBIGene:672")
+        assert len(planned) == 1, (
+            f"populate-check: expected exactly one call, got {planned}"
+        )
+        call = planned[0]
+        assert call.purpose == "gene_summary"
+        payload = call.tool_input.model_dump()
+        assert payload["action"] == "summary"
+        assert payload["db"] == "gene"
+        assert payload["ids"] == ["672"], (
+            "the uid must come from the CURIE itself, never from a second "
+            "lookup that could resolve a different gene"
+        )
+
+    def test_the_curie_prefix_is_matched_case_insensitively(self) -> None:
+        from system_03_search_agent.core import breadth_plan
+
+        assert breadth_plan.plan_gene_summary("ncbigene:7157")[0].purpose == "gene_summary"
+
+    def test_anything_that_is_not_a_gene_uid_plans_nothing(self) -> None:
+        """Planning nothing is the planner's own contract for an unusable
+        input, matching `plan_first_stage`, rather than raising."""
+        from system_03_search_agent.core import breadth_plan
+
+        for bad in (
+            None,
+            672,
+            "MedGen:C0346153",
+            "NCBIGene:",
+            "NCBIGene:0",
+            "NCBIGene:-1",
+            "NCBIGene:672abc",
+        ):
+            assert breadth_plan.plan_gene_summary(bad) == (), (
+                f"{bad!r} must plan no call, or the product asks NCBI about a "
+                f"gene the question never resolved"
+            )

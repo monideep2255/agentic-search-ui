@@ -367,7 +367,7 @@ async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_quer
     # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
     # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
     # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 10
+    assert len(tool_calls) == 11
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 
@@ -377,7 +377,7 @@ async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_quer
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert done_event.payload["total_tool_calls"] == 5
+    assert done_event.payload["total_tool_calls"] == 6
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:
@@ -398,7 +398,7 @@ async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answe
     # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
     # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
     # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 10
+    assert len(tool_calls) == 11
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 
@@ -408,7 +408,7 @@ async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answe
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert done_event.payload["total_tool_calls"] == 5
+    assert done_event.payload["total_tool_calls"] == 6
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:

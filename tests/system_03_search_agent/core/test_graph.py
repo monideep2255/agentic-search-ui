@@ -836,7 +836,7 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert done_event.payload["total_tool_calls"] == 5
+    assert done_event.payload["total_tool_calls"] == 6
 
     citation_events = [event for event in events if event.type == "citation"]
     assert citation_events == [], "an errored tool call must never produce a citation"
@@ -913,7 +913,7 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert done_event.payload["total_tool_calls"] == 5
+    assert done_event.payload["total_tool_calls"] == 6
 
 
 # ---------------------------------------------------------------------------
@@ -2283,7 +2283,7 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
     # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
     # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
     # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 10
+    assert len(tool_calls) == 11
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
@@ -2294,11 +2294,13 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
     # summary, and the context-only GO graph call.
     assert [c["tool"] for c in tool_calls[2:]] == [
         "pubtator_annotate", "clinicaltrials_search", "ncbi_efetch", "ncbi_efetch",
-        "ncbi_efetch", "pubtator_annotate", "ncbi_efetch", "cypher_query",
+        "ncbi_efetch", "pubtator_annotate", "ncbi_efetch", "ncbi_efetch",
+        "cypher_query",
     ]
     assert [c["layer"] for c in tool_calls[2:]] == [
         "layer_3_enrichment", "layer_3_enrichment", "layer_2_api", "layer_2_api",
-        "layer_2_api", "layer_3_enrichment", "layer_2_api", "layer_1_graph",
+        "layer_2_api", "layer_3_enrichment", "layer_2_api", "layer_2_api",
+        "layer_1_graph",
     ]
 
 
@@ -2338,12 +2340,18 @@ async def test_act_executes_the_selected_cypher_query_call(
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert len(tool_calls) == 5
-    assert len(results) == 5
-    assert tool_calls[0].tool == "ncbi_efetch"
-    assert {tool_calls[1].tool, tool_calls[2].tool} == {"pubtator_annotate", "clinicaltrials_search"}
-    assert tool_calls[3].tool == "cypher_query"
-    assert tool_calls[4].tool == "cypher_query"
+    assert len(tool_calls) == 6
+    assert len(results) == 6
+    # Item 11.31 (2026-09-21) added the Gene ESummary call, so Layer 2 now
+    # contributes two `ncbi_efetch` pairs rather than one. Asserted as a
+    # multiset per layer rather than by index, because the exact interleave
+    # within a layer is not a property this test is pinning and pinning it
+    # made the arm fail on an ordering change that broke nothing.
+    assert [c.tool for c in tool_calls].count("ncbi_efetch") == 2
+    assert [c.tool for c in tool_calls].count("cypher_query") == 2
+    assert {c.tool for c in tool_calls} == {
+        "ncbi_efetch", "pubtator_annotate", "clinicaltrials_search", "cypher_query",
+    }
     for result in results:
         assert result.contains_untrusted_free_text is False  # structured data, never free text
 
@@ -3028,7 +3036,7 @@ async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None
     # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
     # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
     # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 10
+    assert len(tool_calls) == 11
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
