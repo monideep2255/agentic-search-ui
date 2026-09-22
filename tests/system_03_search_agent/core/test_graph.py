@@ -843,6 +843,27 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
 
 
 @pytest.mark.asyncio
+async def test_a_failed_graph_search_tells_the_reader_to_retry() -> None:
+    """Decided from the user's chair, 2026-09-22. The generic mock makes the
+    one graph search fail (a generation error, not a no-entity one), so the
+    run refuses; the refusal must now say a search did not finish and invite
+    a retry, on both the token stream and the trust signal, instead of the
+    original "I could not find grounded evidence", which a reader takes as
+    "there is nothing on this". Fails against the pre-change code, where the
+    token text starts with the original wording.
+    """
+    from system_03_search_agent.synthesis.refuse import FAILED_SEARCH_MESSAGE
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+    text = "".join(e.payload["text"] for e in events if e.type == "token")
+    assert text.startswith(FAILED_SEARCH_MESSAGE), text[:200]
+    signal = [e.payload for e in events if e.type == "trust_signal"][-1]
+    assert signal["outcome"] == "refuse"
+    assert signal["message"] == FAILED_SEARCH_MESSAGE
+
+
+@pytest.mark.asyncio
 async def test_an_errored_cypher_call_reports_its_reason_in_the_tool_result_summary() -> None:
     """L-01, 2026-09-22. The consistency run found 24 of 150 runs carrying a
     cypher_query result with status "error" whose summary read only

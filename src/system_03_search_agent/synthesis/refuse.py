@@ -29,6 +29,34 @@ REFUSE_MESSAGE = (
     "search:"
 )
 
+# Decided from the user's chair on 2026-09-22, after the consistency run
+# measured L-01 and its causes were read. A refusal must say what to type
+# next, and an answer that lost a search must say so, or the reader takes
+# "could not find" as "there is nothing on this" and a thinner answer as a
+# complete one. Three wordings, each true of exactly one situation:
+#
+# - The question named nothing the product could look up. The graph tool's
+#   own error text says so (`NO_ENTITY_REASON_MARKER` is its opening
+#   clause), and the honest reply is to ask for a name.
+# - A search failed for any other reason, a timeout being the measured one.
+#   The honest reply is to say so and invite a retry.
+# - Nothing failed and nothing was found: the original `REFUSE_MESSAGE`.
+NO_ENTITY_REASON_MARKER = "no entity could be identified"
+UNRESOLVED_QUESTION_MESSAGE = (
+    "I could not tell which gene, variant, disease or organism you mean. "
+    "Name one and I will search. Or try NCBI's cross-database search:"
+)
+FAILED_SEARCH_MESSAGE = (
+    "One of my searches did not finish, so I could not find grounded "
+    "evidence this time. Ask again to retry, or try NCBI's cross-database "
+    "search:"
+)
+# The note under an answer that still stands but lost a search.
+FAILED_SEARCH_NOTE = (
+    "One of the background searches did not finish, so this answer may be "
+    "missing sources. Ask again to retry."
+)
+
 # The Section 9.3 host pin, applied to the CONSTRUCTED url rather than to
 # the input. Same defense-in-depth posture as the redirect example in
 # `production-examples.md`: validate what was built, never trust that the
@@ -108,11 +136,27 @@ def build_fallback_link(query_term: str) -> str:
     return link
 
 
-def build_refusal_text(query_term: str) -> str:
+def refusal_message_for(failed_searches: list[dict[str, str]] | None) -> str:
+    """The refusal sentence that is true of what the act step recorded.
+
+    `failed_searches` is `GraphState["failed_searches"]`: one mapping per
+    planned call that ended with `status == "error"`, carrying the tool's
+    own `reason`. A no-entity reason outranks any other, since a question
+    the product could not read is the thing to fix before retrying.
+    """
+    reasons = [str(item.get("reason") or "") for item in (failed_searches or [])]
+    if any(NO_ENTITY_REASON_MARKER in reason for reason in reasons):
+        return UNRESOLVED_QUESTION_MESSAGE
+    if reasons:
+        return FAILED_SEARCH_MESSAGE
+    return REFUSE_MESSAGE
+
+
+def build_refusal_text(query_term: str, message: str = REFUSE_MESSAGE) -> str:
     """The user-facing refusal: the message, then the link.
 
     One string rather than a message plus a separate link field, because
     this is what reaches a `token` event and therefore what a user reads.
     The structured form travels on the `trust_signal` event alongside it.
     """
-    return f"{REFUSE_MESSAGE} {build_fallback_link(query_term)}"
+    return f"{message} {build_fallback_link(query_term)}"

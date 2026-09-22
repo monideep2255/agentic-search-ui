@@ -556,9 +556,10 @@ from system_03_search_agent.synthesis.grounding import (
 )
 from system_03_search_agent.synthesis.provenance_defaults import defaults_for_tool
 from system_03_search_agent.synthesis.refuse import (
-    REFUSE_MESSAGE,
+    FAILED_SEARCH_NOTE,
     build_fallback_link,
     build_refusal_text,
+    refusal_message_for,
 )
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
@@ -5182,6 +5183,19 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         cap_exceeded = cap_exceeded or outcome.cap_exceeded
 
     findings = await coordinator_worker_execute(harness, tool_calls, results)
+    # Decided from the user's chair, 2026-09-22: a search that failed is
+    # recorded here, with the tool's own reason, so `write_node` can say
+    # so in one plain sentence. The reason is the same bounded text the
+    # `tool_result` summary now carries (L-01), never a raw exception.
+    failed_searches: list[dict[str, str]] = [
+        {
+            "tool": planned.tool_call.tool,
+            "layer": planned.tool_call.layer,
+            "reason": outcomes[planned.tool_call.call_id].summary[:500],
+        }
+        for _, planned in ordered
+        if outcomes[planned.tool_call.call_id].status == "error"
+    ]
     # A5/F-02 fix: the real Finding list now survives into GraphState
     # (not just its length), so write_node can read what Act actually
     # found instead of fabricating trust_outcome="answer" over nothing.
@@ -5194,6 +5208,7 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         # and `_citations_from_grounded_claims`).
         "layer2_raw_outputs": layer2_raw_outputs,
         "layer3_raw_outputs": layer3_raw_outputs,
+        "failed_searches": failed_searches,
     }
     if cap_exceeded:
         # Section 19.1: the query still ships an answer, a partial one,
@@ -8957,6 +8972,17 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # omission remains. Before the findings tail the two always coincided;
     # now the tail usually covers what the repair could not, and the note's
     # second clause says which case this is.
+    # Decided from the user's chair, 2026-09-22: an answer that lost a
+    # background search says so in one sentence and is marked "not yet
+    # confirmed", the same treatment an answer with omitted findings
+    # already gets, because to the reader both are "this may be missing
+    # sources". Before this the answer arrived thinner with no reason
+    # anywhere (L-01, measured at one graph call in ten).
+    failed_searches: list[dict[str, str]] = state.get("failed_searches", [])
+    failed_search_note: str | None = None
+    if failed_searches and trust_outcome != "refuse":
+        trust_outcome = aggregate([trust_outcome, "ask"])
+        failed_search_note = FAILED_SEARCH_NOTE
     if repair_cap_exceeded and trust_outcome != "refuse":
         repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))
 
@@ -9108,9 +9134,19 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         )
         query_term = " ".join(resolved) if resolved else query.text
         fallback_link = build_fallback_link(query_term)
+        # Decided from the user's chair, 2026-09-22: the refusal names what
+        # to do next. If the product could not tell what was asked, it asks
+        # for a name; if a search failed, it says so and invites a retry;
+        # only when nothing failed and nothing was found does the original
+        # wording stand. One builder feeds both the token text and the
+        # trust signal, per F-4.7-A-02.
+        refusal_message = refusal_message_for(state.get("failed_searches", []))
         sink.emit(
             "token",
-            TokenPayload(text=build_refusal_text(query_term)[:1000], marker_ids=[]),
+            TokenPayload(
+                text=build_refusal_text(query_term, message=refusal_message)[:1000],
+                marker_ids=[],
+            ),
         )
         sink.emit(
             "trust_signal",
@@ -9125,7 +9161,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 grounded=False,
                 triangulated=None,
                 scope="answer",
-                message=REFUSE_MESSAGE,
+                message=refusal_message[:500],
                 fallback_link=fallback_link,
             ),
         )
@@ -9143,6 +9179,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 structured_fallback_note,
                 partial_answer_note,
                 incomplete_answer_note,
+                failed_search_note,
                 repair_cap_note,
             )
             if note is not None

@@ -65,6 +65,14 @@ Field lifecycle:
             exists until phase 2.1+).
         findings_count: set by `act`, the length of the `Finding` list
             `coordinator_worker_execute` returns.
+        failed_searches: set by `act`, one small mapping per planned call
+            whose outcome was `status == "error"`: `tool`, `layer` and the
+            tool's own `reason`. Decided from the user's chair on
+            2026-09-22 after the L-01 cause was read: `write` turns these
+            into one plain sentence, so a reader is told when a background
+            search did not finish, or that the question named nothing the
+            product could look up, instead of a quieter or emptier answer
+            with no reason attached.
         findings: set by `act`, the real `Finding` list itself (T-2.1
             rework, findings A5/F-02). `write` reads this to classify
             what Act actually found (no tool selected, a real result, an
@@ -185,6 +193,7 @@ class GraphState(TypedDict, total=False):
     # `write` asks the question instead of refusing or guessing.
     clarification_needed: str
     layer2_raw_outputs: dict[str, Any]
+    failed_searches: list[dict[str, str]]
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason
