@@ -1411,6 +1411,12 @@ placement, and the trust-line wording.
   without it. Why one breadth follow-up takes over a minute on a gene the
   first call answers in seconds is unread; the graph query service's own logs
   on the Hetzner box would say.
+- THE TRUST TIER `ask` AND THE PARKED GRADER'S `ask` ARE TWO MEANINGS OF ONE
+  WORD. Widening the golden rows to accept the trust tiers was built, found to
+  erase the parked grader's answer-versus-clarification distinction (two of
+  its tests go red for a real reason), and discarded. The 77 percent
+  answer-or-refuse figure is the one to read; the 14 percent is vocabulary.
+  Recorded in `DECISIONS.md` for whoever un-parks the grader.
 - DEVELOP TRACES NOTHING TO LANGSMITH, BY DESIGN: tracing runs on production
   only, product-owner confirmation of 2026-09-22. So a cause behind a develop
   measurement is read by local reproduction, as L-01's was, never from a
