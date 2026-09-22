@@ -1905,9 +1905,9 @@ async def _run_pipeline(
         return _error_output(
             None,
             "no entity could be identified in this query, so no graph lookup "
-            "was attempted. Supply a CURIE such as NCBIGene:672, or wait for "
-            "symbol resolution, which needs the Layer 2 NCBI lookup that "
-            "build phase 3.1 adds. Retrying this query unchanged will not help.",
+            "was attempted. Name the gene, variant, disease or organism, or "
+            "supply a CURIE such as NCBIGene:672. Retrying this query unchanged "
+            "will not help.",
         )
 
     # UI fix set 10, item 10.1 (R34): for a question shape that can be

@@ -843,6 +843,36 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
 
 
 @pytest.mark.asyncio
+async def test_an_errored_cypher_call_reports_its_reason_in_the_tool_result_summary() -> None:
+    """L-01, 2026-09-22. The consistency run found 24 of 150 runs carrying a
+    cypher_query result with status "error" whose summary read only
+    "0 row(s) of 0": `_execute_planned_call` built the summary from row
+    counts and dropped `output.error`, so the reason reached neither the
+    stream, the instrument nor the log. The same generic mock response as
+    the test above makes cypher_query return status="error" with a
+    generation message; the tool_result summary must now carry it.
+    Against the pre-fix code this arm fails because the summary equals
+    "0 row(s) of 0" exactly.
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+    errored = [
+        event.payload
+        for event in events
+        if event.type == "tool_result"
+        and event.payload["tool"] == "cypher_query"
+        and event.payload["status"] == "error"
+    ]
+    assert errored, "the generic mock must still make cypher_query error"
+    for payload in errored:
+        summary = payload["summary"]
+        assert summary.startswith("0 row(s) of 0: "), summary
+        reason = summary[len("0 row(s) of 0: "):]
+        assert reason.strip(), "an errored call must carry its reason, not only a row count"
+        assert len(summary) <= 1000
+
+
+@pytest.mark.asyncio
 async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_tool_call_succeeds(
     monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
 ) -> None:

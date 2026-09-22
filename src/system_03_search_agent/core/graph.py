@@ -4886,9 +4886,23 @@ async def _execute_planned_call(
                 ),
             )
         )
+    summary = f"{output.row_count} row(s) of {output.total_available or output.row_count}"
+    # L-01, measured 2026-09-22 (testing/Developer/reports/2026-09-22_10.3_consistency):
+    # 24 of 150 runs carried a cypher_query result with status "error", and
+    # every one of them reached the stream, the developer instrument and the
+    # deploy log as "0 row(s) of 0" with no reason anywhere, because this
+    # summary was built from row counts alone and `output.error` was dropped
+    # here. The tool writes an actionable message on every error path (no
+    # entity resolved, validator rejection, generation failure, a GraphError,
+    # the overall timeout), all bounded by its own `_MAX_ERROR_CHARS` (500),
+    # so appending it stays under the event's 1000-character summary bound.
+    # Nothing parses the "row(s) of" prefix, which is kept so the shape a
+    # reader has learned still holds.
+    if output.status == "error" and output.error:
+        summary = f"{summary}: {output.error}"
     return _CallOutcome(
         status=output.status,
-        summary=f"{output.row_count} row(s) of {output.total_available or output.row_count}",
+        summary=summary,
         result_count=output.row_count,
         truncated=output.truncated,
         pairs=pairs,
