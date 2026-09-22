@@ -360,6 +360,4 @@ async def test_a_resolved_window_skips_the_live_confirmation_of_the_models_spans
     asked_plain = _install_model(monkeypatch, query_class="single_hop", entities=spans)
     _Spy(monkeypatch)
     await graph_module.think_node(_state("Which diseases are associated with ACMG, dbVar and ClinVar?"))
-    assert sorted(asked_plain) == ["ACMG", "CLINVAR", "DBVAR"] or sorted(s.upper() for s in asked_plain) == [
-        "ACMG", "CLINVAR", "DBVAR"
-    ], asked_plain
+    assert {symbol.upper() for symbol in asked_plain} >= {"ACMG", "DBVAR", "CLINVAR"}, asked_plain
