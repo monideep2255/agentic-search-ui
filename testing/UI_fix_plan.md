@@ -1283,7 +1283,7 @@ The 2026-09-20 shipped list, with what to retest, is
 | 11.33, values cut at 500 characters | FIXED and VERIFIED LIVE on develop at `a868462`: the BRCA1 gene summary now runs past "and through the C-terminal d", zero ellipses. APPROVED by the product owner's retest the same day | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
 | L-01, a graph result vanishing | MEASURED, BOTH CAUSES READ, and DISCLOSED to the reader the same day, awaiting retest | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
 | Scope boundary | DECIDED, BUILT and APPROVED by the product owner's retest on 2026-09-22: refuse outright under a new guard category, `compute_request` | G-046 (BLAST) and G-047 (VCF) were answered from graph rows because the resolver found real concepts inside them. A deterministic screen in `guardrail/forbidden.py` now refuses a BLAST-family token near a sequence object, the phrase "sequence similarity", a 25-character nucleotide run, or `vcf` near a file or analysis word, and the refusal says the capability is unavailable and points at NCBI BLAST. Precedent for the new category: F-3.0-01 |
-| Latency | NARROWED to one shape | G-039, a plain-terms explanation over BRCA1, takes about 100 seconds on every run; everything else has a p90 under 40 seconds |
+| Latency | CAUSE FOUND and FIXED, awaiting retest | G-039, a plain-terms explanation over BRCA1, took about 100 seconds on every run because its own graph search took the model path and the generated query never finished (a planner mis-estimate, killed by the graph's 30-second statement timeout). An exploratory question with no shape now takes the record template, measured at under a second. Evidence: `testing/Developer/reports/2026-09-22_slow_second_search/findings.md` |
 | The instrument | Two lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
 ### The 2026-09-21 session, in one table
@@ -1335,6 +1335,12 @@ option rather than a queued task.
 
 ### What is live on develop
 
+- The plain-terms explanation of a gene no longer waits on a graph search
+  that never finishes: an exploratory question naming an entity and no
+  shape takes the record template. Pushed 2026-09-22 as `2bc8ec0`. Retest:
+  "I am a student. Explain in plain terms what the BRCA1 gene does and why
+  it matters, with sources" should answer in well under a minute with the
+  gene record among its sources and no lost-search line.
 - An answer that lost a background search ends with "One of the background
   searches did not finish, so this answer may be missing sources. Ask again
   to retry" and its trust line reads not yet confirmed. A question the
@@ -1415,12 +1421,14 @@ placement, and the trust-line wording.
   and the plan still dispatches `cypher_query`, which refuses to run with
   nothing to bind. G-005 and G-022 resolve an entity and find nothing; G-036
   never calls Layer 1. Fixed reproduction set, unfixed.
-- THE VARIANCE HALF OF L-01 is the act step's budget: a second graph call on
-  an exploratory question (G-039 on two of three passes, G-033 and G-037 on
-  every pass) does not finish inside 120 seconds and the answer completes
-  without it. Why one breadth follow-up takes over a minute on a gene the
-  first call answers in seconds is unread; the graph query service's own logs
-  on the Hetzner box would say.
+- THE VARIANCE HALF OF L-01 was NOT the act budget and NOT a follow-up: the
+  graph server's own log shows the question's OWN search, taking the model
+  path on an exploratory no-shape question, killed by the graph's 30-second
+  statement timeout after 85 seconds because the planner mis-estimates an
+  id match by four orders of magnitude. Fixed for the exploratory class
+  (`2bc8ec0`). G-037 is a different fault, generation or validation failing
+  before the transport on a single_hop question, and is unfixed: its answer
+  still comes from the other layers.
 - THE TRUST TIER `ask` AND THE PARKED GRADER'S `ask` ARE TWO MEANINGS OF ONE
   WORD. Widening the golden rows to accept the trust tiers was built, found to
   erase the parked grader's answer-versus-clarification distinction (two of

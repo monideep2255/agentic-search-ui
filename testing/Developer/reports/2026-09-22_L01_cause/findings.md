@@ -55,7 +55,9 @@ That message was correct and stale at once: build phase 3.1 shipped on 2026-08-0
 
 ## Cause two: the second graph call runs past the act step's budget
 
-G-039, "I am a student. Explain in plain terms what the BRCA1 gene does and why it matters", resolves `NCBIGene:672` every time and its first graph call returns 40 rows every time. Its second call, the breadth follow-up, returned zero rows on two of three develop passes and one of three local passes, and the local capture carries the reason:
+CORRECTED THE SAME EVENING by `testing/Developer/reports/2026-09-22_slow_second_search/findings.md`, which read the graph server's own request log: the call that is lost is the QUESTION'S OWN search, plan index 0, which merely arrives second because the fast GO-process template on the same gene finishes first. It is slow because, with no recognisable shape and a non-lookup class, template selection falls through to model-generated Cypher whose plan the database mis-estimates (67,521 expected Gene rows for an id match that returns 1), and the graph's own 30-second statement timeout kills it after 85 seconds of wall time. The act budget is the second line of defence, not the cause. The paragraph below is kept as first written.
+
+G-039, "I am a student. Explain in plain terms what the BRCA1 gene does and why it matters", resolves `NCBIGene:672` every time and its first graph call returns 40 rows every time. Its second call returned zero rows on two of three develop passes and one of three local passes, and the local capture carries the reason:
 
     0 row(s) of 0: call did not complete within its per-step timeout budget
 
