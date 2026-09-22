@@ -59,7 +59,8 @@ export interface GuardPayload {
     | "injection"
     | "rate_limited"
     | "cost_capped"
-    | "write_seeking";
+    | "write_seeking"
+    | "compute_request";
   reason: string | null;
 }
 
@@ -377,6 +378,7 @@ function isGuardPayload(value: unknown): value is GuardPayload {
       "rate_limited",
       "cost_capped",
       "write_seeking",
+      "compute_request",
     ].includes(value.category) &&
     isNullableString(value.reason)
   );

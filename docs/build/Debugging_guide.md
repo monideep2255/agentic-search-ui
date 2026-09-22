@@ -304,7 +304,7 @@ Admission control for the agent loop: the only step every query passes through b
 |---|---|---|
 | `src/system_03_search_agent/guardrail/__init__.py` | Package marker mapping each module to its Section 10 subsection (`verdict.py`, `prefilter.py`, `classifier.py`, `forbidden.py`). | Figuring out which Section 10 subsection owns a given check |
 | `src/system_03_search_agent/guardrail/classifier.py` | Section 10.4: Guard-tier prompt-injection classification, the only step in the package that costs a model call. Defense in depth, not the sole control. | An injection-shaped query is wrongly admitted or wrongly refused |
-| `src/system_03_search_agent/guardrail/forbidden.py` | Section 10.5: screens for verdict-seeking intent (diagnosis, treatment, pathogenicity calls) and write-seeking intent, after classification clears. | A verdict-seeking or write-seeking query slips through admitted |
+| `src/system_03_search_agent/guardrail/forbidden.py` | Section 10.5: screens for verdict-seeking intent (diagnosis, treatment, pathogenicity calls) and write-seeking intent, after classification clears, and since 2026-09-22 for compute-seeking intent too (BLAST, any sequence-similarity search, or VCF interpretation), refused as `compute_request`. | A verdict-seeking, write-seeking or compute-seeking query slips through admitted, or a BLAST or VCF question is answered instead of refused |
 | `src/system_03_search_agent/guardrail/prefilter.py` | Section 10.2: the cheap non-LLM pre-filter. Checks injection markers, medical-advice requests, then the biomedical allowlist, in that order, no model call. | A query is refused or admitted before the classifier ever runs |
 | `src/system_03_search_agent/guardrail/verdict.py` | The shared `GuardVerdict` result type every Section 10 screen returns, constrained to `GuardPayload`'s category vocabulary. | A screen's verdict shape or category looks inconsistent downstream |
 
@@ -828,4 +828,4 @@ grep -rn "async def act_node" src/
 
 That is the habit this guide is built around. Line numbers are deliberately absent throughout: a line number is a claim that goes stale silently on the next edit, and a symbol name is greppable and self-correcting.
 
-Last updated: 2026-08-31.
+Last updated: 2026-09-22.

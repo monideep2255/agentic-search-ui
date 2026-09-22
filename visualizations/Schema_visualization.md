@@ -211,7 +211,7 @@ erDiagram
 
 | Event type | Payload fields and bounds |
 | --- | --- |
-| `guard` | `passed` bool. `category` one of `ok`, `off_topic`, `medical_advice`, `injection`, `rate_limited`, `cost_capped`, `write_seeking`. `reason` optional, 256 chars |
+| `guard` | `passed` bool. `category` one of `ok`, `off_topic`, `medical_advice`, `injection`, `rate_limited`, `cost_capped`, `write_seeking`, `compute_request`. `reason` optional, 256 chars |
 | `think` | `narrative` 500 chars. `query_class` one of `lookup`, `single_hop`, `multi_hop`, `aggregate`, `exploratory`. `resolved_entities` at most 20. `clarifying_question` optional, 500 chars |
 | `plan` | `narrative` 500 chars. `tool_calls` at most 20. `resolved_entities` at most 20 |
 | `tool_start` | `call_id` 64 chars. `tool`, `layer`. `status` one of `running`, `ok`, `empty`, `error` |

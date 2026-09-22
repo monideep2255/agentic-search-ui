@@ -181,6 +181,7 @@ export const GUARD_REFUSAL_LABEL: Record<GuardPayload["category"], string> = {
   rate_limited: "Daily question limit reached",
   cost_capped: "System at capacity",
   write_seeking: "Read-only system",
+  compute_request: "Capability not in this product",
 };
 
 /**

@@ -282,6 +282,7 @@ class TestGuardRejected:
     def test_every_guard_category_has_copy_and_none_of_it_leaks_to_stdout(self) -> None:
         for category in (
             "off_topic", "medical_advice", "injection", "rate_limited", "cost_capped", "write_seeking",
+            "compute_request",
         ):
             out, err = io.StringIO(), io.StringIO()
             renderer = Renderer(out, err, operator=False)

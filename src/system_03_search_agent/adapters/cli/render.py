@@ -214,6 +214,14 @@ _GUARD_CATEGORY_COPY: dict[str, str] = {
         "this system only reads from the knowledge graph and NCBI APIs; it "
         "cannot perform a write, update, or delete operation."
     ),
+    # Added 2026-09-22 with the `compute_request` category. Not in
+    # Section 12.6's table either, for the same reason `write_seeking`
+    # is not: the locked section predates the category.
+    "compute_request": (
+        "this product cannot run a sequence search or read a variant "
+        "file. Ask about a specific gene, variant, or paper and it can "
+        "assemble cited evidence."
+    ),
 }
 _GUARD_CATEGORY_FALLBACK = "this question could not be processed."
 

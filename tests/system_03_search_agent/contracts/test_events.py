@@ -216,6 +216,7 @@ class TestGuardPayload:
             "rate_limited",
             "cost_capped",
             "write_seeking",
+            "compute_request",
         ],
     )
     def test_every_category_accepted(self, category: str) -> None:

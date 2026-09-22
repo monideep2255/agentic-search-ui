@@ -134,6 +134,14 @@ class GuardPayload(BaseModel):
         "rate_limited",
         "cost_capped",
         "write_seeking",
+        # Added 2026-09-22 by product-owner decision: a request for a
+        # compute tool v1 does not have (BLAST, any sequence-similarity
+        # search, or VCF ingestion). Additive, so v1-legal per
+        # `system-design-patterns` rule 10, and it follows F-3.0-01's
+        # precedent of a new member over reusing `off_topic`: a caller
+        # switching on `category` can tell a missing capability from an
+        # off-topic question.
+        "compute_request",
     ]
     reason: str | None = Field(None, max_length=256)
 

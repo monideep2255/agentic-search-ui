@@ -69,6 +69,14 @@ describe("GuardrailBanner", () => {
       category: "cost_capped",
       expectedCopy: "The system is at capacity right now. Please try again shortly.",
     },
+    // Added 2026-09-22 with the `compute_request` category. Section 12.6 has
+    // no row for it, so this arm pins the copy the component actually ships
+    // rather than a line quoted from the locked spec.
+    {
+      category: "compute_request",
+      expectedCopy:
+        "This product cannot run a sequence search or read a variant file. Ask about a specific gene, variant, or paper and I can assemble cited evidence.",
+    },
   ];
 
   it.each(categoryCases)(

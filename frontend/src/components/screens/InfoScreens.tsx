@@ -794,7 +794,7 @@ export function IntegrationsScreen() {
 //   - The guardrail's refusal categories: `contracts/events.py`'s
 //     `GuardPayload.category` and `chat/GuardrailBanner.tsx`'s `CATEGORY_COPY`
 //     (off_topic, medical_advice, injection, rate_limited, cost_capped,
-//     write_seeking).
+//     write_seeking, compute_request).
 //   - Entity resolution is live-confirmed: `core/graph.py`'s
 //     `resolve_exact_identifiers` pre-pass, then "a span whose CURIE cannot be
 //     confirmed by a live lookup" does not contribute one. NCBIGene:672 for
