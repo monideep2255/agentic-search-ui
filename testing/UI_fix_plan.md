@@ -754,7 +754,7 @@ Built: · Live: · Approved:
 
 ### 10.3 The consistency run, three tries per golden question (R38)
 
-Built: · Live: · Approved:
+Built: 2026-09-22 · Live: RUN 2026-09-22, evidence in `testing/Developer/reports/2026-09-22_10.3_consistency/` · Approved:
 
 - Feature being tested: every one of the 50 golden questions is measured for how often it actually answers.
 - What you noted: "Consistency run, done by the assistant on the developer side. Ask each of the 50 golden questions 3 times on develop, signed in, and record for each run: answered or refused, how long it took, and how many sources and layers it used."
@@ -806,7 +806,7 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one snippet broken | Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
 | 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | BUILT, not yet live | Raised 2026-09-20. Both open questions answered by the product owner on 2026-09-21, and the cause turned out to be upstream of the directive the item names. Full detail: [11.31](#detail-1131) |
 | 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Not started | Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
-| 11.33 | PubMed abstracts reach the answer page cut off MID-WORD, for example "...inherited breast and/or ovarian c [29]" and "...has been uncle [33]" | STILL OPEN, narrowed | Found 2026-09-21 on develop at `46fff40`. Every character cap in the codebase was ruled out BY EXECUTION, including `_cap_text`, which appends a literal " [truncated]" that appears nowhere in the capture. The sentence splitter cannot cut mid-word either. The remaining hypothesis, that the model itself emitted the fragment while attempting a long verbatim quote, could NOT be reproduced, because `claim_introduces_no_new_content` rejects the reconstruction. NOT SOLVED. A fix was written, verified live and DID NOT CLOSE IT, and that is recorded rather than claimed. `clip_to_word` now cuts at a word boundary at all five slices in `answer_layout.py` and is a real improvement on those paths, but a live run at `d4578d8` still shows every known fragment and ZERO ellipses, which proves the cut is on a path that helper does not touch. WHAT IS NOW KNOWN, and it is more than before: the cut is at EXACTLY 500 characters of the source value, established by fetching the real NCBI gene summary and finding the offset of the rendered fragment's end inside it. The value is NOT short at the tool: traced locally, the gene summary is 1253 characters at `ncbi_eutils_actions.summary`, still 1253 after `_ncbi_efetch_output_to_structured_fields`, and still 1253 on the `SynthFinding` built from it. So the truncation happens between the tool result and the tail render ON THE LIVE PATH ONLY, and a local reconstruction of that path does not reproduce it. Every 500-char slice in `core/graph.py` was read and none applies: they are think narratives, a plan narrative and a refusal message. Item 11.34's fix made this MORE visible rather than causing it, since a multi-sentence value used to be stripped whole. NEXT STEP, and it is now a small one: instrument the live path to print `len(finding.field_value)` at the point the tail narrative is built, which distinguishes a truncation upstream of the render from one inside it. The earlier diagnosis is kept at `testing/Developer/reports/2026-09-21_11.31_divergence/truncation/findings.md` |
+| 11.33 | PubMed abstracts reach the answer page cut off MID-WORD, for example "...inherited breast and/or ovarian c [29]" and "...has been uncle [33]" | FIXED 2026-09-22, live on develop, awaiting the product owner's retest | CAUSE FOUND 2026-09-22 and it was NEVER live-only: `_cap_scalar_string` in `harness/coordinator_worker.py` cut every string leaf at 500 characters, because its documented 2000-character top-level tier could never fire (the function receives the dict itself at depth 0, so no string is ever at depth 0). Every structured tool result passed through it before any renderer. The 2026-09-21 local trace went tool, shaper, `SynthFinding` and SKIPPED that stage, which is why it read as live-only. Found by a fresh-context agent that established server-side versus client-side first from a full event capture, then drove the real `_cap_structured_fields` over the real shaped efetch output and reproduced the fragment character for character; verified by execution in the main session before the fix was commissioned. THE FIX: one cap at every depth, 2000 characters, the bound `SynthFinding.field_value` already enforces, cut on a word boundary with an ellipsis, the dead tier deleted; `_MAX_FINDING_TOTAL_BYTES` measured (20 PubMed rows with 2000-character abstracts fit, the ceiling fires at 22) and deliberately unchanged. Seven arms added, six proven red against the pre-fix code and the seventh saying in its docstring that it cannot be. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`. RETEST: open a BRCA1 answer at researcher depth; the gene summary in the record tail should run past "and through the C-terminal d". WHAT WAS KNOWN BEFORE, kept as the record of a wrong conclusion: found 2026-09-21 on develop at `46fff40`. Every character cap in the codebase was ruled out BY EXECUTION, including `_cap_text`, which appends a literal " [truncated]" that appears nowhere in the capture. The sentence splitter cannot cut mid-word either. The remaining hypothesis, that the model itself emitted the fragment while attempting a long verbatim quote, could NOT be reproduced, because `claim_introduces_no_new_content` rejects the reconstruction. NOT SOLVED. A fix was written, verified live and DID NOT CLOSE IT, and that is recorded rather than claimed. `clip_to_word` now cuts at a word boundary at all five slices in `answer_layout.py` and is a real improvement on those paths, but a live run at `d4578d8` still shows every known fragment and ZERO ellipses, which proves the cut is on a path that helper does not touch. WHAT IS NOW KNOWN, and it is more than before: the cut is at EXACTLY 500 characters of the source value, established by fetching the real NCBI gene summary and finding the offset of the rendered fragment's end inside it. The value is NOT short at the tool: traced locally, the gene summary is 1253 characters at `ncbi_eutils_actions.summary`, still 1253 after `_ncbi_efetch_output_to_structured_fields`, and still 1253 on the `SynthFinding` built from it. So the truncation happens between the tool result and the tail render ON THE LIVE PATH ONLY, and a local reconstruction of that path does not reproduce it. Every 500-char slice in `core/graph.py` was read and none applies: they are think narratives, a plan narrative and a refusal message. Item 11.34's fix made this MORE visible rather than causing it, since a multi-sentence value used to be stripped whole. NEXT STEP, and it is now a small one: instrument the live path to print `len(finding.field_value)` at the point the tail narrative is built, which distinguishes a truncation upstream of the render from one inside it. The earlier diagnosis is kept at `testing/Developer/reports/2026-09-21_11.31_divergence/truncation/findings.md` |
 | 11.34 | A multi-sentence abstract LOSES ITS CITATION entirely in the code-built tail and fallback listing: both fragments are stripped and the marker is orphaned on an empty trailing "[27]." | Found, not started | Found 2026-09-21 while diagnosing 11.33, and unrelated to it. This is a cite-or-refuse defect rather than a presentation one, so it ranks above the cosmetic items: a record that was retrieved and shown loses the link that makes it verifiable. Reproduced by driving `run_grounding_pass` over constructed multi-sentence abstract findings |
 | 11.35 | "The Notes section is super confusing. remove it", naming the unverified-summary note and the further-records note | LIVE | Raised and shipped 2026-09-21, `d044969`, verified in the served bundle. HIDDEN IN THE WEB UI RATHER THAN SUPPRESSED IN THE BACKEND, deliberately: both notes are built in the same branch that floors `trust_outcome` at `ask`, and removing them at the source turned five arms red that guard F-4.5-06 breach 2, an answer reporting a subset of its findings while looking complete. That attempt was reverted. So the trust line still reads "not yet confirmed" on an incomplete answer, and the API, CLI and MCP surfaces still carry the sentences. The filter is a PATTERN, because the first attempt matched only "one further" while the live note reads "5 further pubmed records" |
 | 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | LIVE | Raised and shipped 2026-09-21, `d044969`. Stale twice over: that directive stopped existing when 11.31 removed every length instruction, and it was a promise the product cannot keep, since the same question at the same mode measured 66, 101 and 113 words on three consecutive runs. The info card and the onboarding tour now describe WHO EACH MODE IS FOR |
@@ -1263,10 +1263,10 @@ that.
 ## Where we stopped
 
 The cutoff. It is updated at the end of every working session, so the next
-session starts here rather than reconstructing state. LAST UPDATED 2026-09-21,
-at the close of a session that worked item 11.31 to a decision, fixed the
-citation-loss defect behind it, closed item 2a by measurement, half-built 2b,
-and confirmed L-01. Read this, then the Set 11 table above.
+session starts here rather than reconstructing state. LAST UPDATED 2026-09-22,
+at the close of a session that ran item 10.3 to completion for the first time,
+found and fixed the cause of item 11.33, and measured L-01 as a rate with a
+named mechanism. Read this, then the Set 11 table above.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -1274,6 +1274,17 @@ owner and whoever picks this up read the same record.
 
 The 2026-09-20 shipped list, with what to retest, is
 `testing/Shipped_2026-09-20.md`. This section owns per-item status.
+
+### The 2026-09-22 session, in one table
+
+| Item | State at close | The one thing to know |
+|---|---|---|
+| 10.3, the consistency run | RUN, all 150, first time ever | 86 of 150 answered; 25 questions answer every time (was 1), 18 never (was 43), none worse than the 2026-09-12 baseline. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md` |
+| 11.33, values cut at 500 characters | CAUSE FOUND, FIXED, pushed to develop, awaiting retest | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
+| L-01, a graph result vanishing | MEASURED: 12 of 119 eligible graph calls lost a result another pass had | The vanishing call ends with `status: error` and the generic "0 row(s) of 0" summary, and nothing else is emitted or logged. Six further questions error on the graph on every pass, which is deterministic rather than variance |
+| Scope boundary | NEW, for the product owner | G-046 (BLAST) and G-047 (VCF) were answered from graph rows rather than refused; both are PRD out-of-scope compute tools |
+| Latency | NARROWED to one shape | G-039, a plain-terms explanation over BRCA1, takes about 100 seconds on every run; everything else has a p90 under 40 seconds |
+| The instrument | Two lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
 ### The 2026-09-21 session, in one table
 
@@ -1323,7 +1334,11 @@ owner reviewed this and approved the current state as is, so it is a standing
 option rather than a queued task.
 
 ### What is live on develop
-
+- Item 11.33's fix: one string cap in the coordinator worker at the finding's
+  own bound of 2000 characters, cut on a word boundary with an ellipsis. Pushed
+  2026-09-22. The product owner's retest is the verification: open a BRCA1
+  answer at researcher depth and read the gene summary in the record tail,
+  which should now run past "and through the C-terminal d" to its end.
 - Item 11.34's fix, so a multi-sentence abstract or gene summary is cited
   rather than silently dropped.
 - NCBI's own plain-English gene summary, retrieved, cited and rendered. It is
@@ -1331,46 +1346,59 @@ option rather than a queued task.
 - The citation host rule widened to `omim.org`, with `www.` admitted.
 - The Notes section gone from the screen, and the answer-modes info card
   rewritten to describe who each mode is for.
-- `clip_to_word` at all five character slices in `answer_layout.py`.
+- `clip_to_word` at all five character slices in `answer_layout.py`, which is
+  correct and on the label path; it was never where 11.33 lived.
 
 ### What is parked, and why
-
-- THE OMIM DISPATCH. Enabled and reverted in the same session.
+- THE OMIM DISPATCH. Enabled and reverted on 2026-09-21.
   `breadth_plan.filter_omim_titles` exists and NOTHING CALLS IT, so an
   unfiltered OMIM result would cite a different gene than the question asked
   about. Do not re-enable it without wiring that filter. The steps are written
   into `_BREADTH_FOLLOW_UPS`'s own comment.
-- ITEM 11.33. A word-boundary clip was written, shipped and did not close it: a
-  live run still shows every known fragment and zero ellipses. The cut is at
-  exactly 500 characters of the source value, and the value is 1253 characters
-  at the tool, after shaping, and on the finding, so the truncation happens on
-  the live path between the tool result and the tail render. A local
-  reconstruction does not reproduce it. Next step: one instrumented live run
-  printing `len(finding.field_value)` where the tail narrative is built.
 - THE EXPLANATION HALF OF 11.31, above.
+- THE BYTE CEILING. `_MAX_FINDING_TOTAL_BYTES` stays at 50,000 after the 11.33
+  fix. Measured: a fetch of 20 PubMed records with 2000-character abstracts is
+  45,841 bytes and all 20 rows survive; the ceiling fires at 22 rows. Whether
+  50,000 is still right is a product decision, deliberately not taken inside a
+  defect fix.
 
 ### What is waiting on the product owner
+Three new questions from the consistency run, none blocking:
 
-Nothing is blocking. The three questions this session raised were all answered
-and are recorded in `DECISIONS.md` dated 2026-09-21. The longer standing list
-is unchanged: the three `theme.ts` logo tokens, the six undesigned surfaces,
-whether answers carry a medical-advice notice, the 720px nav, the 20-source
-citation cap, the provenance note, the mode toggle's placement, and the
-trust-line wording.
+- Whether a BLAST or VCF request should be refused by the guardrail outright,
+  or answered honestly for the terms it names with a line saying the product
+  cannot run the tool. Today G-046 and G-047 are answered from graph rows.
+- Whether the golden rows' `acceptable_outcomes` mean trust tiers or the
+  answer-or-refuse split. Today they list only `answer`, while the product's
+  modal grounded outcome is `ask`, so the generated comparison reads 14 percent
+  when the product-level figure is 77 percent.
+- What L-01 disclosure should say, now that the stream shows exactly where it
+  would attach: the `tool_result` with `status: error` and an empty summary.
+
+The longer standing list is unchanged: the three `theme.ts` logo tokens, the
+six undesigned surfaces, whether answers carry a medical-advice notice, the
+720px nav, the 20-source citation cap, the provenance note, the mode toggle's
+placement, and the trust-line wording.
 
 ### Loose ends, named rather than left
-
-- L-01 is CONFIRMED and NOT FIXED. One run in ten returned zero graph rows
-  while every other signal read healthy, and nothing tells the reader.
+- L-01 is MEASURED and NOT FIXED: 12 of 119 eligible graph calls returned zero
+  where another pass returned rows, and the failing call's cause reaches
+  neither the reader, the event stream nor the deploy log. The cause exists in
+  the LangSmith trace and the audit log only; reading one is the next step.
+- NINE questions error on the graph on every pass (G-001, G-007, G-033, G-035,
+  G-037, G-048 always; G-005, G-022 return nothing; G-036 never calls Layer 1).
+  Six of them are refusals a reader sees. This is a retrieval defect with a
+  fixed reproduction set, and the largest single reason a golden question does
+  not answer.
+- `testing/Shipped_2026-09-20.md` was found deleted from the working tree
+  mid-session by something outside this session's tool calls, and restored
+  from HEAD unchanged. Cause unknown.
 - The 2026-09-20 L-01 instrument filtered on `layer_1` while the API emits
   `layer_1_graph`, so its own anomaly field read zero on every run. Any
   instrument that reports "no anomalies" deserves a populate-check.
 - A multi-sentence record can now render as several list rows under one record
   heading, a consequence of 11.34's fix. Not a grounding or citation defect,
   and no test covers it.
-- Item 10.3, the consistency run, has never been run, and L-01 says to expect
-  real variance in its results.
-
 
 ### History, 2026-09-20: the release and what it meant
 
@@ -1461,29 +1489,27 @@ store rendered answers at all, which is a data-retention question as much as a
 technical one.
 
 ### Next, in order
+Rewritten at the close of 2026-09-22. Item 1 of the previous list, the
+consistency run, is done; item 2, 11.33, is fixed and awaiting retest; item 3,
+the L-01 decision, now has its measurement. The previous list's own history is
+in this document's git log and in `requirements/Plan.md`.
 
-Rewritten at the close of 2026-09-21. Every item the previous list carried is
-now done, closed by measurement, or parked with its reason, so this is a new
-list rather than the old one with items struck through. The previous list's
-own history is in this document's git log and in `requirements/Plan.md`.
-
-1. RUN 10.3, THE CONSISTENCY RUN. Each of the 50 golden questions three times,
-   recording answered-or-refused, latency, sources and layers. It is first
-   because the citation path changed twice on 2026-09-21, and because L-01 is
-   now confirmed rather than suspected, so the run has something specific to
-   measure rather than a general worry. Expect real variance: the same
-   question at the same depth returned 66, 101 and 113 prose words on three
-   consecutive runs, and one HNF1A run in ten returned zero graph rows.
-2. CLOSE ITEM 11.33. It is narrowed to one instrumented live run: print
-   `len(finding.field_value)` where the tail narrative is built, which
-   separates a truncation upstream of the render from one inside it. The cut
-   is at exactly 500 characters and the value is 1253 at every local hop, so
-   the live path is doing something the local reconstruction does not.
-3. DECIDE WHETHER TO FIX L-01, now that it is measured. One run in ten losing
-   an entire layer while every signal reads healthy is a product decision
-   about disclosure as much as an engineering one, since the cheapest honest
-   fix is to tell the reader rather than to make retrieval deterministic.
-4. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
+1. RETEST 11.33 ON DEVELOP. Open "Which diseases are associated with BRCA1?"
+   at researcher depth and read the gene summary in the record tail. It should
+   run to its end, or end in an ellipsis at a word boundary, never mid-word.
+2. READ ONE L-01 CAUSE. Take any run id from
+   `testing/Developer/reports/2026-09-22_10.3_consistency/runs.jsonl` whose
+   `tool_errors` is non-empty (G-039 pass 1 or G-003 pass 3 are the clearest),
+   find its LangSmith trace joined on the trace id, and read why the
+   `cypher_query` call ended in `status: error`. The same read answers whether
+   the nine always-erroring questions share one cause. This is an hour, and
+   until it is done the L-01 decision is between disclosure and a fix whose
+   shape nobody knows.
+3. DECIDE L-01 DISCLOSURE with the product owner, with the rate (one call in
+   ten) and the attachment point (the errored `tool_result`) in hand.
+4. DECIDE THE SCOPE-BOUNDARY SHAPE for G-046 and G-047 with the product owner,
+   refuse or answer-with-a-line.
+5. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
    `filter_omim_titles` wired into the act result path first. The steps are in
    `_BREADTH_FOLLOW_UPS`'s own comment.
 
@@ -1491,7 +1517,6 @@ NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining
 lever is recorded in "The result that should shape what happens next" above as
 a standing option, not as queued work.
-
 
 ### What 11.28's diagnosis already found
 
@@ -1506,16 +1531,15 @@ except the event loop not running.
 That points hard at event-loop starvation, consistent with the same suite failing 87 tests at load average 48 to 60 and passing only serially. It is still worth one confirming run rather than asserting it, which is step 4 above.
 
 ### How to start the next session
-
 1. Read "Where we stopped" above, starting with the one-table summary of the
-   2026-09-21 session, then the Set 11 table.
+   2026-09-22 session, then the 2026-09-21 table, then the Set 11 table.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
    carrying only `develop`.
-3. Read "What is parked, and why" before picking anything up. Two items there
-   look finished and are not: the OMIM dispatch is reverted on purpose and
-   must not be re-enabled without wiring `filter_omim_titles`, and item 11.33
-   had a fix shipped that did not close it.
-4. Pick up "Next, in order" at item 1.
+3. Read "What is parked, and why" before picking anything up: the OMIM dispatch
+   is reverted on purpose and must not be re-enabled without wiring
+   `filter_omim_titles`.
+4. Pick up "Next, in order" at item 1, which is the product owner's retest, so
+   if they have not tested yet the first engineering item is item 2.
 
 ## Developer detail
 

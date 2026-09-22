@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-20.
+Kick-off: 2026-05-06. Last updated: 2026-09-22.
 
 ## Status at a glance
 
@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-20.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is the first item under "Next, in order" in `testing/UI_fix_plan.md`'s "Where we stopped" section, which owns the cutoff. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 589 (DECISIONS.md).
+Decisions logged: 591 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -972,7 +972,19 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
-2026-09-21, LATEST, ITEM 11.31 DECIDED AND BUILT, THE CITATION-LOSS DEFECT BEHIND IT FIXED, ITEM 2a CLOSED BY MEASUREMENT, AND L-01 CONFIRMED. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
+2026-09-22, LATEST, ITEM 10.3 RUN FOR THE FIRST TIME, ITEM 11.33's CAUSE FOUND AND FIXED, AND L-01 MEASURED. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
+
+- THE CONSISTENCY RUN, item 10.3, RAN TO COMPLETION: all 50 golden questions three times against develop at `63ec316`, signed in on two fresh test accounts, two workers partitioned by question, three passes minutes apart. 86 of 150 runs answered. 25 questions answer every time, where the 2026-09-12 baseline had 1; 18 never, where it had 43; 31 improved and none worsened. Of the 18, 9 are refusals the golden rows expect, 3 are guardrail refusals the golden row disagrees with (G-008, G-038, G-045), and 6 are genuine gaps, every one a Layer 1 failure. Zero rate-limit signals, zero cap declines, one transient guardrail error. Full reading: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`.
+- THE MEASUREMENT WAS INTERRUPTED TWICE BY THE CLIENT, NOT THE PRODUCT, and the first report of it was wrong. Four runs read as the write step hanging for six to eleven minutes; the laptop had entered idle sleep on battery twice, confirmed from `pmset -g log`, and the tell was two independent streams ending at the same instant. Three of the four runs had finished on the server while the client slept. The four records were set aside and their pairs re-run under `caffeinate`. Recorded in `LEARNINGS.md`.
+- ITEM 11.33's CAUSE WAS NEVER LIVE-ONLY. `_cap_scalar_string` in `harness/coordinator_worker.py` cut every string leaf at 500 characters because its documented 2000-character top-level tier could never fire. The 2026-09-21 local trace skipped that stage, which is why it concluded live-only and shipped a word-boundary clip on the label path that could not close it. Found by a fresh-context agent that established server-side versus client-side first from a full event capture; verified by execution in the main session before the fix was commissioned. THE FIX: one cap at every depth, the finding's own 2000, on a word boundary with an ellipsis, the dead tier deleted; the 50,000-byte finding ceiling measured (20 PubMed rows with 2000-character abstracts fit, it fires at 22) and deliberately unchanged. Seven arms, six proven red against the pre-fix code. Recorded in `DECISIONS.md` and `LEARNINGS.md`.
+- L-01 IS A RATE WITH A MECHANISM: 12 of 119 eligible graph calls returned zero where another pass returned rows. The failing call ends with `status: error` and the generic empty summary, and nothing else reaches the stream or the deploy log; the cause exists only in the LangSmith trace and the audit log. Nine further questions error on the graph on EVERY pass, six of them refusals a reader sees: a retrieval defect with a fixed reproduction set, and the largest single reason a golden question does not answer.
+- TWO OUT-OF-SCOPE COMPUTE REQUESTS, G-046 (BLAST) and G-047 (VCF), WERE ANSWERED from graph rows rather than refused. New exposure, not a regression, and a product-owner decision.
+- ONE QUESTION SHAPE TAKES 100 SECONDS on every run, G-039, a plain-terms explanation over BRCA1; every other slice has a p90 under 40 seconds.
+- THE GOLDEN ROWS' `acceptable_outcomes` name only `answer`, while the product's modal grounded outcome is `ask`, so a mechanical comparison reads 14 percent when the answer-or-refuse figure is 77 percent. Recorded for whoever next edits the dataset.
+- `testing/Shipped_2026-09-20.md` was found deleted from the working tree mid-session by something outside the session's own tool calls and was restored from HEAD. Cause unknown, recorded rather than dropped.
+- Two decisions logged, taking `DECISIONS.md` to 591; two learnings, taking `LEARNINGS.md` to 155.
+
+2026-09-21, ITEM 11.31 DECIDED AND BUILT, THE CITATION-LOSS DEFECT BEHIND IT FIXED, ITEM 2a CLOSED BY MEASUREMENT, AND L-01 CONFIRMED. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
 
 - THE RESULT WORTH CARRYING FORWARD IS NOT A FEATURE: THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING. `ground_claim` accepts a claim against a finding only on contiguous containment. For a short record that is healthy, since a sentence wraps the value verbatim. For a long free-text value such as a whole abstract, a sentence cannot contain it, so only `a in b` remains and the claim must be a VERBATIM EXCERPT. Explaining means different words, so every explanatory sentence is deleted silently and the answer arrives looking thin rather than censored. Measured offline: 19 candidate sentences across 8 shapes, 3 survivors, all literal excerpts.
 - FIVE VERSIONS OF THE PLAIN-LANGUAGE DEPTH DIRECTIVE HAVE NOW FAILED, two of them written this session, each by instructing the model about FORM. Version 4 asked for a sentence per finding and produced 206 words of "One disease is called X. Another disease is called Y.", longer than the 89 it replaced and explaining nothing. Version 5 removed every length instruction and produced 58 words, still explaining nothing. The product owner's corrections drove both: "It is not the words that matter but the content and how easy is it to explain and understand", and "Number of words do not define an answer".

@@ -13,6 +13,7 @@ instrumented run is needed, and the blocked stop was not taken. No
 - [What the local reconstruction missed](#what-the-local-reconstruction-missed)
 - [A second defect found on the way](#a-second-defect-found-on-the-way)
 - [What a fix has to touch](#what-a-fix-has-to-touch)
+- [The fix, and the byte-ceiling measurement](#the-fix-and-the-byte-ceiling-measurement)
 
 ## The verdict
 

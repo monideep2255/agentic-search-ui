@@ -32,62 +32,19 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK SET 11 FROM ITS CUTOFF. The next action is owned by `testing/UI_fix_plan.md`, section "Where we stopped", REWRITTEN AT THE CLOSE OF 2026-09-21. This file no longer carries corrections to that list, because the list itself is new rather than the old one with items struck through: every item the previous ordered list carried is now done, closed by measurement, or parked with its reason.
-  - Item 1 is RUN 10.3, THE CONSISTENCY RUN, 50 golden questions three times each.
-  - Read "What is parked, and why" BEFORE picking anything up. Two things there look finished and are not.
-- THE 2026-09-21 SESSION CHANGED THE ANSWER PATH TWICE, so a tester coming back to develop is looking at a different product from the one `testing/Shipped_2026-09-20.md` describes. That file remains the authoritative account of the 2026-09-20 release; the 2026-09-21 changes are in the fix plan's cutoff table.
-- THE RESULT MOST WORTH CARRYING FORWARD is not a feature. THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING: `ground_claim` accepts a claim against a finding only on contiguous containment, so against a long free-text value such as an abstract only a verbatim excerpt survives. Explaining means different words, so an explanatory sentence is deleted silently and the answer looks thin rather than censored. FIVE versions of the plain-language depth directive have now failed, each by instructing the model about form. A sixth is not the fix. The remaining lever, recorded and deliberately NOT built because the product owner approved the current state as is: have the CODE place plain source text verbatim and cited, the way the record tables already are.
-- ITEM 11.31 IS BUILT AND NOT YET LIVE, as of 2026-09-21, and BOTH of its open questions are answered so neither may be re-asked. Every sentence keeps a source at both depths, and the plain-language bound is a SHAPE rather than a word count. Both are recorded in `DECISIONS.md` dated 2026-09-21.
-
-  THE ITEM NAMED THE WRONG FILE, and this is the part a later session most needs. The cause was never the depth directive. `grounding.ground_claim` accepts a claim only on contiguous containment, so against a long free-text finding such as a whole abstract the only surviving form is a VERBATIM EXCERPT. The gate permits quoting and forbids explaining, which is why both depths read as restatement and why a fourth reworded directive would have been stripped like the three before it.
-
-  The fix changed the INPUT rather than the gate: NCBI's own plain-English Gene ESummary `summary` field is now retrieved and emitted as its own finding, so a plain-language answer explains by quoting prose that is already plain. Relaxing the gate was measured and REJECTED, because three of four reorderings of an abstract's own words ship with every word licensed and the meaning wrong.
-
-  WHAT IS LEFT: no live run has been made at either depth against the new code, so the divergence is built and unproven. The baseline to beat is `testing/Developer/reports/2026-09-21_11.31_divergence/baseline.md`, where the record dump was identical across depths at 66 rows for BRCA1 and about 92 for HNF1A, against 89 to 164 words of prose. The full account is that folder's `findings.md`.
-- CI IS GREEN ON DEVELOP, confirmed after the repair landed:
-
-  - It had failed on two runs, both on one test-isolation defect.
-  - The defect: an arm added with the MCP config fix entered the app's lifespan through `TestClient(app)`, and `StreamableHTTPSessionManager` refuses a second `.run()` in one process.
-  - The repair is `c35b545`, which switches the arm to `httpx.ASGITransport`, the form the repository already documents in `adapters/mcp/test_phase_4_1_production_mount.py`'s module docstring.
-  - The full ten-gate CI then ran green on the release pull request too.
-
-  Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
-- BOTH WORKTREES ARE GONE, removed on 2026-09-20 on the product owner's instruction that local carries only `develop`. Neither was still needed by then:
-  - `breadth-wiring` was merged as `2bb1925`, and the live confirmation it was waiting on is done.
-  - `agent-a8393711bb57d579b` held 11.27 and 11.28, and both are live on develop by other commits, `aedf53d` and `50ed55b`.
-
-  Clearing a worktree is a deletion, so it was asked first, and the one uncommitted file in either was byte-compared against develop's copy before removal and was identical.
-- PRODUCTION IS ON `v0.2.0`, released on the evening of 2026-09-20:
-
-  | Fact | Value |
-  |---|---|
-  | First release since | v0.1.2 on 2026-08-28 |
-  | Commits carried | 241 |
-  | Tag points at | `cde4f59` |
-  | Production health | `GET /health` on the production API returns `app_env: production` |
-  | Back-merge | Already landed, so develop sits exactly one commit ahead of production |
-  | How the version was chosen | THE VERSION WAS DERIVED, NOT CHOSEN: 46 `feat` commits and zero breaking changes, which `.github/release/derive_version.sh` reads as a minor bump |
-
-  Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`, never from a document or a conversation.
-- SET 11 IS NOW MOSTLY LIVE, which reverses this file's earlier warning that it was not. 11.17, 11.21, 11.27 and 11.28 all merged on 2026-09-20, so the built-but-not-live set named here before is empty. The per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. The other sets:
-
-  | Sets | State |
-  |---|---|
-  | 1 to 7 | Approved |
-  | 8 and 9 | Live on develop |
-  | 10 | Untouched apart from item 10.1 |
-- THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given directly by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation, and every remaining presentation fix leaves it untouched. It is the bar item 11.29 has to clear.
-- EVIDENCE for the day is under `testing/Developer/reports/2026-09-20_*`. Start with `2026-09-20_breadth_merge/mcp_failure_explained.md`, for why the biggest feature in the queue sat unmerged for a week over a failure that was never its own, and `2026-09-20_tp53_findings/findings.md`, for the four defects one live answer exposed.
-- When the product owner approves a release, follow `docs/build/Release_flow.md`. CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first. The production API already carries `MCP_ALLOWED_HOSTS`, `LANGSMITH_API_KEY`, `POSTHOG_API_KEY` and `POSTHOG_HOST`.
-- The cutoff also lists what is local or kept in a worktree, the open decisions, and the known loose ends.
-  Carry forward for any future parallel fix pass:
-
-  - Split builders by the files they write
-  - Pin any new wire contract first
-  - Give each a goal contract
-  - Never let two builders own one file region
-
-  File fencing held across eight agents on 2026-09-20 with zero collisions. The one resource that cannot be fenced is this machine's CPU, and checking load before a run is a race rather than a queue.
+- WORK "NEXT, IN ORDER" FROM ITS CUTOFF. The next action is owned by `testing/UI_fix_plan.md`, section "Where we stopped", REWRITTEN AT THE CLOSE OF 2026-09-22. Its item 1 is the product owner's retest of item 11.33; the first engineering item is item 2, reading one L-01 cause out of a LangSmith trace.
+  - Read "What is parked, and why" BEFORE picking anything up. The OMIM dispatch is reverted on purpose and must not be re-enabled without wiring `filter_omim_titles`.
+- ITEM 10.3, THE CONSISTENCY RUN, HAS NOW BEEN RUN, for the first time, on 2026-09-22: all 50 golden questions three times against develop at `63ec316`, signed in on two fresh test accounts. 86 of 150 runs answered; 25 questions answer every time (the 2026-09-12 baseline had 1), 18 never (had 43), none worse. The 18 split into 9 expected refusals, 3 guardrail refusals the golden row disagrees with, and 6 genuine gaps, every one a Layer 1 failure. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`.
+- ITEM 11.33 IS FIXED AND ON DEVELOP, awaiting retest. The cause was never live-only: `harness/coordinator_worker.py` cut every string leaf at 500 characters because its documented 2000-character tier was unreachable, and the 2026-09-21 local trace skipped that stage. One cap now, at `SynthFinding`'s own 2000, on a word boundary, with an ellipsis. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`.
+- L-01 IS MEASURED AND NOT FIXED: 12 of 119 eligible graph calls returned zero where another pass returned rows, and the failing call ends with `status: error` and the generic "0 row(s) of 0" summary while nothing else is emitted or logged. Nine further questions error on the graph on EVERY pass, which is deterministic, and six of them are refusals a reader sees. The cause exists only in the LangSmith trace and the audit log, and reading one is the next engineering step.
+- TWO OUT-OF-SCOPE COMPUTE REQUESTS ARE ANSWERED RATHER THAN REFUSED, G-046 (BLAST) and G-047 (VCF), from graph rows for the concepts the resolver found inside them. A product-owner question, recorded in the fix plan's "What is waiting on the product owner".
+- THE RESULT MOST WORTH CARRYING FORWARD from 2026-09-21 still stands: THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING. Five versions of the plain-language depth directive have failed by instructing the model about form; a sixth is not the fix. The remaining lever, having the CODE place plain source text verbatim and cited, is a standing option the product owner declined for now, not queued work.
+- TWO THINGS A SESSION MUST NOT UNDO CASUALLY: do not re-enable the OMIM dispatch without wiring `filter_omim_titles` (the first OMIM hit for `GCK` is `MAP4K2`), and do not add a word count or a paragraph shape back to the plain-language directive (arms in `tests/system_03_search_agent/synthesis/test_answer_quality.py` go red if one returns).
+- PRODUCTION IS ON `v0.2.0`, released 2026-09-20, tag `cde4f59`, and carries NOTHING from 2026-09-21 or 2026-09-22. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`. When the product owner approves a release, follow `docs/build/Release_flow.md`; CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first.
+- CI IS GREEN ON DEVELOP for every push on 2026-09-21. Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
+- SET 11 IS MOSTLY LIVE; the per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Sets 1 to 7 are approved, 8 and 9 live on develop, 10 now has item 10.3 run and 10.1 done.
+- THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation.
+- Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, never let two builders own one file region. And one more from 2026-09-22: a live measurement shares the NCBI rate pool with every agent, so an agent working alongside one is forbidden live calls until it ends, and the measurement counts rate-limit signals so contamination is visible rather than assumed absent.
 
 THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-phase cadence for UI fixes, and it overrides `.claude/rules/git-workflow.md`'s branch requirement and the judge and adversary rounds for this work only:
 
@@ -117,10 +74,10 @@ WHERE TO LOOK, in the order a fresh session should read them:
 | What happened on 2026-09-20 | `testing/Shipped_2026-09-20.md` for the summary, then the evidence folders under `testing/Developer/reports/2026-09-20_*` |
 | What happened overnight on 2026-09-19 | `testing/Developer/reports/2026-09-19_overnight/session_log.md`, then the three reports it points to |
 
-### The session boundary, close of 2026-09-21
+### The session boundary, close of 2026-09-22
 
 Work stopped here deliberately and resumes in a NEW session. This replaces the
-2026-09-20 boundary, which described a state two sessions of work have since
+2026-09-21 boundary, which described a state one session of work has since
 moved past.
 
 What is true on disk at the close:
@@ -130,45 +87,43 @@ What is true on disk at the close:
 - The full Python suite is green, and `ruff check` over the whole repository
   exits 0. Counts are in the Priority-2 row of `CLAUDE.md`, computed rather
   than asserted.
-- Production is unchanged, still on `v0.2.0`. Nothing from 2026-09-21 has been
-  released; it is all on develop.
+- Production is unchanged, still on `v0.2.0`. Nothing from 2026-09-21 or
+  2026-09-22 has been released; it is all on develop.
 
 WHAT LANDED, in the terms a person notices:
 
 | Item | What changed |
 |---|---|
-| 11.34 | A multi-sentence abstract or gene summary is CITED rather than silently dropped. It used to be rendered, stripped whole, and contribute no text and no citation |
-| 11.31 | NCBI's own plain-English gene summary is retrieved, cited and rendered. The product owner approved the state as is |
-| 2b, host half | `omim.org` is a citeable host, `www.` included |
-| 11.35, 11.36 | The Notes section is gone from the screen, and the answer-modes info card describes who each mode is for rather than promising a word count |
+| 10.3 | The consistency run exists as a measurement: 150 signed-in runs, three per golden question, with the outcome, latency, sources and layers of each, and a comparison against the 2026-09-12 baseline |
+| 11.33 | A record's value is no longer cut at 500 characters mid-word. The cap is the finding's own 2000, on a word boundary, with an ellipsis when it still applies |
+| L-01 | A rate and a mechanism rather than a suspicion: one graph call in ten loses a result, and the errored call carries an empty summary and no message |
 
 WHAT DID NOT LAND, and each is recorded rather than rounded up:
 
-- THE EXPLANATION. The gene summary reaches the page and the model does not
-  use it to explain. Five directive versions have failed at this.
-- ITEM 11.33. A word-boundary clip was written, shipped, and did NOT close it.
-  The board says STILL OPEN.
-- THE OMIM DISPATCH. Enabled and REVERTED the same session, because
-  `filter_omim_titles` exists and nothing calls it.
+- L-01 IS NOT FIXED and its cause is NOT READ. The stream and the deploy log
+  both drop it. The LangSmith trace or the audit log is where it lives.
+- NINE questions fail on the graph on every pass, six of them as refusals.
+  Not variance, a defect with a reproduction set, and unfixed.
+- TWO compute requests, BLAST and VCF, are answered rather than refused. A
+  product decision, unmade.
+- THE EXPLANATION half of 11.31 and THE OMIM DISPATCH stay parked, unchanged
+  from 2026-09-21.
 
-TWO THINGS A LATER SESSION MUST NOT UNDO CASUALLY:
+TWO THINGS THE INSTRUMENTS TAUGHT, both in `LEARNINGS.md` dated 2026-09-22:
 
-- Do not re-enable the OMIM dispatch without wiring `filter_omim_titles`. The
-  first OMIM hit for `GCK` is `MAP4K2`, so an unfiltered result cites a
-  different gene than the question asked, fully and correctly cited.
-- Do not add a word count or a paragraph shape back to the plain-language
-  directive. Both were tried on 2026-09-21 and both failed, and the arms in
-  `tests/system_03_search_agent/synthesis/test_answer_quality.py` fail if one
-  returns.
-
-L-01 IS CONFIRMED AND NOT FIXED. Over 20 live runs, one HNF1A run returned
-zero graph rows while every other tool succeeded and the trust outcome read
-identically to a healthy run. Nothing tells the reader. Evidence:
-`testing/Developer/reports/2026-09-21_L01/`.
+- The client machine slept twice on battery mid-measurement and the record
+  read as the app hanging in the write step; the tell was two independent
+  streams ending at the same instant. The first report to the product owner
+  was wrong and was corrected the same hour.
+- The 2026-09-21 local reconstruction of the 11.33 path skipped a stage,
+  `coordinator_worker_execute`, and concluded live-only. When a local trace of
+  a pipeline disagrees with production, list every stage on the production
+  path and check the trace visited each one before hypothesising an
+  environment difference.
 
 What the next session does first is `testing/UI_fix_plan.md`'s "Next, in
-order", item 1, the consistency run.
-
+order": item 1 is the product owner's retest of 11.33, and item 2, the first
+engineering item, is reading one L-01 cause out of a trace.
 
 ### Process lessons from the fix-loop sessions, already applied
 
@@ -391,7 +346,7 @@ One decision below is still waiting on the product owner: whether `security/` st
 | NCBI design system stages 2 and 3 blocked | `@ncbi-design-system/base` and `@ncbi-design-system/react` are internal to NCBI and 404 on public npm, so stages 2 and 3 cannot run from outside the NCBI network | Whoever next has NCBI-network access |
 | Consistency baseline, paused | Run on 2026-09-12: 150 planned searches, only 85 really ran (65 refused by the signed-in daily limit of 100 because every run used one account). Of the 85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run (14%, likely the Think JSON failure item 2.11 has since fixed), 6 refused off-topic; 15 of 32 questions gave different outcomes across runs, only 2 answered every time, no Layer 3 call seen. Paused by the product owner so screen fixes come first. Results in `testing/Developer/reports/2026-09-12_consistency_baseline/` (untracked) | Rerun before fix set 6, across fresh test accounts |
 | Account menu overclaims "no search limit" | The account menu says "no search limit in effect yet" while the signed-in daily limit of 100 does refuse searches (it counts now) | Whoever next touches the account menu copy |
-| Only 2 of 7 tools run, no Layer 3 reached, SUPERSEDED | Written when live queries reached only `cypher_query` and `ncbi_efetch`. Fix set 8 wired the three-layer search on 2026-09-13, and items 11.17 and 11.21 merged the broad search on 2026-09-20 as `2bb1925`, so `core/graph.py` now dispatches six of the seven tools and `pathogen_detection` is the one it does not. WHAT IS STILL UNPROVEN is what a live question actually reaches run after run, which is what item 10.3's consistency run measures | Item 10.3, the consistency run |
+| Only 2 of 7 tools run, no Layer 3 reached, SUPERSEDED | Written when live queries reached only `cypher_query` and `ncbi_efetch`. Fix set 8 wired the three-layer search on 2026-09-13, and items 11.17 and 11.21 merged the broad search on 2026-09-20 as `2bb1925`, so `core/graph.py` now dispatches six of the seven tools and `pathogen_detection` is the one it does not. Item 10.3's consistency run measured it on 2026-09-22: 63 of 86 answered runs carried a Layer 3 citation, and the graph, live NCBI and enrichment layers were all reached; what is now unproven is WHY one graph call in ten fails, see L-01 in `testing/UI_fix_plan.md` | Read one L-01 cause from a LangSmith trace, `testing/UI_fix_plan.md` "Next, in order" item 2 |
 | MCP rejects every request, "Invalid Host header", RESOLVED | Fix set 5's item 5.3 fixed it and the product owner approved it. Re-probed live on 2026-09-20 under item 11.30: `/mcp` responds. A SEPARATE defect was found in the same probe and is open, the redirect's scheme downgrade, which is a deployment decision rather than a code change | Closed, with the scheme downgrade tracked under item 11.30 |
 | Load-dependent test flakiness (D4) | Frontend tests fail under machine load rather than from a real regression: `railCollapsePremise` timed out once in a full run on 2026-09-13 and passed 20 of 20 alone three times; rail-collapse and query-stream end-to-end specs failed 4 while a second agent's test run shared the machine, then passed 14 of 14 alone. Re-run a failing spec alone before concluding it is a real defect | Whoever next hits a flaky frontend run |
 | Think step retry, and a remaining transient timeout | Item 2.11 (commit `e67323a`) makes the Think step retry once when the model's classification reply is not valid JSON. Measured live after deploy: 5 of 6 guest searches finished; the one failure was a different, transient timeout, not the JSON failure the retry fixes | Whoever next investigates Think-step reliability |
@@ -476,4 +431,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-21.
+Last updated: 2026-09-22.
