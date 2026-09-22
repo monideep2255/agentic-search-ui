@@ -103,17 +103,29 @@ class _Spy:
         monkeypatch.setattr(ncbi_eutils_actions, "summary", _summary)
 
 
-def _install_model(monkeypatch: pytest.MonkeyPatch, query_class: str = "multi_hop") -> None:
+def _install_model(
+    monkeypatch: pytest.MonkeyPatch,
+    query_class: str = "multi_hop",
+    entities: list[tuple[str, str]] | None = None,
+) -> list[str]:
+    """Fake the Think model and the gene resolver; returns the list of symbols
+    the resolver was asked to confirm, so an arm can assert it was or was not
+    consulted."""
     classification = graph_module._ThinkClassification(
         query_class=query_class,
-        entities=[],
+        entities=[
+            graph_module._ThinkExtractedEntity(text=text, entity_type=kind)
+            for text, kind in (entities or [])
+        ],
         narrative="Asks for the evidence under a chromosome window.",
     )
+    asked: list[str] = []
 
     async def _fake_dispatch(*args: Any, **kwargs: Any) -> Any:
         return SimpleNamespace(content=classification.model_dump_json())
 
     async def _no_gene(symbol: str, *, taxon: str = "human") -> str | None:
+        asked.append(symbol)
         return None
 
     monkeypatch.setattr(graph_module, "_dispatch_tier_call", _fake_dispatch)
@@ -121,6 +133,7 @@ def _install_model(monkeypatch: pytest.MonkeyPatch, query_class: str = "multi_ho
     monkeypatch.setenv("GUARD_MODEL", "test-provider/guard-model")
     monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
     monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
+    return asked
 
 
 def _state(text: str, **extra: Any) -> dict[str, Any]:
@@ -318,3 +331,35 @@ def test_an_overlap_record_becomes_a_row_with_its_allowlisted_fields_and_its_url
     assert withheld not in row["fields"]
     assert set(row["fields"]) <= set(graph_module._BREADTH_FIELDS_BY_PURPOSE[purpose])
     assert row["fields"]["assembly"] == "GRCh38"
+
+
+
+# ---------------------------------------------------------------------------
+# The call ceiling: a window question's entities are the window's genes.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_resolved_window_skips_the_live_confirmation_of_the_models_spans(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Measured live 2026-09-22: on one of five passes of the golden
+    coordinate question the model's gene-shaped spans ("ACMG", "dbVar",
+    "ClinVar") each cost a confirmation call, the query passed its ceiling of
+    twenty Layer 2 and 3 calls, the overlap records were refused and the
+    answer carried no citations. With the window resolved, the spans are not
+    confirmed, so the count is the same on every pass."""
+    spans = [("ACMG", "gene"), ("dbVar", "gene"), ("ClinVar", "gene")]
+    asked = _install_model(monkeypatch, entities=spans)
+    _Spy(monkeypatch)
+    result = await graph_module.think_node(_state(GRCH38_QUESTION))
+    assert [e.curie for e in result["resolved_entities"]] == ["NCBIGene:672"]
+    assert asked == [], asked
+    # Populate check: the same spans on a question with no window ARE
+    # confirmed live, one call each.
+    asked_plain = _install_model(monkeypatch, query_class="single_hop", entities=spans)
+    _Spy(monkeypatch)
+    await graph_module.think_node(_state("Which diseases are associated with ACMG, dbVar and ClinVar?"))
+    assert sorted(asked_plain) == ["ACMG", "CLINVAR", "DBVAR"] or sorted(s.upper() for s in asked_plain) == [
+        "ACMG", "CLINVAR", "DBVAR"
+    ], asked_plain

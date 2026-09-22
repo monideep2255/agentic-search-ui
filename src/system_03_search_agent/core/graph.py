@@ -2061,7 +2061,22 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         }
 
     # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
-    model_resolution = await _confirm_extracted_entities(classification.entities)
+    if window_genes is not None and window_genes.genes:
+        # A window question's entities are the window's genes, so the model's
+        # gene-shaped spans ("ACMG", "dbVar", "ClinVar", "copy number variant")
+        # are not confirmed live. Each confirmation is a Layer 2 call counted
+        # against the per-query ceiling of 20, a window question already
+        # spends fifteen fixed calls (two to resolve the window, two for the
+        # overlap records, eleven for a gene question's fan-out), and on one
+        # of five live passes of the golden coordinate question the model's
+        # spans pushed it past the ceiling: the overlap records were refused
+        # and the answer carried no citations. With the guesses skipped the
+        # count is the same on every pass.
+        model_resolution = _EntityResolution(
+            curies=[], unresolved_symbols=[], confirmed=(), disclosures=()
+        )
+    else:
+        model_resolution = await _confirm_extracted_entities(classification.entities)
     if window_genes is not None:
         # The window's genes come first, ahead of anything the model named,
         # and their presence is what stops the gene-shaped and disease
