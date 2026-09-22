@@ -1272,9 +1272,10 @@ The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state. LAST UPDATED 2026-09-22,
 at the close of a session that ran item 10.3 to completion for the first time,
 found and fixed the cause of item 11.33, and measured L-01 as a rate with a
-named mechanism, then, the same evening, shipped item 1 of the next list: the
-two questions that lost their own graph search, and a GEO search for dataset
-questions. Read this, then the Set 11 table above.
+named mechanism, then, the same evening, shipped item 1 of the next list, the
+two questions that lost their own graph search with a GEO search for dataset
+questions, and after it the coordinate range. Read this, then the Set 11
+table above.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -1294,6 +1295,7 @@ The 2026-09-20 shipped list, with what to retest, is
 | Latency | FIXED, PROVEN LIVE at 10.6, 11.9 and 14.8 seconds on three develop runs, and APPROVED by the product owner's retest | G-039, a plain-terms explanation over BRCA1, took about 100 seconds on every run because its own graph search took the model path and the generated query never finished (a planner mis-estimate, killed by the graph's 30-second statement timeout). An exploratory question with no shape now takes the record template, measured at under a second. Evidence: `testing/Developer/reports/2026-09-22_slow_second_search/findings.md` |
 | 2b, OMIM | DONE, live on develop, APPROVED by the product owner's retest | The dispatch is on with `filter_omim_titles` applied before any row is built, so a question about one gene never shows another gene's OMIM record. Ten live runs: one OMIM citation each, zero wrong-gene hits; for GCK, nine wrong-gene records were dropped and OMIM 138079 kept. A gene question now charges 14 to 16 of its 20 allowed Layer 2 and 3 calls. Evidence: `testing/Developer/reports/2026-09-22_OMIM_live/findings.md` |
 | Item 1 of the next list, the two questions that lost their own graph search | BUILT, VERIFIED LIVE, AWAITING RETEST | "Compare what is known about MLH1 and MSH2 in colorectal cancer risk" (G-033) and "Find GEO expression datasets studying TP53" (G-037) lost their own graph search on every pass to a generated query the validator rejected. Both take a fixed template now: each gene's disease edges side by side for the comparison, the gene record for the shapeless gene question, and GEO is searched when a question asks for datasets. Live on develop at `b6cd025`: G-033 3 of 3 answered with its own graph call returning rows in 18 to 30 seconds, G-037 3 of 3 in 13 to 22 seconds with five GEO series cited each time, G-011 3 of 3, zero errored graph calls across those nine runs (the control, G-012, a disease anchor with no shape left on the model path by decision, lost one call to the per-step timeout on its third pass, as it did in the morning). A latent 30-second timeout on any question naming two genes went with it, and the 11.22 check passed on the same runs. Evidence: `testing/Developer/reports/2026-09-22_item1_lost_search/findings.md` |
+| The coordinate range, the next list's item 1 as it then stood | BUILT, VERIFIED LIVE, AWAITING RETEST | "What is under chr17:43,044,295-43,125,364 on GRCh38" used to be answered with a request to name a gene. A window is now recognised by a fixed rule, the genes under it are resolved live from NCBI Gene by position and filtered by each record's own placement, the question proceeds as a gene question, and the dbVar and ClinVar records that genuinely overlap the window are planned right after the graph call. A window with no assembly named is asked which. Live on develop: the golden coordinate question G-001 6 of 8 answered across three deploys, 3 of 3 on the final one answered with BRCA1 resolved from the coordinates alone, in 19 to 23 seconds; a CFTR-locus window on chromosome 7 6 of 6; the no-assembly question answered with the assembly question 6 of 6. The live runs found two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty). Planned by the reasoning model and built by two workers in parallel (the live probes and the pure module), the wiring by the planner. Evidence: `testing/Developer/reports/2026-09-22_coordinate_range/findings.md` |
 | The instrument | Three lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
 ### The 2026-09-21 session, in one table
@@ -1345,6 +1347,15 @@ option rather than a queued task.
 
 ### What is live on develop
 
+- A chromosome window with its assembly named ("chr17:43,044,295-43,125,364
+  on GRCh38") is answered with the genes under it, resolved from the
+  coordinates alone, and the dbVar and ClinVar records that genuinely
+  overlap it, each cited; a window with no assembly named is asked which,
+  because the two assemblies put different genes under the same numbers.
+  Pushed 2026-09-22 (night) as `66b3811` with two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty), verified live G-001 6 of 8 answered across three deploys, 3 of 3 on the final one. Retest:
+  the golden coordinate question names BRCA1 without being told it, lists
+  dbVar and ClinVar records, and does not ask for a gene; the same window
+  without "on GRCh38" gets the assembly question. AWAITING RETEST.
 - A question comparing two genes in a disease context shows each gene's
   disease records side by side from the graph, and a question about one
   gene with no recognisable shape shows the gene record, instead of ending
@@ -1447,12 +1458,13 @@ placement, and the trust-line wording.
   could not read is answered with a request for a name (`10f6a46`). What
   is NOT fixed is the cause itself: the deterministic half is a Think gap
   and the variance half is the act budget, both below.
-- THE DETERMINISTIC HALF OF L-01 is a Think gap: for a GRCh38 coordinate
+- THE DETERMINISTIC HALF OF L-01 was a Think gap: for a GRCh38 coordinate
   range (G-001), a Pathogen Detection isolate (G-035), a BioProject accession
-  (G-007) and on some passes Lynch syndrome (G-003), Think resolves no entity
-  and the plan still dispatches `cypher_query`, which refuses to run with
-  nothing to bind. G-005 and G-022 resolve an entity and find nothing; G-036
-  never calls Layer 1. Fixed reproduction set, unfixed.
+  (G-007) and on some passes Lynch syndrome (G-003), Think resolved no entity
+  and the plan still dispatched `cypher_query`, which refuses to run with
+  nothing to bind. THE COORDINATE RANGE IS FIXED (`66b3811`, the same night);
+  the isolate and the accession are item 2 of the next list. G-005 and G-022
+  resolve an entity and find nothing; G-036 never calls Layer 1.
 - THE VARIANCE HALF OF L-01 was NOT the act budget and NOT a follow-up: the
   graph server's own log shows the question's OWN search, taking the model
   path on an exploratory no-shape question, killed by the graph's 30-second
@@ -1576,25 +1588,32 @@ technical one.
 ### Next, in order
 
 Rewritten at the close of 2026-09-22, after the product owner retested and
-approved everything the day built, and again the same evening when item 1 of
-that list shipped: the two questions that lost their own graph search, and a
-GEO search for dataset questions (`27d68ae`, `b6cd025`, verified live 3 of 3
-and 3 of 3, awaiting retest; its row is in the session table above). The
-day's summary and the retest list are `testing/Shipped_2026-09-22.md`.
-Nothing here is a retest; every item is engineering or a decision, ordered by
-what the person typing the question feels first.
+approved everything the day built, and twice more the same evening: when item
+1 of that list shipped (the two questions that lost their own graph search,
+and a GEO search for dataset questions, `27d68ae`, `b6cd025`), and when the
+coordinate range shipped after it (`66b3811`, then two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty); verified live G-001 6 of 8 answered across three deploys, 3 of 3 on the final one with
+BRCA1 resolved from the coordinates alone; its row is in the session table
+above). Both await the product owner's retest, items 7 to 10 in
+`testing/Shipped_2026-09-22.md`. Nothing here is a retest; every item is
+engineering or a decision, ordered by what the person typing the question
+feels first.
 
-1. TEACH THINK THE COORDINATE RANGE. Four golden questions never answer
-   because Think resolves no entity for a GRCh38 range (G-001), an isolate
-   (G-035) or a project accession (G-007), and the plan dispatches a graph
-   search with nothing to bind. Coordinates first: "what is in this region"
-   is the everyday question, and `tools/ncbi_coordinate_overlap.py` already
-   exists. Each shape is about a day.
-2. WATCH THE CALL CEILING. A gene question charges 14 to 16 of its 20
-   Layer 2 and 3 calls with OMIM on, and a question asking for datasets
-   charges two more for GEO, so 18 at most. A question naming several rs
-   numbers could reach 20 and start dropping calls; measure one before
-   deciding whether the ceiling or the fan-out moves.
+1. WATCH THE CALL CEILING. A gene question charges 14 to 16 of its 20
+   Layer 2 and 3 calls with OMIM on, and the variable part is the model's
+   spans, each confirmed live. MEASURED on the night of 2026-09-22: a window
+   question crossed 20 on one pass in five and refused with no citations,
+   because its fifteen fixed calls plus the model's guesses passed the
+   ceiling; fixed for window questions by not confirming the guesses
+   (`c72b8a7`), which is the same-count-every-pass property to want
+   everywhere. A dataset question charges two more for GEO; a question
+   naming several rs numbers could still reach 20. Measure one before
+   deciding whether the ceiling or the fan-out moves, and count Think's own
+   lookups, which the stream does not show.
+2. THE OTHER TWO SHAPES THAT NEVER ANSWER: a Pathogen Detection isolate
+   description (G-035) and a BioProject accession (G-007). Think resolves no
+   entity for either and the plan dispatches a graph search with nothing to
+   bind. Each is about a day and its own tool path; the coordinate range,
+   which shared this item, is done.
 3. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
    row: "334" expects a clarifying ask and is refused as off-topic; "tell me
    about the tree of life" expects an answer; the pathogenicity classification
@@ -1648,10 +1667,11 @@ That points hard at event-loop starvation, consistent with the same suite failin
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up "Next, in order" at item 1, the coordinate range. Everything the
-   2026-09-22 day built is approved; the evening's item, the two lost
-   searches and the GEO search, is verified live and awaits the product
-   owner's retest, listed in `testing/Shipped_2026-09-22.md`.
+4. Pick up "Next, in order" at item 1, the call-ceiling measurement.
+   Everything the 2026-09-22 day built is approved; the evening's two items,
+   the two lost searches with the GEO search and the coordinate range, are
+   verified live and await the product owner's retest, items 7 to 10 in
+   `testing/Shipped_2026-09-22.md`.
 
 ## Developer detail
 
