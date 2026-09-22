@@ -88,7 +88,10 @@ nest with a 10,000,000-char leaf, a list of lists, a dict of dicts of
 dicts, and a single 1,000,000-char dict key all passed through byte-for-
 byte unbounded, and even the fully-capped shallow case composed to a
 7.7 MB `Finding` (30 properties x 500-char values x 500 rows: no single
-field's own cap bounds that product).
+field's own cap bounds that product). That 500 is the per-string cap AS
+IT STOOD IN JULY 2026; it is 2000 today (item 11.33, 2026-09-22), and
+this paragraph is left in its original arithmetic because it records
+what F-03 measured rather than what the code does now.
 
 `_cap_value` below replaces the old one-level cappers with one recursive
 walk: a dict's values and a list's items are each capped by calling back
@@ -165,12 +168,47 @@ _MAX_NORMALIZED_ID_CHARS = 200
 # `CypherQueryRow`, already caps tighter than this), since this is a
 # defense-in-depth boundary meant to hold for every tool, not a
 # replacement for a tool's own schema caps. Applied recursively: the key
-# count and list-item caps hold at every nesting level, not only the top
-# one, and the string cap is tighter below the top level (matching the
-# F-2.0-14 behavior this replaces, now actually enforced past one level).
+# count, list-item and string caps all hold at every nesting level, not
+# only the top one.
 _MAX_STRUCTURED_TOP_LEVEL_KEYS = 30
+
+# ONE string cap, at every depth. Item 11.33, 2026-09-22.
+#
+# There used to be two: 2000 at depth 0 and 500 below it. The 500 was the
+# only one that ever fired, and the 2000 was DEAD CODE, because
+# `_cap_structured_fields` passes the `structured_fields` DICT itself at
+# depth 0, so a string leaf is at depth 1 at the shallowest and can never
+# be at depth 0. Measured rather than reasoned: a top-level
+# `{"error": "E" * 3000}` came back at 500, not 2000. The two-tier design
+# is DELETED rather than repaired, since a tier that cannot be reached is
+# a confident sentence describing a check that is not there.
+#
+# The value is the bound `SynthFinding.field_value` already enforces
+# downstream: `MAX_FIELD_VALUE_CHARS` in `synthesis/findings.py` line 91,
+# applied at line 643. Matching it is the point. A cap here that is
+# TIGHTER than the finding's own bound silently undercuts it, which is
+# exactly what 500 did: a retrieved PubMed abstract and the BRCA1 gene
+# summary reached the reader cut at 500 characters, mid-word, while both
+# the tool layer (`ncbi_eutils_actions._cap_text`, 4000) and the finding
+# schema (2000) believed they were the binding constraint. The tightest
+# bound in the chain was the one furthest from the schema that documents
+# it, and the one nothing announced. It stays under the tool layer's 4000
+# so this remains a real defence-in-depth boundary rather than a no-op.
+#
+# Raising this cap is a bounded-context-items decision
+# (`production-standards.md`), not a display tweak: it changes how much
+# untrusted text can reach a model prompt. It is bounded above by the
+# finding schema, and the whole capped structure is still bounded by
+# `_MAX_FINDING_TOTAL_BYTES` below.
+#
+# Written as a literal rather than imported from `synthesis.findings`
+# ON PURPOSE: that module imports `Finding` from THIS one (line 81), so
+# the dependency runs synthesis -> harness and an import back the other
+# way would be circular. If the finding schema's bound ever moves, this
+# literal moves with it, and
+# `test_the_harness_string_cap_equals_the_finding_schemas_own_bound` is
+# the one arm that fails if someone moves only one of the two.
 _MAX_STRUCTURED_STRING_CHARS = 2000
-_MAX_STRUCTURED_NESTED_STRING_CHARS = 500
 _MAX_STRUCTURED_LIST_ITEMS = 500
 
 # F-03: a dict KEY was never length-capped at all; a single 1,000,000-char
@@ -193,8 +231,25 @@ _TRUNCATED_DEPTH_MARKER = "<truncated: maximum nesting depth exceeded>"
 # list, one 100-key nested dict, all already field-capped) serializes to
 # just under 19,000 bytes, so 50,000 leaves that case untouched by this
 # ceiling while still bounding the composed-rows case (30 properties x
-# 500 chars x 500 rows, ~7.7 MB field-capped) down by roughly two orders
-# of magnitude.
+# many rows, megabytes when field-capped) down by orders of magnitude.
+#
+# RE-MEASURED 2026-09-22 when the per-string cap rose from 500 to 2000
+# (item 11.33), because quadrupling a per-field cap moves what this
+# ceiling binds and the old comment's arithmetic no longer described the
+# shipped code. The measurement used the largest realistic tool shape:
+# a `fetch` of 20 PubMed records, each carrying a 2000-character abstract
+# plus title, journal and author fields, in the shape
+# `_ncbi_efetch_output_to_structured_fields` produces.
+#
+# - 20 rows: 45,841 bytes, all 20 rows survive. The ceiling does NOT
+#   fire, with roughly 4,200 bytes of headroom.
+# - 22 rows or more: the ceiling fires and the list shrinks to 21 rows.
+#
+# So the realistic path is unaffected and the ceiling still bites on a
+# payload past it. The VALUE is deliberately unchanged: whether 50,000 is
+# the right ceiling now that a single field may carry 2000 characters is
+# a product decision, not one to take inside a defect fix, and 21 rows is
+# already more than any shipped breadth cap requests.
 _MAX_FINDING_TOTAL_BYTES = 50_000
 
 # F-2.0-08: the fixed per-step timeout budget for the isolated reader
@@ -423,14 +478,56 @@ async def _reader_pass(harness: Harness, call: ToolCall, result: ToolExecutionRe
     return _parse_reader_response(call, response.content)
 
 
+#: The character appended to a value this module cut, so a reader can see
+#: the value continues. Same convention as
+#: `synthesis/answer_layout.py`'s `clip_to_word`, which is where a
+#: reader meets it on the page. Duplicated rather than imported: that
+#: module is under `synthesis`, which imports from this one, so the
+#: dependency runs synthesis -> harness and an import back would be
+#: circular. Six lines of agreement is the cheaper of the two costs.
+_ELLIPSIS = "…"
+
+
 def _cap_scalar_string(value: str, depth: int) -> tuple[str, bool]:
-    """Cap one string leaf, using the top-level cap at depth 0 and the
-    tighter nested cap below it, matching the F-2.0-14 shape this
-    replaces. Returns the capped string and whether it was actually cut.
+    """Cap one string leaf at `_MAX_STRUCTURED_STRING_CHARS`, cutting on a
+    word boundary and marking the cut with an ellipsis.
+
+    `depth` is accepted and deliberately unused. ONE cap applies at every
+    depth (item 11.33, 2026-09-22): the two-tier design this replaces had
+    a depth-0 tier that could never fire, because
+    `_cap_structured_fields` passes the `structured_fields` dict itself at
+    depth 0, so no string leaf is ever at depth 0. The parameter stays in
+    the signature because `_cap_value` already threads a depth for the
+    recursion ceiling, and dropping it here would only move the
+    conditional to the call site.
+
+    Returns the capped string and whether it was actually cut.
+
+    Why a word boundary. This function was cutting a retrieved PubMed
+    abstract and the BRCA1 gene summary mid-word ("... and through the
+    C-terminal d"), which reads on the page as a typo rather than as an
+    excerpt. The 2026-09-21 word-boundary fix could not close item 11.33
+    because it was applied in `answer_layout.clip_to_word`, on the label
+    path, while the visible prose comes from the finding's own value,
+    which this function had already cut before any renderer saw it.
+
+    A value with no whitespace at or before the cap (one long identifier,
+    an HGVS name) is cut at the cap unchanged, with NO ellipsis: breaking
+    such a value at an arbitrary point is worse than a hard cut, there is
+    no word boundary to honour, and appending a character would push the
+    result one over the cap it exists to enforce. The same rule, for the
+    same reasons, as `clip_to_word`.
+
+    The returned string is never longer than the cap, in either branch.
     """
-    max_chars = _MAX_STRUCTURED_STRING_CHARS if depth == 0 else _MAX_STRUCTURED_NESTED_STRING_CHARS
-    capped = value[:max_chars]
-    return capped, len(value) > max_chars
+    max_chars = _MAX_STRUCTURED_STRING_CHARS
+    if len(value) <= max_chars:
+        return value, False
+    head = value[:max_chars]
+    cut = head.rfind(" ")
+    if cut <= 0:
+        return head, True
+    return head[:cut].rstrip(" ,;:") + _ELLIPSIS, True
 
 
 def _cap_value(

@@ -435,7 +435,10 @@ async def test_oversized_structured_payload_is_capped_before_reaching_a_finding(
     assert len(capped["long_list"]) <= 500
     nested = capped["nested"]
     assert len(nested) <= 30
-    assert all(len(value) <= 500 for value in nested.values() if isinstance(value, str))
+    # Item 11.33, 2026-09-22: the cap rose to the finding's own bound (2000,
+    # `synthesis/findings.py` MAX_FIELD_VALUE_CHARS) and one cap now applies
+    # at every depth, so a nested value is bounded by 2000, not 500.
+    assert all(len(value) <= 2000 for value in nested.values() if isinstance(value, str))
     harness.call_tier.assert_not_awaited()  # structured pass-through never calls the reader
     # F-03: truncation is signalled on the Finding, not left invisible.
     assert findings[0].truncated is True
@@ -523,7 +526,8 @@ async def test_real_production_shape_rows_and_fields_is_bounded_and_signalled() 
     # anything like its original size, wherever it survived at all
     for row in finding.structured_fields.get("rows", []):
         description = row.get("fields", {}).get("description", "")
-        assert len(description) <= 500
+        # Item 11.33, 2026-09-22: the cap rose to the finding's own bound (2000).
+        assert len(description) <= 2000
 
 
 @pytest.mark.asyncio
@@ -543,7 +547,9 @@ async def test_measured_case_five_level_nest_with_ten_million_char_leaf() -> Non
     assert after < 10_000  # collapsed from ~10,000,062 bytes
     assert finding.truncated is True
     leaf = finding.structured_fields["level1"]["level2"]["level3"]["level4"]["level5"]
-    assert len(leaf) <= 500  # nested string cap
+    # Item 11.33, 2026-09-22: one string cap at every depth, at the finding's
+    # own bound (2000), replacing the unreachable 2000/reachable 500 pair.
+    assert len(leaf) <= 2000
 
 
 @pytest.mark.asyncio
@@ -564,7 +570,8 @@ async def test_measured_case_list_of_lists() -> None:
     assert after < 10_000  # collapsed from ~10,000,023 bytes
     assert finding.truncated is True
     inner_list = finding.structured_fields["data"][0]
-    assert all(len(item) <= 500 for item in inner_list)
+    # Item 11.33, 2026-09-22: the cap rose to the finding's own bound (2000).
+    assert all(len(item) <= 2000 for item in inner_list)
 
 
 @pytest.mark.asyncio
@@ -582,7 +589,8 @@ async def test_measured_case_dict_of_dicts_of_dicts() -> None:
     after = _json_bytes(finding.structured_fields)
     assert after < 10_000  # collapsed from ~10,000,023 bytes
     assert finding.truncated is True
-    assert len(finding.structured_fields["outer"]["middle"]["inner"]) <= 500
+    # Item 11.33, 2026-09-22: the cap rose to the finding's own bound (2000).
+    assert len(finding.structured_fields["outer"]["middle"]["inner"]) <= 2000
 
 
 @pytest.mark.asyncio
@@ -632,6 +640,16 @@ async def test_total_size_ceiling_shrinks_composed_rows_past_per_field_caps() ->
     past a reasonable total size. Mirrors the report's own 7.7 MB example:
     30 properties x 500 chars x 500 rows, none of it individually over any
     per-field cap, still needs the total ceiling to bound it.
+
+    RE-MEASURED 2026-09-22 (item 11.33), because the per-string cap rose
+    from 500 to 2000 and a fixture built from 500-character values needed
+    checking rather than assuming: before 7,735,603 bytes, after 46,516
+    bytes, 3 of 500 rows kept. Those figures are UNCHANGED by the cap
+    change, and that is the point of recording them: this fixture's values
+    are 500 characters, which sits under the old cap and the new one
+    alike, so no per-field capping runs here at all and the byte ceiling
+    alone does the work. The fixture still exercises what it was written
+    for.
     """
     row = {"node_id": "n1", "fields": {f"prop_{i}": "v" * 500 for i in range(30)}}
     structured_fields = {
@@ -658,11 +676,20 @@ async def test_total_size_ceiling_shrinks_composed_rows_past_per_field_caps() ->
 async def test_row_count_is_reconciled_against_the_rows_the_byte_ceiling_actually_kept() -> None:
     """F-2.1-C12 (adversary, third pass): confirmed failing against the
     pre-fix code. The byte ceiling shrinks `rows` from 500 down to a
-    fraction of that (measured: 118 survivors), but `row_count`, a plain
-    integer with nothing of its own to cap, kept reporting the pre-cut
-    value of 500. Any caller reading `row_count`, the natural field to
-    read, was off by a factor of several times. `row_count` must always
-    agree with `len(rows)` once capping has run.
+    fraction of that, but `row_count`, a plain integer with nothing of its
+    own to cap, kept reporting the pre-cut value of 500. Any caller
+    reading `row_count`, the natural field to read, was off by a factor of
+    several times. `row_count` must always agree with `len(rows)` once
+    capping has run.
+
+    RE-MEASURED 2026-09-22 (item 11.33), and the figure in this docstring
+    was corrected rather than left: it said 118 survivors, and the shipped
+    code keeps 3. The 118 is not reproducible against this fixture today.
+    The assertion below has always been a range rather than that number,
+    so the arm was measuring the right property while the prose beside it
+    named a stale one, which is why only the prose changed. The 3 is
+    unchanged by the cap rising from 500 to 2000, since this fixture's
+    500-character values sit under both caps.
     """
     row = {"node_id": "n1", "fields": {f"prop_{i}": "v" * 500 for i in range(30)}}
     structured_fields = {
@@ -682,3 +709,199 @@ async def test_row_count_is_reconciled_against_the_rows_the_byte_ceiling_actuall
         "row_count must be recomputed from the rows the byte ceiling actually kept, "
         "not left at its pre-cut value"
     )
+
+
+# ---------------------------------------------------------------------------
+# Item 11.33 (2026-09-22): one string cap at every depth, at the finding's own
+# bound, cutting on a word boundary.
+#
+# Every arm below FAILS against the pre-fix code, which capped a nested string
+# at 500 characters with a hard mid-word slice and no ellipsis. Each names what
+# the pre-fix code returned, so a reader can tell the arm apart from a
+# tautology.
+#
+# What these arms do NOT cover, stated so the gap is arguable rather than
+# invisible (`goal-contracts.md`): they exercise string leaves only. The list,
+# dict-key, depth and byte-ceiling caps are covered by the F-03 arms above and
+# are unchanged by this fix.
+# ---------------------------------------------------------------------------
+
+
+def test_the_harness_string_cap_equals_the_finding_schemas_own_bound() -> None:
+    """Item 11.33. The harness cap is written as a literal because
+    `synthesis.findings` imports `Finding` from `harness.coordinator_worker`,
+    so importing the constant back would be circular. A literal can drift
+    from the thing it copies, and this arm is what makes that drift a build
+    failure rather than a silent re-run of the original defect: a cap here
+    TIGHTER than the finding's own bound undercuts it invisibly, which is
+    exactly what 500 did.
+
+    THIS ARM PASSES AGAINST THE PRE-FIX CODE, and that is recorded rather
+    than dressed up. `_MAX_STRUCTURED_STRING_CHARS` was already 2000
+    before the fix; it was simply unreachable, so the equality held
+    vacuously while the shipped behaviour was 500. An arm asserting a
+    constant's VALUE cannot see that, which is precisely the defect
+    shape item 11.33 turned out to be. The arm that does see it is
+    `test_one_string_cap_applies_at_every_depth` below, which exercises
+    the function rather than reading the constant. This one guards a
+    different and narrower thing: future drift of the literal.
+    """
+    from system_03_search_agent.synthesis.findings import MAX_FIELD_VALUE_CHARS
+
+    assert coordinator_worker_module._MAX_STRUCTURED_STRING_CHARS == MAX_FIELD_VALUE_CHARS, (
+        "the harness's per-string cap and SynthFinding.field_value's bound must "
+        "move together; if you changed one, change the other"
+    )
+
+
+def test_one_string_cap_applies_at_every_depth() -> None:
+    """Item 11.33. The deleted two-tier design is not allowed back by the
+    side door. `_cap_scalar_string` must return the same bound whatever
+    depth it is told, since `_cap_structured_fields` passes the dict at
+    depth 0 and no string leaf can ever be at depth 0.
+
+    FAILS against the pre-fix code: depth 0 gave 2000 and depth 1 gave 500.
+    """
+    value = "word " * 600  # 3000 chars
+    lengths = {
+        depth: len(coordinator_worker_module._cap_scalar_string(value, depth)[0])
+        for depth in (0, 1, 2, 5)
+    }
+    assert len(set(lengths.values())) == 1, f"the cap must not vary with depth: {lengths}"
+
+
+def _real_gene_summary_length_value() -> str:
+    """A 1253-character multi-sentence value, the length of the real BRCA1
+    gene summary that item 11.33 was reported against."""
+    sentence = "This gene encodes a nuclear phosphoprotein that acts as a tumor suppressor. "
+    value = (sentence * 20)[:1253]
+    assert len(value) == 1253
+    return value
+
+
+@pytest.mark.asyncio
+async def test_a_value_the_length_of_a_real_gene_summary_passes_through_intact() -> None:
+    """Item 11.33 (a). The defect, in one arm: the BRCA1 gene summary is
+    1253 characters and reached the reader at 500, cut mid-word. It is
+    under the finding's own 2000-character bound, so nothing here should
+    touch it at all.
+
+    FAILS against the pre-fix code: the nested cap was 500, so the value
+    came back at length 500 with `truncated` True.
+    """
+    value = _real_gene_summary_length_value()
+    structured_fields = {
+        "status": "ok",
+        "row_count": 1,
+        "rows": [{"curie": "", "node_or_edge_type": "gene", "fields": {"summary": value}}],
+        "error": None,
+    }
+
+    finding = await _pass_through_one(structured_fields)
+
+    assert finding.structured_fields["rows"][0]["fields"]["summary"] == value
+    assert finding.truncated is False, "a value inside the cap must not be reported as cut"
+
+
+@pytest.mark.asyncio
+async def test_an_over_cap_nested_value_is_cut_on_a_word_boundary_with_an_ellipsis() -> None:
+    """Item 11.33 (b). A value past the cap is still cut, but visibly and
+    never mid-word.
+
+    FAILS against the pre-fix code three separate ways: the length came
+    back 500 rather than at or under 2000, there was no ellipsis, and the
+    final character was mid-word.
+    """
+    value = ("alpha beta gamma delta epsilon " * 100)[:3000]
+    assert len(value) == 3000
+    structured_fields = {
+        "rows": [{"fields": {"abstract": value}}],
+    }
+
+    finding = await _pass_through_one(structured_fields)
+
+    out = finding.structured_fields["rows"][0]["fields"]["abstract"]
+    assert len(out) <= 2000, "the cut value must never exceed the cap"
+    assert out.endswith("…"), "a cut must be visible to the reader"
+    assert not out.endswith("……"), "one ellipsis, never two"
+    assert finding.truncated is True
+    # The word-boundary property, stated directly rather than by proxy: the
+    # text before the ellipsis is a prefix of the source ending at a space.
+    body = out[:-1]
+    assert value.startswith(body), "the kept text must be the source's own prefix"
+    assert value[len(body)] == " ", "the cut must land on a word boundary"
+
+
+@pytest.mark.asyncio
+async def test_a_string_directly_under_the_top_level_dict_gets_the_same_cap() -> None:
+    """Item 11.33 (c). The two-tier design's depth-0 tier was unreachable,
+    so this position was capped at 500 while a 2000 constant sat unused.
+    One cap now applies here and everywhere else alike.
+
+    FAILS against the pre-fix code: a 3000-character top-level string came
+    back at 500, not at 2000.
+    """
+    value = "word " * 600  # 3000 chars, whitespace throughout
+    structured_fields = {"error": value}
+
+    finding = await _pass_through_one(structured_fields)
+
+    out = finding.structured_fields["error"]
+    assert 500 < len(out) <= 2000, (
+        "a string directly under the top-level dict must get the same cap as a "
+        "nested one; 500 here means the dead depth-0 tier is back"
+    )
+    assert out.endswith("…")
+    assert finding.truncated is True
+
+
+@pytest.mark.asyncio
+async def test_a_value_with_no_whitespace_before_the_cap_is_cut_at_the_cap() -> None:
+    """Item 11.33 (d). A long identifier or HGVS name has no word boundary
+    to honour. It is cut hard at the cap with NO ellipsis, because
+    appending one would push the result past the cap this function exists
+    to enforce, and because breaking such a value at an arbitrary point is
+    worse than a clean cut. Same rule as `answer_layout.clip_to_word`.
+
+    FAILS against the pre-fix code: the value came back at 500, not 2000.
+    """
+    value = "N" * 2500 + " tail"
+    structured_fields = {"rows": [{"fields": {"hgvs": value}}]}
+
+    finding = await _pass_through_one(structured_fields)
+
+    out = finding.structured_fields["rows"][0]["fields"]["hgvs"]
+    assert len(out) == 2000, "no word boundary means a hard cut at the cap, never past it"
+    assert not out.endswith("…"), "no ellipsis when there was no word boundary to cut at"
+    assert finding.truncated is True
+
+
+@pytest.mark.asyncio
+async def test_a_harness_cut_value_never_renders_a_double_ellipsis() -> None:
+    """Item 11.33, the label path. `answer_layout.clip_to_word` clips a
+    finding's value again for a list row's label, and now receives values
+    that may already end in an ellipsis. Two ellipses would read as a
+    defect.
+
+    It cannot happen, and this arm is the proof rather than the argument.
+    When `clip_to_word` cuts, it cuts strictly before the existing
+    ellipsis, which is therefore discarded; when it does not cut, it
+    returns the value unchanged with the one ellipsis it already had.
+    Checked at a limit below the value, at the value's own length, and
+    above it.
+
+    This is the one arm here that reaches across into `synthesis`. The
+    PRODUCTION dependency still runs one way only, synthesis -> harness: a
+    test importing both is not an import from harness into synthesis.
+    """
+    from system_03_search_agent.synthesis.answer_layout import clip_to_word
+
+    value = ("alpha beta gamma delta epsilon " * 200)[:6000]
+    finding = await _pass_through_one({"rows": [{"fields": {"summary": value}}]})
+    capped = finding.structured_fields["rows"][0]["fields"]["summary"]
+    assert capped.endswith("…"), "premise of this arm: the harness cut and marked the value"
+
+    for limit in (200, 500, len(capped), len(capped) + 10):
+        label = clip_to_word(capped, limit)
+        assert not label.endswith("……"), f"double ellipsis at limit {limit}"
+        assert len(label) <= max(limit, len(capped))
