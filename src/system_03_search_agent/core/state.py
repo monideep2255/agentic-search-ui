@@ -65,6 +65,12 @@ Field lifecycle:
             exists until phase 2.1+).
         findings_count: set by `act`, the length of the `Finding` list
             `coordinator_worker_execute` returns.
+        coordinate_window: set by `think` when the question gives a
+            chromosome window with a named assembly (fix-plan item 1,
+            2026-09-22), the parsed `CoordinateWindow`; `plan` reads it to
+            add the dbVar and ClinVar overlap calls. Absent otherwise, and
+            absent when the assembly is missing, since Think then asks
+            which assembly instead of searching.
         failed_searches: set by `act`, one small mapping per planned call
             whose outcome was `status == "error"`: `tool`, `layer` and the
             tool's own `reason`. Decided from the user's chair on
@@ -194,6 +200,7 @@ class GraphState(TypedDict, total=False):
     clarification_needed: str
     layer2_raw_outputs: dict[str, Any]
     failed_searches: list[dict[str, str]]
+    coordinate_window: Any
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason

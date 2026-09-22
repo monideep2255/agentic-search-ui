@@ -481,7 +481,7 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
-from system_03_search_agent.core import breadth_plan
+from system_03_search_agent.core import breadth_plan, coordinate_window
 from system_03_search_agent.core.next_step import (
     build_next_step_query,
     entity_type_noun,
@@ -1888,6 +1888,72 @@ async def _confirm_fallback_candidates(
     return confirmed
 
 
+#: Fix-plan item 1 (2026-09-22): how many Gene ids one window lookup asks
+#: for. Under the search input's own ceiling of 500 and the summary input's
+#: ceiling of 50 ids, and above `coordinate_window.MAX_WINDOW_GENES`, so the
+#: module's own cap and its truncation flag decide what is kept, not this.
+_WINDOW_GENE_SEARCH_RETMAX: Final[int] = 50
+
+
+async def resolve_window_genes(
+    window: coordinate_window.CoordinateWindow,
+) -> coordinate_window.WindowGenes:
+    """The genes under a chromosome window, resolved live from NCBI Gene.
+
+    Fix-plan item 1 (2026-09-22). One ESearch on chromosome and base
+    position, one ESummary on the ids it returns, then
+    `coordinate_window.genes_in_window` keeps only the records whose own
+    genomic placement overlaps the window, because an Entrez range field is
+    not interval overlap (the same trap the coordinate-overlap action closes
+    for dbVar and ClinVar). GRCh38 only, since Entrez Gene's positions are on
+    the current annotation; `gene_search_term` returns None otherwise and so
+    does this. Every failure returns an empty result rather than raising,
+    the same contract as `resolve_disease_mention_to_curies`: a window whose
+    lookup failed is a window with no genes found, said so in the think
+    narrative, never a crashed turn.
+    """
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchSearchInput,
+        NcbiEfetchSummaryInput,
+    )
+    from system_03_search_agent.tools.ncbi_eutils_actions import search, summary
+
+    empty = coordinate_window.WindowGenes(genes=(), total_overlapping=0, truncated=False)
+    term = coordinate_window.gene_search_term(window)
+    if term is None:
+        return empty
+    try:
+        found = await search(
+            NcbiEfetchSearchInput(
+                action="search", db="gene", term=term, retmax=_WINDOW_GENE_SEARCH_RETMAX
+            )
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Gene window search failed: %s", type(exc).__name__)
+        return empty
+    if found.status not in ("ok", "empty"):
+        return empty
+    uids = [
+        str(uid).strip()
+        for record in found.records
+        for uid in (record.fields.get("idlist") or [])
+        if str(uid).strip().isdigit()
+    ][:_WINDOW_GENE_SEARCH_RETMAX]
+    if not uids:
+        return empty
+    try:
+        summarised = await summary(
+            NcbiEfetchSummaryInput(action="summary", db="gene", ids=uids)
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Gene window summary failed: %s", type(exc).__name__)
+        return empty
+    if summarised.status != "ok":
+        return empty
+    records = [{"id": record.id, "fields": record.fields} for record in summarised.records]
+    return coordinate_window.genes_in_window(records, window)
+
+
 async def think_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -1899,6 +1965,18 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # resolved by this pass is ever named to the model (see
     # `_build_think_messages`'s `already_resolved` block).
     exact_matches = resolve_exact_identifiers(query.text)
+    # Fix-plan item 1 (2026-09-22): a chromosome window in the question is
+    # recognised by a fixed rule beside the exact-identifier pre-pass, which
+    # stays local and synchronous as its gate arm requires; the window's own
+    # live lookup is this separate awaited step. With GRCh38 named, the genes
+    # under the window become resolved entities below, so the rest of the
+    # turn treats the question as a gene question. With no assembly named,
+    # nothing is searched and the turn asks which assembly, since GRCh37 and
+    # GRCh38 put different genes under the same numbers.
+    window = coordinate_window.parse_coordinate_window(query.text)
+    window_genes: coordinate_window.WindowGenes | None = None
+    if window is not None and window.assembly == "GRCh38":
+        window_genes = await resolve_window_genes(window)
     think_messages = _build_think_messages(
         query.text, exact_matches, _memory_suffix(state, "plan")
     )
@@ -1984,6 +2062,18 @@ async def think_node(state: GraphState) -> dict[str, Any]:
 
     # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
     model_resolution = await _confirm_extracted_entities(classification.entities)
+    if window_genes is not None:
+        # The window's genes come first, ahead of anything the model named,
+        # and their presence is what stops the gene-shaped and disease
+        # fallbacks below from running on a question that already resolved.
+        window_confirmed = [(gene.symbol, gene.curie) for gene in window_genes.genes]
+        model_resolution = _EntityResolution(
+            curies=[curie for _, curie in window_confirmed] + list(model_resolution.curies),
+            unresolved_symbols=list(model_resolution.unresolved_symbols),
+            confirmed=tuple(window_confirmed) + tuple(model_resolution.confirmed),
+            disclosures=tuple(model_resolution.disclosures)
+            + (coordinate_window.window_disclosure(window, window_genes),),
+        )
 
     # UI fix set 8 (2026-09-13), the GCK fallback. Originally gated on the
     # model having extracted NO gene span at all, and always on every
@@ -2138,6 +2228,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         )
         else None
     )
+    if window is not None and window.assembly is None:
+        clarification = coordinate_window.ASSEMBLY_QUESTION
     think_narrative = classification.narrative
     if model_resolution.disclosures:
         # Decision D3: the answer names the disease records it used. The
@@ -2191,6 +2283,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     if clarification is not None:
         # Item 7.5. Plan selects no tool and Write asks the question.
         result["clarification_needed"] = clarification
+    if window is not None and window.assembly is not None:
+        result["coordinate_window"] = window
     return sink.result(**result)
 
 
@@ -4090,6 +4184,18 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         planned_tool_calls = [planned]
         narrative = "selected cypher_query for a Layer 1 graph lookup"
 
+        # Fix-plan item 1 (2026-09-22): the dbVar and ClinVar records that
+        # genuinely overlap the question's chromosome window, planned right
+        # after the question's own graph call (which must stay at index 0)
+        # so that under the Section 21.3 ceiling they are never the calls
+        # admission skips: for a window question they are the answer.
+        window = state.get("coordinate_window")
+        if window is not None:
+            planned_tool_calls.extend(
+                _planned_from_breadth(call)
+                for call in coordinate_window.plan_overlap_calls(window)
+            )
+
         # T-3.4-05/T-3.1-28: dispatch a second, answer-bearing Layer 2 call
         # alongside cypher_query when (and only when) the query's already-
         # resolved target entities include a Gene CURIE. `planned` is
@@ -4492,6 +4598,15 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # paragraph of the submitter's prose, and the paper's own abstract path
     # (11.22) is the one place long free text is admitted deliberately.
     "gds_summary": ("title", "accession", "gdstype", "taxon", "n_samples"),
+    # Fix-plan item 1 (2026-09-22). A ClinVar overlap record carries the
+    # variant's title, its germline classification as NCBI states it (never a
+    # verdict of ours), the genes it names, and its placement on the assembly
+    # the question asked about; a dbVar record has no title, so its variant
+    # type leads. `requested_assembly` is withheld: it repeats the question.
+    "clinvar_overlap": (
+        "title", "germline_classification", "gene_symbol", "chr_start", "chr_end", "assembly",
+    ),
+    "dbvar_overlap": ("variant_type", "gene_name", "chr_start", "chr_end", "assembly"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
