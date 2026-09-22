@@ -160,6 +160,17 @@ def _select(
             "has_phenotype",
         ),
         ("gene lookup for BRCA1", [BRCA1], "lookup", "gene_record_one", None),
+        # Decided from the user's chair, 2026-09-22: an exploratory question
+        # naming an entity and no shape gets the record, not the model path
+        # whose generated query timed out on every pass (G-039, G-033).
+        ("Tell me about BRCA1", [BRCA1], "exploratory", "gene_record_one", None),
+        (
+            "I am a student. Explain in plain terms what the BRCA1 gene does and why it matters, with sources.",
+            [BRCA1],
+            "exploratory",
+            "gene_record_one",
+            None,
+        ),
         (
             "Explain in plain terms what the BRCA1 gene does and why it matters, with sources.",
             [BRCA1],
@@ -302,7 +313,11 @@ def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
     ("intent", "entities", "query_class"),
     [
         ("Tell me about BRCA1", [BRCA1], "single_hop"),
-        ("Tell me about BRCA1", [BRCA1], "exploratory"),
+        # 2026-09-22: an exploratory no-shape question now takes the record
+        # template (see the template table); the other three classes with
+        # no shape still take the model path, each for a measured reason
+        # (the single_hop case is index 0 of this table).
+        ("Tell me about BRCA1", [BRCA1], "multi_hop"),
         (
             ("Which diseases are associated with BRCA1 and BRCA2 variants, and which "
              "papers mention them?"),

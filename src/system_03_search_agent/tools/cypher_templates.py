@@ -657,8 +657,9 @@ def select_template(
        one label with two matches resolve to the first on a lookup,
        single-hop or aggregate question; otherwise ambiguous: None. Zero
        falls through to step 3.
-    3. With no shape matched, a `lookup` question about the entity is the
-       record itself. Any other class with no shape is None.
+    3. With no shape matched, a `lookup` or an `exploratory` question about
+       the entity is the record itself. A `single_hop`, `multi_hop` or
+       `aggregate` question with no shape is None, the model path.
     4. A matched hop on a question asking "how many" (any class), or on an
        `aggregate` question saying "count" or "number of", becomes the
        count form, for a single anchor only (a count over several anchors
@@ -675,7 +676,23 @@ def select_template(
 
     shapes = matched_shapes(tool_input.query_intent, anchor_label)
     if not shapes:
-        if tool_input.query_class is QueryClass.LOOKUP:
+        # Decided from the user's chair, 2026-09-22. An `exploratory`
+        # question with no shape used to take the model path, and on the
+        # two golden questions of that kind (G-033, G-039) the generated
+        # query never finished: the planner expects 67,521 Gene rows for
+        # an id match that returns one, drives the join from the edge
+        # table under the LIMIT, and the graph's 30-second statement
+        # timeout kills it after 85 seconds of wall time on every pass
+        # (`testing/Developer/reports/2026-09-22_slow_second_search/`).
+        # The record template answers the same question in under a
+        # second with the row those runs never got. The gate is widened
+        # to exactly that class and no further, measured against the
+        # 2026-09-22 consistency run: a `multi_hop` question's generated
+        # search finds rows the record would lose (G-011), an
+        # `aggregate` one computes a count the record cannot (G-034), and
+        # a `single_hop` one about a name that resolved loosely would turn
+        # a correct refusal into an answer (G-014).
+        if tool_input.query_class in (QueryClass.LOOKUP, QueryClass.EXPLORATORY):
             return _record_template(anchor_label, param_names)
         return None
     wants_count = _wants_count(tool_input)
