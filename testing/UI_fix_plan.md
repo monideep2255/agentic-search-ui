@@ -804,10 +804,10 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Live | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten... Full detail: [11.28](#detail-1128) |
 | 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, not started | Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
 | 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one snippet broken | Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
-| 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | BUILT, not yet live | Raised 2026-09-20. Both open questions answered by the product owner on 2026-09-21, and the cause turned out to be upstream of the directive the item names. Full detail: [11.31](#detail-1131) |
+| 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | LIVE 2026-09-21, approved as is by the product owner the same day | Raised 2026-09-20. Both open questions answered by the product owner on 2026-09-21, and the cause turned out to be upstream of the directive the item names. Full detail: [11.31](#detail-1131) |
 | 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Not started | Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
 | 11.33 | PubMed abstracts reach the answer page cut off MID-WORD, for example "...inherited breast and/or ovarian c [29]" and "...has been uncle [33]" | APPROVED 2026-09-22 by the product owner's retest on develop | CAUSE FOUND 2026-09-22 and it was NEVER live-only: `_cap_scalar_string` in `harness/coordinator_worker.py` cut every string leaf at 500 characters, because its documented 2000-character top-level tier could never fire (the function receives the dict itself at depth 0, so no string is ever at depth 0). Every structured tool result passed through it before any renderer. The 2026-09-21 local trace went tool, shaper, `SynthFinding` and SKIPPED that stage, which is why it read as live-only. Found by a fresh-context agent that established server-side versus client-side first from a full event capture, then drove the real `_cap_structured_fields` over the real shaped efetch output and reproduced the fragment character for character; verified by execution in the main session before the fix was commissioned. THE FIX: one cap at every depth, 2000 characters, the bound `SynthFinding.field_value` already enforces, cut on a word boundary with an ellipsis, the dead tier deleted; `_MAX_FINDING_TOTAL_BYTES` measured (20 PubMed rows with 2000-character abstracts fit, the ceiling fires at 22) and deliberately unchanged. Seven arms added, six proven red against the pre-fix code and the seventh saying in its docstring that it cannot be. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`. RETEST: open a BRCA1 answer at researcher depth; the gene summary in the record tail should run past "and through the C-terminal d". WHAT WAS KNOWN BEFORE, kept as the record of a wrong conclusion: found 2026-09-21 on develop at `46fff40`. Every character cap in the codebase was ruled out BY EXECUTION, including `_cap_text`, which appends a literal " [truncated]" that appears nowhere in the capture. The sentence splitter cannot cut mid-word either. The remaining hypothesis, that the model itself emitted the fragment while attempting a long verbatim quote, could NOT be reproduced, because `claim_introduces_no_new_content` rejects the reconstruction. NOT SOLVED. A fix was written, verified live and DID NOT CLOSE IT, and that is recorded rather than claimed. `clip_to_word` now cuts at a word boundary at all five slices in `answer_layout.py` and is a real improvement on those paths, but a live run at `d4578d8` still shows every known fragment and ZERO ellipses, which proves the cut is on a path that helper does not touch. WHAT IS NOW KNOWN, and it is more than before: the cut is at EXACTLY 500 characters of the source value, established by fetching the real NCBI gene summary and finding the offset of the rendered fragment's end inside it. The value is NOT short at the tool: traced locally, the gene summary is 1253 characters at `ncbi_eutils_actions.summary`, still 1253 after `_ncbi_efetch_output_to_structured_fields`, and still 1253 on the `SynthFinding` built from it. So the truncation happens between the tool result and the tail render ON THE LIVE PATH ONLY, and a local reconstruction of that path does not reproduce it. Every 500-char slice in `core/graph.py` was read and none applies: they are think narratives, a plan narrative and a refusal message. Item 11.34's fix made this MORE visible rather than causing it, since a multi-sentence value used to be stripped whole. NEXT STEP, and it is now a small one: instrument the live path to print `len(finding.field_value)` at the point the tail narrative is built, which distinguishes a truncation upstream of the render from one inside it. The earlier diagnosis is kept at `testing/Developer/reports/2026-09-21_11.31_divergence/truncation/findings.md` |
-| 11.34 | A multi-sentence abstract LOSES ITS CITATION entirely in the code-built tail and fallback listing: both fragments are stripped and the marker is orphaned on an empty trailing "[27]." | Found, not started | Found 2026-09-21 while diagnosing 11.33, and unrelated to it. This is a cite-or-refuse defect rather than a presentation one, so it ranks above the cosmetic items: a record that was retrieved and shown loses the link that makes it verifiable. Reproduced by driving `run_grounding_pass` over constructed multi-sentence abstract findings |
+| 11.34 | A multi-sentence abstract LOSES ITS CITATION entirely in the code-built tail and fallback listing: both fragments are stripped and the marker is orphaned on an empty trailing "[27]." | FIXED and live 2026-09-21 | Found 2026-09-21 while diagnosing 11.33, and unrelated to it. This is a cite-or-refuse defect rather than a presentation one, so it ranks above the cosmetic items: a record that was retrieved and shown loses the link that makes it verifiable. Reproduced by driving `run_grounding_pass` over constructed multi-sentence abstract findings |
 | 11.35 | "The Notes section is super confusing. remove it", naming the unverified-summary note and the further-records note | LIVE | Raised and shipped 2026-09-21, `d044969`, verified in the served bundle. HIDDEN IN THE WEB UI RATHER THAN SUPPRESSED IN THE BACKEND, deliberately: both notes are built in the same branch that floors `trust_outcome` at `ask`, and removing them at the source turned five arms red that guard F-4.5-06 breach 2, an answer reporting a subset of its findings while looking complete. That attempt was reverted. So the trust line still reads "not yet confirmed" on an incomplete answer, and the API, CLI and MCP surfaces still carry the sentences. The filter is a PATTERN, because the first attempt matched only "one further" while the live note reads "5 further pubmed records" |
 | 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | LIVE | Raised and shipped 2026-09-21, `d044969`. Stale twice over: that directive stopped existing when 11.31 removed every length instruction, and it was a promise the product cannot keep, since the same question at the same mode measured 66, 101 and 113 words on three consecutive runs. The info card and the onboarding tour now describe WHO EACH MODE IS FOR |
 | 11.37 | Layer 1 knowledge-graph sources are invisible in the source list | ACCEPTED, not a defect to fix | Raised 2026-09-21. Measured: 40 of 67 citations ARE layer 1, so the graph is searched and cited. The source list deduplicates BY URL and keeps the first citation's layer, and every layer 1 GO term shares `ncbi.nlm.nih.gov/gene/672` with a layer 2 record numbered earlier, so all 40 collapse into a Live NCBI row and the "Knowledge graph" group renders ZERO rows. The product owner reviewed this and accepted it: "All good if deduped. That is fine!" |
@@ -1281,10 +1281,10 @@ The 2026-09-20 shipped list, with what to retest, is
 |---|---|---|
 | 10.3, the consistency run | RUN, all 150, first time ever | 86 of 150 answered; 25 questions answer every time (was 1), 18 never (was 43), none worse than the 2026-09-12 baseline. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md` |
 | 11.33, values cut at 500 characters | FIXED and VERIFIED LIVE on develop at `a868462`: the BRCA1 gene summary now runs past "and through the C-terminal d", zero ellipses. APPROVED by the product owner's retest the same day | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
-| L-01, a graph result vanishing | MEASURED, BOTH CAUSES READ, and DISCLOSED to the reader the same day, awaiting retest | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
+| L-01, a graph result vanishing | MEASURED, BOTH CAUSES READ, DISCLOSED to the reader, and APPROVED by the product owner's retest the same day | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
 | Scope boundary | DECIDED, BUILT and APPROVED by the product owner's retest on 2026-09-22: refuse outright under a new guard category, `compute_request` | G-046 (BLAST) and G-047 (VCF) were answered from graph rows because the resolver found real concepts inside them. A deterministic screen in `guardrail/forbidden.py` now refuses a BLAST-family token near a sequence object, the phrase "sequence similarity", a 25-character nucleotide run, or `vcf` near a file or analysis word, and the refusal says the capability is unavailable and points at NCBI BLAST. Precedent for the new category: F-3.0-01 |
-| Latency | FIXED and PROVEN LIVE: 10.6, 11.9 and 14.8 seconds on three develop runs, both graph searches returning rows, no lost-search line. Awaiting retest | G-039, a plain-terms explanation over BRCA1, took about 100 seconds on every run because its own graph search took the model path and the generated query never finished (a planner mis-estimate, killed by the graph's 30-second statement timeout). An exploratory question with no shape now takes the record template, measured at under a second. Evidence: `testing/Developer/reports/2026-09-22_slow_second_search/findings.md` |
-| 2b, OMIM | DONE, live on develop, awaiting retest | The dispatch is on with `filter_omim_titles` applied before any row is built, so a question about one gene never shows another gene's OMIM record. Ten live runs: one OMIM citation each, zero wrong-gene hits; for GCK, nine wrong-gene records were dropped and OMIM 138079 kept. A gene question now charges 14 to 16 of its 20 allowed Layer 2 and 3 calls. Evidence: `testing/Developer/reports/2026-09-22_OMIM_live/findings.md` |
+| Latency | FIXED, PROVEN LIVE at 10.6, 11.9 and 14.8 seconds on three develop runs, and APPROVED by the product owner's retest | G-039, a plain-terms explanation over BRCA1, took about 100 seconds on every run because its own graph search took the model path and the generated query never finished (a planner mis-estimate, killed by the graph's 30-second statement timeout). An exploratory question with no shape now takes the record template, measured at under a second. Evidence: `testing/Developer/reports/2026-09-22_slow_second_search/findings.md` |
+| 2b, OMIM | DONE, live on develop, APPROVED by the product owner's retest | The dispatch is on with `filter_omim_titles` applied before any row is built, so a question about one gene never shows another gene's OMIM record. Ten live runs: one OMIM citation each, zero wrong-gene hits; for GCK, nine wrong-gene records were dropped and OMIM 138079 kept. A gene question now charges 14 to 16 of its 20 allowed Layer 2 and 3 calls. Evidence: `testing/Developer/reports/2026-09-22_OMIM_live/findings.md` |
 | The instrument | Three lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
 ### The 2026-09-21 session, in one table
@@ -1338,23 +1338,22 @@ option rather than a queued task.
 
 - OMIM's gene-to-disease records appear among a gene question's sources,
   cited to omim.org, and never for a different gene than the one asked
-  about. Pushed 2026-09-22. Retest: "Which diseases are associated with
-  GCK?" should cite OMIM 138079 (GLUCOKINASE; GCK) and never MAP4K2.
+  about. Pushed and APPROVED by retest 2026-09-22.
 - The plain-terms explanation of a gene no longer waits on a graph search
   that never finishes: an exploratory question naming an entity and no
   shape takes the record template. Pushed 2026-09-22 as `2bc8ec0`. Retest:
   "I am a student. Explain in plain terms what the BRCA1 gene does and why
   it matters, with sources" should answer in well under a minute with the
-  gene record among its sources and no lost-search line.
+  gene record among its sources and no lost-search line. APPROVED by retest
+  2026-09-22.
 - An answer that lost a background search ends with "One of the background
   searches did not finish, so this answer may be missing sources. Ask again
   to retry" and its trust line reads not yet confirmed. A question the
   product could not read is answered with "I could not tell which gene,
   variant, disease or organism you mean. Name one and I will search". A
   search that failed with nothing found says so and invites a retry. Pushed
-  2026-09-22 as `10f6a46`, decided from the user's chair. Retest: ask
-  "What ACMG-relevant evidence is available for a copy number variant
-  spanning chr17:43,044,295-43,125,364 on GRCh38?" and read the refusal.
+  2026-09-22 as `10f6a46`, decided from the user's chair, and APPROVED by
+  retest the same day.
 - A BLAST or VCF request is refused at the guardrail as `compute_request`,
   with copy on the web banner and the CLI and the reason on the API. Pushed
   2026-09-22 and APPROVED by the product owner's retest the same day: both
@@ -1548,26 +1547,37 @@ technical one.
 
 ### Next, in order
 
-Rewritten at the close of 2026-09-22. Item 1 of the previous list, the
-consistency run, is done; item 2, 11.33, is fixed and approved by retest; item 3,
-the L-01 decision, now has its measurement and both of its causes. The compute
-refusal is built and approved by retest. The previous list's own history is
-in this document's git log and in `requirements/Plan.md`.
+Rewritten at the close of 2026-09-22, after the product owner retested and
+approved everything the day built: 11.33, the compute refusal, the lost-search
+disclosure, the fast plain-terms explanation and OMIM. The day's summary and
+the retest list are `testing/Shipped_2026-09-22.md`. Nothing here is a retest;
+every item is engineering or a decision, ordered by what the person typing the
+question feels first.
 
-1. RETEST THE L-01 DISCLOSURE on develop: the coordinate-range question above
-   must be answered with a request for a name, and an ordinary gene question
-   must read exactly as before. Decided and built from the user's chair on
-   2026-09-22 after the product owner delegated the decision; the two causes
-   are in `testing/Developer/reports/2026-09-22_L01_cause/findings.md`.
-2. RETEST OMIM on develop. Done 2026-09-22 with `filter_omim_titles` wired
-   into the act result path before any row is built, so a question about one
-   gene never shows an OMIM record for a different gene. Ask "Which diseases
-   are associated with GCK?": the sources should include OMIM 138079
-   (GLUCOKINASE; GCK) cited to omim.org and never MAP4K2, which OMIM's own
-   search ranks first. Ten live runs did exactly that. Worth a look next is
-   the call ceiling it tightened: a gene question now charges 14 to 16 of
-   its 20 allowed Layer 2 and 3 calls, measured in
-   `testing/Developer/reports/2026-09-22_OMIM_live/findings.md`.
+1. STOP TWO QUESTIONS LOSING THEIR OWN SEARCH TO A BAD GENERATED QUERY. The
+   MLH1 and MSH2 comparison (G-033) and GEO datasets on TP53 (G-037) fail
+   validation before the graph ("Generated Cypher references vertex label",
+   "appears to bind a literal value"), on the mixed gene-plus-disease path
+   and the single_hop no-shape path. The reader is told a search did not
+   finish; the search itself is the fix. Start from the two reasons the
+   stream now carries, and measure which template or repair would have
+   answered, as the 2026-09-22 slow-search diagnosis did.
+2. TEACH THINK THE COORDINATE RANGE. Four golden questions never answer
+   because Think resolves no entity for a GRCh38 range (G-001), an isolate
+   (G-035) or a project accession (G-007), and the plan dispatches a graph
+   search with nothing to bind. Coordinates first: "what is in this region"
+   is the everyday question, and `tools/ncbi_coordinate_overlap.py` already
+   exists. Each shape is about a day.
+3. WATCH THE CALL CEILING. A gene question now charges 14 to 16 of its 20
+   Layer 2 and 3 calls with OMIM on. A question naming several rs numbers
+   could reach 20 and start dropping calls; measure one before deciding
+   whether the ceiling or the fan-out moves.
+4. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
+   row: "334" expects a clarifying ask and is refused as off-topic; "tell me
+   about the tree of life" expects an answer; the pathogenicity classification
+   request expects a flag rather than a medical-advice refusal. Nothing blocks
+   on it.
+5. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining
@@ -1595,8 +1605,8 @@ That points hard at event-loop starvation, consistent with the same suite failin
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up "Next, in order" at item 1, which is the product owner's retest, so
-   if they have not tested yet the first engineering item is item 2.
+4. Pick up "Next, in order" at item 1. Everything the 2026-09-22 session
+   built is approved; the list holds only engineering and decisions.
 
 ## Developer detail
 
