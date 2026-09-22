@@ -558,3 +558,27 @@ def test_window_disclosure_cuts_a_long_symbol_list_with_an_ellipsis() -> None:
     assert len(disclosure) <= 300
     assert disclosure.endswith("\u2026")
     assert uncut_list not in disclosure
+
+
+
+def test_named_genes_sort_before_unnamed_loci_whatever_their_position() -> None:
+    """Measured live on the CFTR window (chr7:117,480,025-117,668,665, GRCh38):
+    LOC111674463 starts before CFTR, and by position alone it came first, so
+    the answer's literature, OMIM and gene summary followed the locus. The
+    first resolved gene is the one the turn follows, so named genes lead."""
+    window = cw.parse_coordinate_window("chr7:117,480,025-117,668,665 on GRCh38")
+    assert window is not None
+    records = [
+        {"id": "111674463", "fields": {"name": "LOC111674463", "genomicinfo": [
+            {"chraccver": "NC_000007.14", "chrstart": 117479000, "chrstop": 117481000}]}},
+        {"id": "1080", "fields": {"name": "CFTR", "genomicinfo": [
+            {"chraccver": "NC_000007.14", "chrstart": 117480024, "chrstop": 117668664}]}},
+        {"id": "113664106", "fields": {"name": "LOC113664106", "genomicinfo": [
+            {"chraccver": "NC_000007.14", "chrstart": 117500000, "chrstop": 117500500}]}},
+    ]
+    found = cw.genes_in_window(records, window)
+    assert [gene.symbol for gene in found.genes] == ["CFTR", "LOC111674463", "LOC113664106"]
+    # Populate check: two named genes still order by position between themselves.
+    records.append({"id": "1081", "fields": {"name": "AAAA", "genomicinfo": [
+        {"chraccver": "NC_000007.14", "chrstart": 117600000, "chrstop": 117600500}]}})
+    assert [gene.symbol for gene in cw.genes_in_window(records, window).genes][:2] == ["CFTR", "AAAA"]

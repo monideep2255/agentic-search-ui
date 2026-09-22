@@ -347,6 +347,14 @@ def _overlapping_placements(
     return starts, stops
 
 
+_UNNAMED_LOCUS: Final[re.Pattern[str]] = re.compile(r"^LOC[0-9]+$")
+
+
+def _is_unnamed_locus(symbol: str) -> bool:
+    """NCBI's placeholder symbol for an annotated feature with no name."""
+    return _UNNAMED_LOCUS.match(symbol) is not None
+
+
 def genes_in_window(records: Iterable[Mapping[str, Any]], window: CoordinateWindow) -> WindowGenes:
     """Filter Gene ESummary records to the ones overlapping `window`, capped.
 
@@ -363,10 +371,16 @@ def genes_in_window(records: Iterable[Mapping[str, Any]], window: CoordinateWind
     A kept gene's `start`/`end` are the minimum start and maximum end among
     ONLY its overlapping placements, so a gene with several placements is
     reported by the span that actually intersects the window, not by a
-    placement that does not. Results are sorted by that start ascending,
-    then by symbol, and capped at `MAX_WINDOW_GENES`; `total_overlapping` is
-    the count before capping and `truncated` says whether the cap dropped
-    any.
+    placement that does not. Results are sorted with named genes before
+    unnamed loci (a symbol of the form `LOC` followed by digits, NCBI's
+    placeholder for an annotated feature with no name), each group by start
+    ascending then by symbol, and capped at `MAX_WINDOW_GENES`;
+    `total_overlapping` is the count before capping and `truncated` says
+    whether the cap dropped any. Named first because the FIRST resolved gene
+    is the one the rest of the turn follows for the literature, OMIM and the
+    gene summary: measured live on the CFTR window on 2026-09-22, a
+    regulatory locus that starts before CFTR sorted ahead of it by position
+    alone, and the answer's fan-out was about the locus.
     """
     kept: list[WindowGene] = []
     for record in records:
@@ -392,7 +406,7 @@ def genes_in_window(records: Iterable[Mapping[str, Any]], window: CoordinateWind
                 end=max(stops),
             )
         )
-    kept.sort(key=lambda gene: (gene.start, gene.symbol))
+    kept.sort(key=lambda gene: (_is_unnamed_locus(gene.symbol), gene.start, gene.symbol))
     total = len(kept)
     return WindowGenes(
         genes=tuple(kept[:MAX_WINDOW_GENES]),
