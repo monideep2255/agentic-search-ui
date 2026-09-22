@@ -1,0 +1,1342 @@
+{
+ "record": {
+  "id": "G-033",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-item1-c-24fb67-20260922@example.com",
+  "category": "discovery",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+  "session_id": "c103-b659b4292c17",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "b6cd025",
+  "started_at": "2026-09-22T21:51:21+00:00",
+  "run_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:4292",
+   "NCBIGene:4436",
+   "MedGen:C0346629"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 6 sources, not yet confirmed",
+  "citations": 42,
+  "distinct_sources": 30,
+  "citations_by_layer": {
+   "layer_1_graph": 8,
+   "layer_2_api": 24,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 3,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 7,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   7,
+   6
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1547,
+  "answer_start": "Found 2 gene records and 5 disease records for MLH1, MSH2 and colorectal cancer [1][2][3][4][5][6][7]. \n\nGene records found\n\nGene NCBIGene:4292, name: mutL homo",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 17.329,
+  "seconds": 30.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 104,
+   "citation": 42,
+   "trust_signal": 43,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 0,
+   "ts": "2026-09-22T21:49:57.843821Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 2,
+   "ts": "2026-09-22T21:50:04.139122Z",
+   "payload": {
+    "narrative": "Broad comparison of two genes in a disease context, requiring evidence assembly across multiple sources, no single API calls. (colorectal cancer: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "MLH1",
+      "curie": "NCBIGene:4292",
+      "confidence": 1.0
+     },
+     {
+      "text": "MSH2",
+      "curie": "NCBIGene:4436",
+      "confidence": 1.0
+     },
+     {
+      "text": "colorectal cancer",
+      "curie": "MedGen:C0346629",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 4,
+   "ts": "2026-09-22T21:50:04.141188Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:4292. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-de11b0633879",
+      "layer": "layer_1_graph",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e29dd644995a",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e1ec78cf23bb",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-a27cf61ab937",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3055c685d290",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-53ce0861449d",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1b350ec8aeaf",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-24ea86fea694",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-98cb39cf4322",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3ab2937867f1",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f7ca7cbc9237",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5df179fd3fc5",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-f5216e53d7c8",
+      "layer": "layer_1_graph",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "MLH1",
+      "curie": "NCBIGene:4292",
+      "confidence": 1.0
+     },
+     {
+      "text": "MSH2",
+      "curie": "NCBIGene:4436",
+      "confidence": 1.0
+     },
+     {
+      "text": "colorectal cancer",
+      "curie": "MedGen:C0346629",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 6,
+   "ts": "2026-09-22T21:50:04.142137Z",
+   "payload": {
+    "call_id": "cq-de11b0633879",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 7,
+   "ts": "2026-09-22T21:50:04.142165Z",
+   "payload": {
+    "call_id": "ne-e29dd644995a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 8,
+   "ts": "2026-09-22T21:50:04.142175Z",
+   "payload": {
+    "call_id": "pa-e1ec78cf23bb",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 9,
+   "ts": "2026-09-22T21:50:04.142183Z",
+   "payload": {
+    "call_id": "ct-a27cf61ab937",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 10,
+   "ts": "2026-09-22T21:50:04.142191Z",
+   "payload": {
+    "call_id": "ne-3055c685d290",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 11,
+   "ts": "2026-09-22T21:50:04.142198Z",
+   "payload": {
+    "call_id": "ne-53ce0861449d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 12,
+   "ts": "2026-09-22T21:50:04.142206Z",
+   "payload": {
+    "call_id": "ne-1b350ec8aeaf",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 13,
+   "ts": "2026-09-22T21:50:04.142213Z",
+   "payload": {
+    "call_id": "ne-24ea86fea694",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 14,
+   "ts": "2026-09-22T21:50:04.142220Z",
+   "payload": {
+    "call_id": "pa-98cb39cf4322",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 15,
+   "ts": "2026-09-22T21:50:04.142228Z",
+   "payload": {
+    "call_id": "ne-3ab2937867f1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 16,
+   "ts": "2026-09-22T21:50:04.142235Z",
+   "payload": {
+    "call_id": "ne-f7ca7cbc9237",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 17,
+   "ts": "2026-09-22T21:50:04.142243Z",
+   "payload": {
+    "call_id": "ne-5df179fd3fc5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 18,
+   "ts": "2026-09-22T21:50:04.142250Z",
+   "payload": {
+    "call_id": "cq-f5216e53d7c8",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 19,
+   "ts": "2026-09-22T21:50:04.292370Z",
+   "payload": {
+    "call_id": "pa-e1ec78cf23bb",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 20,
+   "ts": "2026-09-22T21:50:04.373092Z",
+   "payload": {
+    "call_id": "ct-a27cf61ab937",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 21,
+   "ts": "2026-09-22T21:50:04.447605Z",
+   "payload": {
+    "call_id": "ne-3055c685d290",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 22,
+   "ts": "2026-09-22T21:50:04.476214Z",
+   "payload": {
+    "call_id": "ne-e29dd644995a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 23,
+   "ts": "2026-09-22T21:50:04.526227Z",
+   "payload": {
+    "call_id": "ne-1b350ec8aeaf",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 24,
+   "ts": "2026-09-22T21:50:04.667221Z",
+   "payload": {
+    "call_id": "cq-de11b0633879",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "7 row(s) of 7",
+    "result_count": 7,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 25,
+   "ts": "2026-09-22T21:50:04.667776Z",
+   "payload": {
+    "call_id": "ne-53ce0861449d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 26,
+   "ts": "2026-09-22T21:50:04.701110Z",
+   "payload": {
+    "call_id": "cq-f5216e53d7c8",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "6 row(s) of 6",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 27,
+   "ts": "2026-09-22T21:50:04.722908Z",
+   "payload": {
+    "call_id": "ne-5df179fd3fc5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 28,
+   "ts": "2026-09-22T21:50:04.866417Z",
+   "payload": {
+    "call_id": "pa-98cb39cf4322",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 29,
+   "ts": "2026-09-22T21:50:05.019619Z",
+   "payload": {
+    "call_id": "ne-24ea86fea694",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 30,
+   "ts": "2026-09-22T21:50:05.033812Z",
+   "payload": {
+    "call_id": "ne-3ab2937867f1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 31,
+   "ts": "2026-09-22T21:50:05.063314Z",
+   "payload": {
+    "call_id": "ne-f7ca7cbc9237",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 32,
+   "ts": "2026-09-22T21:50:05.066844Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1321489",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1321489",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1333991",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1333991",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5399763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5399763",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C2936783",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2936783",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5436806",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5436806",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17510385",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "242650",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242650/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "120436",
+    "source_url": "https://omim.org/entry/120436",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00261456",
+    "source_url": "https://clinicaltrials.gov/study/NCT00261456",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17510385",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000710",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "meiotic mismatch repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "25646660",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/25646660/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "242651",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242651/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01876511",
+    "source_url": "https://clinicaltrials.gov/study/NCT01876511",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "25646660",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/25646660/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006298",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mismatch repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30998989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30998989/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4686835",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4686835/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02760849",
+    "source_url": "https://clinicaltrials.gov/study/NCT02760849",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30998989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30998989/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006950",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40769155",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4852684",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4852684/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02993068",
+    "source_url": "https://clinicaltrials.gov/study/NCT02993068",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40769155",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0016446",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "somatic hypermutation of immunoglobulin genes",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41480639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41480639/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4856878",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4856878/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03005002",
+    "source_url": "https://clinicaltrials.gov/study/NCT03005002",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41480639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41480639/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048298",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of isotype switching to IgA isotypes",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17510385",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048304",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of isotype switching to IgG isotypes",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "25646660",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/25646660/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30998989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30998989/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40769155",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41480639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41480639/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "3cd16e7d-0bfb-4dd0-a6ab-67af1ba2dc00",
+   "seq": 223,
+   "ts": "2026-09-22T21:50:17.516940Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 17329,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 6 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 2 gene records and 5 disease records for MLH1, MSH2 and colorectal cancer [1][2][3][4][5][6][7]. \n\nGene records found\n\nGene NCBIGene:4292, name: mutL homolog 1 [1]. Gene NCBIGene:4436, name: mutS homolog 2 [5]. gene symbol: MLH1 [8]. gene name: MLH1 [12]. The protein encoded by this gene can heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system [18]. When MutL alpha is bound by MutS beta and some accessory proteins, the PMS2 subunit of MutL alpha introduces a single-strand break near DNA mismatches, providing an entry point for exonuclease degradation [18]. The encoded protein is also involved in DNA damage signaling and can heterodimerize with DNA mismatch repair protein MLH3 to form MutL gamma, which is involved in meiosis [18]. This gene was identified as a locus frequently mutated in hereditary nonpolyposis colon cancer (HNPCC) [18]. [provided by RefSeq, Aug 2017] [18]. \n\nDisease records found\n\nDisease name: Muir-Torr\u00c3\u00a9 syndrome [2]. Disease name: Colorectal cancer, hereditary nonpolyposis, type 2 [3]. Disease name: Mismatch repair cancer syndrome 1 [4]. Disease name: Lynch syndrome 1 [6]. Disease name: Mismatch repair cancer syndrome 2 [7]. \n\nPubmed records found\n\npubmed title: Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays [9]. pubmed title: MutL homolog 1 contributes to temozolomide-induced autophagy via ataxia-telangiectasia mutated in glioma [16]. pubmed title: Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome [22]. pubmed title: AI-generated MLH1 small binder improves prime editing efficiency [27]. pubmed title: Disruption of protein-protein interaction hotspots in the C-terminal domain of MLH1 confers mismatch repair deficiency [32]. The functional characterization of nonsynonymous single nucleotide polymorphisms in human mismatch repair (MMR) genes has been critical to evaluate their pathogenicity for hereditary nonpolyposis colorectal cancer [37]. We previously established an assay for detecting loss-of-function mutations in the MLH1 gene using a dominant mutator effect of human MLH1 expressed in Saccharomyces cerevisiae [37]. The purpose of this study is to extend the functional analyses of nonsynonymous single nucleotide polymorphisms in the MLH1 gene both in quality and in quantity, and integrate the results to evaluate the variants for pathogenic significance [37]. The 101 MLH1 variants, which covered most of the reported MLH1 nonsynonymous single nucleotide polymorphisms and consisted of one 3-bp deletion, 1 nonsense and 99 missense variants, were examined for the dominant mutator effect by three yeast assays and for the ability of the variant to repair a heteroduplex DNA with mismatch bases by in vitro MMR assay [37]. There was diversity in the dominant mutator effects and the in vitro MMR activities among the variants [37]. The majority of functionally inactive variants were located around the putative ATP-binding pocket of the NH(2)-terminal domain or the whole region of the COOH-terminal domain [37]. Integrated functional evaluations contribute to a better prediction of the cancer risk in individuals or families carrying MLH1 variants and provide insights into the function-structure relationships in MLH1 [37]. In the present study, mutL homolog 1\u00a0(MLH1) small interfering (si)RNA, KU\u201155933, an ataxia\u2011telangiectasia mutated (ATM) inhibitor, and compound\u00a0C, an adenosine monophosphate\u2011activated protein kinase (AMPK) inhibitor, were used to investigate the mechanisms underlying temozolomide (TMZ)\u2011induced autophagy and to determine the role of MLH1 and ATM in autophagy [39]. MLH1 siRNA and KU\u201155933 inhibited the phosphorylation of AMPK and ULK1 and reduced the levels of autophagy [39]. MLH1\u00a0siRNA inhibited the phosphorylation of ATM and attenuated TMZ cytotoxicity, whereas the inhibition of ATM\u2011AMPK augmented TMZ cytotoxicity in inherently TMZ\u2011sensitive glioma cells [39]. Therefore, TMZ induced autophagy via the ATM\u2011AMPK pathways and the activation of ATM\u2011AMPK was MLH1\u2011dependent [39]. The inhibition of ATM\u2011AMPK enhanced TMZ cytotoxicity in inherently TMZ\u2011sensitive glioma cells [39]. Approximately 75% of patients with suspected Lynch syndrome carry variants in MLH1 or MSH2, proteins encoded by these genes are required for DNA mismatch repair (MMR) [40]. However, 30% of these are variants of unknown significance (VUS) [40]. A assay that measures cell response to the cytotoxic effects of a methylating agent can determine the effects of VUS in MMR genes and identify patients with constitutional MMR-deficiency syndrome [40]. We adapted this method to test the effects of VUS in MLH1 and MSH2 genes found in patients with suspected Lynch syndrome [40]. We transiently expressed MLH1 or MSH2 variants in MLH1- or MSH2-null human colorectal cancer cell lines (HCT116 or LoVo), respectively [40]. The MMR process causes death of cells with methylation-damaged DNA bases, so we measured proportions of cells that undergo death following exposure to the methylating agent [40]. cells that escaped its toxicity were considered to have variants that affect function of the gene product [40]. Using this assay, we analyzed 88 variants (mainly missense variants), comprising a validation set of 40 previously classified variants (19 in MLH1 and 21 in MSH2) and a prospective set of 48 VUS (25 in MLH1 and 23 in MSH2) [40]. Prediction scores were calculated for all VUS according to the recommendations of the American College of Medical Genetics and Genomics, based on clinical, somatic, in silico, population, and functional data [40]. The assay correctly classified 39 of 40 variants in the validation set [40]. The assay identified 12 VUS that did alter function of the gene product and 28 VUS that did not [40]. the remaining 8 VUS had intermediate effects on MMR capacity and could not be classified [40]. Comparison of assay results with prediction scores confirmed the ability of the assay to discriminate VUS that affected the function of the gene products from those that did not [40]. Using an assay that measures the ability of the cells to undergo death following DNA damage induction by a methylating agent, we were able to assess whether\u2026 [40]. The prime editing (PE) system consists of a Cas9 nickase fused to a reverse transcriptase, which introduces precise edits into the target genomic region guided by a PE guide RNA [41]. However, PE efficiency is limited by mismatch repair [41]. To overcome this limitation, transient expression of a dominant-negative MLH1 (MLH1dn) has been used to inhibit key components of mismatch repair [41]. Here, we designed a de novo MLH1 small binder (MLH1-SB) that binds to the dimeric interface of MLH1 and PMS2 using RFdiffusion and AlphaFold 3 [41]. The compact size of MLH1-SB enabled its integration into existing PE architectures via 2A systems, creating a PE-SB platform [41]. The PE7-SB2 system significantly improved PE efficiency, achieving an 18.8-fold increase over PEmax and a 2.5-fold increase over PE7 in HeLa cells, as well as a 3.4-fold increase over PE7 in mice [41]. This study highlights the potential of generative AI in advancing genome editing technology [41]. MutL\u03b1, a heterodimer of MLH1 and PMS2, plays a key role in DNA mismatch repair (MMR), which maintains genomic stability by correcting replication errors [42]. Loss of MLH1 function causes MMR deficiency (MMRd), leading to elevated mutation rates and increased cancer susceptibility [42]. However, MMRd can offer a therapeutic advantage, as high tumour mutational burden enhances the efficacy of immune checkpoint inhibition [42]. MMR also drives somatic expansion of CAG repeats linked to Huntington's disease (HD) pathogenesis [42]. The C-terminal domain (CTD) of MLH1 contains at least two distinct protein-protein interaction (PPI) sites [42]. The S1 site supports heterodimerization with the PMS2 endonuclease, whereas the S2 site interacts with MIP-boxes present in MMR-associated factors (EXO1, MSH3) and in the DNA repair nuclease FAN1 [42]. Here, using MLH1-S2 mutant cell models and synthetic FAN1-derived peptides containing two adjacent MLH1-binding motifs (MIP and MIM), we demonstrate that selective disruption of MLH1 PPIs impairs MMR in vitro [42]. We further reveal that the peptide is able to inhibit the latent endonuclease activity of recombinant MutL\u03b1, possibly via competing with a putative MIM within PMS2 [42]. Our findings define key PPI interfaces within the MLH1(CTD) that govern MMR activity and may offer novel therapeutic opportunities to exploit MMRd in cancer and HD [42]. \n\nClinvar records found\n\nclinvar title: NM_000249.4(MLH1):c.545+1271_677+737delinsCA [10]. clinvar title: NM_000249.4(MLH1):c.453+625_545+920delinsT [17]. clinvar title: NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [23]. clinvar title: NM_000249.4(MLH1):c.884+5T>A [28]. clinvar title: NM_000249.4(MLH1):c.1039-1013G>A [33]. \n\nOmim records found\n\nDNA MISMATCH REPAIR PROTEIN MLH1 [11]. MLH1 [11]. \n\nClinical trial records found\n\nClinical trial name: The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [13]. Clinical trial name: Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C) [19]. Clinical trial name: Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [24]. Clinical trial name: Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [29]. Clinical trial name: Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver [34]. \n\nPublication records found\n\nPublication pmid: 17510385 [14]. Publication pmid: 25646660 [20]. Publication pmid: 30998989 [25]. Publication pmid: 40769155 [30]. Publication pmid: 41480639 [35]. \n\nBiological process records found\n\nBiologicalProcess GO:0000710, name: meiotic mismatch repair [15]. BiologicalProcess GO:0006298, name: mismatch repair [21]. BiologicalProcess GO:0006950, name: response to stress [26]. BiologicalProcess GO:0016446, name: somatic hypermutation of immunoglobulin genes [31]. BiologicalProcess GO:0048298, name: positive regulation of isotype switching to IgA isotypes [36]. BiologicalProcess GO:0048304, name: positive regulation of isotype switching to IgG isotypes [38]. \n\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer."
+}

@@ -32,8 +32,8 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK "NEXT, IN ORDER" FROM ITS CUTOFF. The next action is owned by `testing/UI_fix_plan.md`, section "Where we stopped", REWRITTEN AT THE CLOSE OF 2026-09-22 after the product owner retested and approved everything the day built. Its item 1 is the two questions that still lose their own graph search to a generated query that fails validation. The day's summary is `testing/Shipped_2026-09-22.md`.
-  - Read "What is parked, and why" BEFORE picking anything up. The OMIM dispatch is reverted on purpose and must not be re-enabled without wiring `filter_omim_titles`.
+- WORK "NEXT, IN ORDER" FROM ITS CUTOFF. The next action is owned by `testing/UI_fix_plan.md`, section "Where we stopped", REWRITTEN AT THE CLOSE OF 2026-09-22 after the product owner retested and approved everything the day built. Its item 1, the two questions that lost their own graph search to a generated query that failed validation, SHIPPED the same evening as `27d68ae` (a fixed template for a two-gene comparison and for a shapeless gene question, and a fast form for several records) and `b6cd025` (a GEO DataSets search when a question asks for datasets), verified live on develop, G-033 3 of 3 and G-037 3 of 3, and awaits the product owner's retest. The list's item 1 is now the coordinate range. The day's summary and the retest list are `testing/Shipped_2026-09-22.md`.
+  - Read "What is parked, and why" BEFORE picking anything up. OMIM is live WITH `filter_omim_titles`; the dispatch and the filter ship together and neither is enabled or removed without the other.
 - ITEM 10.3, THE CONSISTENCY RUN, HAS NOW BEEN RUN, for the first time, on 2026-09-22: all 50 golden questions three times against develop at `63ec316`, signed in on two fresh test accounts. 86 of 150 runs answered; 25 questions answer every time (the 2026-09-12 baseline had 1), 18 never (had 43), none worse. The 18 split into 9 expected refusals, 3 guardrail refusals the golden row disagrees with, and 6 genuine gaps, every one a Layer 1 failure. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`.
 - ITEM 11.33 IS FIXED, ON DEVELOP AND VERIFIED LIVE at `a868462` (the BRCA1 gene summary runs past the old cut, zero ellipses), and APPROVED by the product owner's retest the same day. The cause was never live-only: `harness/coordinator_worker.py` cut every string leaf at 500 characters because its documented 2000-character tier was unreachable, and the 2026-09-21 local trace skipped that stage. One cap now, at `SynthFinding`'s own 2000, on a word boundary, with an ellipsis. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`.
 - L-01 IS MEASURED AND ITS TWO CAUSES ARE READ, not fixed in the answer text: 12 of 119 eligible graph calls returned zero where another pass returned rows. The reason was dropped one line above the event in `_execute_planned_call` and now rides in the `tool_result` summary. Cause one, deterministic per question: Think resolves no entity for a coordinate range, an isolate or an accession and the tool is dispatched with nothing to bind. Cause two, variance, CORRECTED the same evening from the graph server's own log: the question's own search on an exploratory no-shape question took the model path and the generated query was killed by the graph's 30-second statement timeout, a planner mis-estimate; fixed by taking the record template for that class (`2bc8ec0`, awaiting retest). Read by local reproduction, because tracing runs on production only by design and develop has no LangSmith key; evidence in `testing/Developer/reports/2026-09-22_L01_cause/findings.md`. The product owner delegated the decision on 2026-09-22 and it was taken from the user's chair the same day: a lost search is disclosed under the answer, and a question the product could not read is answered with "name the gene, variant, disease or organism you mean" (`10f6a46`, APPROVED by retest the same day).
@@ -43,7 +43,7 @@ The next action is always one line, kept current here. Right now it is:
 - THE SLOW PLAIN-TERMS EXPLANATION IS FIXED: an exploratory question with no shape takes the record template instead of a generated query the graph's statement timeout killed; proven live at 10.6 to 14.8 seconds against about 100 (`2bc8ec0`), APPROVED by retest the same day.
 - ONE THING A SESSION MUST NOT UNDO CASUALLY: do not add a word count or a paragraph shape back to the plain-language directive (arms in `tests/system_03_search_agent/synthesis/test_answer_quality.py` go red if one returns).
 - PRODUCTION IS ON `v0.2.0`, released 2026-09-20, tag `cde4f59`, and carries NOTHING from 2026-09-21 or 2026-09-22. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`. When the product owner approves a release, follow `docs/build/Release_flow.md`; CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first.
-- CI IS GREEN ON DEVELOP for every push on 2026-09-21. Check it yourself with `gh run list --branch develop --limit 3` rather than trusting this line in either direction.
+- CI DID NOT RUN on the evening pushes of 2026-09-22 (`27d68ae`, `b6cd025`): GitHub reports every job "was not started because recent account payments have failed or your spending limit needs to be increased", a billing setting only the product owner can change, after a green run on `02063b0` twenty minutes earlier. The four gates CI would have run were run locally with CI's own commands before the push (`ruff check` over the whole repository, `isort` per gate 2, the full unit suite: 5176 passed, 0 failed). Check `gh run list --branch develop --limit 3` before trusting this line in either direction.
 - SET 11 IS MOSTLY LIVE; the per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Sets 1 to 7 are approved, 8 and 9 live on develop, 10 now has item 10.3 run and 10.1 done.
 - THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation.
 - Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, never let two builders own one file region. And one more from 2026-09-22: a live measurement shares the NCBI rate pool with every agent, so an agent working alongside one is forbidden live calls until it ends, and the measurement counts rate-limit signals so contamination is visible rather than assumed absent.
@@ -99,15 +99,18 @@ WHAT LANDED, in the terms a person notices:
 | 10.3 | The consistency run exists as a measurement: 150 signed-in runs, three per golden question, with the outcome, latency, sources and layers of each, and a comparison against the 2026-09-12 baseline |
 | 11.33 | A record's value is no longer cut at 500 characters mid-word. The cap is the finding's own 2000, on a word boundary, with an ellipsis when it still applies |
 | L-01 | A rate and a mechanism rather than a suspicion: one graph call in ten loses a result, and the errored call carries an empty summary and no message |
+| Item 1 of the next list (evening) | A two-gene comparison shows each gene's disease records side by side and a shapeless gene question shows the gene record, both from fixed templates instead of a generated query that failed validation; a dataset question searches GEO and cites the series. Live: G-033 3 of 3, G-037 3 of 3, zero errored graph calls on those six runs. Awaits retest |
 
 WHAT DID NOT LAND, and each is recorded rather than rounded up:
 
 - L-01 IS NOT FIXED in the answer text. Both causes are read and the reason
   now reaches the stream; whether the answer says so is the product owner's
   decision.
-- NINE questions fail on the graph on every pass, six of them as refusals.
-  Four name nothing Think can resolve, two lose their second call to the act
-  budget every time. A defect with a reproduction set, unfixed.
+- SEVEN questions still fail on the graph on every pass, six of them as
+  refusals. Four name nothing Think can resolve, the coordinate range first
+  (item 1 of the next list). The two that lost their own search to a
+  generated query the validator rejected, G-033 and G-037, were FIXED the
+  same evening (`27d68ae`, `b6cd025`), verified live, awaiting retest.
 - Everything the day built is approved by retest: 11.33, the compute
   refusal, the lost-search disclosure, the fast plain-terms explanation and
   OMIM. `testing/Shipped_2026-09-22.md` is the day's summary.
@@ -127,8 +130,8 @@ TWO THINGS THE INSTRUMENTS TAUGHT, both in `LEARNINGS.md` dated 2026-09-22:
   environment difference.
 
 What the next session does first is `testing/UI_fix_plan.md`'s "Next, in
-order": item 1 is the product owner's retest of 11.33, and item 2, the first
-engineering item, is reading one L-01 cause out of a trace.
+order": item 1 is the coordinate range. The product owner's retest of the
+evening's item is listed in `testing/Shipped_2026-09-22.md`, items 7 and 8.
 
 ### Process lessons from the fix-loop sessions, already applied
 

@@ -795,7 +795,7 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.19 | "Variants in GCK causing MODY" should answer every time | Live, approved 2026-09-22 | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
 | 11.20 | "What genes are associated with MODY?" should answer | Live, approved 2026-09-22 | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. On develop: 5 of 5 repeated runs, one source set, plus the browser check |
 | 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, approved 2026-09-22, both decisions done | The tool layer is on develop since 2026-09-20. CORRECTED 2026-09-22: this row said two decisions were still to build. Both closed since: every retrieved finding is cited (2a, closed by measurement 2026-09-21, its whole residual gap was 11.34) and OMIM is cited and searched with its title filter (2b, done 2026-09-22). Full detail: [11.21](#detail-1121) |
-| 11.22 | PubMed and PMC should provide context for the answers | Queued, approved; live check pending | Reads as delivered by 11.34 (a multi-sentence abstract is cited in the record tail) but not yet checked live; one check moves it to Live. Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
+| 11.22 | PubMed and PMC should provide context for the answers | Live, verified 2026-09-22 | VERIFIED LIVE during item 1's evening runs: abstract text of 220 to 433 characters reaches the answer verbatim, cited to its paper, on three PMIDs checked off the agent's own path with `check_1122.py` in `testing/Developer/reports/2026-09-22_item1_lost_search/`. Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged. Awaits the product owner's look |
 | 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered | Measured from NCBI's own header: your key allows 10 per second (3 without a key). 100 needs a separate arrangement with NCBI. The limiter moves from 3 to 10 as part of 11.21 |
 | 11.24 | How do I test what is built so far? | Answered | A test walk-through is given once the current work is on develop |
 | 11.25 | What from Set 11 is on develop? | Answered | On develop at `e5947e0`: 11.5 to 11.9, 11.12 to 11.14, 11.19, 11.20, 11.26, and 11.15 in part. Live run record: 48 of 53 answered, and the 5 failures did not reproduce in 12 more runs. See `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/findings.md` |
@@ -1272,7 +1272,9 @@ The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state. LAST UPDATED 2026-09-22,
 at the close of a session that ran item 10.3 to completion for the first time,
 found and fixed the cause of item 11.33, and measured L-01 as a rate with a
-named mechanism. Read this, then the Set 11 table above.
+named mechanism, then, the same evening, shipped item 1 of the next list: the
+two questions that lost their own graph search, and a GEO search for dataset
+questions. Read this, then the Set 11 table above.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -1291,6 +1293,7 @@ The 2026-09-20 shipped list, with what to retest, is
 | Scope boundary | DECIDED, BUILT and APPROVED by the product owner's retest on 2026-09-22: refuse outright under a new guard category, `compute_request` | G-046 (BLAST) and G-047 (VCF) were answered from graph rows because the resolver found real concepts inside them. A deterministic screen in `guardrail/forbidden.py` now refuses a BLAST-family token near a sequence object, the phrase "sequence similarity", a 25-character nucleotide run, or `vcf` near a file or analysis word, and the refusal says the capability is unavailable and points at NCBI BLAST. Precedent for the new category: F-3.0-01 |
 | Latency | FIXED, PROVEN LIVE at 10.6, 11.9 and 14.8 seconds on three develop runs, and APPROVED by the product owner's retest | G-039, a plain-terms explanation over BRCA1, took about 100 seconds on every run because its own graph search took the model path and the generated query never finished (a planner mis-estimate, killed by the graph's 30-second statement timeout). An exploratory question with no shape now takes the record template, measured at under a second. Evidence: `testing/Developer/reports/2026-09-22_slow_second_search/findings.md` |
 | 2b, OMIM | DONE, live on develop, APPROVED by the product owner's retest | The dispatch is on with `filter_omim_titles` applied before any row is built, so a question about one gene never shows another gene's OMIM record. Ten live runs: one OMIM citation each, zero wrong-gene hits; for GCK, nine wrong-gene records were dropped and OMIM 138079 kept. A gene question now charges 14 to 16 of its 20 allowed Layer 2 and 3 calls. Evidence: `testing/Developer/reports/2026-09-22_OMIM_live/findings.md` |
+| Item 1 of the next list, the two questions that lost their own graph search | BUILT, VERIFIED LIVE, AWAITING RETEST | "Compare what is known about MLH1 and MSH2 in colorectal cancer risk" (G-033) and "Find GEO expression datasets studying TP53" (G-037) lost their own graph search on every pass to a generated query the validator rejected. Both take a fixed template now: each gene's disease edges side by side for the comparison, the gene record for the shapeless gene question, and GEO is searched when a question asks for datasets. Live on develop at `b6cd025`: G-033 3 of 3 answered with its own graph call returning rows in 18 to 30 seconds, G-037 3 of 3 in 13 to 22 seconds with five GEO series cited each time, G-011 3 of 3, zero errored graph calls across those nine runs (the control, G-012, a disease anchor with no shape left on the model path by decision, lost one call to the per-step timeout on its third pass, as it did in the morning). A latent 30-second timeout on any question naming two genes went with it, and the 11.22 check passed on the same runs. Evidence: `testing/Developer/reports/2026-09-22_item1_lost_search/findings.md` |
 | The instrument | Three lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
 ### The 2026-09-21 session, in one table
@@ -1342,6 +1345,23 @@ option rather than a queued task.
 
 ### What is live on develop
 
+- A question comparing two genes in a disease context shows each gene's
+  disease records side by side from the graph, and a question about one
+  gene with no recognisable shape shows the gene record, instead of ending
+  with a line saying a search did not finish. Pushed 2026-09-22 (evening) as
+  `27d68ae`, verified live 3 of 3 on G-033. Retest: "Compare what is known
+  about MLH1 and MSH2 in colorectal cancer risk" answers with both genes'
+  conditions among the sources and no lost-search line. AWAITING RETEST.
+- A question asking for expression datasets (GEO, dataset, expression
+  profiling, microarray, RNA-seq) searches GEO DataSets for the gene and
+  cites the series it finds to NCBI's own record pages. Pushed 2026-09-22
+  (evening) as `b6cd025`, verified live 3 of 3 on G-037 with five
+  series each run. Retest: "Find GEO expression datasets studying TP53 in
+  human tumour samples" lists GEO series among the sources with working
+  links, and no lost-search line. AWAITING RETEST.
+- Any question naming two genes and no shape takes a query the graph
+  answers in under a second, where the old form timed out at 30 seconds;
+  found by probe while sizing the above, not by a golden question.
 - OMIM's gene-to-disease records appear among a gene question's sources,
   cited to omim.org, and never for a different gene than the one asked
   about. Pushed and APPROVED by retest 2026-09-22.
@@ -1438,11 +1458,12 @@ placement, and the trust-line wording.
   path on an exploratory no-shape question, killed by the graph's 30-second
   statement timeout after 85 seconds because the planner mis-estimates an
   id match by four orders of magnitude. Fixed for the exploratory class
-  (`2bc8ec0`). G-037 and G-033 are a different fault, generation or
+  (`2bc8ec0`). G-037 and G-033 were a different fault, generation or
   validation failing before the transport ("Generated Cypher references
-  vertex label", "appears to bind a literal value"), and are unfixed: their
-  answers still come from the other layers, and since `10f6a46` the reader
-  is told a search did not finish.
+  vertex label", "appears to bind a literal value"), and were FIXED the same
+  evening as fix-plan item 1: no template matched, so both took the model
+  path; both take a template now (`27d68ae`), and G-037 also searches GEO
+  (`b6cd025`). See the 2026-09-22 session table.
 - THE TRUST TIER `ask` AND THE PARKED GRADER'S `ask` ARE TWO MEANINGS OF ONE
   WORD. Widening the golden rows to accept the trust tiers was built, found to
   erase the parked grader's answer-versus-clarification distinction (two of
@@ -1555,41 +1576,36 @@ technical one.
 ### Next, in order
 
 Rewritten at the close of 2026-09-22, after the product owner retested and
-approved everything the day built: 11.33, the compute refusal, the lost-search
-disclosure, the fast plain-terms explanation and OMIM. The day's summary and
-the retest list are `testing/Shipped_2026-09-22.md`. Nothing here is a retest;
-every item is engineering or a decision, ordered by what the person typing the
-question feels first.
+approved everything the day built, and again the same evening when item 1 of
+that list shipped: the two questions that lost their own graph search, and a
+GEO search for dataset questions (`27d68ae`, `b6cd025`, verified live 3 of 3
+and 3 of 3, awaiting retest; its row is in the session table above). The
+day's summary and the retest list are `testing/Shipped_2026-09-22.md`.
+Nothing here is a retest; every item is engineering or a decision, ordered by
+what the person typing the question feels first.
 
-1. STOP TWO QUESTIONS LOSING THEIR OWN SEARCH TO A BAD GENERATED QUERY. The
-   MLH1 and MSH2 comparison (G-033) and GEO datasets on TP53 (G-037) fail
-   validation before the graph ("Generated Cypher references vertex label",
-   "appears to bind a literal value"), on the mixed gene-plus-disease path
-   and the single_hop no-shape path. The reader is told a search did not
-   finish; the search itself is the fix. Start from the two reasons the
-   stream now carries, and measure which template or repair would have
-   answered, as the 2026-09-22 slow-search diagnosis did.
-2. TEACH THINK THE COORDINATE RANGE. Four golden questions never answer
+1. TEACH THINK THE COORDINATE RANGE. Four golden questions never answer
    because Think resolves no entity for a GRCh38 range (G-001), an isolate
    (G-035) or a project accession (G-007), and the plan dispatches a graph
    search with nothing to bind. Coordinates first: "what is in this region"
    is the everyday question, and `tools/ncbi_coordinate_overlap.py` already
    exists. Each shape is about a day.
-3. WATCH THE CALL CEILING. A gene question now charges 14 to 16 of its 20
-   Layer 2 and 3 calls with OMIM on. A question naming several rs numbers
-   could reach 20 and start dropping calls; measure one before deciding
-   whether the ceiling or the fan-out moves.
-4. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
+2. WATCH THE CALL CEILING. A gene question charges 14 to 16 of its 20
+   Layer 2 and 3 calls with OMIM on, and a question asking for datasets
+   charges two more for GEO, so 18 at most. A question naming several rs
+   numbers could reach 20 and start dropping calls; measure one before
+   deciding whether the ceiling or the fan-out moves.
+3. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
    row: "334" expects a clarifying ask and is refused as off-topic; "tell me
    about the tree of life" expects an answer; the pathogenicity classification
    request expects a flag rather than a medical-advice refusal. Nothing blocks
    on it.
-5. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
-6. THREE DISCUSSIONS, EACH A PRECURSOR TO A BUILD UNDER `/bossman-mode`, and
-   one live check, by the product owner's decision of 2026-09-22 ("I think of
-   these as discussion, a precursor to the build"). None waits on a decision
-   taken cold; each opens with a scoping discussion whose written outcome is
-   what the build is measured against:
+4. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
+5. THREE DISCUSSIONS, EACH A PRECURSOR TO A BUILD UNDER `/bossman-mode`, by
+   the product owner's decision of 2026-09-22 ("I think of these as
+   discussion, a precursor to the build"). None waits on a decision taken
+   cold; each opens with a scoping discussion whose written outcome is what
+   the build is measured against:
    - 11.30's other half, the MCP mount's redirect emitting `http://`. The
      discussion measures which addresses the develop and production services
      actually receive forwarded requests from, rather than guessing, and
@@ -1603,9 +1619,8 @@ question feels first.
      question shapes that need multi-hop or retrieval today, from the golden
      set and the consistency run, before any embedding or RAG work is
      proposed.
-   - 11.22, abstracts as citeable context. One live check that a sentence
-     from a multi-sentence abstract is cited in an answer, then the row moves
-     to Live. It is folded into item 1's live verification runs.
+   The fourth entry this list carried, 11.22's live check, is done: see its
+   row in the Set 11 table.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining
@@ -1633,8 +1648,10 @@ That points hard at event-loop starvation, consistent with the same suite failin
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up "Next, in order" at item 1. Everything the 2026-09-22 session
-   built is approved; the list holds only engineering and decisions.
+4. Pick up "Next, in order" at item 1, the coordinate range. Everything the
+   2026-09-22 day built is approved; the evening's item, the two lost
+   searches and the GEO search, is verified live and awaits the product
+   owner's retest, listed in `testing/Shipped_2026-09-22.md`.
 
 ## Developer detail
 
