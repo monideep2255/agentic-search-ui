@@ -794,7 +794,7 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.18 | Search everything in all three layers, sources exact; is the harness or the open-source model to blame? | Answered | The harness: a fixed plan of one graph query and four live calls per gene, one fact per record. The models do not choose what is searched. Fix is 11.21 |
 | 11.19 | "Variants in GCK causing MODY" should answer every time | Live | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
 | 11.20 | "What genes are associated with MODY?" should answer | Live | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. On develop: 5 of 5 repeated runs, one source set, plus the browser check |
-| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, with two decisions still to build | The tool layer is on develop. Full detail: [11.21](#detail-1121) |
+| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, both decisions done | The tool layer is on develop since 2026-09-20. CORRECTED 2026-09-22: this row said two decisions were still to build. Both closed since: every retrieved finding is cited (2a, closed by measurement 2026-09-21, its whole residual gap was 11.34) and OMIM is cited and searched with its title filter (2b, done 2026-09-22). Full detail: [11.21](#detail-1121) |
 | 11.22 | PubMed and PMC should provide context for the answers | Queued, approved | Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
 | 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered | Measured from NCBI's own header: your key allows 10 per second (3 without a key). 100 needs a separate arrangement with NCBI. The limiter moves from 3 to 10 as part of 11.21 |
 | 11.24 | How do I test what is built so far? | Answered | A test walk-through is given once the current work is on develop |
@@ -862,7 +862,7 @@ row used to quote has no report behind it
 
 The ask: Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources
 
-Status: Live, with two decisions still to build
+Status: Live, both decisions done (corrected 2026-09-22)
 
 The tool layer is on develop. The wiring that actually uses it is built and
 measured on `worktree-breadth-wiring` and is NOT merged: one test fails there
@@ -881,7 +881,13 @@ BOTH CAVEATS ARE NOW DECIDED RATHER THAN OPEN, and both are decided the other
 way: the citation host rule will be widened so OMIM can be cited, and every
 retrieved finding will be cited so the source set is identical run to run.
 Neither is built yet; both are in `DECISIONS.md` dated 2026-09-20 and in the
-cutoff's plan table as waves 2a and 2b.
+cutoff's plan table as waves 2a and 2b. BOTH ARE NOW DONE, and the sentence
+before this one is kept as the record of what was true on 2026-09-20: 2a
+closed by measurement on 2026-09-21, because the tail already grounds every
+admitted finding and its whole residual gap was item 11.34; 2b done on
+2026-09-22, the host rule widened to `omim.org` and the dispatch live with
+`filter_omim_titles` applied before any row is built. Both rows are in the
+Set 11 table above.
 
 The merge also fixes L-01 shape 2, the `collect(DISTINCT)` ordering, but NOT
 shape 1
