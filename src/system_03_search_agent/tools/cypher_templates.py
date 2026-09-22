@@ -385,7 +385,7 @@ def _mixed_gene_disease_template(
 ) -> CypherTemplate | None:
     """A question binding gene AND disease CURIEs together, the shape
     "Variants in GCK causing MODY" or "Is BRCA1 linked to breast cancer?"
-    resolves to. Two forms only, both narrow:
+    resolves to. Four forms, each narrow:
 
     - The variants shape, with exactly one gene: the gene's variants whose
       ClinVar record asserts one of the bound diseases
@@ -398,8 +398,27 @@ def _mixed_gene_disease_template(
       anchored at both ends. One row or none, and "none" is the honest
       answer to "is this gene linked to that disease" when the graph has
       no such edge.
+    - No shape, or the diseases shape, with SEVERAL genes (2026-09-22,
+      fix-plan item 1): each gene's disease edges, side by side, the
+      `gene_diseases_many` hop over every bound gene. "Compare what is
+      known about MLH1 and MSH2 in colorectal cancer risk" (golden G-033)
+      landed here as None, so its own graph search was a generated query
+      the validator rejected on every pass, and the reader was told a
+      search did not finish. The hop returns six rows in 0.8 s for that
+      question, measured live; the link narrowed to the bound disease
+      returns zero, because MedGen has dozens of concepts for "colorectal
+      cancer" and the one Think resolved is on neither gene's edges.
+    - No shape, or the diseases shape, with ONE gene beside several
+      disease concepts (same date): the gene record, which is what the
+      one-gene no-shape path returns, so the same question shows the same
+      source however Think listed the concepts. In practice this is Think
+      resolving a common noun ("tumour", "diseases") to a list of MedGen
+      concepts beside a real gene (golden G-037, third pass).
 
-    Anything else is None.
+    Anything else is None: the variants shape with several genes, a count
+    over several anchors (no single record to cite it to, the refusal
+    `select_template` step 4 makes), or a label mix outside Gene and
+    Disease.
     """
     labels = _labels_by_param(entity_bindings)
     if set(labels.values()) != {"Gene", "Disease"}:
@@ -414,7 +433,9 @@ def _mixed_gene_disease_template(
         if _wants_count(tool_input) or len(gene_params) != 1:
             return None
         return _gene_variant_disease_link_template(gene_params[0], disease_params)
-    if shape in (None, "diseases") and len(gene_params) == 1 and len(disease_params) == 1:
+    if shape not in (None, "diseases"):
+        return None
+    if len(gene_params) == 1 and len(disease_params) == 1:
         return CypherTemplate(
             name="gene_disease_link",
             cypher=(
@@ -425,7 +446,22 @@ def _mixed_gene_disease_template(
             ),
             edge_label="gene_associated_with_condition",
         )
-    return None
+    if _wants_count(tool_input):
+        return None
+    if len(gene_params) >= 2:
+        # Decided from the user's chair, 2026-09-22. What a person comparing
+        # two genes wants from the graph is each gene's disease associations
+        # beside each other, not a generated query that fails validation
+        # (G-033, every pass of the consistency run) and not the link
+        # narrowed to the one concept Think happened to resolve (zero rows
+        # live where the open hop returned six). G-011's junk-resolution
+        # pass, "diseases" resolved to eight MedGen concepts beside BRCA1
+        # and BRCA2, lands here too and now returns the same rows as its
+        # clean passes, so the same question shows the same sources.
+        return _hop_template(
+            "diseases", _HOPS[("Gene", "diseases")], "Gene", gene_params, count=False
+        )
+    return _record_template("Gene", gene_params)
 
 
 def _id_clause(param_names: list[str], var: str) -> tuple[str, str]:
@@ -622,16 +658,33 @@ def gene_go_terms_template(gene_param: str) -> CypherTemplate:
 
 
 def _record_template(anchor_label: str, param_names: list[str]) -> CypherTemplate:
-    """The record itself: `MATCH (a:Gene {id: $e}) RETURN a`, or the IN-list
-    form ordered by id when several are bound."""
+    """The record itself: `MATCH (a:Gene {id: $e}) RETURN a`, or, when
+    several are bound, one such match per record joined by UNION ALL, each
+    branch ordered by id and the branches in parameter-name order.
+
+    The several-record form was `MATCH (a:Gene) WHERE a.id IN [...]` until
+    2026-09-22, and on the live graph that form never finished: only the
+    inline property match uses the id index, and any WHERE on `a.id` over
+    the Gene label walks the whole vertex table and dies at the reader
+    role's 30-second statement timeout. Measured through the repository's
+    own `execute_cypher`: 30.5 s for ONE id in an IN list, 30.5 s for two,
+    30.5 s for `a.id = $g1 OR a.id = $g2`, against 0.68 s for the inline
+    match; the UNION ALL of two inline Gene matches 0.42 s, of eight
+    Disease matches 0.44 s (`testing/Developer/reports/
+    2026-09-22_item1_lost_search/`). Branch order is fixed by sorting the
+    parameter names, which are derived from the CURIEs, so the same set of
+    entities produces the same query and the same row order however Think
+    listed them. The validator normalizes each branch with its own LIMIT,
+    which is what makes the form legal here (F-2.1-A8).
+    """
     if len(param_names) == 1:
         cypher = f"MATCH ({_ANCHOR_VAR}:{anchor_label} {{id: ${param_names[0]}}}) RETURN {_ANCHOR_VAR}"
         suffix = "one"
     else:
-        cypher = (
-            f"MATCH ({_ANCHOR_VAR}:{anchor_label}) WHERE {_ANCHOR_VAR}.id IN ["
-            + ", ".join(f"${n}" for n in param_names)
-            + f"] RETURN {_ANCHOR_VAR} ORDER BY {_ANCHOR_VAR}.id"
+        cypher = " UNION ALL ".join(
+            f"MATCH ({_ANCHOR_VAR}:{anchor_label} {{id: ${name}}}) "
+            f"RETURN {_ANCHOR_VAR} ORDER BY {_ANCHOR_VAR}.id"
+            for name in sorted(param_names)
         )
         suffix = "many"
     return CypherTemplate(
@@ -658,8 +711,11 @@ def select_template(
        single-hop or aggregate question; otherwise ambiguous: None. Zero
        falls through to step 3.
     3. With no shape matched, a `lookup` or an `exploratory` question about
-       the entity is the record itself. A `single_hop`, `multi_hop` or
-       `aggregate` question with no shape is None, the model path.
+       the entity is the record itself, and so is a `single_hop` or
+       `multi_hop` question whose anchor is a Gene (2026-09-22, the
+       measured reasons are in the code below). An `aggregate` question
+       with no shape, or a Disease or Article anchor on the two hop
+       classes, is None, the model path.
     4. A matched hop on a question asking "how many" (any class), or on an
        `aggregate` question saying "count" or "number of", becomes the
        count form, for a single anchor only (a count over several anchors
@@ -676,23 +732,42 @@ def select_template(
 
     shapes = matched_shapes(tool_input.query_intent, anchor_label)
     if not shapes:
-        # Decided from the user's chair, 2026-09-22. An `exploratory`
-        # question with no shape used to take the model path, and on the
-        # two golden questions of that kind (G-033, G-039) the generated
-        # query never finished: the planner expects 67,521 Gene rows for
-        # an id match that returns one, drives the join from the edge
-        # table under the LIMIT, and the graph's 30-second statement
+        # Decided from the user's chair, 2026-09-22, in two steps. First,
+        # an `exploratory` question with no shape used to take the model
+        # path, and on the golden question of that kind (G-039) the
+        # generated query never finished: the planner expects 67,521 Gene
+        # rows for an id match that returns one, drives the join from the
+        # edge table under the LIMIT, and the graph's 30-second statement
         # timeout kills it after 85 seconds of wall time on every pass
         # (`testing/Developer/reports/2026-09-22_slow_second_search/`).
         # The record template answers the same question in under a
-        # second with the row those runs never got. The gate is widened
-        # to exactly that class and no further, measured against the
-        # 2026-09-22 consistency run: a `multi_hop` question's generated
-        # search finds rows the record would lose (G-011), an
-        # `aggregate` one computes a count the record cannot (G-034), and
-        # a `single_hop` one about a name that resolved loosely would turn
-        # a correct refusal into an answer (G-014).
+        # second with the row those runs never got.
+        #
+        # Second, the same evening (fix-plan item 1), a GENE question with
+        # no shape on the `single_hop` and `multi_hop` classes joined it,
+        # measured offline over all 150 runs of the consistency run
+        # (`testing/Developer/reports/2026-09-22_item1_lost_search/`): on
+        # those classes the model path never produced a rich result for
+        # any golden question. G-037 lost its own search on every pass to
+        # a generated query the validator rejected, and the reason this
+        # comment gave for keeping `multi_hop` on the model path, that
+        # G-011's generated search found rows a record would lose, was
+        # wrong: G-011's rows came from the `gene_diseases_many` template
+        # on the passes it answered, and its one lost pass was the mixed
+        # path, fixed the same evening in `_mixed_gene_disease_template`.
+        #
+        # What still takes the model path with no shape, each for a
+        # measured reason: an `aggregate` question, which computes a count
+        # the record cannot (G-034); and a Disease or Article anchor on
+        # the two hop classes, because a disease list Think resolved from
+        # a common noun ("diseases", "tumour") would turn a correct
+        # refusal into a page of unrelated records (G-014, pass 3), where
+        # a gene symbol is live-confirmed before it is ever bound.
         if tool_input.query_class in (QueryClass.LOOKUP, QueryClass.EXPLORATORY):
+            return _record_template(anchor_label, param_names)
+        if anchor_label == "Gene" and tool_input.query_class in (
+            QueryClass.SINGLE_HOP, QueryClass.MULTI_HOP
+        ):
             return _record_template(anchor_label, param_names)
         return None
     wants_count = _wants_count(tool_input)

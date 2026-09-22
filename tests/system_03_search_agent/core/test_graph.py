@@ -293,13 +293,15 @@ def _compliant_think_classification(messages: list[dict[str, str]]) -> str:
 def _classify_as(monkeypatch: pytest.MonkeyPatch, query_class: str) -> None:
     """Make the stand-in Think classification return `query_class`.
 
-    2026-09-22: `select_template` now sends an exploratory question with no
-    recognisable shape to the record template, so the fixture's default
-    class no longer exercises cypher_query's generated-Cypher path and its
-    two plan-tier generation calls. The arms that pin that path classify
-    the same question as `multi_hop`, where the model path is still the
-    deliberate behaviour (a generated search finds rows a record would
-    lose; see the 2026-09-22 consistency run, G-011).
+    2026-09-22: `select_template` now sends a gene question with no
+    recognisable shape to the record template on every class but
+    `aggregate` (the exploratory class in the morning, the two hop classes
+    in the evening, fix-plan item 1), so the fixture's default class no
+    longer exercises cypher_query's generated-Cypher path and its two
+    plan-tier generation calls. The arms that pin that path classify the
+    same question as `aggregate`, where the model path is still the
+    deliberate behaviour (a count is something a record cannot give; see
+    the 2026-09-22 consistency run, G-034).
     """
     import sys
 
@@ -641,11 +643,11 @@ async def test_plan_calls_the_plan_tier_model_when_a_tool_runs(_mock_litellm: As
 async def test_plan_calls_the_plan_tier_model_three_times_on_the_model_path(
     _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The arm above on the path it was written for: a `multi_hop`
+    """The arm above on the path it was written for: an `aggregate`
     classification with no matched shape still runs cypher_query's two
     internal generate_cypher attempts after Think's own call, three
     plan-tier calls in all."""
-    _classify_as(monkeypatch, "multi_hop")
+    _classify_as(monkeypatch, "aggregate")
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     plan_tier_calls = [
@@ -768,7 +770,7 @@ async def test_exactly_one_of_five_model_path_calls_carries_the_stable_prefix(
     """The arm above on the generated-Cypher path: five calls in total, and
     still exactly one, Write's, carrying the stable prefix, since the two
     generate_cypher calls never do (F-06)."""
-    _classify_as(monkeypatch, "multi_hop")
+    _classify_as(monkeypatch, "aggregate")
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     assert _mock_litellm.call_count == 5
@@ -817,11 +819,12 @@ async def test_five_model_calls_fire_when_a_tool_runs_on_the_model_path(
     """T-2.1 rework: on the tool path, the three node-level calls
     (guardrail, think, write) plus cypher_query's two internal
     generate_cypher attempts (F-06's documented gap) total five, not three.
-    Six until 2026-09-14, when plan_node's discarded call was deleted; on a
-    `multi_hop` classification since 2026-09-22, when the exploratory one
-    moved to the record template.
+    Six until 2026-09-14, when plan_node's discarded call was deleted; on an
+    `aggregate` classification since 2026-09-22, when the exploratory one
+    moved to the record template in the morning and the two hop classes
+    followed it for a gene anchor in the evening (fix-plan item 1).
     """
-    _classify_as(monkeypatch, "multi_hop")
+    _classify_as(monkeypatch, "aggregate")
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     assert _mock_litellm.call_count == 5
