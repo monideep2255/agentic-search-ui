@@ -70,10 +70,10 @@ missing.
 | 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | 🚀 | 👍 | Tests 11, 15 |
 | 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | ✅ | 🚀 | | Nothing |
 | 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | 👍 | Tests 2, 13 |
-| 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | | Tests 1, 7, 12, 14 |
-| 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | | Tests 1, 7, 12 |
+| 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | 👍 | Tests 1, 7, 12, 14 |
+| 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | 👍 (2026-09-22; 9.3, 9.4 and 9.10 superseded, 9.11 and 9.9's wording still your decision, 9.12 awaits one look) | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
-| 11. Live feedback, 2026-09-13 onward | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-21: a quote from a paper that runs to more than one sentence is no longer thrown away and now keeps its source link (11.34), NCBI's own plain-English gene description is retrieved and shown as a source (11.31), the confusing Notes block is gone (11.35), and the answer-modes info button no longer promises a word count (11.36) | Partly | Mostly | | Tests 1, 7, 12 |
+| 11. Live feedback, 2026-09-13 onward | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-21: a quote from a paper that runs to more than one sentence is no longer thrown away and now keeps its source link (11.34), NCBI's own plain-English gene description is retrieved and shown as a source (11.31), the confusing Notes block is gone (11.35), and the answer-modes info button no longer promises a word count (11.36) | Partly | Mostly | 👍 for everything live (2026-09-22); 11.14 and 11.36 await one look | Tests 1, 7, 12 |
 
 ## Set 1: let people in
 
@@ -531,7 +531,7 @@ question cited recruiting trials, 19 to 55 seconds, one source set per question;
 
 ### 8.1 Search all three layers at the same time (R29)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: every question reaches the knowledge graph, live NCBI records, and literature and trials together.
 - What you noted: "Ideally all 3. Can we not have the 3 different searches being spawned? Will it be a lot of work?"
@@ -539,7 +539,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 8.2 A lead scientist hands off to three named scientists (R30)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: the progress screen shows the three-layer search as a handoff between scientists.
 - What you noted: "What we can show is some fun work: one scientist picks up the question and asks 3 different scientists every time to help find the answer, and then the original scientist synthesizes the answer."
@@ -547,7 +547,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 8.3 Progress steps named for the scientist (R31)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: the progress screen reads like a person working, not a generic spinner.
 - What you noted: from first-impressions points 1 and 2.
@@ -555,7 +555,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 8.4 Scientists stay random on every visit (R43)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: awaits one look (2026-09-22): open the app twice and see different scientists with the same answer
 
 - Feature being tested: the scientist shown, and the three helpers, can differ between visits without changing the answer.
 - What you noted: decision U5, random every visit, as develop does today, with the three helpers also picked at random.
@@ -630,7 +630,7 @@ Follow-ups on 2026-09-14, from your review of the live answers ("the inline cita
 
 ### 9.1 Two answer modes, Plain language and Researcher (R23)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: the three old depths become two modes that match how people actually read.
 - What you noted: "The researcher and deep technical modes can be combined into one."
@@ -638,7 +638,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.2 An info button explaining the two modes (R24)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: a reader can find out what each mode means before choosing it.
 - What you noted: from first-impressions point 4.
@@ -646,7 +646,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.3 Plain language: about 250 words in three paragraphs (R25)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: superseded, not approved as written: the word count and paragraph shape were taken out by 11.31 and 11.36 on 2026-09-21
 
 - Feature being tested: a plain-language answer is short enough to actually read.
 - What you noted: decided as question A3, three short paragraphs, about 250 words: the answer, what it means, and background from first principles for a reader starting from zero.
@@ -654,7 +654,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.4 Researcher: a full page organised by topic (R26)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: superseded, not approved as written: 11.31 redefined Researcher as tables, specifics and depth on 2026-09-21
 
 - Feature being tested: a Researcher answer gives a full, structured review rather than one sentence.
 - What you noted: decided as question A4, a full page, about 700 words or more, organised by topic, for someone doing a deep review.
@@ -662,7 +662,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.5 Short paragraphs of prose with citations inline (R27)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: an answer reads as flowing prose rather than a sparse list.
 - What you noted: decided as question A2, short paragraphs of flowing prose, with citations inline.
@@ -670,7 +670,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.6 The answer streams in sentence by sentence (R28)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: the answer builds up on screen instead of appearing all at once.
 - What you noted: "I also thought we were going to stream the answer, and I don't see streaming. It just shows the answer, and it is very sparse."
@@ -678,7 +678,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.7 Fix answers that open broken or garbled (R32)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 (2026-09-22, on the product owner's own use: in production as v0.2.0 since 2026-09-20)
 
 - Feature being tested: an answer's first sentence always reads as a complete sentence.
 - What you noted: from the browser walkthrough, "An answer's first sentence can come out garbled, for example 'BRCA1 (gene symbol BRCA1 [1]. These are…'."
@@ -686,7 +686,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.8 Fix the uncited note and awkward disease names (R33)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 for the disease names (2026-09-22, on the product owner's own use); the further-records note is gone whole since 11.35, so that half is superseded
 
 - Feature being tested: an added note about further records does not look like an uncited claim, and disease names read naturally.
 - What you noted: from the browser walkthrough, a "one further gene record" note shows as a grey sentence with no source.
@@ -694,7 +694,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.9 Trust signals become one plain line (R36)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: 👍 for the one-line shape (2026-09-22); the wording itself is still the product owner's decision, since most answers read "Based on N sources, not yet confirmed"
 
 - Feature being tested: the trust signal on a real answer says something useful in one line, instead of contradicting pills.
 - What you noted: decision U1, one plain line on real answers only, such as "Confirmed by 2 independent sources" or "Based on 1 source, not yet confirmed", with an info icon that explains it.
@@ -702,7 +702,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.10 Researcher headings, Plain language without them (R40)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: superseded, not approved as written: 11.13 gave both modes the same structure, then 11.31 split them again on different lines
 
 - Feature being tested: a Researcher answer is easy to scan without becoming a bulleted list.
 - What you noted: decision U2, a few short plain topic headings, each followed by short paragraphs of prose with citations inline. Plain language answers stay without headings.
@@ -710,7 +710,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.11 A small medical-advice line on Plain language answers (R47)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: the product owner's decision, not an approval: whether Plain language answers keep the small medical-advice line
 
 - Feature being tested: a Plain language answer carries a light reminder that it is not medical advice.
 - What you noted: decision X5, one small grey line under Plain language answers only, "Research information, not medical advice." Researcher answers do not show it.
@@ -718,7 +718,7 @@ Built: ✅ · Live: 🚀 · Approved:
 
 ### 9.12 The depth cannot change mid-search (D2)
 
-Built: ✅ · Live: 🚀 · Approved:
+Built: ✅ · Live: 🚀 · Approved: awaits one look (2026-09-22): change the mode while a search is running and confirm it stays locked
 
 - Feature being tested: choosing a different mode while a search is running does not corrupt the answer.
 - What you noted: from the developer specification, item D2 (W-CTRL-05), relevant once there are two modes with very different answers.
@@ -774,42 +774,42 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 
 | # | Your feedback | Status | Where it stands |
 |---|---|---|---|
-| 11.1 | Researcher answers should follow your reference screenshot | Live | Built in set 9, commit `537377d`. Being replaced by the approved layout in 11.12 |
+| 11.1 | Researcher answers should follow your reference screenshot | Superseded by 11.12 | Not approved as written; the layout it built was replaced. Built in set 9, commit `537377d`. Being replaced by the approved layout in 11.12 |
 | 11.2 | Delete the reference screenshot and the sets 8 and 9 session prompt when done | Done | Both moved to the Trash on 2026-09-14; the prompt stays in git history |
 | 11.3 | Stop after sets 8 and 9, do not touch set 10 | Done | Set 10 untouched |
 | 11.4 | Does the research layer make people wait 45 seconds? | Answered | No: the searches take about a second; the wait was the writing step. See 11.8 |
-| 11.5 | Citations are too big and overwhelm the answer | Live | Small raised numbers with a hover or tap card, commit `2b6d274` |
-| 11.6 | The answers lack the level of detail of your reference prototype | Live | Commit `0e71188`, on develop at `e5947e0`. Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode. Set 9's "no such link" claim was wrong: HNF1A has 2,075 links. Checked live in the browser: the HNF1A answer shows "Variant-to-disease mapping". The reference shows 13 rows; ours stop at 5 because an answer cites at most 20 sources, which is your call to change |
-| 11.7 | Switch the answer-writing model's reasoning setting to none | Live | Commit `2b6d274`; 35 local runs, no writing errors |
-| 11.8 | Make the process quicker | Live | Median answer on develop 26.5 to 19.7 seconds, slowest 71 to 53, commit `2b6d274` |
-| 11.9 | Show "[scientist] is writing the answer…" while it loads | Live | Commit `28aa805`. Checked live: "Luria is writing the answer… Pasteur, Delbruck and Nirenberg found 11 records" shows before the first sentence, in both modes |
+| 11.5 | Citations are too big and overwhelm the answer | Live, approved 2026-09-22 | Small raised numbers with a hover or tap card, commit `2b6d274` |
+| 11.6 | The answers lack the level of detail of your reference prototype | Live, approved 2026-09-22 | Commit `0e71188`, on develop at `e5947e0`. Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode. Set 9's "no such link" claim was wrong: HNF1A has 2,075 links. Checked live in the browser: the HNF1A answer shows "Variant-to-disease mapping". The reference shows 13 rows; ours stop at 5 because an answer cites at most 20 sources, which is your call to change |
+| 11.7 | Switch the answer-writing model's reasoning setting to none | Live, approved 2026-09-22 | Commit `2b6d274`; 35 local runs, no writing errors |
+| 11.8 | Make the process quicker | Live, approved 2026-09-22 | Median answer on develop 26.5 to 19.7 seconds, slowest 71 to 53, commit `2b6d274` |
+| 11.9 | Show "[scientist] is writing the answer…" while it loads | Live, approved 2026-09-22 | Commit `28aa805`. Checked live: "Luria is writing the answer… Pasteur, Delbruck and Nirenberg found 11 records" shows before the first sentence, in both modes |
 | 11.10 | Use parallel sub-agents, each on a model matched to the task | Done | Applied to every dispatch since |
 | 11.11 | Use your reference prototype for answer depth, formatting and structure; it writes with a different model family | In progress | The detail agent is modelling answers on it. The answer-writing model is unchanged: switching models is a separate decision |
-| 11.12 | The answer reads as one block; break it into readable paragraphs, headings and tables | Live | Commits `0e71188` and `28aa805`. Checked live at 1280: BRCA1 shows 4 headings and 4 tables in both modes. At 390 the tables become stacked rows and the page does not scroll sideways |
-| 11.13 | The same readable format in both Plain language and Researcher | Live, then REVERSED by 11.31 | Checked live: the same heading and table structure in both modes. Full detail: [11.13](#detail-1113) |
-| 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live | Checked live: a real selection of 1,703 characters holds no "Source N, layer" or "Sources X to" text |
-| 11.15 | The answer does not stream | Live in part | The screen reveals sentences one by one after the writing banner. The backend still sends the whole answer at once until 11.16 lands |
-| 11.16 | Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready | Live | CORRECTED 2026-09-20: this row said "In progress ... Full detail: [11.16](#detail-1116) |
-| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Live | Answered and built. The narrow search was our fixed plan in code, not the models. The broader plan was built on `worktree-breadth-wiring` and held with 11.21. MERGED AND LIVE 2026-09-20 as `2bb1925`, once the one unexplained test failure that held it turned out to belong to the branch's missing CI fix rather than to its code. Abstracts as written evidence remain out of scope, item 11.22 |
+| 11.12 | The answer reads as one block; break it into readable paragraphs, headings and tables | Live, approved 2026-09-22 | Commits `0e71188` and `28aa805`. Checked live at 1280: BRCA1 shows 4 headings and 4 tables in both modes. At 390 the tables become stacked rows and the page does not scroll sideways |
+| 11.13 | The same readable format in both Plain language and Researcher | Superseded by 11.31 | Not approved as written; reversed on 2026-09-21. Checked live: the same heading and table structure in both modes. Full detail: [11.13](#detail-1113) |
+| 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live, awaits one look | The product owner has not yet copied an answer; approval waits on that one check (2026-09-22). Checked live: a real selection of 1,703 characters holds no "Source N, layer" or "Sources X to" text |
+| 11.15 | The answer does not stream | Superseded by 11.16 | The partial streaming it describes was completed by 11.16. The screen reveals sentences one by one after the writing banner. The backend still sends the whole answer at once until 11.16 lands |
+| 11.16 | Approved: signal the write step as it starts, reveal sentences at reading pace, then send each checked sentence as soon as it is ready | Live, approved 2026-09-22 | CORRECTED 2026-09-20: this row said "In progress ... Full detail: [11.16](#detail-1116) |
+| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? Abstracts would help write the answers | Live, approved 2026-09-22 | Answered and built. The narrow search was our fixed plan in code, not the models. The broader plan was built on `worktree-breadth-wiring` and held with 11.21. MERGED AND LIVE 2026-09-20 as `2bb1925`, once the one unexplained test failure that held it turned out to belong to the branch's missing CI fix rather than to its code. Abstracts as written evidence remain out of scope, item 11.22 |
 | 11.18 | Search everything in all three layers, sources exact; is the harness or the open-source model to blame? | Answered | The harness: a fixed plan of one graph query and four live calls per gene, one fact per record. The models do not choose what is searched. Fix is 11.21 |
-| 11.19 | "Variants in GCK causing MODY" should answer every time | Live | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
-| 11.20 | "What genes are associated with MODY?" should answer | Live | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. On develop: 5 of 5 repeated runs, one source set, plus the browser check |
-| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, both decisions done | The tool layer is on develop since 2026-09-20. CORRECTED 2026-09-22: this row said two decisions were still to build. Both closed since: every retrieved finding is cited (2a, closed by measurement 2026-09-21, its whole residual gap was 11.34) and OMIM is cited and searched with its title filter (2b, done 2026-09-22). Full detail: [11.21](#detail-1121) |
-| 11.22 | PubMed and PMC should provide context for the answers | Queued, approved | Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
+| 11.19 | "Variants in GCK causing MODY" should answer every time | Live, approved 2026-09-22 | Cause found: the model sometimes read MODY as an organism, which broke the gene lookup. Now NCBI Taxonomy must confirm an organism first. 20 of 20 Think runs and 5 of 5 live runs resolved GCK |
+| 11.20 | "What genes are associated with MODY?" should answer | Live, approved 2026-09-22 | A live-confirmed MedGen disease lookup. 6 MODY genes, the same six your reference shows. On develop: 5 of 5 repeated runs, one source set, plus the browser check |
+| 11.21 | Search the right resource for each question, not only PubMed: PMC, ClinVar, NCBI Datasets, Gene and more; the same question must always show the same number and set of sources | Live, approved 2026-09-22, both decisions done | The tool layer is on develop since 2026-09-20. CORRECTED 2026-09-22: this row said two decisions were still to build. Both closed since: every retrieved finding is cited (2a, closed by measurement 2026-09-21, its whole residual gap was 11.34) and OMIM is cited and searched with its title filter (2b, done 2026-09-22). Full detail: [11.21](#detail-1121) |
+| 11.22 | PubMed and PMC should provide context for the answers | Queued, approved; live check pending | Reads as delivered by 11.34 (a multi-sentence abstract is cited in the record tail) but not yet checked live; one check moves it to Live. Part of 11.21: verified abstract sentences become citeable context, with the citation check unchanged |
 | 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered | Measured from NCBI's own header: your key allows 10 per second (3 without a key). 100 needs a separate arrangement with NCBI. The limiter moves from 3 to 10 as part of 11.21 |
 | 11.24 | How do I test what is built so far? | Answered | A test walk-through is given once the current work is on develop |
 | 11.25 | What from Set 11 is on develop? | Answered | On develop at `e5947e0`: 11.5 to 11.9, 11.12 to 11.14, 11.19, 11.20, 11.26, and 11.15 in part. Live run record: 48 of 53 answered, and the 5 failures did not reproduce in 12 more runs. See `testing/Developer/reports/2026-09-14_live_check/after_e5947e0/findings.md` |
-| 11.26 | The answers do not look like the approved mockup | Live | Commit `28aa805`. Checked live at 1280 and 390 against the mockup's structure |
-| 11.27 | Too much bold: only the title or main point should be bold | Live | LANDED ALONE 2026-09-20 as `aedf53d`, both develop services SUCCESS. Full detail: [11.27](#detail-1127) |
-| 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Live | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten... Full detail: [11.28](#detail-1128) |
-| 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, not started | Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
-| 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one snippet broken | Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
+| 11.26 | The answers do not look like the approved mockup | Live, approved 2026-09-22 | Commit `28aa805`. Checked live at 1280 and 390 against the mockup's structure |
+| 11.27 | Too much bold: only the title or main point should be bold | Live, approved 2026-09-22 | LANDED ALONE 2026-09-20 as `aedf53d`, both develop services SUCCESS. Full detail: [11.27](#detail-1127) |
+| 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Live, approved 2026-09-22 | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten... Full detail: [11.28](#detail-1128) |
+| 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
+| 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one half a discussion precursor to a build | Reclassified 2026-09-22 by the product owner: fix B's deployment setting is settled by a scoping discussion that precedes the build, not by a decision taken cold. Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
 | 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | LIVE 2026-09-21, approved as is by the product owner the same day | Raised 2026-09-20. Both open questions answered by the product owner on 2026-09-21, and the cause turned out to be upstream of the directive the item names. Full detail: [11.31](#detail-1131) |
-| 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Not started | Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
+| 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
 | 11.33 | PubMed abstracts reach the answer page cut off MID-WORD, for example "...inherited breast and/or ovarian c [29]" and "...has been uncle [33]" | APPROVED 2026-09-22 by the product owner's retest on develop | CAUSE FOUND 2026-09-22 and it was NEVER live-only: `_cap_scalar_string` in `harness/coordinator_worker.py` cut every string leaf at 500 characters, because its documented 2000-character top-level tier could never fire (the function receives the dict itself at depth 0, so no string is ever at depth 0). Every structured tool result passed through it before any renderer. The 2026-09-21 local trace went tool, shaper, `SynthFinding` and SKIPPED that stage, which is why it read as live-only. Found by a fresh-context agent that established server-side versus client-side first from a full event capture, then drove the real `_cap_structured_fields` over the real shaped efetch output and reproduced the fragment character for character; verified by execution in the main session before the fix was commissioned. THE FIX: one cap at every depth, 2000 characters, the bound `SynthFinding.field_value` already enforces, cut on a word boundary with an ellipsis, the dead tier deleted; `_MAX_FINDING_TOTAL_BYTES` measured (20 PubMed rows with 2000-character abstracts fit, the ceiling fires at 22) and deliberately unchanged. Seven arms added, six proven red against the pre-fix code and the seventh saying in its docstring that it cannot be. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`. RETEST: open a BRCA1 answer at researcher depth; the gene summary in the record tail should run past "and through the C-terminal d". WHAT WAS KNOWN BEFORE, kept as the record of a wrong conclusion: found 2026-09-21 on develop at `46fff40`. Every character cap in the codebase was ruled out BY EXECUTION, including `_cap_text`, which appends a literal " [truncated]" that appears nowhere in the capture. The sentence splitter cannot cut mid-word either. The remaining hypothesis, that the model itself emitted the fragment while attempting a long verbatim quote, could NOT be reproduced, because `claim_introduces_no_new_content` rejects the reconstruction. NOT SOLVED. A fix was written, verified live and DID NOT CLOSE IT, and that is recorded rather than claimed. `clip_to_word` now cuts at a word boundary at all five slices in `answer_layout.py` and is a real improvement on those paths, but a live run at `d4578d8` still shows every known fragment and ZERO ellipses, which proves the cut is on a path that helper does not touch. WHAT IS NOW KNOWN, and it is more than before: the cut is at EXACTLY 500 characters of the source value, established by fetching the real NCBI gene summary and finding the offset of the rendered fragment's end inside it. The value is NOT short at the tool: traced locally, the gene summary is 1253 characters at `ncbi_eutils_actions.summary`, still 1253 after `_ncbi_efetch_output_to_structured_fields`, and still 1253 on the `SynthFinding` built from it. So the truncation happens between the tool result and the tail render ON THE LIVE PATH ONLY, and a local reconstruction of that path does not reproduce it. Every 500-char slice in `core/graph.py` was read and none applies: they are think narratives, a plan narrative and a refusal message. Item 11.34's fix made this MORE visible rather than causing it, since a multi-sentence value used to be stripped whole. NEXT STEP, and it is now a small one: instrument the live path to print `len(finding.field_value)` at the point the tail narrative is built, which distinguishes a truncation upstream of the render from one inside it. The earlier diagnosis is kept at `testing/Developer/reports/2026-09-21_11.31_divergence/truncation/findings.md` |
 | 11.34 | A multi-sentence abstract LOSES ITS CITATION entirely in the code-built tail and fallback listing: both fragments are stripped and the marker is orphaned on an empty trailing "[27]." | FIXED and live 2026-09-21 | Found 2026-09-21 while diagnosing 11.33, and unrelated to it. This is a cite-or-refuse defect rather than a presentation one, so it ranks above the cosmetic items: a record that was retrieved and shown loses the link that makes it verifiable. Reproduced by driving `run_grounding_pass` over constructed multi-sentence abstract findings |
-| 11.35 | "The Notes section is super confusing. remove it", naming the unverified-summary note and the further-records note | LIVE | Raised and shipped 2026-09-21, `d044969`, verified in the served bundle. HIDDEN IN THE WEB UI RATHER THAN SUPPRESSED IN THE BACKEND, deliberately: both notes are built in the same branch that floors `trust_outcome` at `ask`, and removing them at the source turned five arms red that guard F-4.5-06 breach 2, an answer reporting a subset of its findings while looking complete. That attempt was reverted. So the trust line still reads "not yet confirmed" on an incomplete answer, and the API, CLI and MCP surfaces still carry the sentences. The filter is a PATTERN, because the first attempt matched only "one further" while the live note reads "5 further pubmed records" |
-| 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | LIVE | Raised and shipped 2026-09-21, `d044969`. Stale twice over: that directive stopped existing when 11.31 removed every length instruction, and it was a promise the product cannot keep, since the same question at the same mode measured 66, 101 and 113 words on three consecutive runs. The info card and the onboarding tour now describe WHO EACH MODE IS FOR |
+| 11.35 | "The Notes section is super confusing. remove it", naming the unverified-summary note and the further-records note | Live, approved 2026-09-22 | Raised and shipped 2026-09-21, `d044969`, verified in the served bundle. HIDDEN IN THE WEB UI RATHER THAN SUPPRESSED IN THE BACKEND, deliberately: both notes are built in the same branch that floors `trust_outcome` at `ask`, and removing them at the source turned five arms red that guard F-4.5-06 breach 2, an answer reporting a subset of its findings while looking complete. That attempt was reverted. So the trust line still reads "not yet confirmed" on an incomplete answer, and the API, CLI and MCP surfaces still carry the sentences. The filter is a PATTERN, because the first attempt matched only "one further" while the live note reads "5 further pubmed records" |
+| 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | Live, awaits one look | Approval waits on the product owner opening the info button once (2026-09-22). Raised and shipped 2026-09-21, `d044969`. Stale twice over: that directive stopped existing when 11.31 removed every length instruction, and it was a promise the product cannot keep, since the same question at the same mode measured 66, 101 and 113 words on three consecutive runs. The info card and the onboarding tour now describe WHO EACH MODE IS FOR |
 | 11.37 | Layer 1 knowledge-graph sources are invisible in the source list | ACCEPTED, not a defect to fix | Raised 2026-09-21. Measured: 40 of 67 citations ARE layer 1, so the graph is searched and cited. The source list deduplicates BY URL and keeps the first citation's layer, and every layer 1 GO term shares `ncbi.nlm.nih.gov/gene/672` with a layer 2 record numbered earlier, so all 40 collapse into a Live NCBI row and the "Knowledge graph" group renders ZERO rows. The product owner reviewed this and accepted it: "All good if deduped. That is fine!" |
 | 11.34 | A multi-sentence abstract loses its citation entirely in the code-built tail | FIXED, live pending | Fixed 2026-09-21. `build_structured_fallback_narrative` put ONE marker at the end of a multi-sentence body while `run_grounding_pass` splits on sentence boundaries, so every sentence but the last was unmarked and stripped as an uncited claim. Each sentence of a multi-sentence value is now marked independently, split on `field_value` itself rather than on the rendered labelled body, because the record-type label is not a substring of the value and broke `ground_claim` for the first clause. Before: `claims 1 stripped 3`, uncited. After: `claims 4 stripped 0`, cited. No grounding check was weakened |
 | 2a | Cite every retrieved finding | CLOSED BY MEASUREMENT, no new code | Measured 2026-09-21 BEFORE building, and the mechanism already existed: `tail_is_listing` is unconditionally true, so the findings tail grounds every admitted finding and merges those claims. The residual gap was entirely item 11.34. Measured 5 admitted findings, 3 cited, both uncited ones multi-sentence; after 11.34, 5 of 5 cited and 0 stripped. Building the obvious "cite every row" would have REINTRODUCED a recorded 2.1 defect that shipped 25 chips over an answer to a different question. Evidence and a re-runnable script: `testing/Developer/reports/2026-09-21_2a_measurement/` |
@@ -1402,17 +1402,18 @@ option rather than a queued task.
 
 ### What is waiting on the product owner
 
-Three new questions from the consistency run, none blocking:
+Rewritten 2026-09-22 after the product owner approved the review backlog: the
+three consistency-run questions that used to sit here were all settled that
+day (BLAST and VCF are refused, the golden widening was discarded, and the
+lost search is disclosed). What remains is small, and none of it blocks:
 
-- Whether a BLAST or VCF request should be refused by the guardrail outright,
-  or answered honestly for the terms it names with a line saying the product
-  cannot run the tool. Today G-046 and G-047 are answered from graph rows.
-- Whether the golden rows' `acceptable_outcomes` mean trust tiers or the
-  answer-or-refuse split. Today they list only `answer`, while the product's
-  modal grounded outcome is `ask`, so the generated comparison reads 14 percent
-  when the product-level figure is 77 percent.
-- What L-01 disclosure should say, now that the stream shows exactly where it
-  would attach: the `tool_result` with `status: error` and an empty summary.
+- Four checks of under a minute each, the only rows still not approved: copy
+  an answer and paste it somewhere (11.14), open the answer-modes info button
+  (11.36), change the mode while a search is running (9.12), and open the app
+  twice to see different scientists with the same answer (8.4).
+- Two decisions, both already on the standing list below: whether Plain
+  language answers keep the small medical-advice line (9.11), and the
+  trust-line wording (9.9).
 
 The longer standing list is unchanged: the three `theme.ts` logo tokens, the
 six undesigned surfaces, whether answers carry a medical-advice notice, the
@@ -1584,6 +1585,27 @@ question feels first.
    request expects a flag rather than a medical-advice refusal. Nothing blocks
    on it.
 5. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
+6. THREE DISCUSSIONS, EACH A PRECURSOR TO A BUILD UNDER `/bossman-mode`, and
+   one live check, by the product owner's decision of 2026-09-22 ("I think of
+   these as discussion, a precursor to the build"). None waits on a decision
+   taken cold; each opens with a scoping discussion whose written outcome is
+   what the build is measured against:
+   - 11.30's other half, the MCP mount's redirect emitting `http://`. The
+     discussion measures which addresses the develop and production services
+     actually receive forwarded requests from, rather than guessing, and
+     names everything that trusting them changes, including the client
+     address per-caller rate limiting reads.
+   - 11.32, internal MCP servers around the Layer 2 and 3 calls. The
+     discussion settles transport swap versus re-cut against the locked
+     Section 6 tool list, and what it buys over the direct calls, under
+     `.claude/rules/v1-scope-boundary.md`, before anything is built.
+   - 11.29, hard and soft edges over a fuller graph. The discussion names the
+     question shapes that need multi-hop or retrieval today, from the golden
+     set and the consistency run, before any embedding or RAG work is
+     proposed.
+   - 11.22, abstracts as citeable context. One live check that a sentence
+     from a multi-sentence abstract is cited in an answer, then the row moves
+     to Live. It is folded into item 1's live verification runs.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining
