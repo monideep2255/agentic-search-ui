@@ -550,12 +550,11 @@ THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not b
 
 1. The product owner checks the mid-word fix on the practice site: open an answer about BRCA1 and read the gene description at the bottom, which should now run to its end instead of stopping at "C-terminal d".
 2. Decide what to tell the reader when a lookup fails. The reasons are now known and are written into the search's own record: either the question named nothing the system could look up, or the second search ran out of time. The cheapest honest fix is to say so in the answer, rather than to stop it happening.
-3. Give the practice site the tracing key it turned out never to have. Every measurement we take runs against the practice site, and its searches have never been recorded in the tracing service the design relies on. One setting, but it holds a credential, so it is the product owner's to set.
-4. Confirm on the practice site that a sequence-search request and a variant-file request are now turned away with a clear message, and that an ordinary question about variants in a gene still answers.
-5. Decide whether twenty sources is the right ceiling. Answers hit it on most questions and then tell the reader they were cut short, which is a large part of why a good answer reads as a thin one.
-6. Switch OMIM back on, once its safety filter is actually connected. It is a genuinely useful source of gene-to-disease information and it is switched off for a good reason.
-7. Find out why the plain-language explanation of a well-studied gene takes 100 seconds when everything else takes 12.
-8. The rest of the screen work: a bigger, clearer disclaimer notice, and the smaller items on the tester's list that nobody has objected to yet.
+3. Confirm on the practice site that a sequence-search request and a variant-file request are now turned away with a clear message, and that an ordinary question about variants in a gene still answers.
+4. Decide whether twenty sources is the right ceiling. Answers hit it on most questions and then tell the reader they were cut short, which is a large part of why a good answer reads as a thin one.
+5. Switch OMIM back on, once its safety filter is actually connected. It is a genuinely useful source of gene-to-disease information and it is switched off for a good reason.
+6. Find out why the plain-language explanation of a well-studied gene takes 100 seconds when everything else takes 12.
+7. The rest of the screen work: a bigger, clearer disclaimer notice, and the smaller items on the tester's list that nobody has objected to yet.
 
 NOT ON THIS LIST, deliberately: making the two answer settings genuinely different. It was worked on all day on 21 September. The product owner has seen where it got to and accepted it as it stands. There is a way forward written down, which is to have the system place the plain-English description itself rather than asking it to write one, but it is an option on the table rather than a queued job.
 

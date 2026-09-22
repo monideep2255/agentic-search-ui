@@ -28,7 +28,7 @@ Neither message reached the stream, the developer instrument or the deploy log b
 
 ## Why no trace existed to read
 
-The fix plan's item said to read the LangSmith trace joined on the run's trace id. There is none: `LANGSMITH_API_KEY` is not set on the develop service (checked with the Railway CLI, which returns every other variable's value), so develop has traced nothing to LangSmith since it was stood up. The production service does carry the key. The audit log on the develop container was the other place the cause could live, and it is not reachable from here. Both facts are worth knowing on their own: the join key the technical specification builds observability around is unpopulated on the deployment every measurement runs against.
+The fix plan's item said to read the LangSmith trace joined on the run's trace id. There is none, and that is by design: tracing runs on production only, which the product owner confirmed the same day, so `LANGSMITH_API_KEY` is not set on the develop service and develop has never traced. The audit log on the develop container was the other place the cause could live, and it is not reachable from here. The consequence for method is the one worth keeping: a cause behind a develop measurement is read by local reproduction, never from a trace, and a next step written as "read the trace" against develop is wrong on its face.
 
 So the cause was read by reproduction rather than by trace: the API run locally against the real graph and the real models, with the errored calls' messages carried into the event stream by the code change, and the audit log on this machine read alongside.
 

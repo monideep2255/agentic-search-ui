@@ -1413,11 +1413,11 @@ placement, and the trust-line wording.
   without it. Why one breadth follow-up takes over a minute on a gene the
   first call answers in seconds is unread; the graph query service's own logs
   on the Hetzner box would say.
-- DEVELOP TRACES NOTHING TO LANGSMITH: `LANGSMITH_API_KEY` is not set on the
-  develop service, so the join key Section 20 builds observability on is
-  unpopulated on the deployment every measurement runs against. Production
-  carries the key. A one-line ops fix, not made here because it is a
-  credential decision.
+- DEVELOP TRACES NOTHING TO LANGSMITH, BY DESIGN: tracing runs on production
+  only, product-owner confirmation of 2026-09-22. So a cause behind a develop
+  measurement is read by local reproduction, as L-01's was, never from a
+  trace. Any future "read the trace" step written against develop is wrong
+  on its face.
 - `testing/Shipped_2026-09-20.md` was found deleted from the working tree
   mid-session by something outside this session's tool calls, and restored
   from HEAD unchanged. Cause unknown.
@@ -1531,13 +1531,10 @@ in this document's git log and in `requirements/Plan.md`.
    the reason) and both causes in hand. The cause was read the same day by
    local reproduction, since develop has no LangSmith key, and is recorded in
    `testing/Developer/reports/2026-09-22_L01_cause/findings.md`.
-3. SET `LANGSMITH_API_KEY` ON THE DEVELOP SERVICE, so the next measurement has
-   traces to read. A credential decision for the product owner, one line in
-   Railway.
-4. RETEST THE COMPUTE REFUSAL on develop, decided as refuse-outright by the
+3. RETEST THE COMPUTE REFUSAL on develop, decided as refuse-outright by the
    product owner on 2026-09-22 and built the same day: the two golden texts
    above must refuse, and a CFTR variants question must still answer.
-5. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
+4. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
    `filter_omim_titles` wired into the act result path first. The steps are in
    `_BREADTH_FOLLOW_UPS`'s own comment.
 

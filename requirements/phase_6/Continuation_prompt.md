@@ -36,7 +36,7 @@ The next action is always one line, kept current here. Right now it is:
   - Read "What is parked, and why" BEFORE picking anything up. The OMIM dispatch is reverted on purpose and must not be re-enabled without wiring `filter_omim_titles`.
 - ITEM 10.3, THE CONSISTENCY RUN, HAS NOW BEEN RUN, for the first time, on 2026-09-22: all 50 golden questions three times against develop at `63ec316`, signed in on two fresh test accounts. 86 of 150 runs answered; 25 questions answer every time (the 2026-09-12 baseline had 1), 18 never (had 43), none worse. The 18 split into 9 expected refusals, 3 guardrail refusals the golden row disagrees with, and 6 genuine gaps, every one a Layer 1 failure. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`.
 - ITEM 11.33 IS FIXED, ON DEVELOP AND VERIFIED LIVE at `a868462` (the BRCA1 gene summary runs past the old cut, zero ellipses), awaiting the product owner's retest. The cause was never live-only: `harness/coordinator_worker.py` cut every string leaf at 500 characters because its documented 2000-character tier was unreachable, and the 2026-09-21 local trace skipped that stage. One cap now, at `SynthFinding`'s own 2000, on a word boundary, with an ellipsis. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`.
-- L-01 IS MEASURED AND ITS TWO CAUSES ARE READ, not fixed in the answer text: 12 of 119 eligible graph calls returned zero where another pass returned rows. The reason was dropped one line above the event in `_execute_planned_call` and now rides in the `tool_result` summary. Cause one, deterministic per question: Think resolves no entity for a coordinate range, an isolate or an accession and the tool is dispatched with nothing to bind. Cause two, variance: a second graph call on an exploratory question runs past the act step's 120-second budget. Read by local reproduction because develop has NO `LANGSMITH_API_KEY`; evidence in `testing/Developer/reports/2026-09-22_L01_cause/findings.md`. The disclosure decision is the product owner's, with the cause in hand.
+- L-01 IS MEASURED AND ITS TWO CAUSES ARE READ, not fixed in the answer text: 12 of 119 eligible graph calls returned zero where another pass returned rows. The reason was dropped one line above the event in `_execute_planned_call` and now rides in the `tool_result` summary. Cause one, deterministic per question: Think resolves no entity for a coordinate range, an isolate or an accession and the tool is dispatched with nothing to bind. Cause two, variance: a second graph call on an exploratory question runs past the act step's 120-second budget. Read by local reproduction, because tracing runs on production only by design and develop has no LangSmith key; evidence in `testing/Developer/reports/2026-09-22_L01_cause/findings.md`. The disclosure decision is the product owner's, with the cause in hand.
 - TWO OUT-OF-SCOPE COMPUTE REQUESTS, G-046 (BLAST) and G-047 (VCF), ARE NOW REFUSED at the guardrail under a new additive category `compute_request`, decided by the product owner and built on 2026-09-22 (deterministic screen in `guardrail/forbidden.py`, copy on every surface, precedent F-3.0-01). Awaiting retest.
 - THE RESULT MOST WORTH CARRYING FORWARD from 2026-09-21 still stands: THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING. Five versions of the plain-language depth directive have failed by instructing the model about form; a sixth is not the fix. The remaining lever, having the CODE place plain source text verbatim and cited, is a standing option the product owner declined for now, not queued work.
 - TWO THINGS A SESSION MUST NOT UNDO CASUALLY: do not re-enable the OMIM dispatch without wiring `filter_omim_titles` (the first OMIM hit for `GCK` is `MAP4K2`), and do not add a word count or a paragraph shape back to the plain-language directive (arms in `tests/system_03_search_agent/synthesis/test_answer_quality.py` go red if one returns).
@@ -100,10 +100,12 @@ WHAT LANDED, in the terms a person notices:
 
 WHAT DID NOT LAND, and each is recorded rather than rounded up:
 
-- L-01 IS NOT FIXED and its cause is NOT READ. The stream and the deploy log
-  both drop it. The LangSmith trace or the audit log is where it lives.
+- L-01 IS NOT FIXED in the answer text. Both causes are read and the reason
+  now reaches the stream; whether the answer says so is the product owner's
+  decision.
 - NINE questions fail on the graph on every pass, six of them as refusals.
-  Not variance, a defect with a reproduction set, and unfixed.
+  Four name nothing Think can resolve, two lose their second call to the act
+  budget every time. A defect with a reproduction set, unfixed.
 - The compute refusal and the L-01 reason are on develop and NOT yet retested
   by the product owner.
 - THE EXPLANATION half of 11.31 and THE OMIM DISPATCH stay parked, unchanged
