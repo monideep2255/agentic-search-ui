@@ -1281,7 +1281,7 @@ The 2026-09-20 shipped list, with what to retest, is
 |---|---|---|
 | 10.3, the consistency run | RUN, all 150, first time ever | 86 of 150 answered; 25 questions answer every time (was 1), 18 never (was 43), none worse than the 2026-09-12 baseline. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md` |
 | 11.33, values cut at 500 characters | FIXED and VERIFIED LIVE on develop at `a868462`: the BRCA1 gene summary now runs past "and through the C-terminal d", zero ellipses. APPROVED by the product owner's retest the same day | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
-| L-01, a graph result vanishing | MEASURED, and BOTH CAUSES READ the same day | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
+| L-01, a graph result vanishing | MEASURED, BOTH CAUSES READ, and DISCLOSED to the reader the same day, awaiting retest | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
 | Scope boundary | DECIDED, BUILT and APPROVED by the product owner's retest on 2026-09-22: refuse outright under a new guard category, `compute_request` | G-046 (BLAST) and G-047 (VCF) were answered from graph rows because the resolver found real concepts inside them. A deterministic screen in `guardrail/forbidden.py` now refuses a BLAST-family token near a sequence object, the phrase "sequence similarity", a 25-character nucleotide run, or `vcf` near a file or analysis word, and the refusal says the capability is unavailable and points at NCBI BLAST. Precedent for the new category: F-3.0-01 |
 | Latency | NARROWED to one shape | G-039, a plain-terms explanation over BRCA1, takes about 100 seconds on every run; everything else has a p90 under 40 seconds |
 | The instrument | Two lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
@@ -1335,6 +1335,15 @@ option rather than a queued task.
 
 ### What is live on develop
 
+- An answer that lost a background search ends with "One of the background
+  searches did not finish, so this answer may be missing sources. Ask again
+  to retry" and its trust line reads not yet confirmed. A question the
+  product could not read is answered with "I could not tell which gene,
+  variant, disease or organism you mean. Name one and I will search". A
+  search that failed with nothing found says so and invites a retry. Pushed
+  2026-09-22 as `10f6a46`, decided from the user's chair. Retest: ask
+  "What ACMG-relevant evidence is available for a copy number variant
+  spanning chr17:43,044,295-43,125,364 on GRCh38?" and read the refusal.
 - A BLAST or VCF request is refused at the guardrail as `compute_request`,
   with copy on the web banner and the CLI and the reason on the API. Pushed
   2026-09-22 and APPROVED by the product owner's retest the same day: both
@@ -1395,10 +1404,11 @@ placement, and the trust-line wording.
 
 ### Loose ends, named rather than left
 
-- L-01 is MEASURED, its two causes are READ, and it is NOT FIXED in the
-  answer text. The reason now reaches the stream. Whether the answer should
-  say a graph search did not finish is the product owner's decision, with the
-  cause in hand.
+- L-01 is MEASURED, its two causes are READ, and the reader is now TOLD:
+  a lost search is disclosed under the answer and a question the product
+  could not read is answered with a request for a name (`10f6a46`). What
+  is NOT fixed is the cause itself: the deterministic half is a Think gap
+  and the variance half is the act budget, both below.
 - THE DETERMINISTIC HALF OF L-01 is a Think gap: for a GRCh38 coordinate
   range (G-001), a Pathogen Detection isolate (G-035), a BioProject accession
   (G-007) and on some passes Lynch syndrome (G-003), Think resolves no entity
@@ -1528,11 +1538,11 @@ the L-01 decision, now has its measurement and both of its causes. The compute
 refusal is built and approved by retest. The previous list's own history is
 in this document's git log and in `requirements/Plan.md`.
 
-1. DECIDE L-01 DISCLOSURE with the product owner, with the rate (one call in
-   ten), the attachment point (the errored `tool_result`, which now carries
-   the reason) and both causes in hand. The cause was read the same day by
-   local reproduction, since develop has no LangSmith key, and is recorded in
-   `testing/Developer/reports/2026-09-22_L01_cause/findings.md`.
+1. RETEST THE L-01 DISCLOSURE on develop: the coordinate-range question above
+   must be answered with a request for a name, and an ordinary gene question
+   must read exactly as before. Decided and built from the user's chair on
+   2026-09-22 after the product owner delegated the decision; the two causes
+   are in `testing/Developer/reports/2026-09-22_L01_cause/findings.md`.
 2. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
    `filter_omim_titles` wired into the act result path first. The steps are in
    `_BREADTH_FOLLOW_UPS`'s own comment.
