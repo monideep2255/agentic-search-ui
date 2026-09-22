@@ -296,3 +296,78 @@ def test_omim_filter_rejects_a_malformed_symbol() -> None:
     with pytest.raises(ValueError):
         bp.filter_omim_titles(_OMIM_RECORDS, "GCK OR TP53")
 
+
+# ---------------------------------------------------------------------------
+# GEO DataSets (2026-09-22, fix-plan item 1: G-037 answered with no dataset)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Find GEO expression datasets studying TP53 in human tumour samples.",
+        "Is there a GEO dataset on BRCA1?",
+        "expression profiling of GCK in islets",
+        "any microarray data for TP53",
+        "RNA-seq for BRCA1",
+        "GSE12345 and TP53",
+    ],
+)
+def test_dataset_words_ask_for_a_geo_search(question: str) -> None:
+    assert bp.wants_dataset_search(question)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Which diseases are associated with BRCA1?",
+        "What does the BRCA1 gene do, and how is its expression regulated?",
+        "geological survey of MODY",
+        "",
+        None,
+    ],
+)
+def test_ordinary_questions_do_not_ask_for_a_geo_search(question: str | None) -> None:
+    assert not bp.wants_dataset_search(question)
+
+
+def test_gds_term_is_the_symbol_restricted_to_series() -> None:
+    assert bp.build_gds_term("tp53") == "TP53[All Fields] AND gse[Entry Type]"
+    assert bp.build_gds_term(None) is None
+    assert bp.build_gds_term("") is None
+    with pytest.raises(ValueError):
+        bp.build_gds_term("TP53 OR BRCA1")
+
+
+def test_first_stage_plans_the_geo_search_last_and_only_when_asked() -> None:
+    plain = bp.plan_first_stage("TP53", None)
+    with_datasets = bp.plan_first_stage("TP53", None, datasets=True)
+    assert [c.purpose for c in plain] == ["pubmed_search", "clinvar_search", "omim_search"]
+    assert [c.purpose for c in with_datasets] == [
+        "pubmed_search", "clinvar_search", "omim_search", "gds_search",
+    ]
+    gds = with_datasets[-1].tool_input.root
+    assert (gds.db, gds.term, gds.retmax) == ("gds", "TP53[All Fields] AND gse[Entry Type]", 5)
+    assert with_datasets[-1].tool == "ncbi_efetch" and with_datasets[-1].layer == "layer_2_api"
+    # A dataset question with no resolved gene plans no GEO search: the
+    # term needs a symbol, and the fan-out is gene-anchored like the rest.
+    assert bp.plan_first_stage(None, "breast cancer", datasets=True) == bp.plan_first_stage(
+        None, "breast cancer"
+    )
+
+
+def test_gds_follow_up_is_one_capped_summary() -> None:
+    (call,) = bp.plan_gds_follow_up(["200346694", "200315234", "200346344", "x", "200346694"])
+    assert call.purpose == "gds_summary"
+    assert call.tool_input.root.db == "gds"
+    assert call.tool_input.root.ids == ["200346694", "200346344", "200315234"]
+    assert bp.plan_gds_follow_up([]) == ()
+    assert bp.plan_gds_follow_up(["nope"]) == ()
+
+
+def test_the_geo_pair_keeps_a_dataset_question_under_the_call_ceiling() -> None:
+    """A gene question measured 14 to 16 of its 20 allowed Layer 2 and 3
+    calls on 2026-09-22 with OMIM on. The GEO search and its summary add
+    two, only on a question that asks for datasets, so the worst such
+    question reaches 18 and never the ceiling."""
+    assert len(bp.plan_first_stage("TP53", None, datasets=True)) == 4

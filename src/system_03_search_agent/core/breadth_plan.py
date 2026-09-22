@@ -29,6 +29,14 @@ not hold until PubMed answers:
 - `plan_clinvar_follow_up(ids)` and `plan_omim_follow_up(ids)`: the
   ESummary calls on the ids the first-stage searches returned, sorted and
   capped the same way.
+- `plan_first_stage(..., datasets=True)` adds a GEO DataSets ESearch on the
+  symbol (2026-09-22, fix-plan item 1), planned by `core/graph.py` only when
+  `wants_dataset_search(question)` says the question asks for datasets, and
+  `plan_gds_follow_up(ids)` is its ESummary. GEO is the one place expression
+  datasets live, the graph has no dataset vertex, and golden G-037 ("Find
+  GEO expression datasets studying TP53 in human tumour samples") answered
+  with no dataset at all until then. The term shape was verified live the
+  same day against ESearch's own `querytranslation`.
 
 Sorting: every id list is sorted numerically, highest first, before it is
 capped. ESearch returns PubMed ids in date-added order rather than id
@@ -87,6 +95,7 @@ from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnot
 PUBMED_RESULT_CAP: Final[int] = 5
 CLINVAR_RESULT_CAP: Final[int] = 10
 OMIM_RESULT_CAP: Final[int] = 10
+GDS_RESULT_CAP: Final[int] = 5
 
 # Bounds on the two free-text inputs. A gene symbol is at most 30
 # characters (`NcbiEfetchDatasetReportInput.symbol` uses the same bound) and
@@ -101,6 +110,17 @@ _SYMBOL_PATTERN: Final[re.Pattern[str]] = re.compile(
 )
 _TITLE_STRIP_PATTERN: Final[re.Pattern[str]] = re.compile(r'["\[\]():*?]')
 _WHITESPACE_RUN: Final[re.Pattern[str]] = re.compile(r"\s+")
+
+# The words that say a question is asking for expression datasets, which
+# live in GEO and nowhere the graph or the other searches reach. Word-bounded
+# and deliberately narrow: "dataset" alone, GEO's own names, and the ways
+# people say expression profiling. "expression" on its own is not here,
+# since "how is its expression regulated" describes what a gene does, not a
+# request for data.
+_DATASET_WORDS: Final[re.Pattern[str]] = re.compile(
+    r"\b(geo|gds|gse\d*|datasets?|expression\s+(?:data|profiles?|profiling)|microarrays?|rna-?seq)\b",
+    re.IGNORECASE,
+)
 
 # An E-utilities uid is a plain positive integer (`ncbi_efetch_schemas`
 # caps an id at 30 characters; PubTator3 at 15). Anything else is not an
@@ -197,6 +217,35 @@ def build_pubmed_term(gene_symbol: str | None, disease_title: str | None) -> str
     return " AND ".join(clauses)
 
 
+def wants_dataset_search(question: str | None) -> bool:
+    """Whether `question` asks for expression datasets, the one kind of
+    record only GEO holds. Golden G-037, "Find GEO expression datasets
+    studying TP53 in human tumour samples", answered with no dataset at all
+    until 2026-09-22 because nothing searched GEO, and the graph has no
+    dataset vertex, so its own search could not stand in. Pure and
+    deterministic; False for anything that is not a string."""
+    if not isinstance(question, str):
+        return False
+    return _DATASET_WORDS.search(question) is not None
+
+
+def build_gds_term(gene_symbol: str | None) -> str | None:
+    """The GEO DataSets ESearch term for a symbol: the symbol in every field,
+    restricted to series (`gse[Entry Type]`), so the hits are datasets a
+    person can open rather than the samples inside them. Verified live on
+    2026-09-22 against ESearch's own `querytranslation`: `TP53[All Fields]
+    AND gse[Entry Type]` is translated exactly as written and matches 1,569
+    series, where the unrestricted term matched 19,092 entries, most of
+    them single samples. No organism clause, deliberately: a mouse question
+    would be silently narrowed to human, and the summary rows carry `taxon`
+    for the reader to see. None for no usable symbol; a symbol that is not
+    symbol-shaped raises, as `build_pubmed_term` does."""
+    symbol = _normalise_symbol(gene_symbol)
+    if not symbol:
+        return None
+    return f"{symbol}[All Fields] AND gse[Entry Type]"
+
+
 def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:
     return PlannedCall(
         tool=_NCBI_EFETCH,
@@ -210,14 +259,17 @@ def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:
 
 
 def plan_first_stage(
-    gene_symbol: str | None, disease_title: str | None
+    gene_symbol: str | None, disease_title: str | None, *, datasets: bool = False
 ) -> tuple[PlannedCall, ...]:
     """The calls that need only the symbol or the title, in fixed order.
 
     Order: PubMed search, then for a symbol the ClinVar search and the OMIM
-    search. An empty tuple when neither input is usable, which is the
-    planner's signal to plan nothing extra rather than an error: a question
-    that resolved no gene and bound no disease earns no fan-out.
+    search, then, with `datasets` and a symbol, the GEO DataSets search
+    (2026-09-22, fix-plan item 1), planned last so that under the Section
+    21.3 ceiling it is the first search admission would skip. An empty
+    tuple when neither input is usable, which is the planner's signal to
+    plan nothing extra rather than an error: a question that resolved no
+    gene and bound no disease earns no fan-out.
     """
     symbol = _normalise_symbol(gene_symbol)
     term = build_pubmed_term(symbol, disease_title)
@@ -229,6 +281,10 @@ def plan_first_stage(
             _search_call("clinvar_search", "clinvar", f"{symbol}[gene]", CLINVAR_RESULT_CAP)
         )
         calls.append(_search_call("omim_search", "omim", symbol, OMIM_RESULT_CAP))
+        if datasets:
+            gds_term = build_gds_term(symbol)
+            if gds_term:
+                calls.append(_search_call("gds_search", "gds", gds_term, GDS_RESULT_CAP))
     return tuple(calls)
 
 
@@ -322,6 +378,17 @@ def plan_omim_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
     if not selected:
         return ()
     return (_summary_call("omim_summary", "omim", selected),)
+
+
+def plan_gds_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+    """GEO DataSets ESummary on the sorted, capped uids a GEO search returned.
+    The summary carries the series accession, title, organism, dataset type
+    and sample count (`ncbi_eutils_actions._SUMMARY_FIELDS_BY_DB["gds"]`),
+    and the record URL is NCBI's own `gds/{uid}` page."""
+    selected = select_ids(ids, GDS_RESULT_CAP)
+    if not selected:
+        return ()
+    return (_summary_call("gds_summary", "gds", selected),)
 
 
 def filter_omim_titles(

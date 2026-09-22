@@ -112,6 +112,7 @@ from tests.system_03_search_agent.model_stub import (
 
 _GENE_QUESTION = "Which diseases are associated with BRCA1?"
 _GCK_QUESTION = "Which diseases are associated with GCK?"
+_DATASET_QUESTION = "Find GEO expression datasets studying TP53 in human tumour samples."
 _KNOWN = {"BRCA1": "NCBIGene:672", "TP53": "NCBIGene:7157", "GCK": "NCBIGene:2645"}
 _ABSTRACT = "Loss of BRCA1 function abolishes homologous recombination in this cohort."
 
@@ -235,10 +236,14 @@ class _ToolSpy:
         pubmed_ids: list[str] | None = None,
         clinvar_ids: list[str] | None = None,
         omim_titles: dict[str, str] | None = None,
+        gds_ids: list[str] | None = None,
         search_status: str = "ok",
         summary_raises: bool = False,
     ) -> None:
         self.efetch_inputs: list[dict[str, Any]] = []
+        # Fix-plan item 1: what a GEO DataSets search answers, two real
+        # series uids, given lowest first so the sort is visible.
+        self.gds_ids = ["200315234", "200346694"] if gds_ids is None else gds_ids
         self.pubtator_inputs: list[dict[str, Any]] = []
         self.cypher_templates: list[str | None] = []
         self.pubmed_ids = ["30000001", "30000003", "30000002"] if pubmed_ids is None else pubmed_ids
@@ -273,6 +278,8 @@ class _ToolSpy:
                     ids = list(self.pubmed_ids)
                 elif root.db == "omim":
                     ids = list(self.omim_titles)
+                elif root.db == "gds":
+                    ids = list(self.gds_ids)
                 else:
                     ids = list(self.clinvar_ids)
                 return NcbiEfetchOutput(
@@ -305,6 +312,30 @@ class _ToolSpy:
                     return NcbiEfetchOutput(
                         status="ok", action="summary", records=omim_records,
                         record_count=len(omim_records), total_available=len(omim_records),
+                        truncated=False,
+                    )
+                if root.db == "gds":
+                    # A GEO DataSets ESummary record with the fields the
+                    # tool's own allowlist keeps and NCBI's `gds/{uid}` page.
+                    gds_records = [
+                        NcbiEfetchRecord(
+                            id=uid, db="gds",
+                            fields={
+                                "accession": f"GSE{uid[3:]}",
+                                "title": f"TP53 expression series {uid}",
+                                "summary": "A paragraph of submitter prose.",
+                                "taxon": "Homo sapiens",
+                                "entrytype": "GSE",
+                                "gdstype": "Expression profiling by high throughput sequencing",
+                                "n_samples": 27,
+                            },
+                            source_url=f"https://www.ncbi.nlm.nih.gov/gds/{uid}",
+                        )
+                        for uid in root.ids
+                    ]
+                    return NcbiEfetchOutput(
+                        status="ok", action="summary", records=gds_records,
+                        record_count=len(gds_records), total_available=len(gds_records),
                         truncated=False,
                     )
                 records = [
@@ -1053,3 +1084,56 @@ async def test_bypassing_filter_omim_titles_lets_the_wrong_gene_through(
     events = await _events(_GCK_QUESTION)
     sources = _sources(events)
     assert _omim_url(_OMIM_MAP4K2[0]) in sources, sources
+
+
+# ---------------------------------------------------------------------------
+# Fix-plan item 1 (2026-09-22): the GEO DataSets pair on a dataset question.
+# ---------------------------------------------------------------------------
+
+
+def test_a_dataset_question_plans_the_geo_pair_after_omim_and_a_plain_one_does_not() -> None:
+    """Golden G-037 asks for GEO expression datasets and got none, because
+    nothing searched GEO and the graph has no dataset vertex. The pair is
+    planned only when the question asks, after OMIM's pair, so under the
+    call ceiling it is the first the admission would skip."""
+    calls = graph_module._build_breadth_calls("TP53", datasets=True)
+    purposes = [getattr(c, "purpose", "") for c in calls]
+    assert purposes == [
+        "pubmed_search", "clinvar_search", "omim_search", "gds_search", "pubmed_abstracts",
+        "pubtator_publications", "clinvar_summary", "omim_summary", "gds_summary",
+    ], purposes
+    (gds_follow_up,) = [c for c in calls if getattr(c, "purpose", "") == "gds_summary"]
+    assert gds_follow_up.source_purpose == "gds_search"
+    plain = [getattr(c, "purpose", "") for c in graph_module._build_breadth_calls("TP53")]
+    assert "gds_search" not in plain and "gds_summary" not in plain, plain
+    assert graph_module._build_breadth_calls(None, datasets=True) == []
+
+
+@pytest.mark.asyncio
+async def test_a_dataset_question_reaches_the_answer_with_geo_series_cited(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _ModelSpy(monkeypatch, entity="TP53")
+    _install_lookup(monkeypatch)
+    spy = _ToolSpy(monkeypatch)
+    events = await _events(_DATASET_QUESTION)
+    tools = _plan_tools(events)
+    # The plain gene question's eight NCBI calls plus the GEO search and
+    # its summary.
+    assert tools.count(("ncbi_efetch", "layer_2_api")) == 1 + 4 + 4 + 1, tools
+    searches = [i for i in spy.efetch_inputs if i["action"] == "search" and i["db"] == "gds"]
+    assert len(searches) == 1, spy.efetch_inputs
+    assert searches[0]["term"] == "TP53[All Fields] AND gse[Entry Type]"
+    summaries = [i for i in spy.efetch_inputs if i["action"] == "summary" and i["db"] == "gds"]
+    assert len(summaries) == 1 and summaries[0]["ids"] == ["200346694", "200315234"], summaries
+    sources = _sources(events)
+    assert "https://www.ncbi.nlm.nih.gov/gds/200346694" in sources, sources
+    assert "https://www.ncbi.nlm.nih.gov/gds/200315234" in sources, sources
+    # Every planned call started and closed.
+    starts = [e for e in events if e.type == "tool_start"]
+    assert len(starts) == 15 == len(_results(events)), (len(starts), len(_results(events)))
+    # Populate check: the plain gene question plans no GEO call at all.
+    plain_spy = _ToolSpy(monkeypatch)
+    plain_events = await _events(_GENE_QUESTION, session_id="s-plain")
+    assert not [i for i in plain_spy.efetch_inputs if i.get("db") == "gds"], plain_spy.efetch_inputs
+    assert not [s for s in _sources(plain_events) if "/gds/" in s]

@@ -2688,6 +2688,10 @@ _BREADTH_FOLLOW_UPS: Final[dict[str, tuple[tuple[str, str, str, str], ...]]] = {
     ),
     "clinvar_search": (("ncbi_efetch", "layer_2_api", "ne", "clinvar_summary"),),
     "omim_search": (("ncbi_efetch", "layer_2_api", "ne", "omim_summary"),),
+    # Fix-plan item 1 (2026-09-22): the GEO DataSets pair, planned only when
+    # `breadth_plan.wants_dataset_search` says the question asks for
+    # expression datasets, which live in GEO and nowhere the graph reaches.
+    "gds_search": (("ncbi_efetch", "layer_2_api", "ne", "gds_summary"),),
 }
 _BREADTH_SEARCH_PURPOSES: Final[frozenset[str]] = frozenset(_BREADTH_FOLLOW_UPS)
 #: The first-stage purposes `breadth_plan` plans that this wiring does NOT
@@ -2735,7 +2739,7 @@ def _planned_from_breadth(call: breadth_plan.PlannedCall) -> _PlannedNcbiEfetchT
     return _PlannedLayerToolCall(tool_call=tool_call, tool_input=call.tool_input, purpose=call.purpose)
 
 
-def _build_breadth_calls(gene_symbol: str | None) -> list[Any]:
+def _build_breadth_calls(gene_symbol: str | None, *, datasets: bool = False) -> list[Any]:
     """UI fix 11.21 wiring (2026-09-20): the breadth fan-out for one gene.
 
     `breadth_plan.plan_first_stage` on the symbol alone, never on a disease
@@ -2753,11 +2757,18 @@ def _build_breadth_calls(gene_symbol: str | None) -> list[Any]:
     `ValueError` for a term like `BRCA1 OR cancer` rather than search for
     text the reader never typed, and this function turns that refusal into
     an empty plan, deterministically for the same mention.
+
+    Fix-plan item 1 (2026-09-22): with `datasets`, which `plan_node` sets
+    from `breadth_plan.wants_dataset_search(query.text)`, the GEO DataSets
+    search and its summary follow-up are planned after OMIM's pair. Two
+    calls, only on a question that asks for datasets, so a gene question
+    that measured 14 to 16 of its 20 allowed Layer 2 and 3 calls reaches
+    at most 18.
     """
     if not gene_symbol:
         return []
     try:
-        first_stage = breadth_plan.plan_first_stage(gene_symbol, None)
+        first_stage = breadth_plan.plan_first_stage(gene_symbol, None, datasets=datasets)
     except (TypeError, ValueError):
         return []
     calls: list[Any] = []
@@ -4114,7 +4125,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # GO terms as a second, context-only graph call, unless the
         # question itself asks for a GO shape, which the primary call's
         # own template already answers.
-        planned_tool_calls.extend(_build_breadth_calls(gene_symbol))
+        planned_tool_calls.extend(
+            _build_breadth_calls(
+                gene_symbol, datasets=breadth_plan.wants_dataset_search(query.text)
+            )
+        )
 
         # Item 11.31 (2026-09-21): NCBI's own plain-English gene summary,
         # planned from the RESOLVED CURIE rather than from the symbol, so it
@@ -4469,6 +4484,14 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # rather than saying anything about it, and the record's URL already
     # carries it.
     "omim_summary": ("title", "alttitles", "locus"),
+    # Fix-plan item 1 (2026-09-22). A GEO DataSets ESummary record carries
+    # the fields `ncbi_eutils_actions._SUMMARY_FIELDS_BY_DB["gds"]` keeps.
+    # `title` leads so the citation names the series as its authors did;
+    # the accession, dataset type, organism and sample count are what a
+    # person choosing a dataset reads next. `summary` is withheld: it is a
+    # paragraph of the submitter's prose, and the paper's own abstract path
+    # (11.22) is the one place long free text is admitted deliberately.
+    "gds_summary": ("title", "accession", "gdstype", "taxon", "n_samples"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -5012,6 +5035,8 @@ def _follow_up_planned_call(
         planned = breadth_plan.plan_clinvar_follow_up(ids)
     elif follow_up.source_purpose == "omim_search":
         planned = breadth_plan.plan_omim_follow_up(ids)
+    elif follow_up.source_purpose == "gds_search":
+        planned = breadth_plan.plan_gds_follow_up(ids)
     else:
         return None
     for call in planned:
