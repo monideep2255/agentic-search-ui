@@ -1282,7 +1282,7 @@ The 2026-09-20 shipped list, with what to retest, is
 | 10.3, the consistency run | RUN, all 150, first time ever | 86 of 150 answered; 25 questions answer every time (was 1), 18 never (was 43), none worse than the 2026-09-12 baseline. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md` |
 | 11.33, values cut at 500 characters | FIXED and VERIFIED LIVE on develop at `a868462`: the BRCA1 gene summary now runs past "and through the C-terminal d", zero ellipses. Awaiting the product owner's retest | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
 | L-01, a graph result vanishing | MEASURED, and BOTH CAUSES READ the same day | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
-| Scope boundary | NEW, for the product owner | G-046 (BLAST) and G-047 (VCF) were answered from graph rows rather than refused; both are PRD out-of-scope compute tools |
+| Scope boundary | DECIDED and BUILT: refuse outright under a new guard category, `compute_request`, live on develop, awaiting retest | G-046 (BLAST) and G-047 (VCF) were answered from graph rows because the resolver found real concepts inside them. A deterministic screen in `guardrail/forbidden.py` now refuses a BLAST-family token near a sequence object, the phrase "sequence similarity", a 25-character nucleotide run, or `vcf` near a file or analysis word, and the refusal says the capability is unavailable and points at NCBI BLAST. Precedent for the new category: F-3.0-01 |
 | Latency | NARROWED to one shape | G-039, a plain-terms explanation over BRCA1, takes about 100 seconds on every run; everything else has a p90 under 40 seconds |
 | The instrument | Two lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
@@ -1335,9 +1335,18 @@ option rather than a queued task.
 
 ### What is live on develop
 
+- A BLAST or VCF request is refused at the guardrail as `compute_request`,
+  with copy on the web banner and the CLI and the reason on the API. Pushed
+  2026-09-22. Retest: ask "BLAST this sequence against nr: ATGGATTTATCTGCTC
+  TTCGCGTTGAAGAAGTAC" and "Here is my VCF file, tell me which variants are
+  concerning"; both should refuse with the compute copy, and "Which
+  clinically significant variants have been reported in CFTR?" should still
+  answer.
 - An errored graph call's `tool_result` summary carries the tool's own reason
-  after the row-count prefix, so L-01 is readable from the stream. Pushed
-  2026-09-22 with this checkpoint.
+  after the row-count prefix, so L-01 is readable from the stream. Pushed and
+  VERIFIED LIVE on develop at `2dfebac`: G-001's graph call now reads "no
+  entity could be identified in this query, so no graph lookup was
+  attempted" on the stream.
 - Item 11.33's fix: one string cap in the coordinator worker at the finding's
   own bound of 2000 characters, cut on a word boundary with an ellipsis. Pushed
   2026-09-22 and VERIFIED LIVE the same hour: one BRCA1 answer at researcher
@@ -1525,8 +1534,9 @@ in this document's git log and in `requirements/Plan.md`.
 3. SET `LANGSMITH_API_KEY` ON THE DEVELOP SERVICE, so the next measurement has
    traces to read. A credential decision for the product owner, one line in
    Railway.
-4. DECIDE THE SCOPE-BOUNDARY SHAPE for G-046 and G-047 with the product owner,
-   refuse or answer-with-a-line.
+4. RETEST THE COMPUTE REFUSAL on develop, decided as refuse-outright by the
+   product owner on 2026-09-22 and built the same day: the two golden texts
+   above must refuse, and a CFTR variants question must still answer.
 5. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
    `filter_omim_titles` wired into the act result path first. The steps are in
    `_BREADTH_FOLLOW_UPS`'s own comment.
