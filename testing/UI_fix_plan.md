@@ -813,7 +813,7 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.37 | Layer 1 knowledge-graph sources are invisible in the source list | ACCEPTED, not a defect to fix | Raised 2026-09-21. Measured: 40 of 67 citations ARE layer 1, so the graph is searched and cited. The source list deduplicates BY URL and keeps the first citation's layer, and every layer 1 GO term shares `ncbi.nlm.nih.gov/gene/672` with a layer 2 record numbered earlier, so all 40 collapse into a Live NCBI row and the "Knowledge graph" group renders ZERO rows. The product owner reviewed this and accepted it: "All good if deduped. That is fine!" |
 | 11.34 | A multi-sentence abstract loses its citation entirely in the code-built tail | FIXED, live pending | Fixed 2026-09-21. `build_structured_fallback_narrative` put ONE marker at the end of a multi-sentence body while `run_grounding_pass` splits on sentence boundaries, so every sentence but the last was unmarked and stripped as an uncited claim. Each sentence of a multi-sentence value is now marked independently, split on `field_value` itself rather than on the rendered labelled body, because the record-type label is not a substring of the value and broke `ground_claim` for the first clause. Before: `claims 1 stripped 3`, uncited. After: `claims 4 stripped 0`, cited. No grounding check was weakened |
 | 2a | Cite every retrieved finding | CLOSED BY MEASUREMENT, no new code | Measured 2026-09-21 BEFORE building, and the mechanism already existed: `tail_is_listing` is unconditionally true, so the findings tail grounds every admitted finding and merges those claims. The residual gap was entirely item 11.34. Measured 5 admitted findings, 3 cited, both uncited ones multi-sentence; after 11.34, 5 of 5 cited and 0 stripped. Building the obvious "cite every row" would have REINTRODUCED a recorded 2.1 defect that shipped 25 chips over an answer to a different question. Evidence and a re-runnable script: `testing/Developer/reports/2026-09-21_2a_measurement/` |
-| 2b | Widen the citation host rule so OMIM can be cited, and dispatch OMIM | HALF DONE | 2026-09-21. The HOST HALF IS DONE: `omim.org` is an exact additional host in `NCBI_SOURCE_URL_PATTERN`, with `www.` admitted too because the tool schema already accepts it and a `www.omim.org` record would otherwise be dropped uncited and in silence. Four spoofing shapes are rejected by their own arms. THE DISPATCH HALF IS DELIBERATELY NOT DONE: it was enabled and reverted the same session, because `breadth_plan.filter_omim_titles` exists, NOTHING CALLS IT, and without it the first OMIM hit for `GCK` is `MAP4K2`, so an unfiltered result cites a different gene than the question asked about, fully and correctly cited. What finishing it needs is written into `_BREADTH_FOLLOW_UPS`'s own comment |
+| 2b | Widen the citation host rule so OMIM can be cited, and dispatch OMIM | DONE | 2026-09-22. BOTH HALVES ARE NOW DONE. A question about a gene shows OMIM's entry for that gene, cited to `omim.org`, and never an entry for a different gene: `filter_omim_titles` is called on every `omim_summary` result before a record becomes a row, with the resolved symbol carried from Plan on the planned call. Proven live over ten runs, five per gene, in `testing/Developer/reports/2026-09-22_OMIM_live/findings.md`. THE HOST HALF, done 2026-09-21: `omim.org` is an exact additional host in `NCBI_SOURCE_URL_PATTERN`, with `www.` admitted too because the tool schema already accepts it and a `www.omim.org` record would otherwise be dropped uncited and in silence. Four spoofing shapes are rejected by their own arms. THE DISPATCH HALF was deliberately not done on 2026-09-21: it was enabled and reverted the same session, because `breadth_plan.filter_omim_titles` existed, NOTHING CALLED IT, and without it the first OMIM hit for `GCK` is `MAP4K2`, so an unfiltered result cites a different gene than the question asked about, fully and correctly cited. That is what the 2026-09-22 wiring closed |
 | L-01 | A whole graph result vanishing on some runs, hidden by graceful degradation | CONFIRMED, not fixed | Measured 2026-09-21 over 20 live runs. HNF1A returned 100 graph rows in 7 runs, 12 rows in 2 runs, and 0 rows with `status: "empty"` in 1 run, while every other tool in that run succeeded, `error_payload` was null and `trust_outcome` was "ask", identical to every healthy run. Sources fell from 86 to 41. In the two 12-row runs distinct Layer 1 citations fell from 64 to 25, a loss that reached the answer. NOTHING signals it: a reader cannot tell a degraded answer from a question that genuinely had fewer sources. The 2026-09-20 instrument had been filtering on `layer_1` while the API emits `layer_1_graph`, so its anomaly field reported zero on every run and the defect stayed invisible. Evidence: `testing/Developer/reports/2026-09-21_L01/` |
 
 
@@ -1293,7 +1293,7 @@ The 2026-09-20 shipped list, with what to retest, is
 | 11.31, the two answer modes | DECIDED and BUILT, product owner approved as is | Both open questions answered. The cause was never the depth directive: the grounding gate only passes verbatim source text, so the product cannot explain in its own words at any depth |
 | 11.34, a multi-sentence finding loses its citation | FIXED, live | A retrieved record was rendered, stripped whole, and contributed no text and no citation, with nothing telling the reader. Now cited |
 | 2a, cite every retrieved finding | CLOSED by measurement, no code written | The mechanism already existed. Its entire residual gap was 11.34 |
-| 2b, OMIM | HALF done, deliberately | The citation host rule is widened. The DISPATCH is reverted and must stay reverted until `filter_omim_titles` is wired |
+| 2b, OMIM | DONE 2026-09-22 | The citation host rule is widened and the dispatch is live, with `filter_omim_titles` on the act result path. Ten live runs, one OMIM citation each, zero for another gene |
 | L-01, a graph result vanishing | CONFIRMED over 20 live runs | One run in ten returned zero graph rows with every other signal reading healthy. Nothing tells the reader |
 | 11.33, values cut mid-word | STILL OPEN, narrowed | A fix was written, shipped and did NOT close it. Recorded as still open rather than claimed |
 | 11.35, the Notes section | LIVE | Both notes gone from the screen by product-owner decision |
@@ -1377,11 +1377,12 @@ option rather than a queued task.
 
 ### What is parked, and why
 
-- THE OMIM DISPATCH. Enabled and reverted on 2026-09-21.
-  `breadth_plan.filter_omim_titles` exists and NOTHING CALLS IT, so an
-  unfiltered OMIM result would cite a different gene than the question asked
-  about. Do not re-enable it without wiring that filter. The steps are written
-  into `_BREADTH_FOLLOW_UPS`'s own comment.
+- THE OMIM DISPATCH IS NO LONGER PARKED. It was enabled and reverted on
+  2026-09-21 because `breadth_plan.filter_omim_titles` existed and nothing
+  called it. On 2026-09-22 the filter was wired into the act result path and
+  the dispatch went live. What stays true, and is why the line is kept rather
+  than deleted: the dispatch and the filter ship together, and re-enabling one
+  without the other cites a different gene than the question asked about.
 - THE EXPLANATION HALF OF 11.31, above.
 - THE BYTE CEILING. `_MAX_FINDING_TOTAL_BYTES` stays at 50,000 after the 11.33
   fix. Measured: a fetch of 20 PubMed records with 2000-character abstracts is
@@ -1551,9 +1552,15 @@ in this document's git log and in `requirements/Plan.md`.
    must read exactly as before. Decided and built from the user's chair on
    2026-09-22 after the product owner delegated the decision; the two causes
    are in `testing/Developer/reports/2026-09-22_L01_cause/findings.md`.
-2. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
-   `filter_omim_titles` wired into the act result path first. The steps are in
-   `_BREADTH_FOLLOW_UPS`'s own comment.
+2. RETEST OMIM on develop. Done 2026-09-22 with `filter_omim_titles` wired
+   into the act result path before any row is built, so a question about one
+   gene never shows an OMIM record for a different gene. Ask "Which diseases
+   are associated with GCK?": the sources should include OMIM 138079
+   (GLUCOKINASE; GCK) cited to omim.org and never MAP4K2, which OMIM's own
+   search ranks first. Ten live runs did exactly that. Worth a look next is
+   the call ceiling it tightened: a gene question now charges 14 to 16 of
+   its 20 allowed Layer 2 and 3 calls, measured in
+   `testing/Developer/reports/2026-09-22_OMIM_live/findings.md`.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining
@@ -1578,9 +1585,9 @@ That points hard at event-loop starvation, consistent with the same suite failin
    2026-09-22 session, then the 2026-09-21 table, then the Set 11 table.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
    carrying only `develop`.
-3. Read "What is parked, and why" before picking anything up: the OMIM dispatch
-   is reverted on purpose and must not be re-enabled without wiring
-   `filter_omim_titles`.
+3. Read "What is parked, and why" before picking anything up. The OMIM
+   dispatch is no longer on that list: it went live on 2026-09-22 with
+   `filter_omim_titles` wired.
 4. Pick up "Next, in order" at item 1, which is the product owner's retest, so
    if they have not tested yet the first engineering item is item 2.
 

@@ -1,0 +1,26 @@
+[
+  {
+    "gene": "GCK",
+    "run": 1,
+    "elapsed_s": 21.3,
+    "citations": 54,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/138079"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 1,
+    "elapsed_s": 17.0,
+    "citations": 73,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/113705"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  }
+]

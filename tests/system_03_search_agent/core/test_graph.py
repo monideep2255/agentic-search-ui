@@ -2330,28 +2330,33 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
     # test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query below
     # for the dedicated test of that behavior. UI fix set 8 (R29): the same
     # gene also earns the two Layer 3 calls, so a gene question plans four.
-    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
-    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
-    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
-    # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 11
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): thirteen
+    # planned calls now. The four above plus three searches (PubMed, ClinVar,
+    # OMIM), four follow-ups declared at Plan (abstracts, PubTator3
+    # publications, ClinVar summary, OMIM summary), the Gene ESummary and the
+    # context-only GO graph call; see test_breadth_wiring.py for the per-call
+    # arms, including the one proving an OMIM record for another gene is
+    # dropped before it can be cited.
+    assert len(tool_calls) == 13
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
     assert tool_calls[1]["layer"] == "layer_2_api"
-    # UI fix 11.21 wiring (2026-09-20): the tail is set 8's two Layer 3 calls,
-    # then the breadth plan in its fixed order: the PubMed and ClinVar
-    # searches, the abstract fetch, the PubTator3 publications, the ClinVar
-    # summary, and the context-only GO graph call.
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): the tail
+    # is set 8's two Layer 3 calls, then the breadth plan in its fixed
+    # order, the PubMed, ClinVar and OMIM searches followed by the abstract
+    # fetch, the PubTator3 publications, the ClinVar summary and the OMIM
+    # summary, then item 11.31's Gene ESummary and the context-only GO graph
+    # call.
     assert [c["tool"] for c in tool_calls[2:]] == [
         "pubtator_annotate", "clinicaltrials_search", "ncbi_efetch", "ncbi_efetch",
-        "ncbi_efetch", "pubtator_annotate", "ncbi_efetch", "ncbi_efetch",
-        "cypher_query",
+        "ncbi_efetch", "ncbi_efetch", "pubtator_annotate", "ncbi_efetch",
+        "ncbi_efetch", "ncbi_efetch", "cypher_query",
     ]
     assert [c["layer"] for c in tool_calls[2:]] == [
         "layer_3_enrichment", "layer_3_enrichment", "layer_2_api", "layer_2_api",
-        "layer_2_api", "layer_3_enrichment", "layer_2_api", "layer_2_api",
-        "layer_1_graph",
+        "layer_2_api", "layer_2_api", "layer_3_enrichment", "layer_2_api",
+        "layer_2_api", "layer_2_api", "layer_1_graph",
     ]
 
 
@@ -3083,11 +3088,14 @@ async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None
     tool_calls = plan_event.payload["tool_calls"]
     # UI fix set 8 (R29): four now, the two Layer 3 calls behind these two.
     # The dedicated per-layer selection tests live in test_layer_handoff.py.
-    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
-    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
-    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
-    # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 11
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): thirteen
+    # planned calls now. The four above plus three searches (PubMed, ClinVar,
+    # OMIM), four follow-ups declared at Plan (abstracts, PubTator3
+    # publications, ClinVar summary, OMIM summary), the Gene ESummary and the
+    # context-only GO graph call; see test_breadth_wiring.py for the per-call
+    # arms, including the one proving an OMIM record for another gene is
+    # dropped before it can be cited.
+    assert len(tool_calls) == 13
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"

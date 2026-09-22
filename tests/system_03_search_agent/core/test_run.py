@@ -363,11 +363,14 @@ async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_quer
     # result by the autouse `_stub_ncbi_efetch_dispatch` fixture). UI fix
     # set 8 (R29): plus pubtator_annotate and clinicaltrials_search on
     # Layer 3, stubbed "empty" by `_stub_layer3_dispatch`, so four in all.
-    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
-    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
-    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
-    # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 11
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): thirteen
+    # planned calls now. The four above plus three searches (PubMed, ClinVar,
+    # OMIM), four follow-ups declared at Plan (abstracts, PubTator3
+    # publications, ClinVar summary, OMIM summary), the Gene ESummary and the
+    # context-only GO graph call; see test_breadth_wiring.py for the per-call
+    # arms, including the one proving an OMIM record for another gene is
+    # dropped before it can be cited.
+    assert len(tool_calls) == 13
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 
@@ -394,11 +397,14 @@ async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answe
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
     # T-3.4-05 and UI fix set 8: see the sibling non-streaming test above.
-    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
-    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
-    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
-    # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 11
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): thirteen
+    # planned calls now. The four above plus three searches (PubMed, ClinVar,
+    # OMIM), four follow-ups declared at Plan (abstracts, PubTator3
+    # publications, ClinVar summary, OMIM summary), the Gene ESummary and the
+    # context-only GO graph call; see test_breadth_wiring.py for the per-call
+    # arms, including the one proving an OMIM record for another gene is
+    # dropped before it can be cited.
+    assert len(tool_calls) == 13
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
 

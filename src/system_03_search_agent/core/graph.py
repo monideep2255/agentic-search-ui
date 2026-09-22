@@ -455,6 +455,7 @@ import secrets
 import time
 import uuid
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Final, Literal
@@ -2259,6 +2260,17 @@ class _PlannedNcbiEfetchToolCall:
     #: an abstract fetch keeps its title and drops its abstract. Empty for
     #: the set 8 gene record, which is shaped exactly as before.
     purpose: str = ""
+    #: Item 2b (2026-09-22): the resolved gene symbol this call was planned
+    #: for, carried only so the RESULT can be checked against it before it
+    #: becomes a row. One purpose uses it, `omim_summary`, where
+    #: `_ncbi_efetch_output_to_structured_fields` hands it to
+    #: `breadth_plan.filter_omim_titles`: OMIM's own search ranks another
+    #: gene's entry first for some symbols, so a record whose title does
+    #: not name THIS symbol in a symbol field never reaches synthesis.
+    #: `None` everywhere else, and a `None` here keeps NOTHING for an OMIM
+    #: result, which is that filter's documented behaviour: with no symbol
+    #: to check against, no OMIM title can be stood behind.
+    gene_symbol: str | None = None
 
 
 @dataclass(frozen=True)
@@ -2307,6 +2319,12 @@ class _PlannedFollowUpCall:
     tool_call: ToolCall
     purpose: str
     source_purpose: str
+    #: Item 2b (2026-09-22): see `_PlannedNcbiEfetchToolCall.gene_symbol`.
+    #: Declared at Plan, where the resolved symbol is in hand, and copied
+    #: onto the concrete call `_follow_up_planned_call` builds at Act, so
+    #: the filter runs against the symbol the question resolved rather
+    #: than anything read back out of the OMIM response itself.
+    gene_symbol: str | None = None
 
 
 #: Per-tool Act timeouts for the four tools above, in seconds. Each is the
@@ -2642,43 +2660,26 @@ def _build_layer_tool_calls(
 #: The first-stage purposes whose ids feed a follow-up, and the follow-ups
 #: each one feeds, in the fixed order they are planned.
 #:
-#: OMIM WAS DELIBERATELY ABSENT UNTIL 2026-09-21, and the reason is kept
-#: here rather than deleted, because it explains why the entry looks newer
-#: than its neighbours. `ncbi_eutils_actions._RECORD_URL_TEMPLATES["omim"]`
-#: is `omim.org`, which `contracts.events.NCBI_SOURCE_URL_PATTERN` used to
-#: reject, so an OMIM record could never carry a citation
-#: (`_layer2_citation_for_synth_finding`, F-3.4-T05-04). Issuing two calls
-#: whose records could only feed UNCITED claims would have fed the one
-#: thing cite-or-refuse exists to prevent, so they were not issued.
-#:
-#: The product owner reversed that on 2026-09-20 (DECISIONS.md, "widen the
-#: citation host rule so OMIM can be cited"), and `omim.org` is now an
-#: exact additional host in that pattern, so the CITATION half of the
-#: blocker is gone as of 2026-09-21.
-#:
-#: OMIM IS STILL NOT DISPATCHED, and this is the part a later reader must
-#: not undo casually. Enabling it was tried on 2026-09-21 and reverted the
-#: same session, because a second control is missing rather than because
-#: the citation rule still blocks it.
-#:
-#: `breadth_plan.filter_omim_titles` exists to keep only the OMIM records
-#: whose title names the queried symbol in a symbol field, and NOTHING
-#: CALLS IT. It has been dead code for as long as OMIM has been dropped,
-#: which is why its absence was invisible. Its own docstring records the
-#: failure it prevents: the first OMIM hit for `GCK` is `MAP4K2`, so an
-#: unfiltered OMIM result cites a DIFFERENT GENE than the question asked
-#: about, fully and correctly cited, which is the confident wrong answer
-#: this product exists to avoid.
-#:
-#: Wiring it needs the resolved gene symbol threaded into the act step's
-#: result handling, where `_ncbi_efetch_output_to_structured_fields` shapes
-#: an `omim_summary` result into rows. That is a real change to the result
-#: path and was not worth rushing, so it is written down instead.
-#:
-#: To finish it: add an `omim_search` branch to `_follow_up_planned_call`
-#: (it returns None today), thread the symbol to the shaping step, apply
-#: `filter_omim_titles` to the `omim_summary` records before they become
-#: rows, and add an arm proving a wrong-gene OMIM record is dropped.
+#: OMIM IS DISPATCHED AS OF 2026-09-22, and it was absent before that for
+#: two separate reasons closed one at a time, which is why this entry
+#: looks newer than its neighbours: until 2026-09-21 an OMIM record could
+#: not be CITED, because its URL is `omim.org` while the citation
+#: contract's `NCBI_SOURCE_URL_PATTERN` admitted only NCBI hosts, so
+#: issuing the calls would have fed uncited claims into the grounding pass
+#: (`_layer2_citation_for_synth_finding`, F-3.4-T05-04), which the product
+#: owner closed by adding `omim.org` as an exact additional host
+#: (DECISIONS.md, 2026-09-20); and until today it could not be TRUSTED,
+#: because OMIM's own search ranks a different gene's entry first for some
+#: symbols, the first hit for `GCK` being `MAP4K2`, so an unfiltered result
+#: cites a different gene than the question asked about, fully and
+#: correctly, which is the confident wrong answer this product exists to
+#: avoid. `breadth_plan.filter_omim_titles` was written for exactly that
+#: and nothing called it, so a dispatch enabled on 2026-09-21 was reverted
+#: the same session; it is now called on every `omim_summary` result
+#: before a record becomes a row (`_ncbi_efetch_output_to_structured_
+#: fields`), against the symbol carried down from Plan on the planned call
+#: itself, so a record that does not name the asked gene never reaches
+#: synthesis and a call with no symbol at all keeps nothing.
 _BREADTH_FOLLOW_UPS: Final[dict[str, tuple[tuple[str, str, str, str], ...]]] = {
     # source purpose: ((tool, layer, prefix, follow-up purpose), ...)
     "pubmed_search": (
@@ -2686,9 +2687,17 @@ _BREADTH_FOLLOW_UPS: Final[dict[str, tuple[tuple[str, str, str, str], ...]]] = {
         ("pubtator_annotate", "layer_3_enrichment", "pa", "pubtator_publications"),
     ),
     "clinvar_search": (("ncbi_efetch", "layer_2_api", "ne", "clinvar_summary"),),
+    "omim_search": (("ncbi_efetch", "layer_2_api", "ne", "omim_summary"),),
 }
 _BREADTH_SEARCH_PURPOSES: Final[frozenset[str]] = frozenset(_BREADTH_FOLLOW_UPS)
-_BREADTH_DROPPED_PURPOSES: Final[frozenset[str]] = frozenset({"omim_search"})
+#: The first-stage purposes `breadth_plan` plans that this wiring does NOT
+#: dispatch. EMPTY since 2026-09-22, when `omim_search`, its only member,
+#: left it. Kept rather than deleted, together with the guard in
+#: `_build_breadth_calls` that reads it: it is the one place a planned
+#: purpose can be held back from the fan-out without deleting its planner,
+#: and a named empty set says "nothing is held back today" where a removed
+#: one would say nothing at all.
+_BREADTH_DROPPED_PURPOSES: Final[frozenset[str]] = frozenset()
 
 #: The rows a breadth call contributes to synthesis, after the stable sort.
 #: The same figure as `_LAYER_TOOL_ROW_CAP`, and for the same reason: a
@@ -2736,7 +2745,9 @@ def _build_breadth_calls(gene_symbol: str | None) -> list[Any]:
     question is half of 11.21. The searches come first, then one
     `_PlannedFollowUpCall` per follow-up in `_BREADTH_FOLLOW_UPS` order,
     declared now so the plan event and the premise gate's A1 see a fixed
-    list. OMIM is filtered out (see `_BREADTH_FOLLOW_UPS`).
+    list. OMIM is among them as of 2026-09-22, and each follow-up carries
+    the resolved symbol so the OMIM result can be checked against it at
+    Act (see `_BREADTH_FOLLOW_UPS`).
 
     A symbol that is not symbol-shaped plans nothing: `breadth_plan` raises
     `ValueError` for a term like `BRCA1 OR cancer` rather than search for
@@ -2767,6 +2778,7 @@ def _build_breadth_calls(gene_symbol: str | None) -> list[Any]:
                     ),
                     purpose=purpose,
                     source_purpose=search_purpose,
+                    gene_symbol=gene_symbol,
                 )
             )
     return calls
@@ -4447,7 +4459,21 @@ _NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id"})
 _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     "pubmed_abstracts": ("title",),
     "clinvar_summary": ("title", "germline_classification", "accession", "genes"),
+    # Item 2b (2026-09-22). An OMIM ESummary record carries `oid`, `title`,
+    # `alttitles` and `locus` (`ncbi_eutils_actions._SUMMARY_FIELDS`).
+    # `title` leads, so `_pick_representative_field`, which has no `name`
+    # to prefer here and otherwise takes insertion order, cites the entry
+    # name a reader recognises ("GLUCOKINASE; GCK") rather than a locus
+    # band. `oid` is withheld for the same reason `_NCBI_EFETCH_ROW_
+    # IDENTITY_FIELDS` withholds `gene_id`: it identifies the record
+    # rather than saying anything about it, and the record's URL already
+    # carries it.
+    "omim_summary": ("title", "alttitles", "locus"),
 }
+
+#: Item 2b (2026-09-22). The one breadth purpose whose records are checked
+#: against the question's own gene before any of them becomes a row.
+_OMIM_SUMMARY_PURPOSE: Final[str] = "omim_summary"
 
 #: UI fix 11.22. The purpose whose records carry a real abstract, and the
 #: raw `fields` key `ncbi_eutils_actions._extract_pubmed_articles` already
@@ -4509,8 +4535,38 @@ def _pubmed_abstract_rows(
     return abstract_rows
 
 
+def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -> list[Any]:
+    """Item 2b (2026-09-22): the OMIM summary records whose own title names
+    `gene_symbol` in a symbol field, and no others.
+
+    The decision this enforces, in the words of the person asking the
+    question: a question about one gene never shows an OMIM record for a
+    different gene. OMIM's search ranks another gene's entry first for
+    some symbols (measured: the first hit for `GCK` is `MAP4K2`), and a
+    wrong record here would be shown fully and correctly cited, which is
+    worse than showing nothing.
+
+    The rule itself is `breadth_plan.filter_omim_titles`, called and never
+    reimplemented, so the exact-symbol-field match and its documented
+    refusals (an unusable symbol keeps nothing; a word anywhere in the
+    entry NAME is not a match) have exactly one definition. It reads plain
+    mappings, while `output.records` are validated models, so each record
+    is offered as `{"fields": ...}` alongside its own index and the
+    surviving indexes select the records back out. Looked up through the
+    module rather than imported by name, so an arm can replace the filter
+    and prove this path is the one that runs.
+    """
+    offered = [{"index": index, "fields": record.fields} for index, record in enumerate(records)]
+    kept = {
+        item["index"]
+        for item in breadth_plan.filter_omim_titles(offered, gene_symbol)
+        if isinstance(item, Mapping) and isinstance(item.get("index"), int)
+    }
+    return [record for index, record in enumerate(records) if index in kept]
+
+
 def _ncbi_efetch_output_to_structured_fields(
-    output: NcbiEfetchOutput, purpose: str = ""
+    output: NcbiEfetchOutput, purpose: str = "", gene_symbol: str | None = None
 ) -> dict[str, Any]:
     """Shape an `ncbi_efetch` result into the same generic pseudo-row shape
     `_cypher_output_to_structured_fields` already produces for
@@ -4535,8 +4591,20 @@ def _ncbi_efetch_output_to_structured_fields(
     non-blank abstract, after the title rows are picked and capped, so it
     can only ever add to the fixed five-paper set the title path already
     admits, never widen it.
+
+    Item 2b (2026-09-22): for `purpose == "omim_summary"`, the records are
+    narrowed to the ones naming `gene_symbol` BEFORE any row is built
+    (`_omim_records_naming_the_gene`), so a record for a different gene
+    has no row, no finding and therefore no citation. Deliberately here
+    rather than after the rows exist: a dropped record must never be able
+    to reach synthesis by any later path, and `row_count`,
+    `total_available` and `truncated` below are then computed over what
+    actually stands.
     """
     allowed = _BREADTH_FIELDS_BY_PURPOSE.get(purpose)
+    records = list(output.records)
+    if purpose == _OMIM_SUMMARY_PURPOSE:
+        records = _omim_records_naming_the_gene(records, gene_symbol)
     rows = [
         {
             "curie": "",
@@ -4552,7 +4620,7 @@ def _ncbi_efetch_output_to_structured_fields(
             ),
             "source_url": record.source_url,
         }
-        for record in output.records
+        for record in records
     ]
     if purpose in _BREADTH_FIELDS_BY_PURPOSE:
         # A breadth result is sorted by record URL, a property of the
@@ -4708,7 +4776,9 @@ async def _execute_planned_call(
                 pairs=[],
                 raw_output=ncbi_efetch_output,
             )
-        shaped_fields = _ncbi_efetch_output_to_structured_fields(ncbi_efetch_output, purpose)
+        shaped_fields = _ncbi_efetch_output_to_structured_fields(
+            ncbi_efetch_output, purpose, planned.gene_symbol
+        )
         return _CallOutcome(
             status=ncbi_efetch_output.status,
             summary=f"{ncbi_efetch_output.action}: {shaped_fields['row_count']} record(s)",
@@ -4930,11 +5000,18 @@ def _follow_up_planned_call(
     first, deduplicated and capped there and nowhere else. The follow-up's
     own `ToolCall` (and so its `call_id`) is kept, so the start frame
     written at admission is the one this call closes. None when the
-    planner produced nothing for this purpose."""
+    planner produced nothing for this purpose.
+
+    Item 2b (2026-09-22): the OMIM branch also carries the follow-up's
+    `gene_symbol` onto the concrete call, because `ids` alone cannot tell
+    Act which gene the question asked about and the OMIM result has to be
+    checked against it before any of it becomes a row."""
     if follow_up.source_purpose == "pubmed_search":
         planned = breadth_plan.plan_literature_follow_up(ids)
     elif follow_up.source_purpose == "clinvar_search":
         planned = breadth_plan.plan_clinvar_follow_up(ids)
+    elif follow_up.source_purpose == "omim_search":
+        planned = breadth_plan.plan_omim_follow_up(ids)
     else:
         return None
     for call in planned:
@@ -4945,6 +5022,7 @@ def _follow_up_planned_call(
                 tool_call=follow_up.tool_call,
                 ncbi_efetch_input=call.tool_input,
                 purpose=call.purpose,
+                gene_symbol=follow_up.gene_symbol,
             )
         return _PlannedLayerToolCall(
             tool_call=follow_up.tool_call, tool_input=call.tool_input, purpose=call.purpose

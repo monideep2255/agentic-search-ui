@@ -1,0 +1,122 @@
+[
+  {
+    "gene": "GCK",
+    "run": 1,
+    "elapsed_s": 21.8,
+    "citations": 54,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/138079"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 2,
+    "elapsed_s": 33.6,
+    "citations": 54,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/138079"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 3,
+    "elapsed_s": 19.7,
+    "citations": 54,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/138079"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 4,
+    "elapsed_s": 19.5,
+    "citations": 54,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/138079"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 5,
+    "elapsed_s": 30.5,
+    "citations": 54,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/138079"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 1,
+    "elapsed_s": 20.2,
+    "citations": 73,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/113705"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 2,
+    "elapsed_s": 12.6,
+    "citations": 73,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/113705"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 3,
+    "elapsed_s": 11.7,
+    "citations": 73,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/113705"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 4,
+    "elapsed_s": 14.1,
+    "citations": 73,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/113705"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 5,
+    "elapsed_s": 13.0,
+    "citations": 73,
+    "omim_citations": 1,
+    "omim_urls": [
+      "https://omim.org/entry/113705"
+    ],
+    "mentions_map4k2": false,
+    "trust_outcome": "ask"
+  }
+]

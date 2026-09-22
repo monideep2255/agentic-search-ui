@@ -1,0 +1,592 @@
+{
+  "gene": "GCK",
+  "question": "Which diseases are associated with GCK?",
+  "run": 3,
+  "run_id": "fd2d2d00-beec-4f69-a463-d909ed408dd9",
+  "trace_id": "fd2d2d00-beec-4f69-a463-d909ed408dd9",
+  "elapsed_s": 19.7,
+  "tool_results": [
+    {
+      "tool": "clinicaltrials_search",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "summary": "ok: 5 record(s)",
+      "result_count": 5
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "dataset_report: 1 record(s)",
+      "result_count": 1
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "search: 10 id(s)",
+      "result_count": 10
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "search: 5 id(s)",
+      "result_count": 5
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "search: 10 id(s)",
+      "result_count": 10
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "summary: 1 record(s)",
+      "result_count": 1
+    },
+    {
+      "tool": "cypher_query",
+      "layer": "layer_1_graph",
+      "status": "ok",
+      "summary": "4 row(s) of 4",
+      "result_count": 4
+    },
+    {
+      "tool": "cypher_query",
+      "layer": "layer_1_graph",
+      "status": "ok",
+      "summary": "20 row(s) of 20",
+      "result_count": 20
+    },
+    {
+      "tool": "pubtator_annotate",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "summary": "ok: 1 record(s)",
+      "result_count": 1
+    },
+    {
+      "tool": "pubtator_annotate",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "summary": "ok: 5 record(s)",
+      "result_count": 5
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "summary: 5 record(s)",
+      "result_count": 5
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "summary: 1 record(s)",
+      "result_count": 1
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "summary": "fetch: 10 record(s)",
+      "result_count": 10
+    }
+  ],
+  "citations": [
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0011860",
+      "entity_name": null,
+      "source": "ncbi_efetch",
+      "source_id": "MedGen:C0011860",
+      "field": "name",
+      "claim_text": "GCK is associated with four diseases: Type 2 diabetes mellitus",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0342277",
+      "entity_name": null,
+      "source": "ncbi_efetch",
+      "source_id": "MedGen:C0342277",
+      "field": "name",
+      "claim_text": "Maturity-onset diabetes of the young type 2",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1865290",
+      "entity_name": null,
+      "source": "ncbi_efetch",
+      "source_id": "MedGen:C1865290",
+      "field": "name",
+      "claim_text": "Hyperinsulinemic hypoglycemia, familial, 3",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5393570",
+      "entity_name": null,
+      "source": "ncbi_efetch",
+      "source_id": "MedGen:C5393570",
+      "field": "name",
+      "claim_text": "Permanent neonatal diabetes mellitus 1",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645/",
+      "entity_name": null,
+      "source": "gene",
+      "source_id": "2645",
+      "field": "symbol",
+      "claim_text": "gene symbol: GCK",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/23275527/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "23275527",
+      "field": "title",
+      "claim_text": "pubmed title: Genotype and phenotype correlations in 417 children with congenital hyperinsulinism",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4881257/",
+      "entity_name": null,
+      "source": "clinvar",
+      "source_id": "4881257",
+      "field": "title",
+      "claim_text": "clinvar title: NM_000162.5(GCK):c.796C>G (p.Leu266Val)",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://omim.org/entry/138079",
+      "entity_name": null,
+      "source": "omim",
+      "source_id": "138079",
+      "field": "title",
+      "claim_text": "GLUCOKINASE",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": null,
+      "source": "gene",
+      "source_id": "2645",
+      "field": "name",
+      "claim_text": "gene name: GCK",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/24385",
+      "entity_name": null,
+      "source": "ncbi_gene",
+      "source_id": "@GENE_GCK",
+      "field": "name",
+      "claim_text": "Literature entity name: Gck",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://clinicaltrials.gov/study/NCT01029795",
+      "entity_name": null,
+      "source": "clinicaltrials.gov",
+      "source_id": "NCT01029795",
+      "field": "name",
+      "claim_text": "Clinical trial name: A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/23275527/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "23275527",
+      "field": "pmid",
+      "claim_text": "Publication pmid: 23275527",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "intracellular glucose homeostasis",
+      "source": "GO",
+      "source_id": "GO:0001678",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0001678, name: intracellular glucose homeostasis A live NCBI value for this field is more current per Section 7.1 ('GCK'); see citation [5].",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/36257325/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "36257325",
+      "field": "title",
+      "claim_text": "pubmed title: Reduced penetrance of MODY-associated HNF1A/HNF4A variants but not GCK variants in clinically unselected cohorts",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4881317/",
+      "entity_name": null,
+      "source": "clinvar",
+      "source_id": "4881317",
+      "field": "title",
+      "claim_text": "clinvar title: NM_000162.5(GCK):c.1154G>C (p.Gly385Ala)",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": null,
+      "source": "gene",
+      "source_id": "2645",
+      "field": "summary",
+      "claim_text": "This gene encodes a member of the hexokinase family of proteins",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://clinicaltrials.gov/study/NCT01238380",
+      "entity_name": null,
+      "source": "clinicaltrials.gov",
+      "source_id": "NCT01238380",
+      "field": "name",
+      "claim_text": "Clinical trial name: Using Pharmacogenetics to Improve Treatment in Early-onset Diabetes",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/36257325/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "36257325",
+      "field": "pmid",
+      "claim_text": "Publication pmid: 36257325",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "carbohydrate metabolic process",
+      "source": "GO",
+      "source_id": "GO:0005975",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0005975, name: carbohydrate metabolic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38101397/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "38101397",
+      "field": "title",
+      "claim_text": "pubmed title: ChREBP is activated by reductive stress and mediates GCKR-associated metabolic traits",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4881360/",
+      "entity_name": null,
+      "source": "clinvar",
+      "source_id": "4881360",
+      "field": "title",
+      "claim_text": "clinvar title: NM_000162.5(GCK):c.700T>G (p.Tyr234Asp)",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://clinicaltrials.gov/study/NCT01247363",
+      "entity_name": null,
+      "source": "clinicaltrials.gov",
+      "source_id": "NCT01247363",
+      "field": "name",
+      "claim_text": "Clinical trial name: A Study of LY2608204 in Patients With Type 2 Diabetes",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38101397/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "38101397",
+      "field": "pmid",
+      "claim_text": "Publication pmid: 38101397",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "glucose metabolic process",
+      "source": "GO",
+      "source_id": "GO:0006006",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0006006, name: glucose metabolic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38708602/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "38708602",
+      "field": "title",
+      "claim_text": "pubmed title: Inhibition of Hmbox1 Promotes Cardiomyocyte Survival and Glucose Metabolism Through Gck Activation in Ischemia/Reperfusion Injury",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4884999/",
+      "entity_name": null,
+      "source": "clinvar",
+      "source_id": "4884999",
+      "field": "title",
+      "claim_text": "clinvar title: NM_000162.5(GCK):c.1020-339G>C",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://clinicaltrials.gov/study/NCT01472809",
+      "entity_name": null,
+      "source": "clinicaltrials.gov",
+      "source_id": "NCT01472809",
+      "field": "name",
+      "claim_text": "Clinical trial name: A Clinical Study to Evaluate Safety, Tolerability and Pharmacokinetics of Oral ZYGK1 in Healthy Volunteers",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38708602/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "38708602",
+      "field": "pmid",
+      "claim_text": "Publication pmid: 38708602",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "glucose catabolic process",
+      "source": "GO",
+      "source_id": "GO:0006007",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0006007, name: glucose catabolic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/39245718/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "39245718",
+      "field": "title",
+      "claim_text": "pubmed title: Glucokinase (GCK) in diabetes: from molecular mechanisms to disease pathogenesis",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4885023/",
+      "entity_name": null,
+      "source": "clinvar",
+      "source_id": "4885023",
+      "field": "title",
+      "claim_text": "clinvar title: NM_000162.5(GCK):c.460G>T (p.Val154Leu)",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://clinicaltrials.gov/study/NCT01960231",
+      "entity_name": null,
+      "source": "clinicaltrials.gov",
+      "source_id": "NCT01960231",
+      "field": "name",
+      "claim_text": "Clinical trial name: The Effect of \u00df-cell Specific Glucokinase Mutation on Glucose Homeostasis and Insulin Secretion in a MODY-2 Family",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/39245718/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "39245718",
+      "field": "pmid",
+      "claim_text": "Publication pmid: 39245718",
+      "layer": "layer_3_enrichment"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "glycolytic process",
+      "source": "GO",
+      "source_id": "GO:0006096",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0006096, name: glycolytic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/23275527/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "23275527",
+      "field": "abstract",
+      "claim_text": "Hypoglycemia due to congenital hyperinsulinism (HI) is caused by mutations in 9 genes",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "regulation of glycolytic process",
+      "source": "GO",
+      "source_id": "GO:0006110",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0006110, name: regulation of glycolytic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/36257325/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "36257325",
+      "field": "abstract",
+      "claim_text": "The true prevalence and penetrance of monogenic disease variants are often not known because of clinical-referral ascertainment bias",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "purine nucleotide metabolic process",
+      "source": "GO",
+      "source_id": "GO:0006163",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0006163, name: purine nucleotide metabolic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38101397/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "38101397",
+      "field": "abstract",
+      "claim_text": "Common genetic variants in glucokinase regulator (GCKR), which encodes GKRP, a regulator of hepatic glucokinase (GCK), influence multiple metabolic traits in genome-wide association studies (GWASs), making GCKR one of the most pleiotropic GWAS loci in the genome",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "response to glucose",
+      "source": "GO",
+      "source_id": "GO:0009749",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0009749, name: response to glucose",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38708602/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "38708602",
+      "field": "abstract",
+      "claim_text": "Exercise-induced physiological cardiac growth regulators may protect the heart from ischemia/reperfusion (I/R) injury",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "hexose metabolic process",
+      "source": "GO",
+      "source_id": "GO:0019318",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0019318, name: hexose metabolic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/39245718/",
+      "entity_name": null,
+      "source": "pubmed",
+      "source_id": "39245718",
+      "field": "abstract",
+      "claim_text": "Glucokinase (GCK), a key enzyme in glucose metabolism, plays a central role in glucose sensing and insulin secretion in pancreatic \u03b2-cells, as well as glycogen synthesis in the liver",
+      "layer": "layer_2_api"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "positive regulation of insulin secretion",
+      "source": "GO",
+      "source_id": "GO:0032024",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0032024, name: positive regulation of insulin secretion",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "cellular response to insulin stimulus",
+      "source": "GO",
+      "source_id": "GO:0032869",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0032869, name: cellular response to insulin stimulus",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "glucose homeostasis",
+      "source": "GO",
+      "source_id": "GO:0042593",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0042593, name: glucose homeostasis",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "cellular response to leptin stimulus",
+      "source": "GO",
+      "source_id": "GO:0044320",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0044320, name: cellular response to leptin stimulus",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "negative regulation of gluconeogenesis",
+      "source": "GO",
+      "source_id": "GO:0045721",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0045721, name: negative regulation of gluconeogenesis",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "positive regulation of glycogen biosynthetic process",
+      "source": "GO",
+      "source_id": "GO:0045725",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0045725, name: positive regulation of glycogen biosynthetic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "nicotinamide nucleotide metabolic process",
+      "source": "GO",
+      "source_id": "GO:0046496",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0046496, name: nicotinamide nucleotide metabolic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "regulation of insulin secretion",
+      "source": "GO",
+      "source_id": "GO:0050796",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0050796, name: regulation of insulin secretion",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "glucose 6-phosphate metabolic process",
+      "source": "GO",
+      "source_id": "GO:0051156",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0051156, name: glucose 6-phosphate metabolic process",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "canonical glycolysis",
+      "source": "GO",
+      "source_id": "GO:0061621",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0061621, name: canonical glycolysis",
+      "layer": "layer_1_graph"
+    },
+    {
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+      "entity_name": "calcium ion import",
+      "source": "GO",
+      "source_id": "GO:0070509",
+      "field": "name",
+      "claim_text": "BiologicalProcess GO:0070509, name: calcium ion import",
+      "layer": "layer_1_graph"
+    }
+  ],
+  "trust_outcome": "ask",
+  "omim_citation_count": 1,
+  "mentions_map4k2": false
+}
