@@ -1,0 +1,1925 @@
+{
+ "record": {
+  "id": "G-028",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "discovery",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is the evidence linking APOE to late-onset Alzheimer disease?",
+  "session_id": "c103-bc8a058161fa",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:15:53+00:00",
+  "run_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "NCBIGene:348",
+   "MedGen:C0338449"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 4 sources, not yet confirmed",
+  "citations": 100,
+  "distinct_sources": 88,
+  "citations_by_layer": {
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10,
+   "layer_1_graph": 72
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 76,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0,
+   76
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1375,
+  "answer_start": "Found 3 gene records, 4 pubmed records, 4 clinvar records, 3 clinical trial records, 3 publication records and 3 biological process records for APOE and late-on",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 9,
+  "server_elapsed_s": 4.653,
+  "seconds": 11.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 140,
+   "citation": 100,
+   "trust_signal": 101,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 0,
+   "ts": "2026-09-22T17:14:20.967820Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 2,
+   "ts": "2026-09-22T17:14:22.607870Z",
+   "payload": {
+    "narrative": "Requires traversing from gene APOE to evidence about its association with late-onset Alzheimer disease, likely needing multiple API calls or graph traversal across linked records. (late-onset Alzheimer disease: 1 MedGen record matched by name)",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "APOE",
+      "curie": "NCBIGene:348",
+      "confidence": 1.0
+     },
+     {
+      "text": "late-onset Alzheimer disease",
+      "curie": "MedGen:C0338449",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 4,
+   "ts": "2026-09-22T17:14:22.610056Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:348. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-092a025a9e39",
+      "layer": "layer_1_graph",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b1179b763ab1",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-8598cbe7b104",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-6f981974dace",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-43cfebda20df",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cd7860b0ffb8",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9bfcfe024e8d",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-4a4a15a75201",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-be559e2d04b1",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-af1d918308d5",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-5026fae78a82",
+      "layer": "layer_1_graph",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "APOE",
+      "curie": "NCBIGene:348",
+      "confidence": 1.0
+     },
+     {
+      "text": "late-onset Alzheimer disease",
+      "curie": "MedGen:C0338449",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 6,
+   "ts": "2026-09-22T17:14:22.611031Z",
+   "payload": {
+    "call_id": "cq-092a025a9e39",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 7,
+   "ts": "2026-09-22T17:14:22.611061Z",
+   "payload": {
+    "call_id": "ne-b1179b763ab1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 8,
+   "ts": "2026-09-22T17:14:22.611071Z",
+   "payload": {
+    "call_id": "pa-8598cbe7b104",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 9,
+   "ts": "2026-09-22T17:14:22.611080Z",
+   "payload": {
+    "call_id": "ct-6f981974dace",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 10,
+   "ts": "2026-09-22T17:14:22.611088Z",
+   "payload": {
+    "call_id": "ne-43cfebda20df",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 11,
+   "ts": "2026-09-22T17:14:22.611095Z",
+   "payload": {
+    "call_id": "ne-cd7860b0ffb8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 12,
+   "ts": "2026-09-22T17:14:22.611102Z",
+   "payload": {
+    "call_id": "ne-9bfcfe024e8d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 13,
+   "ts": "2026-09-22T17:14:22.611111Z",
+   "payload": {
+    "call_id": "pa-4a4a15a75201",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 14,
+   "ts": "2026-09-22T17:14:22.611119Z",
+   "payload": {
+    "call_id": "ne-be559e2d04b1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 15,
+   "ts": "2026-09-22T17:14:22.611127Z",
+   "payload": {
+    "call_id": "ne-af1d918308d5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 16,
+   "ts": "2026-09-22T17:14:22.611135Z",
+   "payload": {
+    "call_id": "cq-5026fae78a82",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 17,
+   "ts": "2026-09-22T17:14:22.828849Z",
+   "payload": {
+    "call_id": "pa-8598cbe7b104",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 18,
+   "ts": "2026-09-22T17:14:22.949269Z",
+   "payload": {
+    "call_id": "ne-43cfebda20df",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 19,
+   "ts": "2026-09-22T17:14:22.984199Z",
+   "payload": {
+    "call_id": "ct-6f981974dace",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 20,
+   "ts": "2026-09-22T17:14:23.011216Z",
+   "payload": {
+    "call_id": "ne-b1179b763ab1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 21,
+   "ts": "2026-09-22T17:14:23.064160Z",
+   "payload": {
+    "call_id": "ne-cd7860b0ffb8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 22,
+   "ts": "2026-09-22T17:14:23.086922Z",
+   "payload": {
+    "call_id": "cq-092a025a9e39",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 23,
+   "ts": "2026-09-22T17:14:23.143605Z",
+   "payload": {
+    "call_id": "ne-af1d918308d5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 24,
+   "ts": "2026-09-22T17:14:23.825471Z",
+   "payload": {
+    "call_id": "cq-5026fae78a82",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "76 row(s) of 131",
+    "result_count": 76,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 25,
+   "ts": "2026-09-22T17:14:24.033677Z",
+   "payload": {
+    "call_id": "pa-4a4a15a75201",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 26,
+   "ts": "2026-09-22T17:14:24.205452Z",
+   "payload": {
+    "call_id": "ne-be559e2d04b1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 27,
+   "ts": "2026-09-22T17:14:24.502021Z",
+   "payload": {
+    "call_id": "ne-9bfcfe024e8d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 28,
+   "ts": "2026-09-22T17:14:24.505243Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17863",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/17863/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "441270",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/441270/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31911114",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31911114/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00018499",
+    "source_url": "https://clinicaltrials.gov/study/NCT00018499",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31911114",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31911114/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000302",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to reactive oxygen species",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34157306",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34157306/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00046670",
+    "source_url": "https://clinicaltrials.gov/study/NCT00046670",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34157306",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34157306/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0001523",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "retinoid metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35256931",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35256931/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "478850",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/478850/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00089882",
+    "source_url": "https://clinicaltrials.gov/study/NCT00089882",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35256931",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35256931/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0001937",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of endothelial cell proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38266643",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38266643/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "478851",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/478851/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00348309",
+    "source_url": "https://clinicaltrials.gov/study/NCT00348309",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38266643",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38266643/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006641",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "triglyceride metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38375983",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38375983/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "478870",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/478870/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00428090",
+    "source_url": "https://clinicaltrials.gov/study/NCT00428090",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38375983",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38375983/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006869",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "lipid transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31911114",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31911114/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006898",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "receptor-mediated endocytosis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34157306",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34157306/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007010",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cytoskeleton organization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35256931",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35256931/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007186",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "G protein-coupled receptor signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38266643",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38266643/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007271",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "synaptic transmission, cholinergic",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38375983",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38375983/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007616",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "long-term memory",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008203",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cholesterol metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010544",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of platelet activation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010596",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of endothelial cell migration",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010629",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of gene expression",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010642",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of platelet-derived growth factor receptor signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of cholesterol efflux",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010877",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "lipid transport involved in lipid storage",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010976",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of neuron projection development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010977",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of neuron projection development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0015909",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "long-chain fatty acid transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0017038",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein import",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0019068",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "virion assembly",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030195",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of blood coagulation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030516",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of axon extension",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0031175",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "neuron projection development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0032438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "melanosome organization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0032489",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of Cdc42 protein signal transduction",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0032805",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of low-density lipoprotein particle receptor catabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033344",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cholesterol efflux",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033700",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "phospholipid efflux",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034372",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "very-low-density lipoprotein particle remodeling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034374",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "low-density lipoprotein particle remodeling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034375",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "high-density lipoprotein particle remodeling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034380",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "high-density lipoprotein particle assembly",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034382",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chylomicron remnant clearance",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034384",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "high-density lipoprotein particle clearance",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034447",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "very-low-density lipoprotein particle clearance",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035641",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "locomotory exploration behavior",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0038060",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "nitric oxide-cGMP-mediated signaling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "lipoprotein metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042158",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "lipoprotein biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042632",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cholesterol homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042982",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "amyloid precursor protein metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043254",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of protein-containing complex assembly",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043409",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of MAPK cascade",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043537",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of blood vessel endothelial cell migration",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043691",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "reverse cholesterol transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0044794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "host-mediated activation of viral process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045088",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of innate immune response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045429",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of nitric oxide biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045541",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cholesterol biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045807",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of endocytosis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045893",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0046889",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of lipid biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048168",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of neuronal synaptic plasticity",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048662",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of smooth muscle cell proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050709",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of protein secretion",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of inflammatory response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050807",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of synapse organization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051044",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of membrane protein ectodomain proteolysis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051055",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of lipid biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051246",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of protein metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051248",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of protein metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0055089",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "fatty acid homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0055090",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "acylglycerol homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060999",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of dendritic spine development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0061000",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of dendritic spine development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0061136",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of proteasomal protein catabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0061771",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to caloric restriction",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070328",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "triglyceride homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070374",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of ERK1 and ERK2 cascade",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "2962d2ab-05fb-4bb9-97ec-efb388f5c19a",
+   "seq": 371,
+   "ts": "2026-09-22T17:14:30.483766Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 9,
+    "elapsed_ms": 4653,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 4 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records, 4 pubmed records, 4 clinvar records, 3 clinical trial records, 3 publication records and 3 biological process records for APOE and late-onset Alzheimer disease, of 131 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nVariant Records in ClinVar\n\nTwo additional records\u2014\"NM_000041.4(APOE):c.[388=;526=]\" [1] and \"NM_000041.3(APOE):c.[349G>A;508G>C]\" [2]. \n\nGene records found\n\ngene symbol: APOE [3]. gene name: APOE [5]. The protein encoded by this gene is a major apoprotein of the chylomicron [10]. It binds to a specific liver and peripheral cell receptor, and is essential for the normal catabolism of triglyceride-rich lipoprotein constituents [10]. This gene maps to chromosome 19 in a cluster with the related apolipoprotein C1 and C2 genes [10]. Mutations in this gene result in familial dysbetalipoproteinemia, or type III hyperlipoproteinemia (HLP III), in which increased plasma cholesterol and triglycerides are the conseque [10]. \n\nPubmed records found\n\npubmed title: APOE in the normal brain [4]. pubmed title: Overexpressing low-density lipoprotein receptor reduces tau-associated neurodegeneration in relation to apoE-linked mechanisms [9]. pubmed title: Apolipoprotein E and Alzheimer's disease [14]. pubmed title: Apolipoprotein E secreted by astrocytes forms antiparallel dimers in discoidal lipoproteins [19]. pubmed title: Silencing Apoe with divalent-siRNAs improves amyloid burden and activates immune response pathways in Alzheimer's disease [24]. The APOE4 protein affects the primary neuropathological markers of Alzheimer's disease (AD): amyloid plaques, neurofibrillary tangles, and gliosis [29]. These interactions have been investigated to understand the strong effect of APOE genotype on risk of AD [29]. However, APOE genotype has strong effects on processes in normal brains, in the absence of the hallmarks of AD [29]. We propose that CNS APOE is involved in processes in the normal brains that in later years apply specifically to processes of AD patho [29]. APOE is the strongest genetic risk factor for late-onset Alzheimer's disease [31]. ApoE exacerbates tau-associated neurodegeneration by driving microglial activation [31]. However, how apoE regulates microglial activation and whether targeting apoE is therapeutically beneficial in tauopathy is unclear [31]. Here, we show that overexpressing an apoE metabolic receptor, LDLR (low-density lipoprotein receptor), in P301S tauopathy mice markedly reduces brain apoE and ameliorates tau pathology and neurodegeneration [31]. Genetic variation in apolipoprotein E (APOE) influences Alzheimer's disease (AD) risk [33]. APOE \u03b54 alleles are the strongest genetic risk factor for late onset sporadic AD [33]. The AD risk is dose dependent, as those carrying one APOE \u03b54 allele have a 2-3-fold increased risk, while those carrying two \u03b54 alleles have a 10-15-fold increased risk [33]. Individuals carrying APOE \u03b52 alleles have lower AD risk and those carrying APOE \u03b53 alleles have neutral risk [33]. APOE is a lipoprotein which functions in lipid tran [33]. The Apolipoprotein E gene (APOE) is of great interest due to its role as a risk factor for late-onset Alzheimer's disease [35]. ApoE is secreted by astrocytes in the central nervous system in high-density lipoprotein (HDL)-like lipoproteins [35]. Structural models of lipidated ApoE of high resolution could aid in a mechanistic understanding of how ApoE functions in health and disease [35]. Using monoclonal Fab and F(ab')2 fragments, we characterize the structure of lipidated ApoE on astrocyte-secreted lipoprot [35]. The most significant genetic risk factor for late-onset Alzheimer's disease (AD) is APOE4, with evidence for gain- and loss-of-function mechanisms [37]. A clinical need remains for therapeutically relevant tools that potently modulate APOE expression [37]. We optimized small interfering RNAs (di-siRNA, GalNAc) to potently silence brain or liver Apoe and evaluated the impact of each pool of Apoe on pathology [37]. In adult 5xFAD mice, siRNAs targeting CNS Apoe efficiently silenced Apoe expression and reduced am [37]. \n\nClinvar records found\n\nclinvar title: NM_000041.4(APOE):c.[388=;526=] [1]. clinvar title: NM_000041.3(APOE):c.[349G>A;508G>C] [2]. clinvar title: NM_000041.4(APOE):c.508G>C (p.Ala170Pro) [15]. clinvar title: NM_000041.4(APOE):c.349G>A (p.Ala117Thr) [20]. clinvar title: NM_000041.2(APOE):c.725G>A (p.Arg242Gln) [25]. \n\nClinical trial records found\n\nClinical trial name: Genotype Influence on Recovery After Traumatic Brain Injury [6]. Clinical trial name: Sleep Disordered Breathing, APOE, and Lipid Metabolism [11]. Clinical trial name: Risk Evaluation and Education for Alzheimer's Disease (REVEAL) II [16]. Clinical trial name: Rosiglitazone (Extended Release Tablets) As Adjunctive Therapy For Subjects With Mild To Moderate Alzheimer's Disease [21]. Clinical trial name: Rosiglitazone (Extended Release Tablets) As Monotherapy In Subjects With Mild To Moderate Alzheimer's Disease [26]. \n\nPublication records found\n\nPublication pmid: 31911114 [7]. Publication pmid: 34157306 [12]. Publication pmid: 35256931 [17]. Publication pmid: 38266643 [22]. Publication pmid: 38375983 [27]. \n\nBiological process records found\n\nBiologicalProcess GO:0000302, name: response to reactive oxygen species [8]. BiologicalProcess GO:0001523, name: retinoid metabolic process [13]. BiologicalProcess GO:0001937, name: negative regulation of endothelial cell proliferation [18]. BiologicalProcess GO:0006641, name: triglyceride metabolic process [23]. BiologicalProcess GO:0006869, name: lipid transport [28]. BiologicalProcess GO:0006898, name: receptor-mediated endocytosis [30]. BiologicalProcess GO:0007010, name: cytoskeleton organization [32]. BiologicalProcess GO:0007186, name: G protein-coupled receptor signaling pathway [34]. BiologicalProcess GO:0007271, name: synaptic transmission, cholinergic [36]. BiologicalProcess GO:0007616, name: long-term memory [38]. BiologicalProcess GO:0008203, name: cholesterol metabolic process [39]. BiologicalProcess GO:0010544, name: negative regulation of platelet activation [40]. BiologicalProcess GO:0010596, name: negative regulation of endothelial cell migration [41]. BiologicalProcess GO:0010629, name: negative regulation of gene expression [42]. BiologicalProcess GO:0010642, name: negative regulation of platelet-derived growth factor receptor signaling pathway [43]. BiologicalProcess GO:0010875, name: positive regulation of cholesterol efflux [44]. BiologicalProcess GO:0010877, name: lipid transport involved in lipid storage [45]. BiologicalProcess GO:0010976, name: positive regulation of neuron projection development [46]. BiologicalProcess GO:0010977, name: negative regulation of neuron projection development [47]. BiologicalProcess GO:0015909, name: long-chain fatty acid transport [48]. BiologicalProcess GO:0017038, name: protein import [49]. BiologicalProcess GO:0019068, name: virion assembly [50]. BiologicalProcess GO:0030195, name: negative regulation of blood coagulation [51]. BiologicalProcess GO:0030516, name: regulation of axon extension [52]. BiologicalProcess GO:0031175, name: neuron projection development [53]. BiologicalProcess GO:0032438, name: melanosome organization [54]. BiologicalProcess GO:0032489, name: regulation of Cdc42 protein signal transduction [55]. BiologicalProcess GO:0032805, name: positive regulation of low-density lipoprotein particle receptor catabolic process [56]. BiologicalProcess GO:0033344, name: cholesterol efflux [57]. BiologicalProcess GO:0033700, name: phospholipid efflux [58]. BiologicalProcess GO:0034372, name: very-low-density lipoprotein particle remodeling [59]. BiologicalProcess GO:0034374, name: low-density lipoprotein particle remodeling [60]. BiologicalProcess GO:0034375, name: high-density lipoprotein particle remodeling [61]. BiologicalProcess GO:0034380, name: high-density lipoprotein particle assembly [62]. BiologicalProcess GO:0034382, name: chylomicron remnant clearance [63]. BiologicalProcess GO:0034384, name: high-density lipoprotein particle clearance [64]. BiologicalProcess GO:0034447, name: very-low-density lipoprotein particle clearance [65]. BiologicalProcess GO:0035641, name: locomotory exploration behavior [66]. BiologicalProcess GO:0038060, name: nitric oxide-cGMP-mediated signaling [67]. BiologicalProcess GO:0042157, name: lipoprotein metabolic process [68]. BiologicalProcess GO:0042158, name: lipoprotein biosynthetic process [69]. BiologicalProcess GO:0042632, name: cholesterol homeostasis [70]. BiologicalProcess GO:0042981, name: regulation of apoptotic process [71]. BiologicalProcess GO:0042982, name: amyloid precursor protein metabolic process [72]. BiologicalProcess GO:0043254, name: regulation of protein-containing complex assembly [73]. BiologicalProcess GO:0043409, name: negative regulation of MAPK cascade [74]. BiologicalProcess GO:0043537, name: negative regulation of blood vessel endothelial cell migration [75]. BiologicalProcess GO:0043691, name: reverse cholesterol transport [76]. BiologicalProcess GO:0044794, name: host-mediated activation of viral process [77]. BiologicalProcess GO:0045088, name: regulation of innate immune response [78]. BiologicalProcess GO:0045429, name: positive regulation of nitric oxide biosynthetic process [79]. BiologicalProcess GO:0045541, name: negative regulation of cholesterol biosynthetic process [80]. BiologicalProcess GO:0045807, name: positive regulation of endocytosis [81]. BiologicalProcess GO:0045893, name: positive regulation of DNA-templated transcription [82]. BiologicalProcess GO:0046889, name: positive regulation of lipid biosynthetic process [83]. BiologicalProcess GO:0048168, name: regulation of neuronal synaptic plasticity [84]. BiologicalProcess GO:0048662, name: negative regulation of smooth muscle cell proliferation [85]. BiologicalProcess GO:0050709, name: negative regulation of protein secretion [86]. BiologicalProcess GO:0050728, name: negative regulation of inflammatory response [87]. BiologicalProcess GO:0050807, name: regulation of synapse organization [88]. BiologicalProcess GO:0051044, name: positive regulation of membrane protein ectodomain proteolysis [89]. BiologicalProcess GO:0051055, name: negative regulation of lipid biosynthetic process [90]. BiologicalProcess GO:0051246, name: regulation of protein metabolic process [91]. BiologicalProcess GO:0051248, name: negative regulation of protein metabolic process [92]. BiologicalProcess GO:0055089, name: fatty acid homeostasis [93]. BiologicalProcess GO:0055090, name: acylglycerol homeostasis [94]. BiologicalProcess GO:0060999, name: positive regulation of dendritic spine development [95]. BiologicalProcess GO:0061000, name: negative regulation of dendritic spine development [96]. BiologicalProcess GO:0061136, name: regulation of proteasomal protein catabolic process [97]. BiologicalProcess GO:0061771, name: response to caloric restriction [98]. BiologicalProcess GO:0070328, name: triglyceride homeostasis [99]. BiologicalProcess GO:0070374, name: positive regulation of ERK1 and ERK2 cascade [100]. \n\nNote: this answer was truncated because only 76 of the 131 records that matched this question in the graph were retrieved\n\nNote: this answer does not address the following entities named in the question: Non-familial Alzheimer disease of late onset. Ask about them individually for a complete answer."
+}

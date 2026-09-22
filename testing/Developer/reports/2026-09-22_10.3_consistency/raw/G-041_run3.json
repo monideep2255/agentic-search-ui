@@ -1,0 +1,110 @@
+{
+ "record": {
+  "id": "G-041",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "Which diseases are associated with the gene ZZQXFAKE1?",
+  "session_id": "c103-69f19330f967",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:28:55+00:00",
+  "run_id": "c290e8c3-4791-4c65-90e1-b92752b32c2a",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 23,
+  "answer_start": "I could not identify that gene. NCBI has no record matching the name in your question, so no graph query was attempted. https://www.ncbi.nlm.nih.gov/search/all/",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 5.348,
+  "seconds": 5.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "c290e8c3-4791-4c65-90e1-b92752b32c2a",
+   "seq": 0,
+   "ts": "2026-09-22T17:27:24.632610Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "c290e8c3-4791-4c65-90e1-b92752b32c2a",
+   "seq": 2,
+   "ts": "2026-09-22T17:27:27.094836Z",
+   "payload": {
+    "narrative": "One direct API call to a gene-disease association database answers it.",
+    "query_class": "single_hop",
+    "resolved_entities": [],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "c290e8c3-4791-4c65-90e1-b92752b32c2a",
+   "seq": 4,
+   "ts": "2026-09-22T17:27:27.097195Z",
+   "payload": {
+    "narrative": "no tool selected; unresolved gene symbol candidate(s): ZZQXFAKE1",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "c290e8c3-4791-4c65-90e1-b92752b32c2a",
+   "seq": 8,
+   "ts": "2026-09-22T17:27:27.100662Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 5348,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not identify that gene. NCBI has no record matching the name in your question, so no graph query was attempted. https://www.ncbi.nlm.nih.gov/search/all/?term=ZZQXFAKE1"
+}

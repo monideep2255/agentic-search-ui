@@ -1,0 +1,74 @@
+{
+ "record": {
+  "id": "G-019",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What MeSH terms are assigned to PMID 11237011?",
+  "session_id": "c103-0cb009980752",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:15:39+00:00",
+  "run_id": "4800a884-65d2-4921-97c9-e62e0ac52c1a",
+  "outcome": "error",
+  "timed_out": false,
+  "guard_passed": null,
+  "guard_category": null,
+  "guard_reason": null,
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": null,
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": {
+   "fatal": true,
+   "scope": "step",
+   "source": "guardrail",
+   "error_class": "transient",
+   "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+   "retry_after_s": 0
+  },
+  "total_cost_usd": null,
+  "total_tool_calls": null,
+  "server_elapsed_s": null,
+  "seconds": 15.4,
+  "event_types": {
+   "error": 1
+  }
+ },
+ "events": [
+  {
+   "type": "error",
+   "version": "v1",
+   "trace_id": "4800a884-65d2-4921-97c9-e62e0ac52c1a",
+   "seq": 0,
+   "ts": "2026-09-22T17:14:20.898820Z",
+   "payload": {
+    "fatal": true,
+    "scope": "step",
+    "source": "guardrail",
+    "error_class": "transient",
+    "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+    "retry_after_s": 0
+   }
+  }
+ ],
+ "answer_text": ""
+}

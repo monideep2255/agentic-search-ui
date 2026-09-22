@@ -1,0 +1,211 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-8c4b52c8161f",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:19:18+00:00",
+  "run_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 38,
+  "answer_start": "Found 1 derived record for PMID 11237011: PMID:11237011 [1]. \n\nDerived records found\n\nderived PMID:11237011, sequence_variant_link_type: direct [1]. \n\nNote: the",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 53.16,
+  "seconds": 76.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 6,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+   "seq": 0,
+   "ts": "2026-09-22T17:17:46.378030Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+   "seq": 2,
+   "ts": "2026-09-22T17:17:51.065377Z",
+   "payload": {
+    "narrative": "Requires traversing from a PubMed record to linked records across several databases (sequence data, BioProjects, GEO series, assemblies) and classifying each link. (not recognised as a gene symbol: 11237011)",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+   "seq": 4,
+   "ts": "2026-09-22T17:17:51.066814Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8d92c5953a0c",
+      "layer": "layer_1_graph",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+   "seq": 6,
+   "ts": "2026-09-22T17:17:51.067730Z",
+   "payload": {
+    "call_id": "cq-8d92c5953a0c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+   "seq": 7,
+   "ts": "2026-09-22T17:18:38.587178Z",
+   "payload": {
+    "call_id": "cq-8d92c5953a0c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+   "seq": 8,
+   "ts": "2026-09-22T17:18:38.588353Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11237011",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11237011/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "sequence_variant_link_type",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "80f0ac1b-da6a-4c79-baae-e5f6056aacda",
+   "seq": 19,
+   "ts": "2026-09-22T17:19:01.498355Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 53160,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 derived record for PMID 11237011: PMID:11237011 [1]. \n\nDerived records found\n\nderived PMID:11237011, sequence_variant_link_type: direct [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

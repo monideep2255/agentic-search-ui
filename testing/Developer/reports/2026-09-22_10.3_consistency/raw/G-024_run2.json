@@ -1,0 +1,376 @@
+{
+ "record": {
+  "id": "G-024",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "What is rs334 and what condition is it associated with?",
+  "session_id": "c103-5b6e1be99ef8",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:15:18+00:00",
+  "run_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "dbSNP:rs334"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 6,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 1,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 1,
+  "tools": [
+   "litvar2_lookup",
+   "ncbi_dbsnp",
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 71,
+  "answer_start": "Found 1 variant record record and 5 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], c.20A>T [2], rs334348 ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 3,
+  "server_elapsed_s": 7.412,
+  "seconds": 10.7,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 11,
+   "citation": 6,
+   "trust_signal": 7,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 0,
+   "ts": "2026-09-22T17:13:47.073958Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 2,
+   "ts": "2026-09-22T17:13:51.079132Z",
+   "payload": {
+    "narrative": "Asking for the definition of a specific variant and the condition it is associated with, which can be answered by a single lookup (dbSNP) and linking to its disease association. (not recognised as a gene symbol: rs334)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 4,
+   "ts": "2026-09-22T17:13:51.082370Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-69c7ff215b06",
+      "layer": "layer_1_graph",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_dbsnp",
+      "call_id": "db-2fae943200b6",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "litvar2_lookup",
+      "call_id": "lv-a9700afefa6a",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 6,
+   "ts": "2026-09-22T17:13:51.083553Z",
+   "payload": {
+    "call_id": "cq-69c7ff215b06",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 7,
+   "ts": "2026-09-22T17:13:51.083592Z",
+   "payload": {
+    "call_id": "db-2fae943200b6",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 8,
+   "ts": "2026-09-22T17:13:51.083608Z",
+   "payload": {
+    "call_id": "lv-a9700afefa6a",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 9,
+   "ts": "2026-09-22T17:13:51.364646Z",
+   "payload": {
+    "call_id": "lv-a9700afefa6a",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 10,
+   "ts": "2026-09-22T17:13:51.700252Z",
+   "payload": {
+    "call_id": "db-2fae943200b6",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 11,
+   "ts": "2026-09-22T17:13:52.882056Z",
+   "payload": {
+    "call_id": "cq-69c7ff215b06",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 12,
+   "ts": "2026-09-22T17:13:52.883591Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_2_api",
+    "source": "dbsnp",
+    "field": "clinical_significance",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334348",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334353",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334353",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334558",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334558",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334773",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334773",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "ecba2a53-d104-4755-a0e2-64b02977971b",
+   "seq": 38,
+   "ts": "2026-09-22T17:13:55.818366Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 3,
+    "elapsed_ms": 7412,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 variant record record and 5 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], c.20A>T [2], rs334348 [3], rs334353 [4], c.-50T>C [5] and rs334773 [6]. \n\nVariant record records found\n\nVariant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [1]. \n\nLiterature variant records found\n\nLiterature variant name: c.20A>T [2]. Literature variant name: rs334348 [3]. Literature variant name: rs334353 [4]. Literature variant name: c.-50T>C [5]. Literature variant name: rs334773 [6]. "
+}

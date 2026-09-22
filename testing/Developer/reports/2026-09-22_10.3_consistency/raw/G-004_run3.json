@@ -1,0 +1,235 @@
+{
+ "record": {
+  "id": "G-004",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For a Salmonella enterica isolate, what SNP cluster does it belong to, which AMR genes does it carry, and which isolates are within 5 SNPs of it?",
+  "session_id": "c103-269b157cdd38",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:19:05+00:00",
+  "run_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "MedGen:C4551986",
+   "MedGen:C1859878"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 2,
+  "distinct_sources": 2,
+  "citations_by_layer": {
+   "layer_1_graph": 1,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   2
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 61,
+  "answer_start": "Found 1 gene record for AMR: alpha 2-HS glycoprotein [1], linked to 1 disease: Alopecia-intellectual disability syndrome 1 [2]. \n\nDisease records found\n\nDisease",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 7.427,
+  "seconds": 11.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 10,
+   "citation": 2,
+   "trust_signal": 3,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+   "seq": 0,
+   "ts": "2026-09-22T17:17:33.273419Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+   "seq": 2,
+   "ts": "2026-09-22T17:17:38.906035Z",
+   "payload": {
+    "narrative": "The query asks about multiple linked properties of a specific isolate (SNP cluster, AMR genes, neighboring isolates) which requires graph traversal across records. (AMR: 2 MedGen records matched by name)",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "AMR",
+      "curie": "MedGen:C4551986",
+      "confidence": 1.0
+     },
+     {
+      "text": "AMR",
+      "curie": "MedGen:C1859878",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+   "seq": 4,
+   "ts": "2026-09-22T17:17:38.907804Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-065b4222ba1c",
+      "layer": "layer_1_graph",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "AMR",
+      "curie": "MedGen:C4551986",
+      "confidence": 1.0
+     },
+     {
+      "text": "AMR",
+      "curie": "MedGen:C1859878",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+   "seq": 6,
+   "ts": "2026-09-22T17:17:38.908670Z",
+   "payload": {
+    "call_id": "cq-065b4222ba1c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+   "seq": 7,
+   "ts": "2026-09-22T17:17:39.565917Z",
+   "payload": {
+    "call_id": "cq-065b4222ba1c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "2 row(s) of 2",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+   "seq": 8,
+   "ts": "2026-09-22T17:17:39.567191Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:197",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/197",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "alpha 2-HS glycoprotein",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1859878",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1859878",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "d49c1f71-0584-4887-b4e2-e365bfe3dd82",
+   "seq": 25,
+   "ts": "2026-09-22T17:17:42.984418Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 7427,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record for AMR: alpha 2-HS glycoprotein [1], linked to 1 disease: Alopecia-intellectual disability syndrome 1 [2]. \n\nDisease records found\n\nDisease name: Alopecia-intellectual disability syndrome 1 [2]. \n\nGene-to-disease mapping\n\nGene NCBIGene:197, name: alpha 2-HS glycoprotein [1]. \n\nNote: this answer does not address the following entities named in the question: AMR Syndrome. Ask about them individually for a complete answer."
+}

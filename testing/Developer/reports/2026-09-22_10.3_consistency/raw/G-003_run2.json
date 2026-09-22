@@ -1,0 +1,344 @@
+{
+ "record": {
+  "id": "G-003",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?",
+  "session_id": "c103-165e2a5b02fa",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:14:00+00:00",
+  "run_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C4552100"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 12,
+  "distinct_sources": 12,
+  "citations_by_layer": {
+   "layer_1_graph": 11,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 4,
+  "must_cite_hits": 3,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 12,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   12
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 133,
+  "answer_start": "Found 11 gene records for Lynch syndrome [1][3][4][5][6][7][8][9][10][11][12], linked to 1 disease: Lynch syndrome [2]. \n\nDisease records found\n\nDisease name: L",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 11.04,
+  "seconds": 21.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 20,
+   "citation": 12,
+   "trust_signal": 13,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+   "seq": 0,
+   "ts": "2026-09-22T17:12:29.747549Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+   "seq": 2,
+   "ts": "2026-09-22T17:12:36.518760Z",
+   "payload": {
+    "narrative": "Broad, multi-source question asking for all known information about Lynch syndrome across multiple NCBI databases (genes, condition, variants, trials). (Lynch syndrome: 1 of 10 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+   "seq": 4,
+   "ts": "2026-09-22T17:12:36.520722Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-102d9c5057a6",
+      "layer": "layer_1_graph",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+   "seq": 6,
+   "ts": "2026-09-22T17:12:36.521645Z",
+   "payload": {
+    "call_id": "cq-102d9c5057a6",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+   "seq": 7,
+   "ts": "2026-09-22T17:12:38.076544Z",
+   "payload": {
+    "call_id": "cq-102d9c5057a6",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "12 row(s) of 12",
+    "result_count": 12,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+   "seq": 8,
+   "ts": "2026-09-22T17:12:38.078293Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:27030",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/27030",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 3",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4552100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4552100",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2956",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 6",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4072",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "epithelial cell adhesion molecule",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4763",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "neurofibromin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5378",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 1, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5395",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5395",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 2, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:6224",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/6224",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "ribosomal protein S20",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7048",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7048",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta receptor 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:999",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/999",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "cadherin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "6eea31cd-bf0c-4527-ac76-a7025cafa5b9",
+   "seq": 55,
+   "ts": "2026-09-22T17:12:48.031846Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 11040,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 11 gene records for Lynch syndrome [1][3][4][5][6][7][8][9][10][11][12], linked to 1 disease: Lynch syndrome [2]. \n\nDisease records found\n\nDisease name: Lynch syndrome [2]. \n\nGene-to-disease mapping\n\nGene NCBIGene:27030, name: mutL homolog 3 [1]. Gene NCBIGene:2956, name: mutS homolog 6 [3]. Gene NCBIGene:4072, name: epithelial cell adhesion molecule [4]. Gene NCBIGene:4292, name: mutL homolog 1 [5]. Gene NCBIGene:4436, name: mutS homolog 2 [6]. Gene NCBIGene:4763, name: neurofibromin 1 [7]. Gene NCBIGene:5378, name: PMS1 homolog 1, mismatch repair system component [8]. Gene NCBIGene:5395, name: PMS1 homolog 2, mismatch repair system component [9]. Gene NCBIGene:6224, name: ribosomal protein S20 [10]. Gene NCBIGene:7048, name: transforming growth factor beta receptor 2 [11]. Gene NCBIGene:999, name: cadherin 1 [12]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

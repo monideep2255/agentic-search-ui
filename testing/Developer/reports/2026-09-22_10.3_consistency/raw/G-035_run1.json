@@ -1,0 +1,188 @@
+{
+ "record": {
+  "id": "G-035",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+  "session_id": "c103-6af797684de7",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:01:11+00:00",
+  "run_id": "130d529a-9100-4751-a544-14f513bf68db",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "0 row(s) of 0"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 13,
+  "answer_start": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=What%20Escherichia%20coli%20isolate",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 4.506,
+  "seconds": 7.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "130d529a-9100-4751-a544-14f513bf68db",
+   "seq": 0,
+   "ts": "2026-09-22T16:59:39.874055Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "130d529a-9100-4751-a544-14f513bf68db",
+   "seq": 2,
+   "ts": "2026-09-22T16:59:43.001393Z",
+   "payload": {
+    "narrative": "Asks for a count/collection of isolates meeting criteria across a database",
+    "query_class": "aggregate",
+    "resolved_entities": [],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "130d529a-9100-4751-a544-14f513bf68db",
+   "seq": 4,
+   "ts": "2026-09-22T16:59:43.002953Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-f3a0e10453e4",
+      "layer": "layer_1_graph",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "130d529a-9100-4751-a544-14f513bf68db",
+   "seq": 6,
+   "ts": "2026-09-22T16:59:43.003969Z",
+   "payload": {
+    "call_id": "cq-f3a0e10453e4",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "130d529a-9100-4751-a544-14f513bf68db",
+   "seq": 7,
+   "ts": "2026-09-22T16:59:43.004171Z",
+   "payload": {
+    "call_id": "cq-f3a0e10453e4",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "130d529a-9100-4751-a544-14f513bf68db",
+   "seq": 8,
+   "ts": "2026-09-22T16:59:43.004868Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "130d529a-9100-4751-a544-14f513bf68db",
+   "seq": 12,
+   "ts": "2026-09-22T16:59:45.417535Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 4506,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=What%20Escherichia%20coli%20isolates%20in%20Pathogen%20Detection%20carry%20extended-spectrum%20beta-lactamase%20genes%3F"
+}

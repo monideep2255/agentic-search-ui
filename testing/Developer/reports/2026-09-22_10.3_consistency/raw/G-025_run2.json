@@ -1,0 +1,1914 @@
+{
+ "record": {
+  "id": "G-025",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "discovery",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What does the MTHFR C677T variant do, and what is the evidence quality around it?",
+  "session_id": "c103-50a0840ddff4",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:16:53+00:00",
+  "run_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:4524"
+  ],
+  "trust_outcome": "flag",
+  "trust_line": "Sources disagree on at least one claim",
+  "citations": 100,
+  "distinct_sources": 88,
+  "citations_by_layer": {
+   "layer_1_graph": 72,
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 13,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   13,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1099,
+  "answer_start": "Found 20 sequence variant records for MTHFR, of 990 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nTwo additional records,",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 9,
+  "server_elapsed_s": 9.539,
+  "seconds": 21.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 132,
+   "citation": 100,
+   "trust_signal": 101,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 0,
+   "ts": "2026-09-22T17:15:22.803937Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 2,
+   "ts": "2026-09-22T17:15:26.513702Z",
+   "payload": {
+    "narrative": "Asks about the effect of a specific variant and the evidence quality around it, which is open-ended and requires assembling information about function and literature evidence.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "MTHFR",
+      "curie": "NCBIGene:4524",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 4,
+   "ts": "2026-09-22T17:15:26.515678Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:4524. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-d534d174b5eb",
+      "layer": "layer_1_graph",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7c4049fb26dc",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-5c05bf240b53",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-4f3edb6d32c1",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-6921da2cd15c",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5953427ad827",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-513340bc0bc4",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-ae2b3c83d12b",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-20475af0b52e",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b60155a792c4",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-f3bdcb6e8f78",
+      "layer": "layer_1_graph",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "MTHFR",
+      "curie": "NCBIGene:4524",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 6,
+   "ts": "2026-09-22T17:15:26.516591Z",
+   "payload": {
+    "call_id": "cq-d534d174b5eb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 7,
+   "ts": "2026-09-22T17:15:26.516621Z",
+   "payload": {
+    "call_id": "ne-7c4049fb26dc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 8,
+   "ts": "2026-09-22T17:15:26.516631Z",
+   "payload": {
+    "call_id": "pa-5c05bf240b53",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 9,
+   "ts": "2026-09-22T17:15:26.516639Z",
+   "payload": {
+    "call_id": "ct-4f3edb6d32c1",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 10,
+   "ts": "2026-09-22T17:15:26.516647Z",
+   "payload": {
+    "call_id": "ne-6921da2cd15c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 11,
+   "ts": "2026-09-22T17:15:26.516654Z",
+   "payload": {
+    "call_id": "ne-5953427ad827",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 12,
+   "ts": "2026-09-22T17:15:26.516662Z",
+   "payload": {
+    "call_id": "ne-513340bc0bc4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 13,
+   "ts": "2026-09-22T17:15:26.516669Z",
+   "payload": {
+    "call_id": "pa-ae2b3c83d12b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 14,
+   "ts": "2026-09-22T17:15:26.516677Z",
+   "payload": {
+    "call_id": "ne-20475af0b52e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 15,
+   "ts": "2026-09-22T17:15:26.516685Z",
+   "payload": {
+    "call_id": "ne-b60155a792c4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 16,
+   "ts": "2026-09-22T17:15:26.516692Z",
+   "payload": {
+    "call_id": "cq-f3bdcb6e8f78",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 17,
+   "ts": "2026-09-22T17:15:26.722939Z",
+   "payload": {
+    "call_id": "pa-5c05bf240b53",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 18,
+   "ts": "2026-09-22T17:15:26.821788Z",
+   "payload": {
+    "call_id": "ne-5953427ad827",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 19,
+   "ts": "2026-09-22T17:15:26.847631Z",
+   "payload": {
+    "call_id": "ct-4f3edb6d32c1",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 20,
+   "ts": "2026-09-22T17:15:26.862913Z",
+   "payload": {
+    "call_id": "ne-6921da2cd15c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 21,
+   "ts": "2026-09-22T17:15:26.908789Z",
+   "payload": {
+    "call_id": "ne-7c4049fb26dc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 22,
+   "ts": "2026-09-22T17:15:26.917859Z",
+   "payload": {
+    "call_id": "ne-b60155a792c4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 23,
+   "ts": "2026-09-22T17:15:27.062747Z",
+   "payload": {
+    "call_id": "cq-f3bdcb6e8f78",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "13 row(s) of 13",
+    "result_count": 13,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 24,
+   "ts": "2026-09-22T17:15:29.196592Z",
+   "payload": {
+    "call_id": "cq-d534d174b5eb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "100 row(s) of 977",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 25,
+   "ts": "2026-09-22T17:15:29.403782Z",
+   "payload": {
+    "call_id": "pa-ae2b3c83d12b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 26,
+   "ts": "2026-09-22T17:15:29.506274Z",
+   "payload": {
+    "call_id": "ne-20475af0b52e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 27,
+   "ts": "2026-09-22T17:15:29.602475Z",
+   "payload": {
+    "call_id": "ne-513340bc0bc4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 28,
+   "ts": "2026-09-22T17:15:29.611890Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004148",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004148",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1042278",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1042278",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004806",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004806",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1622T>C (p.Val541Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011084",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011084",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.265C>G (p.Leu89Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1017181",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1017181",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.782G>T (p.Gly261Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1024006",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1024006",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1228_1242del (p.Ser410_Lys414del)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1030042",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1030042",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1621G>T (p.Val541Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1034230",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1034230",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.552del (p.Ser184fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1041980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1041980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.177G>T (p.Trp59Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1042820",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1042820",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.400C>T (p.Arg134Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1048667",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1048667",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.584C>T (p.Ala195Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1066378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1066378",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1750A>T (p.Lys584Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1066379",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1066379",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.474A>T (p.Gly158=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1068525",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1068525",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.202C>T (p.Arg68Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1068573",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1068573",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1114_1115del (p.Lys372fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1070453",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1070453",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.191del (p.Phe64fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1072666",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1072666",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1304_1305del (p.Phe435fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1073018",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1073018",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1063_1075del (p.Pro355fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1073673",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1073673",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1144del (p.Asp382fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1078639",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1078639",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.417G>T (p.Thr139=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079166",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079166",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1698G>A (p.Gly566=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079518",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079518",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1416G>T (p.Leu472=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079525",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079525",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1668G>A (p.Pro556=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079684",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079684",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1080275",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1080275",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1839C>T (p.His613=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1081151",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1081151",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.819G>A (p.Lys273=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1081419",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1081419",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.69T>C (p.Ser23=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1081582",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1081582",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1062C>T (p.His354=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087028",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087028",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1968A>G (p.Pro656=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087054",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087054",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.997C>T (p.Leu333=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087299",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087299",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.198T>A (p.Pro66=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087385",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087385",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.534G>A (p.Leu178=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087771",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087771",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1088221",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1088221",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1362C>G (p.Pro454=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1090921",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1090921",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.675C>T (p.Ile225=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1091668",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1091668",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1722A>T (p.Val574=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1091686",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1091686",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.681G>A (p.Thr227=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1092804",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1092804",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.906C>T (p.Ala302=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1093049",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1093049",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1674T>C (p.Ala558=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1093321",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1093321",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.345C>A (p.Thr115=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1094123",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1094123",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1356C>T (p.Cys452=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1094475",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1094475",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.345C>T (p.Thr115=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1097958",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1097958",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.157T>C (p.Leu53=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1098087",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1098087",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1098292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1098292",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1316T>C (p.Leu439Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1099292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1099292",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1155T>C (p.Pro385=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1100078",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1100078",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.57C>A (p.Ala19=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1102612",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1102612",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.843G>A (p.Lys281=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1108193",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1108193",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.18A>G (p.Arg6=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109006",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109006",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1083T>C (p.Asp361=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109214",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109214",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.9C>T (p.Asn3=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109767",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109767",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109793",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109793",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1248G>A (p.Glu416=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1110919",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1110919",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1734C>G (p.Val578=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1111281",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1111281",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1182C>A (p.Ser394=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1111364",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1111364",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.957C>T (p.His319=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1112859",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1112859",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1059C>T (p.Ala353=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1114195",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1114195",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1344C>T (p.His448=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1115986",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1115986",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.954C>T (p.Leu318=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4524",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "23288205",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/23288205/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3336183",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3336183/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4524",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00341120",
+    "source_url": "https://clinicaltrials.gov/study/NCT00341120",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "23288205",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/23288205/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0001666",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to hypoxia",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30397195",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30397195/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3345787",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3345787/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4524",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00370058",
+    "source_url": "https://clinicaltrials.gov/study/NCT00370058",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30397195",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30397195/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0001843",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "neural tube closure",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34214447",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34214447/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3384941",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3384941/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00482456",
+    "source_url": "https://clinicaltrials.gov/study/NCT00482456",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34214447",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34214447/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006555",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "L-methionine metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38908773",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38908773/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3389646",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3389646/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00730574",
+    "source_url": "https://clinicaltrials.gov/study/NCT00730574",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38908773",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38908773/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0009410",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to xenobiotic stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40970430",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40970430/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3896160",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3896160/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00794885",
+    "source_url": "https://clinicaltrials.gov/study/NCT00794885",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40970430",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40970430/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033274",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to vitamin B2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "23288205",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/23288205/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035999",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "tetrahydrofolate interconversion",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30397195",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30397195/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043200",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to amino acid",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34214447",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34214447/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0046500",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "S-adenosylmethionine metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38908773",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38908773/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050667",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "homocysteine metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40970430",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40970430/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051593",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to folic acid",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070555",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to interleukin-1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070828",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "heterochromatin organization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "L-methionine biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "2ae456bd-9d8f-4d8a-8023-f732f42aacf8",
+   "seq": 363,
+   "ts": "2026-09-22T17:15:41.410900Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 9,
+    "elapsed_ms": 9539,
+    "trust_outcome": "flag",
+    "trust_line": "Sources disagree on at least one claim",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 20 sequence variant records for MTHFR, of 990 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nTwo additional records, ClinVar:1004148 [1] and ClinVar:1042278 [2]. \n\nSequence variant records found\n\nSequenceVariant record ClinVar:1004148 [1]. SequenceVariant ClinVar:1004806, name: NM_005957.5(MTHFR):c.1622T>C (p.Val541Ala) [3]. SequenceVariant ClinVar:1011084, name: NM_005957.5(MTHFR):c.265C>G (p.Leu89Val) [4]. SequenceVariant ClinVar:1017181, name: NM_005957.5(MTHFR):c.782G>T (p.Gly261Val) [5]. SequenceVariant ClinVar:1024006, name: NM_005957.5(MTHFR):c.1228_1242del (p.Ser410_Lys414del) [6]. SequenceVariant ClinVar:1030042, name: NM_005957.5(MTHFR):c.1621G>T (p.Val541Phe) [7]. SequenceVariant ClinVar:1034230, name: NM_005957.5(MTHFR):c.552del (p.Ser184fs) [8]. SequenceVariant ClinVar:1041980, name: NM_005957.5(MTHFR):c.177G>T (p.Trp59Cys) [9]. SequenceVariant record ClinVar:1042278 [2]. SequenceVariant ClinVar:1042820, name: NM_005957.5(MTHFR):c.400C>T (p.Arg134Cys) [10]. SequenceVariant ClinVar:1048667, name: NM_005957.5(MTHFR):c.584C>T (p.Ala195Val) [11]. SequenceVariant ClinVar:1066378, name: NM_005957.5(MTHFR):c.1750A>T (p.Lys584Ter) [12]. SequenceVariant ClinVar:1066379, name: NM_005957.5(MTHFR):c.474A>T (p.Gly158=) [13]. SequenceVariant ClinVar:1068525, name: NM_005957.5(MTHFR):c.202C>T (p.Arg68Ter) [14]. SequenceVariant ClinVar:1068573, name: NM_005957.5(MTHFR):c.1114_1115del (p.Lys372fs) [15]. SequenceVariant ClinVar:1070453, name: NM_005957.5(MTHFR):c.191del (p.Phe64fs) [16]. SequenceVariant ClinVar:1072666, name: NM_005957.5(MTHFR):c.1304_1305del (p.Phe435fs) [17]. SequenceVariant ClinVar:1073018, name: NM_005957.5(MTHFR):c.1063_1075del (p.Pro355fs) [18]. SequenceVariant ClinVar:1073673, name: NM_005957.5(MTHFR):c.1144del (p.Asp382fs) [19]. SequenceVariant ClinVar:1078639, name: NM_005957.5(MTHFR):c.417G>T (p.Thr139=) [20]. SequenceVariant ClinVar:1079166, name: NM_005957.5(MTHFR):c.1698G>A (p.Gly566=) [21]. SequenceVariant ClinVar:1079518, name: NM_005957.5(MTHFR):c.1416G>T (p.Leu472=) [22]. SequenceVariant ClinVar:1079525, name: NM_005957.5(MTHFR):c.1668G>A (p.Pro556=) [23]. SequenceVariant record ClinVar:1079684 [24]. SequenceVariant ClinVar:1080275, name: NM_005957.5(MTHFR):c.1839C>T (p.His613=) [25]. SequenceVariant ClinVar:1081151, name: NM_005957.5(MTHFR):c.819G>A (p.Lys273=) [26]. SequenceVariant ClinVar:1081419, name: NM_005957.5(MTHFR):c.69T>C (p.Ser23=) [27]. SequenceVariant ClinVar:1081582, name: NM_005957.5(MTHFR):c.1062C>T (p.His354=) [28]. SequenceVariant ClinVar:1087028, name: NM_005957.5(MTHFR):c.1968A>G (p.Pro656=) [29]. SequenceVariant ClinVar:1087054, name: NM_005957.5(MTHFR):c.997C>T (p.Leu333=) [30]. SequenceVariant ClinVar:1087299, name: NM_005957.5(MTHFR):c.198T>A (p.Pro66=) [31]. SequenceVariant ClinVar:1087385, name: NM_005957.5(MTHFR):c.534G>A (p.Leu178=) [32]. SequenceVariant record ClinVar:1087771 [33]. SequenceVariant ClinVar:1088221, name: NM_005957.5(MTHFR):c.1362C>G (p.Pro454=) [34]. SequenceVariant ClinVar:1090921, name: NM_005957.5(MTHFR):c.675C>T (p.Ile225=) [35]. SequenceVariant ClinVar:1091668, name: NM_005957.5(MTHFR):c.1722A>T (p.Val574=) [36]. SequenceVariant ClinVar:1091686, name: NM_005957.5(MTHFR):c.681G>A (p.Thr227=) [37]. SequenceVariant ClinVar:1092804, name: NM_005957.5(MTHFR):c.906C>T (p.Ala302=) [38]. SequenceVariant ClinVar:1093049, name: NM_005957.5(MTHFR):c.1674T>C (p.Ala558=) [39]. SequenceVariant ClinVar:1093321, name: NM_005957.5(MTHFR):c.345C>A (p.Thr115=) [40]. SequenceVariant ClinVar:1094123, name: NM_005957.5(MTHFR):c.1356C>T (p.Cys452=) [41]. SequenceVariant ClinVar:1094475, name: NM_005957.5(MTHFR):c.345C>T (p.Thr115=) [42]. SequenceVariant ClinVar:1097958, name: NM_005957.5(MTHFR):c.157T>C (p.Leu53=) [43]. SequenceVariant record ClinVar:1098087 [44]. SequenceVariant ClinVar:1098292, name: NM_005957.5(MTHFR):c.1316T>C (p.Leu439Pro) [45]. SequenceVariant ClinVar:1099292, name: NM_005957.5(MTHFR):c.1155T>C (p.Pro385=) [46]. SequenceVariant ClinVar:1100078, name: NM_005957.5(MTHFR):c.57C>A (p.Ala19=) [47]. SequenceVariant ClinVar:1102612, name: NM_005957.5(MTHFR):c.843G>A (p.Lys281=) [48]. SequenceVariant ClinVar:1108193, name: NM_005957.5(MTHFR):c.18A>G (p.Arg6=) [49]. SequenceVariant ClinVar:1109006, name: NM_005957.5(MTHFR):c.1083T>C (p.Asp361=) [50]. SequenceVariant ClinVar:1109214, name: NM_005957.5(MTHFR):c.9C>T (p.Asn3=) [51]. SequenceVariant record ClinVar:1109767 [52]. SequenceVariant ClinVar:1109793, name: NM_005957.5(MTHFR):c.1248G>A (p.Glu416=) [53]. SequenceVariant ClinVar:1110919, name: NM_005957.5(MTHFR):c.1734C>G (p.Val578=) [54]. SequenceVariant ClinVar:1111281, name: NM_005957.5(MTHFR):c.1182C>A (p.Ser394=) [55]. SequenceVariant ClinVar:1111364, name: NM_005957.5(MTHFR):c.957C>T (p.His319=) [56]. SequenceVariant ClinVar:1112859, name: NM_005957.5(MTHFR):c.1059C>T (p.Ala353=) [57]. SequenceVariant ClinVar:1114195, name: NM_005957.5(MTHFR):c.1344C>T (p.His448=) [58]. SequenceVariant ClinVar:1115986, name: NM_005957.5(MTHFR):c.954C>T (p.Leu318=) [59]. \n\nGene records found\n\ngene symbol: MTHFR [60]. gene name: MTHFR [63]. The protein encoded by this gene catalyzes the conversion of 5,10-methylenetetrahydrofolate to 5-methyltetrahydrofolate, a co-substrate for homocysteine remethylation to methionine [69]. Genetic variation in this gene influences susceptibility to occlusive vascular disease, neural tube defects, colon cancer and acute leukemia, and mutations in this gene are associated with methylenetetrahydrofolate reductase deficiency.[provided by RefSeq, Oct 2009] [69]. \n\nPubmed records found\n\npubmed title: ACMG Practice Guideline: lack of evidence for MTHFR polymorphism testing [61]. pubmed title: Methylenetetrahydrofolate reductase and psychiatric diseases [67]. pubmed title: Shifting landscapes of human MTHFR missense-variant effects [73]. pubmed title: MTHFR gene polymorphisms in diabetes mellitus [78]. pubmed title: Increased methylation levels of the MTHFR gene promoter in Down syndrome [83]. MTHFR polymorphism testing is frequently ordered by physicians as part of the clinical evaluation for thrombophilia [88]. It was previously hypothesized that reduced enzyme activity of MTHFR led to mild hyperhomocysteinemia which led to an increased risk for venous thromboembolism, coronary heart disease, and recurrent pregnancy loss [88]. Recent meta-analyses have disproven an association between hyperhomocysteinemia and risk for coronary heart disease and between MTHFR polymorphism status and risk for v [88]. Methylenetetrahydrofolate reductase (MTHFR) is a key enzyme for the critical process of one-carbon metabolism involving folate and homocysteine metabolisms [90]. It is known that some polymorphism of MTHFR would result in reduction of MTHFR enzyme activity as well as DNA methylation process, later shown to have significant impacts in various psychiatric diseases [90]. However, it is unclear whether the polymorphism of MTHFR could be an independent or an add-on risk factor for specific psychiatric symptoms [90]. Most rare clinical missense variants cannot currently be classified as pathogenic or benign [92]. Deficiency in human 5,10-methylenetetrahydrofolate reductase (MTHFR), the most common inherited disorder of folate metabolism, is caused primarily by rare missense variants [92]. Further complicating variant interpretation, variant impacts often depend on environment [92]. An important example of this phenomenon is the MTHFR variant p.Ala222Val (c.665C>T), which is carried by half of all humans and has a phenotypi [92]. The methylenetetrahydrofolate reductase (MTHFR), methionine synthase (MTR), and methionine synthase reductase (MTRR) are three regulatory enzymes in the folic acid (FA) cycle play a critical role in the balance of methionine and homocysteine [94]. MTHFR and MTRR gene polymorphisms affect the biochemical activities of enzymes, impairing the remethylation of homocysteine to methionine [94]. In 1972, severe MTHFR deficiency resulting in homocystinuria was first reported, suggesting MTHFR involvement in the d [94]. MTHFR is a key enzyme in the one-carbon metabolic pathway, whose activity has been implicated in Down syndrome (DS) and in the development of congenital heart defects (CHDs) [96]. The main aim was to assess promoter methylation levels of the MTHFR gene in DS individuals, including those with congenital heart defects (DS-CHD+), and those without (DS-CHD-), as well as control subjects [96]. We also investigated if common MTHFR polymorphisms, namely 677C\u2009>\u2009T and 1298A\u2009>\u2009C correlate with MTHFR promoter methyl [96]. \n\nClinvar records found\n\nclinvar title: NM_005957.5(MTHFR):c.1262G>T (p.Trp421Leu) [62]. clinvar title: NM_005957.5(MTHFR):c.512G>A (p.Gly171Asp) [68]. clinvar title: NM_005957.5(MTHFR):c.1163G>T (p.Arg388Leu) [74]. clinvar title: NM_005957.5(MTHFR):c.750C>T (p.Cys250=) [79]. clinvar title: NM_005957.5(MTHFR):c.1003C>A (p.Arg335Ser) [84]. \n\nClinical trial records found\n\nClinical trial name: Genetic Causes of Male Infertility [64]. Clinical trial name: Study on the Influence of Electroconvulsive Therapy (ECT) on Homocysteine Levels [70]. Clinical trial name: Homocysteine After Nitrous Oxide Anesthesia [75]. Clinical trial name: Examining B12 Deficiency Associated With C677T Mutation on MTHFR Gene in Terms of Commonness and Endothelial Function [80]. Clinical trial name: China Stroke Primary Prevention Trial [85]. \n\nPublication records found\n\nPublication pmid: 23288205 [65]. Publication pmid: 30397195 [71]. Publication pmid: 34214447 [76]. Publication pmid: 38908773 [81]. Publication pmid: 40970430 [86]. \n\nBiological process records found\n\nBiologicalProcess GO:0001666, name: response to hypoxia [66]. BiologicalProcess GO:0001843, name: neural tube closure [72]. BiologicalProcess GO:0006555, name: L-methionine metabolic process [77]. BiologicalProcess GO:0009410, name: response to xenobiotic stimulus [82]. BiologicalProcess GO:0033274, name: response to vitamin B2 [87]. BiologicalProcess GO:0035999, name: tetrahydrofolate interconversion [89]. BiologicalProcess GO:0043200, name: response to amino acid [91]. BiologicalProcess GO:0046500, name: S-adenosylmethionine metabolic process [93]. BiologicalProcess GO:0050667, name: homocysteine metabolic process [95]. BiologicalProcess GO:0051593, name: response to folic acid [97]. BiologicalProcess GO:0070555, name: response to interleukin-1 [98]. BiologicalProcess GO:0070828, name: heterochromatin organization [99]. BiologicalProcess GO:0071265, name: L-methionine biosynthetic process [100]. \n\nNote: this answer was truncated because only 101 of the 990 records that matched this question in the graph were retrieved"
+}

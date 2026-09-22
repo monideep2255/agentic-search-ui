@@ -1,0 +1,376 @@
+{
+ "record": {
+  "id": "G-024",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "What is rs334 and what condition is it associated with?",
+  "session_id": "c103-ba2bc07c4aa8",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T16:52:37+00:00",
+  "run_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "dbSNP:rs334"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 6,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 1,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 1,
+  "tools": [
+   "litvar2_lookup",
+   "ncbi_dbsnp",
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 71,
+  "answer_start": "Found 1 variant record record and 5 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], c.20A>T [2], rs334348 ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 3,
+  "server_elapsed_s": 7.608,
+  "seconds": 14.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 11,
+   "citation": 6,
+   "trust_signal": 7,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 0,
+   "ts": "2026-09-22T16:51:06.352131Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 2,
+   "ts": "2026-09-22T16:51:09.639579Z",
+   "payload": {
+    "narrative": "Requires one API call to get rs334 info and another to get associated condition, but both are direct lookups. (not recognised as a gene symbol: rs334)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 4,
+   "ts": "2026-09-22T16:51:09.641167Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-6614ef6c8397",
+      "layer": "layer_1_graph",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_dbsnp",
+      "call_id": "db-bdf16d3650d2",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "litvar2_lookup",
+      "call_id": "lv-d38291acde11",
+      "layer": "layer_3_enrichment",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 6,
+   "ts": "2026-09-22T16:51:09.642285Z",
+   "payload": {
+    "call_id": "cq-6614ef6c8397",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 7,
+   "ts": "2026-09-22T16:51:09.642324Z",
+   "payload": {
+    "call_id": "db-bdf16d3650d2",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 8,
+   "ts": "2026-09-22T16:51:09.642335Z",
+   "payload": {
+    "call_id": "lv-d38291acde11",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 9,
+   "ts": "2026-09-22T16:51:09.909801Z",
+   "payload": {
+    "call_id": "lv-d38291acde11",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 10,
+   "ts": "2026-09-22T16:51:10.094546Z",
+   "payload": {
+    "call_id": "db-bdf16d3650d2",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 11,
+   "ts": "2026-09-22T16:51:11.314990Z",
+   "payload": {
+    "call_id": "cq-6614ef6c8397",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 12,
+   "ts": "2026-09-22T16:51:11.316417Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_2_api",
+    "source": "dbsnp",
+    "field": "clinical_significance",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334348",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334353",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334353",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334558",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334558",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334773",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334773",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "fa1e777a-652c-4ae2-a8da-66489e5a35fe",
+   "seq": 38,
+   "ts": "2026-09-22T16:51:17.622652Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 3,
+    "elapsed_ms": 7608,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 variant record record and 5 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], c.20A>T [2], rs334348 [3], rs334353 [4], c.-50T>C [5] and rs334773 [6]. \n\nVariant record records found\n\nVariant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [1]. \n\nLiterature variant records found\n\nLiterature variant name: c.20A>T [2]. Literature variant name: rs334348 [3]. Literature variant name: rs334353 [4]. Literature variant name: c.-50T>C [5]. Literature variant name: rs334773 [6]. "
+}

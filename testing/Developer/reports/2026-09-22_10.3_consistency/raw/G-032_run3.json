@@ -1,0 +1,997 @@
+{
+ "record": {
+  "id": "G-032",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which pathways does PTEN participate in?",
+  "session_id": "c103-fe74dd5f4575",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:23:50+00:00",
+  "run_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "NCBIGene:5728"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 3 sources",
+  "citations": 28,
+  "distinct_sources": 16,
+  "citations_by_layer": {
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 671,
+  "answer_start": "Found 3 gene records, 5 pubmed records, 4 clinvar records, 4 clinical trial records and 4 publication records for PTEN [1][2][3][4][5][6][7][8][9][10][11][12][1",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 8,
+  "server_elapsed_s": 6.407,
+  "seconds": 9.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 10,
+   "tool_result": 10,
+   "step": 1,
+   "token": 55,
+   "citation": 28,
+   "trust_signal": 29,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 0,
+   "ts": "2026-09-22T17:22:19.812811Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 2,
+   "ts": "2026-09-22T17:22:22.470937Z",
+   "payload": {
+    "narrative": "One direct API call to a pathway database (e.g., KEGG, Reactome) for PTEN can answer this.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "PTEN",
+      "curie": "NCBIGene:5728",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 4,
+   "ts": "2026-09-22T17:22:22.473002Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:5728. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-544314691efc",
+      "layer": "layer_1_graph",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-210e7189ba78",
+      "layer": "layer_2_api",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-27fea62dacb9",
+      "layer": "layer_3_enrichment",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-fc44bf7b3e05",
+      "layer": "layer_3_enrichment",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d419fedff630",
+      "layer": "layer_2_api",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-030f8797334e",
+      "layer": "layer_2_api",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3eb20e856a5e",
+      "layer": "layer_2_api",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-4f5339734552",
+      "layer": "layer_3_enrichment",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-eb583232711a",
+      "layer": "layer_2_api",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-36768e84be7d",
+      "layer": "layer_2_api",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PTEN",
+      "curie": "NCBIGene:5728",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 6,
+   "ts": "2026-09-22T17:22:22.473848Z",
+   "payload": {
+    "call_id": "cq-544314691efc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 7,
+   "ts": "2026-09-22T17:22:22.473874Z",
+   "payload": {
+    "call_id": "ne-210e7189ba78",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 8,
+   "ts": "2026-09-22T17:22:22.473883Z",
+   "payload": {
+    "call_id": "pa-27fea62dacb9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 9,
+   "ts": "2026-09-22T17:22:22.473891Z",
+   "payload": {
+    "call_id": "ct-fc44bf7b3e05",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 10,
+   "ts": "2026-09-22T17:22:22.473899Z",
+   "payload": {
+    "call_id": "ne-d419fedff630",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 11,
+   "ts": "2026-09-22T17:22:22.473907Z",
+   "payload": {
+    "call_id": "ne-030f8797334e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 12,
+   "ts": "2026-09-22T17:22:22.473915Z",
+   "payload": {
+    "call_id": "ne-3eb20e856a5e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 13,
+   "ts": "2026-09-22T17:22:22.473923Z",
+   "payload": {
+    "call_id": "pa-4f5339734552",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 14,
+   "ts": "2026-09-22T17:22:22.473932Z",
+   "payload": {
+    "call_id": "ne-eb583232711a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 15,
+   "ts": "2026-09-22T17:22:22.473941Z",
+   "payload": {
+    "call_id": "ne-36768e84be7d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 16,
+   "ts": "2026-09-22T17:22:22.683382Z",
+   "payload": {
+    "call_id": "pa-27fea62dacb9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 17,
+   "ts": "2026-09-22T17:22:22.790687Z",
+   "payload": {
+    "call_id": "ne-030f8797334e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 18,
+   "ts": "2026-09-22T17:22:22.808788Z",
+   "payload": {
+    "call_id": "ne-d419fedff630",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 19,
+   "ts": "2026-09-22T17:22:22.859439Z",
+   "payload": {
+    "call_id": "ne-210e7189ba78",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 20,
+   "ts": "2026-09-22T17:22:22.877286Z",
+   "payload": {
+    "call_id": "ne-36768e84be7d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 21,
+   "ts": "2026-09-22T17:22:22.928098Z",
+   "payload": {
+    "call_id": "ct-fc44bf7b3e05",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 22,
+   "ts": "2026-09-22T17:22:23.149377Z",
+   "payload": {
+    "call_id": "cq-544314691efc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 23,
+   "ts": "2026-09-22T17:22:23.362695Z",
+   "payload": {
+    "call_id": "pa-4f5339734552",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 24,
+   "ts": "2026-09-22T17:22:23.455237Z",
+   "payload": {
+    "call_id": "ne-eb583232711a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 25,
+   "ts": "2026-09-22T17:22:23.686815Z",
+   "payload": {
+    "call_id": "ne-3eb20e856a5e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 26,
+   "ts": "2026-09-22T17:22:23.688851Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5728/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30738865",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30738865/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4875220",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4875220/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5728",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00173407",
+    "source_url": "https://clinicaltrials.gov/study/NCT00173407",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30738865",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30738865/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31427286",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31427286/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4882482",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882482/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5728",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00971789",
+    "source_url": "https://clinicaltrials.gov/study/NCT00971789",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31427286",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31427286/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32249768",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32249768/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4882499",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882499/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01010256",
+    "source_url": "https://clinicaltrials.gov/study/NCT01010256",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32249768",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32249768/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33299139",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33299139/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4882510",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882510/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01201226",
+    "source_url": "https://clinicaltrials.gov/study/NCT01201226",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33299139",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33299139/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39197453",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39197453/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4882529",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882529/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01277757",
+    "source_url": "https://clinicaltrials.gov/study/NCT01277757",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39197453",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39197453/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30738865",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30738865/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31427286",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31427286/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32249768",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32249768/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33299139",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33299139/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39197453",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39197453/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "04d06fc1-fd1c-423a-8a9c-54a1bbc6be81",
+   "seq": 140,
+   "ts": "2026-09-22T17:22:26.373491Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 8,
+    "elapsed_ms": 6407,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 3 sources",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records, 5 pubmed records, 4 clinvar records, 4 clinical trial records and 4 publication records for PTEN [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nGene records found\n\ngene symbol: PTEN [1]. gene name: PTEN [4]. This gene was identified as a tumor suppressor that is mutated in a large number of cancers at high frequency [9]. The protein encoded by this gene is a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase [9]. It contains a tensin like domain as well as a catalytic domain similar to that of the dual specificity protein tyrosine phosphatases [9]. Unlike most of the protein tyrosine phosphatases, this protein preferentially dephosphorylates phosphoinositide substrates [9]. It negatively regulates intracellular [9]. \n\nPubmed records found\n\npubmed title: Mechanisms of PTEN loss in cancer: It's all about diversity [2]. pubmed title: PTEN in the Stroma [7]. pubmed title: FBXO22 degrades nuclear PTEN to promote tumorigenesis [12]. pubmed title: Neddylation of PTEN regulates its nuclear import and promotes tumor development [16]. pubmed title: Secreted PTEN binds PLXDC2 on macrophages to drive antitumor immunity and tumor suppression [20]. PTEN is a phosphatase which metabolises PIP3, the lipid product of PI 3-Kinase, directly opposing the activation of the oncogenic PI3K/AKT/mTOR signalling network [24]. Accordingly, loss of function of the PTEN tumour suppressor is one of the most common events observed in many types of cancer [24]. Although the mechanisms by which PTEN function is disrupted are diverse, the most frequently observed events are deletion of a single gene copy of PTEN and gene silencing, usually observed in tumours with litt [24]. Although tremendous progress has been made in understanding the functions of Phosphatase and tensin homolog deleted on chromosome 10 (PTEN) in tumor cells, only recently have tumor cell-non-autonomous PTEN actions within the tumor microenvironment (TME) been appreciated [25]. While it is accepted that the TME actively communicates with cancer cells to influence disease progression, our understanding of the genes and pathways responsible is still evolving [25]. Given that inactivation of PTEN in the stroma [25]. Nuclear localization of PTEN is essential for its tumor suppressive role, and loss of nuclear PTEN is more prominent than cytoplasmic PTEN in many kinds of cancers [26]. However, nuclear PTEN-specific regulatory mechanisms were rarely reported [26]. Based on the finding that nuclear PTEN is more unstable than cytoplasmic PTEN, here we identify that F-box only protein 22 (FBXO22) induces ubiquitylation of nuclear but not cytoplasmic PTEN at lysine 221, which is responsible for the degradation of nuclear PT [26]. PTEN tumor suppressor opposes the PI3K/Akt signaling pathway in the cytoplasm and maintains chromosomal integrity in the nucleus [27]. Nucleus-cytoplasm shuttling of PTEN is regulated by ubiquitylation, SUMOylation and phosphorylation, and nuclear PTEN has been proposed to exhibit tumor-suppressive functions [27]. Here we show that PTEN is conjugated by Nedd8 under high glucose conditions, which induces PTEN nuclear import without effects on PTEN stability [27]. PTEN neddylation is promoted by the XIAP ligase [27]. Loss of phosphatase and tensin homolog (PTEN) has been linked to an immunosuppressive tumor microenvironment, but its underlying mechanisms remain largely enigmatic [28]. Here, we report that PTEN can be secreted by the transmembrane emp24 domain-containing protein 10 (TMED10)-channeled protein secretion pathway [28]. Inhibiting PTEN secretion from tumor cells contributes to immunosuppression and impairs the tumor-suppressive role of PTEN, while intratumoral injection of PTEN protein promotes antitumor im [28]. \n\nClinvar records found\n\nclinvar title: NM_000314.8(PTEN):c.-193C>G [3]. clinvar title: NM_000314.8(PTEN):c.165-4T>A [8]. clinvar title: NM_000314.8(PTEN):c.-515G>C [13]. clinvar title: NM_000314.8(PTEN):c.-248C>T [17]. clinvar title: NM_000314.8(PTEN):c.224A>C (p.His75Pro) [21]. \n\nClinical trial records found\n\nClinical trial name: PTEN and IGFBP-3 Correlation in Ovarian Carcinoma Invasion [5]. Clinical trial name: Sirolimus to Treat Cowden Syndrome and Other PTEN Hamartomatous Tumor Syndromes [10]. Clinical trial name: The Expression of PTEN Protein and mRNA in Malignant Cells of Chronic Myelomonocytic Leukemia [14]. Clinical trial name: Can Dormant Perimenopausal Ovarian Follicles Become FSH Responsive [18]. Clinical trial name: Akt Inhibitor MK2206 in Treating Patients With Advanced Breast Cancer [22]. \n\nPublication records found\n\nPublication pmid: 30738865 [6]. Publication pmid: 31427286 [11]. Publication pmid: 32249768 [15]. Publication pmid: 33299139 [19]. Publication pmid: 39197453 [23]. "
+}

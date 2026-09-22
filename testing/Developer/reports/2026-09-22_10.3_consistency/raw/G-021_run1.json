@@ -1,0 +1,1914 @@
+{
+ "record": {
+  "id": "G-021",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which papers in the graph mention the CFTR gene, and what do they cover?",
+  "session_id": "c103-36edc3575123",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T16:51:52+00:00",
+  "run_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:1080"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "citations": 100,
+  "distinct_sources": 88,
+  "citations_by_layer": {
+   "layer_1_graph": 72,
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 17,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   17,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1047,
+  "answer_start": "Found 20 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nArticle records found\n\nArticle r",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 20.372,
+  "seconds": 32.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 134,
+   "citation": 100,
+   "trust_signal": 101,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 0,
+   "ts": "2026-09-22T16:50:21.910209Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 2,
+   "ts": "2026-09-22T16:50:24.534805Z",
+   "payload": {
+    "narrative": "Question asks for papers mentioning CFTR and what they cover, requiring exploration of the graph without a single predefined path.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 4,
+   "ts": "2026-09-22T16:50:24.536460Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-529b27536d97",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1b573bf92715",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-141ab00dfabb",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-294e9cb41d83",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-08e9722a9967",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-25d64d30ddaa",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-db7301c1f4b1",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a0171e6aa541",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5d7590d4b297",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-296b982770c4",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-882850ed7313",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 6,
+   "ts": "2026-09-22T16:50:24.537542Z",
+   "payload": {
+    "call_id": "cq-529b27536d97",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 7,
+   "ts": "2026-09-22T16:50:24.537573Z",
+   "payload": {
+    "call_id": "ne-1b573bf92715",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 8,
+   "ts": "2026-09-22T16:50:24.537583Z",
+   "payload": {
+    "call_id": "pa-141ab00dfabb",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 9,
+   "ts": "2026-09-22T16:50:24.537592Z",
+   "payload": {
+    "call_id": "ct-294e9cb41d83",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 10,
+   "ts": "2026-09-22T16:50:24.537600Z",
+   "payload": {
+    "call_id": "ne-08e9722a9967",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 11,
+   "ts": "2026-09-22T16:50:24.537608Z",
+   "payload": {
+    "call_id": "ne-25d64d30ddaa",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 12,
+   "ts": "2026-09-22T16:50:24.537616Z",
+   "payload": {
+    "call_id": "ne-db7301c1f4b1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 13,
+   "ts": "2026-09-22T16:50:24.537624Z",
+   "payload": {
+    "call_id": "pa-a0171e6aa541",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 14,
+   "ts": "2026-09-22T16:50:24.537631Z",
+   "payload": {
+    "call_id": "ne-5d7590d4b297",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 15,
+   "ts": "2026-09-22T16:50:24.537640Z",
+   "payload": {
+    "call_id": "ne-296b982770c4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 16,
+   "ts": "2026-09-22T16:50:24.537649Z",
+   "payload": {
+    "call_id": "cq-882850ed7313",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 17,
+   "ts": "2026-09-22T16:50:24.792412Z",
+   "payload": {
+    "call_id": "pa-141ab00dfabb",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 18,
+   "ts": "2026-09-22T16:50:24.847505Z",
+   "payload": {
+    "call_id": "ne-25d64d30ddaa",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 19,
+   "ts": "2026-09-22T16:50:24.907936Z",
+   "payload": {
+    "call_id": "ne-08e9722a9967",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 20,
+   "ts": "2026-09-22T16:50:24.911134Z",
+   "payload": {
+    "call_id": "ne-1b573bf92715",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 21,
+   "ts": "2026-09-22T16:50:24.954422Z",
+   "payload": {
+    "call_id": "ne-296b982770c4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 22,
+   "ts": "2026-09-22T16:50:25.012098Z",
+   "payload": {
+    "call_id": "ct-294e9cb41d83",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 23,
+   "ts": "2026-09-22T16:50:25.092528Z",
+   "payload": {
+    "call_id": "cq-882850ed7313",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "17 row(s) of 17",
+    "result_count": 17,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 24,
+   "ts": "2026-09-22T16:50:35.288865Z",
+   "payload": {
+    "call_id": "cq-529b27536d97",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "100 row(s) of 1945",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 25,
+   "ts": "2026-09-22T16:50:35.501135Z",
+   "payload": {
+    "call_id": "pa-a0171e6aa541",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 26,
+   "ts": "2026-09-22T16:50:35.601836Z",
+   "payload": {
+    "call_id": "ne-5d7590d4b297",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 27,
+   "ts": "2026-09-22T16:50:35.621320Z",
+   "payload": {
+    "call_id": "ne-db7301c1f4b1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 28,
+   "ts": "2026-09-22T16:50:39.997765Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10075921",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10075921/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10094564",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10094564/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10200050",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10200050/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10561583",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10561583/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10581360",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10581360/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10651488",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10651488/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10666020",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10666020/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10766763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10766763/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10799517",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10799517/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10852925",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10852925/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10862786",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10862786/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10893422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10893422/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10982807",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10982807/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11025834",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11025834/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11051556",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11051556/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11095651",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11095651/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11104661",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11104661/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11109941",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11109941/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11115825",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11115825/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11117575",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11117575/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11134427",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11134427/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11146634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11146634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11158634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11158634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11168024",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11168024/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11175304",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11175304/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11186891",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11186891/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11243954",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11243954/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11304524",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11304524/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11333866",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11333866/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11354633",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11354633/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11356077",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11356077/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11379874",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11379874/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11397675",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11397675/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11400707",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11400707/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462247",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462247/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462248",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462248/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11524016",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11524016/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11529289",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11529289/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11536079",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11536079/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11569691",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11569691/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11574497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11574497/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11597137",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11597137/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11667976",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11667976/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11680956",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11680956/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11683083",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11683083/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11686989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11686989/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11688981",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11688981/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11707463",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11707463/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713441",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713441/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713719",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713719/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11715005",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11715005/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11748227",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11748227/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11756355",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11756355/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11773581",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11773581/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11788089",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11788089/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00179439",
+    "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006811",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705266",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00865904",
+    "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006821",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01078740",
+    "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006833",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01132482",
+    "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0015701",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "bicarbonate transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1706438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01348204",
+    "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034220",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034976",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to endoplasmic reticulum stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035377",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transepithelial water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048240",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "sperm capacitation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050891",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "multicellular organismal-level water homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051454",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intracellular pH elevation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0055085",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "membrane hyperpolarization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070175",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of enamel mineralization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071320",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to cAMP",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0097186",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "amelogenesis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1902476",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1904322",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to forskolin",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "b2542f77-b496-4877-9f28-1fbaaf2198ff",
+   "seq": 365,
+   "ts": "2026-09-22T16:50:51.571706Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 20372,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 5 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 20 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nArticle records found\n\nArticle record PMID:10075921 [1]. Article record PMID:10094564 [2]. Article record PMID:10200050 [3]. Article record PMID:10561583 [4]. Article record PMID:10581360 [5]. Article record PMID:10651488 [6]. Article record PMID:10666020 [7]. Article record PMID:10766763 [8]. Article record PMID:10799517 [9]. Article record PMID:10852925 [10]. Article record PMID:10862786 [11]. Article record PMID:10893422 [12]. Article record PMID:10982807 [13]. Article record PMID:11025834 [14]. Article record PMID:11051556 [15]. Article record PMID:11095651 [16]. Article record PMID:11104661 [17]. Article record PMID:11109941 [18]. Article record PMID:11115825 [19]. Article record PMID:11117575 [20]. Article record PMID:11134427 [21]. Article record PMID:11146634 [22]. Article record PMID:11158634 [23]. Article record PMID:11168024 [24]. Article record PMID:11175304 [25]. Article record PMID:11186891 [26]. Article record PMID:11243954 [27]. Article record PMID:11304524 [28]. Article record PMID:11333866 [29]. Article record PMID:11354633 [30]. Article record PMID:11356077 [31]. Article record PMID:11379874 [32]. Article record PMID:11397675 [33]. Article record PMID:11400707 [34]. Article record PMID:11462247 [35]. Article record PMID:11462248 [36]. Article record PMID:11524016 [37]. Article record PMID:11529289 [38]. Article record PMID:11536079 [39]. Article record PMID:11569691 [40]. Article record PMID:11574497 [41]. Article record PMID:11597137 [42]. Article record PMID:11667976 [43]. Article record PMID:11680956 [44]. Article record PMID:11683083 [45]. Article record PMID:11686989 [46]. Article record PMID:11688981 [47]. Article record PMID:11707463 [48]. Article record PMID:11713441 [49]. Article record PMID:11713719 [50]. Article record PMID:11715005 [51]. Article record PMID:11748227 [52]. Article record PMID:11756355 [53]. Article record PMID:11773581 [54]. Article record PMID:11788089 [55]. \n\nGene records found\n\ngene symbol: CFTR [56]. gene name: CFTR [59]. This gene encodes a member of the ATP-binding cassette (ABC) transporter superfamily [65]. The encoded protein functions as a chloride channel, making it unique among members of this protein family, and controls ion and water secretion and absorption in epithelial tissues [65]. Channel activation is mediated by cycles of regulatory domain phosphorylation, ATP-binding by the nucleotide-binding domains, and ATP hydrolysis [65]. Mutations in this gene cause cystic fibrosis, the most common lethal genetic disorder [65]. \n\nPubmed records found\n\npubmed title: Molecular Structure of the Human CFTR Ion Channel [57]. pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [63]. pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [69]. pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [74]. pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [79]. The cystic fibrosis transmembrane conductance regulator (CFTR) is an ATP-binding cassette (ABC) transporter that uniquely functions as an ion channel [84]. Here, we present a 3.9\u00a0\u00c5 structure of dephosphorylated human CFTR without nucleotides, determined by electron cryomicroscopy (cryo-EM) [84]. Close resemblance of this human CFTR structure to zebrafish CFTR under identical conditions reinforces its relevance for understanding CFTR function [84]. The human CFTR structure reveals a previously unresolved helix [84]. The spectrum of disorders involving CFTR (cystic fibrosis transmembrane conductance regulator) dysfunction correlates with a continuous gradient of CFTR function defined by the combination of two allelic CFTR variants [86]. CFTR-related disorders are clinical entities with features of cystic fibrosis (CF) and evidence for presence of CFTR dysfunction but not meeting criteria for diagnosis of CF [86]. Individuals with CFTR-RDs demonstrate a wide range of CFTR activity and are still under-recognized or misc [86]. This paper is the first in a series providing updated guidance on the definition, evaluation and management of people with a Cystic Fibrosis Transmembrane conductance Regulator (CFTR)-Related Disorder (CFTR-RD) [88]. The need for this update relates to more precise characterisation of CFTR gene variants and improved assessment of CFTR protein dysfunction [88]. The exercise is co-ordinated by the European CF Society Standards of Care Committee and Diagnostic Network Working Group and involves stakeholder e [88]. The predominant mutation causing cystic fibrosis, a deletion of phenylalanine 508 (\u0394508) in the cystic fibrosis transmembrane conductance regulator (CFTR), leads to severe defects in CFTR biogenesis and function [90]. The advanced therapy Trikafta combines the folding corrector tezacaftor (VX-661), the channel potentiator ivacaftor (VX-770), and the dual-function modulator elexacaftor (VX-445) [90]. However, it is unclear how elexacaftor exerts its effects, in part because the structure of \u0394508 CFTR is un [90]. In 2017, the US Food and Drug Administration initiated expansion of drug labels for the treatment of cystic fibrosis (CF) to include CF transmembrane conductance regulator (CFTR) gene variants based on in vitro functional studies [92]. This study aims to identify CFTR variants that result in increased chloride (Cl-) transport function by the CFTR protein after treatment with the CFTR modulator combination elexacaftor/tezacaftor/ivacaftor (ELX/TEZ/IVA) [92]. These data may benefit people with CF (pwCF) who [92]. \n\nClinvar records found\n\nclinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [58]. clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [64]. clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [70]. clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [75]. clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [80]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [60]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [66]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [71]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [76]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [81]. \n\nPublication records found\n\nPublication pmid: 28340353 [61]. Publication pmid: 36207272 [67]. Publication pmid: 36220763 [72]. Publication pmid: 36264792 [77]. Publication pmid: 38388235 [82]. \n\nBiological process records found\n\nBiologicalProcess GO:0006811, name: monoatomic ion transport [62]. BiologicalProcess GO:0006821, name: chloride transport [68]. BiologicalProcess GO:0006833, name: water transport [73]. BiologicalProcess GO:0015701, name: bicarbonate transport [78]. BiologicalProcess GO:0034220, name: monoatomic ion transmembrane transport [83]. BiologicalProcess GO:0034976, name: response to endoplasmic reticulum stress [85]. BiologicalProcess GO:0035377, name: transepithelial water transport [87]. BiologicalProcess GO:0048240, name: sperm capacitation [89]. BiologicalProcess GO:0050891, name: multicellular organismal-level water homeostasis [91]. BiologicalProcess GO:0051454, name: intracellular pH elevation [93]. BiologicalProcess GO:0055085, name: transmembrane transport [94]. BiologicalProcess GO:0060081, name: membrane hyperpolarization [95]. BiologicalProcess GO:0070175, name: positive regulation of enamel mineralization [96]. BiologicalProcess GO:0071320, name: cellular response to cAMP [97]. BiologicalProcess GO:0097186, name: amelogenesis [98]. BiologicalProcess GO:1902476, name: chloride transmembrane transport [99]. BiologicalProcess GO:1904322, name: cellular response to forskolin [100]. \n\nNote: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

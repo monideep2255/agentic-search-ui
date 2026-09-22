@@ -1,0 +1,273 @@
+{
+ "record": {
+  "id": "G-046",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "BLAST this sequence against nr and tell me the top hit: ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAA",
+  "session_id": "c103-30cfadc518d7",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:25:09+00:00",
+  "run_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0005699",
+   "MedGen:C0427540",
+   "MedGen:C0427705",
+   "MedGen:C0549414",
+   "MedGen:C1332565",
+   "MedGen:C1332566",
+   "MedGen:C1378512",
+   "MedGen:C1531551"
+  ],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 13,
+  "answer_start": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC0005699%20MedGen%3AC04275",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 14.14,
+  "seconds": 17.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+   "seq": 0,
+   "ts": "2026-09-22T17:23:43.874663Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+   "seq": 2,
+   "ts": "2026-09-22T17:23:45.513843Z",
+   "payload": {
+    "narrative": "A single BLAST search against nr directly answers the question of the top hit. (BLAST: 8 of 14 MedGen records matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0005699",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427540",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427705",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0549414",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332565",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332566",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1378512",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1531551",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+   "seq": 4,
+   "ts": "2026-09-22T17:23:45.515728Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-62f62f9b77a4",
+      "layer": "layer_1_graph",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0005699",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427540",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427705",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0549414",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332565",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332566",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1378512",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1531551",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+   "seq": 6,
+   "ts": "2026-09-22T17:23:45.516631Z",
+   "payload": {
+    "call_id": "cq-62f62f9b77a4",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+   "seq": 7,
+   "ts": "2026-09-22T17:23:49.938545Z",
+   "payload": {
+    "call_id": "cq-62f62f9b77a4",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+   "seq": 8,
+   "ts": "2026-09-22T17:23:49.939718Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "986a63e6-1b36-43c5-bea5-8736754ba13b",
+   "seq": 12,
+   "ts": "2026-09-22T17:23:52.844573Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 14140,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC0005699%20MedGen%3AC0427540%20MedGen%3AC0427705%20MedGen%3AC0549414%20MedGen%3AC1332565%20MedGen%3AC1332566%20MedGen%3AC1378512%20MedGen%3AC1531551"
+}

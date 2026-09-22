@@ -1,0 +1,288 @@
+{
+ "record": {
+  "id": "G-034",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "aggregate",
+  "expected_outcome": "answer",
+  "question": "How many genes in the graph are associated with breast cancer?",
+  "session_id": "c103-78c80f9ccffe",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:17:07+00:00",
+  "run_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "MedGen:C1320450",
+   "MedGen:C1861471",
+   "MedGen:C1968974",
+   "MedGen:C2675521",
+   "MedGen:C2676677",
+   "MedGen:C3469522",
+   "MedGen:C4016360",
+   "MedGen:C4016581"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 102,
+  "answer_start": "Found 1 derived record for breast cancer: MedGen:C1320450 [1]. \n\nDerived records found\n\nderived MedGen:C1320450, n: 0 [1]. \n\nNote: the written summary of these ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 11.21,
+  "seconds": 17.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 8,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+   "seq": 0,
+   "ts": "2026-09-22T17:15:39.502823Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+   "seq": 2,
+   "ts": "2026-09-22T17:15:40.558056Z",
+   "payload": {
+    "narrative": "The query asks for a count of genes associated with a disease, requiring aggregation over multiple records. (breast cancer: 8 of at least 20 MedGen records matched by name)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+   "seq": 4,
+   "ts": "2026-09-22T17:15:40.559996Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-0a835e0f1b4b",
+      "layer": "layer_1_graph",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+   "seq": 6,
+   "ts": "2026-09-22T17:15:40.560977Z",
+   "payload": {
+    "call_id": "cq-0a835e0f1b4b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+   "seq": 7,
+   "ts": "2026-09-22T17:15:45.409432Z",
+   "payload": {
+    "call_id": "cq-0a835e0f1b4b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+   "seq": 8,
+   "ts": "2026-09-22T17:15:45.410992Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1320450",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1320450",
+    "layer": "layer_1_graph",
+    "source": "MedGen",
+    "field": "n",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "ec8dc4a1-6e07-4da1-8044-9f587fd31dd9",
+   "seq": 21,
+   "ts": "2026-09-22T17:15:51.290210Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 11210,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 derived record for breast cancer: MedGen:C1320450 [1]. \n\nDerived records found\n\nderived MedGen:C1320450, n: 0 [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 2, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer."
+}

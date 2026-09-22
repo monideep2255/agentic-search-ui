@@ -1,0 +1,66 @@
+[
+ {
+  "id": "G-028",
+  "pass": 1,
+  "run_id": "f01a09d8-e918-4b27-b47e-994579e9a913",
+  "started_at": "2026-09-22T16:53:03+00:00",
+  "client_seconds": 365.4,
+  "history_rows_total": 50,
+  "matches": [],
+  "server_completed": false
+ },
+ {
+  "id": "G-025",
+  "pass": 1,
+  "run_id": "ff7e2b06-0e0f-4621-8fdb-57c10254305c",
+  "started_at": "2026-09-22T16:52:59+00:00",
+  "client_seconds": 369.3,
+  "history_rows_total": 50,
+  "matches": [
+   {
+    "trace_id": "ff7e2b06-0e0f-4621-8fdb-57c10254305c",
+    "question": "What does the MTHFR C677T variant do, and what is the evidence quality around it?",
+    "asked_at": "2026-09-22T16:51:42.643281Z",
+    "trust_signal": "ask",
+    "citation_count": 50
+   }
+  ],
+  "server_completed": true
+ },
+ {
+  "id": "G-006",
+  "pass": 2,
+  "run_id": "7d6f3f49-02a9-49b5-9eb9-15eed4782d6e",
+  "started_at": "2026-09-22T17:01:53+00:00",
+  "client_seconds": 652.4,
+  "history_rows_total": 50,
+  "matches": [
+   {
+    "trace_id": "7d6f3f49-02a9-49b5-9eb9-15eed4782d6e",
+    "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+    "asked_at": "2026-09-22T17:02:04.764106Z",
+    "trust_signal": "refuse",
+    "citation_count": 0
+   }
+  ],
+  "server_completed": true
+ },
+ {
+  "id": "G-039",
+  "pass": 1,
+  "run_id": "700f1ab3-8683-46d4-bf18-07cce33a4cdc",
+  "started_at": "2026-09-22T17:01:37+00:00",
+  "client_seconds": 668.4,
+  "history_rows_total": 50,
+  "matches": [
+   {
+    "trace_id": "700f1ab3-8683-46d4-bf18-07cce33a4cdc",
+    "question": "I am a student. Explain in plain terms what the BRCA1 gene does and why it matters, with sources.",
+    "asked_at": "2026-09-22T17:01:43.184356Z",
+    "trust_signal": "flag",
+    "citation_count": 50
+   }
+  ],
+  "server_completed": true
+ }
+]
