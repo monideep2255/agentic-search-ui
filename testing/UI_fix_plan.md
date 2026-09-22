@@ -1280,8 +1280,8 @@ The 2026-09-20 shipped list, with what to retest, is
 | Item | State at close | The one thing to know |
 |---|---|---|
 | 10.3, the consistency run | RUN, all 150, first time ever | 86 of 150 answered; 25 questions answer every time (was 1), 18 never (was 43), none worse than the 2026-09-12 baseline. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md` |
-| 11.33, values cut at 500 characters | CAUSE FOUND, FIXED, pushed to develop, awaiting retest | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
-| L-01, a graph result vanishing | MEASURED: 12 of 119 eligible graph calls lost a result another pass had | The vanishing call ends with `status: error` and the generic "0 row(s) of 0" summary, and nothing else is emitted or logged. Six further questions error on the graph on every pass, which is deterministic rather than variance |
+| 11.33, values cut at 500 characters | FIXED and VERIFIED LIVE on develop at `a868462`: the BRCA1 gene summary now runs past "and through the C-terminal d", zero ellipses. Awaiting the product owner's retest | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
+| L-01, a graph result vanishing | MEASURED, and BOTH CAUSES READ the same day | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
 | Scope boundary | NEW, for the product owner | G-046 (BLAST) and G-047 (VCF) were answered from graph rows rather than refused; both are PRD out-of-scope compute tools |
 | Latency | NARROWED to one shape | G-039, a plain-terms explanation over BRCA1, takes about 100 seconds on every run; everything else has a p90 under 40 seconds |
 | The instrument | Two lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
@@ -1334,11 +1334,15 @@ owner reviewed this and approved the current state as is, so it is a standing
 option rather than a queued task.
 
 ### What is live on develop
+
+- An errored graph call's `tool_result` summary carries the tool's own reason
+  after the row-count prefix, so L-01 is readable from the stream. Pushed
+  2026-09-22 with this checkpoint.
 - Item 11.33's fix: one string cap in the coordinator worker at the finding's
   own bound of 2000 characters, cut on a word boundary with an ellipsis. Pushed
-  2026-09-22. The product owner's retest is the verification: open a BRCA1
-  answer at researcher depth and read the gene summary in the record tail,
-  which should now run past "and through the C-terminal d" to its end.
+  2026-09-22 and VERIFIED LIVE the same hour: one BRCA1 answer at researcher
+  depth carries the gene summary past "and through the C-terminal d" with
+  zero ellipses. The product owner's retest still stands as the approval.
 - Item 11.34's fix, so a multi-sentence abstract or gene summary is cited
   rather than silently dropped.
 - NCBI's own plain-English gene summary, retrieved, cited and rendered. It is
@@ -1350,6 +1354,7 @@ option rather than a queued task.
   correct and on the label path; it was never where 11.33 lived.
 
 ### What is parked, and why
+
 - THE OMIM DISPATCH. Enabled and reverted on 2026-09-21.
   `breadth_plan.filter_omim_titles` exists and NOTHING CALLS IT, so an
   unfiltered OMIM result would cite a different gene than the question asked
@@ -1363,6 +1368,7 @@ option rather than a queued task.
   defect fix.
 
 ### What is waiting on the product owner
+
 Three new questions from the consistency run, none blocking:
 
 - Whether a BLAST or VCF request should be refused by the guardrail outright,
@@ -1381,15 +1387,28 @@ six undesigned surfaces, whether answers carry a medical-advice notice, the
 placement, and the trust-line wording.
 
 ### Loose ends, named rather than left
-- L-01 is MEASURED and NOT FIXED: 12 of 119 eligible graph calls returned zero
-  where another pass returned rows, and the failing call's cause reaches
-  neither the reader, the event stream nor the deploy log. The cause exists in
-  the LangSmith trace and the audit log only; reading one is the next step.
-- NINE questions error on the graph on every pass (G-001, G-007, G-033, G-035,
-  G-037, G-048 always; G-005, G-022 return nothing; G-036 never calls Layer 1).
-  Six of them are refusals a reader sees. This is a retrieval defect with a
-  fixed reproduction set, and the largest single reason a golden question does
-  not answer.
+
+- L-01 is MEASURED, its two causes are READ, and it is NOT FIXED in the
+  answer text. The reason now reaches the stream. Whether the answer should
+  say a graph search did not finish is the product owner's decision, with the
+  cause in hand.
+- THE DETERMINISTIC HALF OF L-01 is a Think gap: for a GRCh38 coordinate
+  range (G-001), a Pathogen Detection isolate (G-035), a BioProject accession
+  (G-007) and on some passes Lynch syndrome (G-003), Think resolves no entity
+  and the plan still dispatches `cypher_query`, which refuses to run with
+  nothing to bind. G-005 and G-022 resolve an entity and find nothing; G-036
+  never calls Layer 1. Fixed reproduction set, unfixed.
+- THE VARIANCE HALF OF L-01 is the act step's budget: a second graph call on
+  an exploratory question (G-039 on two of three passes, G-033 and G-037 on
+  every pass) does not finish inside 120 seconds and the answer completes
+  without it. Why one breadth follow-up takes over a minute on a gene the
+  first call answers in seconds is unread; the graph query service's own logs
+  on the Hetzner box would say.
+- DEVELOP TRACES NOTHING TO LANGSMITH: `LANGSMITH_API_KEY` is not set on the
+  develop service, so the join key Section 20 builds observability on is
+  unpopulated on the deployment every measurement runs against. Production
+  carries the key. A one-line ops fix, not made here because it is a
+  credential decision.
 - `testing/Shipped_2026-09-20.md` was found deleted from the working tree
   mid-session by something outside this session's tool calls, and restored
   from HEAD unchanged. Cause unknown.
@@ -1489,24 +1508,23 @@ store rendered answers at all, which is a data-retention question as much as a
 technical one.
 
 ### Next, in order
+
 Rewritten at the close of 2026-09-22. Item 1 of the previous list, the
-consistency run, is done; item 2, 11.33, is fixed and awaiting retest; item 3,
-the L-01 decision, now has its measurement. The previous list's own history is
+consistency run, is done; item 2, 11.33, is fixed and verified live; item 3,
+the L-01 decision, now has its measurement and both of its causes. The previous list's own history is
 in this document's git log and in `requirements/Plan.md`.
 
 1. RETEST 11.33 ON DEVELOP. Open "Which diseases are associated with BRCA1?"
    at researcher depth and read the gene summary in the record tail. It should
    run to its end, or end in an ellipsis at a word boundary, never mid-word.
-2. READ ONE L-01 CAUSE. Take any run id from
-   `testing/Developer/reports/2026-09-22_10.3_consistency/runs.jsonl` whose
-   `tool_errors` is non-empty (G-039 pass 1 or G-003 pass 3 are the clearest),
-   find its LangSmith trace joined on the trace id, and read why the
-   `cypher_query` call ended in `status: error`. The same read answers whether
-   the nine always-erroring questions share one cause. This is an hour, and
-   until it is done the L-01 decision is between disclosure and a fix whose
-   shape nobody knows.
-3. DECIDE L-01 DISCLOSURE with the product owner, with the rate (one call in
-   ten) and the attachment point (the errored `tool_result`) in hand.
+2. DECIDE L-01 DISCLOSURE with the product owner, with the rate (one call in
+   ten), the attachment point (the errored `tool_result`, which now carries
+   the reason) and both causes in hand. The cause was read the same day by
+   local reproduction, since develop has no LangSmith key, and is recorded in
+   `testing/Developer/reports/2026-09-22_L01_cause/findings.md`.
+3. SET `LANGSMITH_API_KEY` ON THE DEVELOP SERVICE, so the next measurement has
+   traces to read. A credential decision for the product owner, one line in
+   Railway.
 4. DECIDE THE SCOPE-BOUNDARY SHAPE for G-046 and G-047 with the product owner,
    refuse or answer-with-a-line.
 5. FINISH THE OMIM DISPATCH, or leave it parked deliberately. It needs
@@ -1531,6 +1549,7 @@ except the event loop not running.
 That points hard at event-loop starvation, consistent with the same suite failing 87 tests at load average 48 to 60 and passing only serially. It is still worth one confirming run rather than asserting it, which is step 4 above.
 
 ### How to start the next session
+
 1. Read "Where we stopped" above, starting with the one-table summary of the
    2026-09-22 session, then the 2026-09-21 table, then the Set 11 table.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
