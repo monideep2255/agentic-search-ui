@@ -1283,8 +1283,9 @@ The 2026-09-20 shipped list, with what to retest, is
 | 11.33, values cut at 500 characters | FIXED and VERIFIED LIVE on develop at `a868462`: the BRCA1 gene summary now runs past "and through the C-terminal d", zero ellipses. APPROVED by the product owner's retest the same day | It was never live-only. `harness/coordinator_worker.py` cut every string leaf at 500 because its documented 2000-character tier was unreachable. The 2026-09-21 local trace skipped that stage. One cap now, at the finding's own bound, on a word boundary, with an ellipsis |
 | L-01, a graph result vanishing | MEASURED, BOTH CAUSES READ, and DISCLOSED to the reader the same day, awaiting retest | 12 of 119 eligible graph calls lost a result another pass had. The reason was being dropped one line above the event, in `_execute_planned_call`; it now rides in the `tool_result` summary. Two causes: Think resolves no entity and the tool is dispatched with nothing to bind (deterministic per question), and a second graph call on an exploratory question runs past the act step's 120-second budget (variance). Evidence: `testing/Developer/reports/2026-09-22_L01_cause/findings.md` |
 | Scope boundary | DECIDED, BUILT and APPROVED by the product owner's retest on 2026-09-22: refuse outright under a new guard category, `compute_request` | G-046 (BLAST) and G-047 (VCF) were answered from graph rows because the resolver found real concepts inside them. A deterministic screen in `guardrail/forbidden.py` now refuses a BLAST-family token near a sequence object, the phrase "sequence similarity", a 25-character nucleotide run, or `vcf` near a file or analysis word, and the refusal says the capability is unavailable and points at NCBI BLAST. Precedent for the new category: F-3.0-01 |
-| Latency | CAUSE FOUND and FIXED, awaiting retest | G-039, a plain-terms explanation over BRCA1, took about 100 seconds on every run because its own graph search took the model path and the generated query never finished (a planner mis-estimate, killed by the graph's 30-second statement timeout). An exploratory question with no shape now takes the record template, measured at under a second. Evidence: `testing/Developer/reports/2026-09-22_slow_second_search/findings.md` |
-| The instrument | Two lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
+| Latency | FIXED and PROVEN LIVE: 10.6, 11.9 and 14.8 seconds on three develop runs, both graph searches returning rows, no lost-search line. Awaiting retest | G-039, a plain-terms explanation over BRCA1, took about 100 seconds on every run because its own graph search took the model path and the generated query never finished (a planner mis-estimate, killed by the graph's 30-second statement timeout). An exploratory question with no shape now takes the record template, measured at under a second. Evidence: `testing/Developer/reports/2026-09-22_slow_second_search/findings.md` |
+| 2b, OMIM | DONE, live on develop, awaiting retest | The dispatch is on with `filter_omim_titles` applied before any row is built, so a question about one gene never shows another gene's OMIM record. Ten live runs: one OMIM citation each, zero wrong-gene hits; for GCK, nine wrong-gene records were dropped and OMIM 138079 kept. A gene question now charges 14 to 16 of its 20 allowed Layer 2 and 3 calls. Evidence: `testing/Developer/reports/2026-09-22_OMIM_live/findings.md` |
+| The instrument | Three lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
 ### The 2026-09-21 session, in one table
 
@@ -1335,6 +1336,10 @@ option rather than a queued task.
 
 ### What is live on develop
 
+- OMIM's gene-to-disease records appear among a gene question's sources,
+  cited to omim.org, and never for a different gene than the one asked
+  about. Pushed 2026-09-22. Retest: "Which diseases are associated with
+  GCK?" should cite OMIM 138079 (GLUCOKINASE; GCK) and never MAP4K2.
 - The plain-terms explanation of a gene no longer waits on a graph search
   that never finishes: an exploratory question naming an entity and no
   shape takes the record template. Pushed 2026-09-22 as `2bc8ec0`. Retest:
@@ -1427,9 +1432,11 @@ placement, and the trust-line wording.
   path on an exploratory no-shape question, killed by the graph's 30-second
   statement timeout after 85 seconds because the planner mis-estimates an
   id match by four orders of magnitude. Fixed for the exploratory class
-  (`2bc8ec0`). G-037 is a different fault, generation or validation failing
-  before the transport on a single_hop question, and is unfixed: its answer
-  still comes from the other layers.
+  (`2bc8ec0`). G-037 and G-033 are a different fault, generation or
+  validation failing before the transport ("Generated Cypher references
+  vertex label", "appears to bind a literal value"), and are unfixed: their
+  answers still come from the other layers, and since `10f6a46` the reader
+  is told a search did not finish.
 - THE TRUST TIER `ask` AND THE PARKED GRADER'S `ask` ARE TWO MEANINGS OF ONE
   WORD. Widening the golden rows to accept the trust tiers was built, found to
   erase the parked grader's answer-versus-clarification distinction (two of
@@ -1585,9 +1592,9 @@ That points hard at event-loop starvation, consistent with the same suite failin
    2026-09-22 session, then the 2026-09-21 table, then the Set 11 table.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
    carrying only `develop`.
-3. Read "What is parked, and why" before picking anything up. The OMIM
-   dispatch is no longer on that list: it went live on 2026-09-22 with
-   `filter_omim_titles` wired.
+3. Read "What is parked, and why" before picking anything up. OMIM is live
+   WITH its title filter; the two ship together and neither is re-enabled or
+   removed without the other.
 4. Pick up "Next, in order" at item 1, which is the product owner's retest, so
    if they have not tested yet the first engineering item is item 2.
 

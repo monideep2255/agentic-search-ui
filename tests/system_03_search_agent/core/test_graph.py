@@ -290,6 +290,29 @@ def _compliant_think_classification(messages: list[dict[str, str]]) -> str:
     )
 
 
+def _classify_as(monkeypatch: pytest.MonkeyPatch, query_class: str) -> None:
+    """Make the stand-in Think classification return `query_class`.
+
+    2026-09-22: `select_template` now sends an exploratory question with no
+    recognisable shape to the record template, so the fixture's default
+    class no longer exercises cypher_query's generated-Cypher path and its
+    two plan-tier generation calls. The arms that pin that path classify
+    the same question as `multi_hop`, where the model path is still the
+    deliberate behaviour (a generated search finds rows a record would
+    lose; see the 2026-09-22 consistency run, G-011).
+    """
+    import sys
+
+    original = _compliant_think_classification
+
+    def _with_class(messages: list[dict[str, str]]) -> str:
+        payload = json.loads(original(messages))
+        payload["query_class"] = query_class
+        return json.dumps(payload)
+
+    monkeypatch.setattr(sys.modules[__name__], "_compliant_think_classification", _with_class)
+
+
 @pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
@@ -608,6 +631,28 @@ async def test_plan_calls_the_plan_tier_model_when_a_tool_runs(_mock_litellm: As
         for call in _mock_litellm.call_args_list
         if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
     ]
+    # 2026-09-22: the fixture's exploratory class now takes the record
+    # template, so only Think's classification resolves to the plan tier.
+    # The generated-Cypher path's three calls are pinned by the sibling below.
+    assert len(plan_tier_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_plan_calls_the_plan_tier_model_three_times_on_the_model_path(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The arm above on the path it was written for: a `multi_hop`
+    classification with no matched shape still runs cypher_query's two
+    internal generate_cypher attempts after Think's own call, three
+    plan-tier calls in all."""
+    _classify_as(monkeypatch, "multi_hop")
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    plan_tier_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
+    ]
     assert len(plan_tier_calls) == 3
 
 
@@ -690,7 +735,9 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
 
-    assert _mock_litellm.call_count == 5
+    # 2026-09-22: three on the record-template path the fixture's exploratory
+    # class now takes; the model-path sibling below asserts five.
+    assert _mock_litellm.call_count == 3
     prefixed_calls = [
         call
         for call in _mock_litellm.call_args_list
@@ -715,6 +762,25 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
 
 
 @pytest.mark.asyncio
+async def test_exactly_one_of_five_model_path_calls_carries_the_stable_prefix(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The arm above on the generated-Cypher path: five calls in total, and
+    still exactly one, Write's, carrying the stable prefix, since the two
+    generate_cypher calls never do (F-06)."""
+    _classify_as(monkeypatch, "multi_hop")
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    assert _mock_litellm.call_count == 5
+    prefixed_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
+    ]
+    assert len(prefixed_calls) == 1
+
+
+@pytest.mark.asyncio
 async def test_exactly_three_model_calls_fire_on_the_happy_path(
     _mock_litellm: AsyncMock,
 ) -> None:
@@ -731,12 +797,31 @@ async def test_exactly_three_model_calls_fire_on_the_happy_path(
 
 
 @pytest.mark.asyncio
-async def test_five_model_calls_fire_when_a_tool_runs(_mock_litellm: AsyncMock) -> None:
+async def test_three_model_calls_fire_when_a_tool_runs_on_the_template_path(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """2026-09-22: on the record-template path the fixture's exploratory
+    class now takes, the three node-level calls (guardrail, think, write)
+    are the whole run; the template makes no model call. The five-call
+    shape of the generated-Cypher path is pinned by the sibling below.
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    assert _mock_litellm.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_five_model_calls_fire_when_a_tool_runs_on_the_model_path(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """T-2.1 rework: on the tool path, the three node-level calls
     (guardrail, think, write) plus cypher_query's two internal
     generate_cypher attempts (F-06's documented gap) total five, not three.
-    Six until 2026-09-14, when plan_node's discarded call was deleted.
+    Six until 2026-09-14, when plan_node's discarded call was deleted; on a
+    `multi_hop` classification since 2026-09-22, when the exploratory one
+    moved to the record template.
     """
+    _classify_as(monkeypatch, "multi_hop")
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     assert _mock_litellm.call_count == 5
