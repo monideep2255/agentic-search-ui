@@ -555,6 +555,7 @@ from system_03_search_agent.synthesis.grounding import (
     display_index_by_citation_id,
     run_grounding_pass,
 )
+from system_03_search_agent.synthesis.mesh_terms import resolve_descriptor_ids
 from system_03_search_agent.synthesis.provenance_defaults import defaults_for_tool
 from system_03_search_agent.synthesis.refuse import (
     FAILED_SEARCH_NOTE,
@@ -5912,6 +5913,54 @@ _LEAKED_VOCABULARY_NAMES = frozenset(
     {"HPO", "GARD", "OMIM", "Orphanet", "SNOMEDCT_US", "UMLS", "ORDO"}
 )
 _ETL_STUB_PREFIX = "[stub]"
+#: The token inside `_ETL_STUB_PREFIX`'s brackets. Named separately because
+#: the bracketed form turned out to be a FAMILY rather than one placeholder:
+#: see `_bracketed_vocabulary_token` below.
+_ETL_STUB_TOKEN = "stub"
+
+
+def _bracketed_vocabulary_token(text: str) -> str | None:
+    """The vocabulary name inside a leading `[...]`, or None if there is none.
+
+    Added 2026-09-23 after measuring the live graph. `[stub] HP:0000002` was
+    already handled by a `startswith` test, and `[MeSH] D000818` was not, even
+    though the two are the same shape and the same kind of mistake. The MeSH
+    form is what EVERY `OntologyClass` vertex in the live graph actually
+    carries: a graph-wide probe found zero `OntologyClass` names containing a
+    lowercase run of four or more letters, and zero containing "neoplasm".
+
+    Why that mattered enough to change this function. `[MeSH] D000818` reached
+    the old code's `if " " in text: return False` line and was declared a
+    genuine name, so all 26 rows golden question G-019 returns for "What MeSH
+    terms are assigned to PMID 11237011?" presented an identifier as if it were
+    a term, at full assertion confidence and with no artifact marker. Every
+    instrument in this project read that question as working, because rows came
+    back and each row was real and citable. The premise that the rows carried
+    the answer was the thing nobody checked.
+
+    DELIBERATELY NARROW, and this is the part not to simplify later. The
+    bracketed token must itself be a vocabulary this system knows. A blanket
+    "starts with a bracket" rule would be wrong: PubMed gives translated
+    articles bracketed titles such as "[Studies on the effect of ...]", and
+    those are genuine names that must keep rendering. So the test is on the
+    token, never on the bracket.
+
+    Returns the token rather than a bool so a caller can say WHICH vocabulary
+    leaked, which is the sort of thing the next reader of a flagged row wants.
+    """
+    if not text.startswith("["):
+        return None
+    close = text.find("]")
+    if close == -1:
+        return None
+    token = text[1:close].strip()
+    if not token:
+        return None
+    if token == _ETL_STUB_TOKEN:
+        return token
+    if token in _LEAKED_VOCABULARY_NAMES or token in CURIE_PREFIXES:
+        return token
+    return None
 
 
 def _is_vocabulary_token_artifact(value: str) -> bool:
@@ -5924,8 +5973,13 @@ def _is_vocabulary_token_artifact(value: str) -> bool:
     if not text:
         return False
 
-    # An ETL stub placeholder is never a disease name, whatever its shape.
-    if text.startswith(_ETL_STUB_PREFIX):
+    # A BRACKETED VOCABULARY PREFIX is never a genuine name, whatever
+    # follows it. This used to test only `startswith("[stub]")`, which
+    # covered the ETL placeholder and missed `[MeSH] D000818`, the form
+    # every OntologyClass vertex in the live graph carries. See
+    # `_bracketed_vocabulary_token` above for the measurement and for why
+    # the test is on the token rather than on the bracket.
+    if _bracketed_vocabulary_token(text) is not None:
         return True
 
     # F-2.1-J5-04: a vocabulary token followed by a qualifier is still a
@@ -8956,12 +9010,42 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # leaves those findings exactly as they were, so the failure mode of
     # this whole path is the unreadable-but-correct answer that shipped
     # before it existed.
-    synth_findings = apply_resolved_disease_names(
-        synth_findings,
-        await resolve_concept_ids(
-            [f.curie for f in synth_findings if f.curie_fallback and f.curie]
-        ),
+    #
+    # 2026-09-23: MeSH joins MedGen here, for the identical defect one
+    # vocabulary over. Golden question G-019, "What MeSH terms are assigned
+    # to PMID 11237011?", reaches 26 `OntologyClass` rows whose `name` is
+    # `[MeSH] D000818`, the identifier. A graph-wide probe found all 30,790
+    # `OntologyClass` vertices carry that form and none carries a word, so
+    # the terms cannot come from Layer 1 at all: `synthesis/mesh_terms.py`
+    # reads them live, in two calls whatever the id count, and maps each
+    # heading back by the record's own `ds_meshui` rather than by position.
+    # `apply_resolved_disease_names` is reused unchanged rather than
+    # duplicated: it keys on `finding.curie`, so a `MeSH:` entry and a
+    # `MedGen:` entry in one mapping each rewrite their own finding and
+    # neither can touch the other's.
+    #
+    # Both resolvers are asked ONLY about `curie_fallback` findings, so a
+    # row whose own field was usable costs nothing, and each declines the
+    # other's CURIEs by prefix rather than spending a lookup to miss.
+    curie_fallback_curies = [
+        f.curie for f in synth_findings if f.curie_fallback and f.curie
+    ]
+    resolved_names = await resolve_concept_ids(curie_fallback_curies)
+    resolved_names.update(
+        {
+            curie: heading
+            for curie, heading in (
+                await resolve_descriptor_ids(curie_fallback_curies)
+            ).items()
+            # A `MedGen:` CURIE comes back from the MeSH resolver as None,
+            # since it declines what it cannot resolve. Merging those Nones
+            # would overwrite a title MedGen had just resolved, so only a
+            # real heading is merged. The same guard holds in reverse for
+            # whichever resolver runs second.
+            if heading
+        }
     )
+    synth_findings = apply_resolved_disease_names(synth_findings, resolved_names)
 
     # Variant-to-disease detail (2026-09-14). A fold template writes the
     # CURIEs of the Disease records each variant (or gene) row is linked to
@@ -9015,6 +9099,32 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     if not answer_findings:
         answer_findings = list(prompt_findings)
     answer_ref_indices = [f.ref_index for f in answer_findings]
+
+    # THE SAME SELECTION OVER THE FULL DISPLAY LIST, for the code-built
+    # opening sentence only (2026-09-23). `answer_findings` above is
+    # deliberately prompt-scoped, and the comment above says exactly why:
+    # it feeds `answer_ref_indices` into `build_answer_context_directive`,
+    # which the MODEL reads, so naming a ref_index the model was never
+    # shown would be an instruction about content that is not there. That
+    # reasoning is correct and unchanged.
+    #
+    # It does not transfer to `answer_summary_sentence`, and one variable
+    # was serving both consumers. That sentence is built in code, not by
+    # the model, and it cites every record it counts, so its correct scope
+    # is what the READER is shown rather than what the model was shown.
+    # With more than `_MAX_FINDINGS_FOR_MODEL_PROMPT` display rows the two
+    # diverge and the answer contradicts itself: worker G measured five
+    # consecutive live runs of golden question G-019 opening "Found 20
+    # ontology class records" above a list of 26, with 26 citations.
+    #
+    # A count that disagrees with the list under it costs the reader their
+    # trust in every other number on the page, which is why this is worth
+    # a second variable rather than a shared one. Filtering still happens
+    # inside `answer_summary_sentence` against `display_slots`, so this
+    # can never count a finding the answer did not actually show.
+    summary_findings = [f for f in synth_findings if f.call_id in answer_call_ids]
+    if not summary_findings:
+        summary_findings = list(synth_findings)
 
     # F-4.5-A-04: ONE declared budget for the whole Write step, shared by
     # both of its model calls. Before this the repair was given a second,
@@ -9791,7 +9901,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # the reported answer (a summary total next to a differently
         # scoped shown-count in the note).
         summary_sentence = answer_summary_sentence(
-            answer_findings,
+            summary_findings,
             shown_slots,
             _summary_subject(state),
             _known_total_available(findings) if _ok_finding_was_truncated(findings) else None,

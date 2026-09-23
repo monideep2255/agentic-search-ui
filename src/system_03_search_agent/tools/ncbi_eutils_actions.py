@@ -119,7 +119,7 @@ allowlists are live-probed for key presence and shape, not semantically
 verified field by field, which puts them at the same trust tier as the
 `dbvar`/`omim`/`medgen`/`gtr` rows above rather than at the `gene` row's.
 
-As a result every one of `SummaryDb`'s 12 databases is allowlisted, and the
+As a result every one of `SummaryDb`'s 14 databases is allowlisted, and the
 `summary` action never reaches `_generic_summary_fields`. That function's
 one remaining caller is `_extract_generic_fetch_records`, the unverified
 EFetch fallback, where the response shape is unknown by definition and there
@@ -884,6 +884,28 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
         "scientificname", "commonname", "rank", "division", "genbankdivision",
         "genus", "species", "taxid",
     ),
+    # Golden question G-019 (2026-09-23): the MeSH terms assigned to an
+    # article. The graph's own `OntologyClass.name` is the identifier
+    # (`[MeSH] D000818`) for all 30,790 vertices, so the term itself has to
+    # come from here. Keys read live from
+    # `esummary.fcgi?db=mesh&id=68000818` the same day.
+    #
+    # `ds_meshui` is the JOIN KEY and is the reason this row cannot be
+    # trimmed to the display fields: it carries the record's own descriptor
+    # id, which is how `synthesis/mesh_terms.py` matches a heading back to
+    # the id that was asked about. ESearch returned the same batch's UIDs in
+    # descending numeric order rather than request order, measured, so
+    # matching by position would attach the wrong term to the right id.
+    #
+    # `ds_meshterms` is a list whose FIRST entry is the preferred heading and
+    # whose rest are entry terms (D000818: "Animals", then "Animal",
+    # "Animalia", "Metazoa"). `ds_scopenote` is NLM's own definition of the
+    # heading, the only plain-English text the record carries. `ds_recordtype`
+    # distinguishes a descriptor from a qualifier. The large tree-position
+    # blobs (`ds_idxlinks`, `ds_palist`, `ds_previousindexing`) are
+    # deliberately excluded: they are the highest-volume fields in the
+    # response and carry nothing a person reads a MeSH record for.
+    "mesh": ("ds_meshui", "ds_meshterms", "ds_recordtype", "ds_scopenote"),
     # sra packs its payload into a handful of markup-bearing string fields
     # rather than flat scalars. They are the only substantive content the
     # response carries, so they are allowlisted and lean entirely on
@@ -895,7 +917,7 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
 def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
     """Last-resort passthrough for a payload with no allowlist at all.
 
-    After the F-3.1-10 reopen, every one of `SummaryDb`'s 12 databases has
+    After the F-3.1-10 reopen, every one of `SummaryDb`'s 14 databases has
     an entry in `_SUMMARY_FIELDS_BY_DB`, so the `summary` action never
     reaches this function. Its one remaining caller is
     `_extract_generic_fetch_records`, the unverified EFetch fallback, where

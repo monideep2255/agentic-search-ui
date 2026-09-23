@@ -67,6 +67,24 @@ cited as their own records.
   associated with MODY", where the MODY subtypes have few gene edges but
   thousands of variant links).
 
+The removed Disease-to-PhenotypicFeature shape (2026-09-23, `testing/
+Developer/reports/2026-09-23_zero_row_templates/`). Until this date `_HOPS`
+carried `("Disease", "phenotypes"): _Hop("has_phenotype", "PhenotypicFeature",
+"out")`, chosen for a question like "What phenotypic features are associated
+with Marfan syndrome?". It could never return a row, for two independent
+reasons a read-only probe against the live graph confirmed: no `Disease`
+vertex anywhere has an outgoing `has_phenotype` edge, and every
+`PhenotypicFeature` vertex sampled is an unpopulated `[stub]` placeholder.
+`graph_schema_constants.EDGE_ENDPOINTS["has_phenotype"]` documented the same
+wrong pair, which meant the model-generation path was misled the same way the
+template was. Both are now corrected: `EDGE_ENDPOINTS["has_phenotype"]` reads
+its real, measured pair (SequenceVariant to Disease, already used by the fold
+templates above), and the `("Disease", "phenotypes")` hop and its
+`"phenotypes"` shape keyword are gone. A phenotype question about a Disease
+now falls through `select_template` to the model path (`None`), the same path
+that already reaches Layer 2 for the graph's other genuinely absent shapes,
+rather than being routed to a template guaranteed to return nothing.
+
 Depends on:
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
       QueryClass)
@@ -198,7 +216,6 @@ _SHAPE_KEYWORDS: Final[dict[str, str]] = {
     "taxon": r"\b(organism|organisms|taxon|taxonomy)\b",
     "articles": r"\b(paper|papers|article|articles|publication|publications|literature|pubmed|mention|mentions|mentioned)\b",
     "genes": r"\b(gene|genes)\b",
-    "phenotypes": r"\b(phenotype|phenotypes|phenotypic|symptom|symptoms|clinical\s+features?)\b",
     "mesh": r"\bmesh\b",
 }
 _SHAPE_PATTERNS: Final[dict[str, re.Pattern[str]]] = {
@@ -250,7 +267,6 @@ _HOPS: Final[dict[tuple[str, str], _Hop]] = {
     ("Gene", "taxon"): _Hop("in_taxon", "OrganismTaxon", "out"),
     ("Gene", "articles"): _Hop("mentioned_in", "Article", "out"),
     ("Disease", "genes"): _Hop("gene_associated_with_condition", "Gene", "in"),
-    ("Disease", "phenotypes"): _Hop("has_phenotype", "PhenotypicFeature", "out"),
     ("Article", "mesh"): _Hop("has_mesh_annotation", "OntologyClass", "out"),
 }
 

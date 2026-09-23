@@ -2829,6 +2829,12 @@ async def test_malformed_user_id_declines_gracefully_instead_of_crashing(
         "OMIM included",
         "OMIM Phenotypic Series",
         '[stub] MedGen:C1419385',
+        # Measured on the live graph 2026-09-23. EVERY `OntologyClass` vertex
+        # carries this shape, and it reached golden question G-019's 26 rows as
+        # if it were a genuine MeSH term. Red against the pre-2026-09-23 filter,
+        # which tested only `startswith("[stub]")` and let this through.
+        "[MeSH] D000818",
+        "[MeSH] D000001",
     ],
 )
 def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None:
@@ -2863,6 +2869,12 @@ def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None
         "Gardner syndrome",
         "hereditary breast ovarian cancer syndrome",
         "Marfan syndrome",
+        # THE CONTROL FOR THE BRACKETED RULE ADDED 2026-09-23, and the reason
+        # that rule tests the TOKEN rather than the bracket. PubMed gives
+        # translated articles bracketed titles, so a blanket "starts with a
+        # bracket" rule would strip the confidence from genuine records.
+        "[Studies on the effect of interferon on hepatitis B]",
+        "[Analysis of the human genome]",
     ],
 )
 def test_genuine_disease_names_keep_their_confidence(value: str) -> None:
@@ -2880,6 +2892,34 @@ def test_genuine_disease_names_keep_their_confidence(value: str) -> None:
         f"{value!r} is a genuine name and was flagged as a vocabulary "
         "artifact, which downgrades a correct record's confidence"
     )
+
+
+def test_bracketed_vocabulary_token_is_identified_by_name() -> None:
+    """`_bracketed_vocabulary_token` says WHICH vocabulary leaked, not just that one did.
+
+    Measured against the live graph on 2026-09-23 (`testing/Developer/reports/
+    2026-09-23_overnight/probe_ontology_names.py`, committed): zero
+    `OntologyClass` names anywhere in the graph contain a lowercase run of four
+    or more letters, and zero contain "neoplasm", so the `name` field holds
+    identifiers for that label everywhere rather than patchily. `Article.name`
+    and `Gene.name` are correct, which is why this is a per-label mapping
+    defect rather than a generally empty graph.
+
+    POPULATE CHECK: the two negative cases below are what make the positive
+    ones mean something. A rule that flagged every bracketed string would pass
+    the positives and destroy genuine translated-article titles, so this arm
+    fails if the function ever stops distinguishing them.
+    """
+    from system_03_search_agent.core.graph import _bracketed_vocabulary_token
+
+    assert _bracketed_vocabulary_token("[MeSH] D000818") == "MeSH"
+    assert _bracketed_vocabulary_token("[stub] HP:0000002") == "stub"
+    assert _bracketed_vocabulary_token("[MONDO] 0007947") == "MONDO"
+
+    assert _bracketed_vocabulary_token("[Studies on hepatitis B]") is None
+    assert _bracketed_vocabulary_token("Marfan syndrome") is None
+    assert _bracketed_vocabulary_token("[") is None
+    assert _bracketed_vocabulary_token("[] D000818") is None
 
 
 # ---------------------------------------------------------------------------

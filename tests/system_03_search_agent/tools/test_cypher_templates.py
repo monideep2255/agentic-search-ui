@@ -266,13 +266,6 @@ def _select(
             "gene_associated_with_condition",
         ),
         (
-            "What phenotypic features are associated with Marfan syndrome?",
-            ["MedGen:C0024796"],
-            "single_hop",
-            "disease_phenotypes_one",
-            "has_phenotype",
-        ),
-        (
             "What MeSH terms are assigned to PMID 11237011?",
             [PMID],
             "single_hop",
@@ -368,6 +361,18 @@ def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
             "multi_hop",
         ),
         ("Which diseases are associated with rs334?", ["ClinVar:17661"], "single_hop"),
+        # 2026-09-23 (Worker F): the graph has no Disease-to-PhenotypicFeature
+        # edge at all (`testing/Developer/reports/2026-09-23_overnight/
+        # findings.md`, "Worker F"). The `("Disease", "phenotypes")` hop that
+        # used to answer this question was removed; it could never return a
+        # row. This question now takes the model path, the same one that
+        # already reaches Layer 2 for the graph's other genuinely absent
+        # shapes, rather than a template guaranteed to come back empty.
+        (
+            "What phenotypic features are associated with Marfan syndrome?",
+            ["MedGen:C0024796"],
+            "single_hop",
+        ),
         ("Which diseases are associated with BRCA1?", [BRCA1, PMID], "single_hop"),
         ("How many variants does BRCA1 have compared with BRCA2?", [BRCA1, BRCA2], "aggregate"),
         ("Compare NCBIGene:7157 and NCBIGene:672: how many diseases is NCBIGene:672 linked to?", [BRCA1, "NCBIGene:7157"], "lookup"),
@@ -517,4 +522,53 @@ def test_a_count_over_several_genes_beside_a_disease_still_takes_the_model_path(
     assert (
         _select("How many conditions do MLH1 and MSH2 share?", [MLH1, MSH2, "MedGen:C0009402"], "aggregate")
         is None
+    )
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-23, Worker F: the Disease-to-PhenotypicFeature shape never
+# returned a row and is gone. These arms prove the removal took, not just
+# that the one golden question falls back (already covered above).
+# ---------------------------------------------------------------------------
+
+
+def test_phenotypes_is_no_longer_a_matchable_shape_for_any_anchor() -> None:
+    """Populate check: `matched_shapes` must not name `"phenotypes"` for any
+    anchor this module templates. A green fallback test alone cannot tell
+    "the shape was removed" from "the shape still matches but something
+    else about selection changed"; this pins the shape itself is gone."""
+    for anchor in ("Gene", "Disease", "Article"):
+        assert "phenotypes" not in matched_shapes(
+            "What phenotypic features, symptoms and clinical features are known?",
+            anchor,
+        )
+
+
+def test_no_template_in_the_example_set_names_phenotypicfeature() -> None:
+    """Populate check on `all_template_examples`: the removed hop must not
+    reappear under a different name. Mutation: reinstating the `("Disease",
+    "phenotypes")` row in `_HOPS` turns this red, because the graph's own
+    import-time guard (`_assert_templates_name_real_labels`) would then
+    require `PhenotypicFeature` to be a documented endpoint of
+    `has_phenotype` again, which it no longer is."""
+    for template in all_template_examples():
+        assert "disease_phenotypes" not in template.name
+        assert "PhenotypicFeature" not in template.cypher
+
+
+def test_has_phenotype_documents_its_real_endpoint_pair_exactly_once() -> None:
+    """`has_phenotype`'s real, measured pair (SequenceVariant to Disease) now
+    lives in `EDGE_ENDPOINTS` itself, and `ADDITIONAL_EDGE_ENDPOINTS` no
+    longer duplicates it. Mutation: restoring the old Disease-to-
+    PhenotypicFeature primary pair while leaving the SequenceVariant-to-
+    Disease pair in `ADDITIONAL_EDGE_ENDPOINTS` turns this red on the first
+    assertion, and dropping the fix-up in `EDGE_ENDPOINTS` without also
+    dropping the `_HOPS` entry turns the module's own import-time guard red
+    before this test even runs."""
+    from system_03_search_agent.tools import graph_schema_constants as gsc
+
+    assert gsc.EDGE_ENDPOINTS["has_phenotype"] == ("SequenceVariant", "Disease")
+    assert "has_phenotype" not in gsc.ADDITIONAL_EDGE_ENDPOINTS
+    assert cypher_templates._documented_endpoint_pairs("has_phenotype") == (
+        ("SequenceVariant", "Disease"),
     )

@@ -184,9 +184,26 @@ FetchDb = Literal[
 #: record. Live-verified the same day: ESummary on `db=taxonomy&id=562`
 #: returns `scientificname`, `commonname`, `rank`, `division`, `genus`,
 #: `species` and `taxid`, and the record page `/taxonomy/562` answers.
+#:
+#: `mesh` is the fourteenth summary value, additive, golden question G-019
+#: (2026-09-23): "What MeSH terms are assigned to PMID 11237011?" reaches 26
+#: `OntologyClass` rows whose `name` is the identifier `[MeSH] D000818`, so
+#: the terms have to be read from the live MeSH record. `mesh` was already a
+#: `SearchDb` value and was not a `SummaryDb` one, which is exactly the
+#: half-built state the `pmc` comment above warns about.
+#:
+#: Live-verified before the value was added, per that same comment's rule
+#: that an unverified enum value is a silent outage rather than a
+#: capability. `esummary.fcgi?db=mesh&id=68000818&retmode=json` returns
+#: `ds_meshui` ("D000818", the record's own descriptor id) and
+#: `ds_meshterms` (`["Animals", "Animal", "Animalia", "Metazoa"]`, preferred
+#: heading first), and the record page `/mesh/68000818` answers HTTP 200.
+#: The same call over all 26 of G-019's UIDs at once returned all 26
+#: records. `mesh` is deliberately NOT added to `FetchDb`: that path has not
+#: been live-verified and nothing needs it.
 SummaryDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
-    "bioproject", "biosample", "assembly", "gds", "taxonomy",
+    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh",
 ]
 
 
@@ -255,7 +272,8 @@ class NcbiEfetchFetchInput(BaseModel):
 class NcbiEfetchSummaryInput(BaseModel):
     """ESummary: `db=<db>&id=<ids>&retmode=json`. The `summary` branch.
 
-    `db` is the spec's closed 12-value enum. See the SearchDb comment above.
+    `db` is the spec's closed 12-value enum plus the additive `taxonomy`
+    and `mesh` values, 14 in all. See the SummaryDb comment above.
     """
 
     model_config = ConfigDict(extra="forbid")

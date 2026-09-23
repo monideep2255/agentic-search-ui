@@ -84,7 +84,19 @@ EDGE_ENDPOINTS: Final[dict[str, tuple[str, str] | None]] = {
     "participates_in": ("Gene", "BiologicalProcess"),
     "located_in": ("Gene", "CellularComponent"),
     "orthologous_to": ("Gene", "Gene"),
-    "has_phenotype": ("Disease", "PhenotypicFeature"),
+    # Corrected 2026-09-23 (Worker F, overnight run). The reference doc's
+    # "typical endpoints" column read Disease to PhenotypicFeature, and this
+    # table repeated it uncorrected. Two independent read-only probes against
+    # the live graph found ZERO `has_phenotype` edges out of any Disease
+    # vertex, graph-wide, with no filter, and every `PhenotypicFeature` vertex
+    # sampled is an unpopulated `[stub] HP:...` placeholder with `source` =
+    # "stub". The pair the edge actually carries, measured live 2026-09-14
+    # (HNF1A: 2075 rows over 1158 variants and 36 diseases) and confirmed
+    # again here, is SequenceVariant to Disease, ClinVar-sourced. See
+    # `testing/Developer/reports/2026-09-23_overnight/findings.md`,
+    # "Worker F", and `testing/Developer/reports/2026-09-23_overnight/
+    # probe_g022.py` / `probe_disease_names.py` for the read-only probes.
+    "has_phenotype": ("SequenceVariant", "Disease"),
     "is_sequence_variant_of": ("SequenceVariant", "Gene"),
     "cited_in": ("Article", "Article"),
     "subclass_of": ("OntologyClass", "OntologyClass"),
@@ -93,20 +105,19 @@ EDGE_ENDPOINTS: Final[dict[str, tuple[str, str] | None]] = {
     "exact_match": None,
 }
 
-# Endpoint pairs the live graph carries under a label BESIDE the typical
-# pair the reference doc lists for it. Measured 2026-09-14 by read-only
-# parameterised queries (variant-to-disease detail work, `testing/Developer/
-# reports/2026-09-14_variant_disease_detail/`): `has_phenotype` joins a
-# SequenceVariant to a Disease, source "ClinVar", `source_url` the variant's
-# own ClinVar variation page. HNF1A alone has 2075 such rows over 1158
-# variants and 36 diseases. Kept SEPARATE from `EDGE_ENDPOINTS` on purpose:
-# `schema_slice` expands neighbourhoods along that table and the model
-# prompt is built from it, so widening the primary pair to `None` (mixed)
-# would silently drop the Disease-to-PhenotypicFeature expansion. Templates
-# consult both tables (`cypher_templates._assert_templates_name_real_labels`).
-ADDITIONAL_EDGE_ENDPOINTS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
-    "has_phenotype": (("SequenceVariant", "Disease"),),
-}
+# Endpoint pairs the live graph carries under a label BESIDE the primary
+# pair in `EDGE_ENDPOINTS`. Empty since 2026-09-23: the one entry this table
+# ever held, `has_phenotype`'s SequenceVariant-to-Disease pair, was promoted
+# to `EDGE_ENDPOINTS` itself once the pair it had been sitting beside
+# (Disease to PhenotypicFeature) was found not to exist in the graph at all.
+# The comment that used to live here said widening the primary pair "would
+# silently drop the Disease-to-PhenotypicFeature expansion". That expansion
+# does not exist; the comment was defending a query shape the graph cannot
+# answer. See the note on `EDGE_ENDPOINTS["has_phenotype"]` above. Templates
+# still consult both tables (`cypher_templates._assert_templates_name_real_labels`),
+# so a future genuinely-additional pair for another edge still has somewhere
+# to go.
+ADDITIONAL_EDGE_ENDPOINTS: Final[dict[str, tuple[tuple[str, str], ...]]] = {}
 
 # Section F. The prefix set the graph actually uses.
 CURIE_PREFIXES: Final[tuple[str, ...]] = (

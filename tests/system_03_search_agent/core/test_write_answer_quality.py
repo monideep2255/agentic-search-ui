@@ -299,6 +299,81 @@ async def test_a_trials_question_counts_the_trials_as_answer_findings(monkeypatc
     assert "trial title number 1 [1]" in first and "disease name number 3 [5]" in first, first
 
 
+_MANY_DISEASE_ROWS = [
+    {
+        "node_or_edge_type": "Disease",
+        "curie": f"MedGen:D{index}",
+        "fields": {"name": f"disease name number {index}"},
+        "source_url": f"https://www.ncbi.nlm.nih.gov/medgen/D{index}",
+        "graph_snapshot_version": "v1",
+        "vocabulary_artifact_fields": [],
+    }
+    for index in range(1, 27)
+]
+
+
+@pytest.mark.asyncio
+async def test_the_opening_count_matches_the_list_beneath_it(monkeypatch) -> None:
+    """The opening sentence counts what the READER is shown, not the prompt slice.
+
+    Measured on develop 2026-09-23 across five consecutive live runs of golden
+    question G-019: the answer opened "Found 20 ontology class records" above a
+    list of 26, carrying 26 citations. A count that disagrees with the list
+    under it costs the reader their trust in every other number on the page.
+
+    THE CAUSE was one variable serving two consumers whose correct scopes
+    differ. `answer_findings` is sliced to `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    because it feeds `build_answer_context_directive`, which the MODEL reads,
+    and naming a ref_index the model was never shown would be an instruction
+    about content that is not there. That is right, and unchanged. It does not
+    transfer to the code-built opening sentence, which cites every record it
+    counts, so `write_node` now derives `summary_findings` over the full
+    display list for that one caller.
+
+    RED AGAINST THE OLD CODE by construction: with 26 display rows and a prompt
+    slice of 20, the pre-fix build opened "Found 20 disease records".
+
+    POPULATE CHECK: the row count here (26) must exceed
+    `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20) or the two scopes coincide and this
+    arm proves nothing, so it asserts that relationship rather than trusting
+    the literal.
+    """
+    assert len(_MANY_DISEASE_ROWS) > graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT, (
+        "this arm only distinguishes the two scopes when the display list is "
+        "longer than the prompt slice; with fewer rows it passes vacuously"
+    )
+
+    _install(monkeypatch, _relating_reply)
+    state = _state("researcher")
+    state["findings"] = [
+        _finding("cq-aq", "cypher_query", "layer_1_graph", _MANY_DISEASE_ROWS)
+    ]
+    state["findings_count"] = 1
+    result = await graph_module.write_node(state)
+
+    claims = _claims(result)
+    assert claims, "expected a cited opening sentence"
+    first = claims[0]["text"]
+    assert first.startswith("Found "), first
+
+    # What the reader is actually shown, measured from the citation events the
+    # answer emits rather than from a token field: the opening sentence cites
+    # every record it counts, so the citation list is the list it must agree
+    # with. A first attempt read `citation_id` off the token payloads and got
+    # zero, which would have made this arm pass vacuously on any count at all.
+    shown = len(_sources(result))
+    counted = int(first.split("Found ", 1)[1].split(" ", 1)[0])
+    assert shown > 0, "no citations were emitted, so there is nothing to agree with"
+    assert counted != graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT or shown == counted, (
+        f"the opening counted {counted}, which is exactly the prompt slice, "
+        f"while the answer shows {shown}. This is the G-019 defect: {first!r}"
+    )
+    assert counted == shown, (
+        f"the opening sentence counted {counted} records while the answer "
+        f"shows {shown}. The two must agree: {first!r}"
+    )
+
+
 def test_answer_call_ids_pick_the_graph_call_and_trials_only_when_asked() -> None:
     planned = _state("researcher")["tool_calls"]
     ids = graph_module._answer_call_ids(planned, "Which diseases are associated with NCBIGene:672?")

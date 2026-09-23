@@ -153,6 +153,24 @@ def test_build_schema_slice_lookup_stays_bounded_but_reaches_two_hops() -> None:
     matter. Without the first, the generator answers a question the schema
     cannot express. Without the second, this stops being a slice at all
     and the cost control it exists for is gone.
+
+    IT HAS NOW MOVED A THIRD TIME, 2026-09-23, and the lesson is a new one
+    rather than a repeat. The property was right and its WITNESS was wrong:
+    this asserted that PhenotypicFeature sits two hops from Gene via
+    Disease, which was true of `EDGE_ENDPOINTS` and never true of the
+    graph. Measured that night: no Disease vertex anywhere has an outgoing
+    `has_phenotype` edge, every PhenotypicFeature vertex is an unpopulated
+    `[stub]`, and `has_phenotype` actually joins SequenceVariant to
+    Disease. So this arm passed for fourteen months by agreeing with a
+    constant that was wrong, while the model's own schema prompt, built
+    from that same constant, was being told the same false thing.
+
+    The witness is now OntologyClass, two hops from Gene via Article
+    through `mentioned_in` then `has_mesh_annotation`, a path with real
+    data on both edges (probed 2026-09-23: 25 articles for BRCA1, 14 MeSH
+    annotations for a sampled PMID). The guard against F-2.1-A5-03, that a
+    hop floor must not also be a ceiling, is unchanged and is what this arm
+    is still for.
     """
     sliced = schema_slice.build_schema_slice("lookup", ["NCBIGene:672"])
     label_lines = [line.strip() for line in _vertex_label_lines(sliced)]
@@ -162,16 +180,25 @@ def test_build_schema_slice_lookup_stays_bounded_but_reaches_two_hops() -> None:
         "a Gene lookup cannot answer a disease question without the "
         f"Disease label in scope. Got: {label_lines}"
     )
-    # Two hops from Gene, via Disease. F-2.1-A5-03's own reproduction.
-    assert any(line.startswith("PhenotypicFeature:") for line in label_lines), (
-        "PhenotypicFeature is two hops from Gene and a phenotype question "
-        "cannot be expressed without it. A floor that is also a ceiling is "
-        f"the defect this asserts against. Got: {label_lines}"
+    # Two hops from Gene, via Article. F-2.1-A5-03's own reproduction,
+    # re-witnessed 2026-09-23 on a path the graph actually has.
+    assert any(line.startswith("OntologyClass:") for line in label_lines), (
+        "OntologyClass is two hops from Gene, via Article, and a question "
+        "about a gene's MeSH topics cannot be expressed without it. A floor "
+        f"that is also a ceiling is the defect this asserts against. Got: {label_lines}"
     )
-    assert "has_phenotype" in sliced, (
-        "the Disease to PhenotypicFeature edge must be offered, not just "
-        "its endpoint labels; _edges_for_labels needs BOTH endpoints in "
-        "scope and that is exactly what the old floor cut off"
+    assert "has_mesh_annotation" in sliced, (
+        "the Article to OntologyClass edge must be offered, not just its "
+        "endpoint labels; _edges_for_labels needs BOTH endpoints in scope "
+        "and that is exactly what the old floor cut off"
+    )
+    # The counterpart, and the reason this arm changed. PhenotypicFeature is
+    # unreachable in the real graph, so a slice that offers it is describing
+    # a path the generator cannot use. Measured 2026-09-23.
+    assert not any(line.startswith("PhenotypicFeature:") for line in label_lines), (
+        "PhenotypicFeature has no incoming edge in the live graph and every "
+        "such vertex is an unpopulated stub, so offering it to the generator "
+        f"invites a query that can only return zero rows. Got: {label_lines}"
     )
     # Still a slice, not the whole topology.
     assert len(sliced) < len(schema_slice.full_schema_text()), (

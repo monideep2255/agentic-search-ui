@@ -737,6 +737,17 @@ def apply_resolved_disease_names(
     `build_synth_findings` produced and a mapping from
     `synthesis.disease_names.resolve_concept_ids`.
 
+    2026-09-23: the mapping now also carries MeSH headings from
+    `synthesis.mesh_terms.resolve_descriptor_ids`, merged into the same dict
+    by its caller in `core.graph.write_node`. NOTHING HERE CHANGED to admit
+    them, and that is the point worth recording rather than a coincidence:
+    this function keys on `finding.curie`, so a `MeSH:D000818` entry and a
+    `MedGen:C0346153` entry in one mapping each rewrite their own finding
+    and neither can reach the other's. The function's name is now narrower
+    than what it does; it is left alone because `curie` is the contract and
+    renaming a function with this many call sites to fix a noun would be a
+    larger change than the one being described.
+
     ONLY a `curie_fallback` finding is rewritten. That flag means the row's
     own representative field was unusable and the CURIE was cited in its
     place, which is exactly the population this phase exists to make
