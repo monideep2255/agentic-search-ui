@@ -52,6 +52,7 @@ import {
   ApiError,
   createRun,
   fetchHistory,
+  fetchHistoryAnswer,
   fetchMe,
   fetchPersona,
   getAllowance,
@@ -60,7 +61,7 @@ import {
   refreshSession,
   stopRun,
 } from "./lib/api";
-import type { AllowanceResponse, HistoryItem } from "./lib/api";
+import type { AllowanceResponse, HistoryAnswerResponse, HistoryItem } from "./lib/api";
 import {
   capitalizeFirst,
   clearPersistedGuestToken,
@@ -87,6 +88,7 @@ import { RunProgress } from "./components/screens/RunProgress";
 import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import type { PreviousTurn } from "./components/screens/AnswerScreen";
+import { SavedAnswerScreen } from "./components/screens/SavedAnswerScreen";
 import { ArchitectureScreen } from "./components/screens/ArchitectureScreen";
 import { AboutScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
@@ -120,6 +122,15 @@ type SearchView =
    * five places and would eventually be missed in one.
    */
   | { name: "answer"; question: string; continued?: boolean }
+  /**
+   * Item 10.2, overnight run 2026-09-22/23. Reached only from the history
+   * rail, for a row whose `has_saved_answer` is true. Renders whatever
+   * `savedAnswer` state below holds for `question`, never a live run: no
+   * `useAgentRun`/`useRunView` state applies here, which is why this is a
+   * separate view name rather than a flag on "answer", the same reasoning
+   * `continued` above documents for that view's own special case.
+   */
+  | { name: "savedAnswer"; question: string }
   | { name: "signin" };
 
 /** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real.
@@ -179,7 +190,21 @@ const DAILY_CAP_COPY: Record<"anon_daily_cap_reached" | "anon_source_daily_cap_r
  * when the row is created, and a row must be clickable before its run has
  * been admitted.
  */
-type HistoryEntry = { id: string; question: string; meta?: string; traceId?: string };
+/**
+ * `hasSavedAnswer` (item 10.2) mirrors `HistoryItem.has_saved_answer`
+ * exactly, carried through `mergeServerHistory` below. It is absent, never
+ * `false`-by-default, on a locally created row (one this tab just asked
+ * and the server has not echoed back yet), because such a row's answer has
+ * not been stored yet either way and `onOpen` must fall back to asking
+ * rather than to fetching a row that cannot exist.
+ */
+type HistoryEntry = {
+  id: string;
+  question: string;
+  meta?: string;
+  traceId?: string;
+  hasSavedAnswer?: boolean;
+};
 
 /**
  * Mints the id of a locally created rail row (F-4.13-RV-01's fix).
@@ -288,6 +313,7 @@ function mergeServerHistory(current: HistoryEntry[], serverItems: HistoryItem[])
       question: item.question,
       traceId: item.trace_id,
       meta: formatHistoryMeta(item),
+      hasSavedAnswer: item.has_saved_answer === true,
     }));
   return [...current, ...restored];
 }
@@ -413,6 +439,17 @@ export function App() {
   const [runId, setRunId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  /**
+   * Item 10.2. The row `savedAnswer` view is currently showing, and whether
+   * its fetch is still in flight. `savedAnswerRequestId` guards against a
+   * slow fetch for a row the reader has since clicked away from resolving
+   * into state that no longer belongs to the screen on show, the same
+   * stale-response problem `activeEntryId`/the seeding effect's
+   * `AbortController` guard against elsewhere in this file.
+   */
+  const [savedAnswer, setSavedAnswer] = useState<HistoryAnswerResponse | null>(null);
+  const [savedAnswerLoading, setSavedAnswerLoading] = useState(false);
+  const savedAnswerRequestId = useRef(0);
   const [flagged, setFlagged] = useState<number[]>([]);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   /**
@@ -1699,6 +1736,16 @@ export function App() {
           />
         );
       }
+      case "savedAnswer":
+        return (
+          <SavedAnswerScreen
+            question={searchView.question}
+            loading={savedAnswerLoading}
+            answer={savedAnswer}
+            onRunAgain={() => void ask(searchView.question, depth)}
+            onNewSearch={startNewSearch}
+          />
+        );
       default:
         return (
           <HomeScreen
@@ -1865,19 +1912,49 @@ export function App() {
             <HistoryRail
               items={history}
               activeId={
-                searchView.name === "answer" || searchView.name === "run"
+                searchView.name === "answer" ||
+                searchView.name === "run" ||
+                searchView.name === "savedAnswer"
                   ? history.find((item) => item.question === searchView.question)?.id ?? null
                   : null
               }
-              // F-4.8-J-08. This previously switched the heading to a past
-              // question while leaving the CURRENT run's answer on screen,
-              // which is the same fabrication shape as J-03 by another route.
-              // Re-asking is the only truthful option available: this session's
-              // earlier runs are not retained, and retaining them is build
-              // phase 4.5's work, not something to fake here.
+              // F-4.8-J-08's original fix, superseded by item 10.2 (overnight
+              // run of 2026-09-22/23). This used to re-ask every clicked row
+              // unconditionally, on the reasoning that "this session's
+              // earlier runs are not retained" made re-asking the only
+              // truthful option. That is no longer true for a signed-in
+              // row whose answer was stored (`has_saved_answer`): the saved
+              // text is fetched and shown at once, no new search charged to
+              // the reader. Every other row, and any failure fetching a
+              // saved one, still re-asks exactly as before; see
+              // `SavedAnswerScreen` for why the fallback matters more than
+              // the new path.
               onOpen={(id) => {
                 const item = history.find((entry) => entry.id === id);
-                if (item) void ask(item.question, depth);
+                if (!item) return;
+                if (item.hasSavedAnswer === true && item.traceId && token) {
+                  const requestId = savedAnswerRequestId.current + 1;
+                  savedAnswerRequestId.current = requestId;
+                  setSavedAnswer(null);
+                  setSavedAnswerLoading(true);
+                  setSearchView({ name: "savedAnswer", question: item.question });
+                  fetchHistoryAnswer(token, item.traceId)
+                    .then((response) => {
+                      if (savedAnswerRequestId.current !== requestId) return;
+                      setSavedAnswer(response);
+                      setSavedAnswerLoading(false);
+                    })
+                    .catch(() => {
+                      // Fallback path, done-when item 3: a stale flag, a row
+                      // that aged out, or a genuine network failure all land
+                      // here, and here is exactly today's re-ask behaviour.
+                      if (savedAnswerRequestId.current !== requestId) return;
+                      setSavedAnswerLoading(false);
+                      void ask(item.question, depth);
+                    });
+                  return;
+                }
+                void ask(item.question, depth);
               }}
               onCollapse={() => setRailOpen(false)}
               onNewSearch={() => {

@@ -383,6 +383,17 @@ export interface HistoryItem {
   asked_at?: string;
   trust_signal?: string;
   citation_count?: number;
+  /**
+   * Item 10.2, the overnight run of 2026-09-22/23. True only when this row
+   * was written by a signed-in account and its answer text was stored
+   * (`GET /v1/history/{trace_id}/answer` will resolve). A guest's rows never
+   * carry a stored answer by product-owner decision, so this is false or
+   * absent for every guest row, and absent altogether from a backend built
+   * before this field existed, which `withValidatedOptionalFields` below
+   * treats as "no saved answer" rather than an error: the honest default
+   * for a caller that cannot yet say either way.
+   */
+  has_saved_answer?: boolean;
 }
 
 export interface HistoryResponse {
@@ -431,6 +442,11 @@ function withValidatedOptionalFields(item: HistoryItem): HistoryItem {
   if (typeof source.citation_count === "number" && Number.isFinite(source.citation_count)) {
     validated.citation_count = source.citation_count;
   }
+  // Strict `=== true`, never a truthy coercion: a malformed value (a string
+  // "true", a 1) is dropped to the honest default of "no saved answer"
+  // rather than trusted to mean yes, the same "wrong type is worse than
+  // absent" reasoning the three fields above already apply.
+  if (source.has_saved_answer === true) validated.has_saved_answer = true;
   return validated;
 }
 
@@ -474,6 +490,112 @@ export async function fetchHistory(
   return {
     items: body.items.filter(isHistoryItem).map(withValidatedOptionalFields),
     count: body.count,
+  };
+}
+
+/**
+ * One citation on a saved answer, per the overnight run's pinned wire
+ * contract (`testing/Developer/reports/2026-09-23_overnight/contract.md`,
+ * "the citation shape the answer screen already renders").
+ *
+ * Only the fields `SavedAnswerScreen` actually reads are required here;
+ * everything else the live citation payload carries (`lib/events.ts`'s
+ * `CitationPayload`) is read defensively if present, same discipline as
+ * `HistoryItem` above, so an older or partial backend still renders a
+ * usable, honest card rather than failing the whole fetch on one field.
+ */
+export interface HistoryAnswerCitation {
+  display_index: number;
+  source: string;
+  source_url: string;
+  layer: 1 | 2 | 3;
+  source_id?: string;
+  entity_name?: string | null;
+}
+
+function isHistoryAnswerCitation(value: unknown): value is HistoryAnswerCitation {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.display_index === "number" &&
+    typeof value.source === "string" &&
+    typeof value.source_url === "string" &&
+    (value.layer === 1 || value.layer === 2 || value.layer === 3)
+  );
+}
+
+/** `GET /v1/history/{trace_id}/answer`'s 200 body. */
+export interface HistoryAnswerResponse {
+  trace_id: string;
+  question: string;
+  asked_at: string;
+  depth: string;
+  answer_markdown: string;
+  citations: HistoryAnswerCitation[];
+  trust_signal: string;
+  /**
+   * The one plain sentence the person read under the original answer (UI
+   * fix set 9, item 9.9), or `null` when the row carries none: a run from
+   * before `trust_line` existed, or one whose synthesis produced none.
+   * Additive within v1 per `system-design-patterns` pattern 10, so an older
+   * backend that never sends this field is read the same as one that sends
+   * it as `null`.
+   */
+  trust_line: string | null;
+}
+
+/**
+ * `GET /v1/history/{trace_id}/answer`: the stored answer for one of this
+ * caller's own past, signed-in searches.
+ *
+ * Throws `ApiError` on any non-2xx status, 404 included: the contract makes
+ * "not this caller's row", "does not exist" and "holds no saved answer"
+ * INDISTINGUISHABLE on purpose, so this function does not try to tell them
+ * apart either. Every caller of this function treats every rejection the
+ * same way, falling back to re-asking the question, which is item 10.2's
+ * own done-when: a stale `has_saved_answer` flag, a row that aged out, or a
+ * genuine network failure all land on the one tested fallback path rather
+ * than three different ones.
+ *
+ * The body is re-validated on receipt, same discipline as `fetchHistory`: a
+ * 200 whose shape does not match throws a plain `Error` rather than handing
+ * a component `unknown` cast to a type it trusts.
+ */
+export async function fetchHistoryAnswer(
+  token: string,
+  traceId: string,
+  options: ApiCallOptions = {},
+): Promise<HistoryAnswerResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(
+    `${baseUrl}/v1/history/${encodeURIComponent(traceId)}/answer`,
+    {
+      method: "GET",
+      headers: authHeaders(token),
+      signal: options.signal,
+    },
+  );
+  await throwIfNotOk(response, "fetchHistoryAnswer");
+  const body: unknown = await response.json();
+  if (
+    !isRecord(body) ||
+    typeof body.trace_id !== "string" ||
+    typeof body.question !== "string" ||
+    typeof body.answer_markdown !== "string" ||
+    !Array.isArray(body.citations)
+  ) {
+    throw new Error(
+      "fetchHistoryAnswer: response body was not the documented saved-answer shape",
+    );
+  }
+  return {
+    trace_id: body.trace_id,
+    question: body.question,
+    asked_at: typeof body.asked_at === "string" ? body.asked_at : "",
+    depth: typeof body.depth === "string" ? body.depth : "",
+    answer_markdown: body.answer_markdown,
+    citations: body.citations.filter(isHistoryAnswerCitation),
+    trust_signal: typeof body.trust_signal === "string" ? body.trust_signal : "",
+    trust_line: typeof body.trust_line === "string" ? body.trust_line : null,
   };
 }
 
