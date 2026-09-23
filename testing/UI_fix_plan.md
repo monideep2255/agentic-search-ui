@@ -19,7 +19,7 @@ the item's own row further down; the detail stays with the item.
 | Feature, in plain words | Item | Where it stands |
 |---|---|---|
 | History shows the saved answer instantly, with Run again | 10.2 | BUILT 2026-09-23, awaiting the product owner's retest. The data decision they gave before sleeping: store the answer for SIGNED-IN ACCOUNTS ONLY, never for guests, deleted with the account. Guests are excluded at the WRITE in three independent layers, including a database CHECK constraint. No account delete path exists today, so `forget_saved_answers_for_account` is left tested and called by nothing, with the one line a future delete path must add |
-| A disease question searches every layer, the way a gene question already does | 12.1 | NOT STARTED, and the priority. Measured 2026-09-23: 1 of the second tester's 7 questions answers, 6 return no citation at all. The same condition answers as `reflux disease` and refuses as `GERD`, because one name lands on concept ids the graph holds and the other does not, and nothing else is searched. `_build_layer_tool_calls` gates the whole breadth plan on `if gene_symbol:`, so a disease anchor gets one Cypher query and the trials registry, the literature and the live records are never called |
+| A disease question searches every layer, the way a gene question already does | 12.1 | NOT STARTED, and the priority. DONE WHEN the whole of `testing/User-feedback/` answers, the product owner's own bar, verified by re-running the committed script. Measured 2026-09-23: 1 of the second tester's 7 questions answers, 6 return no citation at all. The same condition answers as `reflux disease` and refuses as `GERD`, because one name lands on concept ids the graph holds and the other does not, and nothing else is searched. `_build_layer_tool_calls` gates the whole breadth plan on `if gene_symbol:`, so a disease anchor gets one Cypher query and the trials registry, the literature and the live records are never called |
 | The guardrail stops refusing ordinary literature and trials questions | 12.2 | NOT STARTED. The allowlist carries none of `paper`, `publication`, `article`, `literature`, `study`, `trial`, `research`, while its own refusal text offers "a paper question". `any trials for gerd?` is refused and `Any trials for GERD?` is not, because capitalisation decides |
 | A refusal stops inviting the reader to "continue the conversation" | 12.4 | NOT STARTED, and the cheapest item on this list. `FollowUp.tsx` renders under every result, so a "No answer found" screen offers "What variants cause it?" with no "it" to refer to |
 | Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
@@ -1538,6 +1538,55 @@ THE PRODUCT OWNER'S OWN CONDITION ON THIS SET, in their words: "Can you check
 if we can answer the questions now? If yes great, how do we answer, else this
 the priority and we fix it first."
 
+### Done when
+
+Set by the product owner on 2026-09-23: "the whole folder answers". Stated as
+a contract so it cannot be met by feel:
+
+- DONE WHEN every one of the seven questions in `testing/User-feedback/`
+  returns a cited answer rather than a refusal. Not "most of them", not "the
+  ones that were easy": the folder is the set.
+- VERIFIED BY re-running the committed script,
+  `testing/Developer/reports/2026-09-23_user_feedback/run_feedback_questions.py`,
+  which prints one line per question with the tools that ran, the citation
+  count and the outcome. The verify surface is that script and it is not
+  weakened, narrowed or re-scoped to reach the contract. A question that
+  answers by reaching a DIFFERENT wrong thing has not been answered.
+- THE ONE HONEST EXCEPTION, named up front rather than discovered at the end:
+  `Does coffee help make exercise more effective?` is answered by returning
+  what has been published on caffeine and exercise performance. It is never
+  answered with a verdict on whether coffee works. If that is not acceptable
+  as an answer, the product owner says so and the row becomes a refusal that
+  explains itself rather than one that says "outside biomedical research".
+- BLOCKED-STOP: if answering a question would need data the graph does not
+  hold and no live API covers, stop and report it rather than widening the
+  search until something comes back. A confident wrong record is worse than a
+  missing one.
+
+### The routing decision, taken by the assistant
+
+The product owner was asked how wide a disease question should search and did
+not pick, so this was decided from the user's chair on 2026-09-23 and is
+recorded here to be overruled rather than buried.
+
+DECIDED: a disease anchor gets the SAME breadth a gene anchor already has, and
+the question's own wording ADDS to it rather than narrowing it. Asking about a
+condition searches the live records, the literature and the trials registry;
+asking "any trials for X" still reaches the registry, it simply is no longer
+the only thing that does.
+
+WHY, in the words of the person typing the question: they asked about a
+condition and got nothing, twice. The alternative was to route by what the
+question seems to ask for, which is faster and fails in a way nobody can see,
+because a question phrased unusually silently gets less. Breadth fails
+visibly, and the 20-call ceiling already bounds the cost: a gene question
+spends 14 to 16 of its 20 today, so there is headroom without moving the
+ceiling.
+
+WHAT IT COSTS: a disease question gets slower, in the same range a gene
+question already is. If that proves too slow once measured, narrowing is a
+later decision made against numbers rather than a guess made now.
+
 MOSTLY NOT. All seven questions were re-run against today's code on
 2026-09-23, one at a time, against the real model and the real graph. ONE of
 the seven answers; the other six return no citation at all and fail for the
@@ -1617,6 +1666,7 @@ The 2026-09-20 shipped list, with what to retest, is
 
 | Item | State at close | The one thing to know |
 |---|---|---|
+| Set 12's done-when | SET by the product owner: "the whole folder answers" | Every question in `testing/User-feedback/` returns a cited answer, verified by re-running `run_feedback_questions.py` rather than by judgement. The breadth question the assistant raised went unanswered and was decided from the user's chair: a disease anchor gets the same breadth a gene anchor has, recorded at the head of Set 12 to be overruled rather than buried |
 | Set 12, the second tester's seven questions | MEASURED against today's code, NOT FIXED. Now item 1 of "Next, in order" | 1 of 7 answers, 6 return no citation. A first reading said 0 of 7 and was corrected: that question's graph call had timed out on the measuring run, and `error` is not `empty`. Three distinct causes, all of them routing or vocabulary rather than missing capability: a disease anchor gets one Cypher query because `_build_layer_tool_calls` gates the breadth plan on `if gene_symbol:`; the guardrail allowlist holds no literature vocabulary, so `any trials for gerd?` is refused while `Any trials for GERD?` is not; and a refusal still invites the reader to "continue the conversation". Evidence: `testing/Developer/reports/2026-09-23_user_feedback/findings.md` |
 | 12.3, a clarifying question for a one-to-three-word query | ANSWERED, no build | There is no such clarification today. The four paths that exist cover a referring word with no antecedent, a chromosome window with no assembly, an isolate question missing its organism or gene, and an unplaceable accession. A bare topic reaches none of them |
 | `testing/Test_queries_and_workflows.md` | UPDATED, commit `33d3555` | The overnight work became four typed queries (64 to 67) rather than only a shipped list, two existing queries that had been describing superseded behaviour were corrected (51 and 60), and a "What to retest first" section now carries the queue in order |
@@ -1992,8 +2042,12 @@ What is open and not on this list as its own item, each recorded in
 
 1. SET 12, THE SECOND TESTER'S QUESTIONS. The priority, and the one item a
    person feels immediately: seven ordinary questions, six of them unanswered.
-   Four pieces of work, independent of each other, so they can run in
-   parallel:
+   THE DONE-WHEN, set by the product owner on 2026-09-23, is "the whole folder
+   answers": every question in `testing/User-feedback/` returns a cited answer,
+   verified by re-running the committed script rather than by judgement. The
+   full contract, including the one honest exception and the blocked-stop, is
+   at the head of Set 12. Four pieces of work, independent of each other, so
+   they can run in parallel:
    - 12.1, give a disease anchor the same breadth a gene anchor already has.
      `_build_layer_tool_calls` gates everything on `if gene_symbol:`, so
      "Any trials for GERD?" runs one Cypher query and never calls the trials
