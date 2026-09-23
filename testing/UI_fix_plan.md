@@ -18,14 +18,14 @@ the item's own row further down; the detail stays with the item.
 
 | Feature, in plain words | Item | Where it stands |
 |---|---|---|
-| History shows the saved answer instantly, with Run again | 10.2 | Not built. After the release, by the product owner's order of 2026-09-13 |
+| History shows the saved answer instantly, with Run again | 10.2 | BUILT 2026-09-23, awaiting the product owner's retest. The data decision they gave before sleeping: store the answer for SIGNED-IN ACCOUNTS ONLY, never for guests, deleted with the account. Guests are excluded at the WRITE in three independent layers, including a database CHECK constraint. No account delete path exists today, so `forget_saved_answers_for_account` is left tested and called by nothing, with the one line a future delete path must add |
 | Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
-| The MCP mount's redirect emitting `http://`, the other half of "every integration works end to end" | 11.30 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22); the rest of 11.30 is verified |
+| The MCP mount's redirect emitting `http://`, the other half of "every integration works end to end" | 11.30 | FIXED 2026-09-23, awaiting the product owner's retest. Cause: Railway terminates TLS at its edge and uvicorn's `--forwarded-allow-ips` defaults to loopback, so `X-Forwarded-Proto` was discarded and Starlette built the mount redirect from the container's plaintext view. Fixed IN THE APP rather than in a deployment setting, so it travels with the code and the two services cannot disagree. UPGRADE ONLY: the header can move the scheme to `https` and never to `http`, so no value a caller can put in it makes any redirect less secure than with the header absent. The one-line alternative (`--forwarded-allow-ips='*'`) was REJECTED because it also rewrites the client address from the caller-controlled leftmost `X-Forwarded-For`, which two rate limits hash |
 | Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22) |
 | Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22) |
 | The explanation half of 11.31 | 11.31 | Parked. The product owner approved the current state as is on 2026-09-21; the remaining lever is a standing option, not queued work |
-| The load-dependent frontend tests and journey 7's navigation, fixed before relying on them in quick checks | D4, under "Developer follow-through" | Open. Best done during set 2 |
+| The load-dependent frontend tests and journey 7's navigation, fixed before relying on them in quick checks | D4, under "Developer follow-through" | SPLIT 2026-09-23. Journey 7 FIXED: nav items are buttons, not links, and below 720px only reachable through the overflow menu, so the old `getByRole("link")` inside a `.catch()` had never navigated while reporting success. Proven red against the old selector and green after, with a filmstrip showing the Integrations screen rendered at 390px. The `.catch()` was removed rather than kept. The load-dependent suite is DIAGNOSED with a named mechanism and was still being fixed at the close of the session; see the `## Worker C:` entries in `testing/Developer/reports/2026-09-23_overnight/findings.md` |
 
 ### Features done
 
@@ -63,8 +63,11 @@ Set 10 has 10.1 built and live and 10.3 run. Set 11:
   link plus a disclosed count and cut. Its queries and retest workflow are
   `testing/Product/queries/Isolate_search_queries_and_workflow.md`; retest items 17 to 22
   in `testing/Shipped_2026-09-22.md`
-- L-01, a whole graph result vanishing on some runs: measured, its two causes
-  read, and the reader now told (`10f6a46`); the cause itself is not fixed
+- L-01, a whole graph result vanishing on some runs: CAUSE FOUND and no longer
+  reproducible on develop (12 live runs, 2026-09-23). The model drafting its own
+  Cypher when no template matches is the mechanism; two commits narrowed that
+  path and closed it for the measured questions. Telling the reader when a search
+  was drafted rather than vetted is still open
 - Parked, and why: the explanation half of 11.31; the byte ceiling at 50,000;
   OMIM is live with its title filter and the two ship together
 - Measured rather than built: the call ceiling stays at twenty (24 runs, none
@@ -919,9 +922,10 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | Live, awaits one look | Approval waits on the product owner opening the info button once (2026-09-22). Raised and shipped 2026-09-21, `d044969`. Stale twice over: that directive stopped existing when 11.31 removed every length instruction, and it was a promise the product cannot keep, since the same question at the same mode measured 66, 101 and 113 words on three consecutive runs. The info card and the onboarding tour now describe WHO EACH MODE IS FOR |
 | 11.37 | Layer 1 knowledge-graph sources are invisible in the source list | ACCEPTED, not a defect to fix | Raised 2026-09-21. Measured: 40 of 67 citations ARE layer 1, so the graph is searched and cited. The source list deduplicates BY URL and keeps the first citation's layer, and every layer 1 GO term shares `ncbi.nlm.nih.gov/gene/672` with a layer 2 record numbered earlier, so all 40 collapse into a Live NCBI row and the "Knowledge graph" group renders ZERO rows. The product owner reviewed this and accepted it: "All good if deduped. That is fine!" |
 | 11.34 | A multi-sentence abstract loses its citation entirely in the code-built tail | FIXED, live pending | Fixed 2026-09-21. `build_structured_fallback_narrative` put ONE marker at the end of a multi-sentence body while `run_grounding_pass` splits on sentence boundaries, so every sentence but the last was unmarked and stripped as an uncited claim. Each sentence of a multi-sentence value is now marked independently, split on `field_value` itself rather than on the rendered labelled body, because the record-type label is not a substring of the value and broke `ground_claim` for the first clause. Before: `claims 1 stripped 3`, uncited. After: `claims 4 stripped 0`, cited. No grounding check was weakened |
+| 11.38 | Try the new model on OpenRouter that returns probabilities with its output, and decide where calibrated confidence belongs in the architecture: the guardrail, the choice of which resource to pull, and the cite-or-refuse gate | Discussion, precursor to a build | Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](#detail-1138) |
 | 2a | Cite every retrieved finding | CLOSED BY MEASUREMENT, no new code | Measured 2026-09-21 BEFORE building, and the mechanism already existed: `tail_is_listing` is unconditionally true, so the findings tail grounds every admitted finding and merges those claims. The residual gap was entirely item 11.34. Measured 5 admitted findings, 3 cited, both uncited ones multi-sentence; after 11.34, 5 of 5 cited and 0 stripped. Building the obvious "cite every row" would have REINTRODUCED a recorded 2.1 defect that shipped 25 chips over an answer to a different question. Evidence and a re-runnable script: `testing/Developer/reports/2026-09-21_2a_measurement/` |
 | 2b | Widen the citation host rule so OMIM can be cited, and dispatch OMIM | DONE | 2026-09-22. BOTH HALVES ARE NOW DONE. A question about a gene shows OMIM's entry for that gene, cited to `omim.org`, and never an entry for a different gene: `filter_omim_titles` is called on every `omim_summary` result before a record becomes a row, with the resolved symbol carried from Plan on the planned call. Proven live over ten runs, five per gene, in `testing/Developer/reports/2026-09-22_OMIM_live/findings.md`. THE HOST HALF, done 2026-09-21: `omim.org` is an exact additional host in `NCBI_SOURCE_URL_PATTERN`, with `www.` admitted too because the tool schema already accepts it and a `www.omim.org` record would otherwise be dropped uncited and in silence. Four spoofing shapes are rejected by their own arms. THE DISPATCH HALF was deliberately not done on 2026-09-21: it was enabled and reverted the same session, because `breadth_plan.filter_omim_titles` existed, NOTHING CALLED IT, and without it the first OMIM hit for `GCK` is `MAP4K2`, so an unfiltered result cites a different gene than the question asked about, fully and correctly cited. That is what the 2026-09-22 wiring closed |
-| L-01 | A whole graph result vanishing on some runs, hidden by graceful degradation | CONFIRMED, not fixed | Measured 2026-09-21 over 20 live runs. HNF1A returned 100 graph rows in 7 runs, 12 rows in 2 runs, and 0 rows with `status: "empty"` in 1 run, while every other tool in that run succeeded, `error_payload` was null and `trust_outcome` was "ask", identical to every healthy run. Sources fell from 86 to 41. In the two 12-row runs distinct Layer 1 citations fell from 64 to 25, a loss that reached the answer. NOTHING signals it: a reader cannot tell a degraded answer from a question that genuinely had fewer sources. The 2026-09-20 instrument had been filtering on `layer_1` while the API emits `layer_1_graph`, so its anomaly field reported zero on every run and the defect stayed invisible. Evidence: `testing/Developer/reports/2026-09-21_L01/` |
+| L-01 | A whole graph result vanishing on some runs, hidden by graceful degradation | CAUSE FOUND 2026-09-23, and NO LONGER REPRODUCIBLE on develop | THE CAUSE, reproduced on demand rather than argued: when `select_template` returns None, the plan-tier model DRAFTS the Cypher fresh on every run, and two drafts of the same question are not equivalent. Five runs of "what is the clinical relevance of BRCA1" with everything fixed but the draft returned 100 rows, then 1, then `status: error`, then 2, then 2: one draft returned `g, d, d.id, d.name` over two paths, the next returned `count(d)`. So between one run and the next the evidence collapses from a hundred cited records to a single number. TWO HYPOTHESES RULED OUT BY MEASUREMENT: the graph itself is deterministic (five repeats of each template, identical counts, 1.4 to 3.1 seconds against a 90-second budget), and no failure can arrive as an empty result (every branch of `_handle_response` returns or raises, and `cypher_query` turns a `GraphError` into `status: error`, never `empty`). THE 2026-09-21 REPORT WAS READ WRONG, corrected here: it read the two graph calls in RESULT EMISSION order, but they run concurrently and arrive in either order. Re-mapped by `call_id` to START order, the variable call is slot 0 in all 19 completed runs, and the "stable" call was never the question's search at all: it is the `context_only` GO call, whose 25 rows for HNF1A and 40 for BRCA1 are precisely the two numbers that looked stable. NOT REPRODUCIBLE NOW: 12 live runs on develop on 2026-09-23, BRCA1 6 of 6 identical and HNF1A 5 of 5 completed identical, where 2026-09-21 saw 100/12/0. Two commits nobody re-measured did it, `27d68ae` and `2bc8ec0`, both narrowing the model path. The MECHANISM survives for the questions still on that path. WHAT IS STILL OPEN, each its own item: close the remaining model path or refuse and ask; and tell the reader when a search was drafted rather than vetted, which `CypherQueryOutput.template` already records (it is None exactly when a model drafted it) and `_cypher_output_to_structured_fields` currently drops. THE TRAP for whoever builds that: tonight's degradation was `ok` to `ok`, a hundred rows then one count, NEVER an `empty`, so any rule keyed on empty-or-failed misses the case that actually costs the reader their evidence. Key it on the query having been drafted. Evidence: `testing/Developer/reports/2026-09-23_L01_cause/` and the `## Worker E:` entries in `testing/Developer/reports/2026-09-23_overnight/findings.md`; the original measurement stays at `testing/Developer/reports/2026-09-21_L01/` |
 
 
 ### Detail for the long Set 11 items
@@ -1378,26 +1382,169 @@ buys over the direct calls the tools make today, since
 surface running with the app's own credentials, so the answer has to be worth
 that.
 
+ANSWERED 2026-09-22, when the product owner asked directly whether wrapping
+Layer 2 and Layer 3 in MCP would be faster and more reliable. The honest answer
+splits their question in two, because the valuable half is not the MCP half.
+
+On speed, no, and this is measured rather than argued. MCP is a protocol for one
+process to offer tools to another. It does not change what NCBI returns or how
+fast NCBI returns it, so wrapping our own calls in it adds a hop rather than
+removing one. Item 11.4 measured where the wait actually is: the searches take
+about a second, and the wait was the writing step. Item 11.8 then cut the median
+answer from 26.5 to 19.7 seconds by working on that step, not on the transport.
+Under `.claude/rules/attack-the-constraint.md`, the transport is not the
+constraint, so optimising it buys nothing a person would feel.
+
+On reliability, yes, and the product owner's instinct is right, but the thing
+that buys it is the half of their sentence that does not mention MCP: "reverse
+engineer the NCBI API, see what data exists, and build functions around them".
+That is a measured, typed function surface, and it removes a real class of wrong
+answer, namely the agent choosing an endpoint or a parameter that does not mean
+what it assumed. It is also the exact method that closed G-035 on the night of
+2026-09-22: the FTP tree was measured live first (521 MB, 584,433 rows, a 17.7
+second full scan), a wire contract was pinned from those numbers, and the shape
+went from never answering to 5 of 5. That method is available today, one tool at
+a time, with no protocol change and no new execution surface.
+
+So the two halves separate cleanly, and only one of them is blocked:
+
+- The typed, measured function surface per database: valuable, in scope as
+  ordinary work on the existing seven tools, and provably effective here.
+- The MCP envelope around it: a transport change that earns its keep only if
+  these tools must be callable by agents outside this product. That is a
+  distribution argument, not a speed or reliability one, and it stays a
+  scoping discussion against Section 6 as this detail already says.
+
+Worth stating plainly, because the naming invites the confusion: this product
+already HAS an MCP surface, at `/mcp`, and it points the other way. It exists so
+other agents can call this product. Item 11.32 would point MCP inward, at our
+own calls, which is the direction that adds the hop.
+
+#### Detail 11.38
+
+The ask, raised 2026-09-22: try the new model on OpenRouter that returns
+probabilities with its output, because it could help the guardrail and the step
+where the agent chooses which resource to pull.
+
+Status: Not started. Backlog only, nothing designed and nothing promised.
+
+WHAT IT IS, established 2026-09-23 from the two sources the product owner
+supplied, `https://typesafe.ai/` and
+`https://openrouter.ai/docs/guides/community/jev`. Read as vendor claims, which
+is what they are; nothing below has been measured against this product's own
+questions yet.
+
+| Fact | Value |
+|---|---|
+| Model id | `typesafe/jev-1.13`, alias `~typesafe/jev-latest` |
+| Maker | TypeSafe, who call it a "System One Model" |
+| Endpoint | `POST https://openrouter.ai/api/alpha/decisions`, NOT chat completions |
+| Question types | Choice: the selected option, a probability for every option, and a confidence. Bool: the probability of yes. Score: a probability-weighted position, a probability per level, and a confidence |
+| Context | 32,000 tokens, state plus questions |
+| Price | Input tokens billable, OUTPUT TOKENS FREE. Vendor claims $42 per billion input tokens |
+| Vendor speed and cost claim | 193.6x faster and 244.6x cheaper on their own "System One" tasks: 0.114s and $0.000081 against 8.566s and $0.013880 |
+
+THE LIMITATION THAT DECIDES WHERE IT CAN GO, in the vendor's own words: "Jev
+does not produce reasoning traces, explanations, or free-form text" and "It is
+not a drop-in replacement for a chat model."
+
+That single sentence sorts the whole question. The product owner named three
+places. Two of them are decisions, and Jev is built for exactly that shape. The
+third is writing, and Jev cannot do it at all.
+
+| Where | Shape today | Does Jev fit |
+|---|---|---|
+| Guardrail | A Guard-tier chat model classifies the input, and the answer is taken as certain | YES. This is a Choice with a confidence, which is what the step actually needs. A borderline question could be asked about rather than guessed at |
+| Which resource to pull | Think and Plan pick from a fixed plan per question shape | YES, and it is the better of the two. The option set is closed and known, which is the condition a typed decision needs |
+| Writing the answer | The Synth tier writes prose with inline citations | NO. It emits no free-form text. Not a candidate, at any price |
+
+ON "ZERO HALLUCINATIONS", which is on the vendor's front page and should be read
+carefully rather than quoted. The honest version of that claim is structural: a
+decision constrained to a fixed option set cannot return an option outside the
+set. That is real and it is worth something here, since this product's failures
+include the model reading MODY as an organism (item 11.19). It is NOT a claim
+that the chosen option is correct, and it must never be repeated to a user as
+though it were.
+
+WHY THE INSTINCT IS SOUND, independently of which model it turns out to be. The
+loop currently makes three decisions that are taken as if certain and are not:
+
+| Decision | Where | What is lost today |
+|---|---|---|
+| Is this input safe and on topic | Guardrail | A borderline question is admitted or refused outright, with no middle path such as asking the person what they meant |
+| Which resource answers this | Think and Plan | A wrong pick is invisible: the answer comes back confidently sourced from the wrong place |
+| Is this claim supported | Write, the cite-or-refuse gate | The gate is deterministic by design, which is correct; a calibrated confidence would inform what the answer SAYS about its own certainty, never whether the gate passes |
+
+A calibrated confidence turns each of those from a silent guess into a number
+that can be acted on, and the third one is the trust moat: a product that can
+say "I am not sure" honestly is worth more than one that is fluent and wrong.
+
+WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated. A CORRECTION
+FIRST, recorded rather than quietly fixed: on the night of 2026-09-22 the
+assistant said trying this model would be a config change under
+`system-design-patterns` pattern 11, reversible in one edit. That was said
+before the model was identified and it is WRONG for this model. Jev answers on
+its own `/api/alpha/decisions` endpoint, not on chat completions, so
+`resolve_model()` pointing a tier at it does nothing. A trial needs a new client
+path in the harness, which is a small build rather than a config edit. The cost
+estimate moves with it.
+
+What remains cheap: the trial is still bounded and reversible, because the two
+candidate call sites are decisions with closed option sets, and either can fall
+back to today's path on any error. Output tokens being free makes a
+side-by-side shadow run, where Jev decides in parallel and its answer is only
+recorded rather than acted on, unusually affordable. That shadow run is the
+right first step, because it produces this product's own calibration data
+instead of a vendor benchmark.
+
+What is NOT cheap: ACTING on a confidence number. A threshold anywhere in the
+loop is a new control with its own failure modes, it must be calibrated against
+this product's own questions, and under `.claude/rules/goal-contracts.md` a
+threshold is a verify surface that must not be quietly lowered later to make
+results look better.
+
+TWO CONSTRAINTS THAT BIND ANY TRIAL, both from rules already in force:
+
+- The cite-or-refuse gate stays DETERMINISTIC. `.claude/rules/production-standards.md`
+  requires accept or reject by exact or substring match and says outright that
+  fuzzy scoring may rank repair suggestions but never gates acceptance. So a
+  confidence number may inform what an answer SAYS about its own certainty, and
+  may never decide whether a citation passes. This is the place a probability
+  model is most tempting and most dangerous.
+- `/api/alpha/decisions` is an ALPHA endpoint, and the guardrail is on the path
+  of every single query. A dependency that can change under us does not belong
+  in front of everything until it has a fallback that is proven by execution
+  rather than asserted.
+
+ONE STANDING RULE TO HOLD AGAINST IT, `system-design-patterns` pattern 11 again:
+on a recurring failure, iterate the harness first and swap the model second. So
+a probability-emitting model is worth a bounded trial on its own merits, never
+as the answer to a failure the harness has not been worked on yet.
+
 
 ## Where we stopped
 
 The cutoff. It is updated at the end of every working session, so the next
-session starts here rather than reconstructing state. LAST UPDATED 2026-09-22,
-at the close of a session that:
+session starts here rather than reconstructing state. LAST UPDATED 2026-09-23,
+at the close of an overnight session that ran unsupervised after the product
+owner approved a named list and then authorised picking up further work. Eight
+agents ran, tiered by task. What it did:
 
-- Ran item 10.3 to completion for the first time, and found and fixed the
-  cause of item 11.33
-- Measured L-01 as a rate with a named mechanism
-- Then, the same evening, shipped item 1 of the next list, the two questions
-  that lost their own graph search with a GEO search for dataset questions,
-  and after it the coordinate range
-- Late the same night measured the call ceiling and kept a question's own
-  words out of the disease lookup
-- Taught the product a BioProject accession
-- Later the same night, after the product owner approved the shape in
-  discussion, built the isolate search (G-035), the last golden shape that
-  never answered, with its own test queries document
-- Put the high-level tracker at the top of this file, and updated the `/phase-checkpoint` and `/ship` skills from what the day showed (PR #100)
+- Fixed 11.30's second half, the MCP address that downgraded an HTTPS request
+  to plaintext, in the app rather than in a deployment setting
+- Built 10.2, history showing the saved answer instantly with Run again, across
+  a backend, a frontend and a third pass that closed the seam between them
+- Closed both halves of D4, and made the frontend suite FASTER than it had been
+  all night as well as trustworthy
+- Found L-01's cause, corrected the measurement that described it, and
+  established it is no longer reproducible on develop
+- Probed all eleven graph templates against the live graph and removed the one
+  that could never return a row
+- Made MeSH identifiers resolve to real terms, in two calls for any number of
+  them
+- Fixed an answer that said "Found 20 records" above a list of 26
+- Answered 11.32 with measurement, and recorded 11.38 after the product owner
+  supplied the model's documentation mid-session
 
 Read this, then the Set 11 table above.
 
@@ -1407,6 +1554,22 @@ owner and whoever picks this up read the same record.
 
 The 2026-09-20 shipped list, with what to retest, is
 `testing/Shipped_2026-09-20.md`. This section owns per-item status.
+
+### The 2026-09-23 overnight session, in one table
+
+| Item | State at close | The one thing to know |
+|---|---|---|
+| 11.30 fix B, the MCP scheme downgrade | FIXED, awaiting retest | Fixed in the app, UPGRADE ONLY. The one-line alternative was rejected because it also rewrites the client address from a caller-controlled header that two rate limits hash |
+| 10.2, the saved answer | BUILT, awaiting retest | Accounts only, excluded at the WRITE in three layers including a database CHECK. No account delete path exists, so the forget function is left tested and called by nothing, with the one line a future delete path must add |
+| D4 defect 10, journey 7 | FIXED | Nav items are buttons, not links, and below 720px only reachable through the overflow menu, so the old selector inside a `.catch()` had never navigated while reporting success |
+| D4 defect 12, the load-dependent suite | FIXED, with its evidence strength stated | Worst case 2459ms against a 15000ms ceiling, 16 percent, and 2277ms under moderate load. The full suite now runs in 85 seconds against 128 to 163. The first version of this fix made one file WORSE and its own confirmation run caught it |
+| L-01, a graph result vanishing | CAUSE FOUND, no longer reproducible | The model drafts the Cypher fresh when no template matches, and two drafts are not equivalent. 12 live runs found no variance. The 2026-09-21 report read the two calls in the wrong order and is corrected |
+| MeSH terms | BUILT, awaiting retest | G-019 returns 26 real terms in TWO calls. ESearch is load-bearing: nine-digit descriptors are not computable from the id, and the live endpoint returns UIDs in a different order from the request |
+| The opening count | FIXED, awaiting retest | One variable served two consumers with different correct scopes. Proven red by reverting the one-line call and reproducing "Found 20" above 26 shown |
+| The `[MeSH]` artifact filter | FIXED | It tests the TOKEN, never the bracket, because PubMed gives translated articles bracketed titles and those are genuine names |
+| The dead phenotype template | REMOVED | No Disease vertex anywhere has an outgoing `has_phenotype` edge and every PhenotypicFeature is a stub. The same wrong constant also built the model's schema prompt |
+| 11.32, internal MCP servers | ANSWERED | The valuable half of the ask is the typed measured function surface, not the MCP envelope. Wrapping our own calls adds a hop; the searches take about a second and the wait was always the writing step |
+| 11.38, the Jev probability model | RECORDED | `typesafe/jev-1.13`. Fits the guardrail and the resource choice, cannot write answers at all. NOT a config change: it answers on its own decisions endpoint, not chat completions |
 
 ### The 2026-09-22 session, in one table
 
@@ -1732,56 +1895,74 @@ technical one.
 
 ### Next, in order
 
-Rewritten at the close of 2026-09-22, after the product owner retested and
-approved everything the day built, and again late the same night when the
-list's first two items closed: the call ceiling was measured (24 runs over
-eight shapes, none refused, the worst pass 17 of 20, so the ceiling stays at
-twenty; see the session table above), the measurement's own finding shipped
-(`d8619bc`, a question's own words such as "condition" or "tumour" are never
-searched as a disease name), and the BioProject accession answers (`a64c44e`,
-with `d882856` and `649750c` from its live runs). Items 7 to 16 in
-`testing/Shipped_2026-09-22.md` await the product owner's retest. Nothing
-here is a retest; every item is engineering or a decision, ordered by what the
-person typing the question feels first.
+Rewritten at the close of the overnight session of 2026-09-23, which closed all
+three of the discussion items this list carried and built six things beyond
+them. Items 1 to 7 in `testing/Shipped_2026-09-23.md` await the product owner's
+retest, and items 7 to 22 in `testing/Shipped_2026-09-22.md` are still awaiting
+the retest from the night before. Nothing here is a retest; every item is
+engineering or a decision, ordered by what the person typing the question feels
+first.
 
-The isolate shape (G-035), which headed this list, is DONE as of the night
-of 2026-09-22: built after the discussion the product owner approved,
-verified live 5 of 5, and awaiting retest (items 17 to 22 in
-`testing/Shipped_2026-09-22.md`). Every golden question shape now answers
-on at least one pass. What the isolate work leaves open, each recorded in
-`testing/Developer/reports/2026-09-22_isolate_search/findings.md`: the
-model's written summary fails grounding on most passes so the code-built
-table carries the answer; the golden row's must-cite URL for Taxonomy is
-the older browser address while the product cites NCBI's record page, a
-golden row edit that is the product owner's; and no filter beyond the gene
-prefix exists yet.
+What the overnight session leaves open, each recorded in
+`testing/Developer/reports/2026-09-23_overnight/findings.md`:
 
-1. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
+- A phenotype question no longer runs a search that could never work, and what
+  it reaches instead was not verified end to end. That is item 1 below.
+- The graph holds no disease names and no MeSH terms. Every `Disease` vertex is
+  named after its source vocabulary and every `OntologyClass` after its own
+  identifier, measured graph-wide. Tonight stops those being shown as real
+  names and resolves the MeSH ones live, but the data is a Systems 1 and 2
+  defect in the other repository, known since build phase 2.1 as F-2.1-B07.
+  Nothing here is allowed to fix it, so it is a hand-over rather than a task.
+- The model's written prose still fails the grounding gate on several question
+  shapes, so the code-built table carries the answer. Unchanged tonight.
+- `trust_outcome` is unstable: five runs with byte-identical evidence returned
+  `flag` four times and `ask` once.
+
+1. VERIFY THAT A PHENOTYPE QUESTION NOW REACHES A PATH THAT CAN ANSWER IT.
+   This is the honest gap the overnight session left and it is first because a
+   person feels it directly. The dead graph search is gone, so "What phenotypic
+   features are associated with Marfan syndrome?" no longer runs a query that
+   could never return a row. What it does INSTEAD was not verified end to end
+   overnight. One live run settles it. If the answer is still a refusal, the
+   question is whether it should reach MedGen through Layer 2, which is a
+   routing decision rather than a defect.
+2. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
    row: "334" expects a clarifying ask and is refused as off-topic; "tell me
    about the tree of life" expects an answer; the pathogenicity classification
    request expects a flag rather than a medical-advice refusal. Nothing blocks
    on it. A fourth row joins them: G-035's Taxonomy must-cite URL.
-2. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
-3. THREE DISCUSSIONS, EACH A PRECURSOR TO A BUILD UNDER `/bossman-mode`, by
-   the product owner's decision of 2026-09-22 ("I think of these as
-   discussion, a precursor to the build"). None waits on a decision taken
-   cold; each opens with a scoping discussion whose written outcome is what
-   the build is measured against:
-   - 11.30's other half, the MCP mount's redirect emitting `http://`. The
-     discussion measures which addresses the develop and production services
-     actually receive forwarded requests from, rather than guessing, and
-     names everything that trusting them changes, including the client
-     address per-caller rate limiting reads.
-   - 11.32, internal MCP servers around the Layer 2 and 3 calls. The
-     discussion settles transport swap versus re-cut against the locked
-     Section 6 tool list, and what it buys over the direct calls, under
-     `.claude/rules/v1-scope-boundary.md`, before anything is built.
-   - 11.29, hard and soft edges over a fuller graph. The discussion names the
-     question shapes that need multi-hop or retrieval today, from the golden
-     set and the consistency run, before any embedding or RAG work is
-     proposed.
-   The fourth entry this list carried, 11.22's live check, is done: see its
-   row in the Set 11 table.
+3. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
+4. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
+   established that when no code template matches, the plan-tier model writes
+   the Cypher fresh, and two drafts are not equivalent. The data already
+   exists: `CypherQueryOutput.template` is None exactly in that case, and
+   `_cypher_output_to_structured_fields` currently drops it. THE TRAP, and the
+   reason this is not the obvious one-liner: the degradation is `ok` to `ok`, a
+   hundred rows then one count, NEVER an `empty`, so any rule keyed on
+   empty-or-failed misses the case that actually costs the reader their
+   evidence. Key it on the query having been drafted. The stronger version of
+   this item is to close the remaining model path entirely, the way `27d68ae`
+   closed it for gene questions.
+5. 11.29's BUILD, now that its scoping document exists and is measured. Read
+   `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md`
+   first: it counts how many golden questions need multi-hop (five, all walking
+   one already-built shape), how many need data the graph does not hold
+   (twelve), and says plainly that vector embeddings and a RAG pipeline have a
+   motivating count of zero here. Its own first recommendation is that the
+   grounding gate, which accepts a verbatim excerpt and rejects a faithful
+   paraphrase, is what actually stands between the product and being worth
+   reading instead of a general chatbot.
+6. 11.38, a bounded trial of the probability model, if the product owner wants
+   it. The cheap first step is a SHADOW RUN on the guardrail: it decides in
+   parallel, its answer is only recorded and never acted on, which produces
+   calibration data from this product's own questions rather than a vendor
+   benchmark. Output tokens are free, which is what makes that affordable.
+   Acting on a confidence number is a separate and much larger decision.
+
+   The three discussion items this list carried are all closed: 11.30 was
+   built, 11.32 was answered with measurement, and 11.29's discussion produced
+   the document named in item 5. 11.22's live check was already done.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining

@@ -1,0 +1,7 @@
+{
+  "question": "What diseases are caused by variants in the HNF1A gene?",
+  "run": 1,
+  "outcome": "transport_error",
+  "exception": "The read operation timed out",
+  "elapsed": 1206.5
+}

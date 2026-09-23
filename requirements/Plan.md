@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-22.
+Kick-off: 2026-05-06. Last updated: 2026-09-23.
 
 ## Status at a glance
 
@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-22.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is the first item under "Next, in order" in `testing/UI_fix_plan.md`'s "Where we stopped" section, which owns the cutoff. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 614 (DECISIONS.md).
+Decisions logged: 619 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,15 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-23 (overnight), THE GRAPH AUDIT AND THE SAVED ANSWER. An unsupervised session: the product owner approved a named list before sleeping, then authorised picking up further work from the fix plan. Eight agents ran, tiered by task. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
+
+- WHAT LANDED, seven items. 11.30's second half: a `POST` to `/mcp` no longer answers with a plaintext `Location`, fixed by a middleware that trusts `x-forwarded-proto` to UPGRADE the scheme only and never touches the client address. Item 10.2: clicking a past search shows the answer already given, at once, with Run again, for signed-in accounts only. MeSH identifiers resolve to real terms in TWO calls for any number of them. An answer no longer says "Found 20 records" above a list of 26. The leaked-vocabulary filter now catches the `[MeSH] D000818` form. A graph template that could never return a row is removed. Both halves of D4, after which the frontend suite runs in 85 seconds against 128 to 163 all night.
+- THE FINDING THAT REFRAMES THE ANSWER PATH, measured graph-wide rather than sampled: the graph holds no disease names and no MeSH terms. Every `Disease` vertex carries its source vocabulary in `name` and zero contain the word "syndrome"; every `OntologyClass` carries its own identifier and zero contain a lowercase run of four letters. `Gene.name` and `Article.name` are correct, so it is a per-label mapping defect rather than an empty graph. It has been known since build phase 2.1 as F-2.1-B07, with a census of all 200,845 Disease rows on 2026-07-31, so THE CONSTRAINT HAS NEVER BEEN DISCOVERY: writing the graph is Systems 1 and 2 work in the other repository and is forbidden here. Handed over rather than attempted.
+- L-01's CAUSE FOUND AND THE DEFECT NO LONGER REPRODUCIBLE. When no template matches, the plan-tier model drafts the Cypher fresh each run and two drafts are not equivalent: five runs of one question returned 100 rows, 1, an error, 2, 2. Twelve live runs found no variance where 2026-09-21 saw 100, 12, 0; two commits nobody re-measured had closed it. The 2026-09-21 report was READ WRONG and is corrected: it read two concurrent calls in emission order, and the call that looked stable was never the question's search.
+- THE MOST TRANSFERABLE RESULT IS NOT A FEATURE. Three separate tests passed for months by agreeing with a constant that was wrong, and the same constant built the schema prompt handed to the plan-tier model, so the model was told the same false thing. None was a vacuous arm; each had real assertions that would have caught a broken implementation. They were rigor pointed at a premise nobody had checked. Each was resolved by keeping the property and moving the witness to a path the graph actually has, and one gained a counterpart assertion so the measurement became a standing guard.
+- A WORKER RETRACTED ITS OWN CONCLUSION ON ITS OWN DATA, and that is the second lesson. A test fix that improved five measurements made one file worse; its claim that the KIND of risk had changed was challenged rather than accepted, and the confirmation run then caught it failing under no load. Cutting the fix's own cost from 400 steps to 73 turned a 77 percent margin into 16 percent. The first version would have shipped as an improvement.
+- WHAT DID NOT LAND, recorded rather than rounded up: whether a phenotype question now reaches a path that CAN answer it was not verified end to end, and it is item 1 of "Next, in order"; telling the reader when a search was drafted rather than checked is still open, with the trap that the degradation is `ok` to `ok` and never `empty`; the model's prose still fails the grounding gate on several shapes; `trust_outcome` returned `flag` four times and `ask` once on byte-identical evidence. Five DECISIONS.md rows, three LEARNINGS.md rows. Evidence: `testing/Developer/reports/2026-09-23_overnight/`, `2026-09-23_L01_cause/`, `2026-09-23_mesh_terms/` and `2026-09-23_zero_row_templates/`; the retest list is `testing/Shipped_2026-09-23.md`.
 
 2026-09-22 (night, the last session of the day), THE ISOLATE SEARCH: the one golden question shape that still never answered now does. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
 
