@@ -1593,7 +1593,7 @@ approved everything the day built, and twice more the same evening: when item
 and a GEO search for dataset questions, `27d68ae`, `b6cd025`), and when the
 coordinate range shipped after it (`66b3811`, then two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty); verified live G-001 6 of 8 answered across three deploys, 3 of 3 on the final one with
 BRCA1 resolved from the coordinates alone; its row is in the session table
-above). Both await the product owner's retest, items 7 to 10 in
+above). Both await the product owner's retest, items 7 to 11 in
 `testing/Shipped_2026-09-22.md`. Nothing here is a retest; every item is
 engineering or a decision, ordered by what the person typing the question
 feels first.
@@ -1670,7 +1670,7 @@ That points hard at event-loop starvation, consistent with the same suite failin
 4. Pick up "Next, in order" at item 1, the call-ceiling measurement.
    Everything the 2026-09-22 day built is approved; the evening's two items,
    the two lost searches with the GEO search and the coordinate range, are
-   verified live and await the product owner's retest, items 7 to 10 in
+   verified live and await the product owner's retest, items 7 to 11 in
    `testing/Shipped_2026-09-22.md`.
 
 ## Developer detail

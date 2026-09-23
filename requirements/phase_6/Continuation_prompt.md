@@ -135,7 +135,7 @@ TWO THINGS THE INSTRUMENTS TAUGHT, both in `LEARNINGS.md` dated 2026-09-22:
 What the next session does first is `testing/UI_fix_plan.md`'s "Next, in
 order": item 1 is the call-ceiling measurement, item 2 the two remaining
 shapes that never answer. The product owner's retest of the evening's two
-items is listed in `testing/Shipped_2026-09-22.md`, items 7 to 10.
+items is listed in `testing/Shipped_2026-09-22.md`, items 7 to 11.
 
 ### Process lessons from the fix-loop sessions, already applied
 
