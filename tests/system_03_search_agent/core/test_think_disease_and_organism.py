@@ -29,6 +29,12 @@ Mutations that turn each arm red (each run by hand before the arm was kept):
   False: the mouse question resolves against human (red).
 - `test_the_fallback_runs_when_every_model_span_failed`: restore the
   `not model_named_a_gene` gate: no fallback lookup happens (red).
+- `test_a_generic_word_is_never_searched_as_a_disease_name` (2026-09-22,
+  the call-ceiling measurement): take the `_is_generic_disease_mention`
+  guard out: "condition" reaches the term and binds the fake's hits (red).
+- `test_a_named_disease_with_a_generic_word_is_still_searched`: widen the
+  guard to "any generic word": "Lynch syndrome" is no longer searched
+  (red). This is the populate check for the arm above.
 """
 
 from __future__ import annotations
@@ -323,3 +329,45 @@ async def test_a_failed_gene_span_that_medgen_confirms_binds_as_a_disease(
         ]
     )
     assert mixed.unresolved_symbols == ["BRCA9"] and len(mixed.curies) == 8
+
+
+@pytest.mark.asyncio
+async def test_a_generic_word_is_never_searched_as_a_disease_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Measured live 2026-09-22: "condition" bound "Patient condition
+    unchanged" and seven more, "tumour" bound eight mouse tumour records, and
+    each answer then listed them as entities the person had named."""
+    terms = _install_medgen(
+        monkeypatch,
+        {"condition[title]": MODY_HITS, "tumour[title]": MODY_HITS, "human[title] AND tumour[title]": MODY_HITS},
+    )
+    for mention in ("condition", "tumour", "human tumour samples", "genetic disease", "Rare hereditary condition"):
+        curies, matched = await graph_module.resolve_disease_mention_to_curies(mention)
+        assert curies == [] and matched == 0, mention
+    assert terms == [], terms
+    assert graph_module._DISEASE_CURIE_CACHE == {}, "nothing was looked up, so nothing is remembered"
+
+
+@pytest.mark.asyncio
+async def test_a_named_disease_with_a_generic_word_is_still_searched(monkeypatch: pytest.MonkeyPatch) -> None:
+    terms = _install_medgen(monkeypatch, {"Lynch[title] AND syndrome[title]": ["324942"]})
+    curies, matched = await graph_module.resolve_disease_mention_to_curies("Lynch syndrome")
+    assert terms == ["Lynch[title] AND syndrome[title]"], terms
+    assert curies == ["MedGen:C1838100"] and matched == 1
+
+
+@pytest.mark.asyncio
+async def test_a_generic_disease_span_binds_nothing_and_discloses_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The rs334 question's "condition" span, end to end through confirmation:
+    no CURIE, no disclosure, and never an unresolved symbol (a disease the
+    model mis-read must not become a gene refusal)."""
+    terms = _install_medgen(monkeypatch, {"condition[title]": MODY_HITS})
+
+    async def _no_gene(symbol: str, **kwargs: object) -> str | None:
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _no_gene)
+    spans = [graph_module._ThinkExtractedEntity(text="condition", entity_type="disease")]
+    resolution = await graph_module._confirm_extracted_entities(spans)
+    assert resolution.curies == [] and resolution.disclosures == ()
+    assert resolution.unresolved_symbols == []
+    assert terms == [], terms

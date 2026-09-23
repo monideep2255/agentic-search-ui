@@ -1504,9 +1504,39 @@ _DISEASE_TERM_STOPWORDS = frozenset(
 )
 #: The most words one mention contributes to the term.
 _DISEASE_TERM_MAX_WORDS = 8
+#: Words that are a question's own vocabulary for a disease rather than a
+#: disease's name. A mention made only of these (plus the stopwords above)
+#: is never sent to the name index. Measured 2026-09-22 in the call-ceiling
+#: runs: "condition", from "what condition is it associated with?", matched
+#: "Patient condition unchanged" and seven more; "tumour", from "human
+#: tumour samples", matched eight mouse tumour records; and both answers
+#: then told the person those were entities the question had named. A
+#: mention with any other word ("breast cancer", "Lynch syndrome") is
+#: searched exactly as before.
+_GENERIC_DISEASE_WORDS = frozenset(
+    {
+        "condition", "conditions", "disease", "diseases", "disorder", "disorders",
+        "syndrome", "syndromes", "illness", "illnesses", "tumour", "tumours",
+        "tumor", "tumors", "cancer", "cancers", "neoplasm", "neoplasms",
+        "malignancy", "malignancies", "phenotype", "phenotypes", "trait", "traits",
+        "symptom", "symptoms", "diagnosis", "diagnoses", "pathology", "lesion",
+        "lesions", "infection", "infections", "genetic", "hereditary", "inherited",
+        "rare", "human", "clinical", "medical", "chronic", "acute", "associated",
+        "related", "sample", "samples", "tissue", "tissues", "patient", "patients",
+    }
+)
 #: Cache per case-folded mention, the same discipline as `_SYMBOL_CURIE_CACHE`:
 #: only a completed lookup is cached, never a failed transport.
 _DISEASE_CURIE_CACHE: dict[str, tuple[tuple[str, ...], int]] = {}
+
+
+def _is_generic_disease_mention(cleaned: str) -> bool:
+    """True when every word of a cleaned mention is generic disease
+    vocabulary or a stopword, so there is no name in it to look up."""
+    words = [word.casefold() for word in re.split(r"[\s-]+", cleaned) if word]
+    return bool(words) and all(
+        word in _GENERIC_DISEASE_WORDS or word in _DISEASE_TERM_STOPWORDS for word in words
+    )
 
 
 async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], int]:
@@ -1541,6 +1571,11 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
     3. A placeholder title (`disease_names.PLACEHOLDER_CONDITION_TITLES`)
        is never bound.
 
+    Before any of that, a mention made only of generic disease vocabulary
+    (`_GENERIC_DISEASE_WORDS`: "condition", "tumour samples", "genetic
+    disease") is never searched and binds nothing, since it names no
+    disease; it is not cached either, because nothing was looked up.
+
     Substring matching inside a word is never used ("MODY" does not match
     "COMMODITY"), and a mention that matches nothing binds nothing: the
     caller adds it to no refusal path, because a disease the model mis-read
@@ -1558,6 +1593,8 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
     if len(cleaned) < 3:
         return [], 0
     key = cleaned.casefold()
+    if _is_generic_disease_mention(cleaned):
+        return [], 0
     cached = _DISEASE_CURIE_CACHE.get(key)
     if cached is not None:
         return list(cached[0]), cached[1]
