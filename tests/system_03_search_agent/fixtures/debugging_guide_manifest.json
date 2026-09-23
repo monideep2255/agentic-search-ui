@@ -33,6 +33,7 @@
     "src/system_03_search_agent/contracts/events.py": "514bfed52e931362265063092be5475c7783e8b33e98060afe3953b2ba6755c2",
     "src/system_03_search_agent/contracts/query.py": "9d0b199bd41b1289a9f8967b1105424f3d0bff64f6b01ebb3b4247c226ddb73a",
     "src/system_03_search_agent/core/__init__.py": "dd653147b6b294170bb8b95e5732ae2f2930ee638f56635532ced0c28bf43afd",
+    "src/system_03_search_agent/core/accession.py": "d6a35795219f9c2895749315cde8702d21bd9bbcf237790ac4dac9bc2e4dcfdb",
     "src/system_03_search_agent/core/breadth_plan.py": "6c2790f56214816492b149325c20fecfcdc18f326e1dcd0c90dcd1a40295a5de",
     "src/system_03_search_agent/core/coordinate_window.py": "906e68a51457be7ead6436c0f0b56ee14cc937b15a8dfe924502419f9184603a",
     "src/system_03_search_agent/core/graph.py": "9b0fe028e88a2779a1c4af312120e2b99245455ae846d1f0f5976d91ceaf0883",

@@ -481,7 +481,7 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
-from system_03_search_agent.core import breadth_plan, coordinate_window
+from system_03_search_agent.core import accession, breadth_plan, coordinate_window
 from system_03_search_agent.core.next_step import (
     build_next_step_query,
     entity_type_noun,
@@ -1927,6 +1927,59 @@ async def _confirm_fallback_candidates(
     return confirmed
 
 
+@dataclass(frozen=True)
+class _AccessionPlan:
+    """What Think resolved for an accession question (fix-plan item 2,
+    2026-09-22): the parsed accession, the uid NCBI holds it under (None when
+    NCBI does not have it) and, per linked database, the ids it links to."""
+
+    record: accession.Accession
+    uid: str | None
+    linked: dict[str, list[str]]
+
+
+async def resolve_accession(record: accession.Accession) -> _AccessionPlan:
+    """Resolve an accession to its uid and the records it links to, live.
+
+    Fix-plan item 2 (2026-09-22). One ESearch on the accession's own database
+    with the plain accession as the term (the `[ACCN]` field returns nothing
+    for a BioProject, measured), then one ELink per target database in
+    `accession.LINK_TARGETS`. Every failure returns what was resolved so far
+    rather than raising, the same contract as `resolve_window_genes`: a
+    project whose links failed is a project with no links found, said so in
+    the think narrative, never a crashed turn.
+    """
+    from system_03_search_agent.tools.ncbi_eutils_actions import link, search
+
+    empty = _AccessionPlan(record=record, uid=None, linked={})
+    try:
+        found = await search(accession.search_input(record).root)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("accession search failed: %s", type(exc).__name__)
+        return empty
+    if found.status not in ("ok", "empty"):
+        return empty
+    uids = [
+        str(uid).strip()
+        for hit in found.records
+        for uid in (hit.fields.get("idlist") or [])
+        if str(uid).strip().isdigit()
+    ]
+    if not uids:
+        return empty
+    uid = uids[0]
+    linked: dict[str, list[str]] = {}
+    for link_input in accession.link_inputs(record, uid):
+        try:
+            out = await link(link_input.root)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("accession link failed: %s", type(exc).__name__)
+            continue
+        if out.status == "ok":
+            linked[link_input.root.db] = [str(hit.id) for hit in out.records if hit.id]
+    return _AccessionPlan(record=record, uid=uid, linked=linked)
+
+
 #: Fix-plan item 1 (2026-09-22): how many Gene ids one window lookup asks
 #: for. Under the search input's own ceiling of 500 and the summary input's
 #: ceiling of 50 ids, and above `coordinate_window.MAX_WINDOW_GENES`, so the
@@ -2016,6 +2069,16 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     window_genes: coordinate_window.WindowGenes | None = None
     if window is not None and window.assembly == "GRCh38":
         window_genes = await resolve_window_genes(window)
+    # Fix-plan item 2 (2026-09-22): an NCBI accession in the question (a
+    # BioProject, BioSample, SRA or assembly identifier) is recognised by a
+    # fixed rule and resolved live, with the records it links to, so Plan
+    # can plan their summaries; the graph holds no such records, so no
+    # graph call is made for it. A window wins when both appear.
+    accession_plan: _AccessionPlan | None = None
+    if window is None:
+        found_accession = accession.parse_accession(query.text)
+        if found_accession is not None:
+            accession_plan = await resolve_accession(found_accession)
     think_messages = _build_think_messages(
         query.text, exact_matches, _memory_suffix(state, "plan")
     )
@@ -2100,7 +2163,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         }
 
     # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
-    if window_genes is not None and window_genes.genes:
+    if (window_genes is not None and window_genes.genes) or accession_plan is not None:
         # A window question's entities are the window's genes, so the model's
         # gene-shaped spans ("ACMG", "dbVar", "ClinVar", "copy number variant")
         # are not confirmed live. Each confirmation is a Layer 2 call counted
@@ -2141,7 +2204,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # tokens, live-confirmed and capped at three; a candidate that fails
     # is dropped, so a lone mistyped symbol (BRCA9) keeps its refusal by
     # name through `unresolved_symbols`, which this branch never clears.
-    if not model_resolution.curies:
+    if not model_resolution.curies and accession_plan is None:
         fallback_taxon = await _confirmed_taxon_for_extraction(classification.entities)
         if fallback_taxon is not None:
             fallback_confirmed = await _confirm_fallback_candidates(
@@ -2173,6 +2236,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         not model_resolution.curies
         and not model_resolution.unresolved_symbols
         and not exact_matches
+        and accession_plan is None
     ):
         disease_fallback: list[tuple[str, str]] = []
         fallback_disclosures: list[str] = []
@@ -2284,6 +2348,20 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     )
     if window is not None and window.assembly is None:
         clarification = coordinate_window.ASSEMBLY_QUESTION
+    if accession_plan is not None:
+        accession_note = accession.disclosure(
+            accession_plan.record, accession_plan.uid, accession_plan.linked
+        )
+        model_resolution = _EntityResolution(
+            curies=list(model_resolution.curies),
+            unresolved_symbols=list(model_resolution.unresolved_symbols),
+            confirmed=tuple(model_resolution.confirmed),
+            disclosures=tuple(model_resolution.disclosures) + (accession_note,),
+        )
+        if accession_plan.uid is None:
+            # NCBI does not have it: say so, rather than asking for a gene
+            # name the person never had. Write emits this as the answer.
+            clarification = f"{accession_note}. Check the accession and ask again."
     think_narrative = classification.narrative
     if model_resolution.disclosures:
         # Decision D3: the answer names the disease records it used. The
@@ -2339,6 +2417,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         result["clarification_needed"] = clarification
     if window is not None and window.assembly is not None:
         result["coordinate_window"] = window
+    if accession_plan is not None and accession_plan.uid is not None:
+        result["accession_plan"] = accession_plan
     return sink.result(**result)
 
 
@@ -4208,7 +4288,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     }
     unresolved_symbols: list[str] = state.get("unresolved_entity_symbols") or []
 
-    planned = await _select_planned_tool_call(
+    # Fix-plan item 2 (2026-09-22): an accession question plans NCBI record
+    # summaries and no graph call, since the graph holds no projects,
+    # samples, runs or assemblies; see the `planned is None` branch below.
+    accession_plan = state.get("accession_plan")
+    planned = None if accession_plan is not None else await _select_planned_tool_call(
         query.text, query_class, target_curies, unresolved_symbols, _memory_curies(state)
     )
     if isinstance(planned, _UnresolvedEntityRefusal):
@@ -4234,6 +4318,22 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             tool_calls=[],
         )
         planned_tool_calls: list[_PlannedToolCall | _PlannedNcbiEfetchToolCall] = []
+        if accession_plan is not None and accession_plan.uid is not None:
+            planned_tool_calls = [
+                _planned_from_breadth(call)
+                for call in accession.plan_summary_calls(
+                    accession_plan.record, accession_plan.uid, accession_plan.linked
+                )
+            ]
+            lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
+            planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
+            plan_payload = PlanPayload(
+                narrative=(
+                    f"searching live NCBI records for {accession_plan.record.label()}: "
+                    + ", ".join(dict.fromkeys(p.purpose for p in planned_tool_calls))
+                )[:500],
+                tool_calls=[p.tool_call for p in planned_tool_calls],
+            )
     else:
         planned_tool_calls = [planned]
         narrative = "selected cypher_query for a Layer 1 graph lookup"
@@ -4661,6 +4761,18 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
         "title", "germline_classification", "gene_symbol", "chr_start", "chr_end", "assembly",
     ),
     "dbvar_overlap": ("variant_type", "gene_name", "chr_start", "chr_end", "assembly"),
+    # Fix-plan item 2 (2026-09-22). The four summaries an accession question
+    # plans, each led by the field a person recognises the record by. SRA's
+    # `runs` is the markup-bearing string NCBI returns, which carries the run
+    # accession; kept as it is, bounded by the finding's own cap.
+    "bioproject_summary": (
+        "project_title", "project_acc", "project_data_type", "organism_name", "registration_date",
+    ),
+    "biosample_summary": ("title", "accession", "organism", "publicationdate"),
+    "sra_summary": ("runs", "createdate"),
+    "assembly_summary": (
+        "assemblyname", "assemblyaccession", "assemblystatus", "organism", "submissiondate",
+    ),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -9405,7 +9517,8 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         first_call = planned_tool_calls[0] if planned_tool_calls else None
         resolved = (
             first_call.cypher_input.target_entities
-            if first_call is not None and not getattr(first_call, "memory_bound", False)
+            if isinstance(first_call, _PlannedToolCall)
+            and not getattr(first_call, "memory_bound", False)
             else []
         )
         query_term = " ".join(resolved) if resolved else query.text

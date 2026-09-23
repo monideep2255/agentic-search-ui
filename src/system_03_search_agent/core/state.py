@@ -71,6 +71,12 @@ Field lifecycle:
             add the dbVar and ClinVar overlap calls. Absent otherwise, and
             absent when the assembly is missing, since Think then asks
             which assembly instead of searching.
+        accession_plan: set by `think` when the question names an NCBI
+            accession (a BioProject, BioSample, SRA or assembly identifier)
+            that NCBI has (fix-plan item 2, 2026-09-22): the parsed
+            accession, its uid and the ids it links to; `plan` plans the
+            summaries from it and no graph call, since the graph holds no
+            such records. Absent otherwise.
         failed_searches: set by `act`, one small mapping per planned call
             whose outcome was `status == "error"`: `tool`, `layer` and the
             tool's own `reason`. Decided from the user's chair on
@@ -201,6 +207,7 @@ class GraphState(TypedDict, total=False):
     layer2_raw_outputs: dict[str, Any]
     failed_searches: list[dict[str, str]]
     coordinate_window: Any
+    accession_plan: Any
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason
