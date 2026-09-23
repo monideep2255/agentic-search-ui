@@ -124,21 +124,33 @@ research. Capitalisation decides whether a question is medical.
 this has never shown up in our own testing: every question we type names a
 gene in capitals.
 
-## Cause C: the product already writes the clarification and never shows it
+## Cause C, WITHDRAWN: the clarification does reach the reader
 
-Questions 6 and 7 resolved no entity at all, and the graph tool was dispatched
-anyway with nothing to bind. It reported, in its own words:
+This section first claimed that the product writes a good clarifying question
+and throws it away. That was wrong, and the claim is corrected here rather
+than deleted, because it was the second error of the day in the same
+direction: reading one layer's text and assuming what the next layer does with
+it.
 
-> "no entity could be identified in this query, so no graph lookup was
-> attempted. Name the gene, variant, disease or organism, or supply a CURIE
-> such as NCBIGene:672. Retrying this query unchanged will not help."
+What is true: questions 6 and 7 resolved no entity, the graph tool was
+dispatched with nothing to bind, and it reported in its own words "no entity
+could be identified in this query ... Name the gene, variant, disease or
+organism".
 
-That is a good clarifying question. The reader never sees it. What reaches the
-screen is "No answer found in NCBI records. I could not find grounded evidence
-for this", plus a link to an NCBI search.
+What is also true, and was not checked before the claim was written:
+`synthesis/refuse.py` already carries `NO_ENTITY_REASON_MARKER` and
+`UNRESOLVED_QUESTION_MESSAGE`, decided from the user's chair on 2026-09-22, and
+the live run of question 7 on 2026-09-23 returns:
 
-So this is not only a missing feature. The actionable text exists inside the
-tool result and is discarded on the way to the person who needed it.
+> "I could not tell which gene, variant, disease or organism you mean. Name
+> one and I will search. Or try NCBI's cross-database search: ..."
+
+So the reader does get told what to type next. The tester's screenshots are
+from the 2026-09-14 build, which predates that fix.
+
+WHAT REMAINS TRUE IN THIS FAMILY is Cause E below: the follow-up block still
+invites the reader to "continue the conversation" underneath that
+clarification, and still offers "What variants cause it?" when there is no it.
 
 ## Cause D: nothing asks which question a short one meant
 
