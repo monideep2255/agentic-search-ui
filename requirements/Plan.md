@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-22.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is the first item under "Next, in order" in `testing/UI_fix_plan.md`'s "Where we stopped" section, which owns the cutoff. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 611 (DECISIONS.md).
+Decisions logged: 614 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-22 (night, the last session of the day), THE ISOLATE SEARCH: the one golden question shape that still never answered now does. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
+
+- WHAT LANDED: "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?" (G-035) is answered with a table of the first 20 isolates and their AMR genes, each cited to its Pathogen Detection page by BioSample accession, the organism cited to its NCBI Taxonomy record, and the sentence "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown". A third mode on the pathogen tool, `isolate_search`, streams the whole metadata file of the taxon and counts every match; a fixed rule in `core/isolate_search.py` recognises the shape and resolves the organism from a live-verified table of twenty with no call (`24305f0`, then `286bb49` and `f96c780` from its live runs).
+- DECIDED FROM THE USER'S CHAIR, after the discussion the product owner asked for and approved: a bounded sample with an exact count rather than "more exist", because the probe showed the 521 MB, 584,433-row file streams in 17.7 seconds; "ESBL" searches the blaCTX-M family only and the answer says blaTEM and blaSHV were left out and why, because 279,100 isolates carry a blaTEM allele and nearly all are the narrow-spectrum blaTEM-1; a boundary-aware prefix so blaCTX-M-15 never matches blaCTX-M-155. Three DECISIONS.md rows.
+- VERIFIED LIVE: G-035 5 of 5 across three deploys in 19 to 28 seconds; Salmonella ESBL, blaCTX-M-15 alone, Klebsiella carbapenemase, a true zero for Listeria blaKPC, the two clarifications and the shortest phrasing 2 of 2 each. The live runs found three things the offline arms could not, each fixed the same night: the genes were not on screen beside the isolate, the citation identity read "unknown", and an organism the product cannot search got the generic refusal. The mutation harness found a fourth before anything shipped: the shape took competency question Q5, a lookup of one named isolate.
+- WHAT DID NOT LAND, recorded rather than rounded up: the model's written summary fails grounding on most passes of this shape, so the code-built table carries the answer; the golden row's Taxonomy must-cite URL is the older browser address while the product cites NCBI's record page, a golden row edit that is the product owner's; no filter beyond the gene prefix exists. Two LEARNINGS.md rows. The test queries and the product owner's retest workflow, written from the user's chair, are `testing/Isolate_search_queries_and_workflow.md`; the evidence is `testing/Developer/reports/2026-09-22_isolate_search/`.
 
 2026-09-22, ITEM 10.3 RUN FOR THE FIRST TIME, ITEM 11.33's CAUSE FOUND AND FIXED, AND L-01 MEASURED. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
 

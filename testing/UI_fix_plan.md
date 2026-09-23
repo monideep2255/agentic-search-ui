@@ -18,7 +18,6 @@ the item's own row further down; the detail stays with the item.
 
 | Feature, in plain words | Item | Where it stands |
 |---|---|---|
-| An answer for a Pathogen Detection isolate description, the one golden question shape that still never answers | "Next, in order", item 1 (G-035) | Not started. Opens with a discussion of what the question should return, then a new mode on the pathogen tool, then the Think rule. About a day once the mode is agreed |
 | History shows the saved answer instantly, with Run again | 10.2 | Not built. After the release, by the product owner's order of 2026-09-13 |
 | Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
@@ -58,8 +57,12 @@ Set 10 has 10.1 built and live and 10.3 run. Set 11:
   - Decisions: the medical-advice line on Plain language answers (9.11), the
     trust-line wording (9.9), the three golden rows that disagree with the
     guardrail, and the twenty-source ceiling
-- The isolate shape opens with a discussion of what the question should
-  return, before any build
+- The isolate shape (G-035) is BUILT, VERIFIED LIVE and AWAITING RETEST
+  as of the night of 2026-09-22: the shape the product owner approved in
+  discussion, a bounded sample of isolates each with its AMR genes and a
+  link plus a disclosed count and cut. Its queries and retest workflow are
+  `testing/Isolate_search_queries_and_workflow.md`; retest items 17 to 22
+  in `testing/Shipped_2026-09-22.md`
 - L-01, a whole graph result vanishing on some runs: measured, its two causes
   read, and the reader now told (`10f6a46`); the cause itself is not fixed
 - Parked, and why: the explanation half of 11.31; the byte ceiling at 50,000;
@@ -1391,6 +1394,9 @@ at the close of a session that:
 - Late the same night measured the call ceiling and kept a question's own
   words out of the disease lookup
 - Taught the product a BioProject accession
+- Later the same night, after the product owner approved the shape in
+  discussion, built the isolate search (G-035), the last golden shape that
+  never answered, with its own test queries document
 - Put the high-level tracker at the top of this file, and updated the `/phase-checkpoint` and `/ship` skills from what the day showed (PR #100)
 
 Read this, then the Set 11 table above.
@@ -1417,6 +1423,7 @@ The 2026-09-20 shipped list, with what to retest, is
 | The call ceiling, the next list's item 1 as it then stood | MEASURED, and the ceiling stays at twenty | 24 runs on develop over eight question shapes, three passes each, with the count carried on the done event (`df657ad`): all answered, none refused by the ceiling, the worst pass 17 of 20 (the GRCh38 window every pass, the GEO question on one), the three-rs question 6. Neither the ceiling nor the fan-out moves. What varies is the model's spans the FIRST time a process sees them (three in-process caches), so the first pass after a deploy is the honest count. Evidence: `testing/Developer/reports/2026-09-22_call_ceiling/findings.md` |
 | The question's own words, never a disease | SHIPPED (`d8619bc`), AWAITING RETEST | Found by the ceiling measurement: "condition" and "tumour" were sent to MedGen's name index as disease names, bound eight arbitrary records each, and the answer told the person it "does not address the following entities named in the question" and listed them. A mention made only of generic disease vocabulary now binds nothing; a named disease with a generic word in it ("Lynch syndrome") is searched as before. Retest items 12 and 13 in `testing/Shipped_2026-09-22.md` |
 | The BioProject accession, the next list's item 2 as it then stood | BUILT, VERIFIED LIVE, AWAITING RETEST | "For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies" used to be answered with a request to name a gene. An accession (BioProject, BioSample, SRA, assembly) is now recognised by a fixed rule, resolved live (one search, one link per linked database), and its record plus the samples, runs and assemblies it links to are planned as NCBI summaries with no graph call, each cited to its NCBI page; an accession NCBI does not have is answered "was not found in NCBI, check the accession and ask again". Live on develop at `693c020`: G-007 3 of 3 answered in 15 to 27 seconds with a fixed eight calls, the unknown accession 2 of 2. The live runs found two follow-up fixes (`d882856`, an SRA run shown as its accession rather than NCBI's markup; `649750c`, a resolved accession counts as the question's subject, so "which runs come from it?" no longer asks which gene). The isolate shape that shared this item remains and needs a new tool mode. Evidence: `testing/Developer/reports/2026-09-22_bioproject_accession/findings.md` |
+| The isolate search, the next list's item 1 as it then stood (G-035) | BUILT, VERIFIED LIVE, AWAITING RETEST | "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?" used to be answered with a request to name a gene. The shape is now recognised by a fixed rule (an isolate word, an organism from a live-verified table of twenty, a gene family word or a gene), the organism resolves to its Taxonomy id with no call, and a third pathogen tool mode, `isolate_search`, scans the whole metadata file of the taxon, counts every isolate carrying the prefix and keeps the first 20. The answer is a table of isolates with their AMR genes, each cited to its Pathogen Detection page, the organism cited to NCBI Taxonomy, and the sentence "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown". "ESBL" searches blaCTX-M only and the answer says blaTEM and blaSHV were left out and why. Measured before design: the 521 MB, 584,433-row file streams in 17.7 seconds, so the count is exact. Live on develop: G-035 5 of 5 answered in 19 to 28 seconds across three deploys (`24305f0`, then `286bb49` and `f96c780` from its live runs: the genes shown beside each isolate as a table, the citation identity the BioSample accession, and an organism the product cannot search asked "which organism"); Salmonella ESBL, blaCTX-M-15 alone, Klebsiella carbapenemase, a true zero for Listeria blaKPC, the two clarifications and the shortest phrasing 2 of 2 each. Evidence: `testing/Developer/reports/2026-09-22_isolate_search/findings.md` |
 | This plan, and the two skills that keep it current | DONE, live on develop | "Where every feature stands" is now the first section (`7801a19`), refreshed by `/phase-checkpoint` for every item that changes state; `/ship` runs the CI gates locally before it pushes (PR #100). Evidence: `tracker/doc_readability_runs.md`, the 2026-09-22 row |
 | The instrument | Three lessons in `LEARNINGS.md` | The client machine slept twice mid-run and the record read as the app hanging; a fresh-context agent found 11.33 by listing every stage on the production path |
 
@@ -1469,6 +1476,19 @@ option rather than a queued task.
 
 ### What is live on develop
 
+- A question asking which isolates of an organism carry a resistance gene
+  or family ("What Escherichia coli isolates in Pathogen Detection carry
+  extended-spectrum beta-lactamase genes?") is answered with a table of the
+  first 20 isolates and their AMR genes, each linked to its Pathogen
+  Detection page, the organism cited to NCBI Taxonomy, the exact count of
+  every matching isolate in the snapshot, and which gene prefixes were
+  searched and which were left out. A question naming an organism and no
+  gene asks which gene; one naming a resistance gene and an organism the
+  product cannot search asks which organism. Pushed 2026-09-22 (night) as
+  `24305f0` with two follow-ups from its live runs (`286bb49`, `f96c780`),
+  verified live 5 of 5 on G-035. Retest: items 17 to 22 in
+  `testing/Shipped_2026-09-22.md`, and the full set in
+  `testing/Isolate_search_queries_and_workflow.md`. AWAITING RETEST.
 - A chromosome window with its assembly named ("chr17:43,044,295-43,125,364
   on GRCh38") is answered with the genes under it, resolved from the
   coordinates alone, and the dbVar and ClinVar records that genuinely
@@ -1724,22 +1744,25 @@ with `d882856` and `649750c` from its live runs). Items 7 to 16 in
 here is a retest; every item is engineering or a decision, ordered by what the
 person typing the question feels first.
 
-1. THE ONE SHAPE THAT STILL NEVER ANSWERS: a Pathogen Detection isolate
-   description (G-035). Think resolves no entity for it and the plan
-   dispatches a graph search with nothing to bind. Unlike the coordinate range
-   and the accession, this is NOT a Think rule over a tool that already
-   exists: the pathogen tool has two modes, one isolate by taxon and BioSample
-   accession, and a cluster's SNP neighbours, and nothing searches isolates by
-   an AMR gene, a genotype or a description. So it opens with a discussion of
-   what the question should return, then a new mode on the existing tool,
-   then the Think rule. About a day once the mode is agreed.
-2. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
+The isolate shape (G-035), which headed this list, is DONE as of the night
+of 2026-09-22: built after the discussion the product owner approved,
+verified live 5 of 5, and awaiting retest (items 17 to 22 in
+`testing/Shipped_2026-09-22.md`). Every golden question shape now answers
+on at least one pass. What the isolate work leaves open, each recorded in
+`testing/Developer/reports/2026-09-22_isolate_search/findings.md`: the
+model's written summary fails grounding on most passes so the code-built
+table carries the answer; the golden row's must-cite URL for Taxonomy is
+the older browser address while the product cites NCBI's record page, a
+golden row edit that is the product owner's; and no filter beyond the gene
+prefix exists yet.
+
+1. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
    row: "334" expects a clarifying ask and is refused as off-topic; "tell me
    about the tree of life" expects an answer; the pathogenicity classification
    request expects a flag rather than a medical-advice refusal. Nothing blocks
-   on it.
-3. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
-4. THREE DISCUSSIONS, EACH A PRECURSOR TO A BUILD UNDER `/bossman-mode`, by
+   on it. A fourth row joins them: G-035's Taxonomy must-cite URL.
+2. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
+3. THREE DISCUSSIONS, EACH A PRECURSOR TO A BUILD UNDER `/bossman-mode`, by
    the product owner's decision of 2026-09-22 ("I think of these as
    discussion, a precursor to the build"). None waits on a decision taken
    cold; each opens with a scoping discussion whose written outcome is what
@@ -1786,13 +1809,14 @@ That points hard at event-loop starvation, consistent with the same suite failin
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up "Next, in order" at item 1, the isolate shape, which opens with a
-   discussion rather than code. Everything the 2026-09-22 day built is
-   approved; the evening's and the night's items, the two lost searches with
-   the GEO search, the coordinate range, the generic-word guard and the
-   BioProject accession, are verified live and await the product owner's
-   retest, items 7 to 16 in `testing/Shipped_2026-09-22.md`. The call
-   ceiling is measured and stays at twenty.
+4. Pick up "Next, in order" at item 1, the three golden rows that disagree
+   with the guardrail, which is the product owner's call, or the three
+   discussions at item 3. Everything the 2026-09-22 day built is approved;
+   the evening's and the night's items, the two lost searches with the GEO
+   search, the coordinate range, the generic-word guard, the BioProject
+   accession and the isolate search, are verified live and await the
+   product owner's retest, items 7 to 22 in `testing/Shipped_2026-09-22.md`.
+   The call ceiling is measured and stays at twenty.
 
 ## Developer detail
 

@@ -33,9 +33,9 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 The next action is always one line, kept current here. Right now it is:
 
 - WORK "NEXT, IN ORDER" FROM ITS CUTOFF. Three answers for a fresh session, one line each:
-  - WHAT IS LIVE ON DEVELOP: everything through `66fe042` (the merge of PR #100), which carries the two lost searches and the GEO search (`27d68ae`, `b6cd025`), the coordinate range (`66b3811`, `e477077`, `c72b8a7`), the call count on the done event (`df657ad`), the generic-word guard (`d8619bc`), the BioProject accession (`a64c44e`, `d882856`, `649750c`), the fix plan's high-level tracker (`7801a19`), the CI workflow skipping Markdown-only pushes (PR #99) and the updated `/phase-checkpoint` and `/ship` skills (PR #100). Production is unchanged on `v0.2.0`.
-  - WHAT AWAITS THE PRODUCT OWNER'S RETEST: items 7 to 16 in `testing/Shipped_2026-09-22.md`, plus the four one-look checks (11.14, 11.36, 9.12, 8.4).
-  - THE ONE NEXT ACTION: `testing/UI_fix_plan.md`, "Next, in order", item 1, the isolate shape (G-035), which opens with a discussion of what the question should return, since no mode of the pathogen tool searches isolates by an AMR gene, a genotype or a description.
+  - WHAT IS LIVE ON DEVELOP: everything through `f96c780`, which carries the isolate search (`24305f0`, with `286bb49` and `f96c780` from its live runs) on top of `66fe042` (the merge of PR #100): the two lost searches and the GEO search (`27d68ae`, `b6cd025`), the coordinate range (`66b3811`, `e477077`, `c72b8a7`), the call count on the done event (`df657ad`), the generic-word guard (`d8619bc`), the BioProject accession (`a64c44e`, `d882856`, `649750c`), the fix plan's high-level tracker (`7801a19`), the CI workflow skipping Markdown-only pushes (PR #99) and the updated `/phase-checkpoint` and `/ship` skills (PR #100). Production is unchanged on `v0.2.0`.
+  - WHAT AWAITS THE PRODUCT OWNER'S RETEST: items 7 to 22 in `testing/Shipped_2026-09-22.md` (17 to 22 are the isolate search, whose twelve queries and workflow are `testing/Isolate_search_queries_and_workflow.md`), plus the four one-look checks (11.14, 11.36, 9.12, 8.4).
+  - THE ONE NEXT ACTION: `testing/UI_fix_plan.md`, "Next, in order", item 1, the golden rows that disagree with the guardrail (now four, with G-035's Taxonomy must-cite URL), which is the product owner's call; or item 3, the three discussions that precede a build under `/bossman-mode`. Every golden question shape now answers on at least one pass.
   - Start at the top of `testing/UI_fix_plan.md`: its first section, "Where every feature stands", says what is done and what is left; "Where we stopped" is the cutoff. The call ceiling was measured (24 runs, none refused, worst pass 17 of 20) and stays at twenty; evidence in `testing/Developer/reports/2026-09-22_call_ceiling/findings.md` and `2026-09-22_bioproject_accession/findings.md`.
   - Read "What is parked, and why" BEFORE picking anything up. OMIM is live WITH `filter_omim_titles`; the dispatch and the filter ship together and neither is enabled or removed without the other.
 - ITEM 10.3, THE CONSISTENCY RUN, HAS NOW BEEN RUN, for the first time, on 2026-09-22: all 50 golden questions three times against develop at `63ec316`, signed in on two fresh test accounts. 86 of 150 runs answered; 25 questions answer every time (the 2026-09-12 baseline had 1), 18 never (had 43), none worse. The 18 split into 9 expected refusals, 3 guardrail refusals the golden row disagrees with, and 6 genuine gaps, every one a Layer 1 failure. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`.
@@ -109,19 +109,24 @@ WHAT LANDED, in the terms a person notices:
 | The question's own words (late night) | "What is rs334 and what condition is it associated with?" and the GEO question no longer end with a note listing eight records the person never named; a mention made only of generic disease vocabulary is never searched as a disease name. Awaits retest |
 | The fix plan's tracker and the two skills (late night) | `testing/UI_fix_plan.md` opens with "Where every feature stands"; `/phase-checkpoint` owns every document a session changes and `/ship` runs the CI gates locally before it pushes (PR #100); CI skips Markdown-only pushes (PR #99) |
 | The BioProject accession (late night) | A project, sample, run or assembly accession is answered with the record and what it links to, each cited to its NCBI page; an accession NCBI does not have is told so. Live: G-007 3 of 3, the unknown accession 2 of 2, and after its two follow-up fixes the BioSample question 2 of 2. Awaits retest |
+| The isolate search (later the same night, after the discussion) | "What Escherichia coli isolates in Pathogen Detection carry ESBL genes?" is answered with a table of the first 20 isolates and their AMR genes, each linked to its Pathogen Detection page, the organism cited to NCBI Taxonomy, and the exact count of every matching isolate in the snapshot (140,476), with the prefixes searched and the ones left out stated. A third pathogen tool mode scans the whole 521 MB metadata file in about 18 seconds. Live: G-035 5 of 5 across three deploys (`24305f0`, then `286bb49` for the genes table and the citation identity, `f96c780` for the "which organism" question), the seven extra questions 2 of 2 each. Awaits retest, items 17 to 22 |
 
 WHAT DID NOT LAND, and each is recorded rather than rounded up:
 
 - L-01 IS NOT FIXED in the answer text. Both causes are read and the reason
   now reaches the stream; whether the answer says so is the product owner's
   decision.
-- ONE golden shape still never answers: the isolate description (G-035),
-  which needs a new mode on the pathogen tool before any Think rule can use
-  it. Of the shapes that never answered at the morning's measurement, the
-  two lost searches (`27d68ae`, `b6cd025`), the coordinate range (`66b3811`)
-  and the BioProject accession (`a64c44e`) were FIXED the same day, all
-  verified live and awaiting retest; Lynch syndrome still loses its graph
-  search on some passes.
+- NO golden shape never answers any more: of the shapes that never answered
+  at the morning's measurement, the two lost searches (`27d68ae`,
+  `b6cd025`), the coordinate range (`66b3811`), the BioProject accession
+  (`a64c44e`) and, last, the isolate description (`24305f0`) were all FIXED
+  the same day, verified live and awaiting retest; Lynch syndrome still
+  loses its graph search on some passes. What the isolate search leaves
+  open, in `testing/Developer/reports/2026-09-22_isolate_search/findings.md`:
+  the model's written summary fails grounding on most passes so the
+  code-built table carries the answer, the golden row's Taxonomy must-cite
+  URL is the older browser address while the product cites NCBI's record
+  page, and no filter beyond the gene prefix exists.
 - Everything the day built is approved by retest: 11.33, the compute
   refusal, the lost-search disclosure, the fast plain-terms explanation and
   OMIM. `testing/Shipped_2026-09-22.md` is the day's summary.
@@ -147,12 +152,20 @@ FOUR THINGS THE INSTRUMENTS TAUGHT, all in `LEARNINGS.md` dated 2026-09-22:
 - A name index matches any word, including the question's own: "condition"
   and "tumour" bound eight arbitrary records each, found only by reading
   the answer text of a cold run, since both runs counted as answered.
+- An instrument's capture defines what a measurement can see: the
+  consistency runner keeps every event but tokens, so a table added to an
+  answer was invisible to it, and the same text before and after the fix
+  proved nothing until a second instrument kept the tokens.
+- A shape that skips the model's span confirmation must prove it does not
+  claim another path's questions: the isolate shape took competency
+  question Q5, a lookup of one named isolate, and only the mutation
+  harness's P1 arm going vacuous on Q5 showed it.
 
 What the next session does first is `testing/UI_fix_plan.md`'s "Next, in
-order": item 1 is the isolate shape, which opens with a discussion of what
-the question should return. The product owner's retest of the evening's and
-the night's items is listed in `testing/Shipped_2026-09-22.md`, items 7 to
-16.
+order": item 1 is the golden rows that disagree with the guardrail, the
+product owner's call, and item 3 the three discussions that precede a build.
+The product owner's retest of the evening's and the night's items is listed
+in `testing/Shipped_2026-09-22.md`, items 7 to 22.
 
 ### Process lessons from the fix-loop sessions, already applied
 
