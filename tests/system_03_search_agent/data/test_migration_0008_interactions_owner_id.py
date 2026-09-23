@@ -277,8 +277,25 @@ def test_the_downgrade_removes_exactly_that_column(migrated_head) -> None:
     The rest of the table is asserted unchanged in the same breath. A
     `downgrade` that dropped the wrong column, or more than one, would
     otherwise satisfy an assertion that only checked `owner_id` is gone.
+
+    THE TWO-STEP DOWNGRADE BELOW IS NOT A FLOURISH, amended 2026-09-23. This
+    arm used to take its `before` at HEAD and then call `downgrade(cfg,
+    f"{REVISION}-1")` in one go. That relative target names one revision
+    before 0008, so the single call reverses every revision between head and
+    0007. While 0008 happened to be the newest column-adding revision the
+    two were the same thing; revision 0010 then added two columns above it
+    and this arm reported them as 0008 over-removing, which is a true
+    statement about the wrong step.
+
+    So the chain is brought down to exactly 0008 first, `before` is read
+    THERE, and only then is one further revision reversed. Every assertion
+    below is unchanged and none was weakened: what changed is which step the
+    arm measures, which is the step its own docstring has always claimed.
+    See `testing/Developer/reports/2026-09-23_overnight/findings.md`.
     """
     cfg = migrated_head
+    command.downgrade(cfg, REVISION)
+
     engine = _fresh_engine()
     try:
         before = {c["name"] for c in inspect(engine).get_columns(TABLE)}

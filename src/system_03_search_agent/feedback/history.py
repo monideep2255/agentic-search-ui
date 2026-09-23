@@ -9,7 +9,17 @@ Reads:
       `owner_id`.
 
 Writes:
-    - Nothing. This module is read-only.
+    - `interactions.answer_markdown`, `interactions.audience_depth` and
+      `interactions.answer_trust_line`, set to NULL, and ONLY by
+      `forget_saved_answers_for_account`.
+
+      This line used to read "Nothing. This module is read-only", and it was
+      replaced in the same change that made it false rather than left to be
+      trusted by the next reader. `list_history` and `get_saved_answer` are
+      still read-only, and every other statement in this file about
+      ownership and about never mutating a row still holds: the one writer
+      here clears a saved answer and never touches a row's identity,
+      question, citations, cost or latency.
 
 ## Ownership: the same posture as `feedback/writer.py`
 
@@ -46,13 +56,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
+from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from system_03_search_agent.data.models import Interaction
 from system_03_search_agent.data.session import session_scope
 
-__all__ = ["DEFAULT_LIMIT", "MAX_LIMIT", "HistoryEntry", "list_history"]
+__all__ = [
+    "DEFAULT_LIMIT",
+    "MAX_LIMIT",
+    "HistoryEntry",
+    "SavedAnswer",
+    "forget_saved_answers_for_account",
+    "get_saved_answer",
+    "list_history",
+]
 
 #: T-4.13-02's contract: `limit` defaults to 20. Restated here, not
 #: imported from the endpoint module, so this function's own contract does
@@ -73,16 +93,33 @@ MAX_LIMIT = 50
 #: query is even built rather than after a round trip to the database.
 _MAX_OWNER_ID_LENGTH = 128
 
+#: Mirrors `feedback.contracts.InteractionRow.trace_id`'s own bound
+#: (`max_length=64`), for the same reason `_MAX_OWNER_ID_LENGTH` mirrors
+#: `owner_id`'s: a real stored `trace_id` cannot exceed the width the write
+#: path enforces, so anything longer is refused before a query is built.
+_MAX_TRACE_ID_LENGTH = 64
+
 
 @dataclass(frozen=True)
 class HistoryEntry:
     """One row of a caller's own history, exactly what `GET /v1/history` renders.
 
-    No answer narrative: `interactions` stores none
-    (`feedback/contracts.py`'s `InteractionRow`), and decision D-4.13-01
-    (`tracker/phase_4.13.md`) is why this type does not invent one.
-    `citation_count` is a count, not the citations themselves, for the same
-    reason.
+    No answer narrative HERE, and the reason changed on 2026-09-23. This
+    paragraph used to say `interactions` stores no answer at all (decision
+    D-4.13-01, `tracker/phase_4.13.md`), and that became false when alembic
+    0010 added `answer_markdown` for fix-plan item 10.2. It is rewritten
+    rather than left standing, because a confident sentence is where the
+    next reader stops checking.
+
+    The table now stores an answer for a signed-in account's answered runs.
+    This type still carries none, by a different and narrower argument: a
+    page of history is a list of what you asked, and dragging up to fifty
+    answers across the wire to render a list of questions would make the
+    rail slower for everyone to serve a row nobody clicked. `has_saved_
+    answer` below is the one boolean that list needs; `get_saved_answer`
+    fetches the answer itself, once, when a person actually opens one.
+    `citation_count` is a count rather than the citations for the same
+    reason it always was.
 
     `citation_count` is `None`, never a guess, when the row's stored
     `citations` value is not the list this table's Python type declares.
@@ -97,6 +134,13 @@ class HistoryEntry:
     asked_at: datetime
     trust_signal: str
     citation_count: int | None
+    #: Whether this row holds the answer it gave, so the rail can offer to
+    #: open it instead of re-asking (fix-plan item 10.2). Computed in SQL as
+    #: `answer_markdown IS NOT NULL`, so listing a page of history never
+    #: fetches a single character of answer text. False is the ordinary case
+    #: and carries no fault: a guest's row, a refusal, a row from before the
+    #: column existed, or an answer over the stored bound.
+    has_saved_answer: bool = False
 
 
 def _citation_count(stored: object) -> int | None:
@@ -226,6 +270,10 @@ def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry
                 Interaction.created_at,
                 Interaction.trust_signal,
                 Interaction.citations,
+                # A boolean computed by the database, never the text itself:
+                # a page of twenty rows must not drag twenty saved answers
+                # across the wire to answer a yes/no question about each.
+                Interaction.answer_markdown.isnot(None).label("has_saved_answer"),
             )
             .where(Interaction.owner_id == owner_id)
             .order_by(Interaction.created_at.desc(), Interaction.id.desc())
@@ -239,6 +287,151 @@ def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry
             asked_at=row.created_at,
             trust_signal=row.trust_signal,
             citation_count=_citation_count(row.citations),
+            has_saved_answer=bool(row.has_saved_answer),
         )
         for row in rows
     ]
+
+
+@dataclass(frozen=True)
+class SavedAnswer:
+    """The answer one past search gave, exactly as it stood on screen.
+
+    Fix-plan item 10.2. What the person gets: they click a past search and
+    the answer they already got is there at once, with no second search
+    charged to them.
+
+    `citations` is the row's stored `citations` column, which build phase
+    4.6 has been writing since it shipped: the full `CitationPayload` dicts,
+    the same shape the answer screen already renders. No new column was
+    needed for the citation half of this feature, and inventing one would
+    have stored the same facts twice.
+    """
+
+    trace_id: str
+    question: str
+    asked_at: datetime
+    depth: str
+    answer_markdown: str
+    citations: list[Any]
+    trust_signal: str
+    #: The one plain sentence the person read under their answer. Carried on
+    #: this type and NOT on the HTTP response, because the pinned wire
+    #: contract has no field for it; see alembic 0010's docstring. A caller
+    #: of this module directly gets the fact; the endpoint does not publish
+    #: it until the product owner says so.
+    trust_line: str | None = None
+
+
+def get_saved_answer(owner_id: str, trace_id: str) -> SavedAnswer | None:
+    """One of the caller's own saved answers, or None.
+
+    ONE None FOR THREE CAUSES, and that is the design rather than a
+    shortcut. This returns None when the row does not exist, when it exists
+    and belongs to somebody else, and when it exists, is the caller's, and
+    holds no saved answer. The surface turns all three into the same 404,
+    because any answer that distinguished them would confirm to a stranger
+    that a given `trace_id` exists and belongs to someone. A 403 on another
+    person's row is exactly that confirmation.
+
+    The ownership rule is `list_history`'s, unchanged and for the same
+    reasons: one direct `owner_id` comparison at the SQL boundary, never
+    `user_id` (NULL for every guest), never `session_id`, never anything
+    derived. A row with a NULL `owner_id` can never match a real caller's
+    non-empty string, by SQL's own NULL semantics.
+
+    `answer_markdown IS NOT NULL` is part of the WHERE clause rather than a
+    Python check afterwards, so a row with no saved answer is never fetched
+    and there is one shape of result to reason about instead of two.
+    """
+    if not owner_id:
+        raise ValueError("owner_id must not be empty")
+    if len(owner_id) > _MAX_OWNER_ID_LENGTH:
+        raise ValueError(
+            f"owner_id is capped at {_MAX_OWNER_ID_LENGTH} characters, got {len(owner_id)}"
+        )
+    if not trace_id:
+        raise ValueError("trace_id must not be empty")
+    if len(trace_id) > _MAX_TRACE_ID_LENGTH:
+        raise ValueError(
+            f"trace_id is capped at {_MAX_TRACE_ID_LENGTH} characters, got {len(trace_id)}"
+        )
+
+    with session_scope() as session:
+        row = session.execute(
+            select(
+                Interaction.trace_id,
+                Interaction.query_text,
+                Interaction.created_at,
+                Interaction.trust_signal,
+                Interaction.citations,
+                Interaction.answer_markdown,
+                Interaction.audience_depth,
+                Interaction.answer_trust_line,
+            ).where(
+                Interaction.owner_id == owner_id,
+                Interaction.trace_id == trace_id,
+                Interaction.answer_markdown.isnot(None),
+            )
+        ).first()
+
+    if row is None:
+        return None
+    return SavedAnswer(
+        trace_id=row.trace_id,
+        question=row.query_text,
+        asked_at=row.created_at,
+        # A saved answer always records its own depth: `InteractionRow`
+        # refuses to hold one without the other and the database repeats the
+        # rule. `"researcher"` is the floor for a row written directly into
+        # the database around both, and it is the product's own default
+        # rather than an invented value.
+        depth=row.audience_depth or "researcher",
+        answer_markdown=row.answer_markdown,
+        citations=row.citations if isinstance(row.citations, list) else [],
+        trust_signal=row.trust_signal,
+        trust_line=row.answer_trust_line,
+    )
+
+
+def forget_saved_answers_for_account(user_id: UUID) -> int:
+    """Clear every saved answer belonging to one account. Returns the count.
+
+    THIS FUNCTION IS CALLED BY NOTHING TODAY, and that is stated here rather
+    than implied, because a confident sentence describing a wiring that does
+    not exist is the failure this repository has shipped four times.
+
+    The product owner's decision of 2026-09-22 was: store the answer for
+    signed-in accounts only, and delete it with the account. The first half
+    is enforced at the write. The second half cannot be proven end to end,
+    because THERE IS NO ACCOUNT DELETE PATH: no route under `adapters/` or
+    `auth/` declares a DELETE verb and no code anywhere under `src/` deletes
+    a `User` row (searched 2026-09-22, recorded in
+    `testing/Developer/reports/2026-09-23_overnight/findings.md`). Worse,
+    the existing foreign key would not deliver it either:
+    `interactions.user_id` is `ON DELETE SET NULL`, so deleting the account
+    row leaves its interactions behind with a null user and the link back to
+    the account gone.
+
+    So this exists, tested, so that a future delete path cannot ship without
+    it. WHAT THAT PATH MUST DO, in one line: call this function inside the
+    same transaction that deletes the user, BEFORE the user row goes, since
+    `ON DELETE SET NULL` destroys the only link the moment it does.
+
+    `audience_depth` is cleared alongside the answer, because a depth with
+    no answer is a fact about a person's reading preference with nothing
+    left to attach it to, and `InteractionRow` refuses that pairing anyway.
+    The row itself is KEPT: it carries the cost and latency the daily caps
+    and the weekly review ritual count, and this function's job is to forget
+    the answer, not to rewrite the record that a query happened.
+    """
+    with session_scope() as session:
+        result = session.execute(
+            update(Interaction)
+            .where(
+                Interaction.user_id == user_id,
+                Interaction.answer_markdown.isnot(None),
+            )
+            .values(answer_markdown=None, audience_depth=None, answer_trust_line=None)
+        )
+    return int(result.rowcount or 0)

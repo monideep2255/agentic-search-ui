@@ -211,6 +211,38 @@ class Interaction(Base):
     )
     user_feedback: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
+    #: The finished answer as it stood on screen, rendered to markdown from
+    #: this run's own typed `token` events (alembic 0010, fix-plan item
+    #: 10.2). NULL is the ordinary case and means only "this row holds no
+    #: saved answer": a guest's row, a refusal, a run from before this
+    #: column existed, or an answer that exceeded the stored bound. Nothing
+    #: reading this column may treat NULL as an error.
+    #:
+    #: SIGNED-IN ACCOUNTS ONLY, by product-owner decision of 2026-09-22, and
+    #: the exclusion is applied AT THE WRITE, never at the read: a row whose
+    #: `owner_id` does not begin `user:` never has this column populated, so
+    #: no guest answer is ever on disk to be filtered out later.
+    #: `feedback.contracts.InteractionRow` refuses to construct such a row at
+    #: all, so the rule holds for any future writer as well as for capture.
+    answer_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The audience depth the saved answer above was written at, so a reader
+    #: is shown the same depth they asked for rather than today's default.
+    #: The full four-value `Query.audience_depth` vocabulary, stored as it
+    #: was, never the narrower two-value label the history wire contract
+    #: publishes: a stored row stays true and the mapping happens at the
+    #: wire. NULL exactly when `answer_markdown` is NULL.
+    audience_depth: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The one plain sentence the person read under their answer, for
+    #: example "Sources disagree on at least one claim"
+    #: (`DonePayload.trust_line`). STORED BUT NOT SERVED: the pinned wire
+    #: contract for the saved answer carries `trust_signal` and no trust
+    #: line, and it was not changed. Measured across 150 live runs, all 35
+    #: that ended `answer` or `flag` carried one, so a column that costs
+    #: nothing keeps the fact recoverable if the product owner decides the
+    #: saved view should show it. NULL when `answer_markdown` is NULL, and
+    #: also NULL for an answered run whose `done` event carried no line.
+    answer_trust_line: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     experiment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     experiment_arm: Mapped[str | None] = mapped_column(Text, nullable=True)
     cost_usd: Mapped[Any | None] = mapped_column(Numeric(9, 6), nullable=True)
@@ -232,6 +264,27 @@ class Interaction(Base):
         CheckConstraint(
             "rubric_score BETWEEN 0 AND 16",
             name="ck_interactions_rubric_score",
+        ),
+        # alembic 0010. The product owner's "signed-in accounts only" stated
+        # once more where nothing can route around it. `left(owner_id, 5)`
+        # rather than a `LIKE 'user:%'` pattern on purpose: it says the same
+        # thing, and it carries no `%` for a driver to mistake for a
+        # parameter placeholder in DDL.
+        CheckConstraint(
+            "answer_markdown IS NULL OR left(owner_id, 5) = 'user:'",
+            name="ck_interactions_answer_account_only",
+        ),
+        # The stored bound, enforced by the database as well as by the
+        # Pydantic row. See alembic 0010's docstring for how 32000 was
+        # measured rather than guessed.
+        CheckConstraint(
+            "answer_markdown IS NULL OR char_length(answer_markdown) <= 32000",
+            name="ck_interactions_answer_markdown_length",
+        ),
+        CheckConstraint(
+            "audience_depth IS NULL OR audience_depth IN "
+            "('clinical_brief','researcher','deep_technical','plain_language')",
+            name="ck_interactions_audience_depth",
         ),
         Index("idx_interactions_created_at", "created_at"),
         Index("idx_interactions_user_id", "user_id"),

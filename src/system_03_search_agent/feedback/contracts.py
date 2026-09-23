@@ -35,7 +35,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from system_03_search_agent.contracts.events import CitationPayload
 
@@ -206,6 +206,35 @@ class InteractionRow(BaseModel):
     #: below (F-4.6-11) when it is not None.
     user_feedback: dict[str, Any] | None = None
 
+    #: The finished answer as it stood on screen, rendered to markdown from
+    #: this run's own typed `token` events (fix-plan item 10.2, alembic
+    #: 0010). None is the ordinary case: a guest's row, a refusal, or an
+    #: answer over `MAX_ANSWER_MARKDOWN` below.
+    #:
+    #: SIGNED-IN ACCOUNTS ONLY (product-owner decision, 2026-09-22),
+    #: enforced by `_answer_is_account_only` below. Any construction that
+    #: pairs a non-None answer with a guest `owner_id` RAISES, so a guest
+    #: answer cannot be assembled at all, let alone written. That is the
+    #: point: the decision was to exclude guests at the write, and a rule
+    #: that lives only in the one function that happens to call this model
+    #: today would not bind the next one.
+    answer_markdown: str | None = Field(None, max_length=32000)
+    #: The depth the saved answer was written at, stored as the full
+    #: four-value `Query.audience_depth` vocabulary rather than the narrower
+    #: label the history wire contract publishes. None exactly when
+    #: `answer_markdown` is None.
+    audience_depth: (
+        Literal["clinical_brief", "researcher", "deep_technical", "plain_language"] | None
+    ) = None
+    #: The one plain sentence the person read under their answer
+    #: (`DonePayload.trust_line`). Stored, never served: the pinned wire
+    #: contract for the saved answer has no field for it. See alembic 0010's
+    #: docstring for why it is captured anyway. Bounded to match
+    #: `DonePayload.trust_line`'s own `max_length=200`, mirrored rather than
+    #: re-derived, so this can never reject a value the event already
+    #: accepted.
+    answer_trust_line: str | None = Field(None, max_length=200)
+
     # Implementation columns Section 15 names as required to make the table
     # usable, inherited from the parent session or the harness.
     experiment_id: uuid.UUID | None = None
@@ -373,6 +402,49 @@ class InteractionRow(BaseModel):
             return None
         FeedbackPayload.model_validate(value)
         return value
+
+    @model_validator(mode="after")
+    def _answer_is_account_only(self) -> InteractionRow:
+        """The product owner's "signed-in accounts only", made structural.
+
+        Fix-plan item 10.2, decided 2026-09-22. A row that carries a saved
+        answer must belong to an account (`owner_id` beginning `user:`), and
+        a row that carries a saved answer must say which depth it was
+        written at, so a reader is never shown one at a depth nobody
+        recorded.
+
+        RAISES rather than quietly dropping the answer. This is the shape
+        this repository has been bitten by before: a control that silently
+        repairs its input passes every test written against its output while
+        the thing it was meant to prevent goes unnoticed. If this ever
+        raises on real traffic it means a caller tried to save a guest's
+        answer, which is a genuine contract violation and must be loud.
+        Capture's own caller already treats a construction failure as a
+        dropped row (`core/run.py::_capture_interaction`), so a raise here
+        costs the bookkeeping row and never the person's answer.
+
+        The database repeats this rule as a CHECK constraint (alembic 0010,
+        `ck_interactions_answer_account_only`). Two statements of one rule,
+        deliberately: this one binds every assembler, that one binds every
+        INSERT, including one that never passes through this model.
+        """
+        if self.answer_markdown is None:
+            if self.audience_depth is not None:
+                raise ValueError(
+                    "audience_depth is recorded only alongside a saved answer; "
+                    "got a depth with answer_markdown=None"
+                )
+            return self
+        if not self.owner_id.startswith("user:"):
+            raise ValueError(
+                "answer_markdown is stored for signed-in accounts only "
+                "(owner_id must begin 'user:'); a guest row must carry none"
+            )
+        if self.audience_depth is None:
+            raise ValueError(
+                "a saved answer must record the audience_depth it was written at"
+            )
+        return self
 
 
 #: A citation id is an identifier, not prose. Bounded at the same 64

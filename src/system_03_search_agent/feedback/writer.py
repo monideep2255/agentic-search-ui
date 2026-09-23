@@ -237,6 +237,14 @@ def _interaction_values(row: InteractionRow) -> dict[str, Any]:
         "experiment_arm": row.experiment_arm,
         "cost_usd": row.cost_usd,
         "latency_ms": row.latency_ms,
+        # alembic 0010, fix-plan item 10.2. Named here like every other
+        # column, per this function's own rule that a field `InteractionRow`
+        # gains must not reach the database just because its name matches.
+        # Both are None on every guest row and on every refusal; see
+        # `feedback/capture.py`'s `answer_markdown_from` for why.
+        "answer_markdown": row.answer_markdown,
+        "audience_depth": row.audience_depth,
+        "answer_trust_line": row.answer_trust_line,
     })
 
 
@@ -305,6 +313,13 @@ def _minimal_interaction_values(row: InteractionRow) -> dict[str, Any]:
         "experiment_arm": None,
         "cost_usd": row.cost_usd,
         "latency_ms": row.latency_ms,
+        # A payload column like every other one here, so it is emptied for
+        # the same reason: this insert exists to count a run whose content
+        # could not be stored, and a saved answer is content. The row then
+        # reports no saved answer and the person is offered Run again.
+        "answer_markdown": None,
+        "audience_depth": None,
+        "answer_trust_line": None,
     })
 
 
