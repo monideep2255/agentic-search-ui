@@ -92,6 +92,23 @@ named here rather than silently cut, closing off the exact failure class
 once already on sibling tools: a truncated value that still looks like a
 real, different, shorter value is worse than an honest gap.
 
+Design decision 5, a third input branch, `isolate_search`, and two
+additive output fields, `rows_scanned` and `scan_complete`. Section 6.6's
+two locked branches both start from an identifier the caller already
+holds; the question "which isolates of this taxon carry a gene in this
+family" starts from neither, so it needs its own branch over the taxon's
+Metadata TSV. Additive within v1 exactly as design decision 4 is: a new
+`mode` value and two optional output fields, no existing field's meaning
+changed, so every existing caller and every existing construction site
+keeps working unchanged. The two output fields exist because a bounded
+sample without a total reads as the whole answer: `total_available` says
+how many isolates matched, `scan_complete` says whether that number is
+exact or a lower bound the deadline cut short, and `rows_scanned` says
+how much of the file was actually read. See
+`PathogenIsolateSearchInput`'s own docstring for the input side and
+`pathogen_detection.py`'s module docstring for the scan design and the
+live numbers behind it.
+
 Depends on:
     - Nothing repo-local. `PATHOGEN_TAXON_PATTERN` and
       `PATHOGEN_SOURCE_URL_PATTERN` are defined here, not imported from
@@ -141,6 +158,17 @@ PATHOGEN_TAXON_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9_-]{0,49}$"
 # Section 6.6 line ~1339 (the output schema's `isolates[].source_url`
 # property), copied verbatim.
 PATHOGEN_SOURCE_URL_PATTERN: Final = r"^https://(www\.)?ncbi\.nlm\.nih\.gov/pathogens/"
+
+# The shape of one AMR gene-name prefix on the `isolate_search` branch
+# (design decision 5). ASCII letters, digits, underscore, parentheses,
+# dot, apostrophe and hyphen only, starting with a letter, which is the
+# alphabet the real `AMR_genotypes` column uses: `blaEC`, `blaTEM-1`,
+# `aph(3'')-Ib`, `tet(A)`, `mcr-1.1` (read live from the E. coli snapshot
+# on 2026-09-22). `*`, `;`, whitespace, `/` and every other regex
+# metacharacter outside that set is rejected, and the `.`, `(` and `)`
+# that ARE inside it are safe because nothing ever compiles this value as
+# a regex: the match is a plain `str.startswith` on a case-folded item.
+PATHOGEN_AMR_PREFIX_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9_().'\-]*$"
 
 
 # ---------------------------------------------------------------------------
@@ -197,16 +225,71 @@ class PathogenClusterSnpNeighborsInput(BaseModel):
     max_snp_distance: Annotated[int, Field(ge=1, le=50)] = 5
 
 
-_PathogenActionUnion = PathogenIsolateLookupInput | PathogenClusterSnpNeighborsInput
+class PathogenIsolateSearchInput(BaseModel):
+    """`isolate_search` branch: which isolates of a taxon carry a named AMR gene.
+
+    Design decision 5, additive to Section 6.6's own two-branch `oneOf`,
+    following the same additive-within-v1 discipline design decision 4
+    already applies to `fields_withheld` (`system-design-patterns` pattern
+    10). The two locked branches both start from an identifier the caller
+    already holds, a BioSample accession or a PDS cluster id. A person
+    asking "which E. coli isolates carry extended-spectrum
+    beta-lactamase genes?" holds neither, so neither branch can express
+    the question, and the answer has to come from a scan of the taxon's
+    own Metadata TSV.
+
+    `amr_gene_prefixes` is a list rather than one string because a gene
+    family is a set of alleles, not a single name, and the caller decides
+    which members of it are safe to match. Between one and ten prefixes,
+    each between 2 and 40 characters and shaped by
+    `PATHOGEN_AMR_PREFIX_PATTERN`. Two characters is the floor because a
+    single letter would match a large fraction of every AMR genotype list
+    in the file, which is a confident wrong answer rather than a broad
+    one.
+
+    `max_isolates` bounds the SAMPLE that comes back, never the count
+    behind it: `pathogen_detection.py` keeps this many isolate rows and
+    keeps counting matches to end of file, reporting the real total in
+    `total_available` and whether that total is exact in `scan_complete`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["isolate_search"]
+    taxon: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=50,
+            pattern=PATHOGEN_TAXON_PATTERN,
+            description="FTP taxon folder, e.g. Escherichia_coli_Shigella",
+        ),
+    ]
+    amr_gene_prefixes: Annotated[
+        list[
+            Annotated[
+                str,
+                Field(min_length=2, max_length=40, pattern=PATHOGEN_AMR_PREFIX_PATTERN),
+            ]
+        ],
+        Field(min_length=1, max_length=10),
+    ]
+    max_isolates: Annotated[int, Field(ge=1, le=100)] = 20
+
+
+_PathogenActionUnion = (
+    PathogenIsolateLookupInput | PathogenClusterSnpNeighborsInput | PathogenIsolateSearchInput
+)
 PathogenAction = Annotated[_PathogenActionUnion, Field(discriminator="mode")]
 
 
 class PathogenDetectionInput(RootModel[PathogenAction]):
-    """The 2-way discriminated union entry point, Section 6.6's `oneOf`.
+    """The 3-way discriminated union entry point, Section 6.6's `oneOf` plus
+    the additive `isolate_search` branch (design decision 5).
 
     `PathogenDetectionInput.model_validate(payload)` and
     `PathogenDetectionInput(**payload)` both work identically: a plain
-    dict shaped like one of the two Section 6.6 branches in, a validated,
+    dict shaped like one of the three branches in, a validated,
     mode-routed model out. An unrecognized `mode` value, or a payload
     matching no branch's required fields, raises `pydantic.ValidationError`.
     Mode-specific fields live under `.root`
@@ -314,6 +397,36 @@ class PathogenDetectionOutput(BaseModel):
     isolate_count: Annotated[int, Field(ge=0)] = 0
     total_available: Annotated[int, Field(ge=0)] = 0
     truncated: bool = False
+    # Design decision 5. Both optional and both None by default, so every
+    # construction site that predates the isolate_search branch still
+    # validates unchanged. `isolate_search` populates both; the two
+    # identifier-led modes leave them None, since neither scans a file
+    # whose extent is meaningful to report.
+    rows_scanned: Annotated[
+        int | None,
+        Field(
+            default=None,
+            ge=0,
+            description=(
+                "Data rows actually read from the source file during this "
+                "call, isolate_search mode only. A lower bound on the "
+                "file's size when scan_complete is False."
+            ),
+        ),
+    ] = None
+    scan_complete: Annotated[
+        bool | None,
+        Field(
+            default=None,
+            description=(
+                "True when the scan reached end of file, so total_available "
+                "is the exact number of matching isolates. False when a "
+                "deadline cut the scan, so total_available is a lower "
+                "bound and the answer must say so. None when the mode does "
+                "not scan a whole file."
+            ),
+        ),
+    ] = None
     error: Annotated[str | None, Field(default=None, max_length=500)] = None
     fields_withheld: Annotated[
         list[Annotated[str, Field(max_length=150)]] | None,
@@ -411,6 +524,49 @@ _SOURCE_URL_REJECT_SAMPLES: Final[tuple[str, ...]] = (
     # never validate.
     "https://www.ncbi.nlm.nih.gov/gene/7157",
 )
+
+_AMR_PREFIX_ACCEPT_SAMPLES: Final[tuple[str, ...]] = (
+    # Every one of these is a real gene-name spelling read off the live
+    # E. coli Metadata TSV on 2026-09-22, plus the two family prefixes a
+    # caller actually asks with.
+    "blaEC",
+    "blaTEM-1",
+    "blaCTX-M",
+    "aph(3'')-Ib",
+    "tet(A)",
+    "mcr-1.1",
+)
+_AMR_PREFIX_REJECT_SAMPLES: Final[tuple[str, ...]] = (
+    # A regex metacharacter outside the allowed alphabet. Nothing compiles
+    # this value as a regex, but rejecting the ones that would change a
+    # pattern's meaning keeps that true even if a future reader forgets.
+    "bla*",
+    "bla+",
+    "bla[TEM]",
+    # Shell and path punctuation must never validate.
+    "bla;rm -rf",
+    "bla/../etc",
+    # Whitespace must never validate.
+    "bla TEM",
+    # A leading digit is rejected: the pattern's own first character class
+    # is a letter.
+    "1bla",
+    # Trailing newline must never validate, the same Python-`re`
+    # `$`-before-newline trap design decision 2 covers for the taxon
+    # pattern. Checked here with re.fullmatch for the same reason.
+    "blaTEM-1\n",
+    "",
+)
+
+for _sample in _AMR_PREFIX_ACCEPT_SAMPLES:
+    assert re.fullmatch(PATHOGEN_AMR_PREFIX_PATTERN, _sample) is not None, (
+        f"PATHOGEN_AMR_PREFIX_PATTERN wrongly rejects a real AMR gene name: {_sample!r}"
+    )
+for _sample in _AMR_PREFIX_REJECT_SAMPLES:
+    assert re.fullmatch(PATHOGEN_AMR_PREFIX_PATTERN, _sample) is None, (
+        f"PATHOGEN_AMR_PREFIX_PATTERN wrongly accepts an unsafe prefix: {_sample!r}"
+    )
+del _sample
 
 for _sample in _SOURCE_URL_ACCEPT_SAMPLES:
     assert re.match(PATHOGEN_SOURCE_URL_PATTERN, _sample) is not None, (

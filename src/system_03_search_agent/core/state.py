@@ -77,6 +77,14 @@ Field lifecycle:
             accession, its uid and the ids it links to; `plan` plans the
             summaries from it and no graph call, since the graph holds no
             such records. Absent otherwise.
+        isolate_question: set by `think` when the question asks for the
+            Pathogen Detection isolates of an organism carrying a resistance
+            gene or family (golden question G-035, 2026-09-22), with both the
+            organism and the gene prefixes read; `plan` plans the isolate
+            search and the organism's Taxonomy summary from it and no graph
+            call, and `write` puts the count and the cut under the answer.
+            Absent otherwise, and absent when the shape asks which organism
+            or which gene instead of searching.
         failed_searches: set by `act`, one small mapping per planned call
             whose outcome was `status == "error"`: `tool`, `layer` and the
             tool's own `reason`. Decided from the user's chair on
@@ -208,6 +216,13 @@ class GraphState(TypedDict, total=False):
     failed_searches: list[dict[str, str]]
     coordinate_window: Any
     accession_plan: Any
+    # Golden question G-035 (2026-09-22): set by `think` when the question is
+    # a Pathogen Detection isolate question with its organism and gene
+    # prefixes both read (`core.isolate_search.IsolateQuestion`); `plan`
+    # plans the isolate search and the organism's Taxonomy record from it,
+    # no graph call, and `write` states the count under the answer. Absent
+    # otherwise, and absent when the shape still needs a clarification.
+    isolate_question: Any
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason

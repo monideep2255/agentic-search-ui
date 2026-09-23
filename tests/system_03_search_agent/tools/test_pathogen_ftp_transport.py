@@ -37,6 +37,25 @@ This file exercises:
       mid-build snapshot with only Metadata/, raises
       `PathogenSnapshotUnavailableError` on an unknown taxon (HTTP 404,
       F-3.5-08) and when no snapshot is ever complete.
+    - `TsvScanResult.reached_end` on `stream_filtered_tsv_rows`: True only
+      when the stream genuinely hit end of file, False when `max_matches`
+      or the all-keys-seen early exit stopped it first, and
+      `match_count == len(rows)` for that reader by construction.
+    - `stream_predicate_tsv_rows` (G-035, 2026-09-22): an arbitrary row
+      predicate decides what matches; `max_rows` caps the rows KEPT while
+      `match_count` keeps counting past that cap to end of file;
+      `reached_end` flips True on a full scan and False on a deadline cut;
+      a deadline already in the past raises before any request; a deadline
+      that expires mid-scan returns what was collected with
+      `truncated_by_deadline=True` rather than raising. Every positive arm
+      carries a populate check, a sibling row on the same fake that must
+      NOT match, so an arm cannot pass on a predicate that accepts
+      everything or on an empty result.
+
+This file's fakes serve rows from in-memory byte strings through
+`httpx.MockTransport`, so a passing arm proves the real scanning function
+produces the right result from real bytes, which is the gap that let
+F-3.5-06 through.
 
 This file deliberately does NOT exercise:
     - The literal claim "never buffers a 411GB response body into memory"
@@ -272,6 +291,276 @@ async def test_no_matching_rows_returns_empty_not_an_error() -> None:
     assert result.rows == []
     assert not result.truncated_by_deadline
     assert result.total_rows_scanned == 1
+
+
+# ---------------------------------------------------------------------------
+# reached_end and match_count on stream_filtered_tsv_rows (G-035).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_filtered_scan_that_reaches_eof_reports_reached_end_and_match_count() -> None:
+    """A scan that runs the whole file says so, and its match_count equals
+    the rows it kept, since this reader keeps every row it accepts.
+
+    Populate check: the file also holds a row under a DIFFERENT key, so an
+    arm that passed because the filter accepted everything would see
+    match_count 3 rather than 2 and fail here.
+    """
+    body = (
+        "PDS_acc\tbiosample_acc\n"
+        "PDS1\tSAMN00000001\n"
+        "PDS2\tSAMN00000002\n"  # populate check: must never be accepted
+        "PDS1\tSAMN00000003\n"
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=body)
+
+    async with _client_for(handler) as client:
+        result = await transport.stream_filtered_tsv_rows(
+            f"{BASE_URL}/Salmonella/PDG1/Clusters/cluster_list.tsv",
+            key_column="PDS_acc",
+            key_values={"PDS1"},
+            deadline=_future_deadline(),
+            client=client,
+        )
+
+    assert result.reached_end is True
+    assert result.match_count == 2
+    assert result.match_count == len(result.rows)
+    assert result.total_rows_scanned == 3
+
+
+@pytest.mark.asyncio
+async def test_filtered_scan_stopped_by_max_matches_does_not_claim_reached_end() -> None:
+    """`max_matches` is an early exit, so the counts are a lower bound and
+    `reached_end` must stay False. The populate check is the third
+    matching row the scan never reaches: total_rows_scanned proves the
+    scan really did stop early rather than reading on.
+    """
+    body = (
+        "PDS_acc\tbiosample_acc\n"
+        "PDS1\tSAMN00000001\n"
+        "PDS1\tSAMN00000002\n"
+        "PDS1\tSAMN00000003\n"
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=body)
+
+    async with _client_for(handler) as client:
+        result = await transport.stream_filtered_tsv_rows(
+            f"{BASE_URL}/Salmonella/PDG1/Clusters/cluster_list.tsv",
+            key_column="PDS_acc",
+            key_values={"PDS1"},
+            deadline=_future_deadline(),
+            client=client,
+            max_matches=2,
+        )
+
+    assert result.reached_end is False
+    assert result.match_count == 2
+    assert result.total_rows_scanned == 2
+
+
+# ---------------------------------------------------------------------------
+# stream_predicate_tsv_rows (G-035): the sample-plus-real-total reader.
+# ---------------------------------------------------------------------------
+
+
+def _amr_body(rows: list[tuple[str, str]]) -> str:
+    """A miniature Metadata TSV: biosample_acc plus the AMR_genotypes cell,
+    in the real file's own double-quoted comma-joined spelling.
+    """
+    lines = ["biosample_acc\tstrain\tAMR_genotypes"]
+    lines.extend(f'{acc}\tstrain-{acc}\t"{amr}"' for acc, amr in rows)
+    return "\n".join(lines) + "\n"
+
+
+def _carries_blatem(row: dict[str, str]) -> bool:
+    return any(
+        item.strip().casefold().startswith("blatem-1")
+        for item in row.get("AMR_genotypes", "").strip('"').split(",")
+    )
+
+
+@pytest.mark.asyncio
+async def test_predicate_scan_keeps_matching_rows_and_reaches_end() -> None:
+    """The happy path: the predicate decides, matching rows come back whole,
+    and the scan says it reached end of file.
+
+    Populate check: two of the four rows carry `blaEC` only and must never
+    appear in the result, so an arm cannot pass on a predicate that
+    accepts every row.
+    """
+    body = _amr_body(
+        [
+            ("SAMN00000001", "acrF,blaTEM-1,mdtM"),
+            ("SAMN00000002", "acrF,blaEC,mdtM"),  # populate check: must NOT match
+            ("SAMN00000003", "blaTEM-1,tet(A)"),
+            ("SAMN00000004", "blaEC"),  # populate check: must NOT match
+        ]
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=body)
+
+    async with _client_for(handler) as client:
+        result = await transport.stream_predicate_tsv_rows(
+            f"{BASE_URL}/Escherichia_coli_Shigella/PDG1/Metadata/m.tsv",
+            predicate=_carries_blatem,
+            deadline=_future_deadline(),
+            client=client,
+        )
+
+    assert [row["biosample_acc"] for row in result.rows] == ["SAMN00000001", "SAMN00000003"]
+    assert result.match_count == 2
+    assert result.total_rows_scanned == 4
+    assert result.reached_end is True
+    assert result.truncated_by_deadline is False
+    # The row dict is built from the file's own header, so the predicate
+    # and the caller both see every column by name.
+    assert result.rows[0]["strain"] == "strain-SAMN00000001"
+
+
+@pytest.mark.asyncio
+async def test_predicate_scan_counts_past_max_rows_and_still_reaches_end() -> None:
+    """The contract's load-bearing arm: `max_rows` stops the KEEPING, never
+    the scan. Two rows come back, all five matches are counted, and
+    `reached_end` is True because the scan ran to the end of the file
+    anyway.
+
+    Populate check: three of the eight rows carry `blaEC` only, so a
+    predicate that accepted everything would report match_count 8.
+    """
+    body = _amr_body(
+        [
+            ("SAMN00000001", "blaTEM-1"),
+            ("SAMN00000002", "blaEC"),  # populate check: must NOT match
+            ("SAMN00000003", "blaTEM-1,tet(A)"),
+            ("SAMN00000004", "blaEC,mdtM"),  # populate check: must NOT match
+            ("SAMN00000005", "acrF,blaTEM-1"),
+            ("SAMN00000006", "blaTEM-1"),
+            ("SAMN00000007", "blaEC"),  # populate check: must NOT match
+            ("SAMN00000008", "blaTEM-1,sul2"),
+        ]
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=body)
+
+    async with _client_for(handler) as client:
+        result = await transport.stream_predicate_tsv_rows(
+            f"{BASE_URL}/Escherichia_coli_Shigella/PDG1/Metadata/m.tsv",
+            predicate=_carries_blatem,
+            deadline=_future_deadline(),
+            client=client,
+            max_rows=2,
+        )
+
+    assert len(result.rows) == 2, "max_rows caps the sample"
+    assert [row["biosample_acc"] for row in result.rows] == ["SAMN00000001", "SAMN00000003"]
+    assert result.match_count == 5, "counting must continue past max_rows"
+    assert result.total_rows_scanned == 8, "the scan must read the whole file"
+    assert result.reached_end is True
+
+
+@pytest.mark.asyncio
+async def test_predicate_scan_zero_matches_reaches_end_and_is_not_an_error() -> None:
+    """An exact absence: the scan read everything and nothing matched. This
+    is the result `isolate_search` turns into `status: "empty"`, and it
+    must be distinguishable from a cut-short scan by `reached_end` alone.
+    """
+    body = _amr_body([("SAMN00000001", "blaEC"), ("SAMN00000002", "acrF,mdtM")])
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=body)
+
+    async with _client_for(handler) as client:
+        result = await transport.stream_predicate_tsv_rows(
+            f"{BASE_URL}/Escherichia_coli_Shigella/PDG1/Metadata/m.tsv",
+            predicate=_carries_blatem,
+            deadline=_future_deadline(),
+            client=client,
+        )
+
+    assert result.rows == []
+    assert result.match_count == 0
+    assert result.total_rows_scanned == 2
+    assert result.reached_end is True
+    assert result.truncated_by_deadline is False
+
+
+@pytest.mark.asyncio
+async def test_predicate_scan_deadline_already_past_raises_before_any_request() -> None:
+    called = {"count": 0}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        called["count"] += 1
+        return httpx.Response(200, text=_amr_body([("SAMN00000001", "blaTEM-1")]))
+
+    async with _client_for(handler) as client:
+        with pytest.raises(transport.PathogenDeadlineExceededError):
+            await transport.stream_predicate_tsv_rows(
+                f"{BASE_URL}/Escherichia_coli_Shigella/PDG1/Metadata/m.tsv",
+                predicate=_carries_blatem,
+                deadline=_past_deadline(),
+                client=client,
+            )
+
+    assert called["count"] == 0, "must not make any request once the deadline has already passed"
+
+
+@pytest.mark.asyncio
+async def test_predicate_scan_deadline_expiring_mid_scan_never_claims_reached_end() -> None:
+    """A deadline that fires mid-scan returns what it had, marks itself
+    truncated, and must never claim `reached_end`. The two flags are the
+    opposite of each other here, which is what lets `isolate_search` tell
+    "that is the whole total" from "that is a lower bound".
+
+    As with the sibling arm for `stream_filtered_tsv_rows`, a 50ms
+    deadline against an in-memory mock may or may not actually trip, so
+    the assertion is written to hold either way; what must ALWAYS hold is
+    that truncation and reaching the end are never both true.
+    """
+    rows = [(f"SAMN{i:08d}", "blaTEM-1") for i in range(200)]
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=_amr_body(rows))
+
+    async with _client_for(handler) as client:
+        result = await transport.stream_predicate_tsv_rows(
+            f"{BASE_URL}/Escherichia_coli_Shigella/PDG1/Metadata/m.tsv",
+            predicate=_carries_blatem,
+            deadline=time.monotonic() + 0.05,
+            client=client,
+            max_rows=3,
+        )
+
+    assert not (result.truncated_by_deadline and result.reached_end)
+    assert len(result.rows) <= 3
+    if result.truncated_by_deadline:
+        assert result.reached_end is False
+        assert result.match_count <= 200
+    else:
+        assert result.reached_end is True
+        assert result.match_count == 200
+
+
+@pytest.mark.asyncio
+async def test_predicate_scan_http_error_raises_and_is_not_swallowed() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, text="not found")
+
+    async with _client_for(handler) as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await transport.stream_predicate_tsv_rows(
+                f"{BASE_URL}/Escherichia_coli_Shigella/PDG1/Metadata/m.tsv",
+                predicate=_carries_blatem,
+                deadline=_future_deadline(),
+                client=client,
+            )
 
 
 # ---------------------------------------------------------------------------

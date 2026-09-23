@@ -875,6 +875,15 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
         "accession", "title", "summary", "taxon", "entrytype", "gdstype",
         "gpl", "gse", "pdat", "n_samples", "bioproject",
     ),
+    # Golden question G-035 (2026-09-22): the organism an isolate question
+    # names, cited to its Taxonomy record. Keys read live from
+    # `esummary.fcgi?db=taxonomy&id=562` the same day; `akataxid`,
+    # `modificationdate`, `status`, `subsp` and `uid` are dropped as saying
+    # nothing a person reads an organism record for.
+    "taxonomy": (
+        "scientificname", "commonname", "rank", "division", "genbankdivision",
+        "genus", "species", "taxid",
+    ),
     # sra packs its payload into a handful of markup-bearing string fields
     # rather than flat scalars. They are the only substantive content the
     # response carries, so they are allowlisted and lean entirely on

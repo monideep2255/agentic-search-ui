@@ -380,10 +380,11 @@ def test_each_action_accepts_every_db_its_spec_enum_lists() -> None:
     fetch_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
                  "gtr", "sra")
     summary_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
-                   "gtr", "sra", "bioproject", "biosample", "assembly", "gds")
+                   "gtr", "sra", "bioproject", "biosample", "assembly", "gds",
+                   "taxonomy")
     assert len(search_dbs) == 14
     assert len(fetch_dbs) == 8
-    assert len(summary_dbs) == 12
+    assert len(summary_dbs) == 13
     for db in search_dbs:
         assert NcbiEfetchInput.model_validate({**SEARCH_DICT, "db": db}).root.db == db
     for db in fetch_dbs:

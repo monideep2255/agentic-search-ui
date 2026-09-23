@@ -1,5 +1,74 @@
-"""pathogen_detection: bulk Salmonella isolate/cluster/AMR access over the
-NCBI Pathogen Detection PDG snapshot tree (T-3.5-05).
+"""pathogen_detection: bulk isolate/cluster/AMR access over the NCBI
+Pathogen Detection PDG snapshot tree (T-3.5-05).
+
+## The three modes
+
+- `isolate_lookup`: one isolate, by its BioSample accession.
+- `cluster_snp_neighbors`: every isolate in a PDS cluster within a SNP
+  distance of another member.
+- `isolate_search`: which isolates of a taxon carry an AMR gene in a named
+  family. Added 2026-09-22 (G-035), additive to Section 6.6's two locked
+  branches, and described in full below.
+
+## isolate_search: a bounded sample with a real total behind it
+
+The two original modes both start from an identifier the caller already
+holds. A person asking "which Escherichia coli isolates in Pathogen
+Detection carry extended-spectrum beta-lactamase genes?" holds neither a
+BioSample accession nor a cluster id, so the answer has to come from a
+scan of the taxon's own Metadata TSV.
+
+What the scan costs, measured live on 2026-09-22 against the real tree
+(`testing/Developer/reports/2026-09-22_isolate_search/probes.md`), not
+estimated:
+
+- The taxon folder for E. coli is `Escherichia_coli_Shigella`, and
+  resolving its complete snapshot took 1.97 seconds, root listing
+  included.
+- Its Metadata TSV is 521 MB, 584,433 data rows, 67 columns.
+- A full scan of that file applying a per-row predicate finished in 17.7
+  seconds, reaching end of file with 75 seconds of the 120-second budget
+  still unspent.
+- The 20th match arrived 0.131 seconds into the scan.
+
+Those two numbers together are why this mode is shaped the way it is.
+Matches arrive almost immediately, so a sample is cheap; the whole file is
+also readable inside the budget, so the exact total is affordable too.
+`stream_predicate_tsv_rows` therefore keeps the first `max_isolates`
+matching rows and keeps COUNTING matches all the way to end of file.
+Reaching the sample cap stops the keeping, never the scan.
+
+The reason for paying for the count: a bounded sample with no total behind
+it reads as the whole answer. Twenty isolates shown with nothing else said
+means "there are twenty"; twenty shown out of 279,100 means something
+entirely different, and only the second one is true. `total_available`
+carries the count, `scan_complete` says whether that count is exact or a
+lower bound a deadline cut short, and `rows_scanned` says how much of the
+file was actually read.
+
+## isolate_search: how a gene name is matched, and why not with a regex
+
+The predicate parses the row's `AMR_genotypes` cell with
+`_parse_pathogen_list_field` (the same double-quoted comma-join
+F-3.5-03 already handles, spelled `blaEC`, `blaTEM-1`, `aph(3'')-Ib`,
+`tet(A)` in the real file) and asks whether any item in that list begins
+with any requested prefix, case-folded on both sides.
+
+The match is BOUNDARY-AWARE, not a bare `startswith`: an item matches a
+prefix when it is exactly the prefix, or when the character immediately
+after the prefix is not a letter or digit. So `blaCTX-M` matches
+`blaCTX-M-15`, and `blaCTX-M-15` matches only itself and never
+`blaCTX-M-155`; `blaOXA-48` never matches `blaOXA-484`; `mcr-1` matches
+`mcr-1.1`. A person who asked about blaCTX-M-15 and is shown
+blaCTX-M-155 carriers has been handed a confident wrong record, which is
+worse than a missing one, and a bare prefix test hands them exactly that.
+
+Nothing here ever compiles a caller's prefix into a regular expression.
+The allowed alphabet (`PATHOGEN_AMR_PREFIX_PATTERN`) deliberately contains
+`.`, `(` and `)`, because real gene names contain them, and those are
+harmless precisely because the match is `str.startswith` plus one
+character class test. `aph(3` finds `aph(3'')-Ib`; `bla.EM` finds nothing,
+rather than matching `blaTEM-1` the way a compiled pattern would.
 
 This module went through three drafts before it was correct, each with a
 real finding that changed the code, not just the prose. The short version,
@@ -180,6 +249,7 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from collections.abc import Callable, Sequence
 from typing import Final
 from urllib.parse import quote
 
@@ -196,6 +266,7 @@ from system_03_search_agent.tools.pathogen_detection_schemas import (
     PathogenDetectionOutput,
     PathogenIsolate,
     PathogenIsolateLookupInput,
+    PathogenIsolateSearchInput,
 )
 
 _TAXON_SHAPE_PATTERN: Final[re.Pattern[str]] = re.compile(PATHOGEN_TAXON_PATTERN)
@@ -420,6 +491,62 @@ def _parse_list_field_capped(
     if len(kept) > item_cap_count:
         kept = kept[:item_cap_count]
     return kept
+
+
+def _amr_item_matches_prefix(item_folded: str, prefix_folded: str) -> bool:
+    """One case-folded AMR gene name against one case-folded prefix, with a
+    boundary test after the prefix.
+
+    The whole match rule in one place, so the arms that pin it can call it
+    directly. `item_folded` matches when it IS the prefix, or when the
+    character immediately after the prefix is not a letter or digit:
+
+    - `blaCTX-M-15` matches `blaCTX-M`, because the next character is `-`.
+    - `blaCTX-M-155` does NOT match `blaCTX-M-15`, because the next
+      character is `5`.
+    - `blaOXA-484` does NOT match `blaOXA-48`, same reason.
+    - `mcr-1.1` matches `mcr-1`, because the next character is `.`.
+
+    Without the boundary test, a person asking about blaCTX-M-15 is shown
+    blaCTX-M-155 carriers as though they were the thing asked for, which
+    is a confident wrong record rather than a broad one. Both sides are
+    already case-folded by the caller, so indexing by `len(prefix_folded)`
+    lines up even for a character whose fold changes its length.
+    """
+    if not item_folded.startswith(prefix_folded):
+        return False
+    if len(item_folded) == len(prefix_folded):
+        return True
+    return not item_folded[len(prefix_folded)].isalnum()
+
+
+def _amr_prefix_predicate(prefixes: Sequence[str]) -> Callable[[dict[str, str]], bool]:
+    """Build the row predicate `isolate_search` hands to the transport.
+
+    Reads the row's `AMR_genotypes` cell, parses it with the same
+    comma-join/NULL parser F-3.5-03 built, and accepts the row when any
+    parsed item matches any requested prefix under
+    `_amr_item_matches_prefix`. NEVER compiles a caller's prefix into a
+    regular expression: see the module docstring's own section on why the
+    allowed alphabet can safely contain `.`, `(` and `)`.
+
+    The prefixes are case-folded once here rather than once per row, since
+    this runs on the order of 600,000 times per call.
+    """
+    folded_prefixes = tuple(prefix.casefold() for prefix in prefixes)
+
+    def _row_carries_a_named_gene(row: dict[str, str]) -> bool:
+        raw = _first_present(row, _AMR_COLUMN_CANDIDATES)
+        if raw is None:
+            return False
+        for item in _parse_pathogen_list_field(raw):
+            item_folded = item.casefold()
+            for prefix_folded in folded_prefixes:
+                if _amr_item_matches_prefix(item_folded, prefix_folded):
+                    return True
+        return False
+
+    return _row_carries_a_named_gene
 
 
 def _build_isolate(
@@ -1045,6 +1172,178 @@ async def _cluster_snp_neighbors(
     )
 
 
+def _isolate_search_timeout_output(
+    action: PathogenIsolateSearchInput,
+    taxon: str,
+    *,
+    snapshot: str | None,
+    rows_scanned: int,
+) -> PathogenDetectionOutput:
+    """A deadline cutoff that found NO matching isolate in the portion of the
+    file actually scanned.
+
+    `isolate_search` gets its own timeout output rather than reusing
+    `_deadline_exceeded_output`, because that one's message names
+    `max_snp_distance`, `pds_cluster` and `biosample_acc`, none of which
+    exist on this branch, and a message that tells a reader to narrow a
+    field they never set is worse than no message.
+
+    What it says instead follows F-3.5-A-13's own lesson: the constraint is
+    the file's size, not the query's specificity, so a shorter gene list
+    would not scan faster and this message never suggests one. It also
+    never reports the cutoff as an absence, which is the whole point of
+    `status: "timeout"` existing separately from `status: "empty"`
+    (F-3.5-A-09).
+    """
+    return PathogenDetectionOutput(
+        status="timeout",
+        mode=action.mode,
+        pdg_snapshot=_cap(snapshot, _MAX_SNAPSHOT_CHARS) if snapshot else None,
+        isolate_count=0,
+        total_available=0,
+        truncated=True,
+        rows_scanned=rows_scanned,
+        scan_complete=False,
+        error=_cap(
+            f"pathogen_detection's {_TOTAL_BUDGET_S:.0f}s shared wall-clock budget ran "
+            f"out while scanning {taxon}'s isolate metadata, after reading "
+            f"{rows_scanned} row(s), and no isolate carrying one of the named genes had "
+            "been found in the portion scanned. This does NOT mean none exists: the "
+            "scan never reached the end of the file. A shorter gene list would not "
+            "help, since the cost is the file's size rather than the query's "
+            "specificity; retrying may land on a faster network path.",
+            _MAX_ERROR_CHARS,
+        ),
+    )
+
+
+async def _isolate_search(
+    action: PathogenIsolateSearchInput,
+    snapshot: str,
+    taxon: str,
+    deadline: float,
+    client: httpx.AsyncClient,
+) -> PathogenDetectionOutput:
+    """Which isolates of this taxon carry an AMR gene in the named family.
+
+    One streamed scan of the taxon's Metadata TSV, keeping the first
+    `max_isolates` matching rows and counting every match to end of file or
+    the shared deadline. See the module docstring for the design and the
+    live numbers behind it.
+
+    The four dispositions, and the one that matters most:
+
+    - `ok`: at least one isolate came back. `scan_complete` says whether
+      `total_available` is exact.
+    - `empty`: the scan reached end of file and genuinely nothing matched.
+      An exact, trustworthy absence.
+    - `timeout`: the deadline cut the scan before anything matched. NOT an
+      absence, and reported as its own status so a caller can tell the
+      difference without parsing text (F-3.5-A-09).
+    - A deadline cut that DID find matches is `ok`, with
+      `scan_complete=False` and `truncated=True`, never discarded
+      (F-3.5-A-01: a cutoff that found real rows must use them and
+      disclose the cutoff, not throw the answer away).
+    """
+    if _remaining(deadline) <= 0:
+        return _isolate_search_timeout_output(action, taxon, snapshot=snapshot, rows_scanned=0)
+
+    try:
+        scan = await pathogen_ftp_transport.stream_predicate_tsv_rows(
+            _metadata_url(taxon, snapshot),
+            predicate=_amr_prefix_predicate(action.amr_gene_prefixes),
+            deadline=deadline,
+            client=client,
+            max_rows=min(action.max_isolates, _MAX_ISOLATES),
+        )
+    except pathogen_ftp_transport.PathogenDeadlineExceededError:
+        return _isolate_search_timeout_output(action, taxon, snapshot=snapshot, rows_scanned=0)
+    except (httpx.HTTPStatusError, pathogen_ftp_transport.PathogenTransportError) as exc:
+        return _transport_error_output(
+            action.mode, "isolate_search metadata scan", exc, snapshot=snapshot
+        )
+
+    isolates: list[PathogenIsolate] = []
+    withheld_all: list[str] = []
+    for row in scan.rows[: action.max_isolates]:
+        isolate, withheld = _build_isolate(row, cluster_id_override=None, snp_distance=None)
+        withheld_all.extend(withheld)
+        if isolate is not None:
+            isolates.append(isolate)
+
+    # `match_count` counts rows the predicate accepted, which is the number
+    # a person is told. It can only understate the truth when the deadline
+    # cut the scan, and `scan_complete` is what says so. The `max` guards
+    # the impossible case of keeping more rows than were counted rather
+    # than shipping a total smaller than the sample sitting beside it.
+    total_available = max(scan.match_count, len(isolates))
+    truncated = len(isolates) < total_available or not scan.reached_end
+    fields_withheld = _cap_fields_withheld(withheld_all) if withheld_all else None
+
+    if isolates:
+        return PathogenDetectionOutput(
+            status="ok",
+            mode=action.mode,
+            pdg_snapshot=_cap(snapshot, _MAX_SNAPSHOT_CHARS),
+            isolates=isolates,
+            isolate_count=len(isolates),
+            total_available=total_available,
+            truncated=truncated,
+            rows_scanned=scan.total_rows_scanned,
+            scan_complete=scan.reached_end,
+            fields_withheld=fields_withheld,
+        )
+
+    if scan.match_count == 0 and not scan.reached_end:
+        return _isolate_search_timeout_output(
+            action, taxon, snapshot=snapshot, rows_scanned=scan.total_rows_scanned
+        )
+
+    if scan.match_count == 0:
+        gene_list = ", ".join(action.amr_gene_prefixes)
+        return PathogenDetectionOutput(
+            status="empty",
+            mode=action.mode,
+            pdg_snapshot=_cap(snapshot, _MAX_SNAPSHOT_CHARS),
+            isolate_count=0,
+            total_available=0,
+            truncated=False,
+            rows_scanned=scan.total_rows_scanned,
+            scan_complete=True,
+            error=_cap(
+                f"None of the {scan.total_rows_scanned} {taxon} isolates in this "
+                f"snapshot carries a gene named {gene_list}. The whole file was read, "
+                "so this is an exact answer rather than a scan that ran out of time.",
+                _MAX_ERROR_CHARS,
+            ),
+            fields_withheld=fields_withheld,
+        )
+
+    # Rows matched, but not one of them could be turned into an isolate
+    # record: every kept row lacked a usable `biosample_acc`, the identity
+    # field `_build_isolate` excludes a whole row over rather than ship
+    # truncated. Reported as empty with the count that WAS found, never as
+    # `ok` with nothing in it and never as a plain zero.
+    return PathogenDetectionOutput(
+        status="empty",
+        mode=action.mode,
+        pdg_snapshot=_cap(snapshot, _MAX_SNAPSHOT_CHARS),
+        isolate_count=0,
+        total_available=total_available,
+        truncated=True,
+        rows_scanned=scan.total_rows_scanned,
+        scan_complete=scan.reached_end,
+        error=_cap(
+            f"{total_available} {taxon} isolate(s) carry one of the named genes, but "
+            "none of the rows read could be shown: each was missing the BioSample "
+            "accession that identifies it. Retry once; if it recurs, the snapshot's "
+            "metadata file may have changed shape.",
+            _MAX_ERROR_CHARS,
+        ),
+        fields_withheld=fields_withheld,
+    )
+
+
 async def _pathogen_detection_impl(input_data: PathogenDetectionInput) -> PathogenDetectionOutput:
     """The real implementation. See `pathogen_detection` below for the
     never-raises wrapper.
@@ -1097,6 +1396,8 @@ async def _pathogen_detection_impl(input_data: PathogenDetectionInput) -> Pathog
             return await _isolate_lookup(action, snapshot, taxon, deadline, client)
         if isinstance(action, PathogenClusterSnpNeighborsInput):
             return await _cluster_snp_neighbors(action, snapshot, taxon, deadline, client)
+        if isinstance(action, PathogenIsolateSearchInput):
+            return await _isolate_search(action, snapshot, taxon, deadline, client)
         # Defensive, not assumed reachable: PathogenAction is a closed,
         # discriminator-validated union pydantic has already checked at
         # construction time, so every real branch is handled above.
@@ -1110,10 +1411,10 @@ async def _pathogen_detection_impl(input_data: PathogenDetectionInput) -> Pathog
 
 
 async def pathogen_detection(input_data: PathogenDetectionInput) -> PathogenDetectionOutput:
-    """Bulk Salmonella isolate/cluster/AMR access over the NCBI Pathogen
-    Detection PDG snapshot tree. Never raises.
+    """Bulk isolate/cluster/AMR access over the NCBI Pathogen Detection PDG
+    snapshot tree. Never raises.
 
-    See the module docstring for the two modes, the flagged assumptions
+    See the module docstring for the three modes, the flagged assumptions
     this module was forced to make in the absence of the real
     `pathogen_ftp_transport.py`, and the F-3.5-01/F-3.5-03 findings this
     implementation closes. This public entry point is a thin wrapper

@@ -151,7 +151,7 @@ class PlannedCall:
     layer: str
     prefix: str
     purpose: str
-    tool_input: NcbiEfetchInput | PubtatorAnnotateInput
+    tool_input: NcbiEfetchInput | PubtatorAnnotateInput | Any
 
 
 def _normalise_symbol(gene_symbol: str | None) -> str | None:

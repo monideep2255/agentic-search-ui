@@ -71,6 +71,22 @@ This file exercises:
       required field raises before `pathogen_detection` is ever called
       (a thin integration check; the exhaustive schema-boundary cases live
       in `test_pathogen_detection_schemas.py`, not duplicated here).
+    - isolate_search (G-035, 2026-09-22): ok with a bounded sample and a
+      larger real total, empty when the scan reached end of file with zero
+      matches, timeout when the deadline cut the scan with zero matches,
+      and ok-with-scan_complete-False when the deadline cut a scan that
+      HAD found matches (F-3.5-A-01's own shape, on the new mode). Plus
+      the gene-matching rule itself, exercised through the REAL predicate
+      the tool builds rather than around it: the scripted transport for
+      those arms runs the predicate it is handed over a table of raw rows,
+      so an arm that passed on a predicate accepting everything, or on an
+      empty table, fails. The boundary rule has an arm per direction:
+      `blaCTX-M` matches `blaCTX-M-15`, `blaCTX-M-15` never matches
+      `blaCTX-M-155`, `blaOXA-48` never matches `blaOXA-484`, `mcr-1`
+      matches `mcr-1.1`. Case folding, and two arms proving no regex is
+      ever compiled from a caller's prefix (`aph(3` finds `aph(3'')-Ib`
+      rather than raising on an unbalanced group; `bla.EM` finds nothing
+      rather than matching `blaTEM-1`).
     - The never-raises wrapper: an unexpected exception inside the impl
       (a scripted transport call that raises a plain `RuntimeError`, a
       shape neither `pathogen_ftp_transport.PathogenSnapshotUnavailableError`
@@ -87,7 +103,12 @@ silently omitting it:
       transport itself produces the right result from real bytes on the
       wire. That is `test_pathogen_ftp_transport.py`'s job, added
       specifically because this gap let a critical defect (F-3.5-06)
-      through a fully green run of this file.
+      through a fully green run of this file. The isolate_search arms
+      narrow that gap in ONE respect and no further: `_ScriptedPredicateScan`
+      runs the tool's REAL predicate over a table of raw rows, so the
+      gene-matching rule is genuinely under test here, while the streaming,
+      the header parse, the deadline and the counting are still scripted
+      and still belong to the transport's own file.
     - Whole-invocation timing against a real slow/large file; the deadline
       tests here simulate exhaustion by constructing an already-past
       `time.monotonic()` value or by scripting `truncated_by_deadline=True`
@@ -938,3 +959,508 @@ def test_build_citation_raises_when_no_isolates() -> None:
 
     with pytest.raises(ValueError, match="isolate"):
         build_citation(result, field="strain")
+
+
+# ---------------------------------------------------------------------------
+# isolate_search (G-035, 2026-09-22).
+#
+# These arms script the TRANSPORT but not the MATCHING: the fake below
+# runs whatever predicate `pathogen_detection` hands it over a table of
+# raw rows, so the tool's own gene-matching rule is what decides each
+# result. Every positive arm's table carries at least one sibling row that
+# must NOT match, so an arm cannot pass on a predicate that accepts
+# everything, and each one asserts the kept accessions by name rather than
+# only a count, so it cannot pass on an empty result.
+# ---------------------------------------------------------------------------
+
+
+class _ScriptedPredicateScan:
+    """Stands in for `stream_predicate_tsv_rows`, honestly.
+
+    Applies the caller's predicate to `table`, keeps the first `max_rows`
+    accepted rows, keeps counting every accepted row, and reports
+    `reached_end` and `truncated_by_deadline` the way the real function
+    does. `cut_after` simulates a deadline firing partway through: rows
+    after that index are never read, so `reached_end` stays False and
+    `match_count` is a genuine lower bound.
+    """
+
+    def __init__(
+        self,
+        table: list[dict[str, str]],
+        *,
+        cut_after: int | None = None,
+    ) -> None:
+        self.table = table
+        self.cut_after = cut_after
+        self.calls: list[dict[str, Any]] = []
+
+    async def __call__(
+        self,
+        url: str,
+        *,
+        predicate: Any,
+        deadline: float,
+        client: Any,
+        max_rows: int | None = None,
+    ) -> TsvScanResult:
+        self.calls.append({"url": url, "deadline": deadline, "max_rows": max_rows})
+        visible = self.table if self.cut_after is None else self.table[: self.cut_after]
+        kept: list[dict[str, str]] = []
+        match_count = 0
+        for row in visible:
+            if not predicate(row):
+                continue
+            match_count += 1
+            if max_rows is None or len(kept) < max_rows:
+                kept.append(row)
+        return TsvScanResult(
+            rows=kept,
+            truncated_by_deadline=self.cut_after is not None,
+            total_rows_scanned=len(visible),
+            match_count=match_count,
+            reached_end=self.cut_after is None,
+        )
+
+
+def _install_predicate_scan(
+    monkeypatch: pytest.MonkeyPatch,
+    table: list[dict[str, str]],
+    *,
+    cut_after: int | None = None,
+) -> _ScriptedPredicateScan:
+    scripted = _ScriptedPredicateScan(table, cut_after=cut_after)
+    monkeypatch.setattr(
+        pathogen_detection_module.pathogen_ftp_transport,
+        "stream_predicate_tsv_rows",
+        scripted,
+    )
+    return scripted
+
+
+def _amr_row(biosample_acc: str, amr_genotypes: str) -> dict[str, str]:
+    """One Metadata row in the real file's own spelling: a double-quoted,
+    comma-joined AMR_genotypes cell (probes.md section C).
+    """
+    return {
+        "biosample_acc": biosample_acc,
+        "Run": f"SRR{biosample_acc[-6:]}",
+        "strain": f"strain-{biosample_acc}",
+        "serovar": "NULL",
+        "geo_loc_name": "USA:AZ",
+        "collection_date": "2013-03-05",
+        "AMR_genotypes": f'"{amr_genotypes}"',
+        "AST_phenotypes": "NULL",
+    }
+
+
+def _search_input(
+    taxon: str = "Escherichia_coli_Shigella",
+    prefixes: list[str] | None = None,
+    max_isolates: int = 20,
+) -> PathogenDetectionInput:
+    return PathogenDetectionInput(
+        mode="isolate_search",
+        taxon=taxon,
+        amr_gene_prefixes=prefixes if prefixes is not None else ["blaCTX-M"],
+        max_isolates=max_isolates,
+    )
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_ok_returns_a_bounded_sample_and_the_real_total(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The headline case: two isolates shown out of five that matched, with
+    the total and the cut both disclosed.
+
+    Populate check: three of the eight rows carry `blaEC` only and must
+    never appear, so total_available 5 (not 8) is what proves the real
+    predicate ran.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _amr_row("SAMN00000001", "acrF,blaCTX-M-15,mdtM"),
+        _amr_row("SAMN00000002", "acrF,blaEC,mdtM"),  # populate check: must NOT match
+        _amr_row("SAMN00000003", "blaCTX-M-27,tet(A)"),
+        _amr_row("SAMN00000004", "blaEC"),  # populate check: must NOT match
+        _amr_row("SAMN00000005", "blaCTX-M-15"),
+        _amr_row("SAMN00000006", "blaCTX-M-55,sul2"),
+        _amr_row("SAMN00000007", "blaEC,mdtM"),  # populate check: must NOT match
+        _amr_row("SAMN00000008", "blaCTX-M-14"),
+    ]
+    scripted = _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(_search_input(max_isolates=2))
+
+    assert output.status == "ok", output.error
+    assert output.mode == "isolate_search"
+    assert output.pdg_snapshot == "PDG000000002.4157"
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000003"]
+    assert output.isolate_count == 2
+    assert output.total_available == 5, "the count must run past the sample cap"
+    assert output.truncated is True
+    assert output.rows_scanned == 8
+    assert output.scan_complete is True
+    assert output.isolates[0].amr_genotypes == ["acrF", "blaCTX-M-15", "mdtM"]
+    assert output.isolates[0].source_url == (
+        "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00000001"
+    )
+    assert scripted.calls[0]["max_rows"] == 2
+    assert scripted.calls[0]["url"].endswith(
+        "/Escherichia_coli_Shigella/PDG000000002.4157/Metadata/PDG000000002.4157.metadata.tsv"
+    )
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_not_truncated_when_every_match_is_shown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The sibling of the arm above, and its populate check: when the sample
+    holds every match and the scan reached the end, nothing is truncated.
+    An arm that hardcoded `truncated=True` would fail here.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _amr_row("SAMN00000001", "blaCTX-M-15"),
+        _amr_row("SAMN00000002", "blaEC"),  # populate check: must NOT match
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(_search_input(max_isolates=20))
+
+    assert output.status == "ok", output.error
+    assert output.isolate_count == 1
+    assert output.total_available == 1
+    assert output.truncated is False
+    assert output.scan_complete is True
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_zero_matches_at_eof_is_an_exact_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A scan that read the whole file and found nothing is an exact
+    absence, and says so in words rather than leaving the reader to guess.
+    """
+    _install_snapshot(monkeypatch)
+    table = [_amr_row("SAMN00000001", "blaEC"), _amr_row("SAMN00000002", "acrF,mdtM")]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(_search_input())
+
+    assert output.status == "empty", output.error
+    assert output.isolates == []
+    assert output.total_available == 0
+    assert output.truncated is False
+    assert output.rows_scanned == 2
+    assert output.scan_complete is True
+    assert output.error and "exact answer" in output.error
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_deadline_cut_with_zero_matches_is_timeout_not_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.5-A-09 on the new mode: a cutoff that found nothing is `timeout`,
+    never `empty`, because the two mean different things to a caller
+    deciding whether to retry. The message must not claim an absence.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _amr_row("SAMN00000001", "blaEC"),
+        _amr_row("SAMN00000002", "acrF"),
+        _amr_row("SAMN00000003", "blaCTX-M-15"),  # never reached: after the cut
+    ]
+    _install_predicate_scan(monkeypatch, table, cut_after=2)
+
+    output = await pathogen_detection(_search_input())
+
+    assert output.status == "timeout", output.error
+    assert output.isolates == []
+    assert output.truncated is True
+    assert output.rows_scanned == 2
+    assert output.scan_complete is False
+    assert output.error and "does NOT mean none exists" in output.error
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_deadline_cut_with_matches_is_ok_and_incomplete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.5-A-01's own shape on the new mode: a cutoff that DID find real
+    matches uses them and discloses the cutoff, never discards them. The
+    total is a lower bound, and `scan_complete=False` is what says so.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _amr_row("SAMN00000001", "blaCTX-M-15"),
+        _amr_row("SAMN00000002", "blaEC"),  # populate check: must NOT match
+        _amr_row("SAMN00000003", "blaCTX-M-27"),
+        _amr_row("SAMN00000004", "blaCTX-M-14"),  # never reached: after the cut
+    ]
+    _install_predicate_scan(monkeypatch, table, cut_after=3)
+
+    output = await pathogen_detection(_search_input(max_isolates=20))
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000003"]
+    assert output.total_available == 2, "a lower bound, not the file's real total"
+    assert output.truncated is True
+    assert output.scan_complete is False
+    assert output.rows_scanned == 3
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_transport_error_is_classified_never_raised(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+
+    async def _raise(url: str, **kwargs: Any) -> TsvScanResult:
+        raise httpx.HTTPStatusError(
+            "boom",
+            request=httpx.Request("GET", url),
+            response=httpx.Response(503, request=httpx.Request("GET", url)),
+        )
+
+    monkeypatch.setattr(
+        pathogen_detection_module.pathogen_ftp_transport, "stream_predicate_tsv_rows", _raise
+    )
+
+    output = await pathogen_detection(_search_input())
+
+    assert output.status == "error"
+    assert output.mode == "isolate_search"
+    assert output.error and "503" in output.error
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_deadline_already_exceeded_is_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+
+    async def _raise(url: str, **kwargs: Any) -> TsvScanResult:
+        raise PathogenDeadlineExceededError("already past")
+
+    monkeypatch.setattr(
+        pathogen_detection_module.pathogen_ftp_transport, "stream_predicate_tsv_rows", _raise
+    )
+
+    output = await pathogen_detection(_search_input())
+
+    assert output.status == "timeout"
+    assert output.scan_complete is False
+    assert output.rows_scanned == 0
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_rows_with_no_biosample_acc_are_empty_with_the_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Matches found, none of them renderable: reported as empty carrying the
+    count that WAS found, never as `ok` with an empty list and never as a
+    plain zero that reads like an absence.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        {"biosample_acc": "", "AMR_genotypes": '"blaCTX-M-15"'},
+        {"biosample_acc": "", "AMR_genotypes": '"blaCTX-M-27"'},
+        {"biosample_acc": "", "AMR_genotypes": '"blaEC"'},  # populate check: must NOT match
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(_search_input())
+
+    assert output.status == "empty"
+    assert output.isolates == []
+    assert output.total_available == 2
+    assert output.truncated is True
+    assert output.fields_withheld
+
+
+# ---------------------------------------------------------------------------
+# isolate_search: the gene-matching rule itself, through the real predicate.
+# ---------------------------------------------------------------------------
+
+
+async def _matching_accessions(
+    monkeypatch: pytest.MonkeyPatch, prefixes: list[str], table: list[dict[str, str]]
+) -> list[str | None]:
+    _install_snapshot(monkeypatch)
+    _install_predicate_scan(monkeypatch, table)
+    output = await pathogen_detection(_search_input(prefixes=prefixes, max_isolates=100))
+    assert output.status in {"ok", "empty"}, output.error
+    return [isolate.biosample_acc for isolate in output.isolates]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_family_prefix_matches_alleles_at_a_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`blaCTX-M` matches `blaCTX-M-15`, because the character after the
+    prefix is `-`. Populate check: the `blaCTX` row (no `-M`) and the
+    `blaEC` row must both be absent.
+    """
+    matched = await _matching_accessions(
+        monkeypatch,
+        ["blaCTX-M"],
+        [
+            _amr_row("SAMN00000001", "blaCTX-M-15"),
+            _amr_row("SAMN00000002", "blaCTX-M"),
+            _amr_row("SAMN00000003", "blaEC"),
+            _amr_row("SAMN00000004", "blaCTXM-15"),
+        ],
+    )
+
+    assert matched == ["SAMN00000001", "SAMN00000002"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_allele_prefix_never_matches_a_longer_allele(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The reason the boundary test exists: someone asking about
+    `blaCTX-M-15` must never be shown `blaCTX-M-155` carriers, which a
+    bare `startswith` would return as though they were the thing asked
+    for. Populate check: the exact-match row proves the arm is not simply
+    matching nothing.
+    """
+    matched = await _matching_accessions(
+        monkeypatch,
+        ["blaCTX-M-15"],
+        [
+            _amr_row("SAMN00000001", "blaCTX-M-155"),
+            _amr_row("SAMN00000002", "blaCTX-M-15"),
+            _amr_row("SAMN00000003", "blaCTX-M-159,tet(A)"),
+        ],
+    )
+
+    assert matched == ["SAMN00000002"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_blaoxa_48_never_matches_blaoxa_484(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    matched = await _matching_accessions(
+        monkeypatch,
+        ["blaOXA-48"],
+        [
+            _amr_row("SAMN00000001", "blaOXA-484"),
+            _amr_row("SAMN00000002", "blaOXA-48"),
+            _amr_row("SAMN00000003", "blaOXA-48-like,sul2"),
+        ],
+    )
+
+    assert matched == ["SAMN00000002", "SAMN00000003"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_mcr_1_matches_mcr_1_point_1(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A dot is not a letter or digit, so `mcr-1` matches `mcr-1.1`.
+    Populate check: `mcr-10` must not match, since `0` is a digit.
+    """
+    matched = await _matching_accessions(
+        monkeypatch,
+        ["mcr-1"],
+        [
+            _amr_row("SAMN00000001", "mcr-1.1"),
+            _amr_row("SAMN00000002", "mcr-10"),
+            _amr_row("SAMN00000003", "mcr-1"),
+        ],
+    )
+
+    assert matched == ["SAMN00000001", "SAMN00000003"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_prefix_matching_is_case_insensitive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    matched = await _matching_accessions(
+        monkeypatch,
+        ["BLATEM-1"],
+        [
+            _amr_row("SAMN00000001", "blaTEM-1"),
+            _amr_row("SAMN00000002", "blaEC"),
+        ],
+    )
+
+    assert matched == ["SAMN00000001"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_longer_prefix_never_matches_a_shorter_gene_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Asking for `blaTEM-1` must not match a bare `blaTEM`; asking for
+    `blaTEM` does match `blaTEM-1`. Both directions in one arm, so neither
+    can pass by accident.
+    """
+    table = [_amr_row("SAMN00000001", "blaTEM"), _amr_row("SAMN00000002", "blaTEM-1")]
+
+    assert await _matching_accessions(monkeypatch, ["blaTEM-1"], table) == ["SAMN00000002"]
+    assert await _matching_accessions(monkeypatch, ["blaTEM"], table) == [
+        "SAMN00000001",
+        "SAMN00000002",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_an_unbalanced_paren_prefix_is_data_not_a_regex(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`aph(3` would raise on `re.compile`. It matches `aph(3'')-Ib` here
+    because the prefix is only ever compared with `str.startswith`, which
+    is the whole point of allowing parentheses in the alphabet.
+    """
+    matched = await _matching_accessions(
+        monkeypatch,
+        ["aph(3"],
+        [
+            _amr_row("SAMN00000001", "acrF,aph(3'')-Ib,blaEC"),
+            _amr_row("SAMN00000002", "blaEC"),
+        ],
+    )
+
+    assert matched == ["SAMN00000001"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_a_dot_in_a_prefix_is_a_literal_dot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`bla.EM` must find nothing. Compiled as a regex, `.` would match the
+    `T` and this would return the `blaTEM-1` row, which is the confident
+    wrong record this arm exists to forbid. Populate check: the same table
+    under the prefix `blaTEM` DOES return that row, so the empty result
+    above cannot be an empty table.
+    """
+    table = [_amr_row("SAMN00000001", "blaTEM-1"), _amr_row("SAMN00000002", "blaEC")]
+
+    assert await _matching_accessions(monkeypatch, ["bla.EM"], table) == []
+    assert await _matching_accessions(monkeypatch, ["blaTEM"], table) == ["SAMN00000001"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_any_prefix_in_the_list_matches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A gene family is a set, so the row matches when ANY requested prefix
+    matches ANY parsed item. Populate check: one row matches neither.
+    """
+    matched = await _matching_accessions(
+        monkeypatch,
+        ["blaCTX-M", "mcr-1"],
+        [
+            _amr_row("SAMN00000001", "blaCTX-M-15"),
+            _amr_row("SAMN00000002", "acrF,mcr-1.1"),
+            _amr_row("SAMN00000003", "blaEC,tet(A)"),
+        ],
+    )
+
+    assert matched == ["SAMN00000001", "SAMN00000002"]

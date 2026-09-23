@@ -179,9 +179,14 @@ SearchDb = Literal[
 FetchDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
 ]
+#: `taxonomy` is the thirteenth summary value, additive, golden question G-035
+#: (2026-09-22): an isolate question cites its organism to the NCBI Taxonomy
+#: record. Live-verified the same day: ESummary on `db=taxonomy&id=562`
+#: returns `scientificname`, `commonname`, `rank`, `division`, `genus`,
+#: `species` and `taxid`, and the record page `/taxonomy/562` answers.
 SummaryDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
-    "bioproject", "biosample", "assembly", "gds",
+    "bioproject", "biosample", "assembly", "gds", "taxonomy",
 ]
 
 

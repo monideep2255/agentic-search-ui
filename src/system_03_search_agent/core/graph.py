@@ -481,7 +481,7 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
-from system_03_search_agent.core import accession, breadth_plan, coordinate_window
+from system_03_search_agent.core import accession, breadth_plan, coordinate_window, isolate_search
 from system_03_search_agent.core.next_step import (
     build_next_step_query,
     entity_type_noun,
@@ -603,6 +603,11 @@ from system_03_search_agent.tools.ncbi_dbsnp import ncbi_dbsnp
 from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput, NcbiDbsnpOutput
 from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi_efetch
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput, NcbiEfetchOutput
+from system_03_search_agent.tools.pathogen_detection import (
+    build_citation as pathogen_build_citation,
+)
+from system_03_search_agent.tools.pathogen_detection import pathogen_detection
+from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionOutput
 from system_03_search_agent.tools.pubtator_annotate import build_citation as pubtator_build_citation
 from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
 from system_03_search_agent.tools.pubtator_annotate_schemas import (
@@ -2079,6 +2084,16 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         found_accession = accession.parse_accession(query.text)
         if found_accession is not None:
             accession_plan = await resolve_accession(found_accession)
+    # Golden question G-035 (2026-09-22): a Pathogen Detection isolate
+    # question names an organism and a resistance gene family, which no
+    # resolver here recognised, so it reached Plan with nothing to bind. A
+    # fixed rule recognises it, the organism resolves to its Taxonomy id
+    # from a live-verified table with no call at all, and Plan plans the
+    # isolate search and the organism's Taxonomy record, no graph call. A
+    # window or an accession wins when both appear.
+    isolate_question: isolate_search.IsolateQuestion | None = None
+    if window is None and accession_plan is None:
+        isolate_question = isolate_search.parse_isolate_question(query.text)
     think_messages = _build_think_messages(
         query.text, exact_matches, _memory_suffix(state, "plan")
     )
@@ -2163,7 +2178,11 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         }
 
     # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
-    if (window_genes is not None and window_genes.genes) or accession_plan is not None:
+    if (
+        (window_genes is not None and window_genes.genes)
+        or accession_plan is not None
+        or isolate_question is not None
+    ):
         # A window question's entities are the window's genes, so the model's
         # gene-shaped spans ("ACMG", "dbVar", "ClinVar", "copy number variant")
         # are not confirmed live. Each confirmation is a Layer 2 call counted
@@ -2191,6 +2210,18 @@ async def think_node(state: GraphState) -> dict[str, Any]:
             disclosures=tuple(model_resolution.disclosures)
             + (coordinate_window.window_disclosure(window, window_genes),),
         )
+    if isolate_question is not None and isolate_question.clarification is None:
+        # The organism is the question's entity, resolved from the table;
+        # the disclosure names the prefixes searched and the ones left out.
+        organism = isolate_question.organism
+        assert organism is not None
+        model_resolution = _EntityResolution(
+            curies=[organism.curie] + list(model_resolution.curies),
+            unresolved_symbols=list(model_resolution.unresolved_symbols),
+            confirmed=((organism.label, organism.curie),) + tuple(model_resolution.confirmed),
+            disclosures=tuple(model_resolution.disclosures)
+            + (isolate_search.disclosure(isolate_question),),
+        )
 
     # UI fix set 8 (2026-09-13), the GCK fallback. Originally gated on the
     # model having extracted NO gene span at all, and always on every
@@ -2204,7 +2235,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # tokens, live-confirmed and capped at three; a candidate that fails
     # is dropped, so a lone mistyped symbol (BRCA9) keeps its refusal by
     # name through `unresolved_symbols`, which this branch never clears.
-    if not model_resolution.curies and accession_plan is None:
+    if not model_resolution.curies and accession_plan is None and isolate_question is None:
         fallback_taxon = await _confirmed_taxon_for_extraction(classification.entities)
         if fallback_taxon is not None:
             fallback_confirmed = await _confirm_fallback_candidates(
@@ -2237,6 +2268,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         and not model_resolution.unresolved_symbols
         and not exact_matches
         and accession_plan is None
+        and isolate_question is None
     ):
         disease_fallback: list[tuple[str, str]] = []
         fallback_disclosures: list[str] = []
@@ -2354,6 +2386,10 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     )
     if window is not None and window.assembly is None:
         clarification = coordinate_window.ASSEMBLY_QUESTION
+    if isolate_question is not None and isolate_question.clarification is not None:
+        # No organism, or no gene: ask, in the shape's own words, rather
+        # than search 584,433 isolates for nothing or ask for a gene symbol.
+        clarification = isolate_question.clarification
     if accession_plan is not None:
         accession_note = accession.disclosure(
             accession_plan.record, accession_plan.uid, accession_plan.linked
@@ -2425,6 +2461,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         result["coordinate_window"] = window
     if accession_plan is not None and accession_plan.uid is not None:
         result["accession_plan"] = accession_plan
+    if isolate_question is not None and isolate_question.clarification is None:
+        result["isolate_question"] = isolate_question
     return sink.result(**result)
 
 
@@ -2573,7 +2611,17 @@ _LAYER_TOOL_ACT_TIMEOUT_SECONDS: Final[dict[str, float]] = {
     "pubtator_annotate": 20.0,
     "litvar2_lookup": 20.0,
     "clinicaltrials_search": 20.0,
+    # The isolate search (2026-09-22): the tool's own 120-second FTP budget
+    # plus snapshot resolution. Measured: a full scan of the 521 MB E. coli
+    # metadata file takes about 18 seconds, so this ceiling is the bound on
+    # a slow day, not the expected wait.
+    "pathogen_detection": 150.0,
 }
+
+#: The isolate search shows more rows than the five-row layer cap, since
+#: the rows ARE the answer rather than context beside a graph result. The
+#: figure is the module's own, so Plan's `max_isolates` and Act's cut agree.
+_ISOLATE_ROW_CAP: Final[int] = isolate_search.ISOLATES_SHOWN
 
 #: The fixed number of rows a Layer 2/3 tool contributes to synthesis, after
 #: a stable sort. Fixed rather than "whatever the page held" so that the
@@ -2618,6 +2666,7 @@ def _layer_tool_executor(tool: str) -> Any:
         "pubtator_annotate": pubtator_annotate,
         "litvar2_lookup": litvar2_lookup,
         "clinicaltrials_search": clinicaltrials_search,
+        "pathogen_detection": pathogen_detection,
     }
     return executors[tool]
 
@@ -2803,6 +2852,48 @@ def _layer_tool_output_to_structured_fields(
             )
         rows.sort(key=lambda row: (str(row["fields"].get("rsid", "")), str(row["source_url"])))
         return _shaped(litvar.status, rows[:_LAYER_TOOL_ROW_CAP], litvar.error)
+
+    if tool == "pathogen_detection":
+        # The isolate search (G-035, 2026-09-22). One row per isolate the
+        # tool kept, led by the strain name a person recognises (the
+        # accession when there is none), with the full AMR genotype list,
+        # sorted by BioSample accession so the same snapshot yields the same
+        # rows. The envelope carries the tool's own count of EVERY match
+        # and its cut flag rather than `_shaped`'s "what you see is all
+        # there is", because for this shape the count is the answer.
+        isolates: PathogenDetectionOutput = output
+        for isolate in isolates.isolates:
+            if not isolate.source_url or not isolate.biosample_acc:
+                continue
+            rows.append(
+                _pseudo_row(
+                    "Pathogen Detection isolate",
+                    {
+                        "name": isolate.strain or isolate.biosample_acc,
+                        "biosample_acc": isolate.biosample_acc,
+                        "amr_genotypes": (
+                            ", ".join(isolate.amr_genotypes) if isolate.amr_genotypes else None
+                        ),
+                        "serovar": isolate.serovar,
+                        "geo_loc_name": isolate.geo_loc_name,
+                        "collection_date": isolate.collection_date,
+                    },
+                    isolate.source_url,
+                )
+            )
+        rows.sort(key=lambda row: str(row["fields"].get("biosample_acc", "")))
+        rows = rows[:_ISOLATE_ROW_CAP]
+        status = isolates.status
+        if status == "ok" and not rows:
+            status = "empty"
+        return {
+            "status": status,
+            "row_count": len(rows),
+            "total_available": max(isolates.total_available, len(rows)),
+            "truncated": bool(isolates.truncated) or len(rows) < isolates.isolate_count,
+            "rows": rows,
+            "error": isolates.error,
+        }
 
     raise ValueError(f"no Layer 2/3 shaping exists for tool {tool!r}")
 
@@ -4298,7 +4389,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # summaries and no graph call, since the graph holds no projects,
     # samples, runs or assemblies; see the `planned is None` branch below.
     accession_plan = state.get("accession_plan")
-    planned = None if accession_plan is not None else await _select_planned_tool_call(
+    # Golden question G-035 (2026-09-22): an isolate question plans the
+    # isolate search and the organism's Taxonomy record, and no graph call,
+    # since the graph holds no isolates.
+    isolate_question = state.get("isolate_question")
+    planned = None if (accession_plan is not None or isolate_question is not None) else await _select_planned_tool_call(
         query.text, query_class, target_curies, unresolved_symbols, _memory_curies(state)
     )
     if isinstance(planned, _UnresolvedEntityRefusal):
@@ -4337,6 +4432,20 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
                 narrative=(
                     f"searching live NCBI records for {accession_plan.record.label()}: "
                     + ", ".join(dict.fromkeys(p.purpose for p in planned_tool_calls))
+                )[:500],
+                tool_calls=[p.tool_call for p in planned_tool_calls],
+            )
+        elif isolate_question is not None:
+            planned_tool_calls = [
+                _planned_from_breadth(call) for call in isolate_search.plan_calls(isolate_question)
+            ]
+            lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
+            planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
+            plan_payload = PlanPayload(
+                narrative=(
+                    f"searching Pathogen Detection {isolate_question.organism.label} isolates "
+                    f"for AMR genotypes starting {', '.join(isolate_question.prefixes)}, "
+                    "and the organism's NCBI Taxonomy record"
                 )[:500],
                 tool_calls=[p.tool_call for p in planned_tool_calls],
             )
@@ -4779,6 +4888,12 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     "assembly_summary": (
         "assemblyname", "assemblyaccession", "assemblystatus", "organism", "submissiondate",
     ),
+    # The isolate search (G-035, 2026-09-22): the organism's Taxonomy
+    # record, so the organism is cited to NCBI. A Taxonomy ESummary record
+    # carries `scientificname`, `commonname`, `rank`, `division`, `genus`,
+    # `species` and `taxid` (read live 2026-09-22). The scientific name
+    # leads so the citation names the organism.
+    "taxonomy_summary": ("scientificname", "commonname", "rank", "division", "taxid"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -6309,6 +6424,34 @@ def _unaddressed_target_entities(
         for entity in target_entities
         if not expected_by_entity[entity] or expected_by_entity[entity] not in cited_urls
     ]
+
+
+def _isolate_count_note(state: GraphState) -> str | None:
+    """The isolate search's own count sentence, or None for every other question.
+
+    Golden question G-035 (2026-09-22). The tool counts every matching
+    isolate to the end of the snapshot file and keeps the first twenty, so
+    the person is told how many there are and how many they see, exact when
+    the scan finished and "at least" when it did not. Read from the typed
+    output Act kept rather than the rows, because the rows are the sample
+    and the count is not in them. A search that found nothing still gets
+    its sentence: a true zero is an answer, not a refusal.
+    """
+    question = state.get("isolate_question")
+    if question is None:
+        return None
+    for output in (state.get("layer3_raw_outputs") or {}).values():
+        if not isinstance(output, PathogenDetectionOutput) or output.mode != "isolate_search":
+            continue
+        if output.status not in ("ok", "empty"):
+            return None
+        return isolate_search.count_sentence(
+            question.organism.label,
+            shown=min(output.isolate_count, _ISOLATE_ROW_CAP),
+            total=output.total_available,
+            complete=output.scan_complete is not False,
+        )
+    return None
 
 
 def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
@@ -8134,6 +8277,11 @@ def _layer3_base_citation(
             return litvar2_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "ncbi_dbsnp":
             return dbsnp_build_citation(raw_output, synth_finding.field, display_index=display_index)
+        if synth_finding.tool == "pathogen_detection":
+            # The isolate search (G-035, 2026-09-22). The row's `name` is the
+            # strain, which the tool's builder knows under its own field.
+            field = "strain" if synth_finding.field == "name" else synth_finding.field
+            return pathogen_build_citation(raw_output, field, display_index=display_index)
     except ValueError:
         return None
     return None
@@ -9596,6 +9744,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             note
             for note in (
                 truncation_note,
+                _isolate_count_note(state),
                 structured_fallback_note,
                 partial_answer_note,
                 incomplete_answer_note,

@@ -38,6 +38,31 @@ getting its own fresh clock. `stream_filtered_tsv_rows` returns whether it
 was cut off by the deadline (`truncated_by_deadline`) or genuinely reached
 end of file, so the caller can tell "found everything there is" from "ran
 out of time looking", and never reports the second as the first.
+
+## Two readers over one file shape
+
+There are two ways to read a row out of these files, and they are separate
+functions rather than one function with a flag, because they answer
+different questions.
+
+- `stream_filtered_tsv_rows`: is this row's `key_column` value one of the
+  values I asked for? An exact membership test, used for a point lookup by
+  `biosample_acc` and for every row sharing one `PDS_acc`. It stops as soon
+  as it has what it was asked for.
+- `stream_predicate_tsv_rows`: does this row satisfy an arbitrary caller
+  predicate? Used by `pathogen_detection`'s `isolate_search` mode, where
+  the question is "does this isolate's AMR genotype list carry a gene in
+  the family asked about", which no exact-membership test can express. It
+  keeps only the first `max_rows` accepted rows but keeps COUNTING accepted
+  rows all the way to end of file or the deadline, so the caller can show a
+  bounded sample and still state the real total.
+
+`TsvScanResult` carries two fields for that second reader: `match_count`,
+every row the filter accepted whether it was kept or not, and
+`reached_end`, whether the stream genuinely hit end of file so the counts
+are exact rather than a lower bound. Both are populated by both readers;
+for `stream_filtered_tsv_rows` every accepted row is also a kept row, so
+its `match_count` always equals `len(rows)`.
 """
 
 from __future__ import annotations
@@ -46,7 +71,7 @@ import logging
 import re
 import time
 import urllib.parse
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from typing import Final
 
@@ -91,9 +116,26 @@ class PathogenDeadlineExceededError(PathogenTransportError):
 
 @dataclass(frozen=True)
 class TsvScanResult:
+    """The result of one streamed scan.
+
+    `rows`: the rows actually kept and returned.
+    `truncated_by_deadline`: the wall-clock deadline cut the scan short.
+    `total_rows_scanned`: every data row read off the wire, matching or not.
+    `match_count`: every row the filter ACCEPTED, whether it was kept or
+    not. For `stream_filtered_tsv_rows` this always equals `len(rows)`,
+    since it keeps every row it accepts; for `stream_predicate_tsv_rows`
+    it can be far larger than `len(rows)`, which is the point of it.
+    `reached_end`: the stream genuinely hit end of file, so `match_count`
+    and `total_rows_scanned` are exact rather than a lower bound. False
+    whenever a deadline, a `max_matches` cap, or an all-keys-seen early
+    exit stopped the scan first.
+    """
+
     rows: list[dict[str, str]] = field(default_factory=list)
     truncated_by_deadline: bool = False
     total_rows_scanned: int = 0
+    match_count: int = 0
+    reached_end: bool = False
 
 
 def _endpoint_for_audit(url: str) -> str:
@@ -281,6 +323,7 @@ async def stream_filtered_tsv_rows(
     matched: list[dict[str, str]] = []
     total_scanned = 0
     truncated = False
+    reached_end = False
     header: list[str] | None = None
     key_index: int | None = None
 
@@ -333,6 +376,10 @@ async def stream_filtered_tsv_rows(
                     remaining_keys.discard(value)
                     if not remaining_keys:
                         break
+            else:
+                # No `break` fired, so the stream ran to end of file and
+                # the counts below are exact rather than a lower bound.
+                reached_end = True
     except Exception as exc:
         record_tool_call(
             tool="pathogen_detection",
@@ -359,5 +406,132 @@ async def stream_filtered_tsv_rows(
     )
 
     return TsvScanResult(
-        rows=matched, truncated_by_deadline=truncated, total_rows_scanned=total_scanned
+        rows=matched,
+        truncated_by_deadline=truncated,
+        total_rows_scanned=total_scanned,
+        # This reader keeps every row it accepts, so accepted and kept are
+        # the same number here by construction. Stated rather than left at
+        # the field default, so a caller reading `match_count` off either
+        # reader gets the truth rather than a zero that means nothing.
+        match_count=len(matched),
+        reached_end=reached_end,
+    )
+
+
+async def stream_predicate_tsv_rows(
+    url: str,
+    *,
+    predicate: Callable[[dict[str, str]], bool],
+    deadline: float,
+    client: httpx.AsyncClient,
+    max_rows: int | None = None,
+) -> TsvScanResult:
+    """Stream a tab-separated file, calling `predicate` on every row, keeping
+    the first `max_rows` accepted rows and COUNTING every accepted row to
+    end of file or the deadline, whichever comes first.
+
+    This is the reader for a question an exact membership test cannot ask:
+    `pathogen_detection`'s `isolate_search` mode needs "does this isolate's
+    AMR genotype list carry a gene in the family asked about", which is a
+    property of a parsed list inside one cell, not of the cell's whole
+    value. `predicate` receives the row as a `{column_name: value}` dict
+    built from the file's own header row, so it names columns rather than
+    indexes.
+
+    The counting is the reason this is a separate function rather than a
+    flag on `stream_filtered_tsv_rows`. That one stops the moment it has
+    what it was asked for, which is right for a lookup and wrong here: a
+    person asking which isolates carry a gene wants a bounded sample AND
+    the real total, and a sample with no total behind it reads as "these
+    are all of them". Reaching `max_rows` therefore stops KEEPING rows, it
+    never stops the scan.
+
+    `reached_end` on the result says whether `match_count` is exact. False
+    means the deadline cut the scan, so `match_count` is a lower bound and
+    the caller must say so rather than presenting it as a total.
+
+    `deadline` is the same shared, absolute `time.monotonic()` budget
+    `stream_filtered_tsv_rows` takes: one value per tool invocation, reused
+    across every read that invocation makes, never a fresh per-call
+    timeout.
+
+    `predicate` is called once per data row and must not raise; an
+    exception from it is recorded on the audit line and propagates, the
+    same as any other failure mid-stream.
+    """
+    if time.monotonic() >= deadline:
+        raise PathogenDeadlineExceededError(
+            f"Wall-clock deadline already exceeded before starting a read of {url}."
+        )
+
+    kept: list[dict[str, str]] = []
+    match_count = 0
+    total_scanned = 0
+    truncated = False
+    reached_end = False
+    header: list[str] | None = None
+
+    remaining_s = max(deadline - time.monotonic(), 0.1)
+    # T-5.0-05 / T-6.0-01, exactly as `stream_filtered_tsv_rows` above: this
+    # is a third network-reaching function in this module and therefore a
+    # third audited chokepoint, charged against the Section 21.3 ceiling
+    # before the request so a refused call never reaches the network.
+    charge_one_call(tool="pathogen_detection", layer=2)
+    audit_started = time.monotonic()
+    status_code: int | None = None
+    audit_params = {"filter": "predicate", "max_rows": max_rows}
+    try:
+        async with client.stream("GET", url, timeout=remaining_s) as response:
+            status_code = response.status_code
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if time.monotonic() >= deadline:
+                    truncated = True
+                    break
+                if header is None:
+                    header = line.split("\t")
+                    continue
+                if not line:
+                    continue
+                total_scanned += 1
+                fields = line.split("\t")
+                row = dict(zip(header, fields, strict=False))
+                if not predicate(row):
+                    continue
+                match_count += 1
+                if max_rows is None or len(kept) < max_rows:
+                    kept.append(row)
+            else:
+                reached_end = True
+    except Exception as exc:
+        record_tool_call(
+            tool="pathogen_detection",
+            layer=2,
+            endpoint=_endpoint_for_audit(url),
+            latency_ms=(time.monotonic() - audit_started) * 1000,
+            authorization="none",
+            params=audit_params,
+            http_status=status_code,
+            error=str(exc),
+        )
+        raise
+
+    record_tool_call(
+        tool="pathogen_detection",
+        layer=2,
+        endpoint=_endpoint_for_audit(url),
+        latency_ms=(time.monotonic() - audit_started) * 1000,
+        authorization="none",
+        params=audit_params,
+        record_ids=None,
+        http_status=status_code,
+        error=None,
+    )
+
+    return TsvScanResult(
+        rows=kept,
+        truncated_by_deadline=truncated,
+        total_rows_scanned=total_scanned,
+        match_count=match_count,
+        reached_end=reached_end,
     )
