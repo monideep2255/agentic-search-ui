@@ -207,6 +207,16 @@ _ISOLATE_WORDS: Final[re.Pattern[str]] = re.compile(
     r"\bisolates?\b|pathogen\s+detection", re.IGNORECASE
 )
 
+#: A resistance word with no family behind it ("resistance genes", "AMR"). It
+#: makes the question this shape so the shape's own questions are asked,
+#: which organism or which gene, rather than the generic gene refusal.
+#: Measured live 2026-09-22: "Which tomato isolates in Pathogen Detection
+#: carry resistance genes?" was answered "name a gene, variant, disease or
+#: organism" because nothing here recognised the sentence.
+_GENERIC_RESISTANCE: Final[re.Pattern[str]] = re.compile(
+    r"resistan(?:ce|t)\s+genes?|antimicrobial\s+resistance|\bamr\b", re.IGNORECASE
+)
+
 #: A Pathogen Detection isolate (`PDT...`) or SNP cluster (`PDS...`) identifier.
 #: A question naming one is about THAT record, the tool's older two modes
 #: and competency question Q5, never a search by gene, so the shape stands
@@ -315,7 +325,12 @@ def parse_isolate_question(text: str) -> IsolateQuestion | None:
     organism = _find_organism(text)
     families = _find_families(text)
     genes = _find_genes(text)
-    if organism is None and not families and not genes:
+    if (
+        organism is None
+        and not families
+        and not genes
+        and _GENERIC_RESISTANCE.search(text) is None
+    ):
         return None
     return IsolateQuestion(organism=organism, families=families, genes=genes)
 

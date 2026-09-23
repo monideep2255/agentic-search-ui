@@ -142,6 +142,20 @@ def test_a_gene_with_no_organism_asks_which_organism() -> None:
     assert "Escherichia coli" in module.ORGANISM_QUESTION
 
 
+def test_an_unknown_organism_with_a_resistance_word_asks_which_organism() -> None:
+    """Measured live 2026-09-22: the tomato question got the generic gene
+    refusal because "resistance genes" named no family."""
+    question = module.parse_isolate_question(
+        "Which tomato isolates in Pathogen Detection carry resistance genes?"
+    )
+    assert question is not None and question.organism is None
+    assert question.clarification == module.ORGANISM_QUESTION
+    amr = module.parse_isolate_question("Which E. coli isolates have AMR genes?")
+    assert amr is not None and amr.clarification == module.GENE_QUESTION
+    # Populate check: the same sentence with no resistance word is not the shape.
+    assert module.parse_isolate_question("Which tomato isolates in Pathogen Detection carry genes?") is None
+
+
 def test_an_organism_with_no_gene_asks_which_gene() -> None:
     question = module.parse_isolate_question("Which E. coli isolates are in Pathogen Detection?")
     assert question is not None and question.organism is not None
