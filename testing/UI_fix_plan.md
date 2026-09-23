@@ -61,7 +61,7 @@ Set 10 has 10.1 built and live and 10.3 run. Set 11:
   as of the night of 2026-09-22: the shape the product owner approved in
   discussion, a bounded sample of isolates each with its AMR genes and a
   link plus a disclosed count and cut. Its queries and retest workflow are
-  `testing/Isolate_search_queries_and_workflow.md`; retest items 17 to 22
+  `testing/Product/queries/Isolate_search_queries_and_workflow.md`; retest items 17 to 22
   in `testing/Shipped_2026-09-22.md`
 - L-01, a whole graph result vanishing on some runs: measured, its two causes
   read, and the reader now told (`10f6a46`); the cause itself is not fixed
@@ -1488,7 +1488,7 @@ option rather than a queued task.
   `24305f0` with two follow-ups from its live runs (`286bb49`, `f96c780`),
   verified live 5 of 5 on G-035. Retest: items 17 to 22 in
   `testing/Shipped_2026-09-22.md`, and the full set in
-  `testing/Isolate_search_queries_and_workflow.md`. AWAITING RETEST.
+  `testing/Product/queries/Isolate_search_queries_and_workflow.md`. AWAITING RETEST.
 - A chromosome window with its assembly named ("chr17:43,044,295-43,125,364
   on GRCh38") is answered with the genes under it, resolved from the
   coordinates alone, and the dbVar and ClinVar records that genuinely

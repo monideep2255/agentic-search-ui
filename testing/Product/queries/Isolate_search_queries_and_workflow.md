@@ -217,4 +217,4 @@ The evidence folder for that run must contain `runs.jsonl` (the raw pass-by-pass
 
 ## Where these tests go next
 
-Once this feature is live and the product owner has approved it, query 1 becomes Product_workflows test 23, and the full set of query shapes here becomes a Developer_workflows Tier 2 row. This document is the source; those two documents are the index that points back to it.
+All twelve queries here are included, in the same shape, in `testing/Test_queries_and_workflows.md`, the one document that holds every query for every feature; that document is what the product owner runs, and this one is the per-feature source it was built from. Once the product owner has approved the feature, its shape also becomes a Developer_workflows Tier 2 row.

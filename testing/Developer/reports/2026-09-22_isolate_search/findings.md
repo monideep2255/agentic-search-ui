@@ -18,7 +18,7 @@ Fix-plan "Next, in order" item 1 as it stood at the close of 2026-09-22, the one
 
 The isolate shape answers. Five of five live passes of the golden question on develop answered in 19 to 28 seconds with 21 citations each: the first 20 E. coli isolates carrying a blaCTX-M gene, each in a two-column table with its full AMR genotype list beside its name, each cited to its Pathogen Detection isolate page by its BioSample accession, the organism cited to its NCBI Taxonomy record, and under the answer the sentence "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown". The count is exact: the tool reads the whole 521 MB metadata file to the end on every pass.
 
-The seven extra questions behaved as `testing/Isolate_search_queries_and_workflow.md` expects: Salmonella ESBL 20,307 isolates, blaCTX-M-15 alone 2,678 (never a neighbouring allele), Klebsiella carbapenemase genes 88,025, Listeria blaKPC a true zero stated as zero rather than a refusal, an organism the product cannot search asked "which organism" with five it covers named, an organism with no gene asked "which gene", and the shortest phrasing, "ESBL E. coli isolates?", read exactly as the full question.
+The seven extra questions behaved as `testing/Product/queries/Isolate_search_queries_and_workflow.md` expects: Salmonella ESBL 20,307 isolates, blaCTX-M-15 alone 2,678 (never a neighbouring allele), Klebsiella carbapenemase genes 88,025, Listeria blaKPC a true zero stated as zero rather than a refusal, an organism the product cannot search asked "which organism" with five it covers named, an organism with no gene asked "which gene", and the shortest phrasing, "ESBL E. coli isolates?", read exactly as the full question.
 
 ## What the person feels
 
@@ -33,7 +33,7 @@ The same shape as the coordinate range and the accession: a probe worker measure
 | The FTP tree, live: folders, snapshot, file size, columns, gene spelling, scan time | The probe worker | `probes.md`, `probe_ecoli_metadata.py` |
 | The contract every worker built against | The planner | `contract.md` |
 | A third mode, `isolate_search`, on the pathogen tool, the predicate scan on the transport, 51 new arms and one live premise arm | The tool worker | `tools/pathogen_detection.py`, `pathogen_detection_schemas.py`, `pathogen_ftp_transport.py` and their tests |
-| The test queries and the product owner's workflow | The document worker | `testing/Isolate_search_queries_and_workflow.md` |
+| The test queries and the product owner's workflow | The document worker | `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
 | The pure module, the wiring, 44 arms, the debugging guide | The planner | `core/isolate_search.py`, `core/graph.py`, `core/state.py`, `test_isolate_search.py`, `test_isolate_search_wiring.py` |
 | Live runs on develop, three deploys | The planner | `golden/`, `raw/`, `round2/`, the tables below |
 
@@ -98,7 +98,7 @@ One thing the mutation harness found before anything shipped: competency questio
 
 - The model's written summary fails grounding on most passes of this shape (the ESBL, blaCTX-M-15, Klebsiella, Listeria and terse questions all showed the structured-fallback note), so the code-built table and the count sentence carry the answer and the prose above them is one sentence. Honest, and thin. It is the same grounding property recorded on 2026-09-21: the gate permits quoting and forbids explaining, and a strain name is not something a model can restate.
 - The golden row's `must_cite` names `https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=562`; the product cites NCBI's own record page, `https://www.ncbi.nlm.nih.gov/taxonomy/562`, so the instrument reads 1 of 2 must-cite hits on every pass. The organism IS cited; the row's URL form is the older browser address. A golden row edit is the product owner's, per `docs/build/Golden_dataset_method.md`.
-- A year filter, or any filter beyond the gene prefix, is not built, and a follow-up does not carry an isolate search forward. `testing/Isolate_search_queries_and_workflow.md` test 9 states the honest current behaviour.
+- A year filter, or any filter beyond the gene prefix, is not built, and a follow-up does not carry an isolate search forward. `testing/Product/queries/Isolate_search_queries_and_workflow.md` test 9 states the honest current behaviour.
 - The stable prompt prefix changed bytes at this deploy, since the tool's input schema gained a branch; one cold cache, no code change, and the cache test suite is green.
 - Every Pathogen Detection isolate page is a client-rendered app whose search fragment was not verified to pre-populate, the same scope the tool's build stopped at (F-3.5-04).
 

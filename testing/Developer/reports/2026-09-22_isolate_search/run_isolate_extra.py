@@ -9,7 +9,7 @@ Usage, from the repository root:
         --accounts <path to a JSON list of sign-in bodies, never committed> \\
         --passes 2 --base https://search-agent-api-develop-43b3.up.railway.app --commit <sha>
 
-The rows mirror `testing/Isolate_search_queries_and_workflow.md`: a second
+The rows mirror `testing/Product/queries/Isolate_search_queries_and_workflow.md`: a second
 organism, an explicit allele, a second family, a true zero, the two
 clarifications, the older single-isolate mode, and the shortest phrasing.
 """

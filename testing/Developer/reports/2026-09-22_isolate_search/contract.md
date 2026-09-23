@@ -61,4 +61,4 @@ Files: `src/system_03_search_agent/core/isolate_search.py` (new, pure), `core/gr
 
 ## The document (worker B owns this file and no other)
 
-`testing/Isolate_search_queries_and_workflow.md`: the test queries, written from the user's chair, and the workflow for running them.
+`testing/Product/queries/Isolate_search_queries_and_workflow.md`: the test queries, written from the user's chair, and the workflow for running them.
