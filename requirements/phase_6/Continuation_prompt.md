@@ -32,7 +32,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK "NEXT, IN ORDER" FROM ITS CUTOFF. The next action is owned by `testing/UI_fix_plan.md`, section "Where we stopped", REWRITTEN AT THE CLOSE OF 2026-09-22 after the product owner retested and approved everything the day built. Its item 1, the two questions that lost their own graph search to a generated query that failed validation, SHIPPED the same evening as `27d68ae` (a fixed template for a two-gene comparison and for a shapeless gene question, and a fast form for several records) and `b6cd025` (a GEO DataSets search when a question asks for datasets), verified live on develop, G-033 3 of 3 and G-037 3 of 3, and awaits the product owner's retest. THE COORDINATE RANGE, next on that list, SHIPPED the same night as `66b3811` with two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty): a window with its assembly named is answered with the genes under it (resolved live from NCBI Gene by position, filtered by each record's own placement) and the dbVar and ClinVar records that overlap it; a window with no assembly named is asked which. Verified live: G-001 6 of 8 answered across three deploys, 3 of 3 on the final one with BRCA1 resolved from the coordinates alone, a CFTR-locus window 6 of 6, the assembly question 6 of 6. Awaits the product owner's retest. The list's item 1 is now the call-ceiling measurement. The day's summary and the retest list are `testing/Shipped_2026-09-22.md`.
+- WORK "NEXT, IN ORDER" FROM ITS CUTOFF. The next action is owned by `testing/UI_fix_plan.md`, section "Where we stopped", REWRITTEN LATE ON 2026-09-22 after the list's first two items closed. Its item 1 is now THE ISOLATE SHAPE (G-035), the one golden shape that still never answers, and it opens with a DISCUSSION of what the question should return rather than with code, because no mode of the pathogen tool searches isolates by an AMR gene, a genotype or a description; a new mode on the existing tool comes before any Think rule. WHAT CLOSED ON 2026-09-22 AFTER THE RETEST, all on develop and all awaiting the product owner's retest (items 7 to 16 in `testing/Shipped_2026-09-22.md`): the two lost searches and the GEO search (`27d68ae`, `b6cd025`); the coordinate range (`66b3811`, then `e477077` and `c72b8a7`); THE CALL CEILING MEASURED (`df657ad` put the query's Layer 2 and 3 count on the done event; 24 runs over eight shapes, every one answered, none refused, the worst pass 17 of 20, so the ceiling stays at twenty, and the variable part is the model's spans the FIRST time a process sees them, since Think caches every confirmed span for the life of the process, evidence `testing/Developer/reports/2026-09-22_call_ceiling/findings.md`); the measurement's own finding (`d8619bc`, a question's own words such as "condition" or "tumour" are never searched as a disease name, after two answers had listed eight MedGen records the person never named as "entities named in the question"; the guard held on four live retests); and THE BIOPROJECT ACCESSION (`a64c44e`: a fixed rule recognises a BioProject, BioSample, SRA or assembly accession, Think resolves it live with one search and one link per linked database, Plan plans the record's summary and the summaries of what it links to with no graph call, and an accession NCBI does not have is answered "was not found in NCBI. Check the accession and ask again"; G-007 3 of 3 live at a fixed eight calls; two follow-up fixes from the live runs, `d882856`, an SRA run shown as its accession rather than NCBI's markup, and `649750c`, a resolved accession counts as the question's subject so "which runs come from it?" no longer asks which gene; re-run after both fixes at `649750c`: the BioSample question 2 of 2 answered with its record and five of its runs as accessions, and the golden question again with the run shown as SRR9496657). The day's summary and the retest list are `testing/Shipped_2026-09-22.md`.
   - Read "What is parked, and why" BEFORE picking anything up. OMIM is live WITH `filter_omim_titles`; the dispatch and the filter ship together and neither is enabled or removed without the other.
 - ITEM 10.3, THE CONSISTENCY RUN, HAS NOW BEEN RUN, for the first time, on 2026-09-22: all 50 golden questions three times against develop at `63ec316`, signed in on two fresh test accounts. 86 of 150 runs answered; 25 questions answer every time (the 2026-09-12 baseline had 1), 18 never (had 43), none worse. The 18 split into 9 expected refusals, 3 guardrail refusals the golden row disagrees with, and 6 genuine gaps, every one a Layer 1 failure. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`.
 - ITEM 11.33 IS FIXED, ON DEVELOP AND VERIFIED LIVE at `a868462` (the BRCA1 gene summary runs past the old cut, zero ellipses), and APPROVED by the product owner's retest the same day. The cause was never live-only: `harness/coordinator_worker.py` cut every string leaf at 500 characters because its documented 2000-character tier was unreachable, and the 2026-09-21 local trace skipped that stage. One cap now, at `SynthFinding`'s own 2000, on a word boundary, with an ellipsis. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`.
@@ -101,26 +101,29 @@ WHAT LANDED, in the terms a person notices:
 | L-01 | A rate and a mechanism rather than a suspicion: one graph call in ten loses a result, and the errored call carries an empty summary and no message |
 | Item 1 of the next list (evening) | A two-gene comparison shows each gene's disease records side by side and a shapeless gene question shows the gene record, both from fixed templates instead of a generated query that failed validation; a dataset question searches GEO and cites the series. Live: G-033 3 of 3, G-037 3 of 3, zero errored graph calls on those six runs. Awaits retest |
 | The coordinate range (night) | A chromosome window with its assembly named is answered with the genes under it, resolved from the coordinates alone, and the dbVar and ClinVar records that overlap it; a window with no assembly named is asked which. Live: G-001 6 of 8 answered across three deploys, 3 of 3 on the final one, a CFTR window 6 of 6, the assembly question 6 of 6, after two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty). Awaits retest |
+| The call ceiling (late night) | Measured, not moved: 24 runs over eight question shapes, all answered, none refused, the worst pass 17 of 20; the count now rides on the done event, and the variable part is the model's spans the first time a process sees them |
+| The question's own words (late night) | "What is rs334 and what condition is it associated with?" and the GEO question no longer end with a note listing eight records the person never named; a mention made only of generic disease vocabulary is never searched as a disease name. Awaits retest |
+| The BioProject accession (late night) | A project, sample, run or assembly accession is answered with the record and what it links to, each cited to its NCBI page; an accession NCBI does not have is told so. Live: G-007 3 of 3, the unknown accession 2 of 2, and after its two follow-up fixes the BioSample question 2 of 2. Awaits retest |
 
 WHAT DID NOT LAND, and each is recorded rather than rounded up:
 
 - L-01 IS NOT FIXED in the answer text. Both causes are read and the reason
   now reaches the stream; whether the answer says so is the product owner's
   decision.
-- SIX questions still fail on the graph on every pass, six of them as
-  refusals. Three name nothing Think can resolve, an isolate description, a
-  BioProject accession (item 2 of the next list) and, on some passes, Lynch
-  syndrome; the coordinate range, which was the fourth, was FIXED the same
-  night (`66b3811`). The two that lost their own search to a generated query
-  the validator rejected, G-033 and G-037, were FIXED the same evening
-  (`27d68ae`, `b6cd025`). All verified live, awaiting retest.
+- ONE golden shape still never answers: the isolate description (G-035),
+  which needs a new mode on the pathogen tool before any Think rule can use
+  it. Of the shapes that never answered at the morning's measurement, the
+  two lost searches (`27d68ae`, `b6cd025`), the coordinate range (`66b3811`)
+  and the BioProject accession (`a64c44e`) were FIXED the same day, all
+  verified live and awaiting retest; Lynch syndrome still loses its graph
+  search on some passes.
 - Everything the day built is approved by retest: 11.33, the compute
   refusal, the lost-search disclosure, the fast plain-terms explanation and
   OMIM. `testing/Shipped_2026-09-22.md` is the day's summary.
 - THE EXPLANATION half of 11.31 stays parked, unchanged from 2026-09-21.
   OMIM is no longer parked; it is live with its filter.
 
-TWO THINGS THE INSTRUMENTS TAUGHT, both in `LEARNINGS.md` dated 2026-09-22:
+FOUR THINGS THE INSTRUMENTS TAUGHT, all in `LEARNINGS.md` dated 2026-09-22:
 
 - The client machine slept twice on battery mid-measurement and the record
   read as the app hanging in the write step; the tell was two independent
@@ -132,10 +135,19 @@ TWO THINGS THE INSTRUMENTS TAUGHT, both in `LEARNINGS.md` dated 2026-09-22:
   path and check the trace visited each one before hypothesising an
   environment difference.
 
+- A count that differs between identical passes has a cache behind it
+  before it has a model behind it: the call ceiling's variable part was
+  Think's in-process caches, so the first pass after a deploy is the honest
+  count, and a measurement must say which state it was taken in.
+- A name index matches any word, including the question's own: "condition"
+  and "tumour" bound eight arbitrary records each, found only by reading
+  the answer text of a cold run, since both runs counted as answered.
+
 What the next session does first is `testing/UI_fix_plan.md`'s "Next, in
-order": item 1 is the call-ceiling measurement, item 2 the two remaining
-shapes that never answer. The product owner's retest of the evening's two
-items is listed in `testing/Shipped_2026-09-22.md`, items 7 to 11.
+order": item 1 is the isolate shape, which opens with a discussion of what
+the question should return. The product owner's retest of the evening's and
+the night's items is listed in `testing/Shipped_2026-09-22.md`, items 7 to
+16.
 
 ### Process lessons from the fix-loop sessions, already applied
 

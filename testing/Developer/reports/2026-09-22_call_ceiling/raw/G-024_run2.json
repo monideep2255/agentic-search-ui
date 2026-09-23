@@ -1,0 +1,377 @@
+{
+ "record": {
+  "id": "G-024",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-item1-c-24fb67-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "What is rs334 and what condition is it associated with?",
+  "session_id": "c103-da0f9e78c728",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "df657ad",
+  "started_at": "2026-09-23T00:17:09+00:00",
+  "run_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "dbSNP:rs334"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 6,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 1,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 1,
+  "tools": [
+   "litvar2_lookup",
+   "ncbi_dbsnp",
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 71,
+  "answer_start": "Found 1 variant record record and 5 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], c.20A>T [2], rs334348 ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 3,
+  "server_elapsed_s": 10.682,
+  "seconds": 16.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 11,
+   "citation": 6,
+   "trust_signal": 7,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 0,
+   "ts": "2026-09-23T00:15:38.894469Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 2,
+   "ts": "2026-09-23T00:15:45.426436Z",
+   "payload": {
+    "narrative": "The query asks for a specific dbSNP ID and its associated condition, requiring at most two direct API calls (dbSNP and disease lookup).",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 4,
+   "ts": "2026-09-23T00:15:45.428347Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-3412fff61a90",
+      "layer": "layer_1_graph",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_dbsnp",
+      "call_id": "db-220e51f87353",
+      "layer": "layer_2_api",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "litvar2_lookup",
+      "call_id": "lv-49b9d0cd0764",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 6,
+   "ts": "2026-09-23T00:15:45.429172Z",
+   "payload": {
+    "call_id": "cq-3412fff61a90",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 7,
+   "ts": "2026-09-23T00:15:45.429201Z",
+   "payload": {
+    "call_id": "db-220e51f87353",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 8,
+   "ts": "2026-09-23T00:15:45.429211Z",
+   "payload": {
+    "call_id": "lv-49b9d0cd0764",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 9,
+   "ts": "2026-09-23T00:15:45.565932Z",
+   "payload": {
+    "call_id": "lv-49b9d0cd0764",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 10,
+   "ts": "2026-09-23T00:15:45.883848Z",
+   "payload": {
+    "call_id": "db-220e51f87353",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 11,
+   "ts": "2026-09-23T00:15:47.985836Z",
+   "payload": {
+    "call_id": "cq-3412fff61a90",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 12,
+   "ts": "2026-09-23T00:15:47.987121Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_2_api",
+    "source": "dbsnp",
+    "field": "clinical_significance",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334348",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334353",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334353",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334558",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334558",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334773",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334773",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "472ea40c-3265-4ecf-b338-2a1f488aeb0a",
+   "seq": 38,
+   "ts": "2026-09-23T00:15:52.648195Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 3,
+    "elapsed_ms": 10682,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 variant record record and 5 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], c.20A>T [2], rs334348 [3], rs334353 [4], c.-50T>C [5] and rs334773 [6]. \n\nVariant record records found\n\nVariant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [1]. \n\nLiterature variant records found\n\nLiterature variant name: c.20A>T [2]. Literature variant name: rs334348 [3]. Literature variant name: rs334353 [4]. Literature variant name: c.-50T>C [5]. Literature variant name: rs334773 [6]. "
+}

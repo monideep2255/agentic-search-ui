@@ -1,0 +1,2135 @@
+{
+ "record": {
+  "id": "G-037",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-item1-c-24fb67-20260922@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find GEO expression datasets studying TP53 in human tumour samples.",
+  "session_id": "c103-a6a6b322a8a2",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "df657ad",
+  "started_at": "2026-09-23T00:19:52+00:00",
+  "run_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:7157",
+   "MedGen:C1519412",
+   "MedGen:C1520213",
+   "MedGen:C1521923",
+   "MedGen:C1521938",
+   "MedGen:C1522573",
+   "MedGen:C1524009",
+   "MedGen:C5925093",
+   "MedGen:C5925148"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "citations": 94,
+  "distinct_sources": 82,
+  "citations_by_layer": {
+   "layer_2_api": 24,
+   "layer_1_graph": 60,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 59,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1,
+   59
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1857,
+  "answer_start": "Found 1 gene record for TP53 and tumour, of 125 available: tumor protein p53 [4]. \n\nClinVar records include \"NM_000546.6(TP53):c.247G>T (p.Ala83Ser)\" [1], \"NC_0",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 11,
+  "server_elapsed_s": 5.066,
+  "seconds": 12.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 15,
+   "tool_result": 15,
+   "step": 1,
+   "token": 159,
+   "citation": 94,
+   "trust_signal": 95,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 0,
+   "ts": "2026-09-23T00:18:21.000593Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 2,
+   "ts": "2026-09-23T00:18:22.556479Z",
+   "payload": {
+    "narrative": "The query asks to find GEO expression datasets studying TP53 in human tumour samples, which is a broad open-ended search across a database with no single record or straightforward count. (tumour: 8 of 15 MedGen records matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1519412",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1520213",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1521923",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1521938",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1522573",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1524009",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C5925093",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C5925148",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 4,
+   "ts": "2026-09-23T00:18:22.558990Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:7157. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-e5698ef67e65",
+      "layer": "layer_1_graph",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a8a0296e1f37",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-42b62b4fedc8",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-110efc0267c0",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f8f0b9e4240c",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-14388c003cb4",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d7efc2f759ab",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-759727ebd774",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9e64f924d751",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a4948d857865",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-349bbd072109",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-92fdf954a5c9",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-85b6b9fe5488",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f04e50ea53e7",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-367817423a5e",
+      "layer": "layer_1_graph",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1519412",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1520213",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1521923",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1521938",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1522573",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C1524009",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C5925093",
+      "confidence": 1.0
+     },
+     {
+      "text": "tumour",
+      "curie": "MedGen:C5925148",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 6,
+   "ts": "2026-09-23T00:18:22.562646Z",
+   "payload": {
+    "call_id": "cq-e5698ef67e65",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 7,
+   "ts": "2026-09-23T00:18:22.562680Z",
+   "payload": {
+    "call_id": "ne-a8a0296e1f37",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 8,
+   "ts": "2026-09-23T00:18:22.562690Z",
+   "payload": {
+    "call_id": "pa-42b62b4fedc8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 9,
+   "ts": "2026-09-23T00:18:22.562699Z",
+   "payload": {
+    "call_id": "ct-110efc0267c0",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 10,
+   "ts": "2026-09-23T00:18:22.562707Z",
+   "payload": {
+    "call_id": "ne-f8f0b9e4240c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 11,
+   "ts": "2026-09-23T00:18:22.562715Z",
+   "payload": {
+    "call_id": "ne-14388c003cb4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 12,
+   "ts": "2026-09-23T00:18:22.562723Z",
+   "payload": {
+    "call_id": "ne-d7efc2f759ab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 13,
+   "ts": "2026-09-23T00:18:22.562731Z",
+   "payload": {
+    "call_id": "ne-759727ebd774",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 14,
+   "ts": "2026-09-23T00:18:22.562739Z",
+   "payload": {
+    "call_id": "ne-9e64f924d751",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 15,
+   "ts": "2026-09-23T00:18:22.562746Z",
+   "payload": {
+    "call_id": "pa-a4948d857865",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 16,
+   "ts": "2026-09-23T00:18:22.562754Z",
+   "payload": {
+    "call_id": "ne-349bbd072109",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 17,
+   "ts": "2026-09-23T00:18:22.562762Z",
+   "payload": {
+    "call_id": "ne-92fdf954a5c9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 18,
+   "ts": "2026-09-23T00:18:22.562774Z",
+   "payload": {
+    "call_id": "ne-85b6b9fe5488",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 19,
+   "ts": "2026-09-23T00:18:22.562784Z",
+   "payload": {
+    "call_id": "ne-f04e50ea53e7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 20,
+   "ts": "2026-09-23T00:18:22.562793Z",
+   "payload": {
+    "call_id": "cq-367817423a5e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 21,
+   "ts": "2026-09-23T00:18:22.787883Z",
+   "payload": {
+    "call_id": "ct-110efc0267c0",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 22,
+   "ts": "2026-09-23T00:18:22.815946Z",
+   "payload": {
+    "call_id": "ne-14388c003cb4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 23,
+   "ts": "2026-09-23T00:18:22.847161Z",
+   "payload": {
+    "call_id": "pa-42b62b4fedc8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 24,
+   "ts": "2026-09-23T00:18:22.849391Z",
+   "payload": {
+    "call_id": "ne-f8f0b9e4240c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 25,
+   "ts": "2026-09-23T00:18:22.895807Z",
+   "payload": {
+    "call_id": "ne-a8a0296e1f37",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 26,
+   "ts": "2026-09-23T00:18:23.003161Z",
+   "payload": {
+    "call_id": "ne-759727ebd774",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 27,
+   "ts": "2026-09-23T00:18:23.036193Z",
+   "payload": {
+    "call_id": "cq-e5698ef67e65",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 28,
+   "ts": "2026-09-23T00:18:23.071831Z",
+   "payload": {
+    "call_id": "ne-d7efc2f759ab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 29,
+   "ts": "2026-09-23T00:18:23.320883Z",
+   "payload": {
+    "call_id": "ne-f04e50ea53e7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 30,
+   "ts": "2026-09-23T00:18:23.768888Z",
+   "payload": {
+    "call_id": "cq-367817423a5e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "59 row(s) of 124",
+    "result_count": 59,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 31,
+   "ts": "2026-09-23T00:18:24.046265Z",
+   "payload": {
+    "call_id": "pa-a4948d857865",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 32,
+   "ts": "2026-09-23T00:18:24.070901Z",
+   "payload": {
+    "call_id": "ne-349bbd072109",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 33,
+   "ts": "2026-09-23T00:18:24.105977Z",
+   "payload": {
+    "call_id": "ne-9e64f924d751",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 34,
+   "ts": "2026-09-23T00:18:24.122273Z",
+   "payload": {
+    "call_id": "ne-92fdf954a5c9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 35,
+   "ts": "2026-09-23T00:18:24.335242Z",
+   "payload": {
+    "call_id": "ne-85b6b9fe5488",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 36,
+   "ts": "2026-09-23T00:18:24.341859Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3898631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3905024",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4055875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35883598",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35883598/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "191170",
+    "source_url": "https://omim.org/entry/191170",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200305791",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200305791",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02289326",
+    "source_url": "https://clinicaltrials.gov/study/NCT02289326",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35883598",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35883598/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000122",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36692074",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36692074/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200310906",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200310906",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02612285",
+    "source_url": "https://clinicaltrials.gov/study/NCT02612285",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36692074",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36692074/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0002244",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "hematopoietic progenitor cell differentiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200315234",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200315234",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03149679",
+    "source_url": "https://clinicaltrials.gov/study/NCT03149679",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006289",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "nucleotide-excision repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38417666",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38417666/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083530",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200346344",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200346344",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03466034",
+    "source_url": "https://clinicaltrials.gov/study/NCT03466034",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38417666",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38417666/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006355",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40729726",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40729726/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083687",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200346694",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200346694",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03645200",
+    "source_url": "https://clinicaltrials.gov/study/NCT03645200",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40729726",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40729726/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35883598",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35883598/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006914",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "autophagy",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36692074",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36692074/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006974",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38417666",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38417666/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006979",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to oxidative stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40729726",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40729726/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006983",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "ER overload response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "Ras protein signal transduction",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007623",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "circadian rhythm",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008104",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intracellular protein localization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008285",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell population proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008340",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "determination of adult lifespan",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0009299",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mRNA transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0009410",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to xenobiotic stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0009411",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to UV",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to ionizing radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010332",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to gamma radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010628",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of gene expression",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0016032",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "viral process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030308",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell growth",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030330",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage response, signal transduction by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0031571",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mitotic G1 DNA damage checkpoint signaling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0032211",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of telomere maintenance via telomerase",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033209",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "tumor necrosis factor-mediated signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034644",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to UV",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042149",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to glucose starvation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042771",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043065",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043066",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043153",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "entrainment of circadian clock by photoperiod",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045815",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transcription initiation-coupled chromatin remodeling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045893",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045899",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of RNA polymerase II transcription preinitiation complex assembly",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045944",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0046677",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to antibiotic",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048147",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of fibroblast proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048512",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "circadian behavior",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048539",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "bone marrow development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051053",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of DNA metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051097",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of helicase activity",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051262",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein tetramerization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051726",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of cell cycle",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060218",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "hematopoietic stem cell differentiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060333",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "type II interferon-mediated signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0062100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of programmed necrotic cell death",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0065003",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein-containing complex assembly",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070059",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070245",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of thymocyte apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071456",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to hypoxia",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071466",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to xenobiotic stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071479",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to ionizing radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071480",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to gamma radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0072331",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "signal transduction by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0072332",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "8a704ddb-7c9f-4cb7-8add-26ee81ac6de5",
+   "seq": 386,
+   "ts": "2026-09-23T00:18:30.397699Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 11,
+    "elapsed_ms": 5066,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 5 sources, not yet confirmed",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record for TP53 and tumour, of 125 available: tumor protein p53 [4]. \n\nClinVar records include \"NM_000546.6(TP53):c.247G>T (p.Ala83Ser)\" [1], \"NC_000017.11:g.7666193C>T\" [2], and \"NM_000546.6(TP53):c.816_864del (p.Arg273fs)\" [3]. \n\nGene records found\n\nGene NCBIGene:7157, name: tumor protein p53 [4]. gene symbol: TP53 [5]. gene name: TP53 [9]. This gene encodes a tumor suppressor protein containing transcriptional activation, DNA binding, and oligomerization domains [15]. The encoded protein responds to diverse cellular stresses to regulate expression of target genes, thereby inducing cell cycle arrest, apoptosis, senescence, DNA repair, or changes in metabolism [15]. Mutations in this gene are associated with a variety of human cancers, including hereditary cancers such as Li-Fraumeni syndrome [15]. Alternative splicing of this gene and the use of alternate promoters result in multiple transcript variants and isoforms [15]. Additional isoforms have also been shown to result from the use of alternate translation initiation codons from identical transcript variants (PMIDs: 12032546, 20937277) [15]. [provided by RefSeq, Dec 2016] [15]. \n\nPubmed records found\n\npubmed title: Effects of TP53 Mutations and miRs on Immune Responses in the Tumor Microenvironment Important in Pancreatic Cancer Progression [6]. pubmed title: TP53 signal pathway confers potential therapy target in acute myeloid leukemia [13]. pubmed title: The Role of TP53 in Adaptation and Evolution [19]. pubmed title: TP53 in MDS and AML: Biological and clinical advances [24]. pubmed title: A clinical guide to TP53 mutations in myeloid neoplasms [30]. Approximately 90% of pancreatic cancers are pancreatic ductal adenocarcinomas (PDAC) [36]. PDAC is the fourth leading cause of cancer death world-wide [36]. Therapies for PDAC are largely ineffective due to the dense desmoplastic tumor microenvironment which prevents chemotherapeutic drugs and small molecule inhibitors from exerting effective anti-cancer effects [36]. In this review, we will discuss the roles of TP53 and miRs on the PDAC tumor microenvironment and how loss of the normal functions of TP53 promote tumor progression [36]. The TP53 gene is mutated in approximately 50% of pancreatic cancers [36]. Often, these TP53 mutations are point mutations which confer additional functions for the TP53 proteins [36]. These are called gain of function (GOF) mutations (mut) [36]. Another class of TP53 mutations are deletions which result in loss of the TP53 protein [36]. these are referred to TP53-null mutations [36]. We have organized this review into various components/properties of the PDAC microenvironment and how they may be altered in the presence of mutant TP53 and loss of certain miR expression [36]. TP53 mutation is a frequent tumor suppressor mutation and a critical prognostic indicator across studies in many malignant tumors including hematologic malignancies [38]. However, the role of TP53 and its correlative pathway in acute myeloid leukemia (AML) is enigmatic, which may provide possible emerging strategies with the potential to improve outcomes in AML [38]. Accordingly, we focus not only on the TP53 mutation but also on the underlying mechanisms of the mutated TP53 signal pathway [38]. While it is now generally accepted that TP53 mutations are widely associated with a dismal prognosis, resistance to chemotherapy, and high incidence of relapse and refractory AML [38]. Hereby, the current therapeutics targeting TP53 mutant AML are summarized in this review [38]. This will address emerging TP53-based therapeutic approaches, facilizing the TP53-targeted treatment options [38]. The TP53 gene is a major player in cancer formation, and it is considered the most important tumor suppressor gene [40]. The p53 protein acts as a transcription factor, and it is involved in DNA repair, senescence, cell-cycle control, autophagy, and apoptosis [40]. Beyond cancer, there is evidence that TP53 is associated with fertility, aging, and longevity [40]. Additionally, more evidence exists that genetic variants in TP53 are associated with environmental adaptation [40]. Special TP53 amino-acid residues or pathogenic TP53 mutations seem to be adaptive for animals living in hypoxic and cold environments or having been exposed to starvation, respectively [40]. At the somatic level, it has recently been proven that multiple cancer genes, including TP53, are under positive selection in healthy human tissues [40]. It is not clear why these driver mutations do not transform these tissues into cancerous ones [40]. Other studies have shown that elephants have multiple TP53 copies, probably this being the reason for the very low cancer incidence in these large animals [40]. This may explain the famous Peto's paradox [40]. This review discusses in detail the multilevel role of TP53 in adaptation, according to the published evidence [40]. This role is complicated, and it extends from cells to individuals and to populations [40]. Recently, the WHO-5 and the ICC 2022 criteria have emphasized poor prognosis in AML/MDS patients with multi-hit TP53 mutations, whereas mutated TP53 plays a critical role in tumorigenesis, drawing substantial interest in exploring its biological behaviors [42]. Diverse characteristics of TP53 mutations, including types, VAF, CNVs, allelic status, karyotypes, and concurrent mutations have been extensively studied [42]. Novel potential targets and comprehensive treatment strategies nowadays are under swift development, owing to great advances in technology [42]. However, accurately predicting prognosis of patients with TP53-mutated myeloid neoplasms remains challenging [42]. there is still a lack of effective treatment for those patients [42]. TP53 mutations are found in 10% to 15% of myeloid neoplasms and are one of its most important prognostic factors [44]. Emerging data show that TP53 mutational allele status is a key determinant of clinical outcomes, with multihit TP53 mutant myeloid neoplasms having a very poor prognosis [44]. Significant differences exist among the methods used in clinical and research settings to assess TP53 mutational status, leading to variability in reported patient characteristics, response to therapy, and survival [44]. Indeed, differences in the criteria used to define TP53 mutational states among professional societies and in landmark research studies have led to confusion, suboptimal clinical testing, and variability in therapy recommendations [44]. We review the methods used to assess for TP53 mutational allele status and provide recommendations, based on clinically available testing, for the accurate evaluation of TP53 gene mutations in myeloid neoplasms [44]. Hotspot mutations represent \u223c35% of all TP53 missense mutations in myeloid neoplasms [44]. There is evidence that these hotspot mutations may have dominant-negative or gain-of-function properties [44]. Here, we review this evidence and discuss the potential impact of TP53 mutation identity on patient outcomes and clinical management [44]. \n\nClinvar records found\n\nclinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser) [1]. clinvar title: NC_000017.11:g.7666193C>T [2]. clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs) [3]. clinvar title: NM_000546.6(TP53):c.1101-73G>C [25]. clinvar title: NM_000546.6(TP53):c.-28-3132T>C [31]. \n\nOmim records found\n\nTUMOR PROTEIN p53 [7]. TP53 [7]. \n\nGds records found\n\ngds title: Lack of tumor-derived LCN2 sensitizes pancreatic cancer cells to ferroptosis induction [8]. gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas [14]. gds title: Exportin-1 is a therapeutic vulnerability in atypical teratoid/rhabdoid tumors [20]. gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas -- ATAC [26]. gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas -- RNA [32]. \n\nClinical trial records found\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [10]. Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [16]. Clinical trial name: The p53 Colorectal Cancer Trial [21]. Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [27]. Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [33]. \n\nPublication records found\n\nPublication pmid: 35883598 [11]. Publication pmid: 36692074 [17]. Publication pmid: 36766853 [22]. Publication pmid: 38417666 [28]. Publication pmid: 40729726 [34]. \n\nBiological process records found\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [12]. BiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [18]. BiologicalProcess GO:0006289, name: nucleotide-excision repair [23]. BiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [29]. BiologicalProcess GO:0006357, name: regulation of transcription by RNA polymerase II [35]. BiologicalProcess GO:0006914, name: autophagy [37]. BiologicalProcess GO:0006915, name: apoptotic process [39]. BiologicalProcess GO:0006974, name: DNA damage response [41]. BiologicalProcess GO:0006979, name: response to oxidative stress [43]. BiologicalProcess GO:0006983, name: ER overload response [45]. BiologicalProcess GO:0007265, name: Ras protein signal transduction [46]. BiologicalProcess GO:0007623, name: circadian rhythm [47]. BiologicalProcess GO:0008104, name: intracellular protein localization [48]. BiologicalProcess GO:0008285, name: negative regulation of cell population proliferation [49]. BiologicalProcess GO:0008340, name: determination of adult lifespan [50]. BiologicalProcess GO:0009299, name: mRNA transcription [51]. BiologicalProcess GO:0009410, name: response to xenobiotic stimulus [52]. BiologicalProcess GO:0009411, name: response to UV [53]. BiologicalProcess GO:0010212, name: response to ionizing radiation [54]. BiologicalProcess GO:0010332, name: response to gamma radiation [55]. BiologicalProcess GO:0010628, name: positive regulation of gene expression [56]. BiologicalProcess GO:0016032, name: viral process [57]. BiologicalProcess GO:0030308, name: negative regulation of cell growth [58]. BiologicalProcess GO:0030330, name: DNA damage response, signal transduction by p53 class mediator [59]. BiologicalProcess GO:0031571, name: mitotic G1 DNA damage checkpoint signaling [60]. BiologicalProcess GO:0032211, name: negative regulation of telomere maintenance via telomerase [61]. BiologicalProcess GO:0033209, name: tumor necrosis factor-mediated signaling pathway [62]. BiologicalProcess GO:0034644, name: cellular response to UV [63]. BiologicalProcess GO:0042149, name: cellular response to glucose starvation [64]. BiologicalProcess GO:0042771, name: intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator [65]. BiologicalProcess GO:0042981, name: regulation of apoptotic process [66]. BiologicalProcess GO:0043065, name: positive regulation of apoptotic process [67]. BiologicalProcess GO:0043066, name: negative regulation of apoptotic process [68]. BiologicalProcess GO:0043153, name: entrainment of circadian clock by photoperiod [69]. BiologicalProcess GO:0045815, name: transcription initiation-coupled chromatin remodeling [70]. BiologicalProcess GO:0045892, name: negative regulation of DNA-templated transcription [71]. BiologicalProcess GO:0045893, name: positive regulation of DNA-templated transcription [72]. BiologicalProcess GO:0045899, name: positive regulation of RNA polymerase II transcription preinitiation complex assembly [73]. BiologicalProcess GO:0045944, name: positive regulation of transcription by RNA polymerase II [74]. BiologicalProcess GO:0046677, name: response to antibiotic [75]. BiologicalProcess GO:0048147, name: negative regulation of fibroblast proliferation [76]. BiologicalProcess GO:0048512, name: circadian behavior [77]. BiologicalProcess GO:0048539, name: bone marrow development [78]. BiologicalProcess GO:0051053, name: negative regulation of DNA metabolic process [79]. BiologicalProcess GO:0051097, name: negative regulation of helicase activity [80]. BiologicalProcess GO:0051262, name: protein tetramerization [81]. BiologicalProcess GO:0051726, name: regulation of cell cycle [82]. BiologicalProcess GO:0060218, name: hematopoietic stem cell differentiation [83]. BiologicalProcess GO:0060333, name: type II interferon-mediated signaling pathway [84]. BiologicalProcess GO:0062100, name: positive regulation of programmed necrotic cell death [85]. BiologicalProcess GO:0065003, name: protein-containing complex assembly [86]. BiologicalProcess GO:0070059, name: intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress [87]. BiologicalProcess GO:0070245, name: positive regulation of thymocyte apoptotic process [88]. BiologicalProcess GO:0071456, name: cellular response to hypoxia [89]. BiologicalProcess GO:0071466, name: cellular response to xenobiotic stimulus [90]. BiologicalProcess GO:0071479, name: cellular response to ionizing radiation [91]. BiologicalProcess GO:0071480, name: cellular response to gamma radiation [92]. BiologicalProcess GO:0072331, name: signal transduction by p53 class mediator [93]. BiologicalProcess GO:0072332, name: intrinsic apoptotic signaling pathway by p53 class mediator [94]. \n\nNote: this answer was truncated because only 60 of the 125 records that matched this question in the graph were retrieved\n\nNote: this answer does not address the following entities named in the question: Solitary Fibrous Tumour of the Mouse Nervous System, Yolk Sac Tumour of the Mouse Nervous System, Mouse Dysembryoplastic Neuroepithelial Tumour, Mouse Pineal Parenchymal Tumour of Intermediate Differentiation, Atypical Mouse Tertoid/Thaboid Tumour, Mouse Supratentorial Primitive Neuroectodermal Tumour, Well-differentiated papillary mesothelial tumour of the pleura, Adenomatoid tumour of the peritoneum. Ask about them individually for a complete answer."
+}
