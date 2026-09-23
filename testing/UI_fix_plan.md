@@ -8,6 +8,88 @@ The ordered work list for fixing the product after the first testing round on 20
 
 So you can check progress without reading the code.
 
+## Where every feature stands
+
+The high-level tracker, kept at the top so nobody has to read the sets to
+answer "what is done and what is left". Every status word here is copied from
+the item's own row further down; the detail stays with the item.
+
+### Features still to implement
+
+| Feature, in plain words | Item | Where it stands |
+|---|---|---|
+| An answer for a Pathogen Detection isolate description, the one golden question shape that still never answers | "Next, in order", item 1 (G-035) | Not started. Opens with a discussion of what the question should return, then a new mode on the pathogen tool, then the Think rule. About a day once the mode is agreed |
+| History shows the saved answer instantly, with Run again | 10.2 | Not built. After the release, by the product owner's order of 2026-09-13 |
+| Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
+| Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
+| The MCP mount's redirect emitting `http://`, the other half of "every integration works end to end" | 11.30 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22); the rest of 11.30 is verified |
+| Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22) |
+| Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22) |
+| The explanation half of 11.31 | 11.31 | Parked. The product owner approved the current state as is on 2026-09-21; the remaining lever is a standing option, not queued work |
+| The load-dependent frontend tests and journey 7's navigation, fixed before relying on them in quick checks | D4, under "Developer follow-through" | Open. Best done during set 2 |
+
+### Features done
+
+Every numbered item in sets 1 to 9 is built and live on develop. All are
+approved except these, each in its own row further down:
+
+- 6.1, nothing on screen, so nothing to approve
+- 8.4 and 9.12, each awaiting one look
+- 9.3, 9.4 and 9.10, superseded
+- 9.8, approved for the disease names; its further-records half superseded
+- 9.9, approved for the one-line shape; the wording still the product owner's
+  decision
+- 9.11, the product owner's decision, not an approval
+
+Set 10 has 10.1 built and live and 10.3 run. Set 11:
+
+- 17 rows live and approved
+- 11.22 verified live
+- 11.34 fixed and live
+- 11.14 and 11.36 live, awaiting one look
+- L-01 confirmed, not fixed, in "Additional notes" below
+- The rest answered, done, superseded, accepted or listed above
+
+### Additional notes
+
+- Waiting on the product owner:
+  - The retest of items 7 to 16 in `testing/Shipped_2026-09-22.md`
+  - Four checks of under a minute each: 11.14, 11.36, 9.12 and 8.4
+  - Decisions: the medical-advice line on Plain language answers (9.11), the
+    trust-line wording (9.9), the three golden rows that disagree with the
+    guardrail, and the twenty-source ceiling
+- The isolate shape opens with a discussion of what the question should
+  return, before any build
+- L-01, a whole graph result vanishing on some runs: measured, its two causes
+  read, and the reader now told (`10f6a46`); the cause itself is not fixed
+- Parked, and why: the explanation half of 11.31; the byte ceiling at 50,000;
+  OMIM is live with its title filter and the two ship together
+- Measured rather than built: the call ceiling stays at twenty (24 runs, none
+  refused, the worst pass 17 of 20); item 10.3's consistency run (86 of 150
+  answered; 25 questions answer every time, 18 never)
+- Superseded, not to build: 9.3, 9.4, 9.10, 11.1, 11.13 and 11.15. Accepted as
+  not a defect: 11.37
+- The Set 11 table carries two rows for 11.34; the row marked FIXED and live
+  2026-09-21 is the current one
+- The cutoff and the ordered next actions are in "Where we stopped"
+
+## Progress at a glance
+
+| Set | What you will see | Built | Live | Approved | You retest |
+|---|---|---|---|---|---|
+| 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
+| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
+| 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | ✅ | 🚀 | 👍 | Tests 8, 9, 13, 19 |
+| 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | ✅ | 🚀 | 👍 | Tests 3, 6, 11 (phone width) |
+| 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | 🚀 | 👍 | Tests 11, 15 |
+| 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | ✅ | 🚀 | | Nothing |
+| 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | 👍 | Tests 2, 13 |
+| 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | 👍 (8.4 awaits one look) | Tests 1, 7, 12, 14 |
+| 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | 👍 (2026-09-22; 9.3, 9.4 and 9.10 superseded, 9.11 and 9.9's wording still your decision, 9.12 awaits one look) | Tests 1, 7, 12 |
+| 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | ✅ 10.1; 10.3 run 2026-09-22 | 🚀 10.1 | | Tests 1, 6, 13 |
+| 11. Live feedback, 2026-09-13 onward | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-21: a quote from a paper that runs to more than one sentence is no longer thrown away and now keeps its source link (11.34), NCBI's own plain-English gene description is retrieved and shown as a source (11.31), the confusing Notes block is gone (11.35), and the answer-modes info button no longer promises a word count (11.36) | Partly | Mostly | 👍 for everything live (2026-09-22); 11.14 and 11.36 await one look | Tests 1, 7, 12 |
+| 2026-09-22, outside the numbered sets | The work of that day, evening and night, listed item by item in the session table under "Where we stopped" | ✅ | 🚀 | 👍 for the day's five (2026-09-22); the evening's and the night's items await retest | Items 7 to 16 in `testing/Shipped_2026-09-22.md` |
+
 ## How to read this
 
 Start with [Where we stopped](#where-we-stopped). That section is the cutoff:
@@ -43,8 +125,9 @@ missing.
 
 ## Table of contents
 
-- [How to read this](#how-to-read-this)
+- [Where every feature stands](#where-every-feature-stands)
 - [Progress at a glance](#progress-at-a-glance)
+- [How to read this](#how-to-read-this)
 - [Set 1: let people in](#set-1-let-people-in)
 - [Set 2: a steady frame](#set-2-a-steady-frame)
 - [Set 3: refusals and Stop](#set-3-refusals-and-stop)
@@ -58,22 +141,6 @@ missing.
 - [Set 11: live feedback of 2026-09-13 and 2026-09-14](#set-11-live-feedback-of-2026-09-13-and-2026-09-14)
 - [Where we stopped](#where-we-stopped)
 - [Developer detail](#developer-detail)
-
-## Progress at a glance
-
-| Set | What you will see | Built | Live | Approved | You retest |
-|---|---|---|---|---|---|
-| 1. Let people in | No guest limit and no walls. One Log in button. Log out goes to the home page | ✅ | 🚀 | 👍 | Tests 1, 3, 6 |
-| 2. A steady frame | The white box stays one width. Header and footer stay put, in the lighter NCBI blue, with smooth changes between screens. Retest follow-ups: a light home page, centred screens, no pause after Search, fewer failed searches | ✅ | 🚀 | 👍 | Tests 1, 2, 3, 9, 11 |
-| 3. Refusals and Stop | Refusals show a calm grey label and a clickable NCBI link. Stop shows "Search stopped" | ✅ | 🚀 | 👍 | Tests 8, 9, 13, 19 |
-| 4. Stay signed in, history on phones | A reload keeps you signed in. History opens in a sliding panel on a phone | ✅ | 🚀 | 👍 | Tests 3, 6, 11 (phone width) |
-| 5. Integrations and the disclaimer | An Integrations page in the reference layout. A bigger disclaimer. GraphQL and MCP both work | ✅ | 🚀 | 👍 | Tests 11, 15 |
-| 6. Let automated checks see a real answer | Nothing on screen. It lets later fixes be checked automatically | ✅ | 🚀 | | Nothing |
-| 7. A conversation that remembers | Follow-ups answer about the same gene. "Yes, go deeper" continues the search on the same screen. Retest follow-ups: a folded turn keeps its whole answer with room between turns, and an unclear follow-up asks for the missing detail | ✅ | 🚀 | 👍 | Tests 2, 13 |
-| 8. Search every layer, with the scientists | Every question searches all three layers. A lead scientist hands off to three named scientists | ✅ | 🚀 | 👍 | Tests 1, 7, 12, 14 |
-| 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | 👍 (2026-09-22; 9.3, 9.4 and 9.10 superseded, 9.11 and 9.9's wording still your decision, 9.12 awaits one look) | Tests 1, 7, 12 |
-| 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | | | | Tests 1, 6, 13 |
-| 11. Live feedback, 2026-09-13 onward | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-21: a quote from a paper that runs to more than one sentence is no longer thrown away and now keeps its source link (11.34), NCBI's own plain-English gene description is retrieved and shown as a source (11.31), the confusing Notes block is gone (11.35), and the answer-modes info button no longer promises a word count (11.36) | Partly | Mostly | 👍 for everything live (2026-09-22); 11.14 and 11.36 await one look | Tests 1, 7, 12 |
 
 ## Set 1: let people in
 
@@ -261,7 +328,11 @@ Built: ✅ · Live: 🚀 · Approved: 👍
 
 - Feature being tested: the app follows the NCBI design system as far as it can without NCBI's internal packages.
 - What you noted: "is there a design system that we can use? at least minimum the color scheme?", then "Can we implement the NCBI design system changes that are possible?"
-- What's expected: nothing changes on screen, because our colours are already the USWDS values NCBI is built on. Done on 2026-09-12: the colour card now lists every colour the code uses, including the three logo colours, and says the footer is blue and the home page is light. Four text size and spacing values differ between the design card and the code (h1 size and letter-spacing, h2 size, body line height); both sides are working values, so they wait for your decision. The design system cards are corrected to match the theme code (Stage 0 in `docs/build/design/NCBI_design_system_migration_assessment.md`). Installing the public USWDS package (Stage 1) adds a dependency, so it waits for your yes.
+- What's expected: nothing changes on screen, because our colours are already the USWDS values NCBI is built on.
+  - Done on 2026-09-12: the colour card now lists every colour the code uses, including the three logo colours, and says the footer is blue and the home page is light.
+  - Four text size and spacing values differ between the design card and the code (h1 size and letter-spacing, h2 size, body line height); both sides are working values, so they wait for your decision.
+  - The design system cards are corrected to match the theme code (Stage 0 in `docs/build/design/NCBI_design_system_migration_assessment.md`).
+  - Installing the public USWDS package (Stage 1) adds a dependency, so it waits for your yes.
 
 ### 2.14 A favicon (retest feedback)
 
@@ -410,7 +481,15 @@ Batch: answers.
 
 What you will see: nothing on screen. It lets the answer fixes be checked automatically, not only by hand.
 
-Built 2026-09-13: an opt-in real-model mode for the end-to-end harness (`S3_E2E_REAL_MODEL=1`, run with `npm run test:real-answer` in `frontend/`) and one gated browser check that asks the BRCA1 question against the real model and the real graph and asserts on the answer body: no refusal, at least one cited claim, diseases named in words with no raw MedGen code, sources on an NCBI host. Its first real run passed in 14 seconds. Nothing to retest.
+Built 2026-09-13: an opt-in real-model mode for the end-to-end harness
+(`S3_E2E_REAL_MODEL=1`, run with `npm run test:real-answer` in `frontend/`) and
+one gated browser check that asks the BRCA1 question against the real model and
+the real graph and asserts on the answer body:
+
+- No refusal, at least one cited claim
+- Diseases named in words with no raw MedGen code, sources on an NCBI host
+
+Its first real run passed in 14 seconds. Nothing to retest.
 
 ### 6.1 Let the automated test harness see a real knowledge-graph answer (D3)
 
@@ -510,11 +589,16 @@ and literature and trials at the same time.
 The progress screen shows a lead scientist handing off to three random scientists, with steps like "Franklin is searching…".
 
 Built 2026-09-13, overnight. A question that names a gene now plans four
-searches: the knowledge graph, the live NCBI gene record, the PubTator3
-literature record, and ClinicalTrials.gov (recruiting trials only when the
-question says "recruit"); a variant written as an rs number adds dbSNP and
-LitVar2. The live searches run at the same time, each under its own time limit,
-and one that fails is disclosed rather than blanking the answer.
+searches:
+
+- The knowledge graph
+- The live NCBI gene record
+- The PubTator3 literature record
+- ClinicalTrials.gov (recruiting trials only when the question says "recruit")
+
+A variant written as an rs number adds dbSNP and LitVar2. The live searches run
+at the same time, each under its own time limit. One that fails is disclosed
+rather than blanking the answer.
 
 Every search input comes from the question and the confirmed gene, and results
 are sorted and capped the same way every time, so a question still returns one
@@ -574,13 +658,19 @@ built in code, one citation per row. The screenshot's variant-to-disease table
 cannot be built, because the graph has no link from a variant to a disease;
 variants show as a list.
 
-Plain language answers have three paragraphs, no headings, and end with "This is
-a research summary, not medical advice."
+Plain language answers:
+
+- Have three paragraphs
+- No headings
+- And end with "This is a research summary, not medical advice."
 
 Answers stream in under the progress steps and Stop works mid-answer.
 
-The broken first sentence, notes that looked like claims, and inverted disease
-names are fixed by rules in code, never by rewording.
+Fixed by rules in code, never by rewording:
+
+- The broken first sentence
+- Notes that looked like claims
+- And inverted disease names
 
 One trust line replaces the pills. The tour and About page describe the two
 modes. GraphQL and the command line accept Plain language too; the MCP tool
@@ -611,8 +701,11 @@ Researcher answers no longer restate a record in prose that the list already
 shows, and no sentence reads "has a source URL of". The modes now ask for what
 the citation check actually keeps: about 120 words in Plain language and about
 200 in Researcher. Sources did not change. Live on develop as commit `674b7b9`
-and measured there: the five flagship questions answered 25 of 25, one set of
-sources each, 13 to 71 seconds (22 of 25 before this fix).
+and measured there:
+
+- The five flagship questions answered 25 of 25
+- One set of sources each
+- 13 to 71 seconds (22 of 25 before this fix)
 
 Still open, for your decision: before the fix, 3 of 25 runs ended with "A step
 in this query hit a temporary error" in the writing step, and none did after it,
@@ -624,8 +717,12 @@ seconds.
 Follow-ups on 2026-09-14, from your review of the live answers ("the inline citations overwhelm the answer", "can we make the process quicker", "show people the answer is loading, like [scientist] is writing the answer"):
 - Decided: the answer-writing model's reasoning setting is now `none`. Over 35 local runs: no writing-step errors, answers unchanged in quality (`testing/Developer/reports/2026-09-14_synth_effort_none/report.md`).
 - Quicker: the second writing pass now runs only when it can change the answer, and the Plan step no longer makes a model call whose reply was thrown away. Over the same 35 runs, the typical search fell from 21.2 to 16.6 seconds and the slowest from 60.8 to 46.5, with zero errors and the same sources (`testing/Developer/reports/2026-09-14_speed_fix/report.md`).
-<!-- The dash here is U+2013 and is DELIBERATE: it quotes verbatim what the product renders. `CitationMarkers.tsx` line 141 builds the label with that character and `CitationMarkers.test.tsx` lines 65 and 113 pin it. check_style.py flags it as a house-style dash, which is the one standing hard finding on this file. Do not "fix" it to a hyphen: that would make this document misquote the product. Changing the product, or exempting a digit-dash-digit range in the checker, are the only two real options and both are the product owner's call. -->
-- Quieter citations: sentences end in small raised numbers in the layer colour instead of boxes; many sources collapse to one marker such as "1–13"; hovering, tapping or tabbing to a number opens a small card with each source and a record link. No raw "[1][2]" shows while the answer is being written (`testing/Developer/reports/2026-09-14_citations_and_writing/report.md`).
+<!-- The dash here is U+2013 and is DELIBERATE: it quotes verbatim what the product renders.
+`CitationMarkers.tsx` line 141 builds the label with that character and `CitationMarkers.test.tsx` lines 65 and 113 pin it.
+check_style.py flags it as a house-style dash, which is the one standing hard finding on this file. Do not "fix" it to a hyphen: that would make this document misquote the product.
+Changing the product, or exempting a digit-dash-digit range in the checker, are the only two real options and both are the product owner's call.
+The label is now quoted in a code span, which the checker reads as a literal, so the finding is gone without changing the character. -->
+- Quieter citations: sentences end in small raised numbers in the layer colour instead of boxes; many sources collapse to one marker such as `1–13` (sources 1 to 13); hovering, tapping or tabbing to a number opens a small card with each source and a record link. No raw "[1][2]" shows while the answer is being written (`testing/Developer/reports/2026-09-14_citations_and_writing/report.md`).
 - Writing state: during the writing step the scientist's line reads "{name} is writing the answer…" with moving dots, and "writing…" follows the sentences as they appear.
 
 ### 9.1 Two answer modes, Plain language and Researcher (R23)
@@ -737,7 +834,14 @@ Built: ✅ · Live: 🚀 · Approved:
 - Feature being tested: the two questions the product is judged on answer reliably every time.
 - What you noted: from the developer walkthrough, not your words: "Which diseases are associated with BRCA1?" answered 5 times and was refused 3 times, at different depths, minutes apart.
 - What's expected: BRCA1 and GCK answer every time, checked in tests 1 and 13.
-- Built 2026-09-13, first cut: for the known question shapes (a gene's diseases, variants, orthologs, processes, activities, components, organism and papers; a disease's genes and phenotypes; a paper's MeSH terms; the record itself; counts; several genes at once) the graph query is a code template with a stable ordering, chosen deterministically from the bound entities and the question's words, never a model draft, and it makes no model call.
+- Built 2026-09-13, first cut: for the known question shapes the graph query is a code template with a stable ordering, chosen deterministically from the bound entities and the question's words, never a model draft, and it makes no model call.
+  - The known question shapes:
+    - A gene's diseases, variants, orthologs, processes, activities, components, organism and papers
+    - A disease's genes and phenotypes
+    - A paper's MeSH terms
+    - The record itself
+    - Counts
+    - Several genes at once
   - Measured locally: the BRCA1 disease question ran the identical query and returned the identical four MedGen records five times out of five; the variant follow-up returned the identical first twenty ClinVar records five of five.
   - Before, on develop, the same questions returned two to four different source sets in five runs.
   - Second cut, the same night: the answer cites every retrieved record on every run (a cited line is appended for each record the prose left out), and the multi-hop variant question now hits its template.
@@ -918,7 +1022,11 @@ landing it alone is the quickest win available
 #### Detail 11.28
 
 The ask: The move from searching to the streamed answer is too quick; stagger it
-so people can watch the lead start, hand off to the helpers, and then write.
+so people can watch:
+
+- The lead start
+- Hand off to the helpers
+- And then write
 
 Status: Live
 
@@ -1081,9 +1189,11 @@ Status: DECIDED, not started. REVERSES 11.13
 Raised 2026-09-20. THIS IS A REQUIREMENT REVERSAL AND IS RECORDED AS ONE rather
 than quietly contradicting the earlier row:
 
-Item 11.13 asked for "the same readable format in both Plain language and
-Researcher", is marked Live, and was verified as "the same heading and table
-structure in both modes".
+Item 11.13:
+
+- Asked for "the same readable format in both Plain language and Researcher"
+- Is marked Live
+- And was verified as "the same heading and table structure in both modes"
 
 That is now the defect.
 
@@ -1270,14 +1380,19 @@ that.
 
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state. LAST UPDATED 2026-09-22,
-at the close of a session that ran item 10.3 to completion for the first time,
-found and fixed the cause of item 11.33, and measured L-01 as a rate with a
-named mechanism, then, the same evening, shipped item 1 of the next list, the
-two questions that lost their own graph search with a GEO search for dataset
-questions, after it the coordinate range, and late the same night measured
-the call ceiling, kept a question's own words out of the disease lookup, and
-taught the product a BioProject accession. Read this, then the Set 11 table
-above.
+at the close of a session that:
+
+- Ran item 10.3 to completion for the first time, and found and fixed the
+  cause of item 11.33
+- Measured L-01 as a rate with a named mechanism
+- Then, the same evening, shipped item 1 of the next list, the two questions
+  that lost their own graph search with a GEO search for dataset questions,
+  and after it the coordinate range
+- Late the same night measured the call ceiling and kept a question's own
+  words out of the disease lookup
+- Taught the product a BioProject accession
+
+Read this, then the Set 11 table above.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -1443,10 +1558,11 @@ three consistency-run questions that used to sit here were all settled that
 day (BLAST and VCF are refused, the golden widening was discarded, and the
 lost search is disclosed). What remains is small, and none of it blocks:
 
-- Four checks of under a minute each, the only rows still not approved: copy
-  an answer and paste it somewhere (11.14), open the answer-modes info button
-  (11.36), change the mode while a search is running (9.12), and open the app
-  twice to see different scientists with the same answer (8.4).
+- Four checks of under a minute each, the only rows still not approved:
+  - Copy an answer and paste it somewhere (11.14)
+  - Open the answer-modes info button (11.36)
+  - Change the mode while a search is running (9.12)
+  - Open the app twice to see different scientists with the same answer (8.4)
 - Two decisions, both already on the standing list below: whether Plain
   language answers keep the small medical-advice line (9.11), and the
   trust-line wording (9.9).
@@ -1475,12 +1591,14 @@ placement, and the trust-line wording.
   path on an exploratory no-shape question, killed by the graph's 30-second
   statement timeout after 85 seconds because the planner mis-estimates an
   id match by four orders of magnitude. Fixed for the exploratory class
-  (`2bc8ec0`). G-037 and G-033 were a different fault, generation or
+  (`2bc8ec0`). G-037 and G-033 were a different fault: generation or
   validation failing before the transport ("Generated Cypher references
-  vertex label", "appears to bind a literal value"), and were FIXED the same
-  evening as fix-plan item 1: no template matched, so both took the model
-  path; both take a template now (`27d68ae`), and G-037 also searches GEO
-  (`b6cd025`). See the 2026-09-22 session table.
+  vertex label", "appears to bind a literal value"). FIXED the same evening
+  as fix-plan item 1:
+  - No template matched, so both took the model path
+  - Both take a template now (`27d68ae`)
+  - And G-037 also searches GEO (`b6cd025`)
+  - See the 2026-09-22 session table
 - THE TRUST TIER `ask` AND THE PARKED GRADER'S `ask` ARE TWO MEANINGS OF ONE
   WORD. Widening the golden rows to accept the trust tiers was built, found to
   erase the parked grader's answer-versus-clarification distinction (two of
@@ -1745,9 +1863,22 @@ From section 12 of the report. Everything else is decided.
 
 Implementation notes, from scouting the code on 2026-09-12, before any edit:
 
-- Guest limit, server side: `adapters/web_sse/app.py`. `GET /v1/allowance` computes a blocked reason around lines 689 to 747, and `POST /v1/query` enforces it around lines 1103 to 1191: `spend_one_anonymous_run` from `data/guest_sessions.py` returns the 429 `anon_daily_cap_reached`, the 403 `guest_allowance_exhausted`, and the 403 `guest_attempt_limit_reached`. Plan: stop enforcing the five-answer allowance and the ten-attempt ceiling, while keeping the anonymous daily cap and the per-connection share, which live in the same spend call.
-- Guest limit, web app: `frontend/src/App.tsx`. The walls are set around lines 882 to 900. The "moved into an account" wall comes from `guestMigrated` around line 703, which blocks a signed-out browser that once signed up. Plan: mint a fresh guest token instead of walling. `GuestAllowance` and `SignInWall` render at lines 1110 and 1152.
-- One Log in button: no server change needed. `POST /auth/signup` returns 201 for a new email and 409 for an existing one, and `POST /auth/login` returns tokens or 401. So Log in tries signup first: 201 means log in, 409 means log in with the password, and 401 then means a wrong password for a registered email, which decision X3 accepts showing. `AuthGate.tsx` holds a long comment explaining the old two-button choice, which gets replaced rather than left contradicting the code.
+- Guest limit, server side: `adapters/web_sse/app.py`.
+  - `GET /v1/allowance` computes a blocked reason around lines 689 to 747
+  - `POST /v1/query` enforces it around lines 1103 to 1191: `spend_one_anonymous_run` from `data/guest_sessions.py` returns the 429 `anon_daily_cap_reached`, the 403 `guest_allowance_exhausted`, and the 403 `guest_attempt_limit_reached`
+  - Plan: stop enforcing the five-answer allowance and the ten-attempt ceiling, while keeping the anonymous daily cap and the per-connection share, which live in the same spend call
+- Guest limit, web app: `frontend/src/App.tsx`.
+  - The walls are set around lines 882 to 900.
+  - The "moved into an account" wall comes from `guestMigrated` around line 703, which blocks a signed-out browser that once signed up.
+  - Plan: mint a fresh guest token instead of walling.
+  - `GuestAllowance` and `SignInWall` render at lines 1110 and 1152.
+- One Log in button: no server change needed.
+  - `POST /auth/signup` returns 201 for a new email and 409 for an existing one, and `POST /auth/login` returns tokens or 401.
+  - So Log in tries signup first:
+    - 201 means log in
+    - 409 means log in with the password
+    - 401 then means a wrong password for a registered email, which decision X3 accepts showing
+  - `AuthGate.tsx` holds a long comment explaining the old two-button choice, which gets replaced rather than left contradicting the code.
 - Log out: the handler is at `App.tsx` line 1202 and should also route to the home page.
 - D1: the 429 `anon_daily_cap_reached` path in `App.tsx` needs checking, to confirm it reaches its written message.
 - Tests that will change, because the requirement changed rather than to make them pass: `tests/system_03_search_agent/data/test_guest_sessions.py`, `adapters/web_sse/test_phase_4_10_premise.py`, `adapters/web_sse/test_streaming_endpoints.py`, `auth/test_router.py`, `frontend/src/App.test.tsx`, `frontend/src/phase410Premise.test.tsx`, `frontend/src/components/auth/AuthGate.test.tsx`, `frontend/e2e/guest-allowance-wall.spec.ts` and `frontend/e2e/auth-signin-and-errors.spec.ts`. Each change gets named in the commit message.
@@ -1870,9 +2001,15 @@ Before any answer fix. Paused by the product owner on 2026-09-12 so screen fixes
 come first; rerun before set 6. Partly valid, rerun needed. Finished 2026-09-12,
 but only 85 of 150 runs really ran: 65 were refused before starting, most or all
 by the signed-in daily limit of 100, because all runs used one account. Of the
-85: 13 answered (15%), 54 refused for no evidence (64%), 12 crashed mid-run
-(14%), 6 refused as off-topic. 15 of 32 questions gave different outcomes across
-runs, and only 2 answered every time.
+85:
+
+- 13 answered (15%)
+- 54 refused for no evidence (64%)
+- 12 crashed mid-run (14%)
+- 6 refused as off-topic
+
+15 of 32 questions gave different outcomes across runs, and only 2 answered
+every time.
 
 No Layer 3 call was seen. Next: rerun the 65 across fresh test accounts,
 recording each error's message.
