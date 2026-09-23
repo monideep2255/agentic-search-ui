@@ -849,6 +849,11 @@ Reading those answers found something no count could: two of the eight ended wit
 
 The night's last piece is the project accession, the second of the two question shapes that never answered. A person who types "PRJNA31257" already knows exactly what they mean, and being asked for a gene name was the system not knowing what a project is. Now it recognises a project, sample, run or assembly accession, looks the record up, follows the links to the samples, runs and assemblies under it, and lists each with the page it can be fetched from. It was built the same way as the chromosome stretch, with a helper measuring the government service while another wrote the code. The live checks found two things to fix the same night: a sequencing run was shown as a lump of computer markup instead of its accession number, and a question ending "which runs come from it?" was answered with "which gene do you mean?", because the part of the system that spots a question referring to nothing did not yet count an accession as a subject. Three of three live checks of the standard question passed, and after the two fixes the sample question answered twice with its record and five of its sequencing runs.
 
+The night closed with two housekeeping changes the product owner asked for:
+
+- The fix plan, the document that tracks every piece of feedback, now opens with a plain list: what is still to build, then what is done, then what is waiting on whom. Reading the whole file had become the only way to find that out.
+- The two routines that close a working session were rewritten from what the day showed. One now updates every document a session touches. The other runs every automated check before anything is pushed, since the checks on the code-hosting site have been switched off by a billing setting since the evening.
+
 ## How we work
 
 Every sprint follows the same loop, and it is deliberately slower than just writing the code.
