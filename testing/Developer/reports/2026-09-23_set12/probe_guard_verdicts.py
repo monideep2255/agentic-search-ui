@@ -23,8 +23,8 @@ os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["TOOL_AUDIT_LOG_ENABLED"] = "false"
 sys.path.insert(0, str(root / "src"))
 
-from system_03_search_agent.guardrail import classifier, prefilter  # noqa: E402
-from system_03_search_agent.harness.harness import Harness  # noqa: E402
+from system_03_search_agent.guardrail import classifier, prefilter
+from system_03_search_agent.harness.harness import Harness
 
 # Should be ADMITTED: real biomedical questions the allowlist used to refuse.
 SHOULD_ADMIT = [
@@ -80,7 +80,7 @@ async def main() -> None:
             flag, wrong = "  <-- WRONGLY REFUSED", wrong + 1
         if expected == "refuse" and got == "admit":
             flag, wrong = "  <-- WRONGLY ADMITTED", wrong + 1
-        print(f"{expected:9} {got:18} {str(category):16} {q}{flag}")
+        print(f"{expected:9} {got:18} {category!s:16} {q}{flag}")
     print(f"\n{len(rows)} questions, {wrong} wrong")
 
 

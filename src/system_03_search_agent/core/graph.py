@@ -2910,9 +2910,11 @@ def _build_layer_tool_calls(
     query_text: str,
     gene_symbol: str | None,
     rsids: list[str],
+    disease_text: str | None = None,
 ) -> list[_PlannedLayerToolCall]:
     """The Layer 2 and Layer 3 calls a question earns, each with an input
-    that is a pure function of `(query_text, gene_symbol, rsids)`.
+    that is a pure function of `(query_text, gene_symbol, rsids,
+    disease_text)`.
 
     UI fix set 8 (R29): every question that resolves a gene reaches live
     NCBI records, the literature and the trials registry as well as the
@@ -2933,24 +2935,41 @@ def _build_layer_tool_calls(
       pre-pass already recognises; a question that names no variant plans
       neither.
 
-    `gene_symbol` is uppercased by the caller. A question that resolves no
-    gene and names no rs id plans nothing here, so a disease named only as
-    a typed `MedGen:` CURIE keeps its single graph call.
+    `gene_symbol` is uppercased by the caller.
+
+    FIX-PLAN ITEM 12.1 (2026-09-23): a question anchored on a DISEASE and
+    resolving no gene now earns the same two calls, on `disease_text`
+    instead of the symbol. That paragraph's predecessor read "a disease
+    named only as a typed `MedGen:` CURIE keeps its single graph call",
+    and it was measured to be the defect rather than a limitation: `Any
+    trials for GERD?` planned one graph call, matched no Disease vertex,
+    and refused, while ClinicalTrials.gov holds thousands of GERD trials
+    and `clinicaltrials_search` was built, tested and never called.
+
+    The constraint the old wording protected is intact. `disease_text` is
+    NOT the model-extracted span, whose boundaries move between runs of
+    one question; it is the MedGen record's own preferred name, read live
+    from the resolved CURIE by the caller and normalised once by
+    `breadth_plan.disease_search_text`, so the same question plans the
+    same condition every run. The symbol still wins when a gene resolved:
+    a gene question's planned calls are byte-identical to before.
     """
     calls: list[_PlannedLayerToolCall] = []
-    if gene_symbol:
+    # The symbol wins outright, so nothing about a gene question changes.
+    search_text = gene_symbol or disease_text
+    if search_text:
         calls.append(
             _layer_call(
                 "pubtator_annotate",
                 "layer_3_enrichment",
                 "pa",
                 PubtatorAnnotateInput.model_validate(
-                    {"mode": "entity_lookup", "query": gene_symbol[:200], "limit": _LAYER_TOOL_ROW_CAP}
+                    {"mode": "entity_lookup", "query": search_text[:200], "limit": _LAYER_TOOL_ROW_CAP}
                 ),
             )
         )
         trials_input: dict[str, Any] = {
-            "query_cond": gene_symbol[:200],
+            "query_cond": search_text[:200],
             "page_size": _CLINICALTRIALS_PAGE_SIZE,
         }
         if "recruit" in query_text.lower():
@@ -3018,6 +3037,14 @@ _BREADTH_FOLLOW_UPS: Final[dict[str, tuple[tuple[str, str, str, str], ...]]] = {
     # `breadth_plan.wants_dataset_search` says the question asks for
     # expression datasets, which live in GEO and nowhere the graph reaches.
     "gds_search": (("ncbi_efetch", "layer_2_api", "ne", "gds_summary"),),
+    # Fix-plan item 12.1 (2026-09-23): the disease's own MedGen record, the
+    # live-record leg of a disease-anchored question's breadth. Planned
+    # only when no gene resolved, so a gene question's call list is
+    # unchanged. The search exists because a MedGen CONCEPT id is not an
+    # E-utilities uid and an ESummary keyed on one is rejected outright,
+    # which `synthesis/disease_names` measured; the uid the record page is
+    # addressed by only exists in the search result.
+    "medgen_search": (("ncbi_efetch", "layer_2_api", "ne", "medgen_summary"),),
 }
 _BREADTH_SEARCH_PURPOSES: Final[frozenset[str]] = frozenset(_BREADTH_FOLLOW_UPS)
 #: The first-stage purposes `breadth_plan` plans that this wiring does NOT
@@ -3065,14 +3092,43 @@ def _planned_from_breadth(call: breadth_plan.PlannedCall) -> _PlannedNcbiEfetchT
     return _PlannedLayerToolCall(tool_call=tool_call, tool_input=call.tool_input, purpose=call.purpose)
 
 
-def _build_breadth_calls(gene_symbol: str | None, *, datasets: bool = False) -> list[Any]:
-    """UI fix 11.21 wiring (2026-09-20): the breadth fan-out for one gene.
+def _build_breadth_calls(
+    gene_symbol: str | None,
+    *,
+    datasets: bool = False,
+    disease_title: str | None = None,
+    disease_curie: str | None = None,
+) -> list[Any]:
+    """UI fix 11.21 wiring (2026-09-20): the breadth fan-out for one gene,
+    and, since fix-plan item 12.1 (2026-09-23), for one disease.
 
-    `breadth_plan.plan_first_stage` on the symbol alone, never on a disease
-    title: the only disease text Plan holds is the model-extracted mention,
-    whose boundaries vary between runs of one question (the reason set 8
-    keeps the trials call on the symbol too), and one source set per
-    question is half of 11.21. The searches come first, then one
+    THE CONSTRAINT THIS FUNCTION USED TO STATE, and how it was met rather
+    than dropped. The paragraph here read: "`plan_first_stage` on the
+    symbol alone, never on a disease title: the only disease text Plan
+    holds is the model-extracted mention, whose boundaries vary between
+    runs of one question, and one source set per question is half of
+    11.21." That is still true of a model-extracted mention, and no
+    mention is passed here. `disease_title` is the MedGen record's own
+    preferred name, read live from `disease_curie` by the caller, so it is
+    a fixed function of the CURIE the question resolved rather than of how
+    the model happened to slice the sentence. Measured 2026-09-23: three
+    runs each of `GERD` and `reflux disease` resolved identical CURIE
+    lists, and three runs of `resolve_concept_ids` on C5563728 returned
+    the identical title.
+
+    A SYMBOL WINS OUTRIGHT. When `gene_symbol` is given, `disease_title`
+    and `disease_curie` are ignored and the plan is byte-identical to what
+    it was before this argument existed. Narrowing a gene question's
+    literature search by a disease as well would change every gene
+    question's source set, which is a separate decision with its own
+    evidence to gather, not a side effect of routing a disease question.
+
+    For a disease: the MedGen record search first, since the record is the
+    answer to "what is this", then `plan_first_stage(None, title)`, which
+    is the PubMed search on the title. ClinVar, OMIM and GEO stay
+    gene-only; each of their terms is a gene field or a bare symbol.
+
+    The searches come first, then one
     `_PlannedFollowUpCall` per follow-up in `_BREADTH_FOLLOW_UPS` order,
     declared now so the plan event and the premise gate's A1 see a fixed
     list. OMIM is among them as of 2026-09-22, and each follow-up carries
@@ -3091,13 +3147,21 @@ def _build_breadth_calls(gene_symbol: str | None, *, datasets: bool = False) -> 
     that measured 14 to 16 of its 20 allowed Layer 2 and 3 calls reaches
     at most 18.
     """
-    if not gene_symbol:
+    title = None if gene_symbol else disease_title
+    if not gene_symbol and not title:
         return []
     try:
-        first_stage = breadth_plan.plan_first_stage(gene_symbol, None, datasets=datasets)
+        first_stage = breadth_plan.plan_first_stage(gene_symbol, title, datasets=datasets)
     except (TypeError, ValueError):
         return []
     calls: list[Any] = []
+    if title:
+        # The disease's own record leads, so under the Section 21.3 ceiling
+        # it is the last call admission would ever skip.
+        calls.extend(
+            _planned_from_breadth(call)
+            for call in breadth_plan.plan_disease_search(disease_curie)
+        )
     for call in first_stage:
         if call.purpose in _BREADTH_DROPPED_PURPOSES:
             continue
@@ -3963,6 +4027,49 @@ def _first_gene_curie(target_entities: list[str]) -> str | None:
     return None
 
 
+def _first_disease_curie(target_entities: list[str]) -> str | None:
+    """The first MedGen-shaped CURIE among already-resolved target entities.
+
+    Fix-plan item 12.1 (2026-09-23). `target_entities` is in query order
+    (Think's `_EntityResolution` contract), and within one mention
+    `resolve_disease_mention_to_curies` returns its CURIEs sorted by
+    concept id inside two fixed tiers, so "first" is a function of the
+    matched record set and not of the order MedGen happened to rank it in.
+    Measured the same day: three runs each of `GERD` and of `reflux
+    disease` returned identical lists in identical order.
+    """
+    for curie in target_entities:
+        if curie.startswith("MedGen:"):
+            return curie
+    return None
+
+
+async def _disease_search_text(disease_curie: str | None) -> str | None:
+    """The MedGen record's own preferred name for `disease_curie`,
+    normalised into the one string a disease question searches on.
+
+    Fix-plan item 12.1 (2026-09-23). This is the whole answer to "where
+    does a stable disease text come from", so it is worth stating plainly:
+    NOT the user's phrasing, which varies (`GERD` and `reflux disease` are
+    the same condition), and NOT the model-extracted span, whose
+    boundaries move between runs of one question. The CURIE is
+    deterministic because Think live-confirmed it, and the name is a
+    property of the MedGen record, so the pair is stable in both halves.
+
+    `resolve_concept_ids` never raises and never invents a name: an id
+    MedGen does not hold, a transport failure or a rate-limit refusal all
+    map to None, and this function then returns None, which plans the
+    single graph call the question planned before this existed. Its two
+    calls go through the shared `eutils` pool and the per-query Layer 2/3
+    ceiling like every other call, and its one-week in-process cache means
+    a repeat of the same question pays nothing.
+    """
+    if not disease_curie:
+        return None
+    resolved = await resolve_concept_ids([disease_curie])
+    return breadth_plan.disease_search_text(resolved.get(disease_curie))
+
+
 def _build_planned_ncbi_efetch_call(gene_curie: str) -> _PlannedNcbiEfetchToolCall:
     """Build the second, Layer 2 planned call: an `ncbi_efetch` gene report
     for the same Gene CURIE `cypher_query` is already querying.
@@ -4492,7 +4599,28 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             )
             if mention and ":" not in mention:
                 gene_symbol = mention.strip().upper()
-        layer_calls = _build_layer_tool_calls(query.text, gene_symbol, _rsids_in_text(query.text))
+
+        # Fix-plan item 12.1 (2026-09-23): a question anchored on a DISEASE
+        # with no gene resolved gets the same breadth a gene question gets.
+        # Measured before this existed: `Any trials for GERD?` resolved
+        # `MedGen:C5563728` at confidence 1.0, planned ONE call, `MATCH
+        # (a:Disease {id: $e_MedGen_C5563728}) RETURN a`, got zero rows and
+        # refused, while ClinicalTrials.gov holds thousands of GERD trials.
+        # The pair of synonyms is the proof it was a single point of
+        # failure rather than a ranking problem: `reflux disease` resolves
+        # to eight concepts the graph DOES hold, so the identical call
+        # returned 8 rows and answered. Same condition, two names, opposite
+        # outcomes, because nothing else was searched.
+        disease_curie = (
+            _first_disease_curie(planned.cypher_input.target_entities)
+            if gene_curie is None
+            else None
+        )
+        disease_text = await _disease_search_text(disease_curie)
+
+        layer_calls = _build_layer_tool_calls(
+            query.text, gene_symbol, _rsids_in_text(query.text), disease_text
+        )
         planned_tool_calls.extend(layer_calls)
 
         # UI fix 11.21 wiring (2026-09-20): the breadth fan-out, planned
@@ -4503,7 +4631,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # own template already answers.
         planned_tool_calls.extend(
             _build_breadth_calls(
-                gene_symbol, datasets=breadth_plan.wants_dataset_search(query.text)
+                gene_symbol,
+                datasets=breadth_plan.wants_dataset_search(query.text),
+                disease_title=disease_text,
+                disease_curie=disease_curie,
             )
         )
 
@@ -4544,6 +4675,12 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         )
         if gene_curie is not None:
             narrative = f"searching {len(by_layer)} layers for {gene_curie}. " + narrative
+        elif disease_text:
+            # Fix-plan item 12.1: the disease is named in WORDS, not as
+            # `MedGen:C5563728`, which is the same reason build phase 6.2
+            # exists. The words are the MedGen record's own, so the
+            # narrative cannot name a disease the question did not resolve.
+            narrative = f"searching {len(by_layer)} layers for {disease_text}. " + narrative
         narrative = narrative[:500]
 
         plan_payload = PlanPayload(
@@ -4895,6 +5032,17 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # `species` and `taxid` (read live 2026-09-22). The scientific name
     # leads so the citation names the organism.
     "taxonomy_summary": ("scientificname", "commonname", "rank", "division", "taxid"),
+    # Fix-plan item 12.1 (2026-09-23): the disease's own MedGen record. A
+    # MedGen ESummary record carries `conceptid`, `title`, `definition` and
+    # `semantictype` (`ncbi_eutils_actions._SUMMARY_FIELDS_BY_DB`). `title`
+    # leads so the citation names the disease as MedGen does; `definition`
+    # is NCBI's own plain-English sentence about it, which is to a disease
+    # question what the Gene ESummary's `summary` is to a gene question
+    # (item 11.31), the one prose a grounded answer may quote. `conceptid`
+    # is withheld for the reason `_NCBI_EFETCH_ROW_IDENTITY_FIELDS`
+    # withholds `gene_id`: it identifies the record rather than saying
+    # anything about it, and the question already resolved it.
+    "medgen_summary": ("title", "definition", "semantictype"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -4904,6 +5052,10 @@ _OMIM_SUMMARY_PURPOSE: Final[str] = "omim_summary"
 #: string NCBI returns (`<Run acc="SRR9496657" total_spots="118" .../>`); a
 #: person wants the run accession, so the row carries the accessions alone.
 _SRA_SUMMARY_PURPOSE: Final[str] = "sra_summary"
+#: Fix-plan item 12.1 (2026-09-23): the one breadth purpose whose records
+#: carry one-key wrapper objects that are unwrapped before any row is
+#: built (`_unwrap_medgen_fields`).
+_MEDGEN_SUMMARY_PURPOSE: Final[str] = "medgen_summary"
 _SRA_RUN_ACCESSION = re.compile(r'acc="([A-Z]{3}\d+(?:\.\d+)?)"')
 
 #: UI fix 11.22. The purpose whose records carry a real abstract, and the
@@ -4964,6 +5116,49 @@ def _pubmed_abstract_rows(
             }
         )
     return abstract_rows
+
+
+#: Fix-plan item 12.1 (2026-09-23). The `medgen_summary` fields NCBI
+#: returns as a one-key wrapper object rather than as a scalar. Measured
+#: live the same day over three concepts: `definition` is
+#: `{"value": "<prose>"}` for C0017168 and C0002395 and `{}` for C5563728,
+#: which has no definition, and `semantictype` is `{"value": "Finding"}`.
+_MEDGEN_WRAPPED_FIELDS: Final[tuple[str, ...]] = ("definition", "semantictype")
+
+
+def _unwrap_medgen_fields(fields: dict[str, Any]) -> dict[str, Any]:
+    """Replace a MedGen one-key wrapper with the string it wraps, and drop
+    the field entirely when it wraps nothing.
+
+    WHY THIS IS NOT A GENERIC UNWRAP, and is named field by field: a
+    `{"value": ...}` object is ClinVar's `germline_classification` too, and
+    `ncbi_eutils_actions` deliberately passes that one through untouched
+    because this repository never assumes a shape for it beyond present or
+    absent. This function applies only to the two MedGen fields above,
+    whose shape was read from live records rather than assumed.
+
+    Two things a reader would otherwise have to guess at. An empty
+    `definition` is REMOVED rather than shown as `{}`: a concept with no
+    definition should read as a concept with no definition, not as an
+    empty object, which is the same "a person types a question and reads
+    an answer" standard that made `MedGen:C0346153` a defect. And the
+    unwrapped `definition` is a plain string, which is what
+    `synthesis/grounding.ground_claim` needs: the gate matches a clause
+    against source TEXT by containment, so NCBI's own sentence about a
+    disease can be quoted only once it is a string. Inside a wrapper it
+    could never be cited, however correct it was.
+    """
+    unwrapped = dict(fields)
+    for key in _MEDGEN_WRAPPED_FIELDS:
+        value = unwrapped.get(key)
+        if not isinstance(value, Mapping):
+            continue
+        inner = value.get("value")
+        if isinstance(inner, str) and inner.strip():
+            unwrapped[key] = inner.strip()
+        else:
+            unwrapped.pop(key, None)
+    return unwrapped
 
 
 def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -> list[Any]:
@@ -5068,6 +5263,9 @@ def _ncbi_efetch_output_to_structured_fields(
         }
         for record in records
     ]
+    if purpose == _MEDGEN_SUMMARY_PURPOSE:
+        for row in rows:
+            row["fields"] = _unwrap_medgen_fields(row["fields"])
     if purpose in _BREADTH_FIELDS_BY_PURPOSE:
         # A breadth result is sorted by record URL, a property of the
         # record and not of the response order, then cut to the fixed cap,
@@ -5465,6 +5663,8 @@ def _follow_up_planned_call(
         planned = breadth_plan.plan_omim_follow_up(ids)
     elif follow_up.source_purpose == "gds_search":
         planned = breadth_plan.plan_gds_follow_up(ids)
+    elif follow_up.source_purpose == "medgen_search":
+        planned = breadth_plan.plan_medgen_follow_up(ids)
     else:
         return None
     for call in planned:

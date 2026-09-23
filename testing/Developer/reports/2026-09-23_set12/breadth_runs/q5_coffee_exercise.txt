@@ -10,13 +10,13 @@
 [guard] {"passed": true, "category": "ok", "reason": null}
 [cost]
 [error] {"fatal": true, "scope": "step", "source": "think", "error_class": "recoverable", "message": "the plan tier's response did not match the think classification schema", "retry_after_s": 0}
-[done] {"total_cost_usd": 0.002416755, "total_tool_calls": 0, "elapsed_ms": 11671, "trust_outcome": "refuse", "trust_line": null, "layer_calls_used": 0, "next_step": null, "next_step_query": null}
-[SUMMARY] {"question": "Does coffee help make exercise more effective?", "tools": [], "citations": [], "resolved_entities": [], "trust_outcome": "refuse", "elapsed_s": 11.7}
+[done] {"total_cost_usd": 0.002359865, "total_tool_calls": 0, "elapsed_ms": 6747, "trust_outcome": "refuse", "trust_line": null, "layer_calls_used": 0, "next_step": null, "next_step_query": null}
+[SUMMARY] {"question": "Does coffee help make exercise more effective?", "tools": [], "citations": [], "resolved_entities": [], "trust_outcome": "refuse", "elapsed_s": 6.8}
 [SHOWN] 0 citations, 0 not previously reported, 0 previously reported
 
 --- STDERR ---
-think classification unusable (attempt 1 of 2, trace trace-local-repro): the plan tier's response did not match the think classification schema; reply length 304, starts ' {"query_class": "exploratory", "rationale": "Broad, open-ended question about lifestyle interaction (coffee and exercise effectiveness) with no single obvious biomedical database path nor specific ge'
-think classification unusable (attempt 2 of 2, trace trace-local-repro): the plan tier's response did not match the think classification schema; reply length 282, starts ' {"query_class": "exploratory", "why": "Broad, open-ended question about a lifestyle interaction with no single database record or obvious biomedical data path; requires evidence synthesis across mult'
+think classification unusable (attempt 1 of 2, trace trace-local-repro): the plan tier's response did not match the think classification schema; reply length 248, starts ' ```json\n{"query_class": "exploratory", "why": "Broad, open-ended question about a lifestyle intervention across potentially many biological mechanisms and study types with no single obvious path or s'
+think classification unusable (attempt 2 of 2, trace trace-local-repro): the plan tier's response did not match the think classification schema; reply length 240, starts '{"query_class": "exploratory", "reason": "Broad open-ended question about lifestyle interaction (coffee + exercise effectiveness) with no single database path; requires evidence synthesis across multi'
 interaction capture failed for trace_id=trace-local-repro
 Traceback (most recent call last):
   File "src/system_03_search_agent/core/run.py", line 315, in _capture_interaction

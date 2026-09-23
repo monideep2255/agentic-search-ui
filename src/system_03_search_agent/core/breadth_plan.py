@@ -96,6 +96,9 @@ PUBMED_RESULT_CAP: Final[int] = 5
 CLINVAR_RESULT_CAP: Final[int] = 10
 OMIM_RESULT_CAP: Final[int] = 10
 GDS_RESULT_CAP: Final[int] = 5
+# One concept id resolves to one MedGen record, so this cap is a bound on a
+# malformed response rather than a choice about how much to show.
+MEDGEN_RESULT_CAP: Final[int] = 5
 
 # Bounds on the two free-text inputs. A gene symbol is at most 30
 # characters (`NcbiEfetchDatasetReportInput.symbol` uses the same bound) and
@@ -108,8 +111,23 @@ _MAX_TITLE_CHARS: Final[int] = 200
 _SYMBOL_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9_.@-]{0,29}$", re.ASCII
 )
+# A balanced parenthesised segment, removed WHOLE rather than having its
+# brackets deleted. Fix-plan item 12.1 (2026-09-23), measured: MedGen's
+# preferred name for C5563728 is `Gastroesophageal reflux (GERD)`, and
+# deleting only the two brackets leaves the phrase `gastroesophageal reflux
+# gerd`, which is not a phrase any paper or trial record contains. A
+# MedGen parenthetical is an acronym gloss beside the name, so dropping it
+# leaves the name itself. Every character the strip pattern below exists to
+# remove is removed by this too, so it never widens what may reach a term.
+_PARENTHETICAL: Final[re.Pattern[str]] = re.compile(r"\([^()]*\)")
 _TITLE_STRIP_PATTERN: Final[re.Pattern[str]] = re.compile(r'["\[\]():*?]')
 _WHITESPACE_RUN: Final[re.Pattern[str]] = re.compile(r"\s+")
+
+# A MedGen concept id, the local half of a `MedGen:` CURIE: `C` or `CN`
+# then digits. The same shape `synthesis/disease_names.MEDGEN_CONCEPT_ID`
+# enforces, restated here so this module stays a pure function of its
+# arguments with no import of the synthesis layer.
+_MEDGEN_CONCEPT_ID: Final[re.Pattern[str]] = re.compile(r"^CN?\d+$", re.ASCII)
 
 # The words that say a question is asking for expression datasets, which
 # live in GEO and nowhere the graph or the other searches reach. Word-bounded
@@ -181,6 +199,12 @@ def _normalise_symbol(gene_symbol: str | None) -> str | None:
 def _normalise_title(disease_title: str | None) -> str | None:
     """Lowercase, whitespace-collapsed, operator characters removed, capped.
 
+    A balanced parenthesised segment is dropped WHOLE before anything else
+    (see `_PARENTHETICAL`), so `Gastroesophageal reflux (GERD)` becomes
+    `gastroesophageal reflux` rather than `gastroesophageal reflux gerd`.
+    Any bracket left unbalanced is still removed as a character, so nothing
+    that carries meaning in a PubMed term survives either path.
+
     None when nothing usable remains, so a title made only of quotes or
     brackets plans no disease clause rather than an empty quoted string.
     """
@@ -188,11 +212,30 @@ def _normalise_title(disease_title: str | None) -> str | None:
         return None
     if not isinstance(disease_title, str):
         raise TypeError("disease_title must be a string or None")
-    stripped = _TITLE_STRIP_PATTERN.sub(" ", disease_title)
+    without_gloss = _PARENTHETICAL.sub(" ", disease_title)
+    stripped = _TITLE_STRIP_PATTERN.sub(" ", without_gloss)
     collapsed = _WHITESPACE_RUN.sub(" ", stripped).strip().lower()
     if not collapsed:
         return None
     return collapsed[:_MAX_TITLE_CHARS].strip()
+
+
+def disease_search_text(disease_title: str | None) -> str | None:
+    """The one text a disease-anchored question searches on, or None.
+
+    Fix-plan item 12.1 (2026-09-23). `core/graph.py` plans three different
+    calls from a disease: the PubMed term, the trials condition and the
+    PubTator3 entity lookup. All three take THIS string, so a question's
+    three searches can never disagree about which disease they are about.
+
+    The argument is the MedGen record's own preferred name, fetched live
+    from the resolved `MedGen:` CURIE, never the user's phrasing and never
+    a model-extracted span, which is what makes the result the same on
+    every run of one question. The normalisation is the same one
+    `build_pubmed_term` applies, exposed so the other two calls use the
+    identical bytes rather than a second cleanup of their own.
+    """
+    return _normalise_title(disease_title)
 
 
 def build_pubmed_term(gene_symbol: str | None, disease_title: str | None) -> str | None:
@@ -270,6 +313,13 @@ def plan_first_stage(
     tuple when neither input is usable, which is the planner's signal to
     plan nothing extra rather than an error: a question that resolved no
     gene and bound no disease earns no fan-out.
+
+    THE TITLE-ONLY PATH IS LIVE AS OF 2026-09-23 (fix-plan item 12.1) and
+    had no caller until then. A disease-anchored question passes the
+    MedGen record's own preferred name here and gets the PubMed search;
+    ClinVar, OMIM and GEO stay gene-only, because each of those three
+    terms is a gene field (`SYMBOL[gene]`) or a gene symbol, and there is
+    no disease equivalent that returns the same kind of record.
     """
     symbol = _normalise_symbol(gene_symbol)
     term = build_pubmed_term(symbol, disease_title)
@@ -286,6 +336,54 @@ def plan_first_stage(
             if gds_term:
                 calls.append(_search_call("gds_search", "gds", gds_term, GDS_RESULT_CAP))
     return tuple(calls)
+
+
+def build_medgen_term(disease_curie: str | None) -> str | None:
+    """The MedGen ESearch term for one resolved `MedGen:` CURIE, or None.
+
+    Shape: `C5563728[ConceptId]`. Verified live on 2026-09-23, and it is
+    the same field `synthesis/disease_names` already searches on to read a
+    concept's preferred name, so this is a known-good term rather than a
+    new query shape. A concept id is not a uid, so an ESummary keyed on it
+    is rejected outright and the search is genuinely needed.
+
+    None for anything that is not a `MedGen:` CURIE with a concept-shaped
+    local id, which is this module's own signal to plan nothing rather
+    than an error, the same contract `plan_gene_summary` carries.
+    """
+    if not isinstance(disease_curie, str):
+        return None
+    prefix, separator, local = disease_curie.strip().partition(":")
+    if not separator or prefix.strip() != "MedGen":
+        return None
+    concept_id = local.strip().upper()
+    if _MEDGEN_CONCEPT_ID.match(concept_id) is None:
+        return None
+    return f"{concept_id}[ConceptId]"
+
+
+def plan_disease_search(disease_curie: str | None) -> tuple[PlannedCall, ...]:
+    """The MedGen record search for a disease-anchored question.
+
+    Fix-plan item 12.1 (2026-09-23). The disease's own MedGen record is
+    the live record leg of a disease question's breadth, the counterpart
+    of the Gene ESummary a gene question gets (`plan_gene_summary`): it
+    carries the concept's name, its definition and its semantic type, all
+    citable to `ncbi.nlm.nih.gov/medgen/<uid>`.
+
+    A search rather than a direct summary, and this is the one place a
+    reader will reasonably expect a single call: a MedGen CONCEPT id is
+    not an E-utilities uid, and `synthesis/disease_names` measured NCBI
+    rejecting an ESummary keyed on one outright (`Invalid uid C0346153`).
+    The uid the record page is addressed by only exists in the search
+    result, so the pair is the minimum, not an extra hop.
+
+    An empty tuple for a CURIE this module cannot build a term from.
+    """
+    term = build_medgen_term(disease_curie)
+    if term is None:
+        return ()
+    return (_search_call("medgen_search", "medgen", term, MEDGEN_RESULT_CAP),)
 
 
 def select_ids(ids: Iterable[Any], cap: int) -> list[str]:
@@ -389,6 +487,20 @@ def plan_gds_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
     if not selected:
         return ()
     return (_summary_call("gds_summary", "gds", selected),)
+
+
+def plan_medgen_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+    """MedGen ESummary on the sorted, capped uids a MedGen search returned.
+
+    The summary carries the concept id, the preferred title, the
+    definition and the semantic type
+    (`ncbi_eutils_actions._SUMMARY_FIELDS_BY_DB["medgen"]`), and the record
+    URL is NCBI's own `medgen/{uid}` page.
+    """
+    selected = select_ids(ids, MEDGEN_RESULT_CAP)
+    if not selected:
+        return ()
+    return (_summary_call("medgen_summary", "medgen", selected),)
 
 
 def filter_omim_titles(

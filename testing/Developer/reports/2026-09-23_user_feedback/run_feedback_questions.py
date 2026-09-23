@@ -31,6 +31,8 @@ for key, text in QUESTIONS:
     proc = subprocess.run(
         [sys.executable, str(RUNNER), text, "--no-memory", "--plain", "--summary"],
         capture_output=True, text=True, cwd=str(ROOT), timeout=300,
+        # A refusal is a result worth recording, not a failure to raise on.
+        check=False,
     )
     (OUT / f"{key}.txt").write_text(proc.stdout + "\n--- STDERR ---\n" + proc.stderr)
     summary = None

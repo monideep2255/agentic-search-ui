@@ -46,8 +46,24 @@ def test_pubmed_term_both_joined_with_and() -> None:
 
 
 def test_pubmed_term_strips_operator_characters_from_a_title() -> None:
+    """CHANGED on 2026-09-23 (fix-plan item 12.1), and the change is to the
+    SUBJECT rather than to the check. This arm used to expect `(x)` to lose
+    its brackets and keep its `x`, which was the documented behaviour while
+    no caller passed a disease title at all. A caller passes one now, and
+    what it passes is a MedGen preferred name, whose parenthetical is an
+    acronym gloss (`Gastroesophageal reflux (GERD)`): unbracketing it
+    leaves `gastroesophageal reflux gerd`, a phrase no paper contains, so
+    the search would find nothing while looking fixed. The gloss is now
+    dropped whole. Safety is unchanged or stronger, since every character
+    the strip pattern removes is inside what the drop removes."""
     term = bp.build_pubmed_term(None, 'cancer" OR "[All Fields] (x)')
-    assert term == '"cancer or all fields x"[Title/Abstract]'
+    assert term == '"cancer or all fields"[Title/Abstract]'
+    # The strip pattern still runs, so an UNBALANCED bracket is removed as
+    # a character and its text survives.
+    assert (
+        bp.build_pubmed_term(None, "cancer (of the lung")
+        == '"cancer of the lung"[Title/Abstract]'
+    )
 
 
 def test_pubmed_term_null_inputs_plan_nothing() -> None:
