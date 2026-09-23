@@ -431,6 +431,16 @@ class DonePayload(BaseModel):
     # projects that model whole under a pinned key allowlist, and a trust
     # line is a statement about the finished answer, which is this event.
     trust_line: Annotated[str | None, Field(default=None, max_length=200)] = None
+    # Fix-plan item 1, the call ceiling (2026-09-22, night). How many Layer 2
+    # and 3 calls this query spent against `call_budget`'s ceiling of twenty,
+    # counted at the transports, so it INCLUDES Think's own live lookups,
+    # which no other event shows. Measured that night: a window question
+    # crossed the ceiling on one pass in five and refused with no citations,
+    # and nothing on the stream said why. Additive and optional, within v1 by
+    # `system-design-patterns` pattern 10; None when no budget scope was
+    # bound, which is a different fact from zero. Read by the developer
+    # measurements, ignored by every surface.
+    layer_calls_used: Annotated[int | None, Field(default=None, ge=0)] = None
 
     next_step: Annotated[str | None, Field(default=None, max_length=200)] = None
     """An offer of somewhere to go next, or None when there is nowhere honest.

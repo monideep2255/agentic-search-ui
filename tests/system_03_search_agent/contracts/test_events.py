@@ -989,3 +989,27 @@ class TestEventPayloadBoundToDeclaredType:
                     type="done", payload={"passed": True, "category": "ok"}
                 )
             )
+
+
+
+def test_the_done_event_carries_the_layer_call_count_and_may_omit_it() -> None:
+    """Fix-plan item 1 (2026-09-22): the count of Layer 2 and 3 calls the
+    query spent is on the done event, additive and optional. Populate check:
+    a negative count is rejected, so the field is validated rather than
+    merely accepted."""
+    import pytest as _pytest
+
+    from system_03_search_agent.contracts.events import DonePayload
+
+    with_count = DonePayload(
+        total_cost_usd=0.0, total_tool_calls=3, elapsed_ms=10, trust_outcome="answer",
+        layer_calls_used=15,
+    )
+    assert with_count.layer_calls_used == 15
+    without = DonePayload(total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="refuse")
+    assert without.layer_calls_used is None
+    with _pytest.raises(ValueError):
+        DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="refuse",
+            layer_calls_used=-1,
+        )

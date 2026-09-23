@@ -1049,6 +1049,7 @@ def _decline_for_guardrail(
             total_tool_calls=0,
             elapsed_ms=_elapsed_ms(state),
             trust_outcome="refuse",
+            layer_calls_used=call_budget.calls_made(),
         ),
     )
     return sink.result(guard_refused=True)
@@ -1085,6 +1086,7 @@ def _decline_for_daily_cap(
             total_tool_calls=0,
             elapsed_ms=_elapsed_ms(state),
             trust_outcome="refuse",
+            layer_calls_used=call_budget.calls_made(),
         ),
     )
     return sink.result(daily_cap_declined=True)
@@ -8448,6 +8450,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 total_tool_calls=total_tool_calls,
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
+                layer_calls_used=call_budget.calls_made(),
             ),
         )
         return sink.result()
@@ -8485,6 +8488,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 total_tool_calls=total_tool_calls,
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
+                layer_calls_used=call_budget.calls_made(),
             ),
         )
         return sink.result()
@@ -8542,6 +8546,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 total_tool_calls=total_tool_calls,
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
+                layer_calls_used=call_budget.calls_made(),
             ),
         )
         return sink.result()
@@ -8724,6 +8729,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 total_tool_calls=total_tool_calls,
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
+                layer_calls_used=call_budget.calls_made(),
             ),
         )
         return sink.result()
@@ -9551,6 +9557,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             total_tool_calls=total_tool_calls,
             elapsed_ms=elapsed_ms,
             trust_outcome=trust_outcome,
+            layer_calls_used=call_budget.calls_made(),
             # UI fix set 9, item 9.9: the one plain line, derived from the
             # verdicts above and nothing else; None on a refusal.
             trust_line=answer_trust_line(trust_outcome, claim_trusts, grounding.claims),
@@ -9588,6 +9595,7 @@ def _partial_result_for_cap(
             total_tool_calls=total_tool_calls,
             elapsed_ms=elapsed_ms,
             trust_outcome="flag",
+            layer_calls_used=call_budget.calls_made(),
         ),
     )
     return sink.result()
