@@ -76,7 +76,7 @@
  *                   (`e2e/`'s).
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -137,6 +137,27 @@ async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), question);
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
+}
+
+/**
+ * D4 defect 12: `useAnswerReveal`/`usePacedEvents` hold the landed answer
+ * behind REAL `setTimeout` waits, so a bare `findByTestId(..., { timeout:
+ * 10000 })` right after a run lands measured 6100-7700ms unloaded, 61-77%
+ * of its own ceiling. Fake timers remove the race rather than widening the
+ * window; small steps, each inside its own `act`, because the reveal
+ * schedules its NEXT timer inside a React effect that only runs once `act`
+ * returns (the same reason `hooks/useAnswerReveal.test.ts`'s own `advance`
+ * helper steps). Only ever called between two real-timer stretches, never
+ * around a `userEvent` call.
+ */
+async function revealNow(ms = 8_000, step = 110) {
+  vi.useFakeTimers();
+  for (let elapsed = 0; elapsed < ms; elapsed += step) {
+    await act(async () => {
+      vi.advanceTimersByTime(Math.min(step, ms - elapsed));
+    });
+  }
+  vi.useRealTimers();
 }
 
 /** Signs in through the real gate, from the nav bar's "Log in" action. */
@@ -661,7 +682,8 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       // into the answer screen, this clause still passed. Waiting on a
       // real element that only the ANSWER screen renders is what makes
       // the absences below capable of failing.
-      await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
+      await revealNow();
+      screen.getByTestId("answer-meta");
 
       expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
       expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();

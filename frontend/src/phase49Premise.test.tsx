@@ -54,7 +54,7 @@
  *                   calls.
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -234,13 +234,37 @@ async function signIn(user: ReturnType<typeof userEvent.setup>) {
   await mainArea().findByRole("textbox", { name: /question/i });
 }
 
+/**
+ * D4 defect 12: `useAnswerReveal`/`usePacedEvents` hold the landed answer
+ * behind REAL `setTimeout` waits (`minBannerMs` 1500, `perItemMs` 110, a
+ * per-helper dwell), so this file's own `findByTestId(..., { timeout:
+ * 10000 })` sites measured 6800-7700ms unloaded, 68-77% of their ceiling
+ * with zero contention from anything else. Fake timers remove the race
+ * instead of widening the window: advance in small steps, each inside its
+ * own `act`, because the reveal schedules its NEXT timer inside a React
+ * effect that only runs once `act` returns (the same reason
+ * `hooks/useAnswerReveal.test.ts`'s own `advance` helper steps rather than
+ * jumping). Only ever called between two real-timer stretches, never
+ * around a `userEvent` call.
+ */
+async function revealNow(ms = 8_000, step = 110) {
+  vi.useFakeTimers();
+  for (let elapsed = 0; elapsed < ms; elapsed += step) {
+    await act(async () => {
+      vi.advanceTimersByTime(Math.min(step, ms - elapsed));
+    });
+  }
+  vi.useRealTimers();
+}
+
 /** Sign in, ask, and wait for the answer to land. */
 async function landAnAnswer(user: ReturnType<typeof userEvent.setup>) {
   await signIn(user);
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
-  await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+  await revealNow();
+  screen.getByTestId("source-1");
 }
 
 describe("build phase 4.9: the app presents what the prototype presents", () => {
@@ -401,14 +425,15 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
      * going, never only after it lands, since `landed` stays false for the
      * whole test (no `done` event is ever sent on this stream).
      */
-    const reasoning = await screen.findByTestId("reasoning-log", undefined, { timeout: 10000 });
-    await waitFor(
-      () => {
-        expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
-        expect(reasoning).toHaveTextContent(/read the curated edges/i);
-      },
-      { timeout: 10000 },
-    );
+    // D4 defect 12: this run never sends `done` (see the comment above), so
+    // `revealNow` cannot wait for "landed"; it only needs to clear the
+    // guard/think/plan dwell (bounded at `maxLagMs`, 3500ms) the comment
+    // above already reasons about, which 20000ms of fake time comfortably
+    // covers.
+    await revealNow();
+    const reasoning = screen.getByTestId("reasoning-log");
+    expect(reasoning).toHaveTextContent(/resolving the gene named in the question/i);
+    expect(reasoning).toHaveTextContent(/read the curated edges/i);
   });
 
   // ---------------------------------------------------------------- F-4.8-D-01
@@ -596,7 +621,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    const strip = await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
+    await revealNow();
+    const strip = screen.getByTestId("answer-meta");
     expect(strip).not.toHaveTextContent(/refused/i);
     expect(strip).not.toHaveTextContent("✓");
     expect(strip).not.toHaveTextContent("⚠");
@@ -615,7 +641,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByTestId("answer-meta");
     /*
      * In a cite-or-refuse system the ABSENCE of a grounding verdict must read
      * as "not verified", never as silence. A dropped or never-emitted
@@ -656,7 +683,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("citation-1", undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByTestId("citation-1");
     /*
      * F-4.9-R-04. This asserted `data-layer` ALONE, which is a test hook no
      * user meets. The two harms the finding actually named are what a reader
@@ -718,7 +746,8 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     // 2026-09-14: landing includes the answer reveal, so this waits as long as `landAnAnswer` does.
-    await screen.findByTestId("answer-meta", undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByTestId("answer-meta");
     /*
      * The A-05 fix MOVED this nonsense rather than removing it: counting from
      * tool calls gave "0 layers agreed" when citations arrived without tool

@@ -57,12 +57,31 @@ test.describe(
         }
 
         // "docs" removed with the tab itself, fix set 5 (R18, 2026-09-13).
+        //
+        // Nav items are MUI `Button`s, role "button", never "link"
+        // (`AppShell.tsx` lines 465-490), and below the design's own 720px
+        // breakpoint every item but the current page is `display: none`
+        // inline; only `NavOverflowMenu`'s "More pages" button (also role
+        // "button") reaches them there, as `role="menuitem"` entries
+        // (`AppShell.tsx` lines 159-266, 475-481). 390px needs the overflow
+        // path; 768px and 1440px are both above 720px and click inline.
+        //
+        // `{ exact: true }` on the nav item's own capitalized label, not a
+        // case-insensitive substring: a live run against the real app (not
+        // a guess from the source) found `PersonaChip`'s "About Fleming"
+        // info affordance also lives inside this `<nav>` and a bare
+        // `/about/i` regex matches both, a strict-mode violation Playwright
+        // itself refuses to click through.
+        const nav = page.getByRole("navigation", { name: /main/i });
+        const LABEL: Record<string, string> = { integrations: "Integrations", about: "About" };
         for (const screen of ["integrations", "about"]) {
-          await page
-            .getByRole("navigation", { name: /main/i })
-            .getByRole("link", { name: new RegExp(screen, "i") })
-            .click({ timeout: 5_000 })
-            .catch(() => undefined);
+          const label = LABEL[screen];
+          if (width <= 720) {
+            await nav.getByRole("button", { name: "More pages" }).click({ timeout: 5_000 });
+            await page.getByRole("menuitem", { name: label, exact: true }).click({ timeout: 5_000 });
+          } else {
+            await nav.getByRole("button", { name: label, exact: true }).click({ timeout: 5_000 });
+          }
           await page.waitForTimeout(400);
           await strip.capture(`${width}px ${screen}`);
         }

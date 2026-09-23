@@ -25,7 +25,7 @@
  * certified an interface wired to nothing.
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -110,6 +110,29 @@ async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), question);
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
+}
+
+/**
+ * D4 defect 12: `useAnswerReveal`/`usePacedEvents` hold the landed answer
+ * behind REAL `setTimeout` waits (`minBannerMs` 1500, `perItemMs` 110, a
+ * per-helper dwell), so a bare `findByTestId(..., { timeout: 10000 })` right
+ * after asking measured 6100-7700ms unloaded, 61-77% of its own ceiling with
+ * zero contention from anything else. Fake timers remove the race instead
+ * of widening the window: advance in small steps, each inside its own
+ * `act`, because the reveal schedules its NEXT timer in an effect that only
+ * runs once `act` returns (the same reason `hooks/useAnswerReveal.test.ts`'s
+ * own `advance` helper steps rather than jumping). Only ever called between
+ * two real-timer stretches of a test, never around a `userEvent` call, so
+ * no `userEvent.setup()` in this file needs `delay: null`.
+ */
+async function revealNow(ms = 8_000, step = 110) {
+  vi.useFakeTimers();
+  for (let elapsed = 0; elapsed < ms; elapsed += step) {
+    await act(async () => {
+      vi.advanceTimersByTime(Math.min(step, ms - elapsed));
+    });
+  }
+  vi.useRealTimers();
 }
 
 describe("App", () => {
@@ -923,6 +946,23 @@ describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () =
     //    vitest suites use; `answer-cap` is reached only by the browser
     //    suite, and waiting for it here made an earlier version of this
     //    clause fail for a reason unrelated to what it tests.
+    // NOT converted to `revealNow()` (D4 defect 12). Unlike this file's
+    // other three sites, this test interleaves several REAL-timer waits
+    // (`createRun`, then `releaseHistory()`, then the history-rail and
+    // "9 sources" finds) between the ask and this point, so the pacing
+    // hooks' own first `setTimeout` is very likely already scheduled, and
+    // possibly already fired, on the REAL clock before this line ever
+    // installs fake timers. `vi.useFakeTimers()` only intercepts timers
+    // scheduled AFTER it is installed; a real timer already in flight stays
+    // real and outside `revealNow`'s advance loop. Measured: converting
+    // this site left the run stuck at `step-Write` after a full 20000ms
+    // fake-timer advance, `source-1` never appearing at all, confirmed by a
+    // debug dump of every `data-testid` on screen at that point. Fixing it
+    // properly needs fake timers installed from the START of the test
+    // (before `ask`), with every intervening real-timer wait re-verified
+    // under that regime too, which is a materially larger and riskier
+    // change than the other three sites needed. Left on the original real
+    // wait rather than force a fix that risks a new, subtler flake.
     await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 
     // The restored row must still report ITS OWN run. This run produced one
@@ -1060,7 +1100,8 @@ describe("system notes: App forwards the run's disclosures to AnswerScreen", () 
 
     // 2026-09-14: the answer reveal holds landing for at least 1.5s, so this
     // waits as long as the other landed-answer arms in this file do.
-    const note = await screen.findByTestId("answer-note-0", undefined, { timeout: 10000 });
+    await revealNow();
+    const note = screen.getByTestId("answer-note-0");
     expect(note.textContent).toMatch(/showing 5 of 30 matching rows/i);
   });
 });
@@ -1168,7 +1209,8 @@ describe("privacy: the previous person's thread is cleared on sign-out", () => {
     //    archives the landed turn into `thread`, so `thread` is non-empty
     //    the instant sign-out fires below.
     await ask(user, "What is BRCA1?");
-    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByTestId("source-1");
     await user.type(
       screen.getByLabelText(/ask a follow-up question/i),
       "What variants cause it?",
@@ -1185,7 +1227,8 @@ describe("privacy: the previous person's thread is cleared on sign-out", () => {
     // 3. The next person signs in and lands their OWN, unrelated answer.
     await signIn(user);
     await ask(user, "What variants cause cystic fibrosis?");
-    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByTestId("source-1");
 
     // The first person's archived turn must not be here. `AnswerScreen`
     // only renders the `data-testid="thread"` wrapper when `previousTurns`
