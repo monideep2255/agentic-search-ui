@@ -3166,11 +3166,29 @@ def _build_breadth_calls(
         if call.purpose in _BREADTH_DROPPED_PURPOSES:
             continue
         calls.append(_planned_from_breadth(call))
+    calls.extend(_follow_up_calls_for(calls, gene_symbol=gene_symbol))
+    return calls
+
+
+def _follow_up_calls_for(
+    calls: list[Any], *, gene_symbol: str | None
+) -> list[_PlannedFollowUpCall]:
+    """One `_PlannedFollowUpCall` per follow-up whose source search is in
+    `calls`, in `_BREADTH_FOLLOW_UPS` order.
+
+    Extracted from `_build_breadth_calls` on 2026-09-23 (fix-plan item
+    12.7) so the topic path gets the identical follow-ups from the
+    identical table rather than a second copy of this loop to keep in step.
+    Each call carries the resolved symbol so an OMIM result can be checked
+    against it at Act; a topic question passes None, which keeps nothing,
+    and plans no OMIM search in the first place.
+    """
+    follow_up_calls: list[_PlannedFollowUpCall] = []
     for search_purpose, follow_ups in _BREADTH_FOLLOW_UPS.items():
         if not any(getattr(c, "purpose", "") == search_purpose for c in calls):
             continue
         for tool, layer, prefix, purpose in follow_ups:
-            calls.append(
+            follow_up_calls.append(
                 _PlannedFollowUpCall(
                     tool_call=ToolCall(
                         tool=tool,  # type: ignore[arg-type]
@@ -3182,7 +3200,7 @@ def _build_breadth_calls(
                     gene_symbol=gene_symbol,
                 )
             )
-    return calls
+    return follow_up_calls
 
 
 def _build_planned_go_terms_call(gene_curie: str, query_class: QueryClass) -> _PlannedToolCall:
@@ -4504,6 +4522,86 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     planned = None if (accession_plan is not None or isolate_question is not None) else await _select_planned_tool_call(
         query.text, query_class, target_curies, unresolved_symbols, _memory_curies(state)
     )
+    # Fix-plan item 12.7 (2026-09-23): the question named nothing the
+    # product could resolve, so there is no CURIE to bind and the graph has
+    # nothing to answer with. A LITERATURE QUESTION NEEDS NO ENTITY: the
+    # published record is searched with the question's own words instead.
+    # `build_topic_term` is a pure function of the question text with no
+    # model call and no network call in it, which is what lets this path
+    # keep item 11.21's promise that one question shows one source set.
+    #
+    # Guarded on a coordinate window too, because a window question also
+    # reaches Plan with an empty `target_entities` and its own answer calls
+    # are planned below; the topic path must never displace them.
+    #
+    # A QUESTION THAT ASKS FOR PAPERS REACHES THE PAPERS WHATEVER ELSE
+    # RESOLVED (added 2026-09-23 after review). Measured: `resolve_disease_
+    # mention_to_curies("caffeine")` binds EIGHT MedGen concepts, all of
+    # them real disorders ("Caffeine dependence", "Caffeine withdrawal",
+    # "Organic mental disorder caused by caffeine"), because MedGen's name
+    # index matches any title CONTAINING the word. Whether they reach the
+    # answer depends on whether the Think model labels `caffeine` a disease
+    # span on that run, which is a sample and not a rule: a reviewer
+    # measured about 1 run in 3, eight runs here reproduced it 0 times, and
+    # on a flipped run the reader who asked for papers on caffeine and
+    # exercise got two MedGen records about caffeine intoxication.
+    #
+    # The cause is a model sample and cannot be made deterministic. The
+    # CONSEQUENCE can: when the question names the published literature and
+    # no gene resolved, the literature search is what runs. `breadth_plan.
+    # asks_for_published_literature` reads only the typed text, so the path
+    # is a fixed function of the question.
+    #
+    # `target_curies` is THINK'S OWN list, deliberately, not
+    # `planned.cypher_input.target_entities`: the latter carries a
+    # memory-bound antecedent, and a remembered gene must not be able to
+    # stop a new question about papers reaching the papers.
+    topic_term: str | None = None
+    if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
+        asks_for_literature = breadth_plan.asks_for_published_literature(query.text)
+        gene_resolved = _first_gene_curie(target_curies) is not None
+        if not gene_resolved and (asks_for_literature or not target_curies):
+            topic_term = breadth_plan.build_topic_term(query.text)
+        # SESSION MEMORY BOUND AN ANTECEDENT, and which of the two wins
+        # is the one judgement call in this branch. Measured 2026-09-23
+        # in a session that had already resolved BRCA1: `papers on the
+        # effects of caffeine on exercise performance` bound
+        # `NCBIGene:672`, planned the whole gene fan-out and searched
+        # `BRCA1[Title/Abstract]`. A person who types a new question
+        # about caffeine after one about a gene gets papers about the
+        # gene, which is the confident wrong answer this product exists
+        # to avoid, and it is worse than the refusal it replaces.
+        #
+        # `docs/build/Search_and_conversation_behaviour.md` already
+        # states the contract the binding was written to: a follow-up
+        # binds to the antecedent when it "names no entity of its own
+        # but carries a referring word". The binding in
+        # `_select_planned_tool_call` is wider than that sentence and
+        # always has been; this narrows it BACK to the document, for
+        # the topic path only, rather than changing the binding rule
+        # for every caller.
+        #
+        # Two tests, both cheap and both reusing what already exists:
+        # the referring word (`_is_memory_bound_follow_up`, the same
+        # rule and the same word list the guardrail override uses), and
+        # two content words. The second is what keeps a genuine
+        # continuation with no pronoun ("and in women?") bound to the
+        # entity it continues, since one leftover word is far likelier
+        # to be a fragment than a new subject.
+        # `asks_for_literature` also settles the contest below: a question
+        # that names the published literature has said what it is about,
+        # so it is never a continuation of an earlier subject.
+        if (
+            topic_term is not None
+            and planned.memory_bound
+            and not asks_for_literature
+            and (
+                _is_memory_bound_follow_up(query.text, state)
+                or len(breadth_plan.topic_search_words(query.text)) < 2
+            )
+        ):
+            topic_term = None
+
     if isinstance(planned, _UnresolvedEntityRefusal):
         # T-3.1-13/F-2.1-B10: refuse now, before act_node ever dispatches
         # a tool call and before write_node's own synth call, rather than
@@ -4557,6 +4655,52 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
                 )[:500],
                 tool_calls=[p.tool_call for p in planned_tool_calls],
             )
+    elif topic_term is not None:
+        # THE GRAPH CALL IS DROPPED HERE, deliberately, and it is the one
+        # thing in this branch a later reader is most likely to put back.
+        # With no CURIE, `cypher_query` returns the error "no entity could
+        # be identified in this query, so no graph lookup was attempted",
+        # and that error is not free: `act_node` records it in
+        # `failed_searches`, which floors the trust outcome to `ask` and
+        # puts "One of the background searches did not finish" under an
+        # answer where nothing failed. Keeping a call that can only fail,
+        # to then apologise for it, is worse for the reader than not making
+        # it. `write_node`'s refusal branch already tolerates a plan with
+        # no `_PlannedToolCall` in it (the accession and isolate paths have
+        # shipped that way since 2026-09-22), and it is guarded by
+        # `isinstance`, not by position.
+        planned_tool_calls = [
+            _planned_from_breadth(call)
+            for call in breadth_plan.plan_topic_search(query.text)
+        ]
+        # The abstract fetch and the PubTator3 annotation, keyed off the
+        # `pubmed_search` purpose exactly as they are for a gene or a
+        # disease, so there is one wiring rather than two.
+        planned_tool_calls.extend(
+            _follow_up_calls_for(planned_tool_calls, gene_symbol=None)
+        )
+        lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
+        planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
+        # The narrative names the WORDS searched, never the AND-joined
+        # term, for the same reason build phase 6.2 exists: `coffee AND
+        # exercise AND effective` is machinery and the reader typed words.
+        #
+        # TWO WORDINGS, because one of them would be a lie half the time.
+        # Caught by reading this line's own live output on `papers on
+        # GERD`, where a disease DID resolve and the screen still said none
+        # was named. The reader is told what actually happened: either
+        # nothing was named, or they asked for papers and papers are what
+        # was searched.
+        why = (
+            "you asked for published papers, so searching the literature"
+            if target_curies
+            else "no gene, variant or disease was named, so searching the "
+            "published literature"
+        )
+        plan_payload = PlanPayload(
+            narrative=(f"{why} for: " + ", ".join(topic_term.split(" AND ")))[:500],
+            tool_calls=[p.tool_call for p in planned_tool_calls],
+        )
     else:
         planned_tool_calls = [planned]
         narrative = "selected cypher_query for a Layer 1 graph lookup"
@@ -4761,6 +4905,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         tool_calls=planned_tool_calls,
         next_step_entity_label=next_step_entity_label,
         deferred_record_ids=deferred_record_ids,
+        # Item 12.7: empty unless this turn took the topic path. `write`
+        # reads it for two things and nothing else: the refusal that says
+        # what was searched, and the synthesis directive that keeps the
+        # answer to what has been published.
+        topic_search_term=topic_term or "",
     )
 
 
@@ -9351,6 +9500,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 prompt_findings,
                 query.audience_depth,
                 answer_ref_indices=answer_ref_indices,
+                topic_question=bool(state.get("topic_search_term")),
             ),
             budget_s=write_budget_s,
         )
@@ -9380,6 +9530,25 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # and the outcome comes from Section 8.3's decision table over what
     # survived, not from whether any row happened to carry a source_url.
     tool_outcome = _tool_execution_outcome(findings)
+    # Fix-plan item 12.7 (2026-09-23), and it is the one thing the topic
+    # path could not inherit from the paths beside it. `_tool_execution_
+    # outcome` reads "no finding carried a status" as "Plan selected no
+    # tool", which is the truth for a greeting and a LIE here: a topic
+    # question plans three calls, and an `ncbi_efetch` search that matches
+    # nothing produces no Finding at all, so an empty PubMed search landed
+    # in the greeting branch and shipped `trust_outcome: answer` with no
+    # text, no citation and no refusal. It was invisible before this
+    # ticket only because every other path plans a graph call, whose
+    # result always carries a status.
+    #
+    # Narrowed to the topic path deliberately rather than fixed in
+    # `_tool_execution_outcome` for every caller: the accession and
+    # isolate paths also plan no graph call and may have the same hole,
+    # and widening the change would alter two shipped behaviours nobody
+    # measured today. Recorded in the item 12.7 report as an open finding
+    # rather than closed quietly here.
+    if tool_outcome == "no_tool" and state.get("topic_search_term"):
+        tool_outcome = "empty"
 
     # UI fix set 9 (2026-09-13). The reply is read into paragraphs and
     # headings first, and the grounding pass receives the paragraphs joined,
@@ -9514,6 +9683,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                             omitted_findings
                         ),
                         answer_ref_indices=answer_ref_indices,
+                        topic_question=bool(state.get("topic_search_term")),
                     ),
                     budget_s=repair_budget_s,
                 )
@@ -10019,7 +10189,11 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # only when nothing failed and nothing was found does the original
         # wording stand. One builder feeds both the token text and the
         # trust signal, per F-4.7-A-02.
-        refusal_message = refusal_message_for(state.get("failed_searches", []))
+        # Item 12.7: on the topic path the refusal says what it searched
+        # and found nothing, instead of asking the reader to name a gene.
+        refusal_message = refusal_message_for(
+            state.get("failed_searches", []), state.get("topic_search_term") or None
+        )
         sink.emit(
             "token",
             TokenPayload(

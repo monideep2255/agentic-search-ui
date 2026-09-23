@@ -29,6 +29,12 @@ not hold until PubMed answers:
 - `plan_clinvar_follow_up(ids)` and `plan_omim_follow_up(ids)`: the
   ESummary calls on the ids the first-stage searches returned, sorted and
   capped the same way.
+- `plan_topic_search(question)`: the ONE call a question that names no
+  gene and no disease earns (fix-plan item 12.7, 2026-09-23). Its term is
+  `build_topic_term(question)`, the question's own content words joined
+  with ` AND `, untagged so PubMed's automatic term mapping expands them.
+  It is planned with the purpose `pubmed_search`, so the abstract fetch and
+  the PubTator3 annotation below follow it exactly as they follow a gene's.
 - `plan_first_stage(..., datasets=True)` adds a GEO DataSets ESearch on the
   symbol (2026-09-22, fix-plan item 1), planned by `core/graph.py` only when
   `wants_dataset_search(question)` says the question asks for datasets, and
@@ -287,6 +293,273 @@ def build_gds_term(gene_symbol: str | None) -> str | None:
     if not symbol:
         return None
     return f"{symbol}[All Fields] AND gse[Entry Type]"
+
+
+# ---------------------------------------------------------------------------
+# Fix-plan item 12.7 (2026-09-23): the topic search, for a question that
+# names no gene and no disease.
+#
+# THE INSIGHT THIS IS BUILT ON, because the obvious reading of the defect
+# leads somewhere much worse. Four questions a second tester asked refused
+# outright: two about caffeine and exercise, two about the variants a
+# population carries. They refused because the product has a gene resolver
+# and a disease resolver and nothing else, so Think resolved no entity and
+# the graph call had nothing to bind. The obvious fix is a chemical
+# resolver and a population resolver. That is the wrong layer and it is an
+# infinite list, since the next question names a diet, a sport, an
+# occupation or a country.
+#
+# A LITERATURE QUESTION NEEDS NO ENTITY AT ALL. "What has been published
+# about caffeine and exercise performance" is answerable by searching
+# PubMed with the question's own words. The entity resolver exists so the
+# GRAPH can be queried by CURIE, and the graph is not what answers these.
+#
+# WHY THIS IS SAFE WHERE A MODEL-EXTRACTED SPAN WAS NOT. Item 11.21
+# promised the same question always shows the same sources, which is why
+# `_build_layer_tool_calls` refuses a model-extracted disease span. The
+# term below is built from the USER'S OWN TYPED WORDS by a fixed rule with
+# no model call and no network call in it, so it is a pure function of the
+# question text and cannot vary between runs of one question.
+
+# Grammar words: articles, prepositions, conjunctions, pronouns,
+# determiners, auxiliaries and the question words. A closed class, so this
+# list is finite rather than a growing pile of special cases.
+_TOPIC_STOPWORDS: Final[frozenset[str]] = frozenset(
+    (
+        "a", "about", "above", "across", "after", "again", "against", "all",
+        "almost", "along", "also", "although", "always", "am", "among", "an", "and",
+        "another", "any", "anybody", "anyone", "anything", "are", "around", "as",
+        "at", "be", "because", "been", "before", "being", "below", "beneath",
+        "beside", "between", "beyond", "both", "but", "by", "can", "cannot",
+        "could", "did", "do", "does", "doing", "done", "down", "during", "each",
+        "either", "else", "enough", "even", "ever", "every", "everybody",
+        "everyone", "everything", "except", "few", "for", "from", "further", "had",
+        "has", "have", "having", "he", "her", "hers", "herself", "him", "himself",
+        "his", "how", "however", "i", "if", "in", "inside", "into", "is", "it",
+        "its", "itself", "just", "let", "many", "may", "me", "might", "mine",
+        "more", "most", "much", "must", "my", "myself", "near", "neither", "never",
+        "no", "nobody", "none", "nor", "not", "nothing", "now", "of", "off", "on",
+        "once", "one", "only", "onto", "or", "other", "others", "ought", "our",
+        "ours", "ourselves", "out", "over", "own", "per", "rather", "same", "shall",
+        "she", "should", "since", "so", "some", "somebody", "someone", "something",
+        "still", "such", "than", "that", "the", "their", "theirs", "them",
+        "themselves", "then", "there", "these", "they", "this", "those", "though",
+        "through", "throughout", "thus", "to", "too", "toward", "towards", "under",
+        "unless", "until", "up", "upon", "us", "very", "via", "was", "we", "were",
+        "what", "whatever", "when", "whenever", "where", "whether", "which",
+        "while", "who", "whoever", "whom", "whose", "why", "will", "with", "within",
+        "without", "would", "yet", "you", "your", "yours", "yourself", "yourselves",
+    )
+)
+
+# Words the asker uses to describe the SEARCH, or the act of asking,
+# rather than the subject. A paper is not indexed under "paper". Measured
+# 2026-09-23: the verbatim question `papers on the effects of caffeine on
+# exercise performance` translated `papers` to `"paper"[MeSH Terms]`, the
+# physical material, and the search collapsed from 1,356 hits to 35
+# largely irrelevant ones.
+_TOPIC_META_WORDS: Final[frozenset[str]] = frozenset(
+    (
+        "abstract", "abstracts", "article", "articles", "ask", "asks", "believe",
+        "believes", "citation", "citations", "consider", "curious", "describe",
+        "describes", "evidence", "explain", "explains", "find", "finding",
+        "information", "journal", "journals", "know", "knows", "literature",
+        "paper", "papers", "publication", "publications", "published", "reference",
+        "references", "report", "reports", "research", "review", "reviews", "said",
+        "say", "says", "search", "show", "studies", "study", "summarise",
+        "summarize", "summary", "tell", "think", "thinks", "thought", "understand",
+        "wonder", "wondering",
+    )
+)
+
+# Light verbs and hedging adverbs: grammatical filler that carries no
+# subject. Measured 2026-09-23, and this category is load-bearing rather
+# than tidy: `coffee AND help AND make AND exercise AND effective` returned
+# ZERO hits, while `coffee AND exercise AND effective` returned 532, and
+# `variants AND found AND mediterranean AND descent` returned zero while
+# `variants AND mediterranean AND descent` returned 22.
+_TOPIC_FILLER_WORDS: Final[frozenset[str]] = frozenset(
+    (
+        "actually", "always", "commonly", "found", "generally", "get", "gets",
+        "getting", "give", "given", "gives", "got", "help", "helped", "helpful",
+        "helping", "helps", "known", "let", "make", "makes", "making", "mean",
+        "means", "often", "really", "seen", "simply", "sometimes", "take", "takes",
+        "taking", "tell", "told", "typical", "typically", "usual", "usually", "well",
+    )
+)
+
+# The asker's VALUE JUDGEMENT about the answer. A paper is not indexed
+# under whether its subject is a good thing. Measured 2026-09-23: `variants
+# AND people AND mediterranean AND descent` returned 17 hits, and adding
+# `beneficial` to it returned ZERO.
+#
+# `positive` and `negative` are DELIBERATELY ABSENT, and the omission is
+# the line this category is drawn at rather than an oversight. In
+# biomedical text both are technical ("HER2-positive", "gram-negative",
+# "negative regulation"), so dropping them would damage questions this path
+# is not even about; and the question that prompted the worry, `What
+# positive and negative genes do ashkenazi jewish people have?`, was
+# measured to return 27 relevant hits with both words KEPT. Nothing needed
+# dropping, so nothing was dropped.
+_TOPIC_JUDGEMENT_WORDS: Final[frozenset[str]] = frozenset(
+    (
+        "bad", "beneficial", "benefit", "benefits", "best", "better", "dangerous",
+        "good", "great", "harmful", "important", "interesting", "nice", "safe",
+        "unsafe", "useful", "useless", "worse", "worst",
+    )
+)
+
+#: A word a topic term may be built from: a letter first, then letters,
+#: digits, apostrophes or hyphens. Everything else in the question, every
+#: bracket, quote, colon and operator character, is not matched at all, so
+#: no PubMed operator can ride into the term on the user's own text.
+_TOPIC_WORD: Final[re.Pattern[str]] = re.compile(r"[A-Za-z][A-Za-z0-9'-]*")
+
+#: At most this many words are ANDed together. Every word in an AND chain
+#: is REQUIRED, so a long chain fails catastrophically: one word the
+#: literature does not use zeroes the whole search. The four measured
+#: questions yield three to six words; eight is a ceiling on a pathological
+#: input rather than a tuning knob.
+TOPIC_MAX_WORDS: Final[int] = 8
+
+#: What one topic search asks for, the same cap the literature leg of a
+#: gene question uses, so a topic answer is the same size as any other.
+TOPIC_RESULT_CAP: Final[int] = PUBMED_RESULT_CAP
+
+
+#: Words that say the reader is asking for the PUBLISHED LITERATURE. Added
+#: 2026-09-23 after review, for the defect below.
+#:
+#: THE DEFECT. `resolve_disease_mention_to_curies("caffeine")` binds EIGHT
+#: MedGen concepts, measured live: "Caffeine dependence", "Caffeine
+#: withdrawal", "Organic mental disorder caused by caffeine", "Allergy to
+#: caffeine" and four more. Every one of them is a real disorder, so no
+#: semantic-type check can reject them; that hypothesis was built, measured
+#: and killed. They bind because MedGen's NAME INDEX matches any title
+#: CONTAINING the word, and the question was not about any of them. Whether
+#: they reach the answer depends on whether the Think model happens to label
+#: `caffeine` a disease span on that run, which is a sample, not a rule: a
+#: reviewer measured the flip at about 1 run in 3 and eight runs here
+#: reproduced it 0 times. On a flipped run the reader who asked for papers
+#: on caffeine and exercise got two MedGen records about caffeine
+#: intoxication instead of five papers.
+#:
+#: THE RULE, from the reader's chair: they typed "papers on". They should
+#: get papers. So when the question asks for the published literature and
+#: no gene resolved, the literature search is what runs, whatever the model
+#: labelled. That is deterministic because it reads only the typed text.
+#:
+#: WHAT IS DELIBERATELY ABSENT, and each omission is the line this list is
+#: drawn at rather than an oversight:
+#:
+#: - `trial`, `trials`. A trial is the ClinicalTrials.gov registry, a
+#:   different source, and the disease path ALREADY searches it. `Any
+#:   trials for GERD?` must keep its 20 citations, and it does.
+#: - `study`, `studies`, `research`. Ambiguous: "what studies exist for
+#:   GERD?" is a disease question that would lose its MedGen record and its
+#:   trials leg to a bare PubMed search. Narrow beats broad where the
+#:   broad version takes something away.
+_LITERATURE_WORDS: Final[frozenset[str]] = frozenset(
+    (
+        "article", "articles", "literature", "paper", "papers", "preprint",
+        "preprints", "pubmed", "publication", "publications",
+    )
+)
+
+
+def asks_for_published_literature(question: str | None) -> bool:
+    """Whether the question asks for the published literature by name.
+
+    A pure function of the typed text, word-bounded, with no model call and
+    no network call in it, which is what lets it decide a path without
+    breaking item 11.21's one-question-one-source-set promise.
+    """
+    if not isinstance(question, str):
+        return False
+    return any(
+        match.group(0).strip("'-") in _LITERATURE_WORDS
+        for match in _TOPIC_WORD.finditer(question.lower())
+    )
+
+
+def topic_search_words(question: str | None) -> list[str]:
+    """The content words of `question`, in question order, deduplicated.
+
+    Lowercased, with the four dropped categories above removed. A pure
+    function of the string: no model call, no network call, no randomness,
+    so the same question yields the same words on every run.
+    """
+    if not isinstance(question, str):
+        return []
+    words: list[str] = []
+    for match in _TOPIC_WORD.finditer(question.lower()):
+        word = match.group(0).strip("'-")
+        if not word:
+            continue
+        if (
+            word in _TOPIC_STOPWORDS
+            or word in _TOPIC_META_WORDS
+            or word in _TOPIC_FILLER_WORDS
+            or word in _TOPIC_JUDGEMENT_WORDS
+        ):
+            continue
+        if word not in words:
+            words.append(word)
+    return words[:TOPIC_MAX_WORDS]
+
+
+def build_topic_term(question: str | None) -> str | None:
+    """The PubMed ESearch term for a question with nothing to resolve.
+
+    The content words joined with ` AND `, UNTAGGED, so PubMed's own
+    automatic term mapping expands each one against its translation table.
+    None when no content word survives, which is this module's signal to
+    plan nothing rather than an error.
+
+    UNTAGGED IS A MEASURED CHOICE, NOT AN OVERSIGHT, and it is the opposite
+    of what `build_pubmed_term` does for a gene. Tagging each word
+    `[Title/Abstract]` turns off the mapping, and on 2026-09-23 that took
+    `What positive and negative genes do ashkenazi jewish people have?`
+    from 27 hits to ZERO. Untagged, ESearch's own `querytranslation`
+    expanded `caffeine` to `"caffeine"[Supplementary Concept] OR
+    "caffeine"[All Fields] ...` and `coffee` to its MeSH term, which is the
+    behaviour a lay question needs. The gene path keeps its tag for the
+    opposite reason: a symbol in All Fields matches author names and
+    addresses.
+
+    Live hit counts, all measured on 2026-09-23 with the term read back
+    through `querytranslation`:
+
+    - `papers on the effects of caffeine on exercise performance`
+      -> `effects AND caffeine AND exercise AND performance`, 1,356 hits
+    - `Does coffee help make exercise more effective?`
+      -> `coffee AND exercise AND effective`, 532 hits
+    - `Are there any beneficial variants typically found in people of
+      mediterranean descent?`
+      -> `variants AND people AND mediterranean AND descent`, 17 hits
+    - `What positive and negative genes do ashkenazi jewish people have?`
+      -> `positive AND negative AND genes AND ashkenazi AND jewish AND
+      people`, 27 hits
+    """
+    words = topic_search_words(question)
+    if not words:
+        return None
+    return " AND ".join(words)
+
+
+def plan_topic_search(question: str | None) -> tuple[PlannedCall, ...]:
+    """The single PubMed search a topic question earns, or an empty tuple.
+
+    Its purpose is `pubmed_search`, the SAME purpose the gene and disease
+    paths use, deliberately: `core/graph.py`'s `_BREADTH_FOLLOW_UPS` keys
+    the abstract fetch and the PubTator3 annotation on that purpose, so a
+    topic question gets the identical two follow-ups on the identical PMIDs
+    with no second wiring to keep in step with the first.
+    """
+    term = build_topic_term(question)
+    if term is None:
+        return ()
+    return (_search_call("pubmed_search", "pubmed", term, TOPIC_RESULT_CAP),)
 
 
 def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:

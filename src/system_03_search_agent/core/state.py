@@ -85,6 +85,10 @@ Field lifecycle:
             call, and `write` puts the count and the cut under the answer.
             Absent otherwise, and absent when the shape asks which organism
             or which gene instead of searching.
+        topic_search_term: set by `plan` when the question named no gene,
+            variant or disease, so the published literature was searched
+            for its own words instead of the graph (fix-plan item 12.7,
+            2026-09-23). The AND-joined PubMed term, empty otherwise.
         failed_searches: set by `act`, one small mapping per planned call
             whose outcome was `status == "error"`: `tool`, `layer` and the
             tool's own `reason`. Decided from the user's chair on
@@ -243,3 +247,11 @@ class GraphState(TypedDict, total=False):
     # `DonePayload.next_step_query`.
     deferred_record_ids: list[str]
     next_step_entity_label: str
+    # Fix-plan item 12.7 (2026-09-23): set by `plan`, the AND-joined PubMed
+    # term it built from the question's own words when the question named
+    # no gene, variant or disease and the published literature was searched
+    # instead of the graph. Empty on every other turn. `write` reads it for
+    # exactly two things: the refusal that says what was searched and found
+    # nothing, and the synthesis directive that keeps the answer to what
+    # has been published rather than a verdict.
+    topic_search_term: str

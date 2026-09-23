@@ -51,6 +51,42 @@ FAILED_SEARCH_MESSAGE = (
     "evidence this time. Ask again to retry, or try NCBI's cross-database "
     "search:"
 )
+# Fix-plan item 12.7 (2026-09-23). A question that named no gene and no
+# disease is now answered by searching the published literature for its own
+# words, so when that search comes back empty the honest reply is to say
+# what was searched and that nothing was found. The wording it REPLACES on
+# this path is `UNRESOLVED_QUESTION_MESSAGE`, and that replacement is the
+# point of the ticket: asking a person to "name a gene, variant, disease or
+# organism" when they asked about caffeine and exercise demands a
+# vocabulary they do not have and never will.
+TOPIC_NOT_FOUND_PREFIX = "I searched the published literature for "
+TOPIC_NOT_FOUND_SUFFIX = (
+    " and found nothing. Try different words, or NCBI's cross-database "
+    "search:"
+)
+# The searched words are the user's own, already stripped to letters,
+# digits, apostrophes and hyphens by `breadth_plan._TOPIC_WORD`, and capped
+# here as well so a pathological question cannot lengthen the sentence that
+# reports it. Defence in depth, the same posture `build_fallback_link`
+# takes towards its own input.
+MAX_TOPIC_TERM_CHARS = 200
+
+
+def topic_not_found_message(topic_term: str) -> str:
+    """The refusal for a topic search that ran and matched nothing.
+
+    `topic_term` is `breadth_plan.build_topic_term`'s output, the content
+    words joined with ` AND `. It is shown to the reader with the operators
+    turned back into plain words, since "coffee AND exercise AND effective"
+    is machinery and "coffee, exercise, effective" is what they typed.
+    """
+    words = [part.strip() for part in topic_term.split(" AND ") if part.strip()]
+    shown = ", ".join(words)[:MAX_TOPIC_TERM_CHARS].strip().rstrip(",")
+    if not shown:
+        return REFUSE_MESSAGE
+    return f"{TOPIC_NOT_FOUND_PREFIX}{shown}{TOPIC_NOT_FOUND_SUFFIX}"
+
+
 # The note under an answer that still stands but lost a search.
 FAILED_SEARCH_NOTE = (
     "One of the background searches did not finish, so this answer may be "
@@ -136,19 +172,30 @@ def build_fallback_link(query_term: str) -> str:
     return link
 
 
-def refusal_message_for(failed_searches: list[dict[str, str]] | None) -> str:
+def refusal_message_for(
+    failed_searches: list[dict[str, str]] | None, topic_term: str | None = None
+) -> str:
     """The refusal sentence that is true of what the act step recorded.
 
     `failed_searches` is `GraphState["failed_searches"]`: one mapping per
     planned call that ended with `status == "error"`, carrying the tool's
     own `reason`. A no-entity reason outranks any other, since a question
     the product could not read is the thing to fix before retrying.
+
+    `topic_term` (fix-plan item 12.7) is set only when Plan took the topic
+    path, meaning the question named no gene and no disease and the
+    literature was searched for its own words instead. A FAILED search
+    still outranks it, because "nothing was published" and "the search did
+    not finish" are different facts and only one of them is this path's to
+    report.
     """
     reasons = [str(item.get("reason") or "") for item in (failed_searches or [])]
     if any(NO_ENTITY_REASON_MARKER in reason for reason in reasons):
         return UNRESOLVED_QUESTION_MESSAGE
     if reasons:
         return FAILED_SEARCH_MESSAGE
+    if topic_term:
+        return topic_not_found_message(topic_term)
     return REFUSE_MESSAGE
 
 
