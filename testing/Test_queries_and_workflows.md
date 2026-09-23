@@ -5,6 +5,7 @@ This is the one document that lists every query worth typing into the product, w
 - `testing/Product/Product_workflows.md`
 - `testing/Shipped_2026-09-20.md`
 - `testing/Shipped_2026-09-22.md`
+- `testing/Shipped_2026-09-23.md`
 - `testing/Product/queries/Isolate_search_queries_and_workflow.md`
 - `testing/UI_fix_plan.md`
 
@@ -12,6 +13,7 @@ This is the one document that lists every query worth typing into the product, w
 
 - [From the user's chair](#from-the-users-chair)
 - [Status words](#status-words)
+- [What to retest first](#what-to-retest-first)
 - [Known already, no need to report](#known-already-no-need-to-report)
 - [What this document does not cover](#what-this-document-does-not-cover)
 - [1. Basic search and answers](#1-basic-search-and-answers)
@@ -44,6 +46,23 @@ The person typing a query is a researcher, clinician or student who asked a real
 - Not yet recorded as approved: the test exists and the feature is live, but no document records the product owner's verdict on it.
 
 When an answer does not match what is expected, screenshot it into `testing/Product/feedback/inbox/` and say "check the inbox". The full workflow is below, under Workflow for the product owner.
+
+## What to retest first
+
+As of 23 September 2026. Everything named here is live on develop and none of it has been retested yet, so this is the queue rather than a summary.
+
+Start with these two, because they are where a mistake is most likely and most costly:
+
+- Query 67, a past search reopening with the answer it gave. Pick a question whose answer had a table, such as an isolate question. The backend, the screen and the seam between them were built separately, so the table is where a seam would show.
+- Query 66, the phenotypic features of Marfan syndrome. One live run settles the single gap the 23 September work left open, and that entry says plainly what is not yet known about it.
+
+Then the rest of the 23 September work: query 64 (subject terms in words), query 65 (the opening count agreeing with the list beneath it), and query 60 (the MCP configuration, whose address no longer drops the s from https).
+
+Then the four one-look checks, each a single glance rather than a search: query 3 (the answer-modes info button), query 4 (the mode locking once a search starts), query 7 (copying an answer carries no citation-card text) and query 9 (two visits, different scientists, the same answer).
+
+Then the batch from the night of 22 September, still untested: queries 23 to 44 across sections 3, 4 and 5. That is the two lost searches, the coordinate range, the generic-word guard, the BioProject and BioSample accessions, and the whole isolate set.
+
+Query numbers are permanent. A new query takes the next free number and sits in the section it belongs to, so the numbers do not run in strict order inside a section. Nothing is ever renumbered, because other documents point at these numbers.
 
 ## Known already, no need to report
 
@@ -410,6 +429,42 @@ Why it matters: an answer that changes its evidence base every time it is asked 
 
 Status: Approved (Shipped_2026-09-20 retest item 6; UI_fix_plan item 11.21, "Live, approved 2026-09-22, both decisions done")
 
+### 64. Subject terms are named, not coded
+
+Testing: a question about what a paper is about answers with real subject terms rather than with the identifiers behind them.
+
+Query: `What MeSH terms are assigned to PMID 11237011?`
+
+Steps: type the query, Search.
+
+Expected:
+
+- Real terms in words, such as Genome Human, Chromosome Mapping and CpG Islands. This paper has 26 of them.
+- Each term links to its own MeSH record on ncbi.nlm.nih.gov.
+- No `[MeSH] D000818` style code anywhere in the answer, and no identifier presented as though it were a term.
+- No slower than any other question of this size. Resolving the terms costs two lookups however many terms there are, so a paper with fifty terms is no slower than one with five.
+
+Why it matters: a reader asking what a paper is about should get the subject terms in words. Twenty-six reference numbers answer the question in form only, and an identifier shown at full confidence as though it were a name is worse than showing nothing at all.
+
+Status: Awaiting retest (Shipped_2026-09-23 items 3 and 5)
+
+### 65. The opening count matches the list beneath it
+
+Testing: the number an answer opens with agrees with the number of records it then shows.
+
+Query: any question returning more than twenty records. `Which diseases are associated with BRCA1?` and the GEO question at query 25 both do on most runs.
+
+Steps: ask the query, read the opening sentence, then count the records in the list or table beneath it.
+
+Expected:
+
+- The opening count and the list agree exactly.
+- Before 23 September the sentence said twenty whatever the list held, because it counted a slice handed to the model rather than what the reader can actually see.
+
+Why it matters: a reader who counts twenty-six rows under a sentence promising twenty stops trusting both numbers, and has no way to tell which of the two is wrong.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 4)
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward
@@ -519,6 +574,24 @@ Expected:
 Why it matters: a dataset search that silently drops results, or that tells the person they asked about something they did not, both erode trust in the same way a wrong citation does.
 
 Status: Awaiting retest (Shipped_2026-09-22 items 8 and 13)
+
+### 66. Phenotypic features of a disease
+
+Testing: a question about the physical features of a disease no longer runs a search that could never return a row.
+
+Query: `What phenotypic features are associated with Marfan syndrome?`
+
+Steps: type the query, Search. One run settles it.
+
+Expected, and this entry is deliberately open where the others are not:
+
+- Before 23 September this always answered "I could not find evidence", which reads as "nothing is known about this" and is false.
+- The graph search behind it could never return a row, and it has been removed. What the question reaches INSTEAD was not verified end to end, so what a correct answer looks like here is the thing this test establishes rather than something it checks against.
+- A refusal is worth reporting rather than passing. The open question is whether the question should reach MedGen through the live NCBI records instead, which is a routing decision rather than a defect.
+
+Why it matters: "I could not find evidence" about a disease whose features are thoroughly documented is the worst shape of wrong answer, because it reads as an authoritative statement that nothing is known.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 6; `UI_fix_plan.md` "Next, in order" item 1, the one honest gap the overnight session left)
 
 ## 4. Chromosome windows and accessions
 
@@ -991,14 +1064,14 @@ Steps: log in, run 2 different searches, look at "Your searches" on the left, cl
 Expected:
 
 - Both searches are listed.
-- Clicking one runs that question again, as a fresh run, not a saved copy.
+- Clicking one shows the answer that search already gave, at once, with a Run again button beside it. Query 67 covers that in full.
 - The panel hides and comes back.
 - Guests see no history panel.
 - Reload the page: you stay signed in and both searches are still listed.
 
 Why it matters: a researcher tracking down the same gene across several sessions needs to find their earlier questions without re-typing them from memory.
 
-Status: Approved (Product test 6)
+Status: Approved (Product test 6); what clicking an older search does changed on 23 September and is query 67.
 
 ### 52. Search limit shown to a signed-in user
 
@@ -1033,6 +1106,24 @@ Status: Removed (Product test 16)
 Removed on 2026-09-12. Set 1 took away the ten-attempt guest limit. Query 45, the off-topic question, still covers a question being refused.
 
 Status: Removed (Product test 20)
+
+### 67. A past search reopens with the answer it gave
+
+Testing: clicking a search in the history rail shows the answer already given, at once, instead of paying for a second one.
+
+Steps: sign in, ask a question whose answer has a TABLE, such as an isolate question from section 5, wait for the answer, start a new search, then click that first question in "Your searches".
+
+Expected:
+
+- The answer you already got appears AT ONCE, with no progress screen and no wait.
+- It is marked "Saved answer, asked <date>", carries its own trust line, and has a Run again button beside it.
+- A table renders as a table, not as rows of pipe characters. This is where a mistake would show, since the backend, the screen and the seam between them were built separately.
+- Run again does a fresh search, charged to you as a normal search.
+- Guests do not get this. The account is what stores the answer, and deleting the account deletes it with them.
+
+Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 2; UI_fix_plan item 10.2). Query 51 covers the rail itself.
 
 ## 8. Stop, feedback and the connection
 
@@ -1125,11 +1216,11 @@ Expected:
 
 - The configuration is printed on the page.
 - The copy button copies it.
-- If the address it prints redirects and drops the s from https, that is already known.
+- The address it prints no longer drops the s from https. Before 23 September a request to it was answered with a redirect to an `http://` address, which a client would follow with its token in the clear.
 
 Why it matters: a developer following printed setup instructions should not have to debug the instructions themselves before they can use the integration.
 
-Status: Awaiting retest (UI_fix_plan item 11.30; the printed configuration itself is verified, the redirect's scheme downgrade is a separate open deployment decision)
+Status: Awaiting retest (UI_fix_plan item 11.30; Shipped_2026-09-23 item 1). The end-to-end half is already proven live on develop by the developer check below, which is why this is the one item of the 23 September set that did not need a signed-in session to verify.
 
 ### 61. The disclaimer
 
@@ -1203,18 +1294,20 @@ For a live proof against develop itself, use the consistency runner at `testing/
 
 The evidence folder for that run must contain `runs.jsonl` (the raw pass-by-pass record), a `raw/` folder (the full response bodies), and a `findings.md` that states its verdict in the first line, before any detail.
 
+Two developer-side facts from 23 September. Query 60's end-to-end check has been run against develop and passes: a `POST` to `/mcp` answers `307` with an `https://` location, and a `POST` to `/mcp/` returns a valid MCP initialize response, which proves the mount still works rather than that the redirect merely changed. Separately, the frontend unit suite, which is the quick check run before a push, was both repaired and made faster: 527 of 527 passing in about 85 seconds against 128 to 163 before. Its filmstrip evidence is in `frontend/e2e/evidence/2026-09-23_journey7_viewports/`.
+
 For the wider suite, `testing/Developer/Developer_workflows.md` has the full specification and run commands, including how to run the automated tests behind every other section of this document. Whether the MCP configuration printed on the Integrations page (query 60) actually connects end to end, not just reads correctly, is checked there too, after every change to that page.
 
 ## Where each query came from
 
 | Section | Source documents |
 |---|---|
-| 1. Basic search and answers | `Product/Product_workflows.md` tests 1, 7, 12, 13, 14; `Shipped_2026-09-22.md` items 1, 6; `Shipped_2026-09-20.md` retest items 1, 2, 3, 5, 6; `UI_fix_plan.md` "What is live on develop" and items 8.4, 9.12, 11.14, 11.31, 11.34, 11.35, 11.36 |
+| 1. Basic search and answers | `Product/Product_workflows.md` tests 1, 7, 12, 13, 14; `Shipped_2026-09-22.md` items 1, 6; `Shipped_2026-09-20.md` retest items 1, 2, 3, 5, 6; `UI_fix_plan.md` "What is live on develop" and items 8.4, 9.12, 11.14, 11.31, 11.34, 11.35, 11.36; `Shipped_2026-09-23.md` items 3, 4, 5 |
 | 2. Follow-up questions and conversation | `Product/Product_workflows.md` test 2 |
-| 3. Genes, variants and diseases | `Shipped_2026-09-22.md` items 3, 5, 7, 8, 12, 13 |
+| 3. Genes, variants and diseases | `Shipped_2026-09-22.md` items 3, 5, 7, 8, 12, 13; `Shipped_2026-09-23.md` item 6 |
 | 4. Chromosome windows and accessions | `Shipped_2026-09-22.md` items 2, 9, 10, 11, 14, 15, 16 |
 | 5. Pathogen isolates | `Product/queries/Isolate_search_queries_and_workflow.md` queries 1 to 12; `Shipped_2026-09-22.md` items 17 to 22 |
 | 6. Refusals, off-topic and compute requests | `Product/Product_workflows.md` tests 8, 19; `Shipped_2026-09-22.md` item 4; `UI_fix_plan.md` "What is live on develop" |
-| 7. Sign in, sessions and history | `Product/Product_workflows.md` tests 3, 4, 5, 6, 16, 18, 20 |
+| 7. Sign in, sessions and history | `Product/Product_workflows.md` tests 3, 4, 5, 6, 16, 18, 20; `Shipped_2026-09-23.md` item 2; `UI_fix_plan.md` item 10.2 |
 | 8. Stop, feedback and the connection | `Product/Product_workflows.md` tests 9, 10, 21 |
-| 9. Screens, phone width, the tour and the disclaimer | `Product/Product_workflows.md` tests 11, 15, 17, 22; `Shipped_2026-09-20.md` retest item 4; `UI_fix_plan.md` item 11.30 |
+| 9. Screens, phone width, the tour and the disclaimer | `Product/Product_workflows.md` tests 11, 15, 17, 22; `Shipped_2026-09-20.md` retest item 4; `UI_fix_plan.md` item 11.30; `Shipped_2026-09-23.md` item 1 |
