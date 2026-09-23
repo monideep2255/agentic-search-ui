@@ -218,10 +218,11 @@ def test_plural_forms_clear_the_allowlist(text: str) -> None:
     every shape you did not. The plural list is infinite; the stemmer is not.
 
     Every case here pluralises a word that IS in the vocabulary, so the test
-    measures stemming. An earlier draft used "Show me studies about this",
-    which fails for an unrelated reason: `study` is deliberately not in the
-    vocabulary, being ordinary English rather than a biomedical term. That
-    query genuinely is off-topic, so it tested the wrong thing.
+    measures stemming. `study` joined the vocabulary on 2026-09-23 (fix-plan
+    item 12.2, the literature and trials vocabulary), so the earlier note
+    here, that "Show me studies about this" tested the wrong thing because
+    `study` was deliberately excluded, no longer holds; that case is covered
+    separately below in the literature-vocabulary tests.
     """
     assert clears_biomedical_allowlist(text)
 
@@ -276,13 +277,80 @@ def test_bare_gene_symbol_questions_clear_the_allowlist(text: str) -> None:
         "How do I change a tyre?",
         "What is the weather forecast for tomorrow?",
         "Summarise the plot of Hamlet.",
+        "recommend a good sci-fi movie",
+        "what is the best stock to buy right now",
+        "how do I learn to play guitar",
     ],
 )
 def test_genuinely_off_topic_queries_are_still_refused(text: str) -> None:
-    """The over-broad symbol pattern must not make off-topic unreachable."""
+    """The over-broad symbol pattern must not make off-topic unreachable.
+
+    The last three cases were added alongside the literature-vocabulary
+    widening (fix-plan item 12.2) as the mutation check for that change:
+    none of these contains a literature word, a domain word, or an
+    identifier shape, so the widened allowlist must still miss all of them.
+    """
     verdict = screen(text)
     assert verdict is not None, f"leaked through: {text!r}"
     assert verdict.category == "off_topic"
+
+
+# ---------------------------------------------------------------------------
+# Literature and trials vocabulary. Fix-plan item 12.2, 2026-09-23.
+#
+# Measured before this fix: a second tester asked "papers on the effects of
+# caffeine on exercise performance" and "Does coffee help make exercise more
+# effective?" and both were refused in 0.0 seconds, because the allowlist
+# carried no literature or trials vocabulary at all: not `paper`, `study`,
+# `trial`, `research`, or `publication`. The only literature-shaped phrase
+# present was the two-word `clinical trials`, so `Any trials for GERD?`
+# cleared only by accident, on the capitalised gene-symbol regex, and the
+# identical lowercase question was refused.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "papers on the effects of caffeine on exercise performance",
+        "Does coffee help make exercise more effective?",
+        "Any trials for GERD?",
+        "any trials for gerd?",
+        "recent papers on statins",
+        "recent papers on BRCA1",
+        "find me studies about vitamin d",
+        "what does the literature say about metformin",
+        "show me publications about aspirin",
+        "latest research on long covid",
+        "is there a trial recruiting for melanoma",
+        "papers about the microbiome",
+        "articles on insulin resistance",
+    ],
+)
+def test_literature_and_trials_questions_clear_the_allowlist(text: str) -> None:
+    """The exact measured table from fix-plan item 12.2.
+
+    Every row here failed before the fix. `any trials for gerd?` and `Any
+    trials for GERD?` are pinned as a pair: capitalisation must no longer
+    decide whether an ordinary trials question is admitted.
+    """
+    assert clears_biomedical_allowlist(text), f"still refused: {text!r}"
+    assert screen(text) is None, f"still refused by screen(): {text!r}"
+
+
+def test_capitalisation_no_longer_decides_a_trials_question() -> None:
+    """The specific bug: the same question, cased two ways, disagreed.
+
+    Before this fix `Any trials for GERD?` cleared only because `GERD` is
+    upper-case and matched the symbol-shaped identifier regex, never because
+    `trials` was recognised. Lower-casing the identical sentence lost that
+    accidental match and left the person told their question was outside
+    biomedical research.
+    """
+    upper = clears_biomedical_allowlist("Any trials for GERD?")
+    lower = clears_biomedical_allowlist("any trials for gerd?")
+    assert upper is True
+    assert lower is True
 
 
 # ---------------------------------------------------------------------------

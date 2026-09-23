@@ -451,6 +451,26 @@ _DOMAIN_TERMS: Final[frozenset[str]] = frozenset(
         "transcript", "transcriptome", "translocation", "treatment",
         "treatments", "tumor", "tumour", "vaccine", "viral", "virus",
         "zygosity",
+        # Literature and trials vocabulary. Added 2026-09-23 (fix-plan item
+        # 12.2): a closed set of words about the KIND of question being
+        # asked, an evidence-review or effect/efficacy question, never a
+        # subject. Measured absent entirely before this change: a second
+        # tester asked "papers on the effects of caffeine on exercise
+        # performance" and "Does coffee help make exercise more effective?",
+        # and both were refused in 0.0 seconds before any search ran,
+        # because not one of "paper", "study", "trial", "research", or
+        # "effect" cleared the allowlist. `clinical trials` was the only
+        # phrase present, so the same question refused lowercase and admitted
+        # only by accident when a gene symbol happened to be capitalized
+        # ("Any trials for GERD?" vs "any trials for gerd?").
+        "paper", "publication", "literature", "study", "trial", "research",
+        # "effect"/"effective"/"efficacy": the classic framing of a
+        # literature question ("the effect of X on Y", "is X effective for
+        # Y"), not a subject word. This is what actually clears "Does coffee
+        # help make exercise more effective?": the sentence names no gene,
+        # disease, or drug, and "effective" is the only literature-shaped
+        # word it contains.
+        "effect", "effective", "efficacy",
     }
 )
 

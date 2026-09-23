@@ -239,3 +239,44 @@ def test_the_user_message_is_the_tagged_query_and_nothing_else() -> None:
         r"<query-[0-9a-f]{16}>\nWhat variants cause it\?\n</query-[0-9a-f]{16}>", user
     ), user
     assert "SESSION MEMORY" not in GUARD_SYSTEM_INSTRUCTION
+
+
+# ---------------------------------------------------------------------------
+# Fix-plan item 12.2's follow-up: the physiological-outcome clarification.
+#
+# Measured live, not assumed: "Does coffee help make exercise more
+# effective?" split 2 refuse / 3 admit over five runs before this paragraph
+# was added, then went 10 for 10 admit across two five-run batches after.
+# These two tests pin the paragraph's text exists (so a future edit cannot
+# silently drop the fix) and that its carve-out for a non-biomedical
+# "effective" still names the exact cases the coordinator independently
+# verified the classifier already refuses correctly, so a rewrite of this
+# paragraph cannot narrow that carve-out without one of these going red.
+# ---------------------------------------------------------------------------
+
+
+def test_the_instruction_names_physiological_outcome_questions_as_on_topic() -> None:
+    """MUTATION PROOF: deleting this paragraph turns this assertion red.
+
+    Without it, a plain "does X help Y" health-effect question with no
+    literature word reads to the model as a lifestyle question rather than a
+    biomedical one on some fraction of runs (measured: 2 of 5). The fix is a
+    prompt instruction, not code, so the only place to pin it is the text.
+    """
+    assert "physiological, health, or exercise-performance outcome" in (
+        GUARD_SYSTEM_INSTRUCTION
+    )
+    assert "does coffee help exercise performance" in GUARD_SYSTEM_INSTRUCTION
+
+
+def test_the_physiological_carveout_does_not_swallow_non_biomedical_effective() -> None:
+    """The paragraph must stay narrow: an outcome test, not a word test.
+
+    Pins the exact negative examples the coordinator measured the classifier
+    already refusing correctly (investment strategy, exam study technique,
+    marketing trend), so the instruction keeps naming them as the boundary
+    rather than letting a future edit widen "effective" into a blanket pass.
+    """
+    assert "investment strategy" in GUARD_SYSTEM_INSTRUCTION
+    assert "study technique for an exam" in GUARD_SYSTEM_INSTRUCTION
+    assert "marketing trend" in GUARD_SYSTEM_INSTRUCTION
