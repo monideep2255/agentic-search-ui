@@ -1984,20 +1984,20 @@ That points hard at event-loop starvation, consistent with the same suite failin
 ### How to start the next session
 
 1. Read "Where we stopped" above, starting with the one-table summary of the
-   2026-09-22 session, then the 2026-09-21 table, then the Set 11 table.
+   2026-09-23 overnight session, then the 2026-09-22 table, then the
+   2026-09-21 table, then the Set 11 table.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
    carrying only `develop`.
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up "Next, in order" at item 1, the three golden rows that disagree
-   with the guardrail, which is the product owner's call, or the three
-   discussions at item 3. Everything the 2026-09-22 day built is approved;
-   the evening's and the night's items, the two lost searches with the GEO
-   search, the coordinate range, the generic-word guard, the BioProject
-   accession and the isolate search, are verified live and await the
-   product owner's retest, items 7 to 22 in `testing/Shipped_2026-09-22.md`.
-   The call ceiling is measured and stays at twenty.
+4. Pick up "Next, in order" at item 1, which is a single live run: verify
+   that a phenotype question now reaches a path that can answer it. It is
+   first because it is the one honest gap the overnight session left. Items
+   2 and 3 are the product owner's calls and nothing blocks on them. Awaiting
+   their retest: items 1 to 7 in `testing/Shipped_2026-09-23.md` and items 7
+   to 22 in `testing/Shipped_2026-09-22.md`. The call ceiling is measured and
+   stays at twenty.
 
 ## Developer detail
 
