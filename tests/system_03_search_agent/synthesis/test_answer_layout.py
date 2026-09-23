@@ -317,12 +317,38 @@ def test_trust_line_single_source_not_confirmed() -> None:
     assert line == "Based on 1 source, not yet confirmed"
 
 
-def test_trust_line_counts_databases_not_records() -> None:
+def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
+    """Fix-plan item 12.8 (2026-09-23). Renamed and re-asserted: this test
+    used to lock in the opposite behaviour under the name
+    `test_trust_line_counts_databases_not_records`, asserting "Based on 2
+    sources" for three distinct citations sharing two databases. That was
+    measured to be the defect itself: a reader looking at three clickable
+    citations was told there were two. `DISEASE` and `other` both carry a
+    MedGen CURIE (one database, two distinct citation_ids); `GENE` carries
+    an NCBIGene CURIE. Three chips, two databases. The "Based on" line
+    must report the three chips.
+    """
     other = _finding(3, "pancreatic cancer", curie="MedGen:C3")
     line = answer_trust_line(
         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
     )
-    assert line == "Based on 2 sources, not yet confirmed"
+    assert line == "Based on 3 sources, not yet confirmed"
+
+
+def test_trust_line_confirmed_still_counts_independent_databases() -> None:
+    """The "Confirmed by" line is a claim about corroboration, not about
+    how many chips are on screen, so it must keep counting distinct
+    databases even where `test_trust_line_based_on_counts_visible_
+    citations_not_databases` just proved the "Based on" line does not.
+    Three distinct citations (DISEASE, other, GENE) share only two
+    databases (MedGen, NCBIGene); reporting "Confirmed by 3" would claim a
+    third, nonexistent, independent database agreed.
+    """
+    other = _finding(3, "pancreatic cancer", curie="MedGen:C3")
+    trusts = [_trust("c-2", "high", "concordant", "answer")]
+    assert answer_trust_line("answer", trusts, _claims(DISEASE, other, GENE)) == (
+        "Confirmed by 2 independent sources"
+    )
 
 
 def test_trust_line_confirmed_only_on_concordance() -> None:
@@ -332,6 +358,19 @@ def test_trust_line_confirmed_only_on_concordance() -> None:
     )
     low = [_trust("c-2", "low", "insufficient", "answer")]
     assert answer_trust_line("answer", low, _claims(DISEASE, GENE)) == "Based on 2 sources"
+
+
+def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
+    """The measured field defect (fix-plan item 12.8): five clickable
+    papers, all from PubMed (one database), used to read "Based on 1
+    source". A reader looking at five citations must be told five.
+    """
+    papers = [
+        _finding(n, f"paper {n}", field="title", entity_type="Publication", curie=f"pubmed:{n}", tool="ncbi_efetch")
+        for n in range(1, 6)
+    ]
+    line = answer_trust_line("answer", [], _claims(*papers))
+    assert line == "Based on 5 sources"
 
 
 def test_trust_line_flag_and_refuse() -> None:

@@ -341,7 +341,12 @@ async def test_the_done_event_carries_one_trust_line(monkeypatch) -> None:
     _install(monkeypatch, _structured_reply)
     result = await graph_module.write_node(_state("researcher"))
     done = [e.payload for e in result["events"] if e.type == "done"]
-    assert done and done[0]["trust_line"].startswith("Based on 1 source"), done
+    # Fix-plan item 12.8 (2026-09-23): `_ROWS` is three distinct MedGen
+    # citations (C1, C2, C3), one database. Before the fix this line
+    # counted databases and read "Based on 1 source" over three visible
+    # citations, the exact defect the ticket measured. It now counts the
+    # distinct citation_ids a reader can see and click, so it reads three.
+    assert done and done[0]["trust_line"].startswith("Based on 3 sources"), done
     # Not on the trust signal: the MCP surface projects that model whole under
     # a pinned key allowlist (`adapters/mcp/test_phase_4_1_premise.py`).
     answer = [

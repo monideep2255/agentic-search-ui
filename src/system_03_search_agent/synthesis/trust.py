@@ -566,13 +566,43 @@ def answer_trust_line(
       claims are never triangulated, so "not yet confirmed" would imply a
       check that does not apply to them.
 
-    N counts independent origin databases across the grounded claims, never
-    records, so twenty ClinVar rows are one source.
+    ## Fix-plan item 12.8 (2026-09-23): two different counts, not one
+
+    Measured against real runs (`testing/Developer/reports/2026-09-23_set12/
+    both_depths/`), the "Based on" line was printing "Based on 4 sources"
+    under an answer with 20 clickable citations, and after item 12.7's
+    listing dedup, "Based on 1 source" over five visible papers. The line
+    was never wrong about what it counted, `_origin_database`'s comment
+    always said "databases, never records", and a test asserted exactly
+    that. It was wrong about what the WORD "source" means to the reader
+    looking at the chips underneath: to them, a source is one of those
+    chips, not one of the databases those chips happen to come from.
+
+    Section 8.3.2's independence rule is still real and still needed
+    somewhere: "Confirmed by N independent sources" is a claim about
+    CORROBORATION, that N separate databases agree, and counting
+    citations there would overstate independence (twenty ClinVar rows are
+    one database, not twenty separate confirmations). So the two counts
+    now live side by side and are never conflated:
+
+    - `citation_count`, the number of distinct `citation_id`s among the
+      grounded claims. This is the same identity `display_index_by_
+      citation_id` (`synthesis/grounding.py`) uses to number the chips a
+      reader actually sees, so this count and the visible citation list
+      can no longer disagree. It drives every "Based on N source(s))"
+      line, confirmed or not: the reader is told how much evidence they
+      can click through, which is the claim "Based on" actually makes.
+    - `database_count`, the pre-existing independent-origin count, kept
+      for exactly one job: deciding and wording "Confirmed by N
+      independent sources", where "independent" is the load-bearing word
+      and N must never exceed how many distinct databases actually
+      agree.
     """
     if trust_outcome == "refuse" or not claims:
         return None
-    count = len({_origin_database(claim.finding) for claim in claims})
-    noun = "source" if count == 1 else "sources"
+    citation_count = len({claim.finding.citation_id for claim in claims})
+    database_count = len({_origin_database(claim.finding) for claim in claims})
+    noun = "source" if citation_count == 1 else "sources"
     if trust_outcome == "flag":
         return "Sources disagree on at least one claim"
     high = [trust for trust in claim_trusts if trust.risk_tier == "high"]
@@ -580,9 +610,9 @@ def answer_trust_line(
         trust_outcome == "answer"
         and high
         and all(trust.triangulation == "concordant" for trust in high)
-        and count >= 2
+        and database_count >= 2
     ):
-        return f"Confirmed by {count} independent sources"
+        return f"Confirmed by {database_count} independent sources"
     if trust_outcome == "ask":
-        return f"Based on {count} {noun}, not yet confirmed"
-    return f"Based on {count} {noun}"
+        return f"Based on {citation_count} {noun}, not yet confirmed"
+    return f"Based on {citation_count} {noun}"

@@ -1,0 +1,290 @@
+{
+  "question": "reflux disease",
+  "depth": "researcher",
+  "stages": [
+    {
+      "stage": "build_synth_messages",
+      "depth_arg": "researcher",
+      "system_sha": "9874d2d23519",
+      "user_sha": "fa96cdae3840",
+      "user_chars": 2537,
+      "directive_first_line": "AUDIENCE DEPTH: researcher. Write for a working researcher, about 200 words, in standard biomedical vocabulary. Open with one short summary paragraph of two or "
+    },
+    {
+      "stage": "run_grounding_pass",
+      "in_sha": "d0093c355a04",
+      "in_chars": 1657,
+      "in_text": "The retrieved disease records for reflux disease encompass eight distinct clinical entities spanning the gastroesophageal reflux disease spectrum [1][2][3][4][5][6][7][8]. The core condition is Gastroesophageal reflux disease [1], with subtypes that specify the presence or absence of mucosal injury, including Gastroesophageal reflux disease without esophagitis [3] and Gastro-esophageal reflux disease with esophagitis [4]. Additional subtypes capture specific complications, including Gastro-esophageal reflux disease with ulceration [5] and Gastroesophageal reflux disease with apnea [6]. A distinct entity, Alkaline reflux disease [2], and Non-Erosive Reflux Disease [7] further broaden the clinical classification, while History of gastroesophageal reflux disease [8] represents a historical diagnostic category. The MedGen concept titled Gastroesophageal reflux disease [10] anchors the indexing framework, and the literature entity Gastroesophageal Reflux [11] is recognized as an annotated concept in biomedical text. Multiple PubMed publications carry the title Gastroesophageal Reflux Disease [9][14][20], and a related narrative review is titled Gastroesophageal reflux disease and oral health: A narrative review [17], with corresponding PMIDs 29132520 [13], 33351044 [16], and 35605234 [19]. Three ClinicalTrials.gov studies address reflux disease therapeutics, including Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease [12], Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) [15], and On Demand Treatment of Reflux Disease [18].",
+      "claims": 0,
+      "stripped": 21,
+      "refused": true,
+      "out_sha": "e3b0c44298fc"
+    },
+    {
+      "stage": "build_synth_messages",
+      "depth_arg": "researcher",
+      "system_sha": "9874d2d23519",
+      "user_sha": "a70dbab9fdb3",
+      "user_chars": 4107,
+      "directive_first_line": "AUDIENCE DEPTH: researcher. Write for a working researcher, about 200 words, in standard biomedical vocabulary. Open with one short summary paragraph of two or "
+    },
+    {
+      "stage": "run_grounding_pass",
+      "in_sha": "baef0e5f702b",
+      "in_chars": 1578,
+      "in_text": "The retrieved records identify eight distinct reflux disease concepts, ranging from the general condition to specific clinical subtypes and historical documentation [1][2][3][4][5][6][7][8]. The core entity is Gastroesophageal reflux disease, which appears as both a disease name and a MedGen title [1][10]. Additional subtypes include Alkaline reflux disease and Non-Erosive Reflux Disease [2][7]. The findings enumerate several clinically distinct reflux disease phenotypes. Gastroesophageal reflux disease without esophagitis and Gastro-esophageal reflux disease with esophagitis represent the erosive versus non-erosive distinction [3][4]. Further subtyping includes Gastro-esophageal reflux disease with ulceration and Gastroesophageal reflux disease with apnea [5][6]. History of gastroesophageal reflux disease captures the past-medical-history coding of this condition [8]. The PubMed index contains multiple publications titled Gastroesophageal Reflux Disease, with PMIDs 29132520, 33351044, and 35605234 [9][13][14][16][19][20]. A related narrative review is titled Gastroesophageal reflux disease and oral health: A narrative review [17]. PubTator3 recognizes the entity name Gastroesophageal Reflux as a normalized literature concept [11]. ClinicalTrials.gov records three interventional studies: Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease, Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339), and On Demand Treatment of Reflux Disease [12][15][18].",
+      "claims": 0,
+      "stripped": 11,
+      "refused": true,
+      "out_sha": "e3b0c44298fc"
+    },
+    {
+      "stage": "run_grounding_pass",
+      "in_sha": "9fc9180782ab",
+      "in_chars": 1469,
+      "in_text": "Disease name: Gastroesophageal reflux disease [1]. Disease name: Alkaline reflux disease [2]. Disease name: Gastroesophageal reflux disease without esophagitis [3]. Disease name: Gastro-esophageal reflux disease with esophagitis [4]. Disease name: Gastro-esophageal reflux disease with ulceration [5]. Disease name: Gastroesophageal reflux disease with apnea [6]. Disease name: Non-Erosive Reflux Disease [7]. Disease name: History of gastroesophageal reflux disease [8]. pubmed title: Gastroesophageal Reflux Disease [9]. medgen title: Gastroesophageal reflux disease [10]. Literature entity name: Gastroesophageal Reflux [11]. Clinical trial name: Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease [12]. pubmed title: Gastroesophageal Reflux Disease [14]. Clinical trial name: Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) [15]. pubmed title: Gastroesophageal reflux disease and oral health: A narrative review [17]. Clinical trial name: On Demand Treatment of Reflux Disease [18]. pubmed title: Gastroesophageal Reflux Disease [20]. Clinical trial name: A Study To Investigate The Effectiveness Of AH234844 (Lavoltidine) Compared With NEXIUM And Ranitidine [21]. pubmed title: Gastroesophageal Reflux Disease [23]. Clinical trial name: Open-label Comparison of 24hr Gastric pH on Days 1, 2, 7 With Once-daily Administration of Lavoltidine 40 mg [24].",
+      "claims": 20,
+      "stripped": 0,
+      "refused": false,
+      "out_sha": "0e702bceb9da"
+    }
+  ],
+  "tail_events": [
+    {
+      "type": "done",
+      "payload": {
+        "total_cost_usd": 0.0166541698,
+        "total_tool_calls": 6,
+        "elapsed_ms": 5464,
+        "trust_outcome": "ask",
+        "trust_line": "Based on 20 sources, not yet confirmed",
+        "layer_calls_used": 7,
+        "next_step": null,
+        "next_step_query": null
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "kind": "claim",
+      "text": "Found 8 disease records for reflux disease [1][2][3][4][5][6][7][8]. ",
+      "cells": null
+    },
+    {
+      "kind": "paragraph_break",
+      "text": "\n\n",
+      "cells": null
+    },
+    {
+      "kind": "heading",
+      "text": "Disease records found\n\n",
+      "cells": null
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: Gastroesophageal reflux disease [1]. ",
+      "cells": [
+        "Gastroesophageal reflux disease"
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: Alkaline reflux disease [2]. ",
+      "cells": [
+        "Alkaline reflux disease"
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: Gastroesophageal reflux disease without esophagitis [3]. ",
+      "cells": [
+        "Gastroesophageal reflux disease without esophagitis"
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: Gastro-esophageal reflux disease with esophagitis [4]. ",
+      "cells": [
+        "Gastro-esophageal reflux disease with esophagitis"
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: Gastro-esophageal reflux disease with ulceration [5]. ",
+      "cells": [
+        "Gastro-esophageal reflux disease with ulceration"
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: Gastroesophageal reflux disease with apnea [6]. ",
+      "cells": [
+        "Gastroesophageal reflux disease with apnea"
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: Non-Erosive Reflux Disease [7]. ",
+      "cells": [
+        "Non-Erosive Reflux Disease"
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "Disease name: History of gastroesophageal reflux disease [8]. ",
+      "cells": [
+        "History of gastroesophageal reflux disease"
+      ]
+    },
+    {
+      "kind": "paragraph_break",
+      "text": "\n\n",
+      "cells": null
+    },
+    {
+      "kind": "heading",
+      "text": "Pubmed records found\n\n",
+      "cells": null
+    },
+    {
+      "kind": "list_item",
+      "text": "pubmed title: Gastroesophageal Reflux Disease [9]. ",
+      "cells": [
+        "Gastroesophageal Reflux Disease."
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "pubmed title: Gastroesophageal Reflux Disease [13]. ",
+      "cells": [
+        "Gastroesophageal Reflux Disease."
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "pubmed title: Gastroesophageal reflux disease and oral health: A narrative review [15]. ",
+      "cells": [
+        "Gastroesophageal reflux disease and oral health: A narrative review."
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "pubmed title: Gastroesophageal Reflux Disease [17]. ",
+      "cells": [
+        "Gastroesophageal Reflux Disease."
+      ]
+    },
+    {
+      "kind": "list_item",
+      "text": "pubmed title: Gastroesophageal Reflux Disease [19]. ",
+      "cells": [
+        "Gastroesophageal Reflux Disease."
+      ]
+    },
+    {
+      "kind": "paragraph_break",
+      "text": "\n\n",
+      "cells": null
+    },
+    {
+      "kind": "heading",
+      "text": "Medgen records found\n\n",
+      "cells": null
+    },
+    {
+      "kind": "list_item",
+      "text": "medgen title: Gastroesophageal reflux disease [10]. ",
+      "cells": [
+        "Gastroesophageal reflux disease"
+      ]
+    },
+    {
+      "kind": "paragraph_break",
+      "text": "\n\n",
+      "cells": null
+    },
+    {
+      "kind": "heading",
+      "text": "Literature entity records found\n\n",
+      "cells": null
+    },
+    {
+      "kind": "list_item",
+      "text": "Literature entity name: Gastroesophageal Reflux [11]. ",
+      "cells": [
+        "Gastroesophageal Reflux"
+      ]
+    },
+    {
+      "kind": "paragraph_break",
+      "text": "\n\n",
+      "cells": null
+    },
+    {
+      "kind": "heading",
+      "text": "Clinical trial records found\n\n",
+      "cells": null
+    },
+    {
+      "kind": "table_header",
+      "text": "",
+      "cells": [
+        "Trial",
+        "Status"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "text": "Clinical trial name: Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease [12]. ",
+      "cells": [
+        "Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease",
+        "COMPLETED"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "text": "Clinical trial name: Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) [14]. ",
+      "cells": [
+        "Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)",
+        "COMPLETED"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "text": "Clinical trial name: On Demand Treatment of Reflux Disease [16]. ",
+      "cells": [
+        "On Demand Treatment of Reflux Disease",
+        "COMPLETED"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "text": "Clinical trial name: A Study To Investigate The Effectiveness Of AH234844 (Lavoltidine) Compared With NEXIUM And Ranitidine [18]. ",
+      "cells": [
+        "A Study To Investigate The Effectiveness Of AH234844 (Lavoltidine) Compared With NEXIUM And Ranitidine.",
+        "COMPLETED"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "text": "Clinical trial name: Open-label Comparison of 24hr Gastric pH on Days 1, 2, 7 With Once-daily Administration of Lavoltidine 40 mg [20]. ",
+      "cells": [
+        "Open-label Comparison of 24hr Gastric pH on Days 1, 2, 7 With Once-daily Administration of Lavoltidine 40 mg.",
+        "COMPLETED"
+      ]
+    },
+    {
+      "kind": "paragraph_break",
+      "text": "\n\n",
+      "cells": null
+    },
+    {
+      "kind": "note",
+      "text": "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+      "cells": null
+    }
+  ],
+  "rendered_sha": "a9b4007be08a",
+  "rendered_chars": 1431,
+  "rendered": "Found 8 disease records for reflux disease [1][2][3][4][5][6][7][8]. \n\nDisease records found\n\nGastroesophageal reflux diseaseAlkaline reflux diseaseGastroesophageal reflux disease without esophagitisGastro-esophageal reflux disease with esophagitisGastro-esophageal reflux disease with ulcerationGastroesophageal reflux disease with apneaNon-Erosive Reflux DiseaseHistory of gastroesophageal reflux disease\n\nPubmed records found\n\nGastroesophageal Reflux Disease.Gastroesophageal Reflux Disease.Gastroesophageal reflux disease and oral health: A narrative review.Gastroesophageal Reflux Disease.Gastroesophageal Reflux Disease.\n\nMedgen records found\n\nGastroesophageal reflux disease\n\nLiterature entity records found\n\nGastroesophageal Reflux\n\nClinical trial records found\n\nTrial / StatusFamotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease / COMPLETEDEfficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) / COMPLETEDOn Demand Treatment of Reflux Disease / COMPLETEDA Study To Investigate The Effectiveness Of AH234844 (Lavoltidine) Compared With NEXIUM And Ranitidine. / COMPLETEDOpen-label Comparison of 24hr Gastric pH on Days 1, 2, 7 With Once-daily Administration of Lavoltidine 40 mg. / COMPLETED\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

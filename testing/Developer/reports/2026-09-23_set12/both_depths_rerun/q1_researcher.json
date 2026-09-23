@@ -1,0 +1,40 @@
+{
+  "depth": "researcher",
+  "question": "reflux disease",
+  "outcome": "ask",
+  "words": 142,
+  "paragraphs": 1,
+  "headings": 5,
+  "list_items": 15,
+  "table_rows": 5,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 4 sources, not yet confirmed",
+  "sources": [
+    "29132520",
+    "33351044",
+    "35605234",
+    "36170502",
+    "37516506",
+    "6553",
+    "@DISEASE_Gastroesophageal_Reflux",
+    "MedGen:C0017168",
+    "MedGen:C0267057",
+    "MedGen:C0341102",
+    "MedGen:C0677659",
+    "MedGen:C1280387",
+    "MedGen:C1300118",
+    "MedGen:C2242528",
+    "MedGen:C4039982",
+    "NCT00141960",
+    "NCT00163306",
+    "NCT00184522",
+    "NCT00405119",
+    "NCT00551473"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+  ],
+  "errors": [],
+  "key": "q1",
+  "answer_text": "Found 8 disease records for reflux disease [1][2][3][4][5][6][7][8]. \n\n## Disease records found\n\n- Gastroesophageal reflux disease\n- Alkaline reflux disease\n- Gastroesophageal reflux disease without esophagitis\n- Gastro-esophageal reflux disease with esophagitis\n- Gastro-esophageal reflux disease with ulceration\n- Gastroesophageal reflux disease with apnea\n- Non-Erosive Reflux Disease\n- History of gastroesophageal reflux disease\n\n## Pubmed records found\n\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal reflux disease and oral health: A narrative review.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal Reflux Disease.\n\n## Medgen records found\n\n- Gastroesophageal reflux disease\n\n## Literature entity records found\n\n- Gastroesophageal Reflux\n\n## Clinical trial records found\n\n- Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease / COMPLETED\n- Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) / COMPLETED\n- On Demand Treatment of Reflux Disease / COMPLETED\n- A Study To Investigate The Effectiveness Of AH234844 (Lavoltidine) Compared With NEXIUM And Ranitidine. / COMPLETED\n- Open-label Comparison of 24hr Gastric pH on Days 1, 2, 7 With Once-daily Administration of Lavoltidine 40 mg. / COMPLETED\n\n(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)\n"
+}
