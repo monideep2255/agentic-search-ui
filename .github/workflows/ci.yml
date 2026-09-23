@@ -53,6 +53,14 @@ on:
     # build phase 4.15, and Railway's production environment watches it. A
     # merge to either reaches a live URL, so a merge to either runs the gates.
     branches: [develop, production]
+    # 2026-09-22: a push that changes ONLY Markdown runs no gate, because no
+    # gate reads Markdown and the free Actions minutes ran out on the day the
+    # fix loop pushed a dozen documentation-only commits. Anything else,
+    # including a Python script inside a report folder (gate 3 has failed on
+    # exactly that, twice), still runs everything. A pull request is never
+    # filtered, per the comment above.
+    paths-ignore:
+      - "**.md"
 
 # A second push to the same branch makes the first run's answer irrelevant.
 # Cancel it rather than paying for both. Never cancels a PUSH run, so the
