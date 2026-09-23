@@ -1,0 +1,110 @@
+# Transcript of one live run, produced by run_feedback_questions.py.
+# Absolute paths in the tracebacks below were rewritten to be
+# repository-relative; nothing else was changed. The tracebacks are
+# POST-answer bookkeeping (session memory, interaction capture,
+# analytics) failing because the local runner passes no caller
+# identity. They occur after the done event and do not affect the
+# answer being measured.
+
+[MEMORY] reported_record_ids injected=0 text='reflux disease'
+[CYPHER] MATCH (a:Disease {id: $e_MedGen_C0017168}) RETURN a ORDER BY a.id LIMIT 100 UNION ALL MATCH (a:Disease {id: $e_MedGen_C0267057}) RETURN a ORDER BY a.id LIMIT 100 UNION ALL MATCH (a:Disease {id: $e_MedGen_C0341102}) RETURN a ORDER BY a.id LIMIT 100 UNION ALL MATCH (a:Disease {id: $e_MedGen_C0677659}) RETURN a ORDER BY a.id LIMIT 100 UNION ALL MATCH (a:Disease {id: $e_MedGen_C1280387}) RETURN a ORDER BY a.id LIMIT 100 UNION ALL MATCH (a:Disease {id: $e_MedGen_C1300118}) RETURN a ORDER BY a.id LIMIT 100 UNION ALL MATCH (a:Disease {id: $e_MedGen_C2242528}) RETURN a ORDER BY a.id LIMIT 100 UNION ALL MATCH (a:Disease {id: $e_MedGen_C4039982}) RETURN a ORDER BY a.id LIMIT 100
+[ROWS] 8 rows, total=8
+[ROW] {"c0": "{\"id\": 1407374883554850, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C0017168\", \"name\": \"OMIM\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C0017168\", \"knowledge_level\": \"\"}}::vertex"}
+[ROW] {"c0": "{\"id\": 1407374883567340, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C0267057\", \"name\": \"SNOMEDCT_US\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C0267057\", \"knowledge_level\": \"\"}}::vertex"}
+[ROW_KEYS] ['c0']
+[WITH_SOURCE_URL] 0
+[FINDING] cypher_query status=ok rows=8 with_source_url=8
+[SHAPED] {"node_or_edge_type": "Disease", "curie": "MedGen:C0017168", "fields": {"id": "MedGen:C0017168", "name": "OMIM", "xrefs": "", "source": "MedGen", "agent_type": "", "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0017168", "knowledge_level": ""}, "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0017168", "graph_snapshot_version": "ncbi_kg_v1_2026-04-22", "traversed_edge_type": null, "ambiguous_high_risk_edge_touch": false, "vocabulary_artifact_fields": ["id", "name", "source", "source_url"]}
+[SHAPED] {"node_or_edge_type": "Disease", "curie": "MedGen:C0267057", "fields": {"id": "MedGen:C0267057", "name": "SNOMEDCT_US", "xrefs": "", "source": "MedGen", "agent_type": "", "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0267057", "knowledge_level": ""}, "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0267057", "graph_snapshot_version": "ncbi_kg_v1_2026-04-22", "traversed_edge_type": null, "ambiguous_high_risk_edge_touch": false, "vocabulary_artifact_fields": ["id", "name", "source", "source_url"]}
+[SYNTH_FINDINGS] 8 capped=False
+[SYNTH_TEXT] "The knowledge graph returns eight disease records matching the query for reflux disease, encompassing several clinical variants and classifications of gastroesophageal reflux [1][2][3][4][5][6][7][8]. The core entity is \"Gastroesophageal reflux disease,\" which serves as the parent concept for the returned subtype records [1]. Four records specify anatomical or endoscopic subtypes: \"Gastroesophageal reflux disease without esophagitis\" and \"Non-Erosive Reflux Disease\" represent non-erosive presentations [3][7], while \"Gastro-esophageal reflux disease with esophagitis\" and \"Gastro-esophageal reflux disease with ulceration\" denote mucosal injury of increasing severity [4][5]. A distinct entity, \"Alkaline reflux disease,\" captures bile-related reflux separate from acid-mediated disease [2]. One record documents an episodic complication: \"Gastroesophageal reflux disease with apnea\" links reflux to respiratory manifestation, particularly relevant in pediatric populations [6]. A separate record, \"History of gastroesophageal reflux disease,\" represents a past-medical-history designation rather than an active condition [8]. Together, these eight records illustrate that reflu
+[GROUNDING] claims=0 outcome=None dropped=None attrs=['narrative', 'claims', 'stripped_count', 'refused', 'sentences', 'sentence_origins']
+[SYNTH_TEXT] "The retrieved records identify eight distinct reflux disease entities, encompassing both primary diagnoses and specific clinical subtypes [1][2][3][4][5][6][7][8]. The broad category is represented by the finding named Gastroesophageal reflux disease [1]. An alternative etiology is captured by the finding named Alkaline reflux disease [2]. A historical documentation of the condition is represented by the finding named History of gastroesophageal reflux disease [8]. Several records stratify reflux disease by the presence of esophageal mucosal injury. The finding named Gastroesophageal reflux disease without esophagitis describes reflux absent endoscopic mucosal damage [3]. The finding named Gastro-esophageal reflux disease with esophagitis specifies reflux accompanied by esophageal inflammation [4]. The finding named Gastro-esophageal reflux disease with ulceration denotes reflux complicated by mucosal ulceration [5]. Additional subtypes capture distinct clinical presentations. The finding named Gastroesophageal reflux disease with apnea associates reflux with episodes of apnea [6]. The finding named Non-Erosive Reflux Disease identifies a reflux phenotype in which symptoms occur w
+[GROUNDING] claims=0 outcome=None dropped=None attrs=['narrative', 'claims', 'stripped_count', 'refused', 'sentences', 'sentence_origins']
+[SYNTH_TEXT] "Disease name: Gastroesophageal reflux disease [1]. Disease name: Alkaline reflux disease [2]. Disease name: Gastroesophageal reflux disease without esophagitis [3]. Disease name: Gastro-esophageal reflux disease with esophagitis [4]. Disease name: Gastro-esophageal reflux disease with ulceration [5]. Disease name: Gastroesophageal reflux disease with apnea [6]. Disease name: Non-Erosive Reflux Disease [7]. Disease name: History of gastroesophageal reflux disease [8]."
+[GROUNDING] claims=8 outcome=None dropped=None attrs=['narrative', 'claims', 'stripped_count', 'refused', 'sentences', 'sentence_origins']
+[guard] {"passed": true, "category": "ok", "reason": null}
+[cost]
+[think] {"narrative": "Broad, open-ended query about a disease/condition with no specific question structure, no gene named, no organism specified, and no single obvious path to answer (reflux disease: 8 of at least 20 MedGen records matched by name)", "query_class": "exploratory", "resolved_entities": [{"text": "reflux disease", "curie": "MedGen:C0017168", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C0267057", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C0341102", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C0677659", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C1280387", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C1300118", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C2242528", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C4039982", "confidence": 1.0}], "clarifying_question": null}
+[cost]
+[plan] {"narrative": "Layer 1, the knowledge graph: cypher_query", "tool_calls": [{"tool": "cypher_query", "call_id": "cq-3e25ea1766f5", "layer": "layer_1_graph", "persona": "Crick", "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.", "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"}], "resolved_entities": [{"text": "reflux disease", "curie": "MedGen:C0017168", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C0267057", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C0341102", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C0677659", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C1280387", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C1300118", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C2242528", "confidence": 1.0}, {"text": "reflux disease", "curie": "MedGen:C4039982", "confidence": 1.0}]}
+[cost]
+[tool_start]
+[tool_result] session memory not recorded for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 625, in run
+    await _remember_turn(query, final_state["events"])
+  File "src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+    await remember_turn_for_caller(
+  File "src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+interaction capture failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+    await capture_run(query, events)
+  File "src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+    row = assemble_interaction(query, events)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+analytics query_completed event failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+    interaction = assemble_interaction(query, events)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+{"call_id": "cq-3e25ea1766f5", "tool": "cypher_query", "layer": "layer_1_graph", "status": "ok", "persona": "Crick", "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.", "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick", "summary": "8 row(s) of 8", "result_count": 8, "truncated": false}
+[step]
+[token] {"text": "Found 8 disease records for reflux disease [1][2][3][4][5][6][7][8]. ", "marker_ids": ["cq-3e25ea1766f5-1", "cq-3e25ea1766f5-2", "cq-3e25ea1766f5-3", "cq-3e25ea1766f5-4", "cq-3e25ea1766f5-5", "cq-3e25ea1766f5-6", "cq-3e25ea1766f5-7", "cq-3e25ea1766f5-8"], "kind": "claim", "cells": null, "emphasis": ["reflux disease"]}
+[token] {"text": "\n\n", "marker_ids": [], "kind": "paragraph_break", "cells": null, "emphasis": null}
+[token] {"text": "Disease records found\n\n", "marker_ids": [], "kind": "heading", "cells": null, "emphasis": null}
+[token] {"text": "Disease name: Gastroesophageal reflux disease [1]. ", "marker_ids": ["cq-3e25ea1766f5-1"], "kind": "list_item", "cells": ["Gastroesophageal reflux disease"], "emphasis": null}
+[token] {"text": "Disease name: Alkaline reflux disease [2]. ", "marker_ids": ["cq-3e25ea1766f5-2"], "kind": "list_item", "cells": ["Alkaline reflux disease"], "emphasis": null}
+[token] {"text": "Disease name: Gastroesophageal reflux disease without esophagitis [3]. ", "marker_ids": ["cq-3e25ea1766f5-3"], "kind": "list_item", "cells": ["Gastroesophageal reflux disease without esophagitis"], "emphasis": null}
+[token] {"text": "Disease name: Gastro-esophageal reflux disease with esophagitis [4]. ", "marker_ids": ["cq-3e25ea1766f5-4"], "kind": "list_item", "cells": ["Gastro-esophageal reflux disease with esophagitis"], "emphasis": null}
+[token] {"text": "Disease name: Gastro-esophageal reflux disease with ulceration [5]. ", "marker_ids": ["cq-3e25ea1766f5-5"], "kind": "list_item", "cells": ["Gastro-esophageal reflux disease with ulceration"], "emphasis": null}
+[token] {"text": "Disease name: Gastroesophageal reflux disease with apnea [6]. ", "marker_ids": ["cq-3e25ea1766f5-6"], "kind": "list_item", "cells": ["Gastroesophageal reflux disease with apnea"], "emphasis": null}
+[token] {"text": "Disease name: Non-Erosive Reflux Disease [7]. ", "marker_ids": ["cq-3e25ea1766f5-7"], "kind": "list_item", "cells": ["Non-Erosive Reflux Disease"], "emphasis": null}
+[token] {"text": "Disease name: History of gastroesophageal reflux disease [8]. ", "marker_ids": ["cq-3e25ea1766f5-8"], "kind": "list_item", "cells": ["History of gastroesophageal reflux disease"], "emphasis": null}
+[token] {"text": "\n\n", "marker_ids": [], "kind": "paragraph_break", "cells": null, "emphasis": null}
+[token] {"text": "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead", "marker_ids": [], "kind": "note", "cells": null, "emphasis": null}
+[citation] 1 https://www.ncbi.nlm.nih.gov/medgen/C0017168 :: Disease name: Gastroesophageal reflux disease
+[citation] 2 https://www.ncbi.nlm.nih.gov/medgen/C0267057 :: Disease name: Alkaline reflux disease
+[citation] 3 https://www.ncbi.nlm.nih.gov/medgen/C0341102 :: Disease name: Gastroesophageal reflux disease without esophagitis
+[citation] 4 https://www.ncbi.nlm.nih.gov/medgen/C0677659 :: Disease name: Gastro-esophageal reflux disease with esophagitis
+[citation] 5 https://www.ncbi.nlm.nih.gov/medgen/C1280387 :: Disease name: Gastro-esophageal reflux disease with ulceration
+[citation] 6 https://www.ncbi.nlm.nih.gov/medgen/C1300118 :: Disease name: Gastroesophageal reflux disease with apnea
+[citation] 7 https://www.ncbi.nlm.nih.gov/medgen/C2242528 :: Disease name: Non-Erosive Reflux Disease
+[citation] 8 https://www.ncbi.nlm.nih.gov/medgen/C4039982 :: Disease name: History of gastroesophageal reflux disease
+[trust_signal]
+[trust_signal]
+[trust_signal]
+[trust_signal]
+[trust_signal]
+[trust_signal]
+[trust_signal]
+[trust_signal]
+[trust_signal]
+[cost]
+[done] {"total_cost_usd": 0.015673656799999998, "total_tool_calls": 1, "elapsed_ms": 6541, "trust_outcome": "ask", "trust_line": "Based on 1 source, not yet confirmed", "layer_calls_used": 4, "next_step": null, "next_step_query": null}
+[SUMMARY] {"question": "reflux disease", "tools": [{"tool": "cypher_query", "layer": "layer_1_graph", "status": "ok", "count": 8, "persona": "Crick"}], "citations": [{"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0017168", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C0017168", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}, {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0267057", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C0267057", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}, {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0341102", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C0341102", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}, {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0677659", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C0677659", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}, {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1280387", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C1280387", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}, {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1300118", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C1300118", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}, {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2242528", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C2242528", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}, {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4039982", "layer": "layer_2_api", "source": "ncbi_efetch", "source_id": "MedGen:C4039982", "license": "public_domain_us_gov", "evidence_kind": "primary_assertion"}], "resolved_entities": ["MedGen:C0017168", "MedGen:C0267057", "MedGen:C0341102", "MedGen:C0677659", "MedGen:C1280387", "MedGen:C1300118", "MedGen:C2242528", "MedGen:C4039982"], "trust_outcome": "ask", "answer_trust": {"outcome": "ask", "risk_tier": "low", "grounded": true, "message": null, "summary": null}, "elapsed_s": 23.2}
+[SHOWN] 8 citations, 8 not previously reported, 0 previously reported

@@ -1,0 +1,45 @@
+# Transcript of one live run, produced by run_feedback_questions.py.
+# Absolute paths in the tracebacks below were rewritten to be
+# repository-relative; nothing else was changed. The tracebacks are
+# POST-answer bookkeeping (session memory, interaction capture,
+# analytics) failing because the local runner passes no caller
+# identity. They occur after the done event and do not affect the
+# answer being measured.
+
+[MEMORY] reported_record_ids injected=0 text='papers on the effects of caffeine on exercise performance'
+[guard] {"passed": false, "category": "off_topic", "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."}
+[done] {"total_cost_usd": 0.0, "total_tool_calls": 0, "elapsed_ms": 147, "trust_outcome": "refuse", "trust_line": null, "layer_calls_used": 0, "next_step": null, "next_step_query": null}
+[SUMMARY] {"question": "papers on the effects of caffeine on exercise performance", "tools": [], "citations": [], "resolved_entities": [], "trust_outcome": "refuse", "elapsed_s": 0.2}
+[SHOWN] 0 citations, 0 not previously reported, 0 previously reported
+
+--- STDERR ---
+interaction capture failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+    await capture_run(query, events)
+  File "src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+    row = assemble_interaction(query, events)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+analytics query_completed event failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+    interaction = assemble_interaction(query, events)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.

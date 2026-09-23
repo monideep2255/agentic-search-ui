@@ -19,6 +19,9 @@ the item's own row further down; the detail stays with the item.
 | Feature, in plain words | Item | Where it stands |
 |---|---|---|
 | History shows the saved answer instantly, with Run again | 10.2 | BUILT 2026-09-23, awaiting the product owner's retest. The data decision they gave before sleeping: store the answer for SIGNED-IN ACCOUNTS ONLY, never for guests, deleted with the account. Guests are excluded at the WRITE in three independent layers, including a database CHECK constraint. No account delete path exists today, so `forget_saved_answers_for_account` is left tested and called by nothing, with the one line a future delete path must add |
+| A disease question searches every layer, the way a gene question already does | 12.1 | NOT STARTED, and the priority. Measured 2026-09-23: 1 of the second tester's 7 questions answers, 6 return no citation at all. The same condition answers as `reflux disease` and refuses as `GERD`, because one name lands on concept ids the graph holds and the other does not, and nothing else is searched. `_build_layer_tool_calls` gates the whole breadth plan on `if gene_symbol:`, so a disease anchor gets one Cypher query and the trials registry, the literature and the live records are never called |
+| The guardrail stops refusing ordinary literature and trials questions | 12.2 | NOT STARTED. The allowlist carries none of `paper`, `publication`, `article`, `literature`, `study`, `trial`, `research`, while its own refusal text offers "a paper question". `any trials for gerd?` is refused and `Any trials for GERD?` is not, because capitalisation decides |
+| A refusal stops inviting the reader to "continue the conversation" | 12.4 | NOT STARTED, and the cheapest item on this list. `FollowUp.tsx` renders under every result, so a "No answer found" screen offers "What variants cause it?" with no "it" to refer to |
 | Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
 | The MCP mount's redirect emitting `http://`, the other half of "every integration works end to end" | 11.30 | FIXED 2026-09-23, awaiting the product owner's retest. Cause: Railway terminates TLS at its edge and uvicorn's `--forwarded-allow-ips` defaults to loopback, so `X-Forwarded-Proto` was discarded and Starlette built the mount redirect from the container's plaintext view. Fixed IN THE APP rather than in a deployment setting, so it travels with the code and the two services cannot disagree. UPGRADE ONLY: the header can move the scheme to `https` and never to `http`, so no value a caller can put in it makes any redirect less secure than with the header absent. The one-line alternative (`--forwarded-allow-ips='*'`) was REJECTED because it also rewrites the client address from the caller-controlled leftmost `X-Forwarded-For`, which two rate limits hash |
@@ -145,6 +148,7 @@ missing.
 - [Set 9: answers worth reading](#set-9-answers-worth-reading)
 - [Set 10: reliable flagship answers, and saved history](#set-10-reliable-flagship-answers-and-saved-history)
 - [Set 11: live feedback of 2026-09-13 and 2026-09-14](#set-11-live-feedback-of-2026-09-13-and-2026-09-14)
+- [Set 12: the second tester's questions](#set-12-the-second-testers-questions)
 - [Where we stopped](#where-we-stopped)
 - [Developer detail](#developer-detail)
 
@@ -1522,13 +1526,67 @@ a probability-emitting model is worth a bounded trial on its own merits, never
 as the answer to a failure the harness has not been worked on yet.
 
 
+## Set 12: the second tester's questions
+
+Batch: what the product does when someone who has never seen it asks a real
+question. Raised 2026-09-23 by the product owner, who had a second tester, a
+skip-level manager, use the 2026-09-14 develop build and send four
+screenshots. Their comments are written into the filenames, in
+`testing/User-feedback/`.
+
+THE PRODUCT OWNER'S OWN CONDITION ON THIS SET, in their words: "Can you check
+if we can answer the questions now? If yes great, how do we answer, else this
+the priority and we fix it first."
+
+MOSTLY NOT. All seven questions were re-run against today's code on
+2026-09-23, one at a time, against the real model and the real graph. ONE of
+the seven answers; the other six return no citation at all and fail for the
+same reasons they failed on 14 September. So by the product owner's own
+condition this set is the priority, and it is item 1 of "Next, in order".
+
+A CORRECTION IS KEPT HERE RATHER THAN TIDIED AWAY, because the first reading
+was wrong in the direction that suited the story. `reflux disease` was first
+recorded as a refusal, and it was a `ConnectTimeout` to the graph query
+service on the measuring run, not a property of the product. Re-run, it
+answers with eight cited records. Two other refusals were re-run to check for
+the same mistake and both reproduced exactly. The instrument was wrong before
+the product was, and it was caught only because the per-tool STATUS was
+recorded next to the row count: `error` does not mean `empty`.
+
+Evidence, with a full transcript per question and a re-runnable script:
+`testing/Developer/reports/2026-09-23_user_feedback/`.
+
+| # | The tester's question | Tools that ran | Graph result | Sources | Outcome |
+|---|---|---|---|---|---|
+| 1 | `reflux disease` | cypher_query | ok, 8 rows | 8 | ANSWERS, grounded, 23.2s |
+| 2 | `GERD` | cypher_query | empty | 0 | refuse |
+| 3 | `Any trials for GERD?` | cypher_query | empty | 0 | refuse, reproduced twice |
+| 4 | `papers on the effects of caffeine on exercise performance` | NONE | not reached | 0 | refused before any search |
+| 5 | `Does coffee help make exercise more effective?` | NONE | not reached | 0 | refused before any search |
+| 6 | `Are there any beneficial variants typically found in people of mediterranean descent?` | cypher_query | error, no entity | 0 | refuse |
+| 7 | `What positive and negative genes do ashkenazi jewish people have?` | cypher_query | error, no entity | 0 | refuse, reproduced twice |
+
+| # | The feedback | Status | Where it stands |
+|---|---|---|---|
+| 12.1 | "am I asking the wrong kind of question?" A disease question searches one place and refuses. `reflux disease`, `GERD`, `Any trials for GERD?` | Not started, and it is the priority | CAUSE FOUND 2026-09-23, and the code says it in its own words. `_build_layer_tool_calls` in `core/graph.py` opens with `if gene_symbol:` and its docstring closes: "A question that resolves no gene and names no rs id plans nothing here, so a disease named only as a typed `MedGen:` CURIE keeps its single graph call." So item 11.21's breadth wiring, live NCBI records plus the literature plus the trials registry, fires on a GENE. Anchor a question on a disease and it gets ONE Cypher query. Question 3 is the sharpest case because every step before the last one worked: Think resolved GERD to `MedGen:C5563728` at confidence 1.0 and its own narrative reads "open-ended exploration across trial registries and literature", then Plan chose `cypher_query` alone and ran `MATCH (a:Disease {id: $e_MedGen_C5563728}) RETURN a LIMIT 100`, which returned 0 rows. `clinicaltrials_search` is built, tested, wired, and was never called; the registry holds thousands of GERD trials. THE SHARPEST EVIDENCE IS A PAIR OF SYNONYMS, and neither half was designed: `reflux disease` resolves to eight MedGen concepts that ALL exist as `Disease` vertices, so its single graph call returns 8 rows and the question ANSWERS; `GERD` resolves to one concept, `MedGen:C5563728`, which the graph does not hold, so the identical single call returns zero and the question refuses. The same condition under two names answers or refuses depending on which concept id the name lands on, because nothing else is searched. That is a single point of failure, not a ranking problem. THE FIX IS ROUTING, NOT CAPABILITY: give a disease anchor the same breadth a gene anchor has. It compounds with the 2026-09-23 graph finding, since a `Disease` row that did come back carries its source vocabulary in `name` rather than a usable name |
+| 12.2 | "unexpected": `papers on the effects of caffeine on exercise performance` is refused as "Outside biomedical research" | Not started | The guardrail allowlist in `guardrail/prefilter.py` carries NO literature vocabulary. Absent as single terms, all measured: `paper`, `papers`, `publication`, `article`, `literature`, `study`, `studies`, `trial`, `trials`, `research`. Only the two-word `clinical trials` is present. THE REFUSAL TEXT ITSELF says "I can help with a gene, variant, pathogen, or paper question", and `paper` is not in the allowlist, so the refusal invites a question the same check then refuses. WORSE, AND MEASURED: `Any trials for GERD?` clears only because `GERD` is uppercase and matches the deliberately over-broad symbol regex `\b[A-Z]{2,}[A-Z0-9-]*\b`. `any trials for gerd?` is REFUSED. Capitalisation decides whether a question is medical. Also refused today: `recent papers on statins`, `find me studies about vitamin d`, `what does the literature say about metformin`, `show me publications about aspirin`, `latest research on long covid`, `is there a trial recruiting for melanoma`. This has never surfaced in our own testing because every question we type names a gene in capitals, which clears by the same accident |
+| 12.3 | The product owner's question: do we ask a clarifying question when a query is one to three words, such as `Reflux disease`, which could mean many things? | ANSWERED, and the answer is no | Measured 2026-09-23. There are exactly FOUR clarifying paths today and none covers a short or broad question. `_needs_clarification` in `core/graph.py` fires only when a question contains a referring word ("it", "those") AND resolves no entity AND has no remembered antecedent, so a bare topic, which contains no referring word, never reaches it. The other three are `coordinate_window.ASSEMBLY_QUESTION` (a chromosome window with no assembly named), `isolate_search`'s two clarifications (an isolate question missing its organism or its gene), and an accession the product cannot place. NOTHING is keyed on the question being short, broad, or having several readings: a two-word disease name is treated as a fully specified request, one reading is picked silently, and then it refuses. Whether to build this is the product owner's call, and it should be decided AFTER 12.1, because a question that can be answered should be answered rather than queried back |
+| 12.4 | "If it didn't have an answer, why would I 'continue the conversation'? Maybe 'ask another question?'" | Not started, and it is the cheapest item here | `FollowUp.tsx` renders unconditionally under every result, including a refusal. So a person just told "No answer found in NCBI records" is offered the heading "Continue this conversation" and three chips: "What variants cause it?", "Which trials are recruiting?", "What does the literature add?". There is no "it". Pressing the first chip sends a question whose only referring word has no antecedent, which is the one case `_needs_clarification` DOES catch, so the product would then ask which gene they meant. Two changes: the heading reads "Ask another question" when the result carried no answer, and the three chips are suppressed or replaced with something the person could actually ask next |
+| 12.6 | The product already writes a good clarifying question and throws it away | Not started, and it may be most of 12.3 for far less work | FOUND 2026-09-23 while measuring questions 6 and 7. Both resolved no entity, the graph tool was dispatched with nothing to bind, and it reported in its own words: "no entity could be identified in this query, so no graph lookup was attempted. Name the gene, variant, disease or organism, or supply a CURIE such as NCBIGene:672. Retrying this query unchanged will not help." That is exactly the clarification the reader needed. What reaches the screen instead is "No answer found in NCBI records. I could not find grounded evidence for this", plus a link to an NCBI search. The actionable text is not missing; it is discarded on the way to the person who needed it |
+| 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
+
+
 ## Where we stopped
 
 The cutoff. It is updated at the end of every working session, so the next
-session starts here rather than reconstructing state. LAST UPDATED 2026-09-23,
-at the close of an overnight session that ran unsupervised after the product
-owner approved a named list and then authorised picking up further work. Eight
-agents ran, tiered by task. What it did:
+session starts here rather than reconstructing state. LAST UPDATED 2026-09-23
+MORNING, when the product owner brought a second tester's feedback and it was
+re-run against today's code before anything was planned. THE ONE THING TO KNOW:
+six of that tester's seven questions still return no citation at all, unchanged
+since the 2026-09-14 build they were asked on, so SET 12 IS NOW THE PRIORITY
+and is item 1 of "Next, in order". The overnight session that preceded it ran
+unsupervised after the product owner approved a named list and then authorised
+picking up further work. Eight agents ran, tiered by task. What it did:
 
 - Fixed 11.30's second half, the MCP address that downgraded an HTTPS request
   to plaintext, in the app rather than in a deployment setting
@@ -1554,6 +1612,15 @@ owner and whoever picks this up read the same record.
 
 The 2026-09-20 shipped list, with what to retest, is
 `testing/Shipped_2026-09-20.md`. This section owns per-item status.
+
+### The 2026-09-23 morning session, in one table
+
+| Item | State at close | The one thing to know |
+|---|---|---|
+| Set 12, the second tester's seven questions | MEASURED against today's code, NOT FIXED. Now item 1 of "Next, in order" | 1 of 7 answers, 6 return no citation. A first reading said 0 of 7 and was corrected: that question's graph call had timed out on the measuring run, and `error` is not `empty`. Three distinct causes, all of them routing or vocabulary rather than missing capability: a disease anchor gets one Cypher query because `_build_layer_tool_calls` gates the breadth plan on `if gene_symbol:`; the guardrail allowlist holds no literature vocabulary, so `any trials for gerd?` is refused while `Any trials for GERD?` is not; and a refusal still invites the reader to "continue the conversation". Evidence: `testing/Developer/reports/2026-09-23_user_feedback/findings.md` |
+| 12.3, a clarifying question for a one-to-three-word query | ANSWERED, no build | There is no such clarification today. The four paths that exist cover a referring word with no antecedent, a chromosome window with no assembly, an isolate question missing its organism or gene, and an unplaceable accession. A bare topic reaches none of them |
+| `testing/Test_queries_and_workflows.md` | UPDATED, commit `33d3555` | The overnight work became four typed queries (64 to 67) rather than only a shipped list, two existing queries that had been describing superseded behaviour were corrected (51 and 60), and a "What to retest first" section now carries the queue in order |
+| This plan's own stale pointer | FIXED, commit `a2ef03c` | "How to start the next session" still named the three golden rows as item 1 after the overnight checkpoint had rewritten "Next, in order" around it |
 
 ### The 2026-09-23 overnight session, in one table
 
@@ -1895,45 +1962,71 @@ technical one.
 
 ### Next, in order
 
-Rewritten at the close of the overnight session of 2026-09-23, which closed all
-three of the discussion items this list carried and built six things beyond
-them. Items 1 to 7 in `testing/Shipped_2026-09-23.md` await the product owner's
-retest, and items 7 to 22 in `testing/Shipped_2026-09-22.md` are still awaiting
-the retest from the night before. Nothing here is a retest; every item is
-engineering or a decision, ordered by what the person typing the question feels
-first.
+REWRITTEN 2026-09-23 MORNING, after the product owner brought a second
+tester's feedback. That feedback was re-run against today's code before
+anything was written down, and it takes the top of this list on the product
+owner's own condition: "else this the priority and we fix it first". Six of
+the seven questions return no citation at all, and the seventh answers only
+because its name happens to land on concept ids the graph holds.
 
-What the overnight session leaves open, each recorded in
+Items 1 to 7 in `testing/Shipped_2026-09-23.md` await the product owner's
+retest, and items 7 to 22 in `testing/Shipped_2026-09-22.md` are still
+awaiting the retest from the night before. Nothing below is a retest; every
+item is engineering or a decision, ordered by what the person typing the
+question feels first.
+
+What is open and not on this list as its own item, each recorded in
 `testing/Developer/reports/2026-09-23_overnight/findings.md`:
 
-- A phenotype question no longer runs a search that could never work, and what
-  it reaches instead was not verified end to end. That is item 1 below.
-- The graph holds no disease names and no MeSH terms. Every `Disease` vertex is
-  named after its source vocabulary and every `OntologyClass` after its own
-  identifier, measured graph-wide. Tonight stops those being shown as real
-  names and resolves the MeSH ones live, but the data is a Systems 1 and 2
-  defect in the other repository, known since build phase 2.1 as F-2.1-B07.
-  Nothing here is allowed to fix it, so it is a hand-over rather than a task.
+- The graph holds no disease names and no MeSH terms. Every `Disease` vertex
+  is named after its source vocabulary and every `OntologyClass` after its own
+  identifier, measured graph-wide. Known since build phase 2.1 as F-2.1-B07.
+  Writing the graph is Systems 1 and 2 work in the other repository, so this
+  is a hand-over rather than a task. It BOUNDS item 1: a disease question can
+  be answered from the live records and the literature, and never from the
+  graph's disease names.
 - The model's written prose still fails the grounding gate on several question
-  shapes, so the code-built table carries the answer. Unchanged tonight.
+  shapes, so the code-built table carries the answer.
 - `trust_outcome` is unstable: five runs with byte-identical evidence returned
   `flag` four times and `ask` once.
 
-1. VERIFY THAT A PHENOTYPE QUESTION NOW REACHES A PATH THAT CAN ANSWER IT.
-   This is the honest gap the overnight session left and it is first because a
-   person feels it directly. The dead graph search is gone, so "What phenotypic
-   features are associated with Marfan syndrome?" no longer runs a query that
-   could never return a row. What it does INSTEAD was not verified end to end
-   overnight. One live run settles it. If the answer is still a refusal, the
-   question is whether it should reach MedGen through Layer 2, which is a
-   routing decision rather than a defect.
-2. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
+1. SET 12, THE SECOND TESTER'S QUESTIONS. The priority, and the one item a
+   person feels immediately: seven ordinary questions, six of them unanswered.
+   Four pieces of work, independent of each other, so they can run in
+   parallel:
+   - 12.1, give a disease anchor the same breadth a gene anchor already has.
+     `_build_layer_tool_calls` gates everything on `if gene_symbol:`, so
+     "Any trials for GERD?" runs one Cypher query and never calls the trials
+     registry that holds thousands of GERD trials. This is the largest of the
+     three and the one that changes the most answers.
+   - 12.2, put literature vocabulary in the guardrail allowlist. Today
+     `any trials for gerd?` is refused as outside biomedical research and
+     `Any trials for GERD?` is not, because capitalisation decides. The
+     refusal text offers "a paper question" and `paper` is not in the
+     allowlist.
+   - 12.6, show the clarifying question the product already writes. When no
+     entity resolves, the graph tool returns "Name the gene, variant, disease
+     or organism", and that text is discarded before the screen. It may be
+     most of 12.3 for a fraction of the work.
+   - 12.4, stop inviting a reader to "continue the conversation" under a
+     screen that carried no answer. The cheapest change here.
+   VERIFY THE MARFAN PHENOTYPE QUESTION AS PART OF THIS, not separately: it is
+   the same family, a disease-anchored question reaching a single graph call
+   that returns nothing. It was the overnight session's one open item and it
+   belongs to 12.1's fix.
+2. 12.3, WHETHER A ONE-TO-THREE-WORD QUESTION SHOULD BE ASKED BACK. The
+   product owner's question, now measured: there is no such clarification
+   today, and the four paths that do exist cover none of it. Decide AFTER item
+   1, because a question that can be answered should be answered rather than
+   queried back, and item 1 changes how many of them can be answered.
+3. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
    row: "334" expects a clarifying ask and is refused as off-topic; "tell me
    about the tree of life" expects an answer; the pathogenicity classification
    request expects a flag rather than a medical-advice refusal. Nothing blocks
-   on it. A fourth row joins them: G-035's Taxonomy must-cite URL.
-3. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
-4. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
+   on it. A fourth row joins them: G-035's Taxonomy must-cite URL. ITEM 12.2
+   MAY CLOSE SOME OF THESE ON ITS OWN, since they are the same check.
+4. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
+5. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
    established that when no code template matches, the plan-tier model writes
    the Cypher fresh, and two drafts are not equivalent. The data already
    exists: `CypherQueryOutput.template` is None exactly in that case, and
@@ -1944,7 +2037,7 @@ What the overnight session leaves open, each recorded in
    evidence. Key it on the query having been drafted. The stronger version of
    this item is to close the remaining model path entirely, the way `27d68ae`
    closed it for gene questions.
-5. 11.29's BUILD, now that its scoping document exists and is measured. Read
+6. 11.29's BUILD, now that its scoping document exists and is measured. Read
    `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md`
    first: it counts how many golden questions need multi-hop (five, all walking
    one already-built shape), how many need data the graph does not hold
@@ -1953,7 +2046,7 @@ What the overnight session leaves open, each recorded in
    grounding gate, which accepts a verbatim excerpt and rejects a faithful
    paraphrase, is what actually stands between the product and being worth
    reading instead of a general chatbot.
-6. 11.38, a bounded trial of the probability model, if the product owner wants
+7. 11.38, a bounded trial of the probability model, if the product owner wants
    it. The cheap first step is a SHADOW RUN on the guardrail: it decides in
    parallel, its answer is only recorded and never acted on, which produces
    calibration data from this product's own questions rather than a vendor
@@ -1991,13 +2084,16 @@ That points hard at event-loop starvation, consistent with the same suite failin
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up "Next, in order" at item 1, which is a single live run: verify
-   that a phenotype question now reaches a path that can answer it. It is
-   first because it is the one honest gap the overnight session left. Items
-   2 and 3 are the product owner's calls and nothing blocks on them. Awaiting
-   their retest: items 1 to 7 in `testing/Shipped_2026-09-23.md` and items 7
-   to 22 in `testing/Shipped_2026-09-22.md`. The call ceiling is measured and
-   stays at twenty.
+4. Pick up "Next, in order" at item 1, SET 12, the second tester's seven
+   questions, of which zero are answered today. Its three pieces (12.1 the
+   disease anchor's breadth, 12.2 the guardrail's literature vocabulary, 12.4
+   the refusal's follow-up invitation) are independent and can run in
+   parallel, and the Marfan phenotype check belongs to 12.1 rather than
+   standing alone. Items 2 to 4 are the product owner's calls and nothing
+   blocks on them. Awaiting their retest: items 1 to 7 in
+   `testing/Shipped_2026-09-23.md` and items 7 to 22 in
+   `testing/Shipped_2026-09-22.md`. The call ceiling is measured and stays at
+   twenty.
 
 ## Developer detail
 

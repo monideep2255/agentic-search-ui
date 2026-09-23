@@ -1,0 +1,76 @@
+# Transcript of one live run, produced by run_feedback_questions.py.
+# Absolute paths in the tracebacks below were rewritten to be
+# repository-relative; nothing else was changed. The tracebacks are
+# POST-answer bookkeeping (session memory, interaction capture,
+# analytics) failing because the local runner passes no caller
+# identity. They occur after the done event and do not affect the
+# answer being measured.
+
+[MEMORY] reported_record_ids injected=0 text='GERD'
+[CYPHER] MATCH (a:Disease {id: $e_MedGen_C5563728}) RETURN a LIMIT 100
+[ROWS] 0 rows, total=0
+[ROW_KEYS] []
+[WITH_SOURCE_URL] 0
+[FINDING] cypher_query status=empty rows=0 with_source_url=0
+[SYNTH_FINDINGS] 0 capped=False
+[SYNTH_TEXT] "I could not find information on this."
+[GROUNDING] claims=0 outcome=None dropped=None attrs=['narrative', 'claims', 'stripped_count', 'refused', 'sentences', 'sentence_origins']
+[guard] {"passed": true, "category": "ok", "reason": null}
+[cost]
+[think] {"narrative": "Single term query for a medical condition acronym, answerable by one direct lookup (GERD: 1 MedGen record matched by name)", "query_class": "lookup", "resolved_entities": [{"text": "GERD", "curie": "MedGen:C5563728", "confidence": 1.0}], "clarifying_question": null}
+[cost]
+[plan] {"narrative": "Layer 1, the knowledge graph: cypher_query", "tool_calls": [{"tool": "cypher_query", "call_id": "cq-72f68e1af265", "layer": "layer_1_graph", "persona": "Fleming", "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.", "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"}], "resolved_entities": [{"text": "GERD", "curie": "MedGen:C5563728", "confidence": 1.0}]}
+[cost]
+[tool_start]
+[tool_result] {"call_id": "cq-72f68e1af265", "tool": "cypher_query", "layer": "layer_1_graph", "status": "empty", "persona": "Fleming", "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.", "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming", "summary": "0 row(s) of 0", "result_count": 0, "truncated": false}
+[step]
+[token] {"text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC5563728", "marker_ids": [], "kind": null, "cells": null, "emphasis": null}
+[trust_signal]
+[cost]
+[done] {"total_cost_usd": 0.0076292978, "total_tool_calls": 1, "elapsed_ms": 6050, "trust_outcome": "refuse", "trust_line": null, "layer_calls_used": 2, "next_step": null, "next_step_query": null}
+[SUMMARY] {"question": "GERD", "tools": [{"tool": "cypher_query", "layer": "layer_1_graph", "status": "empty", "count": 0, "persona": "Fleming"}], "citations": [], "resolved_entities": ["MedGen:C5563728"], "trust_outcome": "refuse", "answer_trust": {"outcome": "refuse", "risk_tier": "unknown", "grounded": false, "message": "I could not find grounded evidence for this. Try NCBI's cross-database search:", "summary": null}, "elapsed_s": 7.4}
+[SHOWN] 0 citations, 0 not previously reported, 0 previously reported
+
+--- STDERR ---
+session memory not recorded for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 625, in run
+    await _remember_turn(query, final_state["events"])
+  File "src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+    await remember_turn_for_caller(
+  File "src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+interaction capture failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+    await capture_run(query, events)
+  File "src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+    row = assemble_interaction(query, events)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+analytics query_completed event failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+    interaction = assemble_interaction(query, events)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.

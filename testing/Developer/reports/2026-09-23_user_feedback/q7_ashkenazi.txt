@@ -1,0 +1,60 @@
+# Transcript of one live run, produced by run_feedback_questions.py.
+# Absolute paths in the tracebacks below were rewritten to be
+# repository-relative; nothing else was changed. The tracebacks are
+# POST-answer bookkeeping (session memory, interaction capture,
+# analytics) failing because the local runner passes no caller
+# identity. They occur after the done event and do not affect the
+# answer being measured.
+
+[MEMORY] reported_record_ids injected=0 text='What positive and negative genes do ashkenazi jewish people have?'
+[FINDING] cypher_query status=error rows=0 with_source_url=0
+[SYNTH_FINDINGS] 0 capped=False
+[SYNTH_TEXT] "I could not find information on this. The findings provided do not contain any records relevant to the question about positive and negative genes in Ashkenazi Jewish people. No gene-disease associations, variant annotations, or population-specific genetic findings were returned by the knowledge graph, live NCBI APIs, or enrichment APIs for this query."
+[GROUNDING] claims=0 outcome=None dropped=None attrs=['narrative', 'claims', 'stripped_count', 'refused', 'sentences', 'sentence_origins']
+[guard] {"passed": true, "category": "ok", "reason": null}
+[cost]
+[think] {"narrative": "Broad open-ended question about genetic characteristics of an ethnic population with no single obvious path or specific gene symbols mentioned", "query_class": "exploratory", "resolved_entities": [], "clarifying_question": null}
+[cost]
+[plan] {"narrative": "Layer 1, the knowledge graph: cypher_query", "tool_calls": [{"tool": "cypher_query", "call_id": "cq-d992de02f1f5", "layer": "layer_1_graph", "persona": "Chargaff", "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.", "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"}], "resolved_entities": []}
+[cost]
+[tool_start]
+[tool_result] {"call_id": "cq-d992de02f1f5", "tool": "cypher_query", "layer": "layer_1_graph", "status": "error", "persona": "Chargaff", "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.", "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff", "summary": "0 row(s) of 0: no entity could be identified in this query, so no graph lookup was attempted. Name the gene, variant, disease or organism, or supply a CURIE such as NCBIGene:672. Retrying this query unchanged will not help.", "result_count": 0, "truncated": false}
+[step]
+[token] {"text": "I could not tell which gene, variant, disease or organism you mean. Name one and I will search. Or try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=What%20positive%20and%20negative%20genes%20do%20ashkenazi%20jewish%20people%20have%3F", "marker_ids": [], "kind": null, "cells": null, "emphasis": null}
+[trust_signal]
+[cost]
+[done] {"total_cost_usd": 0.007755972, "total_tool_calls": 1, "elapsed_ms": 5386, "trust_outcome": "refuse", "trust_line": null, "layer_calls_used": 0, "next_step": null, "next_step_query": null}
+[SUMMARY] {"question": "What positive and negative genes do ashkenazi jewish people have?", "tools": [{"tool": "cypher_query", "layer": "layer_1_graph", "status": "error", "count": 0, "persona": "Chargaff"}], "citations": [], "resolved_entities": [], "trust_outcome": "refuse", "answer_trust": {"outcome": "refuse", "risk_tier": "unknown", "grounded": false, "message": "I could not tell which gene, variant, disease or organism you mean. Name one and I will search. Or try NCBI's cross-database search:", "summary": null}, "elapsed_s": 6.5}
+[SHOWN] 0 citations, 0 not previously reported, 0 previously reported
+
+--- STDERR ---
+interaction capture failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+    await capture_run(query, events)
+  File "src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+    row = assemble_interaction(query, events)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+analytics query_completed event failed for trace_id=trace-local-repro
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+    interaction = assemble_interaction(query, events)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
