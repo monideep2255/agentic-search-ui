@@ -277,6 +277,10 @@ TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
     # Product-owner direction 2026-09-14: a trial row has a second field of
     # its own, its recruitment status, read verbatim from the record.
     "Clinical trial": ("overall_status", "Trial", "Status"),
+    # The isolate search (G-035, 2026-09-22): the person asked which
+    # isolates carry the genes, so each row shows its AMR genotype list,
+    # read verbatim from the record, beside the isolate's name.
+    "Pathogen Detection isolate": ("amr_genotypes", "Isolate", "AMR genes"),
 }
 
 # The code-built heading over a mapping table, per anchor type, in place of
@@ -284,6 +288,7 @@ TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
 TABLE_HEADINGS: dict[str, str] = {
     "SequenceVariant": "Variant-to-disease mapping",
     "Gene": "Gene-to-disease mapping",
+    "Pathogen Detection isolate": "Isolates and their AMR genes",
 }
 
 

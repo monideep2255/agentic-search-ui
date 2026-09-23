@@ -8223,7 +8223,7 @@ def _layer2_citation_for_synth_finding(
 
 #: The tools whose grounded claims are cited through their OWN builders.
 _LAYER3_CITATION_TOOLS: Final[frozenset[str]] = frozenset(
-    {"clinicaltrials_search", "pubtator_annotate", "litvar2_lookup", "ncbi_dbsnp"}
+    {"clinicaltrials_search", "pubtator_annotate", "litvar2_lookup", "ncbi_dbsnp", "pathogen_detection"}
 )
 
 
@@ -8326,6 +8326,7 @@ def _layer3_citation_for_synth_finding(
         or row_fields.get("pubtator_id")
         or row_fields.get("rsid")
         or row_fields.get("pmid")
+        or row_fields.get("biosample_acc")
         or synth_finding.curie
         or "unknown"
     )

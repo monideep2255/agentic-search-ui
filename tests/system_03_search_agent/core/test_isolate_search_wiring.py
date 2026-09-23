@@ -328,3 +328,20 @@ async def test_write_puts_the_count_under_an_isolate_answer(monkeypatch: pytest.
     assert any("Pathogen Detection lists 21,004 Escherichia coli isolates" in t for t in tokens), tokens
     done = next(e for e in result["events"] if e.type == "done")
     assert done.payload["trust_outcome"] != "refuse"
+    # Measured live on the first pass (2026-09-22): the listing showed the
+    # isolate's name alone and the citation's identity read "unknown". The
+    # genes ride in the table's second cell and the identity is the accession.
+    rows = [e.payload for e in result["events"] if e.type == "token" and e.payload.get("kind") == "table_row"]
+    assert rows and rows[0]["cells"] == ["AZ-TG59983", "acrF, blaCTX-M-15"], rows
+    assert any("Isolates and their AMR genes" in t for t in tokens), tokens
+    citations = [e.payload for e in result["events"] if e.type == "citation"]
+    assert citations and all(c["source_id"] == "SAMN02442784" for c in citations), citations
+
+
+def test_the_isolate_table_shows_the_genes_beside_the_name() -> None:
+    from system_03_search_agent.synthesis.answer_layout import TABLE_HEADINGS, table_second_cell
+
+    row = {"name": "AZ-TG59983", "biosample_acc": "SAMN02442784", "amr_genotypes": "acrF, blaCTX-M-15"}
+    assert table_second_cell("Pathogen Detection isolate", row) == "acrF, blaCTX-M-15"
+    assert table_second_cell("Pathogen Detection isolate", {"name": "x", "amr_genotypes": None}) is None
+    assert TABLE_HEADINGS["Pathogen Detection isolate"] == "Isolates and their AMR genes"
