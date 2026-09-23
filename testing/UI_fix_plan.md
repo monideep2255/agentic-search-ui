@@ -11,26 +11,68 @@ So you can check progress without reading the code.
 ## Where every feature stands
 
 The high-level tracker, kept at the top so nobody has to read the sets to
-answer "what is done and what is left". Every status word here is copied from
-the item's own row further down; the detail stays with the item.
+answer "what is done and what is left". REORGANISED 2026-09-23 on the product
+owner's instruction, into what needs them first, then what is moving, then
+what is finished. Every status word here is copied from the item's own row
+further down; the detail stays with the item.
 
-### Features still to implement
+THIS DOCUMENT IS THE SOURCE OF TRUTH for what gets worked on. An item is
+written here BEFORE it is built. Other folders are evidence referenced from
+here, never a work queue of their own: `testing/User-feedback/` holds a second
+tester's screenshots and is referenced by set 12.
+
+### 1. Waiting on you: retests
+
+Each of these is built, live on develop, and needs your eyes before it counts
+as done. Nothing is blocked on them.
+
+| What to check | Where the steps are | Item |
+|---|---|---|
+| The seven questions your skip manager asked, all of which now answer | `testing/Shipped_2026-09-23.md`, retest items 8 to 11 | 12.1, 12.2, 12.4, 12.7 |
+| The overnight batch: saved answers, MeSH terms, the record count, the MCP address | `testing/Shipped_2026-09-23.md`, retest items 1 to 7 | 10.2, 11.30 and four others |
+| The night of 2026-09-22: the two lost searches, the coordinate range, the accessions, the isolate set | `testing/Shipped_2026-09-22.md`, retest items 7 to 22 | various |
+| Four one-look checks, under a minute each | the items' own rows below | 11.14, 11.36, 9.12, 8.4 |
+
+### 2. Waiting on you: decisions
+
+Each is written so the answer is yes, no, or pick one. None blocks work in
+flight.
+
+| The decision | What it affects | Item |
+|---|---|---|
+| Is twenty sources the right ceiling? | Every answer hits it and then tells the reader it was cut short, which is a large part of why a good answer reads as a thin one | the ceiling, measured and unchanged |
+| Four golden test rows disagree with what the product does, row by row | The test set only, nothing a user sees | the golden rows |
+| Should a one-to-three-word question be asked back, such as `Reflux disease`? | Short questions today are answered on one silent reading of what they meant | 12.3 |
+| Does the Plain language answer keep its small grey medical-advice line? | One line under every plain-language answer | 9.11 |
+| The trust-line wording | One line under every answer | 9.9 |
+
+### 3. Being built right now
 
 | Feature, in plain words | Item | Where it stands |
 |---|---|---|
-| History shows the saved answer instantly, with Run again | 10.2 | BUILT 2026-09-23, awaiting the product owner's retest. The data decision they gave before sleeping: store the answer for SIGNED-IN ACCOUNTS ONLY, never for guests, deleted with the account. Guests are excluded at the WRITE in three independent layers, including a database CHECK constraint. No account delete path exists today, so `forget_saved_answers_for_account` is left tested and called by nothing, with the one line a future delete path must add |
-| A disease question searches every layer, the way a gene question already does | 12.1 | IN PROGRESS 2026-09-23, an agent is building it, and it is the priority. DONE WHEN the whole of `testing/User-feedback/` answers, the product owner's own bar, verified by re-running the committed script. Measured 2026-09-23: 1 of the second tester's 7 questions answers, 6 return no citation at all. The same condition answers as `reflux disease` and refuses as `GERD`, because one name lands on concept ids the graph holds and the other does not, and nothing else is searched. `_build_layer_tool_calls` gates the whole breadth plan on `if gene_symbol:`, so a disease anchor gets one Cypher query and the trials registry, the literature and the live records are never called |
-| The guardrail stops refusing ordinary literature and trials questions | 12.2 | IN PROGRESS 2026-09-23, an agent is building it. The allowlist carries none of `paper`, `publication`, `article`, `literature`, `study`, `trial`, `research`, while its own refusal text offers "a paper question". `any trials for gerd?` is refused and `Any trials for GERD?` is not, because capitalisation decides |
-| A refusal stops inviting the reader to "continue the conversation" | 12.4 | IN PROGRESS 2026-09-23, an agent is building it. The cheapest item on this list. `FollowUp.tsx` renders under every result, so a "No answer found" screen offers "What variants cause it?" with no "it" to refer to |
-| Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
+| The trust line stops undercounting an answer's sources | 12.8 | IN PROGRESS 2026-09-23, an agent is on it. "Based on 1 source" under five cited papers |
+| Plain language and researcher stop returning the same text | 12.9 | IN PROGRESS 2026-09-23, an agent is on it. Identical word counts on four of seven questions, which is 11.31's defect returning |
 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
-| The MCP mount's redirect emitting `http://`, the other half of "every integration works end to end" | 11.30 | FIXED 2026-09-23, awaiting the product owner's retest. Cause: Railway terminates TLS at its edge and uvicorn's `--forwarded-allow-ips` defaults to loopback, so `X-Forwarded-Proto` was discarded and Starlette built the mount redirect from the container's plaintext view. Fixed IN THE APP rather than in a deployment setting, so it travels with the code and the two services cannot disagree. UPGRADE ONLY: the header can move the scheme to `https` and never to `http`, so no value a caller can put in it makes any redirect less secure than with the header absent. The one-line alternative (`--forwarded-allow-ips='*'`) was REJECTED because it also rewrites the client address from the caller-controlled leftmost `X-Forwarded-For`, which two rate limits hash |
-| Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22) |
-| Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | A discussion that precedes a build under `/bossman-mode` (reclassified 2026-09-22) |
-| The explanation half of 11.31 | 11.31 | Parked. The product owner approved the current state as is on 2026-09-21; the remaining lever is a standing option, not queued work |
-| The load-dependent frontend tests and journey 7's navigation, fixed before relying on them in quick checks | D4, under "Developer follow-through" | SPLIT 2026-09-23. Journey 7 FIXED: nav items are buttons, not links, and below 720px only reachable through the overflow menu, so the old `getByRole("link")` inside a `.catch()` had never navigated while reporting success. Proven red against the old selector and green after, with a filmstrip showing the Integrations screen rendered at 390px. The `.catch()` was removed rather than kept. The load-dependent suite is DIAGNOSED with a named mechanism and was still being fixed at the close of the session; see the `## Worker C:` entries in `testing/Developer/reports/2026-09-23_overnight/findings.md` |
 
-### Features done
+### 4. Still to build, nobody on it
+
+| Feature, in plain words | Item | Where it stands |
+|---|---|---|
+| Tell the reader when the system wrote its own search rather than using a checked one | "Next, in order" item 5 | Not started. The data exists: `CypherQueryOutput.template` is None exactly then. THE TRAP: the degradation is `ok` to `ok`, never `empty` |
+| Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
+| The load-dependent frontend tests | D4, under "Developer follow-through" | Journey 7 FIXED 2026-09-23. The load-dependent suite is diagnosed and was still being worked at the close of that session |
+
+### 5. Parked, and discussions that precede a build
+
+| Feature, in plain words | Item | Where it stands |
+|---|---|---|
+| Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | A discussion that precedes a build under `/bossman-mode`, reclassified 2026-09-22 |
+| Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | A discussion that precedes a build. Its scoping document now exists and is measured: `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md` |
+| A bounded trial of the probability model | 11.38 | Backlog only, nothing designed and nothing promised |
+| The explanation half of 11.31 | 11.31 | Parked. You approved the current state as is on 2026-09-21 |
+| The byte ceiling at 50,000 | see its row | Parked |
+
+### 6. Done
 
 Every numbered item in sets 1 to 9 is built and live on develop. All are
 approved except these, each in its own row further down:
@@ -39,40 +81,47 @@ approved except these, each in its own row further down:
 - 8.4 and 9.12, each awaiting one look
 - 9.3, 9.4 and 9.10, superseded
 - 9.8, approved for the disease names; its further-records half superseded
-- 9.9, approved for the one-line shape; the wording still the product owner's
-  decision
-- 9.11, the product owner's decision, not an approval
+- 9.9, approved for the one-line shape; the wording still your decision
+- 9.11, your decision, not an approval
 
-Set 10 has 10.1 built and live and 10.3 run. Set 11:
+Set 10 has 10.1 built, live and approved, 10.2 built and awaiting retest, and
+10.3 run. Set 11:
 
 - 17 rows live and approved
-- 11.22 verified live
-- 11.34 fixed and live
+- 11.22 verified live, 11.34 fixed and live
 - 11.14 and 11.36 live, awaiting one look
-- L-01 confirmed, not fixed, in "Additional notes" below
+- 11.30 fixed 2026-09-23 and live-verified end to end
+- L-01 cause found and no longer reproducible, in "Additional notes" below
 - The rest answered, done, superseded, accepted or listed above
+
+Set 12, your skip manager's feedback, raised and built 2026-09-23: 12.1, 12.2,
+12.4 and 12.7 are live and awaiting your retest; 12.3 and 12.5 are answered;
+12.6 was found already built; 12.8 and 12.9 are in progress.
 
 ### Additional notes
 
-- Waiting on the product owner:
-  - The retest of items 7 to 16 in `testing/Shipped_2026-09-22.md`
-  - Four checks of under a minute each: 11.14, 11.36, 9.12 and 8.4
-  - Decisions: the medical-advice line on Plain language answers (9.11), the
-    trust-line wording (9.9), the three golden rows that disagree with the
-    guardrail, and the twenty-source ceiling
-- The isolate shape (G-035) is BUILT, VERIFIED LIVE and AWAITING RETEST
-  as of the night of 2026-09-22: the shape the product owner approved in
-  discussion, a bounded sample of isolates each with its AMR genes and a
-  link plus a disclosed count and cut. Its queries and retest workflow are
-  `testing/Product/queries/Isolate_search_queries_and_workflow.md`; retest items 17 to 22
-  in `testing/Shipped_2026-09-22.md`
+- THE GRAPH HOLDS NO DISEASE NAMES AND NO MESH TERMS, measured graph-wide on
+  2026-09-23. Every `Disease` vertex carries its source vocabulary in `name`
+  and zero contain the word "syndrome". Known since build phase 2.1 as
+  F-2.1-B07. Writing the graph is Systems 1 and 2 work in the other
+  repository, so this is a hand-over rather than a task, and it BOUNDS what
+  any answer-path work here can achieve.
+- ITEM 11.21's PROMISE IS NOT BEING KEPT, measured for the first time on
+  2026-09-23 and on wiring nobody changed. Six identical PubMed searches
+  returned two distinct result sets, and the GERD questions moved 20 citations
+  to 19 with one paper swapped. Separately, which path a question takes is a
+  model call, so it is a sample: `reflux disease` resolved nothing on one run
+  in six. Nobody had looked. Not yet its own item.
+- The isolate shape (G-035) is BUILT, VERIFIED LIVE and AWAITING RETEST. Its
+  queries and retest workflow are
+  `testing/Product/queries/Isolate_search_queries_and_workflow.md`; retest
+  items 17 to 22 in `testing/Shipped_2026-09-22.md`
 - L-01, a whole graph result vanishing on some runs: CAUSE FOUND and no longer
-  reproducible on develop (12 live runs, 2026-09-23). The model drafting its own
-  Cypher when no template matches is the mechanism; two commits narrowed that
-  path and closed it for the measured questions. Telling the reader when a search
-  was drafted rather than vetted is still open
-- Parked, and why: the explanation half of 11.31; the byte ceiling at 50,000;
-  OMIM is live with its title filter and the two ship together
+  reproducible on develop (12 live runs, 2026-09-23). The model drafting its
+  own Cypher when no template matches is the mechanism; two commits narrowed
+  that path and closed it for the measured questions
+- OMIM is live WITH `filter_omim_titles`; the two ship together and neither is
+  enabled or removed without the other
 - Measured rather than built: the call ceiling stays at twenty (24 runs, none
   refused, the worst pass 17 of 20); item 10.3's consistency run (86 of 150
   answered; 25 questions answer every time, 18 never)
@@ -1617,11 +1666,14 @@ Evidence, with a full transcript per question and a re-runnable script:
 
 | # | The feedback | Status | Where it stands |
 |---|---|---|---|
-| 12.1 | "am I asking the wrong kind of question?" A disease question searches one place and refuses. `reflux disease`, `GERD`, `Any trials for GERD?` | In progress 2026-09-23, and it is the priority | CAUSE FOUND 2026-09-23, and the code says it in its own words. `_build_layer_tool_calls` in `core/graph.py` opens with `if gene_symbol:` and its docstring closes: "A question that resolves no gene and names no rs id plans nothing here, so a disease named only as a typed `MedGen:` CURIE keeps its single graph call." So item 11.21's breadth wiring, live NCBI records plus the literature plus the trials registry, fires on a GENE. Anchor a question on a disease and it gets ONE Cypher query. Question 3 is the sharpest case because every step before the last one worked: Think resolved GERD to `MedGen:C5563728` at confidence 1.0 and its own narrative reads "open-ended exploration across trial registries and literature", then Plan chose `cypher_query` alone and ran `MATCH (a:Disease {id: $e_MedGen_C5563728}) RETURN a LIMIT 100`, which returned 0 rows. `clinicaltrials_search` is built, tested, wired, and was never called; the registry holds thousands of GERD trials. THE SHARPEST EVIDENCE IS A PAIR OF SYNONYMS, and neither half was designed: `reflux disease` resolves to eight MedGen concepts that ALL exist as `Disease` vertices, so its single graph call returns 8 rows and the question ANSWERS; `GERD` resolves to one concept, `MedGen:C5563728`, which the graph does not hold, so the identical single call returns zero and the question refuses. The same condition under two names answers or refuses depending on which concept id the name lands on, because nothing else is searched. That is a single point of failure, not a ranking problem. THE FIX IS ROUTING, NOT CAPABILITY: give a disease anchor the same breadth a gene anchor has. It compounds with the 2026-09-23 graph finding, since a `Disease` row that did come back carries its source vocabulary in `name` rather than a usable name |
-| 12.2 | "unexpected": `papers on the effects of caffeine on exercise performance` is refused as "Outside biomedical research" | IN PROGRESS 2026-09-23, an agent is building it | The guardrail allowlist in `guardrail/prefilter.py` carries NO literature vocabulary. Absent as single terms, all measured: `paper`, `papers`, `publication`, `article`, `literature`, `study`, `studies`, `trial`, `trials`, `research`. Only the two-word `clinical trials` is present. THE REFUSAL TEXT ITSELF says "I can help with a gene, variant, pathogen, or paper question", and `paper` is not in the allowlist, so the refusal invites a question the same check then refuses. WORSE, AND MEASURED: `Any trials for GERD?` clears only because `GERD` is uppercase and matches the deliberately over-broad symbol regex `\b[A-Z]{2,}[A-Z0-9-]*\b`. `any trials for gerd?` is REFUSED. Capitalisation decides whether a question is medical. Also refused today: `recent papers on statins`, `find me studies about vitamin d`, `what does the literature say about metformin`, `show me publications about aspirin`, `latest research on long covid`, `is there a trial recruiting for melanoma`. This has never surfaced in our own testing because every question we type names a gene in capitals, which clears by the same accident |
+| 12.1 | "am I asking the wrong kind of question?" A disease question searches one place and refuses. `reflux disease`, `GERD`, `Any trials for GERD?` | LIVE on develop 2026-09-23, `02130d7`, awaiting the product owner's retest | CAUSE FOUND 2026-09-23, and the code says it in its own words. `_build_layer_tool_calls` in `core/graph.py` opens with `if gene_symbol:` and its docstring closes: "A question that resolves no gene and names no rs id plans nothing here, so a disease named only as a typed `MedGen:` CURIE keeps its single graph call." So item 11.21's breadth wiring, live NCBI records plus the literature plus the trials registry, fires on a GENE. Anchor a question on a disease and it gets ONE Cypher query. Question 3 is the sharpest case because every step before the last one worked: Think resolved GERD to `MedGen:C5563728` at confidence 1.0 and its own narrative reads "open-ended exploration across trial registries and literature", then Plan chose `cypher_query` alone and ran `MATCH (a:Disease {id: $e_MedGen_C5563728}) RETURN a LIMIT 100`, which returned 0 rows. `clinicaltrials_search` is built, tested, wired, and was never called; the registry holds thousands of GERD trials. THE SHARPEST EVIDENCE IS A PAIR OF SYNONYMS, and neither half was designed: `reflux disease` resolves to eight MedGen concepts that ALL exist as `Disease` vertices, so its single graph call returns 8 rows and the question ANSWERS; `GERD` resolves to one concept, `MedGen:C5563728`, which the graph does not hold, so the identical single call returns zero and the question refuses. The same condition under two names answers or refuses depending on which concept id the name lands on, because nothing else is searched. That is a single point of failure, not a ranking problem. THE FIX IS ROUTING, NOT CAPABILITY: give a disease anchor the same breadth a gene anchor has. It compounds with the 2026-09-23 graph finding, since a `Disease` row that did come back carries its source vocabulary in `name` rather than a usable name |
+| 12.2 | "unexpected": `papers on the effects of caffeine on exercise performance` is refused as "Outside biomedical research" | LIVE on develop 2026-09-23, `f63b272`, awaiting the product owner's retest | The guardrail allowlist in `guardrail/prefilter.py` carries NO literature vocabulary. Absent as single terms, all measured: `paper`, `papers`, `publication`, `article`, `literature`, `study`, `studies`, `trial`, `trials`, `research`. Only the two-word `clinical trials` is present. THE REFUSAL TEXT ITSELF says "I can help with a gene, variant, pathogen, or paper question", and `paper` is not in the allowlist, so the refusal invites a question the same check then refuses. WORSE, AND MEASURED: `Any trials for GERD?` clears only because `GERD` is uppercase and matches the deliberately over-broad symbol regex `\b[A-Z]{2,}[A-Z0-9-]*\b`. `any trials for gerd?` is REFUSED. Capitalisation decides whether a question is medical. Also refused today: `recent papers on statins`, `find me studies about vitamin d`, `what does the literature say about metformin`, `show me publications about aspirin`, `latest research on long covid`, `is there a trial recruiting for melanoma`. This has never surfaced in our own testing because every question we type names a gene in capitals, which clears by the same accident |
 | 12.3 | The product owner's question: do we ask a clarifying question when a query is one to three words, such as `Reflux disease`, which could mean many things? | ANSWERED, and the answer is no | Measured 2026-09-23. There are exactly FOUR clarifying paths today and none covers a short or broad question. `_needs_clarification` in `core/graph.py` fires only when a question contains a referring word ("it", "those") AND resolves no entity AND has no remembered antecedent, so a bare topic, which contains no referring word, never reaches it. The other three are `coordinate_window.ASSEMBLY_QUESTION` (a chromosome window with no assembly named), `isolate_search`'s two clarifications (an isolate question missing its organism or its gene), and an accession the product cannot place. NOTHING is keyed on the question being short, broad, or having several readings: a two-word disease name is treated as a fully specified request, one reading is picked silently, and then it refuses. Whether to build this is the product owner's call, and it should be decided AFTER 12.1, because a question that can be answered should be answered rather than queried back |
-| 12.4 | "If it didn't have an answer, why would I 'continue the conversation'? Maybe 'ask another question?'" | In progress 2026-09-23, and it is the cheapest item here | `FollowUp.tsx` renders unconditionally under every result, including a refusal. So a person just told "No answer found in NCBI records" is offered the heading "Continue this conversation" and three chips: "What variants cause it?", "Which trials are recruiting?", "What does the literature add?". There is no "it". Pressing the first chip sends a question whose only referring word has no antecedent, which is the one case `_needs_clarification` DOES catch, so the product would then ask which gene they meant. Two changes: the heading reads "Ask another question" when the result carried no answer, and the three chips are suppressed or replaced with something the person could actually ask next |
+| 12.4 | "If it didn't have an answer, why would I 'continue the conversation'? Maybe 'ask another question?'" | LIVE on develop 2026-09-23, `955c4ac`, awaiting the product owner's retest | `FollowUp.tsx` renders unconditionally under every result, including a refusal. So a person just told "No answer found in NCBI records" is offered the heading "Continue this conversation" and three chips: "What variants cause it?", "Which trials are recruiting?", "What does the literature add?". There is no "it". Pressing the first chip sends a question whose only referring word has no antecedent, which is the one case `_needs_clarification` DOES catch, so the product would then ask which gene they meant. Two changes: the heading reads "Ask another question" when the result carried no answer, and the three chips are suppressed or replaced with something the person could actually ask next |
 | 12.6 | The product already writes a good clarifying question and throws it away | ALREADY BUILT, closed by measurement, no work needed | CORRECTED 2026-09-23, hours after this row first claimed the opposite, and the correction is kept because it was wrong in the direction that suited the story being told. The claim came from reading the graph tool's own error text ("no entity could be identified in this query ... Name the gene, variant, disease or organism") and ASSUMING the generic refusal reached the screen. It does not. `synthesis/refuse.py` already carries `NO_ENTITY_REASON_MARKER` and `UNRESOLVED_QUESTION_MESSAGE`, decided from the user's chair on 2026-09-22, and a live run of the ashkenazi question on 2026-09-23 returns: "I could not tell which gene, variant, disease or organism you mean. Name one and I will search. Or try NCBI's cross-database search: ...". The tester's screenshots are from the 2026-09-14 build, which predates that fix. SO THE ONLY REMAINING GAP IN THIS FAMILY IS 12.4, the follow-up block that still invites a conversation UNDER that clarification |
+| 12.7 | A question naming no gene and no disease finds nothing at all: `papers on the effects of caffeine on exercise performance`, `Does coffee help make exercise more effective?`, the Mediterranean and Ashkenazi questions | LIVE on develop 2026-09-23, `7c1ebc4` and `29c8687`, awaiting the product owner's retest | RAISED AND BUILT 2026-09-23 after 12.1 and 12.2 landed and four questions still returned nothing. Think resolves genes and diseases, and these name a chemical or a population, so the graph was asked a question with nothing to bind and the reader was told to name a gene. THE FIX IS NOT A CHEMICAL RESOLVER, and then a population resolver, and then a diet resolver: A LITERATURE QUESTION NEEDS NO ENTITY. When a question names the published literature and no gene resolved, the question's own typed words become a PubMed term, which stays deterministic because the user's words do not vary between runs. Terms were MEASURED LIVE, not guessed, and three shapes rejected with their hit counts: the question verbatim returns ZERO for the Mediterranean question, because "papers" maps to PubMed's subject heading for the physical material. A SECOND ROUND was needed after the lead read the answers instead of counting them: five papers rendered as ninety-one rows, the same title fifteen times, 932 words. The cause was one row per SENTENCE OF THE ABSTRACT, not per field. Now 101 words, five rows. Full account: `testing/Developer/reports/2026-09-23_set12/worker_topic.md` |
+| 12.8 | The trust line under an answer undercounts its sources: "Based on 1 source" beneath five cited papers | RAISED 2026-09-23 by the product owner, who asked for it to be fixed | MEASURED across fourteen runs on 2026-09-23 and PRE-EXISTING, not caused by today's work, though 12.7's deduplication made it more visible. What the reader sees against what the line claims: 20 cited sources reads "Based on 4 sources"; 12 reads "Based on 3 sources"; 5 reads "Based on 2 sources", and after 12.7's dedup the same answer reads "Based on 1 source" over five clickable papers. So the line has never counted what the reader can see. From the user's chair this is a plain falsehood on screen under every answer, and it undersells the work: a reader told an answer rests on one source discounts it. Evidence: `testing/Developer/reports/2026-09-23_set12/both_depths/` |
+| 12.9 | Plain language and researcher return the SAME text, which is the defect 11.31 was raised for and marked fixed on 2026-09-21 | RAISED 2026-09-23 by the product owner, who asked for it to be fixed | MEASURED 2026-09-23 by asking all seven questions at both depths: identical word counts to the digit on four of the seven, `reflux disease` 213 and 213, `GERD` 185 and 185, the coffee question 932 and 932, the Mediterranean question 639 and 639. Three did differ, so it is not universal, which is why it needs a diagnosis rather than a patch. 11.31 was approved on 2026-09-21 on the understanding that the two modes had been separated; either these paths never read `audience_depth`, or something downstream drops it. THE INSTRUCTION IS TO NAME THE LAYER THAT DROPS IT, not to build a second answer writer on top. Evidence: `testing/Developer/reports/2026-09-23_set12/both_depths/` |
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 

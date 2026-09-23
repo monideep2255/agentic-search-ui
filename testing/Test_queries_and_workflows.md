@@ -6,6 +6,7 @@ This is the one document that lists every query worth typing into the product, w
 - `testing/Shipped_2026-09-20.md`
 - `testing/Shipped_2026-09-22.md`
 - `testing/Shipped_2026-09-23.md`
+- `testing/User-feedback/`, a second tester's screenshots, with their comment in each filename
 - `testing/Product/queries/Isolate_search_queries_and_workflow.md`
 - `testing/UI_fix_plan.md`
 
@@ -25,6 +26,7 @@ This is the one document that lists every query worth typing into the product, w
 - [7. Sign in, sessions and history](#7-sign-in-sessions-and-history)
 - [8. Stop, feedback and the connection](#8-stop-feedback-and-the-connection)
 - [9. Screens, phone width, the tour and the disclaimer](#9-screens-phone-width-the-tour-and-the-disclaimer)
+- [10. Questions with no gene and no disease in them](#10-questions-with-no-gene-and-no-disease-in-them)
 - [Workflow for the product owner](#workflow-for-the-product-owner)
 - [Workflow for the developer](#workflow-for-the-developer)
 - [Where each query came from](#where-each-query-came-from)
@@ -51,7 +53,9 @@ When an answer does not match what is expected, screenshot it into `testing/Prod
 
 As of 23 September 2026. Everything named here is live on develop and none of it has been retested yet, so this is the queue rather than a summary.
 
-Start with these two, because they are where a mistake is most likely and most costly:
+START WITH SECTION 10, queries 68 to 71. They came from someone who had never seen the product, six of their seven questions returned nothing on 2026-09-14, and all seven answer now. That is the largest change in behaviour to check and the one a person feels first.
+
+Then these two, because they are where a mistake is most likely and most costly:
 
 - Query 67, a past search reopening with the answer it gave. Pick a question whose answer had a table, such as an isolate question. The backend, the screen and the seam between them were built separately, so the table is where a seam would show.
 - Query 66, the phenotypic features of Marfan syndrome. One live run settles the single gap the 23 September work left open, and that entry says plainly what is not yet known about it.
@@ -1272,6 +1276,87 @@ Why it matters: a first-time visitor who does not know what to ask should be abl
 
 Status: Not yet recorded as approved (Product test 22)
 
+## 10. Questions with no gene and no disease in them
+
+Added 2026-09-23 from `testing/User-feedback/`, a second tester's session on
+the 2026-09-14 build. They had never seen the product and asked what a person
+actually asks. Six of their seven questions returned nothing. All seven answer
+now, and these queries are how that stays true.
+
+### 68. A condition, asked by its common name and by its abbreviation
+
+Testing: the same condition answers whichever name a person uses.
+
+Query: `GERD`, then `reflux disease`, then `Any trials for GERD?`
+
+Steps: ask each as a new search.
+
+Expected:
+
+- All three answer with cited records rather than "I could not find grounded evidence for this".
+- The trials question returns real ClinicalTrials.gov studies, each linked to its own study page.
+- The abbreviation and the full name both work. Before 2026-09-23 `reflux disease` answered and `GERD` refused, because one name landed on concept ids the graph holds and the other did not, and nothing else was searched.
+
+Why it matters: a person types whichever name they know. A product that answers one and refuses the other looks broken in a way they cannot diagnose, and they will not think to try a synonym.
+
+Status: Awaiting retest (Shipped_2026-09-23 items 8 and 10; UI_fix_plan item 12.1)
+
+### 69. A question about a chemical, a food or a population
+
+Testing: a question that names no gene and no disease still finds the published literature.
+
+Query: `papers on the effects of caffeine on exercise performance`, then `Are there any beneficial variants typically found in people of mediterranean descent?`
+
+Steps: ask each as a new search, in a FRESH session or at least not straight after a gene question.
+
+Expected:
+
+- Cited papers, each linked to its own PubMed page, rather than a request to name a gene.
+- Each paper appears ONCE in the list. Before 2026-09-23 five papers rendered as ninety-one rows with the same title repeating.
+- The answer reports what has been published. It never gives a verdict of its own.
+- On the caffeine question the papers should be about caffeine and exercise, for example the sports nutrition position stand, not about something adjacent.
+
+Why it matters: the product has a gene resolver and a disease resolver, so a question naming a chemical or a population used to reach nothing at all. Most questions a non-specialist asks are this shape.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 11; UI_fix_plan item 12.7)
+
+### 70. The same question in lower case
+
+Testing: capitalisation does not decide whether a question is medical.
+
+Query: `any trials for gerd?` in lower case, then `recent papers on statins`, then `what does the literature say about metformin`
+
+Steps: ask each as a new search.
+
+Expected:
+
+- Each is accepted and searched.
+- None is answered with "This looks outside biomedical research. I can help with a gene, variant, pathogen, or paper question."
+- Before 2026-09-23, `Any trials for GERD?` was accepted and `any trials for gerd?` was refused, because the capitals matched a gene-symbol pattern rather than because the question was understood.
+
+Why it matters: a person who types in lower case, or whose question names no gene in capitals, was being told their subject was outside biomedical research. That reads as a statement about their field, not about the product.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 9; UI_fix_plan item 12.2)
+
+### 71. What sits under an answer that found nothing
+
+Testing: a refusal does not invite the reader into a conversation that has nothing in it.
+
+Query: anything the product cannot answer. A made-up gene symbol works.
+
+Steps: ask it, wait for the refusal, then read everything below the refusal block.
+
+Expected:
+
+- The heading under the refusal reads "Ask another question", not "Continue this conversation".
+- The three suggestion chips ("What variants cause it?", "Which trials are recruiting?", "What does the literature add?") are GONE. There is no "it" to refer to.
+- The field to type your next question is still there.
+- On an answer that DID find something, the heading and all three chips are unchanged.
+
+Why it matters: the tester's own words were "If it didn't have an answer, why would I 'continue the conversation'? Maybe 'ask another question?'". Pressing the first chip sent a question about an "it" with no antecedent, so the product then asked them which gene they meant: its own suggestion walked them from one dead end into another.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 10; UI_fix_plan item 12.4)
+
 ## Workflow for the product owner
 
 1. Open the develop app: <https://search-agent-web-develop-2aeb.up.railway.app>
@@ -1310,4 +1395,5 @@ For the wider suite, `testing/Developer/Developer_workflows.md` has the full spe
 | 6. Refusals, off-topic and compute requests | `Product/Product_workflows.md` tests 8, 19; `Shipped_2026-09-22.md` item 4; `UI_fix_plan.md` "What is live on develop" |
 | 7. Sign in, sessions and history | `Product/Product_workflows.md` tests 3, 4, 5, 6, 16, 18, 20; `Shipped_2026-09-23.md` item 2; `UI_fix_plan.md` item 10.2 |
 | 8. Stop, feedback and the connection | `Product/Product_workflows.md` tests 9, 10, 21 |
+| 10. Questions with no gene and no disease in them | `User-feedback/` (a second tester's four screenshots); `Shipped_2026-09-23.md` items 8 to 11; `UI_fix_plan.md` items 12.1, 12.2, 12.4, 12.7 |
 | 9. Screens, phone width, the tour and the disclaimer | `Product/Product_workflows.md` tests 11, 15, 17, 22; `Shipped_2026-09-20.md` retest item 4; `UI_fix_plan.md` item 11.30; `Shipped_2026-09-23.md` item 1 |
