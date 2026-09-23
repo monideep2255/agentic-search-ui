@@ -258,3 +258,22 @@ def test_a_summary_record_becomes_a_row_led_by_the_field_a_person_recognises(
     assert withheld not in row["fields"]
     assert set(row["fields"]) <= set(graph_module._BREADTH_FIELDS_BY_PURPOSE[purpose])
     assert row["source_url"].endswith(f"/{db}/1")
+
+
+def test_an_sra_summary_row_shows_the_run_accessions_not_the_markup() -> None:
+    """Measured live on the first accession run: the answer read
+    `<Run acc="SRR9496657" total_spots="118" .../>` where a person wants
+    the accession."""
+    markup = (
+        '<Run acc="SRR9496657" total_spots="118" total_bases="95317" load_done="true"/>'
+        '<Run acc="SRR9496658" total_spots="2"/><Run acc="SRR9496657"/>'
+    )
+    record = NcbiEfetchRecord(id="1", db="sra", fields={"runs": markup, "createdate": "2019/06/26"}, source_url="https://www.ncbi.nlm.nih.gov/sra/1")
+    output = NcbiEfetchOutput(status="ok", action="summary", records=[record], record_count=1, total_available=1, truncated=False)
+    (row,) = graph_module._ncbi_efetch_output_to_structured_fields(output, "sra_summary")["rows"]
+    assert row["fields"]["runs"] == "SRR9496657, SRR9496658"
+    assert graph_module._sra_run_accessions("   no markup here  ") == "no markup here"
+    plain = NcbiEfetchRecord(id="2", db="sra", fields={"runs": markup}, source_url="https://www.ncbi.nlm.nih.gov/sra/2")
+    other = NcbiEfetchOutput(status="ok", action="summary", records=[plain], record_count=1, total_available=1, truncated=False)
+    (untouched,) = graph_module._ncbi_efetch_output_to_structured_fields(other, "")["rows"]
+    assert untouched["fields"]["runs"] == markup, "only the sra_summary purpose reshapes the field"

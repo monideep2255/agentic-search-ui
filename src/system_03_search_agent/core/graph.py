@@ -4778,6 +4778,11 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
 #: against the question's own gene before any of them becomes a row.
 _OMIM_SUMMARY_PURPOSE: Final[str] = "omim_summary"
+#: Fix-plan item 2 (2026-09-22): an SRA summary's `runs` field is the markup
+#: string NCBI returns (`<Run acc="SRR9496657" total_spots="118" .../>`); a
+#: person wants the run accession, so the row carries the accessions alone.
+_SRA_SUMMARY_PURPOSE: Final[str] = "sra_summary"
+_SRA_RUN_ACCESSION = re.compile(r'acc="([A-Z]{3}\d+(?:\.\d+)?)"')
 
 #: UI fix 11.22. The purpose whose records carry a real abstract, and the
 #: raw `fields` key `ncbi_eutils_actions._extract_pubmed_articles` already
@@ -4869,6 +4874,16 @@ def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -
     return [record for index, record in enumerate(records) if index in kept]
 
 
+def _sra_run_accessions(runs: str) -> str:
+    """The run accessions inside an SRA summary's `runs` markup, comma
+    separated and in order, or the markup's own text with its whitespace
+    collapsed when it carries no `acc` attribute at all."""
+    accessions = list(dict.fromkeys(_SRA_RUN_ACCESSION.findall(runs)))
+    if accessions:
+        return ", ".join(accessions)
+    return " ".join(runs.split())
+
+
 def _ncbi_efetch_output_to_structured_fields(
     output: NcbiEfetchOutput, purpose: str = "", gene_symbol: str | None = None
 ) -> dict[str, Any]:
@@ -4904,6 +4919,11 @@ def _ncbi_efetch_output_to_structured_fields(
     to reach synthesis by any later path, and `row_count`,
     `total_available` and `truncated` below are then computed over what
     actually stands.
+
+    Fix-plan item 2 (2026-09-22): for `purpose == "sra_summary"`, the `runs`
+    field is reduced to the run accessions the markup carries, so the answer
+    reads "runs: SRR9496657" rather than the raw `<Run .../>` string NCBI
+    returns. Measured live on the first accession run before this existed.
     """
     allowed = _BREADTH_FIELDS_BY_PURPOSE.get(purpose)
     records = list(output.records)
@@ -4935,6 +4955,11 @@ def _ncbi_efetch_output_to_structured_fields(
         rows = rows[:_BREADTH_ROW_CAP]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
             rows = rows + _pubmed_abstract_rows(output.records, rows)
+        if purpose == _SRA_SUMMARY_PURPOSE:
+            for row in rows:
+                runs = row["fields"].get("runs")
+                if isinstance(runs, str):
+                    row["fields"]["runs"] = _sra_run_accessions(runs)
     return {
         "status": output.status,
         "row_count": len(rows),
