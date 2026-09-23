@@ -2336,9 +2336,15 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # Only the wait ceiling moves; the Section 21.3 call COUNT is the same
     # 20 for every class.
     call_budget.set_query_class(query_class)
+    # Fix-plan item 2 (2026-09-22): a resolved accession is the question's
+    # own subject, so "which SRA runs come from it?" refers to something.
+    # Measured live before this line: the BioSample question resolved its
+    # record and its runs, then asked which gene the person meant.
+    has_accession_subject = accession_plan is not None and accession_plan.uid is not None
     clarification = (
         CLARIFICATION_QUESTION
-        if _needs_clarification(
+        if not has_accession_subject
+        and _needs_clarification(
             query.text,
             state,
             [entity.curie for entity in resolved_entities],

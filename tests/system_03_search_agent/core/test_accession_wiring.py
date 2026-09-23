@@ -10,7 +10,10 @@ Coverage statement, per `goal-contracts`: Think with a BioProject NCBI has
 (the uid and the three link lists on the state, the disclosure in the
 narrative, the model's spans not confirmed, no clarification), with one NCBI
 does not have (the not-found answer as the clarification, nothing on the
-state), and with a plain gene question (untouched); Plan with an accession
+state), with a BioSample question whose "come from it" would otherwise trip
+the follow-up clarification (no ask, since the accession is the subject; the
+same question with the accession unrecognised does ask, the populate
+check), and with a plain gene question (untouched); Plan with an accession
 plan (four NCBI summaries in order, no graph call, the plan event naming the
 accession) and without one (the graph call first, as before); Write's
 refusal branch with a plan whose first call is an NCBI call, which used to
@@ -42,6 +45,7 @@ PROJECT_QUESTION = (
     "assemblies, and tell me how to retrieve each."
 )
 UNKNOWN_QUESTION = "What is in BioProject PRJNA999999999?"
+BIOSAMPLE_QUESTION = "What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?"
 GENE_QUESTION = "Which diseases are associated with BRCA1?"
 
 # The probe's real ids: uid 31257, one BioSample, one SRA run, one assembly.
@@ -51,15 +55,23 @@ LINKS = {"biosample": ["12121739"], "sra": ["8317276"], "assembly": ["11968211"]
 class _Spy:
     """Fakes for the NCBI search and link actions, recording every input."""
 
-    def __init__(self, monkeypatch: pytest.MonkeyPatch, *, known: bool = True) -> None:
+    def __init__(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        known: bool = True,
+        uid_by_db: dict[str, str] | None = None,
+    ) -> None:
         self.searches: list[Any] = []
         self.links: list[Any] = []
+        uids = uid_by_db or {"bioproject": "31257"}
 
         async def _search(tool_input: Any, **kwargs: Any) -> Any:
             self.searches.append(tool_input)
-            if tool_input.db == "bioproject" and known:
+            if known and tool_input.db in uids:
                 return SimpleNamespace(
-                    status="ok", records=[SimpleNamespace(id="", fields={"idlist": ["31257"], "idlist_count": 1})]
+                    status="ok",
+                    records=[SimpleNamespace(id="", fields={"idlist": [uids[tool_input.db]], "idlist_count": 1})],
                 )
             return SimpleNamespace(status="empty", records=[])
 
@@ -145,6 +157,27 @@ async def test_an_accession_ncbi_does_not_have_is_answered_with_not_found(
     assert "was not found" in (result.get("clarification_needed") or "")
     assert "accession_plan" not in result
     assert spy.links == [], "no link is asked for a record that was not found"
+
+
+@pytest.mark.asyncio
+async def test_a_referring_word_in_an_accession_question_does_not_ask_which_gene(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Measured live 2026-09-22: "come from it" tripped the follow-up
+    clarification and the BioSample question was answered with "which gene,
+    variant or condition do you mean?" after its record and runs had
+    resolved. A resolved accession is the question's own subject."""
+    _install_model(monkeypatch)
+    _Spy(monkeypatch, uid_by_db={"biosample": "12121739"})
+    result = await graph_module.think_node(_state(BIOSAMPLE_QUESTION))
+    assert result.get("clarification_needed") is None
+    plan = result["accession_plan"]
+    assert plan.record.kind == "biosample" and plan.uid == "12121739"
+    assert "sra" in plan.linked
+    # Populate check: with the accession unrecognised, the same words do ask.
+    monkeypatch.setattr(graph_module.accession, "parse_accession", lambda text: None)
+    asked = await graph_module.think_node(_state(BIOSAMPLE_QUESTION))
+    assert asked.get("clarification_needed") == graph_module.CLARIFICATION_QUESTION
 
 
 @pytest.mark.asyncio
