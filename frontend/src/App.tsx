@@ -1705,6 +1705,21 @@ export function App() {
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}
+                // UI fix set 12 (12.4). Deliberately the SAME expression
+                // `AnswerScreen` uses to decide whether to render its
+                // refusal block, `refusal || refusalLabel` (its line 1552),
+                // rather than a `!== null` pair that agrees with it only
+                // while neither field can be an empty string. Today neither
+                // can, so the two forms pick the same runs; writing the
+                // weaker form and describing it as "the same test" would be
+                // a confident sentence about a check that is not there,
+                // which is the shape this repository has shipped four times
+                // (build phase 4.15). A clarification counts as a refusal,
+                // because a clarification IS a refusal to answer yet.
+                // `FollowUp` also suppresses the hints on its own when this
+                // is true, but the label switch has to happen here, since
+                // `FollowUp` never sees `view` itself.
+                isRefusal={Boolean(view.refusal || view.refusalLabel)}
                 // T-6.2-08. Accepting the offer goes through the SAME `ask`
                 // as anything typed, so it continues the thread rather than
                 // starting over. That was the product owner's condition on
