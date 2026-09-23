@@ -1,0 +1,22 @@
+{
+  "depth": "researcher",
+  "question": "What positive and negative genes do ashkenazi jewish people have?",
+  "outcome": "answer",
+  "words": 871,
+  "paragraphs": 1,
+  "headings": 2,
+  "list_items": 69,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 2 sources",
+  "sources": [
+    "10926794",
+    "15284715",
+    "19690183",
+    "34870614",
+    "35944511"
+  ],
+  "notes": [],
+  "errors": [],
+  "key": "q7"
+}

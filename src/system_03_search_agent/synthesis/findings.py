@@ -1004,8 +1004,12 @@ def _mark_sentence(sentence: str, ref_index: int) -> str:
 
 
 def build_structured_fallback_narrative(synth_findings: list[SynthFinding]) -> str:
-    """A narrative built in code, one marked sentence per finding SENTENCE,
-    for grounding.
+    """A narrative built in code, one row per RECORD, for grounding.
+
+    Round 2 of fix-plan item 12.7 (2026-09-23) put `one_finding_per_record`
+    in front of the loop below, so a record whose `title`, `abstract` and
+    `pmid` all reached synthesis contributes ONE row rather than one row per
+    sentence of its abstract. See that function for the measurement.
 
     UI fix set 7, item 7.1 (2026-09-13). `core.graph.write_node` calls this
     when the model's answer grounded nothing although findings reached it,
@@ -1080,7 +1084,7 @@ def build_structured_fallback_narrative(synth_findings: list[SynthFinding]) -> s
     from system_03_search_agent.synthesis.grounding import split_into_sentences
 
     parts: list[str] = []
-    for finding in synth_findings:
+    for finding in one_finding_per_record(synth_findings):
         value_sentences = split_into_sentences(finding.field_value)
         if len(value_sentences) <= 1:
             # Single sentence (or no sentence-ending punctuation at all):
@@ -1094,6 +1098,106 @@ def build_structured_fallback_narrative(synth_findings: list[SynthFinding]) -> s
             if marked:
                 parts.append(marked)
     return " ".join(parts)
+
+
+def one_finding_per_record(synth_findings: list[SynthFinding]) -> list[SynthFinding]:
+    """The findings a code-built LISTING may render: at most one per record.
+
+    Review round 2 of fix-plan item 12.7 (2026-09-23). THE DEFECT THIS
+    CLOSES, measured rather than guessed. `Does coffee help make exercise
+    more effective?` produced FIVE papers and a 932-word answer of NINETY-
+    ONE list items, the same title repeating over and over. Counting
+    citations could not see it: the verify surface said "15 citations,
+    answer" and the answer was unreadable.
+
+    THE CAUSE IS NOT ONE ROW PER FIELD, which is the natural guess and is
+    wrong. It is one row per SENTENCE OF THE ABSTRACT. Each paper
+    contributes three findings that share one `source_url`, its `title`,
+    its `abstract` and its `pmid`, and the loop above marks every SENTENCE
+    of a multi-sentence value separately (item 11.34, for a real reason:
+    a multi-sentence body with one trailing marker grounds nothing). The
+    five abstracts measured were 16, 8, 21, 32 and 6 sentences, so five
+    records became 93 rows of which 83 were abstract sentences.
+
+    WHY IT HIT THE TOPIC PATH HARDEST, and why it is not only that path's
+    problem: on the topic path every admitted record is a paper with a long
+    abstract and there is nothing else, so the abstracts ARE the listing. A
+    disease question measured 19 findings over 12 records, so the same
+    duplication was there (title, pmid and abstract rows for one paper)
+    and merely smaller. This function fixes both.
+
+    THE RULE, and its second clause exists because the first one alone was
+    WRONG and an existing test caught it. Group by `source_url`, never by
+    the rendered string. Then:
+
+    - If every finding in a group carries the SAME `field` name, they are
+      separate records that happen to share a page, and ALL of them are
+      kept. `test_graph.py::test_tool_row_limit_truncation_is_surfaced_
+      even_when_byte_ceiling_never_fires` has three genes, `NCBIGene:672`,
+      `673` and `674`, all three `field="name"` and all three pointing at
+      `.../gene/672`. Collapsing those to one deleted two real findings and
+      made the answer announce itself incomplete. The check was right and
+      the rule was wrong.
+    - Otherwise the group is several VIEWS of one record, its `title`, its
+      `abstract` and its `pmid`, and exactly one is kept: the lowest
+      `ref_index` among single-sentence values, so the row that ships is
+      the title rather than a whole abstract; or, when every value is
+      multi-sentence, the lowest `ref_index` overall, so a record is never
+      dropped to nothing.
+
+    The discriminator is the field NAME, which is metadata, never the field
+    value, because deduplicating on rendered text is how two genuinely
+    different facts that happen to read alike get silently merged.
+
+    A finding with a blank `source_url` is never grouped: it keeps its own
+    row, because an empty string is not an identity and grouping on it
+    would collapse unrelated records into one.
+
+    WHAT THIS DOES NOT TOUCH, and the distinction is the whole safety
+    argument: the MODEL still receives every finding, abstracts included
+    (`build_synth_messages` is unchanged), so a narrative that quotes an
+    abstract still grounds against it and still earns that citation. Only
+    the CODE-BUILT listing is deduplicated, which is the path that fires
+    when the model's own narrative grounded nothing.
+
+    It also restores a product-owner decision that had quietly lapsed.
+    `core/breadth_plan.py`'s module docstring records that abstract
+    sentences do NOT become findings until a new design exists, held back
+    on 2026-09-14 because a sentence rule accepted meaning-reversing
+    fragments and cannot see a refutation in the next sentence. The
+    listing was emitting one quoted abstract sentence per row, which is
+    exactly what that decision forbade.
+    """
+    groups: dict[str, list[SynthFinding]] = {}
+    for finding in synth_findings:
+        key = (finding.source_url or "").strip()
+        if not key:
+            continue
+        groups.setdefault(key, []).append(finding)
+    # The one finding each multi-view group keeps, by citation_id so the
+    # walk below stays a single pass in the original order.
+    keep: dict[str, str] = {}
+    for key, group in groups.items():
+        if len({finding.field for finding in group}) <= 1:
+            continue
+        keep[key] = min(group, key=_listing_rank).citation_id
+    kept: list[SynthFinding] = []
+    for finding in synth_findings:
+        key = (finding.source_url or "").strip()
+        chosen = keep.get(key)
+        if chosen is None or chosen == finding.citation_id:
+            kept.append(finding)
+    return kept
+
+
+def _listing_rank(finding: SynthFinding) -> tuple[int, int]:
+    """Sort key for `one_finding_per_record`: single-sentence values first,
+    then the `build_synth_findings` order. Pure, so the choice is a fixed
+    function of the finding set."""
+    from system_03_search_agent.synthesis.grounding import split_into_sentences
+
+    multi_sentence = 1 if len(split_into_sentences(finding.field_value)) > 1 else 0
+    return (multi_sentence, finding.ref_index)
 
 
 # T-4.5-07, Section 14.5. The depth directives live in the DYNAMIC SUFFIX,
@@ -1351,12 +1455,54 @@ def unreported_findings(
     entities the QUESTION named. Same shape of defect, one level down: this
     one catches an answer that reported only some of the findings RETRIEVAL
     produced.
+
+    ## Why a collapsed view of an already-reported record is NOT unreported
+
+    Review round 2 of fix-plan item 12.7 (2026-09-23), caught by
+    `test_topic_search.py::test_the_graph_is_not_called_at_all_for_a_topic_
+    question` rather than by reading. `one_finding_per_record` collapses the
+    several VIEWS of one record, its `title`, its `abstract` and its `pmid`,
+    to a single listing row. Those collapsed findings keep their own
+    `citation_id`, so a citation_id-only comparison counted them as missing
+    and the answer told the reader it was incomplete while showing every
+    record it had, each one cited and clickable. A readability fix had
+    started producing a false confession.
+
+    The test to apply is the reader's: can they see this record and open it?
+    A view whose record is reported is reported, because the reader is
+    looking at that paper. A finding whose record never reached the answer
+    at all is genuinely missing, and F-4.5-06 breach 2 still catches it.
+
+    THE GROUPING RULE IS THE DEDUPLICATOR'S OWN, reused rather than
+    restated, so the two can never disagree about what a record is. That
+    matters most in the case that broke the deduplicator's first version:
+    three genes sharing one `/gene/672` page carry the SAME `field` name, so
+    they are separate records rather than views, `one_finding_per_record`
+    keeps all three, and each stays individually accountable here. Only a
+    group with DIFFERENT field names collapses, and only then does the
+    representative answer for the rest.
     """
-    return [
-        finding
-        for finding in synth_findings
-        if finding.citation_id not in reported_citation_ids
-    ]
+    representative: dict[str, str] = {}
+    for finding in one_finding_per_record(synth_findings):
+        key = (finding.source_url or "").strip()
+        if key:
+            representative[key] = finding.citation_id
+
+    def is_reported(finding: SynthFinding) -> bool:
+        if finding.citation_id in reported_citation_ids:
+            return True
+        key = (finding.source_url or "").strip()
+        if not key:
+            return False
+        stands_for = representative.get(key)
+        # `stands_for is finding`'s own id means nothing was collapsed into
+        # it, so there is no representative to answer for this finding and
+        # the citation_id check above was already the whole answer.
+        if stands_for is None or stands_for == finding.citation_id:
+            return False
+        return stands_for in reported_citation_ids
+
+    return [finding for finding in synth_findings if not is_reported(finding)]
 
 
 def build_completeness_directive(omitted: list[SynthFinding]) -> str:

@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "Are there any beneficial variants typically found in people of mediterranean descent?",
+  "outcome": "ask",
+  "words": 639,
+  "paragraphs": 1,
+  "headings": 2,
+  "list_items": 60,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "sources": [
+    "16225031",
+    "34582790",
+    "35098403",
+    "37782073",
+    "39042260"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "key": "q6"
+}

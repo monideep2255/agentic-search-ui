@@ -1,0 +1,31 @@
+{
+  "depth": "researcher",
+  "question": "GERD",
+  "outcome": "ask",
+  "words": 185,
+  "paragraphs": 1,
+  "headings": 5,
+  "list_items": 21,
+  "table_rows": 5,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 3 sources, not yet confirmed",
+  "sources": [
+    "1795938",
+    "24503367",
+    "33351044",
+    "36170502",
+    "37034973",
+    "37516506",
+    "@DISEASE_Gastroesophageal_Reflux",
+    "NCT00141960",
+    "NCT00163306",
+    "NCT00181805",
+    "NCT00184522",
+    "NCT00235677"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+  ],
+  "errors": [],
+  "key": "q2"
+}

@@ -1,0 +1,24 @@
+{
+  "depth": "plain_language",
+  "question": "papers on the effects of caffeine on exercise performance",
+  "outcome": "answer",
+  "words": 824,
+  "paragraphs": 2,
+  "headings": 2,
+  "list_items": 75,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 2 sources",
+  "sources": [
+    "11583104",
+    "25355191",
+    "32589582",
+    "33388079",
+    "36615805"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "key": "q4"
+}

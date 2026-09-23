@@ -1,0 +1,40 @@
+{
+  "depth": "plain_language",
+  "question": "reflux disease",
+  "outcome": "ask",
+  "words": 213,
+  "paragraphs": 1,
+  "headings": 6,
+  "list_items": 32,
+  "table_rows": 5,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 4 sources, not yet confirmed",
+  "sources": [
+    "29132520",
+    "33351044",
+    "35605234",
+    "36170502",
+    "37516506",
+    "6553",
+    "@DISEASE_Gastroesophageal_Reflux",
+    "MedGen:C0017168",
+    "MedGen:C0267057",
+    "MedGen:C0341102",
+    "MedGen:C0677659",
+    "MedGen:C1280387",
+    "MedGen:C1300118",
+    "MedGen:C2242528",
+    "MedGen:C4039982",
+    "NCT00141960",
+    "NCT00163306",
+    "NCT00184522",
+    "NCT00405119",
+    "NCT00551473"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "key": "q1"
+}

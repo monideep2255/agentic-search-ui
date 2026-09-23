@@ -844,3 +844,111 @@ No existing test was weakened, narrowed or deleted. Nothing under
 FOR THE LEAD'S CHECKPOINT, unchanged in kind from round 0: the tracked Python
 test count in `CLAUDE.md` and `AGENTS.md` is stale by this round's arms as
 well. Not edited here, for the reason `goal-contracts` gives.
+
+---
+
+# Review round 2: the answer was unreadable and the citation count said it was fine
+
+VERDICT: FIXED. Five papers produced ninety-one list items; they now produce
+five rows, one per paper, each cited. The cause was NOT the one guessed, and
+establishing it took reading the shaped findings rather than the code. The
+depth question is answered with a named layer and NOT papered over. One more
+defect was found in my own first fix by an existing test, and that is recorded
+rather than quietly corrected.
+
+## The cause, established rather than assumed
+
+The reviewer's guess was one row per FIELD of a PubMed record. That is close
+and wrong in the load-bearing way, and a per-field rule would have produced
+fifteen rows rather than the ninety-one measured.
+
+IT IS ONE ROW PER SENTENCE OF THE ABSTRACT. `build_structured_fallback_
+narrative` marks every SENTENCE of a finding's value separately, which item
+11.34 made it do for a real reason: a multi-sentence body with one trailing
+marker grounds nothing at all, so the finding contributes no citation.
+
+Dumping the real findings for `Does coffee help make exercise more effective?`:
+
+    [1..5]   field='title'     sentences=1   five papers
+    [6]      field='abstract'  sentences=16
+    [7]      field='abstract'  sentences=8
+    [8]      field='abstract'  sentences=21
+    [9]      field='abstract'  sentences=32
+    [10]     field='abstract'  sentences=6
+    [11..15] field='pmid'      sentences=1
+    15 findings over 5 records; 93 listing rows, 83 of them abstract sentences
+
+So each paper contributes THREE findings sharing one `source_url`, and the
+abstracts alone account for 83 of the 93 rows.
+
+AND THE TRIGGER, which matters as much as the cause: the model's own narrative
+grounded ZERO claims. Its text was good prose about the papers, but
+`ground_claim` accepts a claim only when it is contained in the cited
+finding's value, and a synthesis across five papers quotes none of them
+verbatim. So the code-built listing, designed as a last resort, becomes the
+WHOLE answer on this path every time.
+
+THE SAME DUPLICATION IS ON THE DISEASE PATH and is merely smaller. `GERD`
+measured 19 findings over 12 records, 26 listing rows, with papers
+contributing `title`, `pmid` and sometimes `abstract`. It is worst on the
+topic path because there every admitted record is a paper with a long
+abstract and there is nothing else in the answer.
+
+IT ALSO BROKE A HELD-BACK PRODUCT-OWNER DECISION. `core/breadth_plan.py`'s
+module docstring records that abstract sentences do NOT become findings until
+a new design exists, held back on 2026-09-14 because a sentence rule accepted
+meaning-reversing fragments and cannot see a refutation in the next sentence.
+The listing was emitting one quoted abstract sentence per row. Fixing the
+readability restores that decision, and it also resolves my own F-12.7-03,
+the "It can be a powerful ergogenic aid" quote I escalated: that sentence was
+a listing row, and listing rows are now titles.
+
+## The fix, and the mistake inside my first version
+
+`one_finding_per_record`, in front of the listing loop. Group by
+`source_url`; keep one finding per record; prefer a single-sentence value so
+the row that ships is the title rather than a whole abstract; never
+deduplicate on the rendered string.
+
+MY FIRST VERSION GROUPED ON `source_url` ALONE AND WAS WRONG. An existing
+test caught it: `test_graph.py::test_tool_row_limit_truncation_is_surfaced_
+even_when_byte_ceiling_never_fires` has three genes, `NCBIGene:672`, `673`
+and `674`, every one `field="name"` and every one pointing at
+`.../gene/672`. Collapsing them deleted two real findings, and the answer
+then announced itself INCOMPLETE, because a deleted finding counts as
+unreported and floors the trust outcome to `ask`. A readability fix had
+started telling readers their answer was missing sources.
+
+Which of `goal-contracts`' three cases: THE SUBJECT WAS WRONG. The check was
+right and my rule was wrong, so the rule changed and the check did not.
+
+The corrected rule adds one clause: within a `source_url` group, if every
+finding carries the SAME `field` name they are separate records sharing a
+page and ALL are kept; only a group with DIFFERENT field names is several
+views of one record and collapses to one. The discriminator is the field
+NAME, metadata, never the field value.
+
+## Measured effect
+
+| Shape | Records | Listing rows before | Listing rows after |
+|---|---|---|---|
+| q5, topic path (measured live) | 5 | 93 | **5** |
+| q2, disease path (measured live) | 12 | 26 | **12** |
+| three genes sharing one page | 3 | 3 | **3**, unchanged |
+
+WHAT IT COSTS THE CITATION COUNT, stated plainly because it will look like a
+regression on the old verify surface: q5 drops from 15 citations to 5. That
+is the duplication leaving, not evidence leaving. Five papers were always
+five papers. The count was never the right measure, which is the whole point
+of this round.
+
+WHAT IT DOES NOT TOUCH: the MODEL still receives every finding, abstracts
+included. `build_synth_messages` is unchanged, so a narrative that quotes an
+abstract still grounds against it and still earns that citation. Only the
+code-built listing is deduplicated.
+
+WHAT I COULD NOT ADD: journal and year. The `pubmed_abstracts` path is an
+EFetch, and `_extract_pubmed_fetch_records` parses `title` and `abstract`
+only; `fulljournalname` and `pubdate` live on the ESummary path, which this
+question does not call. Adding them means a third call per question. Reported
+rather than built.

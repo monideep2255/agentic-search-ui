@@ -1,0 +1,24 @@
+{
+  "depth": "researcher",
+  "question": "Does coffee help make exercise more effective?",
+  "outcome": "ask",
+  "words": 932,
+  "paragraphs": 1,
+  "headings": 2,
+  "list_items": 91,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "sources": [
+    "11583104",
+    "32589582",
+    "33388079",
+    "38466174",
+    "40626862"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+  ],
+  "errors": [],
+  "key": "q5"
+}
