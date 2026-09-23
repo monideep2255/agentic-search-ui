@@ -1,6 +1,6 @@
 ---
 name: phase-checkpoint
-description: "Sync planning or build documentation at a phase boundary: after closing a planning sub-phase or full phase (Plan.md Phases 2 to 5), or after a build phase's pull request merges to develop (Plan.md Phase 6 onward, one checkpoint per merged build phase). Appends new decisions to DECISIONS.md and refreshes the mode-appropriate artifacts: the planning session doc, meeting note, and phase continuation prompt in planning mode, or the Phase 6 continuation prompt and Plan.md status in build mode. Distinct from /ship, which commits and pushes to GitHub: this updates the planning artifacts and runs before /ship, and never touches git. Distinct from /release, which is the local-verify-then-ship ritual for code changes."
+description: "Sync planning, build and UI-fix-loop docs at a phase boundary. Runs at a planning sub-phase or phase end, a build phase's PR merge to develop or a UI-fix-loop session boundary. Refreshes PROGRESS.md in every mode. Planning mode also refreshes the session doc and continuation prompt. Build mode refreshes the Phase 6 continuation prompt and Plan.md status. UI-fix-loop mode refreshes the fix plan and the day's shipped list. Distinct from /ship, which commits and pushes: this updates artifacts and runs before /ship, never touching git."
 scope: project
 depends_on:
   - requirements/Plan.md
@@ -15,9 +15,24 @@ depended_by:
 
 # /phase-checkpoint - sync planning or build docs at a phase boundary
 
-Purpose: at the end of a sub-phase, a full planning phase, or a merged build phase, bring the relevant documentation into a consistent state so a fresh session can resume with zero loss. User-invoked only. Does not commit or push (that is `/ship`).
+Purpose: bring the relevant documentation into a consistent state at a phase boundary, so a fresh session can resume with zero loss. User-invoked only. Does not commit or push (that is `/ship`). Runs at the end of:
 
-This skill exists because the documentation ritual repeats at every phase boundary, and a single forgotten artifact (a stale continuation prompt, a Plan.md status line that still says "not started") breaks a clean resume. The skill turns the ritual into a checklist so no artifact is skipped, in either mode below.
+- A sub-phase or a full planning phase.
+- A merged build phase.
+- A UI-fix-loop session boundary.
+
+This skill exists because the documentation ritual repeats at every phase boundary, and a single forgotten artifact (a stale continuation prompt, a Plan.md status line that still says "not started") breaks a clean resume. The skill turns the ritual into a checklist so no artifact is skipped, in any mode below.
+
+## Table of contents
+
+- [Three modes](#three-modes)
+- [One-owner convention](#one-owner-convention)
+- [When to run](#when-to-run)
+- [Inputs the skill needs](#inputs-the-skill-needs)
+- [Steps](#steps)
+- [Constraints](#constraints)
+- [Exit checklist](#exit-checklist)
+- [Output](#output)
 
 ## Three modes
 
@@ -44,15 +59,18 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | Fact | Single owner | Everywhere else |
 |------|--------------|-------------------|
 | Per-phase tickets, findings, evidence | `tracker/phase_N.M.md` | A pointer, never a copy |
-| Phase status and open flags | `tracker/BOARD.md` | A pointer |
+| Phase status and open flags | `tracker/BOARD.md` | A pointer, for build phases only; the UI fix loop does not write it and its last write was 2026-09-01 |
 | Per-item UI fix status, and the session cutoff | `testing/UI_fix_plan.md`, its Set table and its "Where we stopped" section | A pointer, never a copy. `tracker/BOARD.md` does NOT track UI fix items and is not expected to |
 | Phase narrative and history | `requirements/Plan.md` Revision history | A pointer |
 | Current state and next action | `requirements/phase_6/Continuation_prompt.md` | A pointer |
-| Failures and their fixes | `LEARNINGS.md` | A pointer |
+| Failures and their fixes | `LEARNINGS.md` | A pointer; Step 1b checks the session's failures are logged |
 | Choices between alternatives | `DECISIONS.md` | A pointer |
 | Build order | `requirements/Technical_specification.md` Section 25 | A pointer |
 | Counts (tests, decisions, entries, flags) | Computed by `tracker/check_doc_drift.py` | Only CLAUDE.md and the continuation prompt may state them |
 | The plain-language state of the project, for a non-technical reader | `PROGRESS.md` | Nowhere else. It is the only document written for someone outside the build |
+| The day's shipped list: one row per item shipped that day, the numbered "What to retest" items, and what was measured rather than built | `testing/Shipped_<YYYY-MM-DD>.md` | A pointer by item number, never a copy |
+| Where every feature stands: features still to implement, features done, additional notes | The high-level tracker at the top of `testing/UI_fix_plan.md`, refreshed by this checkpoint from the item rows it summarises, since it is a derived index and can drift | Nowhere else |
+| The tracked counts on line 32 of `CLAUDE.md` and `AGENTS.md` (Python tests, decisions, learnings) and Plan.md's "Decisions logged" line | This checkpoint, in Step 5d, from the values `tracker/check_doc_drift.py` computes | Nowhere else |
 
 `PROGRESS.md` is the one deliberate exception to the pointer rule, and it is worth saying why. Every other row above avoids restating a fact because a second copy drifts. `PROGRESS.md` restates many of them on purpose, in different words, because its reader cannot follow a pointer into `tracker/phase_N.M.md` and get anything useful out of it. The protection against drift is that it is refreshed at Step 5b of every checkpoint, from the same sources, rather than edited ad hoc.
 
@@ -69,7 +87,7 @@ This is why Step 4 and Step 5 below say refresh and update, not add a new sectio
 
 Confirm before writing. Ask if unclear from context:
 
-1. Which mode: planning-phase or build-phase.
+1. Which mode: planning-phase, build-phase, or UI-fix-loop.
 2. Planning-phase mode: which phase and sub-phase(s) this checkpoint closes (for example "Phase 2, steps 2.1 to 2.3"), and whether this is a sub-phase or a phase-end checkpoint (phase-end adds Step 5).
 3. Build-phase mode: which build phase just merged (for example "1.0"), and its PR number.
 4. UI-fix-loop mode: which fix set and which items changed state this session. There is no build phase and no PR number, so do not ask for either.
@@ -81,6 +99,15 @@ Confirm before writing. Ask if unclear from context:
 - Scan the session for decisions made since the last checkpoint that are not yet in DECISIONS.md.
 - Append each as a row (Date, Decision, Alternatives considered, Why). Append-only, never modify existing rows. Follow decision-logging.md.
 - If every decision is already logged, say so and move on.
+
+### Step 1b: LEARNINGS.md (all modes)
+
+`LEARNINGS.md` was written by neither this skill nor `/ship`, so the session's lessons were reaching it only when someone remembered to log them by hand. This step closes that gap.
+
+- Scan the session for failures that took more than a couple of minutes, wrong assumptions that cost rework, or fixes whose reason is not obvious from the code.
+- For each one not yet in LEARNINGS.md, append a row in the `learnings` skill's shape: Date, Applies to, What broke, then a `<details><summary>what was tried</summary>` block and a `<details><summary>what fixed it</summary>` block.
+- Append-only, never rewrite an existing row. No blank line inside the table.
+- If nothing this session met the bar, say so and move on.
 
 ### Step 2: session doc (planning-phase mode only)
 
@@ -98,7 +125,7 @@ Confirm before writing. Ask if unclear from context:
 
 - Planning-phase mode: refresh `requirements/phase_N/Continuation_prompt.md`: update the progress tracker, the decisions-so-far list, the DECISIONS.md count, and the next-up section so a new chat can resume cleanly.
 - Build-phase mode: refresh `requirements/phase_6/Continuation_prompt.md` instead, the single file spanning all of Phase 6. Update: the opening status line (which build phase just merged, its PR number), the "read these first" list (the current LEARNINGS.md count, the current `tracker/BOARD.md` state including any new flags), the "then start build phase X" command to name the next build phase, a short "build phase N.M, done" section summarizing what just merged, and the "what it delivers" section for the phase now next up. Carry forward any open item the merged phase's release gate created (for example an accepted CVE deferred to a later phase) into the "Open items to resolve during Phase 6" table.
-- UI-fix-loop mode: refresh `requirements/phase_6/Continuation_prompt.md`, but only Step 2, the next action, plus a session-boundary note if work stops here and resumes in a new session. Do NOT write a "build phase N.M, done" section: no build phase merged. State what is live, what is parked and why, and what the next session does first.
+- UI-fix-loop mode: rewrite Step 2 of `requirements/phase_6/Continuation_prompt.md` IN PLACE so its first bullet answers three questions in one line each for a fresh session: what is live on develop (commit hashes), what awaits the product owner's retest (item numbers in `testing/Shipped_<date>.md`), and the one next action (the fix plan's "Next, in order" item 1). Rewrite the "session boundary" subsection in place too: its "what landed" table, its "what did not land" list, its instruments-taught list, and its closing "what the next session does first" line. Delete any sentence describing a state the session superseded; never append a second version below the old one. Do NOT write a "build phase N.M, done" section: no build phase merged.
 - The continuation prompt is rewritten in place, not appended to: every field above is edited where it already sits. A section describing a state the merge just superseded, a prior "build phase N.M, done" section, a prior status line, a prior "then start build phase X" pointer, is deleted, not left below the new one. This is the failure this rule exists to prevent: after five build phases handled as appends instead of rewrites, the file described build phase 2.1 in five contradictory sections at once, and its own copy-paste block told the next agent not to open build phase 2.2, the phase that was actually next.
 
 ### Step 5: synthesis and Plan status (all modes, different scope)
@@ -115,10 +142,17 @@ Confirm before writing. Ask if unclear from context:
 - The Set table: update the status word and the "where it stands" cell for every item that changed state this session. Status words are Live, In progress, Queued, Not started, Answered, Done, and any other word needs a reason in the cell.
 - The "Where we stopped" section: rewrite it in place. It is the cutoff, and the next session starts from it rather than reconstructing state. It carries what is live, what is parked and why, what is waiting on the product owner, the known loose ends, and the ordered next actions.
 - An item that was merged and then reverted is NOT quietly returned to its earlier status. Say it was reverted, and say what question is open, or the next session will re-land the same work into the same defect.
+- Refresh the "Where every feature stands" tracker at the top of `testing/UI_fix_plan.md` for every item that changed state this session: features still to implement, features done (with the approval exceptions named item by item), and additional notes. It is a derived index of the rows below it and drifts if left alone.
+- Add one row per item to the session table under "Where we stopped" for every item this session touched.
+- Rewrite "Next, in order" and step 4 of "How to start the next session" in place, so item 1 is genuinely next and the retest range names the right item numbers.
 
 ### Step 5b: PROGRESS.md, the plain-language update (all modes)
 
-Refresh `PROGRESS.md` at the repo root. It is the one document written for someone who has never seen the code: a sprint-demo style update in ordinary English, saying what works, what does not, and what is next.
+Refresh `PROGRESS.md` at the repo root. It is the one document written for someone who has never seen the code, a sprint-demo style update in ordinary English. It says:
+
+- What works.
+- What does not.
+- What is next.
 
 Every other artifact this skill touches is written for a builder. This one is not, and that is the whole point of keeping it separate rather than folding it into `README.md` (technical) or the continuation prompt (written for the next agent).
 
@@ -138,6 +172,24 @@ Rules for the writing, which are stricter here than anywhere else in the repo:
 - Concrete over abstract. "It currently only knows about one gene by name" beats "entity resolution coverage is limited".
 - Keep the failures in. The value of this document is that a non-technical reader can see what went wrong and what it cost, not a sanitized highlight reel.
 
+### Step 5c: the day's shipped list (UI-fix-loop mode only)
+
+`testing/Shipped_<YYYY-MM-DD>.md` is created on the first ship of a day and extended after that on the same day.
+
+- "What shipped, in order": one row per item, naming the item, its commit, and what a person notices.
+- A numbered "What to retest" item for every shipped item, with the exact query a retester types and what they should see. The section's intro sentence must name the current range of items awaiting retest.
+- "What was measured rather than built": the bullets recording what the session checked against reality rather than what it constructed.
+- "What the day taught": a short closing note.
+
+The continuation prompt and the fix plan point at these items by number, so a retest item's number must not be renumbered once written.
+
+### Step 5d: the tracked counts (all modes)
+
+- Run `python tracker/check_doc_drift.py --check`. It takes about two minutes, since it collects the whole test suite.
+- For every "says X (computed: Y)" line it reports, update that document to Y: `CLAUDE.md` and `AGENTS.md` line 32 for tests, decisions, and learnings, and `requirements/Plan.md` line 20 for decisions.
+- Set `CLAUDE.md`'s "Last updated" line to today.
+- Never edit the checker to make it pass, per `.claude/rules/goal-contracts.md`.
+
 ### Step 6: structural hygiene pass (all modes)
 
 Before the exit checklist, verify the structure of every document this checkpoint created or updated, per writing-style.md. This step exists because a status block was once crammed into a single run-on paragraph, and a table of contents lagged the body as sections were appended.
@@ -150,6 +202,8 @@ Before the exit checklist, verify the structure of every document this checkpoin
 ### Step 7: drift check (all modes)
 
 Run `python tracker/check_doc_drift.py --check` before declaring the checkpoint done. It computes the tracked counts (tests, DECISIONS.md rows, LEARNINGS.md entries, open flags, PR numbers) from source and fails if any tracked document states a stale value. A nonzero exit blocks the checkpoint: fix the drifted document the script names in its output, then rerun the check. Never declare the checkpoint done on a failing or unrun drift check.
+
+The check is run a second time here, after Step 5d's edits, so the run ends on a green check rather than on the one that named the stale values.
 
 ## Constraints
 
@@ -177,7 +231,12 @@ Before declaring the checkpoint done, verify:
 - [ ] No wall of text: every enumerated passage in a touched doc is a list or a table, not a run-on paragraph (writing-style.md).
 - [ ] Every touched doc's table of contents, status, counts, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no stale count, no title or filename naming fewer steps than the file covers.
 - [ ] `python tracker/check_doc_drift.py --check` exits 0.
+- [ ] UI-fix-loop mode: `testing/Shipped_<date>.md` has a row and a numbered retest item for every item shipped this session, and its "What to retest" intro names the current range.
+- [ ] UI-fix-loop mode: the "Where every feature stands" tracker at the top of `testing/UI_fix_plan.md` agrees with every item row it summarises (spot-check each item that changed state).
+- [ ] All modes: every failure the session hit is a row in LEARNINGS.md.
+- [ ] All modes: the counts on CLAUDE.md and AGENTS.md line 32 and Plan.md's decisions line equal the drift check's computed values.
+- [ ] The fresh-session test: from the continuation prompt's Step 2 alone, a new session can state what is live, what awaits retest and where, and the one next action.
 
 ## Output
 
-Report: which mode ran, which artifacts were created or updated (with paths), the new DECISIONS.md count, (build-phase mode) which build phase just closed and which is next, and (UI-fix-loop mode) which fix items changed state and what the next session starts on. Suggest running `/ship` next to commit and push.
+Report: which mode ran, which artifacts were created or updated (with paths), the new DECISIONS.md count, (build-phase mode) which build phase just closed and which is next, (UI-fix-loop mode) which fix items changed state and what the next session starts on, the shipped list's new retest item numbers, and the count values written. Suggest running `/ship` next to commit and push.

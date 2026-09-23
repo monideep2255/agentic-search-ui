@@ -204,14 +204,14 @@ The invocation is always the skill's exact name. A shortened alias does not reso
 | objective-review | Critical feedback, not agreement | `/objective-review` |
 | repo-dive | First-principles analysis of a reference repo | `/repo-dive <path>` |
 | skill-adapt-verify | Verify adapted skill for stale paths and style violations | `/skill-adapt-verify <path>` |
-| ship | Sync docs, commit, push phase branch, and clear leftover agent worktrees | `/ship` |
+| ship | Run the CI gates locally (ruff over the whole repository, isort, the unit suite when Python changed, `npm run build` when the frontend changed, the doc drift check), sync the four canonical docs, commit with a Conventional Commit subject, push (develop in the UI fix loop, the phase branch in build-phase mode), prove the remote advanced, confirm the deploy, and clear leftover agent worktrees. Runs after `/phase-checkpoint` at any session boundary | `/ship` |
 | first-principles | Explain concepts from fundamentals | `/first-principles` |
 | socratic-questioning | Clarifying questions before advice | `/socratic-questioning` |
 | release-workflow | End-to-end release verification and ship | `/release-workflow` |
 | eval-harness | The offline evaluation gate, operationalizing the evaluation playbook: 8-point rubric, hard-fails, coverage metric, must-pass set | `/eval-harness` |
 | verify | Pre-commit checks: Python compile, tests, lint, git status | `/verify` |
 | standup | Where the build stands right now, in seven plain lines: phase, what landed, what is in motion this moment, what is next, how long until done, what decisions are waiting on the product owner, and what is blocked. Reports committed AND uncommitted work, including running agents and commands. Reads the tracker and git, never the conversation, so it is correct in a fresh session. Reports only, never edits | `/standup` |
-| phase-checkpoint | Sync planning docs at a phase or sub-phase boundary (decisions, session doc, meeting note, continuation prompt, and at phase end the synthesis and Plan status). Runs before `/ship`, never touches git | `/phase-checkpoint` |
+| phase-checkpoint | Sync the planning and build documents at a boundary, in one of three modes: planning phase, build phase, or the UI fix loop. Every mode appends decisions and learnings, refreshes the continuation prompt, Plan.md's revision history, PROGRESS.md and the tracked counts; the UI fix loop mode also refreshes the fix plan's top tracker, its cutoff and the day's shipped list with its numbered retest items. Runs before `/ship`, never touches git | `/phase-checkpoint` |
 | doc-readability | Make one named document readable in house style: break prose walls, add the table of contents, add Mermaid, add first-principles explanation. Gated by a bundled no-loss script plus a fresh-context auditor, so no fact is lost. Refuses the two locked requirements documents | `/doc-readability` |
 
 Auto-read skills (loaded by other skills or before specific tasks): best-practices, release-workflow, dev-standards.

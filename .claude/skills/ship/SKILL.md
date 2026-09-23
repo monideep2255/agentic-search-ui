@@ -1,11 +1,54 @@
 ---
 name: ship
-description: Bring docs in line with code, commit and push to GitHub, and clear away leftover agent worktrees, in one ritual. Use when ending a work block or after a logical milestone.
+description: Runs the CI gates locally before anything is staged. Syncs the four canonical docs and commits with a Conventional Commit subject. Pushes to develop in the UI fix loop or to the phase branch in build-phase mode. Proves the remote advanced and confirms the deploy. Clears away leftover agent worktrees. Use when ending a work block or after a logical milestone.
 ---
 
-# /ship - docs-sync, git-sync, then worktree cleanup
+# /ship - gates, docs-sync, git-sync, then worktree cleanup
 
-A single ritual to end a work block: bring docs in line with code, commit and push, then clear away any worktrees and branches that background agents left behind. The first two steps delegate to an agent each; the third is done directly, because it deletes things and the check that makes deletion safe is three commands.
+A single ritual to end a work block: run the local gates, bring docs in line with code, commit and push, then clear away any worktrees and branches that background agents left behind. The gates run directly; the docs-sync and git-sync steps delegate to an agent each; the worktree step is done directly, because it deletes things and the check that makes deletion safe is three commands.
+
+## Table of contents
+
+- [Step 0: the gates, before anything is staged](#step-0-the-gates-before-anything-is-staged)
+- [Step 1: docs-sync agent](#step-1-docs-sync-agent)
+- [Step 1b: stray file sweep](#step-1b-stray-file-sweep)
+- [Step 2: git-sync agent](#step-2-git-sync-agent)
+- [Step 3: leftover worktree cleanup](#step-3-leftover-worktree-cleanup)
+- [Guards](#guards)
+- [Output](#output)
+
+## Step 0: the gates, before anything is staged
+
+No verification ran before a push until this step existed. The product owner set standing pre-push checks on 2026-09-12 and 2026-09-20, and until now they lived only in memory and in the continuation prompt, never enforced here. CI on GitHub has been unable to run since 2026-09-22 because of the account's billing setting, and this repository also works in a UI fix loop where pushes go straight to `develop` with no PR and no review round. That leaves the local gates below as the only gates a push actually has.
+
+### Gate on the exit code, never through a pipe
+
+Every check gates on its own exit code, never through a pipe. Run the check with output to a file. Capture `rc=$?` and continue only if it is 0:
+
+```bash
+pytest ... > /tmp/gate_output.txt 2>&1
+rc=$?
+cat /tmp/gate_output.txt | tail -20
+if [ $rc -ne 0 ]; then echo "GATE FAILED, rc=$rc"; fi
+```
+
+A chain like `pytest ... | tail -3 && git commit` reports `tail`'s exit code, not the test run's, so a red suite still lets the `&&` continue. Commit `ff80814` (2026-09-12) and one commit on 2026-09-22 went out with a red arm this way.
+
+### The checks, in order
+
+- `ruff check` with no path: the whole repository, matching CI gate 3. Report folders under `testing/` count as source.
+- `isort --check-only --diff src tests services tracker alembic .claude .github`: matches CI gate 2.
+- `bash .github/gates/gate04_unit_suite.sh`: whenever any Python file under `src/`, `tests/`, `services/` or `tracker/` changed. Roughly five minutes. A docs-only change skips this and the report says so.
+- `npm run build` in `frontend/`: whenever any file under `frontend/` changed. Railway's own build is what fails silently otherwise, and this is the only local check that would catch it first.
+- `python tracker/check_doc_drift.py --check`: always. It collects the suite, roughly two minutes.
+
+### A red gate stops the ship
+
+Fix the cause, then make a NEW commit. Never `--amend`.
+
+### CI is advisory, and it has not run since 2026-09-22
+
+Check `gh run list --branch develop --limit 3` before claiming CI ran on this push. If the billing setting still blocks Actions, treat a local green as the only evidence a push has. The report should say so rather than imply CI backed it up.
 
 ## Step 1: docs-sync agent
 
@@ -21,13 +64,30 @@ It will:
 
 Wait for docs-sync to complete before proceeding. Its edits may add files to the commit.
 
+### What docs-sync owns, and what it must not touch
+
+docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`: `requirements/Plan.md`, `requirements/phase_6/Continuation_prompt.md`, `PROGRESS.md`, `testing/UI_fix_plan.md`, `testing/Shipped_<date>.md`, `LEARNINGS.md` and the tracked counts. So at a session boundary run `/phase-checkpoint` BEFORE `/ship`.
+
+Ship checks it ran: the "LAST UPDATED" date in the fix plan's "Where we stopped" section and the continuation prompt's session-boundary date must be today's, or the ship stops and says the checkpoint is missing. Memory recorded "checkpoint then ship" as a standing convention on 2026-09-20, and a convention that lives only in memory is not enforcement.
+
 ## Step 1b: stray file sweep
 
-Account for EVERY stray file before anything is staged. Each one is either work that belongs in the commit, work that belongs in `.gitignore`, or a leftover to remove. There is no fourth category, and "I did not look" is not one of them.
+Account for EVERY stray file before anything is staged. Each one falls into exactly one of three categories, and "I did not look" is not one of them:
+
+- Work that belongs in the commit
+- Work that belongs in `.gitignore`
+- A leftover to remove
 
 ### Why this step needs two sources
 
-This step used to run `git status --porcelain` alone. That is structurally blind, and it failed in production on 2026-09-20: a filesystem walk found 163 macOS duplicate-copy files of the shape `<name> 2.<ext>`, nine of them under `src/`, one a stale copy of a live document, and `git status` listed NONE of them. This repository's own `.gitignore` lines 85 to 94 carry rules of the form `* [0-9].py` and `* [0-9].md`, so git is instructed to hide the exact shape this sweep exists to catch.
+This step used to run `git status --porcelain` alone. That is structurally blind, and it failed in production on 2026-09-20:
+
+- A filesystem walk found 163 macOS duplicate-copy files of the shape `<name> 2.<ext>`.
+- Nine of them were under `src/`.
+- One was a stale copy of a live document.
+- `git status` listed NONE of them.
+
+This repository's own `.gitignore` lines 85 to 94 carry rules of the form `* [0-9].py` and `* [0-9].md`, so git is instructed to hide the exact shape this sweep exists to catch.
 
 Worse, the sweep looked like it was working. The 119 files it did surface that day were `.txt`, `.png`, `.jsonl` and `.log`, extensions no ignore rule covers. A check that catches the easy half and silently drops the half that matters is more dangerous than one that catches nothing. The same blindness hid `src/system_03_search_agent/tools/cypher_query 2.py` and cost a day of debugging, and duplicate `test_*.py` files collected by pytest inflated the tracked test count from 5222 to 6016.
 
@@ -125,9 +185,11 @@ It will:
 
 Additional context to pass to git-sync:
 
-- `/ship` is an explicit user directive to push. This overrides any default-branch protection rules, including pushing directly to `develop`.
-- If on a phase branch (`phase/*`): push with `-u` flag and offer to create MR
-- NEVER add `Co-Authored-By` lines (project rule)
+- The commit subject follows Conventional Commits per `.claude/rules/git-workflow.md`: `<type>[optional scope]: <description>` in sentence case, one logical change per commit, the body saying why.
+- NEVER add `Co-Authored-By` lines or any co-author trailer (project rule).
+- Push target by mode: in the UI fix loop, `develop` directly, which is one of the two named carve-outs in `.claude/rules/bossman-mode.md`; in build-phase mode, the `phase/N.M-...` branch with `-u`, then offer the pull request; anything under `.claude/`, hooks or settings goes on a `chore/` or `fix/` branch with a pull request regardless of mode.
+- Prove the push: compare `git rev-parse HEAD` with `git rev-parse origin/<branch>` and require equality; never a verbose curl trace (`.claude/rules/sandbox-diagnosis.md`).
+- After a push to develop, confirm the Railway deploy for that commit reached SUCCESS (the `develop` project's API service; a deploy takes two to three minutes) before telling the product owner anything is live; a push is not a deploy.
 
 ## Step 3: leftover worktree cleanup
 
@@ -159,9 +221,9 @@ So the check is three questions, and ALL THREE must clear before anything is rem
 
 Only when all three clear: `git worktree remove --force <path>`, `git worktree prune`, and `git branch -D <branch>`.
 
-If any question does not clear, do NOT delete. Report the worktree, say which question stopped it and what it holds, and leave it. A parked worktree costs disk; a deleted one costs the work.
+If any question does not clear, do NOT delete. Report the worktree. Say which question stopped it and what it holds. Leave it. A parked worktree costs disk; a deleted one costs the work.
 
-Report which branches and worktrees were removed, and name anything skipped and why. If a branch had unmerged commits, do NOT delete it, and surface it to the user as its own item; that is a lost-work risk, not housekeeping.
+Report which branches and worktrees were removed, and name anything skipped and why. If a branch had unmerged commits, do NOT delete it. Surface it to the user as its own item: that is a lost-work risk, not housekeeping.
 
 This step is deletion, so it follows `file-protection`: say what is going before it goes. The check in step 1 is what makes that statement true rather than hopeful.
 
@@ -172,14 +234,19 @@ This step is deletion, so it follows `file-protection`: say what is going before
 - Do NOT push if the commit would include `.env`, secrets, or anything in the gitignore. Block and ask
 - Do NOT push with an unexplained stray file in the tree. Every path from BOTH of Step 1b's sources, `git status --porcelain` and the filesystem walk, is classified there, or the push waits. A clean `git status` is not evidence the tree is clean, since `.gitignore` hides the duplicate-copy family from it.
 - Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
+- Do NOT push with any Step 0 gate red or unrun
+- Do NOT push at a session boundary before `/phase-checkpoint` has run today
 
 ## Output
 
-After all three steps complete, report:
+After all steps complete, report:
 
-1. Files changed (count + list)
-2. Commit hash
-3. Push status (pushed / nothing to push / blocked)
-4. Every untracked path that was found, and what happened to each: staged, ignored, removed, or left with a question
-5. Worktrees and `worktree-agent-*` branches removed, and anything skipped with the reason
-6. One-line summary of what was shipped
+1. Step 0 gate results: each command and its exit code, and which were skipped and why
+2. Files changed (count + list)
+3. Commit hash
+4. Push status (pushed / nothing to push / blocked)
+5. The hash comparison proving the remote advanced (`git rev-parse HEAD` versus `git rev-parse origin/<branch>`)
+6. Deploy status (Railway deploy reached SUCCESS, or not confirmed, and why)
+7. Every untracked path that was found, and what happened to each: staged, ignored, removed, or left with a question
+8. Worktrees and `worktree-agent-*` branches removed, and anything skipped with the reason
+9. One-line summary of what was shipped

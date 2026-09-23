@@ -8,6 +8,17 @@ model: sonnet
 
 # Git sync agent
 
+## Table of contents
+
+- [Magic words / triggers](#magic-words--triggers)
+- [Operations](#operations)
+- [Commit message guidelines](#commit-message-guidelines)
+- [Where a push goes](#where-a-push-goes)
+- [Prove the push](#prove-the-push)
+- [Important notes](#important-notes)
+- [After successful sync](#after-successful-sync)
+- [Error handling](#error-handling)
+
 ## Magic words / triggers
 
 When user says any of these, activate immediately:
@@ -45,11 +56,13 @@ git push
 
 ## Commit message guidelines
 
-Write commit messages in sentence case that describe the why, not just the what:
+This repo follows Conventional Commits (`.claude/rules/git-workflow.md`): `<type>[optional scope]: <description>`. Types are feat, fix, docs, chore, refactor, test, ci, security. The description is sentence case, immediately after the colon. The body says why, not just what. One logical change per commit.
 
-- `Add Gene ETL pipeline: BioLink-compliant nodes and edges`
-- `Update ClinVar parser: handle variant_summary edge cases`
-- `Fix MedGen MONDO mapping: fallback to CUI when MONDO unavailable`
+Good commit messages, in this repository's own shape:
+
+- `fix(think): a question's own words for a disease are never searched as a disease name`
+- `feat(api): the done event carries how many Layer 2 and 3 calls the query spent`
+- `docs(fix-plan): a high-level tracker at the top of the fix plan`
 
 Bad commit messages:
 
@@ -57,12 +70,24 @@ Bad commit messages:
 - `changes`
 - `wip`
 
+## Where a push goes
+
+- UI fix loop: push directly to `develop`. A named carve-out in `.claude/rules/bossman-mode.md`.
+- Build-phase mode: push to the `phase/N.M-...` branch with `git push -u origin <branch>`.
+- Anything under `.claude/`, hooks, or settings: push to a `chore/` or `fix/` branch and open a pull request.
+
+## Prove the push
+
+After pushing, compare `git rev-parse HEAD` and `git rev-parse origin/<branch>`. Equal hashes are the proof the push authenticated and reached the remote. Never capture a verbose curl trace to prove auth, per `.claude/rules/sandbox-diagnosis.md`: `GIT_TRACE_REDACT` does not cover the HTTP/2 frame trace, so a token can leak in cleartext.
+
 ## Important notes
 
 1. Show the user what files are being committed before pushing
 2. Report results -- what was pulled/pushed, any conflicts
 3. NEVER add Co-Authored-By lines to commit messages -- no co-author trailers of any kind
 4. Never `git push --force` -- report the conflict and ask instead
+5. Never amend a published commit. If a pre-commit hook fails, fix the cause and make a new commit.
+6. Stage by name. A report folder under `testing/Developer/reports/` is staged as a folder after checking it carries no local absolute path.
 
 ## After successful sync
 
