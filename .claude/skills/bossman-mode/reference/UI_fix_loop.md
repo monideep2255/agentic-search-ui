@@ -33,7 +33,7 @@ There is no branch, no pull request, no judge round and no adversary round. The 
 3. Fixes land directly on `develop`. No phase branch, no pull request.
 4. Run the quick checks that fit the change, then push. One item per push.
 5. Confirm it live: the deployment reports SUCCESS, the served app carries the change, and a browser check at 1280px and 390px.
-6. The product owner retests and gives a verdict. That verdict, not an agent's grade, moves the row to done.
+6. The product owner retests and gives a verdict. That verdict, not an agent's grade, moves the row to done. Once an item is live its row and detail already sit in `testing/UI_fixes_done.md`; the verdict closes the one "Your retest" row the plan keeps for it.
 
 Tickets reach `in-review` on merge and reach `done` only on the product owner's verdict. This is the same rule build phase 6.2 adopted when it dropped its judge round: the person testing on develop is the verification step, so nothing an agent runs can close a row on its own.
 
@@ -65,7 +65,7 @@ Dropping the judge round does not drop the standard of evidence. Three things ca
 
 | What | Where |
 |------|-------|
-| The item list, one row per fix, with status | `testing/UI_fix_plan.md` |
+| The item list, one row per fix, with status | `testing/UI_fix_plan.md` while being built or to do; `testing/UI_fixes_done.md` once live |
 | The running cutoff and the shared plan | `testing/UI_fix_plan.md`, the "Where we stopped" section, updated at the end of every session |
 | Evidence for a defect or an investigation | `testing/Developer/reports/<date>_<topic>/findings.md` |
 | A choice between alternatives | `DECISIONS.md` |

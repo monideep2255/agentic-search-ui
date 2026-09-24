@@ -60,7 +60,7 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 |------|--------------|-------------------|
 | Per-phase tickets, findings, evidence | `tracker/phase_N.M.md` | A pointer, never a copy |
 | Phase status and open flags | `tracker/BOARD.md` | A pointer, for build phases only; the UI fix loop does not write it and its last write was 2026-09-01 |
-| Per-item UI fix status, and the session cutoff | `testing/UI_fix_plan.md`, its Set table and its "Where we stopped" section | A pointer, never a copy. `tracker/BOARD.md` does NOT track UI fix items and is not expected to |
+| Per-item UI fix status, and the session cutoff | `testing/UI_fix_plan.md` for every item still being built or still to do, its open-item tables and its "Where we stopped" section; `testing/UI_fixes_done.md` for every finished item | A pointer, never a copy. `tracker/BOARD.md` does NOT track UI fix items and is not expected to. An item lives in exactly one of the two files |
 | Phase narrative and history | `requirements/Plan.md` Revision history | A pointer |
 | Current state and next action | `requirements/phase_6/Continuation_prompt.md` | A pointer |
 | Failures and their fixes | `LEARNINGS.md` | A pointer; Step 1b checks the session's failures are logged |
@@ -69,7 +69,8 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | Counts (tests, decisions, entries, flags) | Computed by `tracker/check_doc_drift.py` | Only CLAUDE.md and the continuation prompt may state them |
 | The plain-language state of the project, for a non-technical reader | `PROGRESS.md` | Nowhere else. It is the only document written for someone outside the build |
 | The day's shipped list: one row per item shipped that day, the numbered "What to retest" items, and what was measured rather than built | `testing/Shipped_<YYYY-MM-DD>.md` | A pointer by item number, never a copy |
-| Where every feature stands: features still to implement, features done, additional notes | The high-level tracker at the top of `testing/UI_fix_plan.md`, refreshed by this checkpoint from the item rows it summarises, since it is a derived index and can drift | Nowhere else |
+| Where every feature stands: features being built and still to do, additional notes | The high-level tracker at the top of `testing/UI_fix_plan.md`, refreshed by this checkpoint from the item rows it summarises, since it is a derived index and can drift | Nowhere else |
+| Every finished feature, its test query and its retest item | The "Done features at a glance" table at the top of `testing/UI_fixes_done.md`, in step with `testing/Test_queries_and_workflows.md` and the shipped lists | Nowhere else |
 | The tracked counts on line 32 of `CLAUDE.md` and `AGENTS.md` (Python tests, decisions, learnings) and Plan.md's "Decisions logged" line | This checkpoint, in Step 5d, from the values `tracker/check_doc_drift.py` computes | Nowhere else |
 
 `PROGRESS.md` is the one deliberate exception to the pointer rule, and it is worth saying why. Every other row above avoids restating a fact because a second copy drifts. `PROGRESS.md` restates many of them on purpose, in different words, because its reader cannot follow a pointer into `tracker/phase_N.M.md` and get anything useful out of it. The protection against drift is that it is refreshed at Step 5b of every checkpoint, from the same sources, rather than edited ad hoc.
@@ -137,9 +138,11 @@ Confirm before writing. Ask if unclear from context:
 
 ### Step 5a: the UI fix plan (UI-fix-loop mode only)
 
-`testing/UI_fix_plan.md` is the single owner of per-item status and of the cutoff, so it is the first artifact this mode updates, not the last.
+`testing/UI_fix_plan.md` is the single owner of what is being built, what is next and the cutoff, so it is the first artifact this mode updates, not the last. Finished items live in `testing/UI_fixes_done.md`: the product owner split the plan on 2026-09-24 because one file holding both had grown past 2,500 lines and broke on every edit.
 
-- The Set table: update the status word and the "where it stands" cell for every item that changed state this session. Status words are Live, In progress, Queued, Not started, Answered, Done, and any other word needs a reason in the cell.
+- WHEN AN ITEM GOES LIVE on develop, move its row and its detail section, verbatim, from `testing/UI_fix_plan.md` to `testing/UI_fixes_done.md`, add its row to the done file's "Done features at a glance" table with its test query number and its shipped retest item, and leave ONE row in the plan's "To do" table, waiting on "Your retest", until the product owner approves it. On approval, delete that one row and set the done file's status to Approved.
+
+- The item tables in both files: update the status word and the "where it stands" cell for every item that changed state this session, in whichever file the item lives. Status words are Live, In progress, Queued, Not started, Answered, Done, and any other word needs a reason in the cell.
 - The "Where we stopped" section: rewrite it in place. It is the cutoff, and the next session starts from it rather than reconstructing state. It carries what is live, what is parked and why, what is waiting on the product owner, the known loose ends, and the ordered next actions.
 - An item that was merged and then reverted is NOT quietly returned to its earlier status. Say it was reverted, and say what question is open, or the next session will re-land the same work into the same defect.
 - Refresh the "Where every feature stands" tracker at the top of `testing/UI_fix_plan.md` for every item that changed state this session: features still to implement, features done (with the approval exceptions named item by item), and additional notes. It is a derived index of the rows below it and drifts if left alone.
@@ -221,7 +224,7 @@ Before declaring the checkpoint done, verify:
 - [ ] Every decision made this session is in DECISIONS.md (append-only).
 - [ ] Planning-phase mode: the phase session doc has a section for each sub-phase closed, and a dated meeting note exists with an action-items section.
 - [ ] Build-phase mode: `requirements/phase_6/Continuation_prompt.md` names the correct just-merged build phase, the correct next-up build phase, the current LEARNINGS.md count, and any open item the merged phase's release gate created.
-- [ ] UI-fix-loop mode: `testing/UI_fix_plan.md`'s Set table names the correct status for every item that changed, and its "Where we stopped" section is rewritten in place as the cutoff, naming what is parked and why.
+- [ ] UI-fix-loop mode: every item that changed state has the correct status in whichever file it lives, every item that went live has moved to `testing/UI_fixes_done.md` with its row in "Done features at a glance", and `testing/UI_fix_plan.md`'s "Where we stopped" section is rewritten in place as the cutoff, naming what is parked and why.
 - [ ] UI-fix-loop mode: `requirements/Plan.md` has a Revision history entry for the session, and its Phase 6 status row was NOT bumped to name a fix set.
 - [ ] `PROGRESS.md` refreshed: the sprint table has a row for the phase that just merged, "what works today" and "what does not work yet" reflect the current state, item 1 of "what is next" is genuinely next, the known-problems table matches the open flags on `tracker/BOARD.md`, and the last-updated date is today. Written in plain English with no internal finding identifiers in the body.
 - [ ] The continuation prompt (whichever mode) reflects current state: no just-merged phase described as "not started" or "next up" to build.
