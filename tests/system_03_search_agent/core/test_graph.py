@@ -362,7 +362,7 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 def _valid_query(**overrides: object) -> Query:
-    """The shared query fixture. Its default text ("hello") is
+    """The shared query fixture. Its default text ("what can you do") is
     deliberately one of `graph_module._NO_TOOL_QUERY_TEXTS` (T-2.1-08),
     so plan_node selects no tool and act_node's dispatch loop never runs,
     leaving every pre-existing stub-era test in this file (event
@@ -372,9 +372,18 @@ def _valid_query(**overrides: object) -> Query:
     real cypher_query dispatch override `text=` to a substantive query
     explicitly (see the "plan selects cypher_query" / "act executes it"
     tests below).
+
+    FOUR WORDS, NOT ONE ("hello", changed 2026-09-24), since fix-plan item
+    12.3, REDESIGNED the same day: a one-to-three-word opening question
+    now makes its OWN guard-tier classifier call before any of this
+    (`core.graph._clarify_or_proceed`), which "hello" would have
+    triggered, inserting an extra model call and cost event ahead of this
+    file's own fixed call counts and event sequences. Four words is past
+    that trigger, so this fixture tests exactly what it always tested, one
+    no-tool stub, with no dependency on item 12.3 at all.
     """
     base: dict[str, object] = {
-        "text": "hello",
+        "text": "what can you do",
         "session_id": "session-1",
         "trace_id": "trace-graph-1",
         "user_id": None,
@@ -2381,10 +2390,10 @@ async def test_flagship_disease_row_hedges_its_citation_and_flags_its_payload_fi
 async def test_act_node_calls_coordinator_worker_execute_with_empty_lists_for_a_no_tool_query(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With no tool selected (the default "hello" query), act_node still
-    calls coordinator_worker_execute with paired empty lists, proving the
-    integration point remains wired even when there is nothing to fan
-    out over.
+    """With no tool selected (the default "what can you do" query),
+    act_node still calls coordinator_worker_execute with paired empty
+    lists, proving the integration point remains wired even when there is
+    nothing to fan out over.
     """
     calls: list[tuple] = []
     original = graph_module.coordinator_worker_execute

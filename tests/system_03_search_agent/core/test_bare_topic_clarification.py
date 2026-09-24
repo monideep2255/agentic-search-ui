@@ -1,36 +1,40 @@
-"""UI fix plan item 12.3 (2026-09-23): a bare one-to-three-word question
-that opens a conversation gets a clarifying question instead of a silent
-guess, with four full questions the reader can pick with one click.
+"""UI fix plan item 12.3, REDESIGNED 2026-09-24: a one-to-three-word
+question that opens a conversation is asked back or searched by a model's
+own reading of it, never by a word list.
 
-The product owner's approved design, in their own words: "If clarify
-needed -> yes approved". A question of one to three words, with no question
-word, that OPENS a conversation (a follow-up inside a conversation is never
-asked back, since memory already supplies its subject:
-`docs/build/Search_and_conversation_behaviour.md`) is too ambiguous to
-search silently: "reflux disease", "GERD", "BRCA1", "MeSH" and "Marfan" all
-ask; "Any trials for GERD?" (four words), "What is GERD?" (a question word)
-and any short follow-up with an earlier turn behind it all proceed.
+The product owner's instruction, verbatim: "Please do not hardcode!
+Hopefully not that dumb". The first build decided ask-or-proceed from a
+question-word list, then a request-word list, and offered four fixed
+template questions; all three are withdrawn. What replaced them is one
+guard-tier call, `core.clarify`'s `build_clarify_messages`/
+`parse_clarify_reply`, dispatched from `core.graph._clarify_or_proceed` and
+wired at the top of `think_node`. `core.clarify`'s own module owns the
+prompt and the strict parse; `test_clarify.py` grades that in isolation.
+This file grades the WIRING: the trigger that decides whether the
+classifier is even called, and what `think_node` does with each of its
+three possible outcomes.
 
-Exercised:
-    `_bare_topic_clarification` directly: every must-ask shape from the
-    fix-plan row, every word in the question-word list exempting a
-    question, the four-word cutoff, punctuation stripped before counting
-    ("GERD?" still asks), and the exact question and four options built.
-    Through the real five-node graph with the model stubbed (the same
-    harness `test_clarification.py` uses): each must-ask example publishes
-    the clarification with its four options and runs NO tool call; each
-    must-not example (a question word, or four words) proceeds to a real
-    search; the identical bare-topic text proceeds when an earlier turn's
-    session memory is present, since that is what "opens a conversation"
-    means in practice.
+Exercised, each through the real five-node graph with the model stubbed
+per tier (the same harness `test_clarification.py` uses):
+    `ask_back: true` publishes the classifier's OWN question and options
+    and runs NO tool call. `ask_back: false` proceeds to a real search.
+    A malformed classifier reply, and a classifier call that raises
+    `HarnessCallError`, both proceed to a real search, the fail-open rule
+    stated in `core.clarify`'s own module docstring. A four-word question
+    never calls the classifier at all. A short follow-up with an earlier
+    turn's session memory present never calls it either, since memory
+    already supplies the subject.
 
-NOT exercised: the web UI's rendering of the four options as chips
-(`frontend/src/components/answer/FollowUp.chips.test.tsx` owns that), and
-live models.
+NOT exercised: `core.clarify`'s own parsing and bounds (`test_clarify.py`
+owns that), and the web UI's rendering of the four options as chips
+(`frontend/src/components/answer/FollowUp.clarifyingOptions.test.tsx`
+owns that; unchanged by this redesign, since the wire contract
+`ThinkPayload.clarifying_options` did not change).
 """
 
 from __future__ import annotations
 
+import json
 import time
 import uuid
 from typing import Any
@@ -43,9 +47,11 @@ from system_03_search_agent.contracts.query import (
     ResolvedEntity,
     SessionMemorySummary,
 )
+from system_03_search_agent.core import clarify
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness import harness as harness_module
+from system_03_search_agent.harness.harness import HarnessCallError
 from system_03_search_agent.tools.cypher_schemas import CypherQueryOutput, CypherQueryRow
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput
 from tests.system_03_search_agent.model_stub import (
@@ -55,75 +61,30 @@ from tests.system_03_search_agent.model_stub import (
     fake_response,
 )
 
-# ---------------------------------------------------------------------------
-# Pure unit tests: `_bare_topic_clarification` needs no graph, no model, and
-# no event loop, so these run with none of the fixtures below.
-# ---------------------------------------------------------------------------
 
-
-@pytest.mark.parametrize(
-    "text",
-    ["reflux disease", "GERD", "BRCA1", "MeSH", "Marfan"],
-)
-def test_every_must_ask_example_from_the_fix_plan_row_asks(text: str) -> None:
-    result = graph_module._bare_topic_clarification(text)
-    assert result is not None, text
-    assert result.question == f"What would you like to know about {text}?"
-    assert len(result.options) == 4
-    assert result.options == (
-        f"What is {text} and what are its symptoms?",
-        f"Which genes or variants are linked to {text}?",
-        f"Are there clinical trials for {text}?",
-        f"What does recent research say about {text}?",
+def _clarify_reply(topic: str) -> str:
+    """A well-formed `ask_back: true` reply for `topic`, matching
+    `core.clarify.ClarifyDecision`'s own bounds."""
+    return json.dumps(
+        {
+            "ask_back": True,
+            "question": f"What would you like to know about {topic}?",
+            "options": [
+                f"What is {topic}?",
+                f"What does recent research say about {topic}?",
+                f"Are there clinical trials on {topic}?",
+                f"Which genes or diseases are linked to {topic}?",
+            ],
+        }
     )
 
 
-def test_a_question_mark_alone_does_not_exempt() -> None:
-    """"A question mark alone does not exempt: `GERD?` is still ambiguous."
-    The trailing punctuation is stripped from the token before counting, so
-    this is still one bare word, and the echoed topic drops the mark too."""
-    result = graph_module._bare_topic_clarification("GERD?")
-    assert result is not None
-    assert result.question == "What would you like to know about GERD?"
-
-
-def test_four_words_does_not_ask() -> None:
-    """"Any trials for GERD?" (four words) must proceed, per the fix-plan
-    row: a fourth word states enough of a request to search."""
-    assert graph_module._bare_topic_clarification("Any trials for GERD?") is None
-
-
-def test_three_words_with_no_question_word_still_asks() -> None:
-    assert graph_module._bare_topic_clarification("post surgical infection") is not None
-
-
-@pytest.mark.parametrize("word", sorted(graph_module._BARE_TOPIC_QUESTION_WORDS))
-def test_every_question_word_exempts_a_question(word: str) -> None:
-    """Every word in the fix-plan row's list ("what, which, how, why, who,
-    when, where, is, are, does, do, can, should, list, show, tell, find,
-    any"), checked one at a time so a future edit that drops one is caught
-    by name rather than by a single combined assertion."""
-    assert graph_module._bare_topic_clarification(f"{word} GERD") is None
-    # Case-insensitive: the reply text preserves the caller's own casing
-    # elsewhere, but the exemption check itself must not be fooled by it.
-    assert graph_module._bare_topic_clarification(f"{word.upper()} GERD") is None
-
-
-def test_what_is_gerd_does_not_ask() -> None:
-    """The fix-plan row's own worked example of a question word exempting a
-    question, at its literal three-word length."""
-    assert graph_module._bare_topic_clarification("What is GERD?") is None
-
-
-def test_empty_and_whitespace_do_not_ask() -> None:
-    assert graph_module._bare_topic_clarification("") is None
-    assert graph_module._bare_topic_clarification("   ") is None
+_PROCEED_REPLY = json.dumps({"ask_back": False, "question": "", "options": []})
 
 
 # ---------------------------------------------------------------------------
-# Integration tests through the real five-node graph, model calls stubbed.
-# Mirrors `test_clarification.py`'s own harness exactly, since this is the
-# same class of deterministic, pre-search decision.
+# Harness: the same fixtures `test_clarification.py` uses, plus a
+# configurable clarify-call outcome.
 # ---------------------------------------------------------------------------
 
 
@@ -140,29 +101,7 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cost_control, "check_system_daily_cost_cap", lambda *a, **k: None)
 
 
-@pytest.fixture(autouse=True)
-def _stubbed_models_and_tools(monkeypatch: pytest.MonkeyPatch) -> None:
-    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
-    from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
-
-    async def _dispatch(*args: object, **kwargs: object) -> Any:
-        messages = list(kwargs.get("messages") or [])
-        joined = "\n".join(str(message.get("content") or "") for message in messages)
-        if GUARD_SYSTEM_INSTRUCTION in joined:
-            return fake_response(COMPLIANT_GUARD_CLASSIFICATION)
-        if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
-            return fake_response(compliant_think_classification(messages))
-        if SYNTH_SYSTEM_INSTRUCTION in joined:
-            return fake_response(compliant_synth_narrative(messages))
-        return fake_response("MATCH (g:Gene) RETURN g LIMIT 1")
-
-    monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
-    monkeypatch.setattr(
-        harness_module.litellm,
-        "get_model_info",
-        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
-    )
-
+def _install_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _resolve(symbol: str, *, taxon: str = "human") -> str | None:
         return {"BRCA1": "NCBIGene:672"}.get(symbol.strip().upper())
 
@@ -202,6 +141,60 @@ def _stubbed_models_and_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(graph_module, "ncbi_efetch", _efetch)
 
 
+def _install_models(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    clarify_reply: str | BaseException | None,
+) -> list[str]:
+    """Stub `litellm.acompletion` per tier, and record which tiers' prompts
+    were actually dispatched (by their fixed instruction text), so a test
+    can assert the classifier was, or was never, called.
+
+    `clarify_reply`:
+        - a string: the clarify call's raw completion content.
+        - an exception instance: the clarify call raises it (simulates a
+          `HarnessCallError` or a `cost_control.QueryCapExceededError`).
+        - None: this test never expects the clarify call to be reached;
+          reaching it raises `AssertionError` so a wrong-trigger regression
+          fails loudly here rather than silently returning a plausible
+          value.
+    """
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+    from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+    dispatched: list[str] = []
+
+    async def _dispatch(*args: object, **kwargs: object) -> Any:
+        messages = list(kwargs.get("messages") or [])
+        joined = "\n".join(str(message.get("content") or "") for message in messages)
+        if clarify.CLARIFY_SYSTEM_INSTRUCTION in joined:
+            dispatched.append("clarify")
+            if clarify_reply is None:
+                raise AssertionError("the clarify classifier was called but no reply was configured")
+            if isinstance(clarify_reply, BaseException):
+                raise clarify_reply
+            return fake_response(clarify_reply)
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            dispatched.append("guard")
+            return fake_response(COMPLIANT_GUARD_CLASSIFICATION)
+        if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
+            dispatched.append("think")
+            return fake_response(compliant_think_classification(messages))
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            dispatched.append("synth")
+            return fake_response(compliant_synth_narrative(messages))
+        dispatched.append("other")
+        return fake_response("MATCH (g:Gene) RETURN g LIMIT 1")
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    return dispatched
+
+
 async def _run(text: str, memory: SessionMemorySummary | None = None) -> list[Any]:
     trace_id = f"t-{uuid.uuid4().hex[:12]}"
     query = Query(text=text, session_id="bare-topic-test", trace_id=trace_id)
@@ -236,41 +229,43 @@ def _memory_with_tp53() -> SessionMemorySummary:
     )
 
 
+# ---------------------------------------------------------------------------
+# ask_back: true
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "text",
-    ["reflux disease", "GERD", "BRCA1", "MeSH", "Marfan"],
-)
-async def test_a_bare_topic_that_opens_a_conversation_asks_and_runs_no_tool(
-    text: str,
+async def test_ask_back_true_shows_the_models_question_and_runs_no_tool(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """MUTATION PROOF: removing the `_bare_topic_clarification` branch in
-    `think_node` turns the think, plan and token arms red; removing Plan's
-    existing `clarification_needed` early return turns the tool_start arm
-    red; removing Write's existing `clarification_needed` branch turns the
-    token and done arms red. All three are item 7.5's own pre-existing
-    machinery, reused rather than reinvented, so this arm also proves that
-    reuse actually wires end to end for this new call site.
+    """MUTATION PROOF: removing `_clarify_or_proceed`'s `ask_back` check in
+    `think_node` (always falling through) turns the think and token arms
+    red; removing Plan's existing `clarification_needed` early return
+    turns the tool_start arm red; removing Write's existing
+    `clarification_needed` branch turns the token and done arms red. All
+    three are item 7.5's own pre-existing machinery, reused rather than
+    reinvented.
     """
-    events = await _run(text)
+    _install_tools(monkeypatch)
+    dispatched = _install_models(monkeypatch, clarify_reply=_clarify_reply("insulin"))
+
+    events = await _run("insulin")
     types = [event.type for event in events]
     assert "done" in types, types
+    assert dispatched == ["guard", "clarify"], dispatched
 
     think = _payload(events, "think")
     assert think is not None
-    expected_question = f"What would you like to know about {text}?"
+    expected_question = "What would you like to know about insulin?"
     assert think["clarifying_question"] == expected_question
     assert think["resolved_entities"] == []
     assert think["clarifying_options"] == [
-        f"What is {text} and what are its symptoms?",
-        f"Which genes or variants are linked to {text}?",
-        f"Are there clinical trials for {text}?",
-        f"What does recent research say about {text}?",
+        "What is insulin?",
+        "What does recent research say about insulin?",
+        "Are there clinical trials on insulin?",
+        "Which genes or diseases are linked to insulin?",
     ]
 
-    # No search at all: BRCA1 is a real, resolvable gene symbol in this
-    # stub, and it still must not resolve or run a tool, because the
-    # product owner's design asks BEFORE any search runs.
     assert "tool_start" not in types, types
     plan = _payload(events, "plan")
     assert plan is not None and plan["tool_calls"] == []
@@ -285,50 +280,182 @@ async def test_a_bare_topic_that_opens_a_conversation_asks_and_runs_no_tool(
 
 
 @pytest.mark.asyncio
-async def test_a_fourth_word_proceeds_to_a_real_search() -> None:
+async def test_ask_back_true_options_are_tailored_to_whatever_the_model_sent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No template lives in `think_node` any more: whatever four strings
+    the classifier sends are what the reader sees, unmodified."""
+    _install_tools(monkeypatch)
+    custom = json.dumps(
+        {
+            "ask_back": True,
+            "question": "Which BRCA1 aspect do you mean?",
+            "options": [
+                "What is BRCA1?",
+                "Which conditions are linked to BRCA1?",
+            ],
+        }
+    )
+    _install_models(monkeypatch, clarify_reply=custom)
+
+    events = await _run("BRCA1")
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == "Which BRCA1 aspect do you mean?"
+    assert think["clarifying_options"] == [
+        "What is BRCA1?",
+        "Which conditions are linked to BRCA1?",
+    ]
+    assert "tool_start" not in [event.type for event in events]
+
+
+# ---------------------------------------------------------------------------
+# ask_back: false, and every failure mode. All proceed to a real search.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_ask_back_false_proceeds_to_a_real_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_tools(monkeypatch)
+    dispatched = _install_models(monkeypatch, clarify_reply=_PROCEED_REPLY)
+
+    events = await _run("BRCA1")
+    types = [event.type for event in events]
+    assert dispatched[:2] == ["guard", "clarify"], dispatched
+    assert "think" in dispatched, dispatched
+
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] is None
+    assert think.get("clarifying_options") is None
+    assert "tool_start" in types, types
+
+
+@pytest.mark.asyncio
+async def test_a_malformed_reply_proceeds_to_a_real_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The fail-open rule, on the parse half: `parse_clarify_reply` raises
+    `ClarifyUnavailableError` for text that is not valid JSON, and
+    `_clarify_or_proceed` turns that into `None`, which `think_node`
+    treats exactly like `ask_back: false`."""
+    _install_tools(monkeypatch)
+    dispatched = _install_models(monkeypatch, clarify_reply="not valid json at all")
+
+    events = await _run("BRCA1")
+    types = [event.type for event in events]
+    assert "clarify" in dispatched, dispatched
+
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] is None
+    assert "tool_start" in types, types
+
+
+@pytest.mark.asyncio
+async def test_a_schema_invalid_reply_proceeds_to_a_real_search(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The fail-open rule again, on a reply that IS valid JSON but fails
+    `ClarifyDecision`'s own bounds (here, `ask_back: true` with only one
+    option, under `MIN_CLARIFY_OPTIONS`)."""
+    _install_tools(monkeypatch)
+    bad = json.dumps({"ask_back": True, "question": "Which?", "options": ["only one?"]})
+    dispatched = _install_models(monkeypatch, clarify_reply=bad)
+
+    events = await _run("BRCA1")
+    assert "clarify" in dispatched, dispatched
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] is None
+    assert "tool_start" in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+async def test_a_call_failure_proceeds_to_a_real_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The fail-open rule on the DISPATCH half: a `HarnessCallError` (a
+    timeout, or an exhausted-retry transport failure) from the classifier
+    call itself, not from parsing its reply."""
+    _install_tools(monkeypatch)
+    dispatched = _install_models(
+        monkeypatch,
+        clarify_reply=HarnessCallError("simulated timeout", error_class="transient"),
+    )
+
+    events = await _run("BRCA1")
+    assert "clarify" in dispatched, dispatched
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] is None
+    assert "tool_start" in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+async def test_a_cap_hit_proceeds_to_a_real_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The fail-open rule on the cost-cap half: the classifier call itself
+    is what `cost_control.QueryCapExceededError` blocks, and even then the
+    QUESTION still gets an honest attempt at a real search rather than
+    being silently dropped."""
+    _install_tools(monkeypatch)
+    dispatched = _install_models(
+        monkeypatch,
+        clarify_reply=cost_control.QueryCapExceededError(
+            "simulated cap hit",
+            query_cost_usd=1.0,
+            query_cap_usd=1.0,
+            estimated_call_cost_usd=0.01,
+        ),
+    )
+
+    events = await _run("BRCA1")
+    assert "clarify" in dispatched, dispatched
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] is None
+    assert "tool_start" in [event.type for event in events]
+
+
+# ---------------------------------------------------------------------------
+# The trigger: 1 to 3 words, opening the conversation. Anything else never
+# reaches the classifier at all.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_four_words_never_calls_the_classifier(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_tools(monkeypatch)
+    dispatched = _install_models(monkeypatch, clarify_reply=None)
+
     events = await _run("Any trials for GERD?")
-    types = [event.type for event in events]
-    think = _payload(events, "think")
-    assert think is not None
-    assert think["clarifying_question"] is None
-    assert think.get("clarifying_options") is None
-    assert "tool_start" in types, types
+    assert "clarify" not in dispatched, dispatched
+    assert "tool_start" in [event.type for event in events]
 
 
 @pytest.mark.asyncio
-async def test_a_question_word_proceeds_to_a_real_search() -> None:
-    events = await _run("What is GERD?")
-    types = [event.type for event in events]
-    think = _payload(events, "think")
-    assert think is not None
-    assert think["clarifying_question"] is None
-    assert think.get("clarifying_options") is None
-    assert "tool_start" in types, types
+async def test_a_short_follow_up_with_an_earlier_turn_never_calls_the_classifier(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The counterfactual that isolates "opens a conversation" from "is
+    short": the exact text of a must-trigger example ("BRCA1"), asked with
+    an earlier turn's session memory present, never reaches the
+    classifier, because a follow-up inside a conversation is never asked
+    back (session memory already supplies its subject).
 
-
-@pytest.mark.asyncio
-async def test_a_short_follow_up_with_an_earlier_turn_proceeds() -> None:
-    """The counterfactual that isolates "opens a conversation" from "is a
-    bare topic": the exact text of a must-ask example above ("BRCA1"),
-    asked with an earlier turn's session memory present, must NOT ask,
-    because a follow-up inside a conversation is never asked back
-    (session memory already supplies its subject). This is the same
-    property `test_clarification.py`'s own counterfactual pins for item
-    7.5, applied to this new call site.
+    Populate-check, run first: the identical text with NO memory DOES call
+    the classifier, so "never calls it" below is a statement about the
+    memory gate, not about the trigger never firing for this text at all.
     """
-    # Populate-check, run first: the identical text with NO memory does ask,
-    # so "proceeds" below is a statement about the memory gate, not about
-    # "BRCA1" never being ambiguous in the first place.
+    _install_tools(monkeypatch)
+    opening_dispatched = _install_models(monkeypatch, clarify_reply=_clarify_reply("BRCA1"))
     opening_events = await _run("BRCA1")
+    assert "clarify" in opening_dispatched, opening_dispatched
     opening_think = _payload(opening_events, "think")
-    assert opening_think is not None
-    assert opening_think["clarifying_question"] is not None
+    assert opening_think is not None and opening_think["clarifying_question"] is not None
 
+    dispatched = _install_models(monkeypatch, clarify_reply=None)
     events = await _run("BRCA1", memory=_memory_with_tp53())
-    types = [event.type for event in events]
+
+    assert "clarify" not in dispatched, dispatched
     think = _payload(events, "think")
     assert think is not None
     assert think["clarifying_question"] is None
-    assert think.get("clarifying_options") is None
-    assert "tool_start" in types, types
+    assert "tool_start" in [event.type for event in events]
     assert think["resolved_entities"], "BRCA1 resolves as a real entity once asked"

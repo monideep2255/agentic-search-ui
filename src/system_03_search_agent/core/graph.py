@@ -481,7 +481,13 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
-from system_03_search_agent.core import accession, breadth_plan, coordinate_window, isolate_search
+from system_03_search_agent.core import (
+    accession,
+    breadth_plan,
+    clarify,
+    coordinate_window,
+    isolate_search,
+)
 from system_03_search_agent.core.next_step import (
     build_next_step_query,
     entity_type_noun,
@@ -2059,101 +2065,83 @@ async def resolve_window_genes(
     return coordinate_window.genes_in_window(records, window)
 
 
-#: Fix-plan item 12.3 (2026-09-23), the product owner's approved design, in
-#: their own words: "If clarify needed -> yes approved". A question of one to
-#: three words, with no word from this set, that OPENS a conversation (a
-#: follow-up inside a conversation is never asked back, since memory already
-#: supplies its subject: see `_bare_topic_clarification`'s one call site)
-#: reads as a bare topic ("reflux disease", "GERD", "BRCA1", "MeSH", "Marfan")
-#: rather than a specific request, and gets asked back instead of guessed at.
-#: Any of these words present exempts the question ("What is GERD?", "Any
-#: trials for GERD?"), because it already states what is wanted.
-_BARE_TOPIC_QUESTION_WORDS: Final = frozenset(
-    {
-        "what",
-        "which",
-        "how",
-        "why",
-        "who",
-        "when",
-        "where",
-        "is",
-        "are",
-        "does",
-        "do",
-        "can",
-        "should",
-        "list",
-        "show",
-        "tell",
-        "find",
-        "any",
-    }
-)
+#: Fix-plan item 12.3, REDESIGNED 2026-09-24 on the product owner's
+#: instruction, in their words: "Please do not hardcode! Hopefully not that
+#: dumb". The STRUCTURAL trigger this rule keeps is the owner's own number,
+#: stated under item 11.38: "Jev becomes our classfier -> 1-3 words ->
+#: clarification question or move forward". Whether to ask, and what to
+#: ask, is `core.clarify`'s classifier's decision, never a word list; see
+#: that module's docstring for the full account, including where Jev's own
+#: Bool question type slots into `ask_back` once it leaves the backlog.
+_MAX_CLARIFY_TRIGGER_WORDS: Final[int] = 3
 
-#: A fourth word states enough of a request to search rather than ask
-#: ("Any trials for GERD?"), so the check is narrowly one to three words.
-_MAX_BARE_TOPIC_WORDS: Final[int] = 3
+#: The classifier's own share of `budget_for_step("think", "lookup")`,
+#: never the whole thing. It must leave room for the REAL think classify
+#: call that still runs afterward on an `ask_back=False` verdict or ANY
+#: classifier failure, both of which fall through to the ordinary flow
+#: below this block.
+_CLARIFY_BUDGET_FRACTION: Final[float] = 0.2
 
-#: Keeps every one of the four full questions below well under
-#: `ThinkPayload.clarifying_options`'s 220-character-per-item bound, with
-#: room to spare for the longest template ("Which genes or variants are
-#: linked to ... ?") even against a pathologically long single "word".
-_MAX_BARE_TOPIC_CHARS: Final[int] = 150
+#: A short classification needs no long completion. Comfortably above the
+#: JSON-escaped form of a 220-character question plus four 220-character
+#: options, with room for the fixed key names.
+_CLARIFY_MAX_TOKENS: Final[int] = 300
 
 
-@dataclass(frozen=True)
-class _BareTopicClarification:
-    """The clarifying question and its four one-click options."""
+async def _clarify_or_proceed(
+    harness: Harness, trace_id: str, sink: _EventSink, text: str
+) -> clarify.ClarifyDecision | None:
+    """The guard-tier ask-or-proceed call, or None on ANY failure.
 
-    question: str
-    options: tuple[str, str, str, str]
+    None is the fail-open signal. The caller, `think_node`, proceeds with
+    the search on None exactly as it would if this function had never been
+    called, per the product owner's instruction that a broken or absent
+    classifier must never block a question that could otherwise be
+    answered: an unparseable reply, a wrong shape, a timeout
+    (`HarnessCallError`), or a per-query cap hit
+    (`cost_control.QueryCapExceededError`) all fall through here rather
+    than being enumerated separately by the caller.
 
+    The `cost` event is emitted the moment the call RETURNS, before any
+    attempt to parse its content, because that is the moment money was
+    actually spent; a reply this function then rejects as unusable still
+    cost what it cost.
 
-def _bare_topic_clarification(text: str) -> _BareTopicClarification | None:
-    """A bare one-to-three-word topic's clarifying question, or None.
-
-    None when the text is not this shape at all: empty, more than
-    `_MAX_BARE_TOPIC_WORDS` words, or carrying a word from
-    `_BARE_TOPIC_QUESTION_WORDS`. Tokenized the same way
-    `_is_memory_bound_follow_up` and `_needs_clarification` already tokenize
-    a question elsewhere in this module (`token.strip("?.,;:!\"'()")` on each
-    whitespace-split word), so a trailing question mark never exempts a bare
-    topic on its own: "GERD?" strips to the single token "GERD" and is still
-    asked back, since a question mark alone does not say what is wanted.
-
-    This function does not check whether the question opens a conversation;
-    it has no `state` to check that against. Its one call site in
-    `think_node` gates on `_session_memory(state) is None` first, so a
-    follow-up such as "and BRCA2?" is never even offered to this function:
-    session memory already supplies its subject.
-
-    A pure greeting ("hello", "hi", "thanks") is exempt via the SAME
-    `_NO_TOOL_QUERY_TEXTS` set `_select_planned_tool_call` already checks,
-    never asked back as though it were an ambiguous biomedical topic.
-    "hello" is not a shorter, ruder version of "GERD"; it is not a topic at
-    all, and the person typing it would read "What would you like to know
-    about hello?" as the product malfunctioning, not as help.
+    Each failure is logged at WARNING with the trace id and the
+    exception's CLASS NAME only, never its message or the model's reply
+    text: the message could echo untrusted model output, and this sink is
+    not scoped to carry that (`ai-security-standards.md`).
     """
-    normalized = text.strip().lower()
-    if not normalized or normalized in _NO_TOOL_QUERY_TEXTS:
+    messages = clarify.build_clarify_messages(text)
+    budget_s = budget_for_step("think", "lookup") * _CLARIFY_BUDGET_FRACTION
+    try:
+        response = await _dispatch_tier_call(
+            harness,
+            trace_id,
+            "guard",
+            "think",
+            messages,
+            budget_s=budget_s,
+            max_tokens=_CLARIFY_MAX_TOKENS,
+            cache_prefix=None,
+        )
+    except (cost_control.QueryCapExceededError, HarnessCallError) as exc:
+        logger.warning(
+            "clarify classifier call failed (trace %s): %s",
+            trace_id,
+            type(exc).__name__,
+        )
         return None
-    tokens = [token.strip("?.,;:!\"'()") for token in text.strip().split()]
-    tokens = [token for token in tokens if token]
-    if not tokens or len(tokens) > _MAX_BARE_TOPIC_WORDS:
+    sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "guard"))
+    try:
+        return clarify.parse_clarify_reply(response.content)
+    except clarify.ClarifyUnavailableError as exc:
+        logger.warning(
+            "clarify classifier reply unusable (trace %s): %s",
+            trace_id,
+            type(exc).__name__,
+        )
         return None
-    if any(token.lower() in _BARE_TOPIC_QUESTION_WORDS for token in tokens):
-        return None
-    topic = " ".join(tokens)[:_MAX_BARE_TOPIC_CHARS]
-    return _BareTopicClarification(
-        question=f"What would you like to know about {topic}?",
-        options=(
-            f"What is {topic} and what are its symptoms?",
-            f"Which genes or variants are linked to {topic}?",
-            f"Are there clinical trials for {topic}?",
-            f"What does recent research say about {topic}?",
-        ),
-    )
 
 
 async def think_node(state: GraphState) -> dict[str, Any]:
@@ -2162,37 +2150,42 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
 
-    # Fix-plan item 12.3 (2026-09-23). Checked FIRST: before the exact-ID
-    # pre-pass below, before any resolver, and before the Think model call
-    # further down. The product owner's design is explicit that this is
-    # "decided in code, before any search, so it costs nothing and the
-    # answer is instant. No model decides it." Gated on
-    # `_session_memory(state) is None`, i.e. this question OPENS the
-    # conversation: `load_for_caller` returns None for exactly "a session
-    # that has no memory yet, which is the ordinary first turn", so a
-    # follow-up such as "and BRCA2?" never reaches
-    # `_bare_topic_clarification` at all, since memory already supplies its
-    # subject (docs/build/Search_and_conversation_behaviour.md).
+    # Fix-plan item 12.3, REDESIGNED 2026-09-24. Checked FIRST: before the
+    # exact-ID pre-pass below, before any resolver, and before the Think
+    # classification call further down, so a question the classifier asks
+    # back never pays for either. Gated on `_session_memory(state) is
+    # None`, i.e. this question OPENS the conversation: `load_for_caller`
+    # returns None for exactly "a session that has no memory yet, which is
+    # the ordinary first turn", so a follow-up such as "and BRCA2?" never
+    # reaches the classifier at all, since memory already supplies its
+    # subject (docs/build/Search_and_conversation_behaviour.md). The word
+    # count is the product owner's own trigger from item 11.38 ("1-3
+    # words"), a plain whitespace split with no punctuation stripping and
+    # no word list: everything past the trigger is `core.clarify`'s model
+    # decision, never code.
     if _session_memory(state) is None:
-        bare_topic = _bare_topic_clarification(query.text)
-        if bare_topic is not None:
-            think_payload = ThinkPayload(
-                narrative=(
-                    "the question is a bare topic of three words or fewer "
-                    "with no question word, so the answer asks which aspect "
-                    "before any search"
-                ),
-                query_class="lookup",
-                resolved_entities=[],
-                clarifying_question=bare_topic.question,
-                clarifying_options=list(bare_topic.options),
-            )
-            sink.emit("think", think_payload)
-            return sink.result(
-                query_class="lookup",
-                resolved_entities=[],
-                clarification_needed=bare_topic.question,
-            )
+        trigger_words = query.text.strip().split()
+        if trigger_words and len(trigger_words) <= _MAX_CLARIFY_TRIGGER_WORDS:
+            decision = await _clarify_or_proceed(harness, trace_id, sink, query.text)
+            if decision is not None and decision.ask_back:
+                think_payload = ThinkPayload(
+                    narrative=(
+                        "the clarify classifier read a one-to-three-word "
+                        "opening question and decided it names a subject "
+                        "rather than a request, so the answer asks which "
+                        "aspect is meant before any search"
+                    ),
+                    query_class="lookup",
+                    resolved_entities=[],
+                    clarifying_question=decision.question,
+                    clarifying_options=list(decision.options),
+                )
+                sink.emit("think", think_payload)
+                return sink.result(
+                    query_class="lookup",
+                    resolved_entities=[],
+                    clarification_needed=decision.question,
+                )
 
     # T-4.7-05, Section 17's exact-ID-first order: a deterministic, LOCAL,
     # non-async pre-pass runs FIRST, before any model call. Only text NOT
