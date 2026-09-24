@@ -140,6 +140,11 @@ Set 12, your skip manager's feedback, raised and built 2026-09-23: 12.1, 12.2,
 12.4 and 12.7 are live and awaiting your retest; 12.3 and 12.5 are answered;
 12.6 was found already built; 12.8 is fixed; 12.9 to 12.12 are in progress on the product owner's direction of 2026-09-23.
 
+CORRECTED 2026-09-24, since the sentence above describes the evening of
+2026-09-23: 12.3 and 12.9 to 12.13 are now LIVE on develop and awaiting your
+retest, the rows in section 2 above. 12.14 to 12.17 are recorded and not
+started, and 12.16 is live apart from its part 3.
+
 ### Additional notes
 
 - THE GRAPH HOLDS NO DISEASE NAMES AND NO MESH TERMS, measured graph-wide on
@@ -1783,6 +1788,13 @@ Evidence, with a full transcript per question and a re-runnable script:
 
 ## Where we stopped
 
+READ THE TRACKER AT THE TOP FIRST. Added 2026-09-24: everything below was
+written on the morning of 2026-09-23, and the night that followed shipped
+most of it. Set 12's seven questions now answer or are asked back (12.3),
+12.9 to 12.13 are live, and "Where every feature stands" at the top of
+this plan is the current state. This section is fully refreshed at the next
+session checkpoint.
+
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state. LAST UPDATED 2026-09-23
 MORNING, when the product owner brought a second tester's feedback and it was
@@ -2174,6 +2186,11 @@ technical one.
 
 ### Next, in order
 
+UPDATED 2026-09-24: items 1 and 2 below are DONE and live. Set 12's
+questions answer (12.1, 12.2, 12.4, 12.7, 12.10) or are asked back when they
+are one to three words (12.3). What remains of Set 12 is 12.14, 12.15 and
+12.17, in section 2 of the tracker at the top, which is the current order.
+
 REWRITTEN 2026-09-23 MORNING, after the product owner brought a second
 tester's feedback. That feedback was re-run against today's code before
 anything was written down, and it takes the top of this list on the product
@@ -2302,7 +2319,9 @@ That points hard at event-loop starvation, consistent with the same suite failin
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up "Next, in order" at item 1, SET 12, the second tester's seven
+4. Pick up the tracker at the top of this plan, section 2, which is the
+   current order (UPDATED 2026-09-24: the rest of this step describes
+   2026-09-23). Then "Next, in order" at item 1, SET 12, the second tester's seven
    questions, of which zero are answered today. Its three pieces (12.1 the
    disease anchor's breadth, 12.2 the guardrail's literature vocabulary, 12.4
    the refusal's follow-up invitation) are independent and can run in
