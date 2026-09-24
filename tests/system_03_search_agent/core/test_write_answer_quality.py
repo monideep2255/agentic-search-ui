@@ -278,11 +278,24 @@ async def test_without_the_drop_the_restatements_are_rendered_twice(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_plain_language_keeps_restatements_since_it_has_no_list(monkeypatch) -> None:
+async def test_plain_language_drops_restatements_the_list_already_shows(monkeypatch) -> None:
+    """Item 12.12 (2026-09-23), REVERSING the arm that stood here.
+
+    It pinned "plain language keeps restatements since it has no list". Both
+    halves stopped being true: every depth has listed every record since
+    2026-09-14, and a tester's plain-language answers read "One trial is
+    named X. Another is named Y" above a list naming the same trials. The
+    product owner directed the repetition fixed, so the restatements go at
+    this depth too, and the listing still names every record once.
+    """
     _install(monkeypatch, _restating_reply)
     tokens = _tokens(await graph_module.write_node(_state("plain_language")))
     prose = [t["text"] for t in tokens if t["kind"] == "claim"]
-    assert any("disease name number 1" in text for text in prose[1:]), prose
+    listed = [t["text"] for t in tokens if t["kind"] in ("list_item", "table_row")]
+    assert any("disease name number 1" in text for text in listed), (
+        f"populate-check: the listing must still name the record: {tokens}"
+    )
+    assert not any("disease name number 1" in text for text in prose[1:]), prose
 
 
 @pytest.mark.asyncio

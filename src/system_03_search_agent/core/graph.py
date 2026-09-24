@@ -553,6 +553,7 @@ from system_03_search_agent.synthesis.grounding import (
     GroundedClaim,
     GroundingResult,
     display_index_by_citation_id,
+    extract_evidence_quotes,
     run_grounding_pass,
 )
 from system_03_search_agent.synthesis.mesh_terms import resolve_descriptor_ids
@@ -9556,7 +9557,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # paragraph each sentence came from, so structure reaches the screen
     # beside the grounded text rather than inside it. See
     # `synthesis/answer_layout.py`.
-    model_layout = grounding_input(parse_synth_layout(_response_text(synth_text)))
+    # Items 12.9 and 12.10: a sentence in the model's own words carries the
+    # record words behind it as `[N: "words"]`. The quotes are lifted out
+    # BEFORE the reply is split into paragraphs and sentences, since a quote
+    # may carry a full stop, and handed to the grounding pass by key.
+    model_reply, evidence_quotes = extract_evidence_quotes(_response_text(synth_text))
+    model_layout = grounding_input(parse_synth_layout(model_reply))
     # Grounded against `prompt_findings`, never the full display list. The
     # grounding pass resolves a printed `[N]` marker by `ref_index`
     # (`synthesis/grounding.py`'s `by_ref`), and the model was shown exactly
@@ -9570,6 +9576,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         prompt_findings,
         core_ask_required=True,
         question=query.text,
+        evidence_quotes=evidence_quotes,
     )
 
     # T-4.5-07, finding F-4.5-06 breach 2: the completeness repair.
@@ -9701,14 +9708,16 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 # Best-effort, per the contract stated above.
                 repaired_text = None
             if repaired_text is not None:
-                repaired_layout = grounding_input(
-                    parse_synth_layout(_response_text(repaired_text))
+                repaired_reply, repaired_quotes = extract_evidence_quotes(
+                    _response_text(repaired_text)
                 )
+                repaired_layout = grounding_input(parse_synth_layout(repaired_reply))
                 repaired_grounding = run_grounding_pass(
                     repaired_layout.narrative,
                     prompt_findings,
                     core_ask_required=True,
                     question=query.text,
+                    evidence_quotes=repaired_quotes,
                 )
                 reported_before = {
                     claim.finding.citation_id for claim in grounding.claims
@@ -9843,13 +9852,15 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # back to it if the listing below grounds nothing.
     prose_before_drop = grounding
     restatements_dropped = 0
-    # Researcher only, even though every depth now lists: a Plain language
-    # paragraph is the short prose the product owner asked to keep, and it
-    # often IS a one-record sentence, so dropping restatements there would
-    # leave the list alone.
+    # Every depth since item 12.12 (2026-09-23). It used to be Researcher
+    # only, on the grounds that a Plain language paragraph often IS a
+    # one-record sentence. That was the "One trial is named X. Another is
+    # named Y" paragraph a tester flagged, printed above a list naming the
+    # same trials. Since items 12.9 and 12.10 the model can write prose that
+    # says what the records mean, and that prose is never counted as a
+    # restatement, so dropping the restatements no longer empties the page.
     if (
-        query.audience_depth == "researcher"
-        and tool_outcome == "ok"
+        tool_outcome == "ok"
         and not structured_fallback_used
         and grounding.claims
     ):

@@ -51,7 +51,7 @@ from system_03_search_agent.synthesis.disease_names import (
     is_placeholder_condition_title,
     readable_disease_name,
 )
-from system_03_search_agent.synthesis.findings import SynthFinding
+from system_03_search_agent.synthesis.findings import SynthFinding, one_finding_per_record
 from system_03_search_agent.synthesis.grounding import (
     _MARKER,
     GroundedClaim,
@@ -496,7 +496,9 @@ def _record_support_tokens(finding: SynthFinding) -> set[str]:
     )
 
 
-def is_record_restatement(sentence: str, cited: list[SynthFinding]) -> bool:
+def is_record_restatement(
+    sentence: str, cited: list[SynthFinding], shown: SynthFinding | None = None
+) -> bool:
     """Whether a grounded prose sentence only restates one listed record.
 
     Measured live on "Variants in GCK causing MODY" in Researcher: the
@@ -511,11 +513,17 @@ def is_record_restatement(sentence: str, cited: list[SynthFinding]) -> bool:
 
     Deterministic containment over `content_tokens`, the same tokenizer the
     gate uses; never a similarity score.
+
+    `shown` is the finding the listing actually renders for this record
+    (item 12.12, 2026-09-23). Comparing against the CITED finding was wrong
+    for a paper: a sentence drawn from its abstract was "already in the
+    record", so it was dropped, while the list row shows only the title. The
+    comparison is now against what the reader can see below the prose.
     """
     if len({finding.citation_id for finding in cited}) != 1:
         return False
     tokens = _canonicalize_relational(content_tokens(_MARKER.sub(" ", sentence)))
-    return tokens <= _record_support_tokens(cited[0])
+    return tokens <= _record_support_tokens(shown or cited[0])
 
 
 def drop_record_restatements(
@@ -523,9 +531,11 @@ def drop_record_restatements(
 ) -> tuple[GroundingResult, int]:
     """Remove one-record restatements from grounded prose, renumbering.
 
-    Only for a Researcher answer, whose code-built listing carries every
-    prepared record: the prose is for what the list cannot say, so a
-    sentence the list already says is dropped whole. Nothing is written
+    For every depth since item 12.12 (2026-09-23), since every depth's
+    code-built listing carries every prepared record: the prose is for what
+    the list cannot say, so a sentence the list already says is dropped
+    whole. A sentence carrying a quoted synthesis (items 12.9 and 12.10) is
+    never a restatement: it says what a record means, not what it is. Nothing is written
     after the gate; sentences are only removed, and every record a dropped
     sentence cited is still cited by its list row.
 
@@ -538,6 +548,11 @@ def drop_record_restatements(
     if not grounding.sentences or not grounding.claims:
         return grounding, 0
     claims = list(grounding.claims)
+    shown_by_url = {
+        (finding.source_url or "").strip(): finding
+        for finding in one_finding_per_record(synth_findings)
+        if (finding.source_url or "").strip()
+    }
     cursor = 0
     kept: list[tuple[str, int, list[GroundedClaim]]] = []
     dropped = 0
@@ -547,7 +562,13 @@ def drop_record_restatements(
             return grounding, 0
         own = claims[cursor : cursor + marker_count]
         cursor += marker_count
-        if own and is_record_restatement(sentence, [claim.finding for claim in own]):
+        cited = [claim.finding for claim in own]
+        shown = shown_by_url.get((cited[0].source_url or "").strip()) if cited else None
+        if (
+            own
+            and not any(claim.evidence_quote for claim in own)
+            and is_record_restatement(sentence, cited, shown)
+        ):
             dropped += 1
             continue
         kept.append((sentence, origin, own))

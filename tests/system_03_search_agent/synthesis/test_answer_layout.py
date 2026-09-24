@@ -373,6 +373,29 @@ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
     assert line == "Based on 5 sources"
 
 
+def test_trust_line_counts_pages_the_source_list_shows() -> None:
+    """Item 12.11 (2026-09-23), a regression from 12.8 the same day.
+
+    Measured on develop: `GERD` showed SOURCES 12 beside "Based on 14
+    sources". A paper cited for its title and for its abstract is two
+    citation ids and ONE row in the page's source list, which merges by
+    exact URL. The line must count what the list shows.
+    """
+    from dataclasses import replace
+
+    title = _finding(1, "paper one", field="title", entity_type="Publication", tool="ncbi_efetch")
+    abstract = replace(
+        _finding(2, "paper one abstract", field="abstract", entity_type="Publication", tool="ncbi_efetch"),
+        source_url=title.source_url,
+    )
+    other = _finding(3, "paper two", field="title", entity_type="Publication", tool="ncbi_efetch")
+    claims = _claims(title, abstract, other)
+    assert len({c.finding.citation_id for c in claims}) == 3, (
+        "populate-check: three citation ids, or the old count could not be told apart"
+    )
+    assert answer_trust_line("answer", [], claims) == "Based on 2 sources"
+
+
 def test_trust_line_flag_and_refuse() -> None:
     assert answer_trust_line("flag", [], _claims(DISEASE)) == "Sources disagree on at least one claim"
     assert answer_trust_line("refuse", [], _claims(DISEASE)) is None

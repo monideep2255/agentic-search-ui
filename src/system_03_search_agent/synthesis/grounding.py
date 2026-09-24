@@ -250,6 +250,10 @@ class GroundedClaim:
 
     claim_text: str
     finding: SynthFinding
+    # Items 12.9 and 12.10: the exact words of the record this claim rests
+    # on, when the claim is written in the model's own words rather than
+    # copied. None for a claim the strict path accepted.
+    evidence_quote: str | None = None
 
 
 @dataclass(frozen=True)
@@ -517,6 +521,262 @@ def claim_introduces_no_new_content(
     return claim_tokens <= support_tokens
 
 
+# ---------------------------------------------------------------------------
+# Quote-anchored synthesis, items 12.9 and 12.10 (2026-09-23).
+#
+# THE PRODUCT OWNER'S DECISION, in their words: "It should synthesize and
+# ensure that it is synthesizing from the paper." Before this, the only
+# sentence that could survive against a long record (an abstract, a trial
+# summary) was a verbatim excerpt, because `ground_claim` accepts contiguous
+# containment only. Six of seven questions a tester asked on 2026-09-23 came
+# back as a list of records that never answered the question.
+#
+# WHAT WAS REJECTED FIRST, and why this is different. 11.31 measured
+# dropping contiguity and leaning on `claim_introduces_no_new_content` over
+# the WHOLE record: three of four reorderings of an abstract's own words
+# shipped with the meaning wrong, because a 2000-character abstract licenses
+# almost any sentence built from its vocabulary. Contiguity was carrying the
+# defence against rearrangement.
+#
+# THIS DESIGN keeps contiguity, and moves it onto something the model must
+# commit to. A sentence in the model's own words carries the exact words of
+# the record that support it, `[N: "exact words"]`. Then, every check exact:
+#
+#   1. The quote is contiguous inside finding N's value (normalized
+#      containment, the same rule as `ground_claim`), at least
+#      `_MIN_QUOTE_CHARS` long and carrying two content words.
+#   2. Every content word of the sentence is in the QUOTE (not the whole
+#      record), the question, the finding's own field name, CURIE and type,
+#      or `_SYNTHESIS_VOCABULARY`. Word endings are allowed to differ, by a
+#      fixed suffix list, never by similarity.
+#   3. Every standalone number in the sentence is in the quote.
+#   4. Polarity holds: the sentence negates exactly when the quote does.
+#
+# The residual risk is stated rather than discovered: the words of one short
+# quote can still be reordered to change who does what to whom. It is bounded
+# by the quote being short, and the quote is kept on the claim so a surface
+# can show the reader the words each sentence rests on.
+#
+# A sentence with NO quote is judged exactly as before. This path only ever
+# runs after the strict path has already rejected a clause, so it cannot
+# change the outcome for anything the strict path accepts.
+# ---------------------------------------------------------------------------
+
+# `[N: "exact words"]`, straight or curly quotes. The quote may not contain a
+# quote mark, a closing bracket or a newline, so it can never swallow the
+# rest of the reply. Bounded at 600 characters.
+_QUOTED_MARKER = re.compile(
+    r"\[(\d{1,3})\s*:\s*[\"“]([^\"”\]\n]{1,600})[\"”]\s*\]"
+)
+# What `extract_evidence_quotes` rewrites a quoted marker to: the finding
+# number plus a key into the quote table. It carries no period, so no
+# sentence split can land inside it.
+_KEYED_MARKER = re.compile(r"\[(\d{1,3})(?:#(\d{1,3}))?\]")
+
+_MIN_QUOTE_CHARS = 15
+
+# Words a synthesis may use to REPORT evidence without the record carrying
+# them. A closed list, deliberately narrow: each word says where a statement
+# comes from or how strongly the source puts it, never what is true. Absent
+# on purpose: "cause", "causes", "proves", "cure", "always", "safe", every
+# treatment word, and every negation.
+#
+# "yes" is absent too, deliberately: item 12.7's hard line is that the
+# product reports what was published and never hands a person a verdict, and
+# "Yes, coffee helps" would be one. A sentence may say what the evidence
+# reports; it may not open by answering yes or no on the record's behalf.
+_SYNTHESIS_VOCABULARY: frozenset[str] = frozenset(
+    {
+        "generally", "evidence", "study", "studies", "research",
+        "researchers", "paper", "papers", "article", "articles", "review",
+        "reviews", "trial", "trials", "report", "reports", "authors",
+        "suggest", "suggests", "suggested", "indicate", "indicates",
+        "indicated", "conclude", "concludes", "concluded", "find", "finds",
+        "publication", "published", "source", "sources", "position",
+        "stand", "may", "might", "can", "could", "likely", "people",
+        "person", "some", "most", "many", "several",
+        # Grammatical glue, added 2026-09-23 after replaying live replies:
+        # words that join or hedge a statement and assert nothing of their
+        # own. Comparatives ("higher", "lower", "more", "less") are left OUT
+        # on purpose, since swapping one for another reverses a finding.
+        "about", "approximately", "around", "among", "however", "though",
+        "although", "because", "since", "separately", "per", "including",
+        "example", "like", "whether", "often", "usually", "typically",
+    }
+)
+
+# Negation, checked for polarity rather than presence. "no" and "not" are
+# already content words (see `_FUNCTION_WORDS`), so a sentence cannot ADD one
+# its quote lacks; this set closes the other direction, a quote that denies
+# something restated without the denial.
+_NEGATIONS: frozenset[str] = frozenset(
+    {
+        "no", "not", "none", "never", "neither", "nor", "without", "cannot",
+        "lack", "lacks", "lacked", "lacking", "absent", "absence", "unable",
+        "fail", "fails", "failed", "nothing", "insignificant",
+    }
+)
+_CONTRACTED_NEGATION = re.compile(r"n['’]t\b", re.IGNORECASE)
+
+# Inflection only, applied to both sides alike. A fixed list, longest first,
+# and never allowed to cut a word below four characters, so "enhances",
+# "enhanced" and "enhancing" meet at "enhanc" while "effect" and "effective"
+# stay different words.
+_SUFFIXES: tuple[str, ...] = ("ingly", "ing", "edly", "ed", "es", "ly", "s")
+
+
+def _stem(token: str) -> str:
+    """Inflection only. Measured on 2026-09-23 live replies: "improves" and
+    "improve", "changes" and "change", "carries" and "carry" failed to meet
+    under the first version, so a trailing "e" is dropped and "ies" becomes
+    "y". Still a fixed rule over letters, never a similarity, and never below
+    four characters."""
+    if not token.isalpha():
+        return token
+    if token.endswith("ies") and len(token) > 5:
+        return token[:-3] + "y"
+    for suffix in _SUFFIXES:
+        if token.endswith(suffix) and len(token) - len(suffix) >= 4:
+            token = token[: -len(suffix)]
+            break
+    if token.endswith("e") and len(token) > 4:
+        token = token[:-1]
+    return token
+
+
+_NEGATION_CANONICAL = "\0negation"
+
+
+def _stemmed(tokens: set[str]) -> set[str]:
+    """Stem, and collapse the relational and the negation words to one each.
+
+    Negations collapse for the WORD check only ("not" may rest on a quote's
+    "no"), and only because `synthesis_is_supported` checks polarity
+    separately first, so a sentence can never gain or lose a denial this
+    way.
+    """
+    return {
+        _NEGATION_CANONICAL if token in _NEGATIONS else _stem(token)
+        for token in _canonicalize_relational(tokens)
+    }
+
+
+def _negates(text: str) -> bool:
+    if _CONTRACTED_NEGATION.search(text):
+        return True
+    return any(word in _NEGATIONS for word in _TOKEN.findall(normalize(text)))
+
+
+_QUOTE_BRACKETS = re.compile(r"[()\[\]{}]")
+
+
+def _quote_form(text: str) -> str:
+    """`normalize`, with round, square and curly brackets dropped.
+
+    Measured on 2026-09-23: the model quoted "AJ individuals face a 1 in 40
+    (2.5%) risk" from a record reading "(AJ) individuals face ...". Dropping
+    a bracket changes no word, so a quote is compared with brackets removed
+    on both sides. Every word and every other character still has to match,
+    in order.
+    """
+    return " ".join(normalize(_QUOTE_BRACKETS.sub(" ", text)).split())
+
+
+# The fields that NAME a record rather than describe it. A cited record's own
+# label may license the words a synthesis uses to name its subject.
+LABEL_FIELDS: frozenset[str] = frozenset(
+    {"title", "name", "symbol", "preferred_name", "brief_title", "official_title"}
+)
+
+
+def extract_evidence_quotes(text: str) -> tuple[str, tuple[str, ...]]:
+    """Rewrite each `[N: "words"]` to `[N#k]` and return the quotes by `k`.
+
+    Run on the model's reply BEFORE anything splits it into sentences, since
+    a quote may carry a full stop. Plain `[N]` markers are left untouched.
+    Idempotent: text with no quoted marker comes back unchanged with no
+    quotes.
+    """
+    quotes: list[str] = []
+
+    def rewrite(match: re.Match[str]) -> str:
+        quotes.append(match.group(2).strip())
+        return f"[{match.group(1)}#{len(quotes) - 1}]"
+
+    return _QUOTED_MARKER.sub(rewrite, text), tuple(quotes)
+
+
+def synthesis_is_supported(
+    claim_text: str,
+    quote: str,
+    finding: SynthFinding,
+    licensed_question: str = "",
+    record_labels: str = "",
+) -> bool:
+    """One quote, one finding. See `synthesis_is_supported_by`."""
+    return synthesis_is_supported_by(
+        claim_text, [(quote, finding)], licensed_question, record_labels
+    )
+
+
+def _quote_is_valid(quote: str, finding: SynthFinding) -> bool:
+    """Check 1: long enough to say something, and really in the record.
+
+    ONE direction only: `ground_claim` also accepts the record inside the
+    claim, and a short value such as "BRCA1" sitting inside a long invented
+    "quote" must not certify the rest of it.
+    """
+    form = _quote_form(quote)
+    if len(form) < _MIN_QUOTE_CHARS or len(content_tokens(quote)) < 2:
+        return False
+    value = _quote_form(finding.field_value)
+    return bool(value) and form in value
+
+
+def synthesis_is_supported_by(
+    claim_text: str,
+    pairs: list[tuple[str, SynthFinding]],
+    licensed_question: str = "",
+    record_labels: str = "",
+) -> bool:
+    """Whether a sentence in the model's own words is carried by its quotes.
+
+    `pairs` is every `(quote, finding)` the sentence attached, so a sentence
+    drawing on two spans of one paper, or on two papers, rests on both.
+    Measured 2026-09-23: the model wrote `[7: "..."][7: "..."]` and each
+    quote alone carried half the sentence. Each quote is verified against
+    ITS OWN finding; the sentence's words, numbers and polarity are then
+    checked against all of them together. The four checks are described
+    above `_QUOTED_MARKER`.
+
+    `record_labels` is the cited records' own titles and names (same page,
+    selected by code, never model text), so a sentence may name its subject
+    as the paper names it, for example "breast cancer" from a paper titled
+    about breast cancer when the quoted span only says "the association". It
+    licenses words only: numbers must still be in a quote.
+
+    `licensed_question` must already be filtered by
+    `_licensed_question_content`, the same licence the strict path gives.
+    """
+    if not pairs or not all(_quote_is_valid(quote, finding) for quote, finding in pairs):
+        return False
+    quotes = " ".join(quote for quote, _ in pairs)
+    context = " ".join(f"{f.curie} {f.entity_type}" for _, f in pairs)
+    # 3. Numbers come from the quotes, the question or the record's own id.
+    if not numbers_are_supported(claim_text, quotes, licensed_question, record_context=context):
+        return False
+    # 4. Polarity: the sentence negates exactly when one of its quotes does.
+    if _negates(claim_text) != any(_negates(quote) for quote, _ in pairs):
+        return False
+    # 2. Every content word is licensed by the quotes, the record's own
+    # label, the question, or the reporting vocabulary. Never the whole
+    # record: that is the design 11.31 measured and rejected.
+    fields = " ".join(f"{f.field} {f.field.replace('_', ' ')}" for _, f in pairs)
+    support = content_tokens(f"{quotes} {record_labels} {fields} {context} {licensed_question}")
+    allowed = _stemmed(support) | _stemmed(set(_SYNTHESIS_VOCABULARY))
+    return _stemmed(content_tokens(claim_text)) <= allowed
+
+
 def _is_framing(clause: str) -> bool:
     """Whether a clause is pure framing, and therefore needs no marker.
 
@@ -753,22 +1013,30 @@ def _licensed_question_content(question: str) -> str:
     return " ".join(licensed)
 
 
-def _segments(sentence: str) -> list[tuple[str, int | None]]:
-    """Split one sentence into `(text, marker_number_or_None)` segments.
+def _segments(sentence: str) -> list[tuple[str, int | None, int | None]]:
+    """Split one sentence into `(text, marker_number, quote_key)` segments.
 
     The text of each segment is what precedes its marker, back to the
     previous marker in the same sentence. A trailing segment with no marker
     (text after the last marker, or a whole sentence with no marker at all)
-    comes back with `None`.
+    comes back with `None`. `quote_key` is set only for a marker that
+    `extract_evidence_quotes` rewrote from `[N: "words"]`.
     """
-    out: list[tuple[str, int | None]] = []
+    out: list[tuple[str, int | None, int | None]] = []
     cursor = 0
-    for match in _MARKER.finditer(sentence):
-        out.append((sentence[cursor : match.start()], int(match.group(1))))
+    for match in _KEYED_MARKER.finditer(sentence):
+        key = match.group(2)
+        out.append(
+            (
+                sentence[cursor : match.start()],
+                int(match.group(1)),
+                int(key) if key is not None else None,
+            )
+        )
         cursor = match.end()
     tail = sentence[cursor:]
     if tail.strip():
-        out.append((tail, None))
+        out.append((tail, None, None))
     return out
 
 
@@ -796,6 +1064,7 @@ def run_grounding_pass(
     synth_findings: list[SynthFinding],
     core_ask_required: bool = True,
     question: str = "",
+    evidence_quotes: tuple[str, ...] | None = None,
 ) -> GroundingResult:
     """Run Section 8.2's seven steps over one Synth narrative.
 
@@ -820,8 +1089,20 @@ def run_grounding_pass(
     repeated computation, since the licensing decision does not depend on
     which finding a given clause cites.
     """
+    # Items 12.9 and 12.10. A caller that split the reply into paragraphs
+    # has already rewritten its quoted markers and passes the quotes in; a
+    # caller handing over raw model text gets them extracted here.
+    if evidence_quotes is None:
+        narrative, evidence_quotes = extract_evidence_quotes(narrative)
     by_ref = {finding.ref_index: finding for finding in synth_findings}
     licensed_question = _licensed_question_content(question)
+    # Items 12.9 and 12.10: each record's own title and name, keyed by page,
+    # so a synthesis may name its subject the way the cited paper names it.
+    labels_by_url: dict[str, str] = {}
+    for labelled in synth_findings:
+        url = (labelled.source_url or "").strip()
+        if url and labelled.field in LABEL_FIELDS:
+            labels_by_url[url] = f"{labels_by_url.get(url, '')} {labelled.field_value}".strip()
 
     surviving_sentences: list[str] = []
     surviving_origins: list[int] = []
@@ -863,7 +1144,8 @@ def run_grounding_pass(
         # This is what makes "was a clause stripped from the MIDDLE" decidable
         # rather than guessed at.
         segment_kept: list[bool] = []
-        for text, marker in _segments(sentence):
+        segments = _segments(sentence)
+        for segment_index, (text, marker, quote_key) in enumerate(segments):
             if marker is None:
                 # Unmarked text. Framing is allowed to stand; anything else
                 # that actually asserts something has nothing behind it and
@@ -921,7 +1203,12 @@ def run_grounding_pass(
                 f"{finding.field.replace('_', ' ')} {finding.curie} "
                 f"{finding.entity_type} {licensed_question}"
             )
-            if (
+            quote = (
+                evidence_quotes[quote_key]
+                if quote_key is not None and 0 <= quote_key < len(evidence_quotes)
+                else None
+            )
+            strict_ok = not (
                 # Section 8.2 step 5, as the spec writes it.
                 not ground_claim(claim_text, finding.field_value)
                 # F-2.2-02: invented NUMBERS.
@@ -934,7 +1221,39 @@ def run_grounding_pass(
                 # F-2.2-A-01/03/04: invented WORDS, including the negations
                 # and reversals that made a finding support its own denial.
                 or not claim_introduces_no_new_content(claim_text, supporting_text)
-            ):
+            )
+            # Items 12.9 and 12.10: a clause the strict path rejects may
+            # still stand when it carries the exact record words behind it
+            # and passes every check in `synthesis_is_supported`. Strict
+            # first, so this can never change an outcome the strict path
+            # already decided in the clause's favour.
+            # Every quote this clause carries: its own, plus those on markers
+            # that follow it with nothing asserted in between, as in
+            # `claim [7: "a"][7: "b"]` or `claim [4: "a"][9: "b"]`. Each is
+            # still verified against its own finding.
+            pairs: list[tuple[str, SynthFinding]] = []
+            if quote is not None:
+                pairs.append((quote, finding))
+            for later_text, later_marker, later_key in segments[segment_index + 1 :]:
+                if later_marker is None or _asserts_something(_clean_claim(later_text)):
+                    break
+                later_finding = by_ref.get(later_marker)
+                if later_finding is None or later_key is None or later_key >= len(evidence_quotes):
+                    continue
+                pairs.append((evidence_quotes[later_key], later_finding))
+            labels = " ".join(
+                labels_by_url.get((cited.source_url or "").strip(), "") for _, cited in pairs
+            )
+            synthesized = (
+                not strict_ok
+                and bool(pairs)
+                and synthesis_is_supported_by(claim_text, pairs, licensed_question, labels)
+            )
+            if synthesized and quote is None:
+                # Carried by the quotes on the markers after it; the claim
+                # keeps the first of them as the words it rests on.
+                quote = pairs[0][0]
+            if not strict_ok and not synthesized:
                 # Steps 5 and 6: no similarity fallback, no partial credit.
                 stripped += 1
                 segment_kept.append(False)
@@ -949,7 +1268,31 @@ def run_grounding_pass(
             # survive, so a discarded sentence leaves no numbered gap and no
             # claim pointing at prose nobody will read.
             kept_parts.append((text.rstrip(), finding.ref_index))
-            pending_claims.append(GroundedClaim(claim_text=claim_text, finding=finding))
+            pending_claims.append(
+                GroundedClaim(
+                    claim_text=claim_text,
+                    finding=finding,
+                    evidence_quote=quote if synthesized else None,
+                )
+            )
+            if synthesized:
+                # A sentence carried partly by a quote on a LATER marker names
+                # that record too, so every record it rests on stays cited on
+                # the page rather than being dropped as an empty clause.
+                shown_refs = {finding.ref_index}
+                for extra_quote, extra_finding in pairs:
+                    if extra_finding.ref_index in shown_refs:
+                        continue
+                    shown_refs.add(extra_finding.ref_index)
+                    kept_parts.append(("", extra_finding.ref_index))
+                    pending_claims.append(
+                        GroundedClaim(
+                            claim_text=claim_text,
+                            finding=extra_finding,
+                            evidence_quote=extra_quote,
+                        )
+                    )
+                    segment_kept.append(True)
             segment_kept.append(True)
 
         # T-6.2-15, and the decision recorded in `DECISIONS.md` on
@@ -1013,8 +1356,11 @@ def run_grounding_pass(
         #   removes, so no source is lost with the sentence.
         if kept_parts:
             probe = "".join(part for part, _ in kept_parts)
-            if _is_unbalanced_fragment(probe) or (
-                _opens_on_bare_pronoun(probe) and not previous_survived
+            if (
+                _is_unbalanced_fragment(probe)
+                or _opens_mid_sentence(probe)
+                or (_opens_on_bare_pronoun(probe) and not previous_survived)
+                or (_opens_on_continuation(probe) and not previous_survived)
             ):
                 stripped += len(pending_claims)
                 pending_claims.clear()
@@ -1038,7 +1384,7 @@ def run_grounding_pass(
             # A surviving fragment can begin with the glue that joined it to
             # a stripped predecessor. Reading ", and Disease record X [1]."
             # as a sentence is worse than reading it without the comma.
-            rebuilt = _clean_claim(rebuilt)
+            rebuilt = _capitalise_opening(_clean_claim(rebuilt))
             if rebuilt and not rebuilt.endswith((".", ";", "?", "!")):
                 rebuilt += "."
             if rebuilt:
@@ -1065,7 +1411,14 @@ def run_grounding_pass(
 
 
 def _is_unbalanced_fragment(text: str) -> bool:
-    """True when a sentence's round brackets do not pair up (item 9.7)."""
+    """True when a sentence's round brackets or double quotes do not pair up.
+
+    Brackets from item 9.7. Quotes from item 12.12, measured on 2026-09-23:
+    `however, recent work suggests no effect on maximal ability, but enhanced
+    endurance or resistance to fatigue".` was an abstract's quoted conclusion
+    cut at its semicolon, and shipped with the closing quote and no opening
+    one.
+    """
     depth = 0
     for character in text:
         if character == "(":
@@ -1074,7 +1427,84 @@ def _is_unbalanced_fragment(text: str) -> bool:
             depth -= 1
             if depth < 0:
                 return True
-    return depth != 0
+    if depth != 0:
+        return True
+    if text.count('"') % 2:
+        return True
+    return text.count("“") != text.count("”")
+
+
+# Words that only make sense as the middle of a sentence the reader never
+# saw. A record sentence cut at a semicolon or quoted from its middle opens
+# on one of these, and nothing on the page precedes it (item 12.12).
+_ORPHAN_CONNECTIVES: frozenset[str] = frozenset(
+    {
+        "however", "whereas", "although", "though", "thus", "therefore",
+        "hence", "whereby", "moreover", "furthermore", "conversely",
+        "nevertheless", "nonetheless", "instead", "yet", "so",
+    }
+)
+
+
+def _first_word(text: str) -> str:
+    stripped = text.lstrip(" \t\"'“‘([")
+    return stripped.split(" ", 1)[0].rstrip(",;:")
+
+
+def _opens_mid_sentence(text: str) -> bool:
+    """True when a sentence opens lowercase on a leftover connective (12.12).
+
+    Measured 2026-09-23: "however, recent work suggests no effect on maximal
+    ability ..." was the back half of an abstract's sentence and shipped as
+    a paragraph of its own. Only a LOWERCASE connective counts: a sentence
+    the model wrote that opens "However," has its own first half on the page.
+    Any other lowercase opening is a real claim and is capitalised instead,
+    see `_capitalise_opening`.
+    """
+    first = _first_word(text)
+    return first.isalpha() and first.islower() and first in _ORPHAN_CONNECTIVES
+
+
+def _capitalise_opening(sentence: str) -> str:
+    """Capitalise a surviving sentence that opens on a plain lowercase word.
+
+    A verbatim excerpt taken from the middle of a record's sentence starts
+    lowercase ("pathogenic BRCA1 variants abolish ..."). Its words are
+    unchanged; only the first letter is raised. An identifier that is
+    lowercase by convention ("rs80357906", "mRNA", "p.Arg1699Trp") carries a
+    digit, punctuation or a capital, so it is never touched.
+    """
+    first = _first_word(sentence)
+    if not (first.isalpha() and first.islower()):
+        return sentence
+    index = sentence.find(first)
+    return sentence[:index] + first[0].upper() + sentence[index + 1 :]
+
+
+_CONTINUATION_OPENERS: tuple[str, ...] = (
+    "another ",
+    "a second ",
+    "a third ",
+    "a fourth ",
+    "a fifth ",
+    "a further ",
+    "the other ",
+    "the second ",
+    "the third ",
+    "the remaining ",
+    "the rest ",
+    "also ",
+)
+
+
+def _opens_on_continuation(text: str) -> bool:
+    """True for "Another is titled ...", "A third ...", "The other ..." (12.12).
+
+    Each continues a list whose first item must already be on the page, so
+    it is dropped when the sentence before it did not survive, exactly as a
+    bare pronoun is.
+    """
+    return normalize(text).startswith(_CONTINUATION_OPENERS)
 
 
 _BARE_PRONOUNS = frozenset({"they", "it"})

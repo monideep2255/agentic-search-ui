@@ -585,11 +585,11 @@ def answer_trust_line(
     one database, not twenty separate confirmations). So the two counts
     now live side by side and are never conflated:
 
-    - `citation_count`, the number of distinct `citation_id`s among the
-      grounded claims. This is the same identity `display_index_by_
-      citation_id` (`synthesis/grounding.py`) uses to number the chips a
-      reader actually sees, so this count and the visible citation list
-      can no longer disagree. It drives every "Based on N source(s))"
+    - `citation_count`, the number of distinct pages among the grounded
+      claims, keyed by exact `source_url`. Item 12.11 corrected this the
+      same day it was written: it first counted distinct `citation_id`s,
+      and the page's source list merges several chips for one record into
+      one row by URL, so "Based on 14 sources" sat above a list of 12. It drives every "Based on N source(s))"
       line, confirmed or not: the reader is told how much evidence they
       can click through, which is the claim "Based on" actually makes.
     - `database_count`, the pre-existing independent-origin count, kept
@@ -600,7 +600,14 @@ def answer_trust_line(
     """
     if trust_outcome == "refuse" or not claims:
         return None
-    citation_count = len({claim.finding.citation_id for claim in claims})
+    # Item 12.11 (2026-09-23): distinct PAGES, not distinct citation ids.
+    # Counting ids read "Based on 14 sources" above a source list headed 12,
+    # because the page merges every chip for the same record into one row by
+    # its exact URL (`groupSourcesByLayer` in `AnswerScreen.tsx`). Same key,
+    # same count. A claim with no URL counts on its own id, never merged.
+    citation_count = len(
+        {claim.finding.source_url or claim.finding.citation_id for claim in claims}
+    )
     database_count = len({_origin_database(claim.finding) for claim in claims})
     noun = "source" if citation_count == 1 else "sources"
     if trust_outcome == "flag":

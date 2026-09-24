@@ -80,8 +80,11 @@ def _fake_response(content: str):
 
 
 def _narrative_covering(prompt: str, ref_indices: set[int]) -> str:
+    # Item 12.12 (2026-09-23): prose that only restates a record the listing
+    # already shows is dropped at every depth, so the fake relates each
+    # record to the question's subject, as a real answer does.
     clauses = [
-        f"{body.strip()} [{index}]"
+        f"NCBIGene:672 is associated with {body.strip()} [{index}]"
         for index, body in _FINDING_LINE.findall(prompt)
         if int(index) in ref_indices
     ]
