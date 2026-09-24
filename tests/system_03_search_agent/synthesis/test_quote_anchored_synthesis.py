@@ -62,11 +62,15 @@ def _finding(ref: int, value: str, field: str = "abstract", url: str = URL) -> S
 
 
 PAPER = _finding(1, ABSTRACT)
+# Every real PubMed record carries its title as a finding on the same page;
+# since item 12.16 part 4 a reworded sentence is held to naming its record's
+# title (`grounding._names_its_record`), so the fixture carries one too.
+PAPER_TITLE = _finding(20, "Caffeine and endurance exercise performance", field="title")
 QUESTION = "Does coffee help make exercise more effective?"
 
 
 def _ground(narrative: str, findings: list[SynthFinding] | None = None):
-    return run_grounding_pass(narrative, findings or [PAPER], question=QUESTION)
+    return run_grounding_pass(narrative, findings or [PAPER, PAPER_TITLE], question=QUESTION)
 
 
 # --------------------------------------------------------------- acceptance
@@ -174,7 +178,7 @@ def test_a_quote_with_a_full_stop_does_not_split_the_sentence() -> None:
 # ------------------------------------------------------------- item 12.12
 
 
-def test_an_orphan_connective_with_a_stray_quote_mark_is_dropped() -> None:
+def test_the_measured_orphan_fragment_is_dropped() -> None:
     """The caffeine answer's third paragraph, measured on 2026-09-23."""
     value = (
         'The review concluded "caffeine may help; however, recent work suggests no effect '
@@ -196,23 +200,75 @@ def test_an_unpaired_quote_mark_alone_drops_the_sentence() -> None:
     assert _ground("Enhanced endurance or resistance to fatigue [4].", [paper]).grounded
 
 
-def test_another_with_nothing_before_it_is_dropped() -> None:
+def test_a_list_continuation_goes_as_a_restatement_not_by_its_first_word() -> None:
+    """Item 12.16 part 4: the "Another ..." word list is gone.
+
+    "Another is titled X" only repeats a title the list below the answer
+    shows, so the restatement rule drops it by structure, whatever word it
+    opens on. The records stay cited by their list rows.
+    """
     first = _finding(5, "Genetic variants in Ashkenazi Jews", field="title", url="https://pubmed.ncbi.nlm.nih.gov/5/")
     second = _finding(6, "BRCA1 and BRCA2 founder mutations", field="title", url="https://pubmed.ncbi.nlm.nih.gov/6/")
-    alone = _ground("Another is titled BRCA1 and BRCA2 founder mutations [6].", [first, second])
-    assert not alone.grounded
+    findings = [first, second]
+    alone = _ground("Another is titled BRCA1 and BRCA2 founder mutations [6].", findings)
+    assert alone.grounded, "populate-check: the grounding pass no longer judges its first word"
+    _, dropped = drop_record_restatements(alone, findings)
+    assert dropped == 1
     paired = _ground(
         "One is titled Genetic variants in Ashkenazi Jews [5]. "
         "Another is titled BRCA1 and BRCA2 founder mutations [6].",
-        [first, second],
+        findings,
     )
-    assert len(paired.sentences) == 2, "populate-check: with its first on the page it stays"
+    _, dropped = drop_record_restatements(paired, findings)
+    assert dropped == 2, "a restatement paragraph goes whole, and the list names both papers"
 
 
-def test_a_lowercase_excerpt_is_capitalised_not_dropped() -> None:
-    result = _ground("consistently enhances endurance performance in trained athletes [1].")
+def test_the_back_half_of_a_record_sentence_is_dropped_whatever_word_opens_it() -> None:
+    """Item 12.16 part 4: decided by where the words sit in the record.
+
+    The opening words below were never on any list: the rule reads the record,
+    so it covers phrasings nobody thought of.
+    """
+    cases = [
+        ("Caffeine may help; however, recent work suggests enhanced endurance in athletes.",
+         "however, recent work suggests enhanced endurance in athletes"),
+        ("Caffeine may help; however, recent work suggests enhanced endurance in athletes.",
+         "recent work suggests enhanced endurance in athletes"),
+        ("Statins lower the risk, so that clinical judgment remains necessary.",
+         "so that clinical judgment remains necessary"),
+        ("Caffeine helps sprinters, particularly those who train in the morning.",
+         "particularly those who train in the morning"),
+    ]
+    for value, excerpt in cases:
+        paper = _finding(9, value)
+        assert grounding.ground_claim(excerpt, value), f"populate-check: {excerpt!r} is verbatim"
+        assert not _ground(f"{excerpt} [9].", [paper]).grounded, excerpt
+
+
+def test_the_same_words_starting_a_record_sentence_stand_capitalised() -> None:
+    """The populate-check for the rule above: words, not position, did NOT decide."""
+    paper = _finding(9, "Caffeine may help. Recent work suggests enhanced endurance in athletes.")
+    result = _ground("recent work suggests enhanced endurance in athletes [9].", [paper])
     assert result.grounded
-    assert result.narrative.startswith("Consistently enhances")
+    assert result.narrative.startswith("Recent work suggests"), result.narrative
+
+
+def test_a_whole_record_sentence_written_lowercase_is_capitalised() -> None:
+    result = _ground("caffeine consistently enhances endurance performance in trained athletes [1].")
+    assert result.grounded
+    assert result.narrative.startswith("Caffeine consistently")
+
+
+def test_a_subjectless_clause_from_mid_record_is_dropped() -> None:
+    """It used to be capitalised into "Consistently enhances ...", a fragment."""
+    assert not _ground("consistently enhances endurance performance in trained athletes [1].").grounded
+
+
+def test_the_record_fragment_rule_can_fail(monkeypatch) -> None:
+    """Mutation proof: with the rule off, the measured fragment ships."""
+    monkeypatch.setattr(grounding, "_starts_inside_record_sentence", lambda *a, **k: False)
+    paper = _finding(9, "Statins lower the risk, so that clinical judgment remains necessary.")
+    assert _ground("so that clinical judgment remains necessary [9].", [paper]).grounded
 
 
 # ------------------------------------------------------- restatement drop
@@ -245,11 +301,3 @@ def test_a_quoted_synthesis_is_never_a_restatement() -> None:
     assert dropped == 0
 
 
-def test_an_orphan_connective_alone_drops_the_sentence() -> None:
-    """Isolates the connective rule from the quote-mark rule above."""
-    value = "Caffeine may help; however, recent work suggests enhanced endurance in athletes."
-    paper = _finding(9, value)
-    assert not _ground("however, recent work suggests enhanced endurance in athletes [9].", [paper]).grounded
-    assert _ground("recent work suggests enhanced endurance in athletes [9].", [paper]).grounded, (
-        "populate-check: without the connective the same excerpt stands"
-    )

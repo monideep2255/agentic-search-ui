@@ -1167,9 +1167,9 @@ def run_grounding_pass(
     # UI fix set 9, item 9.7: whether the sentence before this one survived,
     # so a pronoun opener whose antecedent was discarded can be recognised.
     previous_survived = False
-    # Item 12.10 (2026-09-23): the records the last SHOWN sentence cited, so a
-    # reworded sentence that refers back ("This condition ...") can be held
-    # to the record it refers back to.
+    # Item 12.16 part 4 (2026-09-24): the records the last SHOWN sentence
+    # cited, so a reworded sentence that switches records can be held to
+    # naming the record it switches to (`_names_its_record`).
     previous_refs: set[int] = set()
 
     for sentence_index, sentence in enumerate(_split_sentences(narrative)):
@@ -1437,20 +1437,22 @@ def run_grounding_pass(
             probe = "".join(part for part, _ in kept_parts)
             this_refs = {ref for _, ref in kept_parts if ref is not None}
             reworded = any(claim.evidence_quote for claim in pending_claims)
+            this_labels = " ".join(
+                labels_by_url.get((by_ref[ref].source_url or "").strip(), "")
+                for ref in this_refs
+                if ref in by_ref
+            )
             if (
                 _is_unbalanced_fragment(probe)
-                or _opens_mid_sentence(probe)
+                or _opens_on_record_fragment(kept_parts, pending_claims)
                 or (_opens_on_bare_pronoun(probe) and not previous_survived)
-                or (_opens_on_continuation(probe) and not previous_survived)
-                # Item 12.10, measured live on 2026-09-23: after a sentence
-                # about Familial Mediterranean fever, "This condition can
-                # cause ... neonatal hyperbilirubinemia, acute hemolysis"
-                # rested faithfully on a G6PD paper's quote, so "this
-                # condition" silently changed disease. Each sentence was true
-                # to its own quote; the reference between them was false. A
-                # REWORDED sentence that refers back must cite a record the
-                # sentence before it cited.
-                or (reworded and _refers_back(probe) and not (this_refs & previous_refs))
+                # Item 12.16 part 4: a reworded sentence that switches to
+                # records the sentence before it did not cite must name them.
+                or (
+                    reworded
+                    and not (this_refs & previous_refs)
+                    and not _names_its_record(probe, this_labels)
+                )
             ):
                 stripped += len(pending_claims)
                 pending_claims.clear()
@@ -1527,16 +1529,25 @@ def _is_unbalanced_fragment(text: str) -> bool:
     return text.count("“") != text.count("”")
 
 
-# Words that only make sense as the middle of a sentence the reader never
-# saw. A record sentence cut at a semicolon or quoted from its middle opens
-# on one of these, and nothing on the page precedes it (item 12.12).
-_ORPHAN_CONNECTIVES: frozenset[str] = frozenset(
-    {
-        "however", "whereas", "although", "though", "thus", "therefore",
-        "hence", "whereby", "moreover", "furthermore", "conversely",
-        "nevertheless", "nonetheless", "instead", "yet", "so",
-    }
-)
+# Item 12.16, part 4 (2026-09-24). THE PRODUCT OWNER CHOSE "Structure, not
+# words" for the checks below, after ruling out hardcoding the same night
+# ("Please do not hardcode! Hopefully not that dumb"). The first versions of
+# 2026-09-23 were phrase lists: sixteen connectives ("however", "so" ...), a
+# dozen list openers ("Another", "A third" ...) and ten pointing words ("This",
+# "They" ...). Each caught only the phrasings someone listed. What replaced
+# them reads the records' own data instead:
+#
+# - `_starts_inside_record_sentence`: where the words sit in their record.
+# - `_names_its_record`: whether a sentence names its record's own title.
+# - The "Another is titled ..." case needs no rule of its own: a sentence that
+#   only repeats a row the list below shows is dropped as a restatement
+#   (`answer_layout.drop_record_restatements`), at every depth since 12.12.
+
+# A record sentence ends at one of these. A colon counts: in a structured
+# abstract, "Results: pathogenic variants abolish ..." puts a whole sentence
+# after its section label. A comma or a semicolon joins clauses, so words
+# that follow one are the back half of a sentence.
+_RECORD_SENTENCE_ENDS = (".", "?", "!", ":")
 
 
 def _first_word(text: str) -> str:
@@ -1544,75 +1555,83 @@ def _first_word(text: str) -> str:
     return stripped.split(" ", 1)[0].rstrip(",;:")
 
 
-def _opens_mid_sentence(text: str) -> bool:
-    """True when a sentence opens lowercase on a leftover connective (12.12).
+def _starts_inside_record_sentence(claim_text: str, field_value: str) -> bool:
+    """Whether copied words begin in the MIDDLE of one of their record's sentences.
 
-    Measured 2026-09-23: "however, recent work suggests no effect on maximal
-    ability ..." was the back half of an abstract's sentence and shipped as
-    a paragraph of its own. Only a LOWERCASE connective counts: a sentence
-    the model wrote that opens "However," has its own first half on the page.
-    Any other lowercase opening is a real claim and is capitalised instead,
-    see `_capitalise_opening`.
+    Measured 2026-09-23, twice: "however, recent work suggests no effect on
+    maximal ability ..." began after a semicolon in an abstract, and "so that
+    clinical judgment remains necessary in making the decision to use them"
+    after a comma. Both were verbatim, so the gate passed them, and both
+    shipped as a paragraph with no first half. Where the words sit in the
+    record decides it, not which word they open on: text found at the start of
+    the record, or after one of `_RECORD_SENTENCE_ENDS`, starts a sentence;
+    text found anywhere else is a sentence's back half. Words not found as a
+    contiguous run (a sentence that wraps a short value) are not a fragment.
     """
-    first = _first_word(text)
-    return first.isalpha() and first.islower() and first in _ORPHAN_CONNECTIVES
+    value = normalize(field_value)
+    claim = normalize(claim_text)
+    if not value or not claim:
+        return False
+    position = value.find(claim)
+    if position <= 0:
+        return False
+    return not value[:position].rstrip().endswith(_RECORD_SENTENCE_ENDS)
+
+
+def _opens_on_record_fragment(
+    kept_parts: list[tuple[str, int | None]], pending_claims: list[GroundedClaim]
+) -> bool:
+    """True when a sentence opens, in lowercase, on the back half of a record sentence.
+
+    Lowercase is the second, independent signal: a model that copies a
+    clause and writes it with a capital is presenting a whole sentence, and
+    its words are still verbatim. Only the first claim decides, since that is
+    what the sentence opens on; a sentence opening on framing is not judged.
+    """
+    if not kept_parts or kept_parts[0][1] is None or not pending_claims:
+        return False
+    first = _first_word(kept_parts[0][0])
+    if not (first.isalpha() and first.islower()):
+        return False
+    claim = pending_claims[0]
+    if claim.evidence_quote is not None:
+        return False
+    return _starts_inside_record_sentence(claim.claim_text, claim.finding.field_value)
+
+
+def _names_its_record(sentence: str, labels: str) -> bool:
+    """Whether a sentence shares a content word with its own records' titles.
+
+    Measured live 2026-09-23: after a sentence about Familial Mediterranean
+    fever, "This condition can cause ... neonatal hyperbilirubinemia, acute
+    hemolysis" rested faithfully on a G6PD paper's quote, so "this condition"
+    silently changed disease. Each sentence was true to its own quote; the
+    reference between them was false. The structural signal is the switch
+    itself: a reworded sentence that cites records the sentence before it did
+    not cite must name something from those records' own titles, which are
+    retrieved data, never a list. A record with no title or name cannot show
+    what it is about, so such a switch does not stand.
+    """
+    if not labels.strip():
+        return False
+    return bool(_stemmed(content_tokens(sentence)) & _stemmed(content_tokens(labels)))
 
 
 def _capitalise_opening(sentence: str) -> str:
     """Capitalise a surviving sentence that opens on a plain lowercase word.
 
-    A verbatim excerpt taken from the middle of a record's sentence starts
-    lowercase ("pathogenic BRCA1 variants abolish ..."). Its words are
-    unchanged; only the first letter is raised. An identifier that is
-    lowercase by convention ("rs80357906", "mRNA", "p.Arg1699Trp") carries a
-    digit, punctuation or a capital, so it is never touched.
+    Reached only by a sentence that is NOT a record fragment (see
+    `_opens_on_record_fragment`): a whole record sentence the model wrote
+    with a lowercase first letter. Its words are unchanged; only the first
+    letter is raised. An identifier that is lowercase by convention
+    ("rs80357906", "mRNA", "p.Arg1699Trp") carries a digit, punctuation or a
+    capital, so it is never touched.
     """
     first = _first_word(sentence)
     if not (first.isalpha() and first.islower()):
         return sentence
     index = sentence.find(first)
     return sentence[:index] + first[0].upper() + sentence[index + 1 :]
-
-
-_CONTINUATION_OPENERS: tuple[str, ...] = (
-    "another ",
-    "a second ",
-    "a third ",
-    "a fourth ",
-    "a fifth ",
-    "a further ",
-    "the other ",
-    "the second ",
-    "the third ",
-    "the remaining ",
-    "the rest ",
-    "also ",
-)
-
-
-_REFERRING_OPENERS: frozenset[str] = frozenset(
-    {"this", "these", "that", "those", "it", "they", "its", "their", "such", "both"}
-)
-
-
-def _refers_back(text: str) -> bool:
-    """True when a sentence's subject points at the one before it (12.10).
-
-    "This condition", "These variants", "It", "They", "Such mutations":
-    a first word that only names something already on the page.
-    """
-    words = normalize(text).split()
-    return bool(words) and words[0] in _REFERRING_OPENERS
-
-
-def _opens_on_continuation(text: str) -> bool:
-    """True for "Another is titled ...", "A third ...", "The other ..." (12.12).
-
-    Each continues a list whose first item must already be on the page, so
-    it is dropped when the sentence before it did not survive, exactly as a
-    bare pronoun is.
-    """
-    return normalize(text).startswith(_CONTINUATION_OPENERS)
 
 
 _BARE_PRONOUNS = frozenset({"they", "it"})

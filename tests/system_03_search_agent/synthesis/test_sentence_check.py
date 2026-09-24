@@ -21,6 +21,8 @@ measured live, in `testing/Developer/reports/2026-09-23_synthesis/`.
 
 from __future__ import annotations
 
+from dataclasses import replace as replace_finding
+
 import pytest
 
 from system_03_search_agent.core import graph as graph_module
@@ -56,6 +58,19 @@ PAPER = SynthFinding(
     curie="pubmed:1",
 )
 QUESTION = "What is GERD?"
+# Real records carry a title; since item 12.16 part 4 a reworded sentence that
+# opens an answer or switches records must name its record's title.
+PAPER_TITLE = SynthFinding(
+    ref_index=9,
+    citation_id="c-9",
+    layer="layer_2_ncbi_api",
+    tool="ncbi_efetch",
+    field="title",
+    field_value="Proton pump inhibitor drugs and their long-term risks",
+    source_url="https://pubmed.ncbi.nlm.nih.gov/1/",
+    entity_type="Publication",
+    curie="pubmed:1",
+)
 
 # A faithful plain-language rewording code cannot license: "kidney" is not in
 # the quote, "renal" is.
@@ -67,7 +82,7 @@ REWORDED = (
 
 def _candidates(narrative: str) -> tuple[list[SynthesisCandidate], object]:
     sink: list[SynthesisCandidate] = []
-    result = run_grounding_pass(narrative, [PAPER], question=QUESTION, candidate_sink=sink)
+    result = run_grounding_pass(narrative, [PAPER, PAPER_TITLE], question=QUESTION, candidate_sink=sink)
     return sink, result
 
 
@@ -111,7 +126,7 @@ def test_a_sentence_failing_an_exact_check_never_reaches_the_model(narrative: st
 def test_an_approved_candidate_is_accepted_on_the_second_pass() -> None:
     sink, _ = _candidates(REWORDED)
     result = run_grounding_pass(
-        REWORDED, [PAPER], question=QUESTION, verified_syntheses=frozenset({sink[0].key})
+        REWORDED, [PAPER, PAPER_TITLE], question=QUESTION, verified_syntheses=frozenset({sink[0].key})
     )
     assert result.grounded
     assert result.narrative.startswith("Taking these drugs for a long time")
@@ -121,7 +136,7 @@ def test_an_approved_candidate_is_accepted_on_the_second_pass() -> None:
 def test_approval_of_a_different_sentence_accepts_nothing() -> None:
     other = synthesis_key("Something else entirely", ["Long-term use of PPIs is associated"])
     result = run_grounding_pass(
-        REWORDED, [PAPER], question=QUESTION, verified_syntheses=frozenset({other})
+        REWORDED, [PAPER, PAPER_TITLE], question=QUESTION, verified_syntheses=frozenset({other})
     )
     assert not result.grounded
 
@@ -195,7 +210,7 @@ async def _helper(monkeypatch, *, reply=None, raises=None, budget_s=30.0):
     narrative, quotes = extract_evidence_quotes(REWORDED)
     result = await graph_module._ground_with_sentence_check(
         narrative,
-        [PAPER],
+        [PAPER, PAPER_TITLE],
         question=QUESTION,
         evidence_quotes=quotes,
         harness=object(),
@@ -289,11 +304,15 @@ G6PD = SynthFinding(
     curie="pubmed:3",
 )
 FIRST = "Familial Mediterranean fever is caused by mutations in the MEFV gene [2]. "
+FMF_TITLE = replace_finding(FMF, ref_index=12, citation_id="c-12", field="title",
+                            field_value="Familial Mediterranean fever and the MEFV gene")
+G6PD_TITLE = replace_finding(G6PD, ref_index=13, citation_id="c-13", field="title",
+                             field_value="Diagnosis and management of G6PD deficiency")
 
 
 def _approve_all(narrative: str) -> object:
     sink: list[SynthesisCandidate] = []
-    findings = [FMF, G6PD]
+    findings = [FMF, G6PD, FMF_TITLE, G6PD_TITLE]
     run_grounding_pass(narrative, findings, question=QUESTION, candidate_sink=sink)
     return run_grounding_pass(
         narrative, findings, question=QUESTION,
@@ -320,6 +339,18 @@ def test_the_same_reference_to_the_same_record_stays() -> None:
     )
     result = _approve_all(right)
     assert len(result.sentences) == 2, result.sentences
+
+
+def test_the_switch_rule_can_fail(monkeypatch) -> None:
+    """Mutation proof: with `_names_its_record` always true, the misattribution ships."""
+    from system_03_search_agent.synthesis import grounding
+
+    monkeypatch.setattr(grounding, "_names_its_record", lambda *a, **k: True)
+    wrong = FIRST + (
+        "This condition can lead to jaundice in newborns and red cell breakdown "
+        '[3: "G6PD deficiency can cause neonatal hyperbilirubinemia and acute hemolysis"].'
+    )
+    assert len(_approve_all(wrong).sentences) == 2
 
 
 def test_naming_the_other_record_instead_of_referring_back_stays() -> None:
