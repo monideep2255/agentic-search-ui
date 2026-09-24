@@ -44,7 +44,8 @@ These docs are owned elsewhere. This agent's job for every row is: verify it is 
 | `requirements/Plan.md` | Revision history and phase status | /phase-checkpoint | Verify it is current; never edit it here |
 | `requirements/phase_6/Continuation_prompt.md` | What to read and do next in the current phase | /phase-checkpoint | Verify it is current; never edit it here |
 | `PROGRESS.md` | Plain-language project state | /phase-checkpoint | Verify it is current; never edit it here |
-| `testing/UI_fix_plan.md` | Per-item UI fix status and the cutoff | /phase-checkpoint | Verify it is current; never edit it here |
+| `testing/UI_fix_plan.md` | What is being built, what is next, and the cutoff | /phase-checkpoint | Verify it is current; never edit it here |
+| `testing/UI_fixes_done.md` | Every finished UI fix, its detail and the history | /phase-checkpoint | Verify it is current; never edit it here |
 | `testing/Shipped_<YYYY-MM-DD>.md` | The day's shipped list and retest items | /phase-checkpoint | Verify it is current; never edit it here |
 | `LEARNINGS.md` | Append-only build-failure log | the learnings skill | Verify it is current; never edit it here |
 | `tracker/BOARD.md` | The build board, build phases only | the task-tracker skill | Verify it is current; never edit it here |
