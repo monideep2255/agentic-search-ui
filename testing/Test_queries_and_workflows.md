@@ -1427,7 +1427,7 @@ Expected:
 
 Why it matters: two numbers on the same screen disagreeing about the same count undermines trust in both of them, not just the wrong one.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 12; UI_fixes_done item 12.11)
+Status: Awaiting retest (Shipped_2026-09-23 item 12; UI_fixes_done items 12.11 and 12.8)
 
 ### 75. A papers list reads as clean prose, with no record repeated
 

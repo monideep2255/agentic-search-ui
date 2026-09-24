@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-23.
+Last updated: 2026-09-24.
 
 ## Table of contents
 
@@ -50,6 +50,16 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+NEW ON 24 SEPTEMBER, on the practice site and waiting for the product owner's retest, from a session that ran through the evening of 23 September into the next day:
+
+- A plain-language answer now explains itself in real sentences drawn from the papers it found, rather than only quoting a source word for word. Every such sentence is checked twice before you see it: a fast rule first confirms each quote, number and "not" it relies on is really in the record, then a second, separate check asks a model whether the sentence says no more than the words it quotes from that record. Tried live on seven plain-language questions, every one came back as real prose.
+- Plain language and researcher mode now genuinely read differently. Ask about clinical trials for GERD in plain language and it opens "I found 5 clinical trials related to GERD" with a plain list of titles. Ask the same question in researcher mode and it opens "Found 5 clinical trial records for GERD" with a table that also carries each trial's own identifier. Checked against all twelve full questions from the two rounds of tester feedback, and every one read differently between the two modes while pointing at the same underlying records.
+- A very short question, just a gene name or a condition on its own, is now asked back with choices written for that specific subject rather than a generic prompt. Asked three times each, "reflux disease", "GERD", "BRCA1" and "Marfan" got that clarifying question every time. "MeSH" got it two times out of three. A short question that is already answerable on its own, like "papers on caffeine", still gets answered rather than questioned.
+- Clicking a question in the sidebar, within the same browser tab you asked it in, now shows you the answer you already read instead of running the whole search again.
+- The trust line under an answer now matches the number of sources listed on the page. Before, a question about GERD could claim 14 sources while only 12 were actually listed. The two numbers are now counted the same way, once per page.
+
+Honest caveat from the same session: the check that lets an answer explain itself in its own words depends on a second model call succeeding. In two tries out of six the answer fell back to a plain list, one of them because that call failed. The system played it safe rather than show a sentence that had not passed the check.
 
 NEW ON 22 SEPTEMBER, on the practice site and waiting for the product owner to try it:
 
@@ -169,9 +179,21 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 22 SEPTEMBER, in one sentence: the system can quote its sources but it cannot explain them in its own words, so answers read like a list of records no matter which setting you pick.
+THE HONEST HEADLINE AS OF 24 SEPTEMBER, in one sentence: ask about the physical features of a condition and the system still gets genes and variants instead, while every so often turning away a perfectly good question for a reason nothing on screen explains.
 
-And now we know how often it answers at all, because on 22 September we finally ran every one of our fifty test questions three times over. Half the questions answer every time, and when they answer they come back with the same sources each time. Eighteen never answered, and twelve of those are meant to be turned away. Six were genuine gaps, and every one of them was the same kind of failure: the search of our own database came back with nothing, or broke, and nothing said so. By the end of the same night all six had been built and checked on the practice site, the last of them the bacterial-sample question; they wait for the product owner to try them.
+Ask what physical features go with Marfan syndrome and the system still answers with genes and variants, not phenotypes. It is the first thing to build once the product owner's retests are done.
+
+Separately, a good, ordinary question is occasionally refused at the step that works out what kind of question it is. Measured across about forty live tries, this happened twice, roughly one in twenty. The screen shows an ordinary refusal, while behind it the model doing that step had replied in a shape the system could not read. It is second in line to be built.
+
+The previous headline's complaint is largely answered this session. A plain-language answer now writes real sentences instead of only quoting a source word for word, checked twice over: once by a fixed rule, once by a second, separate model confirming the sentence says no more than its source supports. It worked for all seven plain-language questions tried live. It is not yet bulletproof: in two tries out of six the answer fell back to a plain list, one of them because the second check's call failed. In both, the system showed the list rather than a sentence that had not passed the check.
+
+THE HONEST HEADLINE AS OF 22 SEPTEMBER, kept for the record, in one sentence: the system can quote its sources but it cannot explain them in its own words, so answers read like a list of records no matter which setting you pick.
+
+And now we know how often it answers at all, because on 22 September we finally ran every one of our fifty test questions three times over.
+Half the questions answer every time, and when they answer they come back with the same sources each time.
+Eighteen never answered, and twelve of those are meant to be turned away.
+Six were genuine gaps, and every one of them was the same kind of failure: the search of our own database came back with nothing or broke and nothing said so.
+By the end of the same night all six had been built and checked on the practice site, the last of them the bacterial-sample question; they wait for the product owner to try them.
 
 That is not a writing problem, and it took most of a day to establish that. The system has a safety rule that every sentence must be checkable against a source. The way it checks is strict: the sentence has to repeat the source's words exactly, in the same order. That works fine for a short record, where a sentence can quote the whole thing. It breaks for a long piece of text like a research abstract, because a single sentence cannot contain four hundred words, so the only sentence that passes is one that copies a chunk of the abstract word for word.
 
@@ -192,12 +214,18 @@ The other things we know are wrong today:
 - ~~Long quotes from research papers are still cut off in the middle of a word, like "has been uncle".~~ FIXED on 22 September, checked on the practice site the same hour (the gene description now runs to its end), and confirmed by the product owner the same day. The cause was embarrassing in a useful way: a safety limit deep in the system trimmed every piece of text to 500 characters, and its own comment said the limit was 2000. The 2000 could never apply because of how the text was handed in. The day before, we had traced the text through every step we could think of, found it whole at each one, and concluded the problem only happened on the live site. We had skipped a step. A fresh pair of eyes listed every step on the real path and found it in an hour. Text is now trimmed at 2000 characters, at the end of a word, with a visible "…" when it is trimmed at all.
 - ~~One useful source of gene-to-disease information, OMIM, is still switched off.~~ SWITCHED ON on 22 September, with its safety filter connected first. Asking about one gene now shows that gene's OMIM entry and never another gene's: in ten live checks, a question about GCK kept its own entry and dropped nine that OMIM's own search had ranked above it. Confirmed by the product owner the same evening.
 - ~~One question shape is slow every time. "I am a student, explain in plain terms what the BRCA1 gene does" took 110, 104 and 97 seconds on three tries.~~ FOUND and FIXED on the evening of 22 September. The database was being asked, for that shape of question, to run a search it could not plan well, and it gave up after its own half-minute limit while the answer waited on it. That shape now asks for the gene's own record instead, which takes under a second. Confirmed by the product owner the same evening.
-- Clicking one of your past searches asks the question again from scratch instead of showing the answer you already read, because answers are not stored anywhere.
-- One security-shaped loose end in how an AI tool connects to the product, described below.
+- ~~Clicking one of your past searches asks the question again from scratch instead of showing the answer you already read, because answers are not stored anywhere.~~ FIXED since, awaiting the product owner's retest: answers are now stored for signed-in users, and a past search opens its saved answer instead of searching again.
+- ~~One security-shaped loose end in how an AI tool connects to the product, described below.~~ FIXED overnight into 23 September, awaiting the product owner's retest.
 
 THE HONEST HEADLINE AS OF 20 SEPTEMBER, kept for the record, in one sentence: answers now hit their own ceiling of twenty sources and then tell you they were cut short, so a good answer still reads as a thin one.
 
-That is measured rather than felt. We ran thirty real searches on the live practice site and counted what each answer said about itself. Twenty-four of the thirty ended by telling the reader the result had been trimmed. Twenty-two of the thirty said some of what was found is not described above. The number of sources used ranged from thirteen to twenty, averaging sixteen, and twenty is exactly the limit we set. So answers are pressed up against that limit most of the time, and then apologising for it. Nobody has yet decided whether twenty is the right number.
+That is measured rather than felt.
+We ran thirty real searches on the live practice site and counted what each answer said about itself.
+Twenty-four of the thirty ended by telling the reader the result had been trimmed.
+Twenty-two of the thirty said some of what was found is not described above.
+The number of sources used ranged from thirteen to twenty, averaging sixteen. And twenty is exactly the limit we set.
+So answers are pressed up against that limit most of the time, and then apologising for it.
+Nobody has yet decided whether twenty is the right number.
 
 That measurement also killed the theory that sent us looking. We had believed the system was routinely throwing away its own written answer and shipping a bare list of records instead. It does that on seven of thirty runs, and five of those seven are one single question. Two of the five questions we tried never did it at all. Measuring it cost an evening and saved us building a fix for a problem that is much narrower than we thought.
 
@@ -211,7 +239,8 @@ The other things we know are wrong today:
 
 One thing that did improve, and it is worth keeping in view: another thirty live searches ran today and every one of them answered. Counting the two runs before it, that is seventy-five searches in a row with no failure, against roughly one in ten failing a week ago. We have not fixed that failure and we are not claiming we have. The recorder built to catch it in the act has been running the whole time and has never once caught it.
 
-THE HONEST HEADLINE AS OF 13 SEPTEMBER, kept for the record: the screens are steadier now, and the biggest remaining problem is the answers themselves. Most real questions are still refused or answered thinly, only two of our seven lookup tools are actually being used, and the literature and clinical-trials tools are never reached at all.
+THE HONEST HEADLINE AS OF 13 SEPTEMBER, kept for the record: the screens are steadier now. And the biggest remaining problem is the answers themselves.
+Most real questions are still refused or answered thinly, only two of our seven lookup tools are actually being used. And the literature and clinical-trials tools are never reached at all.
 
 A few more things worth saying plainly, from the product owner's first round of testing:
 
@@ -219,17 +248,25 @@ A few more things worth saying plainly, from the product owner's first round of 
 - The account menu tells you there is no search limit in effect, which is wrong: a signed-in account is actually held to a limit of 100 searches a day, and that limit does fire.
 - Connecting an AI tool to this product through the link meant for that purpose does not work on the practice site right now; every attempt is rejected.
 
-THE HONEST HEADLINE AS OF 5 SEPTEMBER, kept for the record: the product is much easier on the eye than it was, and the biggest remaining problem is still that answers are SLOW. Nothing done that week made them faster.
+THE HONEST HEADLINE AS OF 5 SEPTEMBER, kept for the record: the product is much easier on the eye than it was. And the biggest remaining problem is still that answers are SLOW.
+Nothing done that week made them faster.
 
 Two things are worth saying about the week, because they are the kind of thing a progress note usually leaves out.
 
-The first is that we found a privacy problem nobody was looking for. If two people used the same computer, one after the other, the second person could still see the first person's conversation on screen after the first had signed out: their questions, the claims, and the sources. It is fixed. It had been there a while, and it survived because two comments in the code confidently said it had already been handled.
+The first is that we found a privacy problem nobody was looking for.
+If two people used the same computer, one after the other, the second person could still see the first person's conversation on screen after the first had signed out: their questions, the claims and the sources.
+It is fixed.
+It had been there a while, and it survived because two comments in the code confidently said it had already been handled.
 
 The second is that a test we trusted had been quietly broken for seven rounds of work. The tests kept passing, so nobody looked. They were passing because almost all of them checked that the SCREEN drew correctly, and the screen draws correctly whether or not the system actually answers. A green tick meant "the page rendered", never "it answered the question". That is now partly fixed and honestly recorded as not finished.
 
-THE HEADLINE FROM 1 SEPTEMBER, still true: the answers are readable, and the thing that replaced unreadability as the biggest problem is that they are SLOW.
+THE HEADLINE FROM 1 SEPTEMBER, still true: the answers are readable. And the thing that replaced unreadability as the biggest problem is that they are SLOW.
 
-An answer can take more than twenty-five seconds. We had believed it was twelve to fourteen, and we were wrong: we filmed the live site one picture per second and the answer had still not arrived at twenty-five. Worse, for fifteen of those seconds NOTHING ON THE SCREEN CHANGED. We have made the waiting look alive, with a number counting up and a moving indicator, and that is honest rather than fast. It does not make the answer arrive any sooner, and nobody is currently assigned to make it faster.
+An answer can take more than twenty-five seconds.
+We had believed it was twelve to fourteen, and we were wrong: we filmed the live site one picture per second and the answer had still not arrived at twenty-five.
+Worse, for fifteen of those seconds NOTHING ON THE SCREEN CHANGED.
+We have made the waiting look alive, with a number counting up and a moving indicator. And that is honest rather than fast.
+It does not make the answer arrive any sooner, and nobody is currently assigned to make it faster.
 
 One smaller one we found and have not fixed: the system reports the cost of answering a question as zero. That turned out not to be a bug at all. The figure is deliberately hidden from ordinary users, and it is hidden from us too unless an account is explicitly marked as an operator. The control is working; we were reading it wrong.
 
@@ -237,18 +274,37 @@ The phone-sized page that slid sideways IS now fixed, and the cause was not what
 
 THE PREVIOUS HEADLINE, from 31 August, kept because the story of it is worth more than the fix. Someone asked the live site which diseases are linked to the gene BRCA1. It answered, quickly, and cited every claim:
 
-> The knowledge graph associates the gene BRCA1 with four disease records: MedGen:C0346153, MedGen:C2676676, MedGen:C3280442, and MedGen:C4554406.
+> The knowledge graph associates the gene BRCA1 with four disease records: MedGen:C0346153, MedGen:C2676676, MedGen:C3280442 and MedGen:C4554406.
 
-Four reference codes where four disease names should be. A researcher cannot use that sentence for anything. Everything around it worked: the page was well built, the system found real records, and it honestly showed its sources. The answer was still useless.
+Four reference codes where four disease names should be.
+A researcher cannot use that sentence for anything.
+Everything around it worked: the page was well built, the system found real records. And it honestly showed its sources.
+The answer was still useless.
 
-We found the cause by looking in our copy of the database rather than guessing. Each disease record has a field meant to hold its name, and for diseases that field was filled in with the name of the CATALOGUE the record came from, not the name of the disease. Across twenty-five records it only ever said one of three things: "MedGen", "MeSH", or "SNOMEDCT_US". Gene records are fine, which is why gene questions read normally. So a readable answer was never possible from our own copy of the data, and showing the system that field would have made things worse, not better: it would have answered "SNOMEDCT_US" four times.
+We found the cause by looking in our copy of the database rather than guessing.
+Each disease record has a field meant to hold its name, and for diseases that field was filled in with the name of the CATALOGUE the record came from, not the name of the disease.
+Across twenty-five records it only ever said one of three things: "MedGen", "MeSH" or "SNOMEDCT_US".
+Gene records are fine, which is why gene questions read normally.
+So a readable answer was never possible from our own copy of the data, and showing the system that field would have made things worse, not better: it would have answered "SNOMEDCT_US" four times.
 
-WE THOUGHT THE FIX WAS ALREADY HALF DONE, AND WE WERE HALF WRONG, which is the part worth keeping. Our notes said the system already looked these records up at a public medical database during the same search, so the ability to turn a code into a name was already there. The notes also said to check that before promising it. We checked, and the public database REJECTS a request made that way: it needs two steps, one to find the record and one to read its name. What survived was the useful half, that the system could already do both steps, so this was wiring rather than building. It now makes those two requests once for the whole answer rather than once per disease, and it matches each name to the right code by reading the code back out of the reply instead of trusting the order they arrive in, which would have quietly attached the wrong disease name to the right code the day that database changed its ordering.
+WE THOUGHT THE FIX WAS ALREADY HALF DONE, AND WE WERE HALF WRONG, which is the part worth keeping.
+Our notes said the system already looked these records up at a public medical database during the same search, so the ability to turn a code into a name was already there.
+The notes also said to check that before promising it.
+We checked, and the public database REJECTS a request made that way: it needs two steps, one to find the record and one to read its name.
+What survived was the useful half, that the system could already do both steps, so this was wiring rather than building.
+It now makes those two requests once for the whole answer rather than once per disease, and it matches each name to the right code by reading the code back out of the reply instead of trusting the order they arrive in, which would have quietly attached the wrong disease name to the right code the day that database changed its ordering.
 
 
-The newest honest limitation, and it is the one a person will actually notice. Your searches are now saved properly on our side, but the browser still forgets WHO YOU ARE when you reload the page. So you come back, you are signed out, and you have to sign in again before your searches appear. They are not lost, they are just behind a sign-in you did not expect. Keeping you signed in is its own piece of work and is deliberately not bolted onto this one, because where a browser is allowed to store the thing that proves who you are is a security question worth deciding properly rather than in the last hour of an unrelated week.
+The newest honest limitation, and it is the one a person will actually notice.
+Your searches are now saved properly on our side, but the browser still forgets WHO YOU ARE when you reload the page.
+So you come back, you are signed out. And you have to sign in again before your searches appear.
+They are not lost, they are just behind a sign-in you did not expect.
+Keeping you signed in is its own piece of work and is deliberately not bolted onto this one, because where a browser is allowed to store the thing that proves who you are is a security question worth deciding properly rather than in the last hour of an unrelated week.
 
-A second one, from the same sprint, and it matters most on a shared computer. If someone uses the tool without an account and then a DIFFERENT person creates an account on that same browser, the first person's questions follow them into the new account. Our system genuinely cannot tell those two situations apart: one person finally signing up looks exactly like a second person sitting down at the same machine. We found it, we can see it, and we chose to write it down rather than guess at a fix that would break the ordinary case of one person signing up.
+A second one, from the same sprint. And it matters most on a shared computer.
+If someone uses the tool without an account and then a DIFFERENT person creates an account on that same browser, the first person's questions follow them into the new account.
+Our system genuinely cannot tell those two situations apart: one person finally signing up looks exactly like a second person sitting down at the same machine.
+We found it, we can see it. And we chose to write it down rather than guess at a fix that would break the ordinary case of one person signing up.
 Both of last week's headline problems are fixed, so this section leads with what is true now rather than keeping solved problems at the top. What they were, and what happened to them, is in the sprint list below.
 
 The honest headline as of 30 August: WE STILL CANNOT SAY HOW OFTEN THE ANSWERS ARE GOOD, and we now know that is harder than we thought. The system answers questions and cites every claim, and three releases have shipped. We built the measuring instrument this week and it did not work. Four separate checkers who did not build it reviewed it, and it failed all four.
@@ -259,7 +315,10 @@ The scorer is shelved rather than patched, and that is a deliberate call by the 
 
 The previous headline is worth keeping in view because it is now fixed. It used to be that nothing ran the tests automatically: every check happened because a person decided to run it, while a change merged into the main line went straight to the live web address with nothing in between. That is fixed as of 26 August, and 28 August put a second step between a merge and the public.
 
-The new honest headline is narrower and still real: those checks do not actually BLOCK anything. They put a red mark next to a button that still works. Making them genuinely block a merge needs either a paid plan on the service that hosts our code, or making the project's code public, and that is a decision for the product owner rather than something we can build. Until it is made, the checks inform a person rather than stopping them.
+The new honest headline is narrower and still real: those checks do not actually BLOCK anything.
+They put a red mark next to a button that still works.
+Making them genuinely block a merge needs either a paid plan on the service that hosts our code, or making the project's code public. And that is a decision for the product owner rather than something we can build.
+Until it is made, the checks inform a person rather than stopping them.
 
 The second thing to know: the seven problems one person found in an afternoon of clicking around are all fixed and all live, as of 25 August. We checked by opening the real web address afterwards rather than trusting that it had worked. One thing is better but not finished: the screen used to sit silent for about eleven seconds while it worked, and it now tells you which source it is consulting as it goes, but there is still a gap of about six seconds at the end while it writes the answer, during which it says nothing. That is the same problem one step further along, and it is written down.
 
@@ -280,6 +339,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Answers that explain themselves, and a short question that asks first | A plain-language answer now writes real sentences drawn from the papers instead of only quoting them, checked by a fast rule and then a second model before you see it. Plain language and researcher mode finally read differently on every question tried. A bare gene name or condition on its own is now asked back with choices written for that subject. Reopening a saved search in the sidebar, in the same tab, shows the answer you already got instead of searching again. The source count under an answer now matches the sources listed on the page | 2026-09-23 to 24 |
 | A night of checking what the system actually knows | Eight helpers worked through the night while nobody watched. The largest thing they found was not a bug in the code but a hole in the data: the medical database the system reads does not store the NAMES of diseases or of medical subject terms. It stores the name of the catalogue the disease came from, so a record for Marfan syndrome is filed under the word "GARD". Not one disease record anywhere contains the word "syndrome". Gene names and article titles are stored correctly, so this is a specific gap rather than an empty database. That had been recorded fourteen months ago and never fixed, and it cannot be fixed from here: the database is built by a different part of the project. What the night COULD fix, it did. Subject terms are now looked up live, so a question about what a paper is about returns twenty-six real terms instead of twenty-six reference numbers, and it costs two lookups however many terms there are. An answer that said "Found 20 records" above a list of 26 now agrees with itself. Clicking a past search shows the answer you already got instead of paying for a fresh one. A search that could never return anything was removed. And the address the integrations page prints no longer sends a secure request to an insecure one | 23 September, overnight |
 | The last unanswerable question | Asking which bacterial samples carry a resistance gene used to get "name a gene". Now it gets a table of samples with their genes and links, an exact count of how many exist, and a plain statement of which gene families were searched and which were left out on purpose, because one common gene name would have listed samples that do not actually carry the resistance asked about. Measured first, built second: the government's 521 MB sample catalogue can be read end to end in eighteen seconds, so the count is real rather than "and more". The live check found three things the tests had not, all fixed the same night: the genes were not on screen next to the sample, the source links had no identity, and a question about an organism the system cannot search got the wrong kind of "which do you mean" | 22 September, night |
 | Finding out why the answers read thinly, and fixing a real loss of sources | Discovered that the system is only allowed to quote its sources word for word, never to explain them, which is why every answer reads like a list. Tried five ways of instructing it differently; all five failed. Went and fetched better raw material instead: NCBI writes a plain-English description of every gene and we had never asked for it. Separately, found and fixed a genuine loss: a quote from a research paper that ran to more than one sentence was being thrown away completely, contributing nothing and losing its source link, with nothing on screen to say so. Also removed a confusing Notes block the product owner flagged, and proved that one search in ten quietly loses a whole source of information | 21 September |
@@ -480,7 +540,7 @@ The most useful thing we learned has nothing to do with any of those. It is that
 
 ### Sprint: the checks that run by themselves (26 August)
 
-Ten checks now run automatically every time anyone proposes a change: the code compiles, it is tidy, the tests pass, the dependencies have no known security holes, the web pages build, and a screen-reader check runs when the appearance changes.
+Ten checks now run automatically every time anyone proposes a change: the code compiles, it is tidy, the tests pass, the dependencies have no known security holes, the web pages build. And a screen-reader check runs when the appearance changes.
 
 The valuable part of this sprint is not the checks. It is what they caught the first four times they ran, none of which any person or any earlier check had noticed:
 
@@ -515,7 +575,11 @@ WHAT WENT WRONG, and this sprint has an unusually honest list.
 
 The plan was two sites inside one project, which is how the hosting service describes it and how we specified it. It does not work: the hosting service ties "which version of the code" to the service rather than to the site, so pointing the real site at a different version moved the practice site too. We found that by trying it and checking BOTH sites, not by reading the documentation, which says the opposite. The design was rebuilt as two entirely separate projects the same day.
 
-The practice site was live, answered correctly when asked if it was healthy, and could not reach its own service at all. The address of the service it should talk to is baked in when the site is built, and we had set it after the build, so the site was shipped pointing at the visitor's own computer. It passed every check we had written, including one that said all four addresses respond. Nothing caught it, because no check had ever actually opened the site and looked. One does now.
+The practice site was live, answered correctly when asked if it was healthy and could not reach its own service at all.
+The address of the service it should talk to is baked in when the site is built, and we had set it after the build, so the site was shipped pointing at the visitor's own computer.
+It passed every check we had written, including one that said all four addresses respond.
+Nothing caught it, because no check had ever actually opened the site and looked.
+One does now.
 
 FOUR separate times, the defect was not broken code but a confident sentence describing a check that did not exist. A note claimed a comparison the code never made. A test claimed to prove two sites use different keys when it only proved they use different databases, and that one took four attempts to fix properly. A file whose entire job is catching tests that cannot fail claimed to cover everything while missing two, twice, the second time inside the fix for the first. And then the status board made the same claim a third time, written while fixing the second.
 
@@ -535,7 +599,11 @@ A permission we did not know was off. The last step of a release, the one that c
 
 A release note nobody would read. The first release listed 798 changes and its page ran to sixty-two thousand characters, because a first release has nothing before it to compare against and so sweeps up the entire history of the project.
 
-Something worse than long, hiding inside it. Of those 798 entries, 173 were filed as fixes. Every single one predates the release, so we were telling a reader about 173 bugs we had fixed in a product nobody had ever used. That is not clutter, it is untrue in what it implies, and no amount of filtering could fix it because those changes genuinely were fixes during development. The first release now says what the product does rather than listing what we did to build it, and it says in its own text why it is the only entry written by hand.
+Something worse than long, hiding inside it.
+Of those 798 entries, 173 were filed as fixes.
+Every single one predates the release, so we were telling a reader about 173 bugs we had fixed in a product nobody had ever used.
+That is not clutter, it is untrue in what it implies. And no amount of filtering could fix it because those changes genuinely were fixes during development.
+The first release now says what the product does rather than listing what we did to build it, and it says in its own text why it is the only entry written by hand.
 
 Two pieces of wording on a public page. A release with nothing user-facing in it read as "Plus 2 internal changes" under a bare heading, which is a sentence missing its first half. A release with exactly one read "1 internal changes".
 
@@ -547,17 +615,32 @@ The lesson, and it is the one worth keeping: a thing that has never actually run
 
 ### Sprint: making the system show its workings (30 August, merged)
 
-Until this sprint the tool answered you and then forgot everything about how it got there. If an answer was wrong, there was no way to go back and see which sources it had consulted, how long each one took, or whether one of them had quietly failed. This sprint gives it a memory of its own work, in three separate records rather than one, so that losing any single one still leaves a usable picture.
+Until this sprint the tool answered you and then forgot everything about how it got there.
+If an answer was wrong, there was no way to go back and see which sources it had consulted, how long each one took or whether one of them had quietly failed.
+This sprint gives it a memory of its own work, in three separate records rather than one, so that losing any single one still leaves a usable picture.
 
 The first is a step-by-step trace of a whole question, sent to an outside service built for exactly this, so you can open one question and watch it move through the system. The second counts behaviour in aggregate: how many questions, how often the system refuses, how often someone gives a thumbs up. It counts, it never stores the question. The third is a plain file on our own machine, one line per outside lookup, that only ever gets added to and never edited, recording which source was consulted, under which permission, what it answered and how long it took.
 
 The hardest part was not building any of that. It was making sure none of the three records can accidentally carry a password or an account name off our machine. That took five rounds of fixing and re-checking one control, which is the most any single piece of this project has ever taken.
 
-What went wrong is worth stating plainly, because it was a thinking error rather than a coding one. Error messages from a failed lookup can contain the password used to make it, because the password sits inside the web address. We spent four rounds hardening the check that scans those messages before writing them to our own file on our own machine, and each round was defeated by a slightly different message. Meanwhile the very same text was being sent, unchecked, to the outside tracing service. Four rounds guarding the front door of a house whose back door was open. Two independent reviewers found it; the people doing the work did not, because each round only looked at the file the previous round had been editing.
+What went wrong is worth stating plainly, because it was a thinking error rather than a coding one.
+Error messages from a failed lookup can contain the password used to make it, because the password sits inside the web address.
+We spent four rounds hardening the check that scans those messages before writing them to our own file on our own machine, and each round was defeated by a slightly different message.
+Meanwhile the very same text was being sent, unchecked, to the outside tracing service.
+Four rounds guarding the front door of a house whose back door was open.
+Two independent reviewers found it; the people doing the work did not, because each round only looked at the file the previous round had been editing.
 
-The fix was to stop trying to scan the text at all. The system no longer sends the message; it sends a short code saying what kind of failure it was, and the name of the failure type. Nothing else. A message you never send is a message that cannot leak.
+The fix was to stop trying to scan the text at all.
+The system no longer sends the message; it sends a short code saying what kind of failure it was and the name of the failure type.
+Nothing else.
+A message you never send is a message that cannot leak.
 
-One more thing happened at the very end, and it is recorded because a reader learns more from it than from another green tick. The session that paused this work wrote a handoff note saying one small item was still unfinished. It was not: the fix, its tests, and the record of it had all been saved together. The note was written after a genuine re-check, but the re-check tested the wrong door and found a real problem behind a different one. The next session re-measured before building anything and caught it. Had it trusted three documents that all agreed, it would have rebuilt a working control on top of itself.
+One more thing happened at the very end, and it is recorded because a reader learns more from it than from another green tick.
+The session that paused this work wrote a handoff note saying one small item was still unfinished.
+It was not: the fix, its tests and the record of it had all been saved together.
+The note was written after a genuine re-check, but the re-check tested the wrong door and found a real problem behind a different one.
+The next session re-measured before building anything and caught it.
+Had it trusted three documents that all agreed, it would have rebuilt a working control on top of itself.
 
 
 ## What is next
@@ -566,16 +649,29 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. Check one question by hand: ask what physical features are associated with Marfan syndrome. Until last night that always answered "I could not find evidence", which reads as "nothing is known about this" and is false. The search that could never work has been removed. What the question reaches instead was not checked end to end overnight, and one run settles it.
-2. Decide four test questions where the gatekeeper or the expected answer disagree with what the product does: three where the gatekeeper turns away a question the test expects answered, and one where the test names an older address for an organism's record page than the one the product now links to.
-3. Decide whether twenty sources is the right ceiling. Answers hit it on most questions and then tell the reader they were cut short, which is a large part of why a good answer reads as a thin one.
-4. Tell the reader when the system wrote its own search rather than using a checked one. Last night established that when no prepared search fits a question, the system writes one from scratch each time, and two attempts at the same question are not the same search: one returned a hundred records and the next returned a single number. That variation is no longer happening on the practice site, closed by two earlier changes nobody had re-measured, but the machinery is still there and nothing on screen says which kind of search produced an answer.
-5. Decide what to do about connecting facts across several steps, now that there is a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
-6. Decide whether to try the new outside model that reports how confident it is. It cannot write answers at all, so it would only ever help the system decide things: whether a question is safe, and which source to search. The cheap first step is to let it decide in parallel and record what it would have said, without acting on it.
+1. Wait on the product owner's retests. The session that ran from the evening of 23 September into 24 September shipped an answer that writes real sentences instead of only quoting sources, plain language and researcher modes that finally read differently, a short question that is asked back with the right choices, a sidebar that reopens a saved answer, and a source count that matches its own list. All of it is on the practice site, none of it on the public one yet, and what ships to the public site next depends on what the product owner finds.
+2. Fix the phenotype question. Ask what physical features are associated with Marfan syndrome and the system still names no phenotypes at all, answering with genes and variants instead.
+3. Stop the occasional refusal of a good question at the step that works out what kind of question it is. It happened twice in about forty live tries.
+4. Let a model, rather than a fixed list of words, decide which questions are asking for published papers.
+5. When someone asks for recent papers, ask what "recent" means before searching.
+6. Decide four test questions where the gatekeeper or the expected answer disagree with what the product does: three where the gatekeeper turns away a question the test expects answered, and one where the test names an older address for an organism's record page than the one the product now links to.
+7. Decide whether twenty sources is the right ceiling. Answers hit it on most questions and then tell the reader they were cut short, which is a large part of why a good answer reads as a thin one.
+8. Tell the reader when the system wrote its own search rather than using a checked one. Last night established that when no prepared search fits a question, the system writes one from scratch each time, and two attempts at the same question are not the same search: one returned a hundred records and the next returned a single number. That variation is no longer happening on the practice site, closed by two earlier changes nobody had re-measured, but the machinery is still there and nothing on screen says which kind of search produced an answer.
+9. Decide what to do about connecting facts across several steps, now that there is a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
+10. Decide whether to try the new outside model that reports how confident it is. It cannot write answers at all, so it would only ever help the system decide things: whether a question is safe, and which source to search. The cheap first step is to let it decide in parallel and record what it would have said, without acting on it.
+11. Make answers match the reference prototype's depth, formatting and structure. The last two days' work answered part of this.
 
-Done since this list was last written, overnight on 23 September, while nobody was watching: subject terms are looked up and shown as real words; an answer's opening count now matches the list under it; a past search reopens with the answer it gave; a reference number is no longer shown as though it were a real name; a search that could never return a row was removed; the integrations address no longer downgrades a secure connection; and the developers' own test suite was both repaired and made faster, after the first attempt at repairing it made one part worse and its own checking run caught that before anyone shipped it.
+Done since this list was last written, overnight on 23 September, while nobody was watching:
 
-NOT ON THIS LIST, deliberately: making the two answer settings genuinely different. It was worked on all day on 21 September. The product owner has seen where it got to and accepted it as it stands. There is a way forward written down, which is to have the system place the plain-English description itself rather than asking it to write one, but it is an option on the table rather than a queued job.
+- Subject terms are looked up and shown as real words.
+- An answer's opening count now matches the list under it.
+- A past search reopens with the answer it gave.
+- A reference number is no longer shown as though it were a real name.
+- A search that could never return a row was removed.
+- The integrations address no longer downgrades a secure connection.
+- The developers' own test suite was both repaired and made faster, after the first attempt at repairing it made one part worse and its own checking run caught that before anyone shipped it.
+
+~~NOT ON THIS LIST, deliberately: making the two answer settings genuinely different. It was worked on all day on 21 September. The product owner has seen where it got to and accepted it as it stands. There is a way forward written down, which is to have the system place the plain-English description itself rather than asking it to write one, but it is an option on the table rather than a queued job.~~ DONE since: from 24 September the two settings read differently on every question tried, and that work waits on the product owner's retest in item 1.
 
 The previous next step, still true and now further down the list: are the fifty test questions the right fifty?
 
@@ -583,13 +679,19 @@ HOW WORK GETS CHOSEN FROM HERE ALSO CHANGED on 31 August, and it is worth a sent
 
 Until now the plan was a numbered list of building blocks written months ago, and each sprint took the next number. That list is finished: every block has either been built or moved to a later pile. What is left is of two kinds, and neither fits a numbered block. There are notes attached to bits of the code saying "if you ever touch this, watch out for that", which only become work if someone touches that code. And there is the list of things a real person hit when they used the live site, which is the one that matters now.
 
-So from here the work comes off those two lists rather than off the plan. The reason is the sprint above: we took the next number, built it, and it turned out to protect against a problem we do not have yet, while the thing making answers unreadable sat in our notes the whole time. A number in a plan is a poor guide to what is worth doing once most of the plan is built.
+So from here the work comes off those two lists rather than off the plan.
+The reason is the sprint above: we took the next number, built it. And it turned out to protect against a problem we do not have yet, while the thing making answers unreadable sat in our notes the whole time.
+A number in a plan is a poor guide to what is worth doing once most of the plan is built.
 
 Everything else waits on that. They were written as a first attempt to get moving, and they held up well, every one checked against the live databases and re-checked by four separate reviews. But nobody has yet said they are the RIGHT fifty questions to judge this system by, and until someone does, there is little point building a scorer precise enough to catch subtle mistakes against them.
 
 Changing the set is cheap and safe. There is a documented method for it, and the tool that builds the question list re-checks every fact against the live databases each time it runs. The expensive part is deciding what to ask.
 
-After that, the order is: stop the system overloading the public databases it depends on; a full safety and quality review before anyone outside the team relies on it; and then working out which underlying AI model does each job best, which needs a working scorer to answer.
+After that, the order is:
+
+- Stop the system overloading the public databases it depends on.
+- A full safety and quality review before anyone outside the team relies on it.
+- Work out which underlying AI model does each job best, which needs a working scorer to answer.
 
 
 ```mermaid
@@ -660,7 +762,14 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
 | Answers reach their own ceiling of twenty sources and then tell the reader the result was cut short. Across thirty measured searches, twenty-four ended with a note about being trimmed and twenty-two said some of what was found is not described. This is the single biggest reason a good answer reads as a thin one | Needs a product decision first: is twenty the right number? Nobody has set it deliberately. Raising it is not free, because every extra source costs time and money on each question |
-| The system can quote its sources word for word but cannot explain them in its own words, because every sentence has to repeat a source exactly to pass the safety check. This is why both answer settings read like a list of records | Worked on all day on 21 September and accepted as it stands by the product owner. Five attempts to fix it by rewording the instructions all failed. There is a way forward written down, which is to have the system place the plain-English text itself instead of asking it to write one, but it is an option rather than a queued job |
+| ~~The system can quote its sources word for word but cannot explain them in its own words, because every sentence has to repeat a source exactly to pass the safety check. This is why both answer settings read like a list of records. Worked on all day on 21 September. Five attempts to fix it by rewording the instructions all failed~~ | LARGELY FIXED, 23 September. A second, separate check now reads each sentence after it is written: a fast rule confirms every quote, number and "not" it leans on is really in the source, then a second, separate model confirms the sentence says no more than the words it quotes. Live, this worked for all seven plain-language questions tried. Not yet bulletproof: in two tries out of six the answer fell back to a plain list, one of them because the second check's call failed, and the system showed the list rather than a sentence that had not passed the check |
+| Ask what physical features go with a condition, such as Marfan syndrome, and the system still names no phenotypes at all, answering with genes and variants instead | First in line to be built, once the product owner's retests are done |
+| A good, ordinary question is occasionally refused at the step that works out what kind of question it is. Measured at roughly one in twenty over about forty live tries | Second in line to be built. The screen shows an ordinary refusal, while behind it the model doing that step had replied in a shape the system could not read |
+| Asking for "recent papers" does not ask what "recent" means before searching | Fourth in line to be built |
+| Which questions count as a request for published literature is still decided by matching against a fixed list of words | Third in line to be built |
+| A sentence that moves on to a different paper must name something from that paper's title, and a generic title word such as "patients" can satisfy that check | Recorded, not yet scheduled |
+| The trust line under an answer now counts its sources correctly, but the exact wording of that line is still an open product decision | Whenever the product owner decides |
+| The exact wording of the plain-language answer's medical-advice line is still an open product decision | Whenever the product owner decides |
 | One search in ten quietly loses a whole source of information. Measured over the full 150-search test on 22 September: 12 of 119 database lookups came back empty where the same question had found records on another try. The reason was being thrown away one step before the screen; it is now kept, and it is one of two: the question named nothing to look up, or the second search ran out of time | The reason is fixed to reach the record. Whether the answer itself says so is the product owner's decision, raised 22 September with the causes in hand |
 | ~~Long quotes from research papers are cut off in the middle of a word, like "has been uncle". A fix was written and shipped on 21 September and did NOT work~~ | FIXED 22 September and confirmed by the product owner the same day. The real cause was a 500-character safety trim deep in the system whose own comment claimed 2000; the 21 September fix was on a path the text never took |
 | ~~OMIM, a useful source of gene-to-disease information, is switched off~~ | SWITCHED ON 22 September with its safety filter connected first; ten live checks showed the right gene every time. Confirmed by the product owner the same evening |
@@ -668,8 +777,8 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | ~~Two requests the product is not built to handle, a sequence search and a file of genetic variants, were answered about the disease terms found inside them rather than turned away~~ | DECIDED, FIXED and confirmed by the product owner, 22 September: turned away with a message saying the capability does not exist |
 | ~~One question shape takes about 100 seconds every time: a plain-language explanation of a well-studied gene~~ | FOUND and FIXED 22 September: that shape asks the database for the gene's own record instead of a search it could not plan. Confirmed by the product owner the same evening |
 | Broad questions of the shape "what genes are associated with X" fail our own fact-check five times out of six, so the reader is handed a list of records instead of a written answer. Refusing to show unverified writing is right; needing to refuse that often is not | Unowned. It is narrow, which is itself a finding: four other question shapes we tried barely do this at all |
-| Clicking one of your past searches asks the question again from scratch instead of showing the answer you already read | Blocked on a decision about people's data. No answer text is stored anywhere today, so this needs somewhere to keep answers and a decision about whether we should keep them at all |
-| Connecting an AI tool to the product involves a web address that quietly forwards the request, and the forwarding step sends it to an unencrypted address before bouncing back | Open. The instructions we now print avoid that step entirely, so nobody following them is exposed, but fixing the forwarding itself means changing how the site is hosted rather than changing any code |
+| ~~Clicking one of your past searches asks the question again from scratch instead of showing the answer you already read~~ | FIXED, awaiting the product owner's retest. Answers are now stored for signed-in users. A past search restored when you sign in opens its saved answer at once, built overnight into 23 September, and since the evening of 23 September so does a search asked earlier in the same tab |
+| ~~Connecting an AI tool to the product involves a web address that quietly forwards the request, and the forwarding step sends it to an unencrypted address before bouncing back~~ | FIXED overnight into 23 September, awaiting the product owner's retest: a secure request is no longer redirected to an unencrypted address, and the printed instructions work as pasted. Before the fix, the printed instructions already avoided that step, and fixing the forwarding itself was thought to need a hosting change rather than a code change |
 | About 1 search in 10 used to end with "could not be completed" instead of an answer. It has not happened once in the last seventy-five tries, but nothing was fixed, so it is hiding rather than gone. The recorder built to capture the cause has been running the whole time and has never caught it | Still open. The next step is to catch one in the act rather than to assume it has left |
 | ~~The same question can return a different set of sources each time it is asked. Asked six times, one question gave eighteen sources, then thirteen, then eight~~ | LARGELY FIXED, 20 September. Asked three times each, eight of the ten question-and-setting combinations returned exactly the same number of sources every time, and the other two differed on one try out of three. Not yet confirmed by the product owner, and it is on their retest list |
 | ~~Some answers have too many words in bold, so nothing stands out~~ | FIXED and shipped, 20 September. It over-corrected on the first attempt, leaving plain language with no emphasis at all, and that was repaired the same day |
@@ -767,9 +876,16 @@ Two honest things about it.
 
 The first is that most of this was already built. Before writing anything we checked all eight requirements in the plan against the code that already existed, and five of them had been quietly built already, one at a time, as each search tool was added over previous weeks. The plan promised a piece of work that was mostly finished. Finding that out was arguably worth more than the two pieces we added.
 
-The second is that we built the wrong thing this week, and that is worth saying plainly rather than burying. This protects against many people using the tool at once, and today almost nobody is using it. Meanwhile the reference-code problem described at the top of this page, the one that makes answers unreadable, was sitting in our notes the whole time. We had the evidence for what actually needed fixing and worked somewhere else. The order of work has been changed as a result: making answers readable now comes first, and the remaining safety and quality work waits until real people have tried it.
+The second is that we built the wrong thing this week, and that is worth saying plainly rather than burying.
+This protects against many people using the tool at once, and today almost nobody is using it.
+Meanwhile the reference-code problem described at the top of this page, the one that makes answers unreadable, was sitting in our notes the whole time.
+We had the evidence for what actually needed fixing and worked somewhere else.
+The order of work has been changed as a result: making answers readable now comes first, and the remaining safety and quality work waits until real people have tried it.
 
-An independent reviewer checked the work and found nine problems in it, three of them serious. All three say the same thing: the automatic tests written to prove this feature works do not actually check it, and the feature could be deleted without a single test complaining. The feature itself does work, proven by watching it run rather than by the tests. We fixed the one problem that made answers worse, wrote the other eight down with owners, and merged, because unreadable answers are the bigger problem and this is not where the effort belongs.
+An independent reviewer checked the work and found nine problems in it, three of them serious.
+All three say the same thing: the automatic tests written to prove this feature works do not actually check it, and the feature could be deleted without a single test complaining.
+The feature itself does work, proven by watching it run rather than by the tests.
+We fixed the one problem that made answers worse, wrote the other eight down with owners and merged, because unreadable answers are the bigger problem and this is not where the effort belongs.
 
 ### Sprint: making the answers readable, and the interface around them (1 September, merged)
 
@@ -779,9 +895,17 @@ What changed for a user is the list at the top of this page. What is worth recor
 
 We checked our own notes before trusting them, and they were half wrong. The notes said the fix for unreadable answers was nearly free, because the system already looked these records up during the same search. They also said to verify that before promising it. We verified, and the public database rejects a request made the way our notes assumed; it needs two steps. The useful half survived, that the system could already do both steps, so this was wiring rather than building.
 
-The most uncomfortable result is about our own checking rather than the product. Of the nine problems found this sprint, FOUR were faults in the tools we use to check our work, not in the work. Three of those four did not fail, they returned a believable wrong answer. One nearly had us report a fault in the product that did not exist: a script watching the live site was looking for two things by the wrong name, found nothing, and reported "nothing happened" on every frame of a recording where things plainly did happen. We caught it only because the recording contradicted something we already knew.
+The most uncomfortable result is about our own checking rather than the product.
+Of the nine problems found this sprint, FOUR were faults in the tools we use to check our work, not in the work.
+Three of those four did not fail, they returned a believable wrong answer.
+One nearly had us report a fault in the product that did not exist: a script watching the live site was looking for two things by the wrong name, found nothing and reported "nothing happened" on every frame of a recording where things plainly did happen.
+We caught it only because the recording contradicted something we already knew.
 
-They all have the same shape, and it is now written down: each one NAMED SOMETHING THAT DOES NOT EXIST, and the surrounding machinery reported the absence as an ordinary value rather than an error. A missing thing counted as zero. An unknown label became a warning nobody reads. A state we forgot to handle counted as "not finished yet". None of those can fail, so none of them was really a check.
+They all have the same shape, and it is now written down: each one NAMED SOMETHING THAT DOES NOT EXIST. And the surrounding machinery reported the absence as an ordinary value rather than an error.
+A missing thing counted as zero.
+An unknown label became a warning nobody reads.
+A state we forgot to handle counted as "not finished yet".
+None of those can fail, so none of them was really a check.
 
 The way work gets checked also changed this sprint. Until now an independent reviewer went over each piece before it was released to the practice site. From here the product owner tests it there instead, and their verdict is what marks something finished. The argument that won: a problem a real person hits is worth more than one a reviewer imagines, and the practice site is now a place to try things rather than the thing itself, so a problem there costs a test run rather than a user. One rule was kept: whoever built something still does not get to declare it finished.
 
@@ -826,7 +950,10 @@ Nothing automatically checks our work before it goes live. We have nearly four t
 
 ### Sprint: the first round of testing, and fixing the screens (12 to 13 September)
 
-This is the first sprint where the product owner actually sat down and tried the product against a written plan, rather than us guessing what to fix next. Two rounds of fixes went out: the first let people in properly, with no five-search wall and a working sign in and sign out. The second made the screen itself hold still: a fixed header and footer, one steady width for the answer box, screens that fade in instead of snapping, a lighter home page, and a bigger search box that also works on a phone. Both rounds, plus eight small follow-ups the product owner asked for after retesting, are now live and approved.
+This is the first sprint where the product owner actually sat down and tried the product against a written plan, rather than us guessing what to fix next.
+Two rounds of fixes went out: the first let people in properly, with no five-search wall and a working sign in and sign out.
+The second made the screen itself hold still: a fixed header and footer, one steady width for the answer box, screens that fade in instead of snapping, a lighter home page and a bigger search box that also works on a phone.
+Both rounds, plus eight small follow-ups the product owner asked for after retesting, are now live and approved.
 
 Three things went wrong along the way, and they are worth keeping rather than smoothing over.
 
@@ -838,21 +965,61 @@ And about one guest search in seven was failing at one particular step before th
 
 ### Sprint: measuring how often it answers, and finding the cut (22 September)
 
-The first thing that happened this sprint is the test we had never managed to finish. Every one of the fifty test questions was asked three times, signed in, spread over forty minutes, and the result of every one of the 150 searches was written down as it came in. The last attempt at this, on 12 September, silently lost 65 of its 150 searches to a daily limit on the single account it used, so this time it used two accounts and stayed under the limit on each. Half the questions now answer every time. On 12 September one did.
+The first thing that happened this sprint is the test we had never managed to finish.
+Every one of the fifty test questions was asked three times, signed in, spread over forty minutes. And the result of every one of the 150 searches was written down as it came in.
+The last attempt at this, on 12 September, silently lost 65 of its 150 searches to a daily limit on the single account it used, so this time it used two accounts and stayed under the limit on each.
+Half the questions now answer every time.
+On 12 September one did.
 
-The second thing is a mistake we made and caught within the hour. Four searches appeared to hang for six to eleven minutes and then drop the connection with no answer. The first report to the product owner called that a defect in the system. It was the laptop running the test going to sleep on battery, twice. What gave it away was that the hung searches came in pairs and ended at the exact same second, which no fault in the system could produce. Three of the four searches had in fact finished on the server while the laptop slept. The four were set aside and re-run with the machine kept awake, and all four answered. The lesson is written down: a test that measures time from its own clock cannot tell a slow server from a sleeping tester.
+The second thing is a mistake we made and caught within the hour.
+Four searches appeared to hang for six to eleven minutes and then drop the connection with no answer.
+The first report to the product owner called that a defect in the system.
+It was the laptop running the test going to sleep on battery, twice.
+What gave it away was that the hung searches came in pairs and ended at the exact same second, which no fault in the system could produce.
+Three of the four searches had in fact finished on the server while the laptop slept.
+The four were set aside and re-run with the machine kept awake, and all four answered.
+The lesson is written down: a test that measures time from its own clock cannot tell a slow server from a sleeping tester.
 
-The third thing is the mid-word cut, finally. The day before, we had followed a piece of text through every step of the system we could think of, found it whole at every one, and concluded the cut only happened on the live site. That was wrong because we had skipped a step. A fresh pair of eyes, told to list every step on the real path before guessing, found a safety limit that trimmed every piece of text to 500 characters, in a part of the system nobody thinks of as a text handler. Its own comment said the limit was 2000. The 2000 could never apply because of how the text was handed to it. The fix is on the practice site and waits for the product owner to confirm it.
+The third thing is the mid-word cut, finally.
+The day before, we had followed a piece of text through every step of the system we could think of, found it whole at every one and concluded the cut only happened on the live site.
+That was wrong because we had skipped a step.
+A fresh pair of eyes, told to list every step on the real path before guessing, found a safety limit that trimmed every piece of text to 500 characters, in a part of the system nobody thinks of as a text handler.
+Its own comment said the limit was 2000.
+The 2000 could never apply because of how the text was handed to it.
+The fix is on the practice site and waits for the product owner to confirm it.
 
-The evening added one more, after the product owner had confirmed everything above. Two questions had been quietly losing their own search of our database: "compare what is known about these two genes in this cancer" and "find me expression datasets about this gene". For both, the system had no ready-made query and asked a model to write one, and the query it wrote was rejected every time, so the answer came from the other sources with a line admitting a search had not finished. Now the comparison shows each gene's known conditions side by side from a fixed query, the dataset question shows the gene's record, and, because our database holds no datasets at all, the dataset question now also searches the government's own dataset catalogue and lists what it finds with links. While measuring this we found that a query naming two genes at once would have hung for thirty seconds on our database, though no test question had ever tripped it; that is fixed too. Twelve live checks passed. One thing to know: the automatic checks that normally run on every change did not run this evening, because the code-hosting account's billing needs attention, so the same checks were run by hand before the change went out.
+The evening added one more, after the product owner had confirmed everything above.
+Two questions had been quietly losing their own search of our database: "compare what is known about these two genes in this cancer" and "find me expression datasets about this gene".
+For both, the system had no ready-made query and asked a model to write one. And the query it wrote was rejected every time, so the answer came from the other sources with a line admitting a search had not finished.
+Now the comparison shows each gene's known conditions side by side from a fixed query, the dataset question shows the gene's record. And, because our database holds no datasets at all, the dataset question now also searches the government's own dataset catalogue and lists what it finds with links.
+While measuring this we found that a query naming two genes at once would have hung for thirty seconds on our database, though no test question had ever tripped it; that is fixed too.
+Twelve live checks passed.
+One thing to know: the automatic checks that normally run on every change did not run this evening, because the code-hosting account's billing needs attention, so the same checks were run by hand before the change went out.
 
-The night added the question that clinical genetics asks most: "here is a stretch of chromosome, what is under it?" Until now the system only understood things with a name, so it answered by asking for a gene name, which is the one thing the person does not have. Now it reads the coordinates, looks up the genes under them in the government's own gene catalogue, checks each gene's real position rather than trusting the catalogue's rough search (which can return things that only look nearby), and then carries on as it would for any gene question, adding the structural and clinical variants recorded for that exact stretch. If the question does not say which genome build the coordinates are on, it asks, because the two builds in use put different genes under the same numbers and guessing would give a confident wrong answer. The work was planned first and built by two helpers in parallel, one measuring the government service while the other wrote the code, with the two halves joined only after both were done. The live checks then found two things worth fixing the same night: a stretch that starts with an unnamed piece of annotation was being treated as if that piece were the gene the person meant, so named genes now come first; and on one check in five the question ran into the system's own limit on outside lookups, because the model's guesses about the wording each cost one, so those guesses are no longer looked up for a question whose genes the coordinates already settle. 6 of 8 answered across three deploys, 3 of 3 on the final one live checks of the standard test question then passed, with the right gene found from the numbers alone.
+The night added the question that clinical genetics asks most: "here is a stretch of chromosome, what is under it?" Until now the system only understood things with a name, so it answered by asking for a gene name, which is the one thing the person does not have.
+Now it reads the coordinates, looks up the genes under them in the government's own gene catalogue, checks each gene's real position rather than trusting the catalogue's rough search (which can return things that only look nearby) and then carries on as it would for any gene question, adding the structural and clinical variants recorded for that exact stretch.
+If the question does not say which genome build the coordinates are on, it asks, because the two builds in use put different genes under the same numbers and guessing would give a confident wrong answer.
+The work was planned first and built by two helpers in parallel, one measuring the government service while the other wrote the code, with the two halves joined only after both were done.
+The live checks then found two things worth fixing the same night: a stretch that starts with an unnamed piece of annotation was being treated as if that piece were the gene the person meant, so named genes now come first; and on one check in five the question ran into the system's own limit on outside lookups, because the model's guesses about the wording each cost one, so those guesses are no longer looked up for a question whose genes the coordinates already settle.
+6 of 8 answered across three deploys, 3 of 3 on the final one live checks of the standard test question then passed, with the right gene found from the numbers alone.
 
-Late the same night, the limit that the chromosome work had bumped into was measured properly. The system allows each search twenty lookups against outside services, and until tonight nobody could see how many a search actually used, because the lookups the system makes while working out what a question means were never shown. A count was added to the end of every search, and eight kinds of question were each asked three times: none was refused, and the closest any came was seventeen. The limit stays. What the count showed instead was a surprise: the same question used nine lookups the first time and three the next two, because the system remembers every name it has already checked for as long as it stays running. So the first question after each new deploy is the expensive one, and that is the one to measure.
+Late the same night, the limit that the chromosome work had bumped into was measured properly.
+The system allows each search twenty lookups against outside services, and until tonight nobody could see how many a search actually used, because the lookups the system makes while working out what a question means were never shown.
+A count was added to the end of every search, and eight kinds of question were each asked three times: none was refused. And the closest any came was seventeen.
+The limit stays.
+What the count showed instead was a surprise: the same question used nine lookups the first time and three the next two, because the system remembers every name it has already checked for as long as it stays running.
+So the first question after each new deploy is the expensive one, and that is the one to measure.
 
-Reading those answers found something no count could: two of the eight ended with a note that the answer "does not address" a list of conditions, and the list was eight records nobody had asked about. The word "condition" in "what condition is it associated with?" had been looked up as if it were the name of a disease, matched eight records that happen to contain the word, and the answer then blamed the question for them. Words like that are now never looked up as a disease name, while "breast cancer" or "Lynch syndrome" still are.
+Reading those answers found something no count could: two of the eight ended with a note that the answer "does not address" a list of conditions, and the list was eight records nobody had asked about.
+The word "condition" in "what condition is it associated with?" had been looked up as if it were the name of a disease, matched eight records that happen to contain the word. And the answer then blamed the question for them.
+Words like that are now never looked up as a disease name, while "breast cancer" or "Lynch syndrome" still are.
 
-The night's last piece is the project accession, the second of the two question shapes that never answered. A person who types "PRJNA31257" already knows exactly what they mean, and being asked for a gene name was the system not knowing what a project is. Now it recognises a project, sample, run or assembly accession, looks the record up, follows the links to the samples, runs and assemblies under it, and lists each with the page it can be fetched from. It was built the same way as the chromosome stretch, with a helper measuring the government service while another wrote the code. The live checks found two things to fix the same night: a sequencing run was shown as a lump of computer markup instead of its accession number, and a question ending "which runs come from it?" was answered with "which gene do you mean?", because the part of the system that spots a question referring to nothing did not yet count an accession as a subject. Three of three live checks of the standard question passed, and after the two fixes the sample question answered twice with its record and five of its sequencing runs.
+The night's last piece is the project accession, the second of the two question shapes that never answered.
+A person who types "PRJNA31257" already knows exactly what they mean, and being asked for a gene name was the system not knowing what a project is.
+Now it recognises a project, sample, run or assembly accession, looks the record up, follows the links to the samples, runs and assemblies under it and lists each with the page it can be fetched from.
+It was built the same way as the chromosome stretch, with a helper measuring the government service while another wrote the code.
+The live checks found two things to fix the same night: a sequencing run was shown as a lump of computer markup instead of its accession number, and a question ending "which runs come from it?" was answered with "which gene do you mean?", because the part of the system that spots a question referring to nothing did not yet count an accession as a subject.
+Three of three live checks of the standard question passed, and after the two fixes the sample question answered twice with its record and five of its sequencing runs.
 
 The night closed with two housekeeping changes the product owner asked for:
 

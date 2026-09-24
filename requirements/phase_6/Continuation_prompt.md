@@ -32,23 +32,23 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current here. Right now it is:
 
-- WORK "NEXT, IN ORDER" FROM ITS CUTOFF. Three answers for a fresh session, one line each:
-  - WHAT IS LIVE ON DEVELOP: everything through the overnight session of 2026-09-23 (`git log --since=2026-09-23 --oneline` for the hashes), on top of `f96c780`. That session shipped: the MCP address no longer downgrading an HTTPS request to plaintext (11.30 fix B); item 10.2, history showing the saved answer instantly with Run again; MeSH identifiers resolving to real terms in two calls; the opening sentence counting the display list rather than the prompt slice; the leaked-vocabulary filter catching the `[MeSH] D000818` form; the dead `Disease` to `PhenotypicFeature` template removed; and both halves of D4. Production is unchanged on `v0.2.0`.
-  - WHAT AWAITS THE PRODUCT OWNER'S RETEST: items 1 to 7 in `testing/Shipped_2026-09-23.md`, plus items 7 to 22 in `testing/Shipped_2026-09-22.md` from the night before, plus the four one-look checks (11.14, 11.36, 9.12, 8.4).
-  - THE ONE NEXT ACTION: `testing/UI_fix_plan.md`, "Next, in order", item 1, verify that a phenotype question now reaches a path that can answer it. One live run settles it. It is first because it is the one honest gap the overnight session left: the dead search is gone and what the question reaches INSTEAD was not verified end to end.
-  - Start at the top of `testing/UI_fix_plan.md`: "Where every feature stands" says what is done and what is left; "Where we stopped" is the cutoff and carries the 2026-09-23 session table.
+- WORK SECTION 2 OF THE FIX PLAN'S TRACKER FROM THE TOP. Three answers for a fresh session, one line each:
+  - WHAT IS LIVE ON DEVELOP: product code through `9b9ff2b`. Every later commit is documents and rules, and both Railway services redeploy on every push: they were at SUCCESS on `90f12f3`, the last push before the 2026-09-24 checkpoint. The session of 2026-09-23 to 24 shipped Set 12 (12.1 to 12.4, 12.7 to 12.13, and parts 1, 2 and 4 of 12.16): answers that answer the question, checked by a second model against the exact words they quote; plain language and researcher that differ on every question; a very short question asked back with choices a classifier writes; the history rail opening a saved answer. Production is unchanged on `v0.2.0`.
+  - WHAT AWAITS THE PRODUCT OWNER'S RETEST: items 12 to 17 in `testing/Shipped_2026-09-23.md` first, then its items 1 to 11, then items 7 to 22 in `testing/Shipped_2026-09-22.md`, plus the four one-look checks (11.14, 11.36, 9.12, 8.4).
+  - THE ONE NEXT ACTION: after the retests, `testing/UI_fix_plan.md`, "Next, in order", item 1, 12.14: `What phenotypic features are associated with Marfan syndrome?` answers with variant and gene records at both depths, a confident answer of the wrong kind.
+  - Start at the top of `testing/UI_fix_plan.md`: "Where every feature stands" says what is being built and what is next, and "Where we stopped" is the cutoff. Every closed item, its detail and the session tables are in `testing/UI_fixes_done.md` since the plan was split on 2026-09-24.
   - Read "What is parked, and why" BEFORE picking anything up. OMIM is live WITH `filter_omim_titles`; the dispatch and the filter ship together and neither is enabled or removed without the other.
 - THE GRAPH HOLDS NO DISEASE NAMES AND NO MESH TERMS, measured graph-wide on 2026-09-23 and the single most useful fact for anyone planning answer-path work. Every `Disease` vertex carries its SOURCE VOCABULARY in `name` (`GARD`, `MONDO`, `MeSH`, `SNOMEDCT_US`), and zero Disease vertices anywhere contain the word "syndrome". Every `OntologyClass` carries its own identifier (`[MeSH] D000818`), and zero contain a lowercase run of four letters. `Gene.name` (`fibrillin 1`) and `Article.name` are CORRECT, so this is a per-label mapping defect rather than an empty graph. It has been known since build phase 2.1 as F-2.1-B07, with a census of all 200,845 Disease rows taken on 2026-07-31, and `core/graph.py`'s `_is_vocabulary_token_artifact` exists for it. THE CONSTRAINT HAS NEVER BEEN DISCOVERY: writing the graph is Systems 1 and 2 work in the other repository and `file-protection.md` forbids it here, so this is a hand-over, not a task. Probes: `testing/Developer/reports/2026-09-23_overnight/probe_disease_names.py` and `probe_ontology_names.py`, both runnable.
 - ITEM 10.3, THE CONSISTENCY RUN, HAS NOW BEEN RUN, for the first time, on 2026-09-22: all 50 golden questions three times against develop at `63ec316`, signed in on two fresh test accounts. 86 of 150 runs answered; 25 questions answer every time (the 2026-09-12 baseline had 1), 18 never (had 43), none worse. The 18 split into 9 expected refusals, 3 guardrail refusals the golden row disagrees with, and 6 genuine gaps, every one a Layer 1 failure. Evidence: `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`.
 - ITEM 11.33 IS FIXED, ON DEVELOP AND VERIFIED LIVE at `a868462` (the BRCA1 gene summary runs past the old cut, zero ellipses), and APPROVED by the product owner's retest the same day. The cause was never live-only: `harness/coordinator_worker.py` cut every string leaf at 500 characters because its documented 2000-character tier was unreachable, and the 2026-09-21 local trace skipped that stage. One cap now, at `SynthFinding`'s own 2000, on a word boundary, with an ellipsis. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`.
-- L-01's CAUSE IS FOUND AND THE DEFECT IS NO LONGER REPRODUCIBLE on develop, established 2026-09-23 and superseding the 2026-09-22 reading of it. THE CAUSE: when `select_template` returns None, the plan-tier model DRAFTS the Cypher fresh on every run and two drafts are not equivalent; five runs of one BRCA1 question returned 100 rows, then 1, then `status: error`, then 2, then 2, one draft returning records and the next `count(d)`. TWELVE LIVE RUNS on 2026-09-23 found no variance at all (BRCA1 6 of 6 identical, HNF1A 5 of 5), where 2026-09-21 saw 100, then 12, then 0; two commits nobody re-measured closed it, `27d68ae` and `2bc8ec0`. THE 2026-09-21 REPORT WAS READ WRONG and is corrected: it read the two graph calls in RESULT EMISSION order when they run concurrently and arrive in either order, and the call that looked stable was never the question's search but the `context_only` GO call. RULED OUT BY MEASUREMENT: the graph itself is deterministic, and no failure can arrive as an empty result. STILL OPEN, and it is item 4 of "Next, in order": telling the reader when a search was drafted rather than checked. `CypherQueryOutput.template` is None exactly in that case and `_cypher_output_to_structured_fields` drops it. THE TRAP: the degradation is `ok` to `ok`, never `empty`, so a rule keyed on empty-or-failed misses the case that costs the reader their evidence. Evidence: `testing/Developer/reports/2026-09-23_L01_cause/`.
+- L-01's CAUSE IS FOUND AND THE DEFECT IS NO LONGER REPRODUCIBLE on develop, established 2026-09-23 and superseding the 2026-09-22 reading of it. THE CAUSE: when `select_template` returns None, the plan-tier model DRAFTS the Cypher fresh on every run and two drafts are not equivalent; five runs of one BRCA1 question returned 100 rows, then 1, then `status: error`, then 2, then 2, one draft returning records and the next `count(d)`. TWELVE LIVE RUNS on 2026-09-23 found no variance at all (BRCA1 6 of 6 identical, HNF1A 5 of 5), where 2026-09-21 saw 100, then 12, then 0; two commits nobody re-measured closed it, `27d68ae` and `2bc8ec0`. THE 2026-09-21 REPORT WAS READ WRONG and is corrected: it read the two graph calls in RESULT EMISSION order when they run concurrently and arrive in either order, and the call that looked stable was never the question's search but the `context_only` GO call. RULED OUT BY MEASUREMENT: the graph itself is deterministic, and no failure can arrive as an empty result. STILL OPEN, and it is item 7 of "Next, in order": telling the reader when a search was drafted rather than checked. `CypherQueryOutput.template` is None exactly in that case and `_cypher_output_to_structured_fields` drops it. THE TRAP: the degradation is `ok` to `ok`, never `empty`, so a rule keyed on empty-or-failed misses the case that costs the reader their evidence. Evidence: `testing/Developer/reports/2026-09-23_L01_cause/`.
 - TWO OUT-OF-SCOPE COMPUTE REQUESTS, G-046 (BLAST) and G-047 (VCF), ARE NOW REFUSED at the guardrail under a new additive category `compute_request`, decided by the product owner and built on 2026-09-22 (deterministic screen in `guardrail/forbidden.py`, copy on every surface, precedent F-3.0-01). APPROVED by the product owner's retest the same day.
-- THE RESULT MOST WORTH CARRYING FORWARD from 2026-09-21 still stands: THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING. Five versions of the plain-language depth directive have failed by instructing the model about form; a sixth is not the fix. The remaining lever, having the CODE place plain source text verbatim and cited, is a standing option the product owner declined for now, not queued work.
+- THE GROUNDING GATE NO LONGER ONLY PERMITS QUOTING, decided by the product owner on 2026-09-23 and live since `5d53f78`. Code checks everything exact first: the quote is in its record character for character, every number is in the quote, the negation matches, and no reworded sentence opens on a yes or no verdict; then a guard-tier model judges whether the reworded sentence says more than its quote, all sentences of an answer in one call, failing closed. It is the ONE bounded exception to deterministic acceptance, written into `.claude/rules/production-standards.md` by pull request #101: do not widen the model's role beyond reworded sentences without the product owner. Code-only checking had passed 0 of 53 faithful sentences. The residual, stated: a sentence that switches papers is anchored by any shared title word, and a generic one is weak.
 - OMIM IS DISPATCHED AS OF 2026-09-22, with `filter_omim_titles` applied before any row is built; the dispatch and the filter ship together and neither is enabled or removed without the other (the first OMIM hit for `GCK` is `MAP4K2`). Ten live runs, zero wrong-gene hits. APPROVED by retest the same day.
 - THE SLOW PLAIN-TERMS EXPLANATION IS FIXED: an exploratory question with no shape takes the record template instead of a generated query the graph's statement timeout killed; proven live at 10.6 to 14.8 seconds against about 100 (`2bc8ec0`), APPROVED by retest the same day.
 - ONE THING A SESSION MUST NOT UNDO CASUALLY: do not add a word count or a paragraph shape back to the plain-language directive (arms in `tests/system_03_search_agent/synthesis/test_answer_quality.py` go red if one returns).
-- PRODUCTION IS ON `v0.2.0`, released 2026-09-20, tag `cde4f59`, and carries NOTHING from 2026-09-21 or 2026-09-22. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`. When the product owner approves a release, follow `docs/build/Release_flow.md`; CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first.
-- CI DID NOT RUN on any push from the evening of 2026-09-22 onward (`27d68ae` through `66fe042`): GitHub reports every job "was not started because recent account payments have failed or your spending limit needs to be increased", a billing setting only the product owner can change, after a green run on `02063b0` twenty minutes earlier. The four gates CI would have run were run locally with CI's own commands before the push (`ruff check` over the whole repository, `isort` per gate 2, the full unit suite: 5176 passed, 0 failed). Check `gh run list --branch develop --limit 3` before trusting this line in either direction.
+- PRODUCTION IS ON `v0.2.0`, released 2026-09-20, tag `cde4f59`, and carries NOTHING from 2026-09-21 onward. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`. When the product owner approves a release, follow `docs/build/Release_flow.md`; CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first.
+- CI DID NOT RUN on any push from the evening of 2026-09-22 onward (`27d68ae` through `e5ab0c4` on 2026-09-24, re-checked at the 2026-09-24 checkpoint): GitHub reports every job "was not started because recent account payments have failed or your spending limit needs to be increased", a billing setting only the product owner can change, after a green run on `02063b0` twenty minutes earlier. The four gates CI would have run were run locally with CI's own commands before every push (`ruff check` over the whole repository, `isort` per gate 2, the full unit suite: 5796 passed, 0 failed, at the last code push on 2026-09-24). Check `gh run list --branch develop --limit 3` before trusting this line in either direction.
 - SET 11 IS MOSTLY LIVE; the per-item truth is the Set 11 table in `testing/UI_fixes_done.md` since the plan was split on 2026-09-24, which owns this fact. Sets 1 to 7 are approved, 8 and 9 live on develop, 10 now has item 10.3 run and 10.1 done.
 - THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation.
 - Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, never let two builders own one file region. And one more from 2026-09-22: a live measurement shares the NCBI rate pool with every agent, so an agent working alongside one is forbidden live calls until it ends, and the measurement counts rate-limit signals so contamination is visible rather than assumed absent.
@@ -59,7 +59,7 @@ THE UI FIX LOOP, product-owner decision of 2026-09-12. It replaces the build-pha
 2. They say "check the inbox". Reply with a short triage per item: what it is, whether it is already known, and a one-line fix. Agree together what gets fixed.
 3. Fix it immediately. No build phase, no multi-day plan, no judge or adversary agents. The product owner's testing is the verification.
 4. Work directly on `develop`. No branch and no pull request.
-5. Before pushing, run the quick checks for what changed: the affected tests and lint, in minutes rather than hours. A frontend change always runs `npm run build` before push, since Railway's own build is the thing that can fail silently otherwise. Each check gates the push on its own exit code, never through a pipe: a chained command that pipes a failing check through `tail` or `grep` can report success on a check that actually failed, which is exactly what happened on commit `ff80814` (see "Process lessons this session" below).
+5. Before pushing, run the quick checks for what changed: the affected tests and lint, in minutes rather than hours. A frontend change always runs `npm run build` before push, since Railway's own build is the thing that can fail silently otherwise. Each check gates the push on its own exit code, never through a pipe: a chained command that pipes a failing check through `tail` or `grep` can report success on a check that actually failed, which is exactly what happened on commit `ff80814` (see "Process lessons from the fix-loop sessions" below).
 6. Commit with a Conventional Commit subject and push to `develop`. The develop app redeploys on its own.
 7. Confirm the new code is live: the Railway deployment for that commit shows SUCCESS, and the served app actually contains the change, not just that the push succeeded. Then tell the product owner what changed and which tests to re-run.
 8. Repeat from step 1 until the product owner approves develop.
@@ -69,104 +69,76 @@ WHERE TO LOOK, in the order a fresh session should read them:
 
 | Question | File |
 |---|---|
-| What shipped on 2026-09-20, and what to retest | `testing/Shipped_2026-09-20.md`, the day's summary |
-| Where the last session stopped, and what is next | `testing/UI_fix_plan.md`, section "Where we stopped", read with the two corrections in Step 2 above |
+| What shipped most recently, and what to retest | `testing/Shipped_2026-09-23.md`, items 12 to 17 first, then `testing/Shipped_2026-09-22.md` |
+| Where the last session stopped, and what is next | `testing/UI_fix_plan.md`: the tracker at the top, then the section "Where we stopped" |
 | Per-item status: built, live, approved, what to retest | `testing/UI_fix_plan.md` for items being built or still to do, `testing/UI_fixes_done.md` for items built and live, split on 2026-09-24 |
 | What the product owner tests by hand | `testing/Product/Product_workflows.md`, 21 tests in plain steps |
 | What must the product do, and what is broken | `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers |
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
 | What did the product owner say | `testing/Product/feedback/inbox/`, any file in it |
 | What is designed and what is not | `docs/build/design/README.md`, the coverage map |
-| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and seven rows dated 2026-09-20. The last three of those seven are the ones that change what gets built: widen the citation host rule so OMIM can be cited (which reverses an earlier row the same day), cite every retrieved finding, and the two answer modes diverge |
+| Why was that decided | `DECISIONS.md`, eight rows dated 2026-09-05, the UI-fix-loop rows dated 2026-09-12 to 2026-09-14, and seven rows dated 2026-09-20. The last three of those seven are the ones that change what gets built: widen the citation host rule so OMIM can be cited (which reverses an earlier row the same day), cite every retrieved finding, and the two answer modes diverge. The rows dated 2026-09-23 and 2026-09-24 change how answers are checked and kept: a second model checks each reworded sentence against its quote, a classifier decides when to ask back, no tester's question becomes a prompt's example, and the fix plan is two files |
+| What happened on 2026-09-23 and 2026-09-24 | `testing/Shipped_2026-09-23.md` for the summary, then the evidence folders under `testing/Developer/reports/2026-09-23_*` and `testing/Developer/reports/2026-09-24_*` |
 | What happened on 2026-09-20 | `testing/Shipped_2026-09-20.md` for the summary, then the evidence folders under `testing/Developer/reports/2026-09-20_*` |
 | What happened overnight on 2026-09-19 | `testing/Developer/reports/2026-09-19_overnight/session_log.md`, then the three reports it points to |
 
-### The session boundary, close of 2026-09-22
+### The session boundary, close of 2026-09-24
 
 Work stopped here deliberately and resumes in a NEW session. This replaces the
-2026-09-21 boundary, which described a state one session of work has since
-moved past.
+2026-09-22 boundary, which described a state two sessions of work have since
+moved past; that session's record is in `testing/Shipped_2026-09-22.md` and
+the session tables in `testing/UI_fixes_done.md`.
 
 What is true on disk at the close:
 
-- Develop is pushed and the working tree is clean. Local carries only
-  `develop`; the remote carries `develop` and `production`.
-- The full Python suite is green, and `ruff check` over the whole repository
-  exits 0. Counts are in the Priority-2 row of `CLAUDE.md`, computed rather
-  than asserted.
-- Production is unchanged, still on `v0.2.0`. Nothing from 2026-09-21 or
-  2026-09-22 has been released; it is all on develop.
+- Develop is pushed. Local carries only `develop`, plus one agent worktree
+  that is fully merged and locked by the running editor session; the remote
+  carries `develop` and `production`.
+- The full Python suite is green (5796 passed, 0 failed) and `ruff check` over
+  the whole repository exits 0. Counts are in the Priority-2 row of
+  `CLAUDE.md`, computed rather than asserted.
+- Production is unchanged, still on `v0.2.0`.
 
 WHAT LANDED, in the terms a person notices:
 
 | Item | What changed |
 |---|---|
-| 10.3 | The consistency run exists as a measurement: 150 signed-in runs, three per golden question, with the outcome, latency, sources and layers of each, and a comparison against the 2026-09-12 baseline |
-| 11.33 | A record's value is no longer cut at 500 characters mid-word. The cap is the finding's own 2000, on a word boundary, with an ellipsis when it still applies |
-| L-01 | A rate and a mechanism rather than a suspicion: one graph call in ten loses a result, and the errored call carries an empty summary and no message |
-| Item 1 of the next list (evening) | A two-gene comparison shows each gene's disease records side by side and a shapeless gene question shows the gene record, both from fixed templates instead of a generated query that failed validation; a dataset question searches GEO and cites the series. Live: G-033 3 of 3, G-037 3 of 3, zero errored graph calls on those six runs. Awaits retest |
-| The coordinate range (night) | A chromosome window with its assembly named is answered with the genes under it, resolved from the coordinates alone, and the dbVar and ClinVar records that overlap it; a window with no assembly named is asked which. Live: G-001 6 of 8 answered across three deploys, 3 of 3 on the final one, a CFTR window 6 of 6, the assembly question 6 of 6, after two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty). Awaits retest |
-| The call ceiling (late night) | Measured, not moved: 24 runs over eight question shapes, all answered, none refused, the worst pass 17 of 20; the count now rides on the done event, and the variable part is the model's spans the first time a process sees them |
-| The question's own words (late night) | "What is rs334 and what condition is it associated with?" and the GEO question no longer end with a note listing eight records the person never named; a mention made only of generic disease vocabulary is never searched as a disease name. Awaits retest |
-| The fix plan's tracker and the two skills (late night) | `testing/UI_fix_plan.md` opens with "Where every feature stands"; `/phase-checkpoint` owns every document a session changes and `/ship` runs the CI gates locally before it pushes (PR #100); CI skips Markdown-only pushes (PR #99) |
-| The BioProject accession (late night) | A project, sample, run or assembly accession is answered with the record and what it links to, each cited to its NCBI page; an accession NCBI does not have is told so. Live: G-007 3 of 3, the unknown accession 2 of 2, and after its two follow-up fixes the BioSample question 2 of 2. Awaits retest |
-| The isolate search (later the same night, after the discussion) | "What Escherichia coli isolates in Pathogen Detection carry ESBL genes?" is answered with a table of the first 20 isolates and their AMR genes, each linked to its Pathogen Detection page, the organism cited to NCBI Taxonomy, and the exact count of every matching isolate in the snapshot (140,476), with the prefixes searched and the ones left out stated. A third pathogen tool mode scans the whole 521 MB metadata file in about 18 seconds. Live: G-035 5 of 5 across three deploys (`24305f0`, then `286bb49` for the genes table and the citation identity, `f96c780` for the "which organism" question), the seven extra questions 2 of 2 each. Awaits retest, items 17 to 22 |
+| 12.1, 12.2, 12.4, 12.7 | The second tester's seven questions answer: a disease question searches every layer, a literature question is never refused for its capitals, a refusal says "Ask another question", a question naming no gene and no disease finds the papers |
+| 12.8 and 12.11 | The trust line counts the pages the source list shows |
+| 12.12 | No paragraph opens mid-sentence or carries a stray quote mark, and the "One is titled X. Another is titled Y" paragraph is gone |
+| 12.10 | Answers answer the question in plain sentences drawn from the papers, each checked against the exact words it quotes |
+| 12.13 | A search asked in the same tab opens its saved answer from the history rail |
+| 12.9 | Plain language and researcher differ on every question, in the opening sentence and the list as well as the prose |
+| 12.3 | A one-to-three-word opening question is asked back, with choices a classifier writes for the subject |
+| 12.16, parts 1, 2 and 4 | No tester's question is a prompt's example, the ask-back decision is a classifier's, and the answer checker's phrase lists became structural rules |
+| The fix plan | Split in two: `testing/UI_fix_plan.md` for what is being built and what is next, `testing/UI_fixes_done.md` for every closed item |
 
 WHAT DID NOT LAND, and each is recorded rather than rounded up:
 
-- L-01 IS NOT FIXED in the answer text. Both causes are read and the reason
-  now reaches the stream; whether the answer says so is the product owner's
-  decision.
-- NO golden shape never answers any more: of the shapes that never answered
-  at the morning's measurement, the two lost searches (`27d68ae`,
-  `b6cd025`), the coordinate range (`66b3811`), the BioProject accession
-  (`a64c44e`) and, last, the isolate description (`24305f0`) were all FIXED
-  the same day, verified live and awaiting retest; Lynch syndrome still
-  loses its graph search on some passes. What the isolate search leaves
-  open, in `testing/Developer/reports/2026-09-22_isolate_search/findings.md`:
-  the model's written summary fails grounding on most passes so the
-  code-built table carries the answer, the golden row's Taxonomy must-cite
-  URL is the older browser address while the product cites NCBI's record
-  page, and no filter beyond the gene prefix exists.
-- Everything the day built is approved by retest: 11.33, the compute
-  refusal, the lost-search disclosure, the fast plain-terms explanation and
-  OMIM. `testing/Shipped_2026-09-22.md` is the day's summary.
-- THE EXPLANATION half of 11.31 stays parked, unchanged from 2026-09-21.
-  OMIM is no longer parked; it is live with its filter.
+- 12.14: a question about phenotypic features names none.
+- 12.17: a good question sometimes refuses at the think step, twice in about
+  forty live runs.
+- 12.16 part 3: which questions count as a request for papers is still a
+  word list.
+- 12.15: "recent papers" does not ask what recent means.
+- Two of six guarded live reruns of 12.10 fell back to a list, once because
+  the checking model's call failed; that is the check refusing to guess.
 
-FOUR THINGS THE INSTRUMENTS TAUGHT, all in `LEARNINGS.md` dated 2026-09-22:
+WHAT THE SESSION TAUGHT, all in `LEARNINGS.md` dated 2026-09-24:
 
-- The client machine slept twice on battery mid-measurement and the record
-  read as the app hanging in the write step; the tell was two independent
-  streams ending at the same instant. The first report to the product owner
-  was wrong and was corrected the same hour.
-- The 2026-09-21 local reconstruction of the 11.33 path skipped a stage,
-  `coordinator_worker_execute`, and concluded live-only. When a local trace of
-  a pipeline disagrees with production, list every stage on the production
-  path and check the trace visited each one before hypothesising an
-  environment difference.
+- A fixed rule can verify that words were copied, never that they were
+  paraphrased faithfully: four widenings moved 0 of 53 to 0 of 53.
+- A per-sentence check certifies sentences, never the reference between
+  them: "This condition" once pointed at the wrong disease.
+- Replace a table row as a whole line, never a substring of it.
+- Update an item's own row, not only the tracker that is derived from it.
+- A decision point is a classifier's call; a word list decides only for the
+  phrasings someone thought of.
+- A restated fact is a new claim: a no-loss check proves nothing was lost,
+  never that a sentence an agent rewrote is true.
 
-- A count that differs between identical passes has a cache behind it
-  before it has a model behind it: the call ceiling's variable part was
-  Think's in-process caches, so the first pass after a deploy is the honest
-  count, and a measurement must say which state it was taken in.
-- A name index matches any word, including the question's own: "condition"
-  and "tumour" bound eight arbitrary records each, found only by reading
-  the answer text of a cold run, since both runs counted as answered.
-- An instrument's capture defines what a measurement can see: the
-  consistency runner keeps every event but tokens, so a table added to an
-  answer was invisible to it, and the same text before and after the fix
-  proved nothing until a second instrument kept the tokens.
-- A shape that skips the model's span confirmation must prove it does not
-  claim another path's questions: the isolate shape took competency
-  question Q5, a lookup of one named isolate, and only the mutation
-  harness's P1 arm going vacuous on Q5 showed it.
-
-What the next session does first is `testing/UI_fix_plan.md`'s "Next, in
-order": item 1 is the golden rows that disagree with the guardrail, the
-product owner's call, and item 3 the three discussions that precede a build.
-The product owner's retest of the evening's and the night's items is listed
-in `testing/Shipped_2026-09-22.md`, items 7 to 22.
+What the next session does first: the product owner's retests, then
+`testing/UI_fix_plan.md`'s "Next, in order", item 1, 12.14.
 
 ### Process lessons from the fix-loop sessions, already applied
 
@@ -225,7 +197,7 @@ THE ASSISTANT DRIVES THE BROWSER WHEN ASKED, and on 2026-09-12 the product owner
 
 And the judge round is no longer the gate before a merge to develop: the product owner testing on develop is the verification step, which is why build phase 6.2's tickets merged as `in-review` rather than `done`. They move to `done` on their verdict, not on the lead's.
 
-Everything else on this page is context for that one line, and it describes the state at the close of 2026-09-20, with Set 11 of the UI fix loop mostly live and two of its items decided but unbuilt. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
+Everything else on this page is context for that one line. It describes the state at the close of 2026-09-24: Set 12 of the UI fix loop is live on develop and awaiting retest, and items 12.14 to 12.17 are still open. Sections describing earlier states are replaced by pointers rather than left below, for the reason the next section gives.
 
 ### What the sections below used to say, and where that content lives now
 

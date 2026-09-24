@@ -43,19 +43,16 @@ their three sections:
 
 ### 1. Being built right now, in priority order
 
-Order: 11.11 is the one item still being built; 12.9 and 12.3 went live on
-2026-09-24 and moved to your retests in section 2.
+Nothing is being built between sessions. 11.11, listed here until
+2026-09-24, had nobody on it and moved to section 2; 12.9 and 12.3 went live
+and moved to your retests there.
 
-| Priority | Feature, in plain words | Item | Where it stands |
-|---|---|---|---|
-| 1 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
 
 ### 2. To do, in priority order
 
 Your retests come first, since they are your next action. The rest follow
-"Next, in order" in "Where we stopped": 12.14 belongs to its item 1, which
-names the Marfan phenotype question; then its items 2 to 7. Rows that list
-does not rank keep the order the tracker already listed them in.
+"Next, in order" in "Where we stopped", items 1 to 10. Rows that list does not
+rank keep the order the tracker already listed them in.
 
 | Priority | Feature, in plain words | Item | Waiting on | Where it stands, what it affects, or where the steps are |
 |---|---|---|---|---|
@@ -70,21 +67,22 @@ does not rank keep the order the tracker already listed them in.
 | 9 | Plain language and researcher differ on every question | 12.9 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 16. LIVE on develop 2026-09-24. Measured live on all 12 full questions from both feedback folders: every one differs in its opening sentence and its list (a list in plain language, a table with identifiers in researcher), and both depths list the same records |
 | 10 | A one-to-three-word question is asked back, such as `reflux disease` | 12.3 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 17. LIVE on develop 2026-09-24, decided by a classifier model, not a word list. Measured live three times each: `reflux disease`, `GERD`, `BRCA1` and `Marfan` asked back 3 of 3 with choices written for the subject; `MeSH` 2 of 3; `papers on caffeine` searched |
 | 11 | A question about phenotypic features names none | 12.14 | Nobody on it | RAISED 2026-09-23 from the fix-2 screenshots. NOT STARTED, nobody on it |
-| 12 | A question asking for recent papers asks what recent means | 12.15 | Nobody on it | RAISED 2026-09-23 from the fix-2 screenshots. NOT STARTED, nobody on it |
+| 12 | A good question sometimes fails at the think step and shows a refusal | 12.17 | Nobody on it | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it |
 | 13 | No hardcoded decisions: prompts, routing and the clarify decision stop relying on word lists and test-question examples | 12.16 | Part 3 not started | RAISED 2026-09-24 by the product owner. Parts 1, 2 and 4 LIVE 2026-09-24; part 3, the literature-request routing word list, not started. Audit in 12.16's row |
-| 14 | A good question sometimes fails at the think step and shows a refusal | 12.17 | Nobody on it | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it |
+| 14 | A question asking for recent papers asks what recent means | 12.15 | Nobody on it | RAISED 2026-09-23 from the fix-2 screenshots. NOT STARTED, nobody on it |
 | 15 | Four golden test rows disagree with what the product does, row by row | the golden rows | Your decision | The test set only, nothing a user sees |
 | 16 | Is twenty sources the right ceiling? | the ceiling, measured and unchanged | Your decision | Every answer hits it and then tells the reader it was cut short, which is a large part of why a good answer reads as a thin one |
-| 17 | Tell the reader when the system wrote its own search rather than using a checked one | "Next, in order" item 5 | Nobody on it | Not started. The data exists: `CypherQueryOutput.template` is None exactly then. THE TRAP: the degradation is `ok` to `ok`, never `empty` |
+| 17 | Tell the reader when the system wrote its own search rather than using a checked one | "Next, in order" item 7 | Nobody on it | Not started. The data exists: `CypherQueryOutput.template` is None exactly then. THE TRAP: the degradation is `ok` to `ok`, never `empty` |
 | 18 | Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | Parked | A discussion that precedes a build. Its scoping document now exists and is measured: `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md` |
 | 19 | A bounded trial of the probability model | 11.38 | Parked | Backlog only, nothing designed and nothing promised |
-| 20 | Does the Plain language answer keep its small grey medical-advice line? | 9.11 | Your decision | One line under every plain-language answer |
-| 21 | The trust-line wording | 9.9 | Your decision | One line under every answer |
-| 22 | Judge answer quality once answering is reliable | 10.4 | Nobody on it | Not built. After the release, once 10.3's consistency run shows reliable answering |
-| 23 | The load-dependent frontend tests | D4, under "Developer follow-through" | Nobody on it | Journey 7 FIXED 2026-09-23. The load-dependent suite is diagnosed and was still being worked at the close of that session |
-| 24 | Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | Parked | A discussion that precedes a build under `/bossman-mode`, reclassified 2026-09-22 |
-| 25 | The explanation half of 11.31 | 11.31 | Parked | Parked. You approved the current state as is on 2026-09-21 |
-| 26 | The byte ceiling at 50,000 | see its row | Parked | Parked |
+| 20 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | Nobody on it | Queued, tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. The answer-writing model is unchanged; switching models is a separate decision. 12.9 and 12.10 answered part of its ask |
+| 21 | Does the Plain language answer keep its small grey medical-advice line? | 9.11 | Your decision | One line under every plain-language answer |
+| 22 | The trust-line wording | 9.9 | Your decision | One line under every answer |
+| 23 | Judge answer quality once answering is reliable | 10.4 | Nobody on it | Not built. After the release, once 10.3's consistency run shows reliable answering |
+| 24 | The load-dependent frontend tests | D4, under "Developer follow-through" | Nobody on it | Journey 7 FIXED 2026-09-23. The load-dependent suite is diagnosed and was still being worked at the close of that session |
+| 25 | Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | Parked | A discussion that precedes a build under `/bossman-mode`, reclassified 2026-09-22 |
+| 26 | The explanation half of 11.31 | 11.31 | Parked | Parked. You approved the current state as is on 2026-09-21 |
+| 27 | The byte ceiling at 50,000 | see its row | Parked | Parked |
 
 What the Waiting on column means:
 
@@ -136,7 +134,7 @@ Set 11's intro in `testing/UI_fixes_done.md` defines most of the status words th
 
 | # | Your feedback | Status | Where it stands |
 |---|---|---|---|
-| 11.11 | Use your reference prototype for answer depth, formatting and structure; it writes with a different model family | In progress | The detail agent is modelling answers on it. The answer-writing model is unchanged: switching models is a separate decision |
+| 11.11 | Use your reference prototype for answer depth, formatting and structure; it writes with a different model family | Queued | Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision |
 | 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
 | 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
 | 11.38 | Try the new model on OpenRouter that returns probabilities with its output, and decide where calibrated confidence belongs in the architecture: the guardrail, the choice of which resource to pull, and the cite-or-refuse gate | Discussion, precursor to a build | Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](#detail-1138) |
@@ -436,56 +434,47 @@ as the answer to a failure the harness has not been worked on yet.
 
 ## Where we stopped
 
-READ THE TRACKER AT THE TOP FIRST. Added 2026-09-24: everything below was
-written on the morning of 2026-09-23, and the night that followed shipped
-most of it. Set 12's seven questions now answer or are asked back (12.3),
-12.9 to 12.13 are live, and "Where every feature stands" at the top of
-this plan is the current state. This section is fully refreshed at the next
-session checkpoint.
+The cutoff. It is updated at the end of every working session, so the next
+session starts here rather than reconstructing state.
 
-The cutoff.
+LAST UPDATED 2026-09-24, at the close of the session that ran from the evening
+of 2026-09-23. THE ONE THING TO KNOW: answers now answer the question. The
+answer model writes plain sentences from the papers, code checks every quote,
+number and negation, and a second, cheap model checks that each reworded
+sentence says no more than its quote. Everything that shipped awaits the
+product owner's retest, and nothing is being built between sessions.
 
-- It is updated at the end of every working session, so the next
-  session starts here rather than reconstructing state.
-- LAST UPDATED 2026-09-23 MORNING, when the product owner brought a second
-  tester's feedback and it was re-run against today's code before anything
-  was planned.
-- THE ONE THING TO KNOW: six of that tester's seven questions still return no
-  citation at all, unchanged since the 2026-09-14 build they were asked on,
-  so SET 12 IS NOW THE PRIORITY and is item 1 of "Next, in order".
-- The overnight session that preceded it ran unsupervised after the product
-  owner approved a named list and then authorised picking up further work.
-- Eight agents ran, tiered by task.
+What is live on develop:
 
-What it did:
+- Product code through `9b9ff2b`, with both Railway services at SUCCESS on
+  `e5ab0c4`. Every commit after it is documents and rules.
+- The session shipped 12.11, 12.12, 12.10, 12.13, 12.9, 12.3 and parts 1, 2
+  and 4 of 12.16. Its session table is under "Session history" in
+  `testing/UI_fixes_done.md`.
+- Not a product change: this plan was split in two on 2026-09-24, and pull
+  requests #101, #102 and #103 changed one rule and the two session-closing
+  skills.
+- Production is unchanged on `v0.2.0`.
 
-- Fixed 11.30's second half, the MCP address that downgraded an HTTPS request
-  to plaintext, in the app rather than in a deployment setting
-- Built 10.2, history showing the saved answer instantly with Run again, across
-  a backend, a frontend and a third pass that closed the seam between them
-- Closed both halves of D4, and made the frontend suite FASTER than it had been
-  all night as well as trustworthy
-- Found L-01's cause, corrected the measurement that described it, and
-  established it is no longer reproducible on develop
-- Probed all eleven graph templates against the live graph and removed the one
-  that could never return a row
-- Made MeSH identifiers resolve to real terms, in two calls for any number of
-  them
-- Fixed an answer that said "Found 20 records" above a list of 26
-- Answered 11.32 with measurement, and recorded 11.38 after the product owner
-  supplied the model's documentation mid-session
+What awaits the product owner's retest, in this order:
 
-Read this, then the Set 11 table in `testing/UI_fixes_done.md`.
+- Items 12 to 17 in `testing/Shipped_2026-09-23.md`, the newest work.
+- Items 1 to 11 in the same file.
+- Items 7 to 22 in `testing/Shipped_2026-09-22.md`.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
 owner and whoever picks this up read the same record. Since the 2026-09-24
 split, what is done lives in `testing/UI_fixes_done.md`.
 
-The 2026-09-20 shipped list, with what to retest, is
-`testing/Shipped_2026-09-20.md`. This section owns per-item status.
-
 ### The result that should shape what happens next
+
+SUPERSEDED IN PART on 2026-09-24, and kept as the record of why: the product
+owner approved a second, cheap model that checks each reworded sentence
+against the exact record words it quotes, after code has checked the quote,
+the numbers and the negation (items 12.9 and 12.10). A faithful explanation
+in the model's own words now survives. What follows is why that check was
+needed.
 
 THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING, and this is the
 session's most transferable finding. `ground_claim` accepts a claim against a
@@ -535,10 +524,12 @@ option rather than a queued task.
 
 ### What is waiting on the product owner
 
-Rewritten 2026-09-22 after the product owner approved the review backlog: the
-three consistency-run questions that used to sit here were all settled that
-day (BLAST and VCF are refused, the golden widening was discarded, and the
-lost search is disclosed). What remains is small, and none of it blocks:
+Rewritten 2026-09-24 at the session checkpoint. None of it blocks work:
+
+- Retests, newest first: items 12 to 17 in `testing/Shipped_2026-09-23.md`,
+  then its items 1 to 11, then items 7 to 22 in `testing/Shipped_2026-09-22.md`.
+- Two decisions added since 2026-09-22: the four golden test rows, and
+  whether twenty sources is the right ceiling.
 
 - Four checks of under a minute each, the only rows still not approved:
   - Copy an answer and paste it somewhere (11.14)
@@ -608,28 +599,28 @@ The longer standing list is unchanged:
   heading, a consequence of 11.34's fix. Not a grounding or citation defect,
   and no test covers it.
 
+- ADDED 2026-09-24, from the session's live runs:
+  - The rule for a reworded sentence that switches papers is satisfied by any
+    shared title word, and a generic one ("patients") is a weak anchor.
+    Recorded in 12.16's row; not fixed.
+  - The ask-back classifier is a judgement: `MeSH` was asked back 2 times in 3
+    after tuning.
+  - Some dense paragraphs in older sections, carried over by the plan's split,
+    were left as written: cosmetic, and three cannot pass the no-loss check.
+  - One agent worktree, fully merged, stays locked by the running editor
+    session and clears when it ends.
+
 ### Next, in order
 
-UPDATED 2026-09-24: items 1 and 2 below are DONE and live. Set 12's
-questions answer (12.1, 12.2, 12.4, 12.7, 12.10) or are asked back when they
-are one to three words (12.3). What remains of Set 12 is 12.14, 12.15 and
-12.17, in section 2 of the tracker at the top, which is the current order.
+REWRITTEN 2026-09-24 at the session checkpoint.
 
-REWRITTEN 2026-09-23 MORNING, after the product owner brought a second
-tester's feedback. That feedback was re-run against today's code before
-anything was written down, and it takes the top of this list on the product
-owner's own condition: "else this the priority and we fix it first". Six of
-the seven questions return no citation at all, and the seventh answers only
-because its name happens to land on concept ids the graph holds.
+- The old items 1 and 2 are done and live: Set 12's questions, and 12.3.
+  Their records are in `testing/UI_fixes_done.md`.
+- Nothing below is a retest. Every item is engineering or a decision, ordered
+  by what the person typing the question feels first.
+- Section 2 of the tracker at the top follows the same order.
 
-Items 1 to 7 in `testing/Shipped_2026-09-23.md` await the product owner's
-retest, and items 7 to 22 in `testing/Shipped_2026-09-22.md` are still
-awaiting the retest from the night before. Nothing below is a retest; every
-item is engineering or a decision, ordered by what the person typing the
-question feels first.
-
-What is open and not on this list as its own item, each recorded in
-`testing/Developer/reports/2026-09-23_overnight/findings.md`:
+What is open and not on this list as its own item:
 
 - The graph holds no disease names and no MeSH terms. Every `Disease` vertex
   is named after its source vocabulary and every `OntologyClass` after its own
@@ -639,46 +630,30 @@ What is open and not on this list as its own item, each recorded in
   be answered from the live records and the literature, and never from the
   graph's disease names.
 - The model's written prose still fails the grounding gate on several question
-  shapes, so the code-built table carries the answer.
+  shapes, so the code-built table carries the answer. SUPERSEDED 2026-09-24:
+  the model check (12.10) lets a faithful reworded sentence through; two of six
+  guarded live reruns still fell back to a list, once because the checking
+  model's call failed.
 - `trust_outcome` is unstable: five runs with byte-identical evidence returned
   `flag` four times and `ask` once.
 
-1. SET 12, THE SECOND TESTER'S QUESTIONS. The priority, and the one item a
-   person feels immediately: seven ordinary questions, six of them unanswered.
-   THE DONE-WHEN, set by the product owner on 2026-09-23, is "the whole folder
-   answers": every question in `testing/User-feedback/` returns a cited answer,
-   verified by re-running the committed script rather than by judgement. The
-   full contract, including the one honest exception and the blocked-stop, is
-   at the head of Set 12 in `testing/UI_fixes_done.md`. Three pieces of work, independent of each other,
-   running in parallel since 2026-09-23:
-   - 12.1, give a disease anchor the same breadth a gene anchor already has.
-     `_build_layer_tool_calls` gates everything on `if gene_symbol:`, so
-     "Any trials for GERD?" runs one Cypher query and never calls the trials
-     registry that holds thousands of GERD trials. This is the largest of the
-     three and the one that changes the most answers.
-   - 12.2, put literature vocabulary in the guardrail allowlist. Today
-     `any trials for gerd?` is refused as outside biomedical research and
-     `Any trials for GERD?` is not, because capitalisation decides. The
-     refusal text offers "a paper question" and `paper` is not in the
-     allowlist.
-   - 12.6 turned out to be ALREADY BUILT and is closed with no work. The
-     clarification does reach the reader today, shipped 2026-09-22, and the
-     tester's screenshots predate it. The claim that it was discarded was the
-     assistant's, made from reading the tool's error text without checking
-     what the screen shows, and it is corrected in the Set 12 table in `testing/UI_fixes_done.md` rather than deleted.
-   - 12.4, stop inviting a reader to "continue the conversation" under a
-     screen that carried no answer. The cheapest change here.
-
-   VERIFY THE MARFAN PHENOTYPE QUESTION AS PART OF THIS, not separately: it is
-   the same family, a disease-anchored question reaching a single graph call
-   that returns nothing. It was the overnight session's one open item and it
-   belongs to 12.1's fix.
-2. 12.3, WHETHER A ONE-TO-THREE-WORD QUESTION SHOULD BE ASKED BACK. The
-   product owner's question, now measured: there is no such clarification
-   today, and the four paths that do exist cover none of it. Decide AFTER item
-   1, because a question that can be answered should be answered rather than
-   queried back, and item 1 changes how many of them can be answered.
-3. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
+1. 12.14, A QUESTION ABOUT PHENOTYPIC FEATURES NAMES NONE. `What phenotypic
+   features are associated with Marfan syndrome?` answers with variant and gene
+   records at both depths, a confident answer of the wrong kind. The dead
+   template was removed on 2026-09-23 and nothing that CAN answer took its
+   place. Its row is under "Open items from earlier sets".
+2. 12.17, A GOOD QUESTION SOMETIMES REFUSES AT THE THINK STEP. Twice in about
+   forty live runs the plan tier's reply did not match the think
+   classification schema, and the reader saw a refusal for a question the
+   product answers on every other run.
+3. 12.16 PART 3, WHICH QUESTIONS COUNT AS A REQUEST FOR PAPERS BECOMES A
+   CLASSIFIER'S DECISION, on the product owner's instruction that decisions are
+   not hardcoded; today it is a word list. It is also where their architecture
+   direction under 11.38 points: "We use Jev as a classifier where ever we are
+   making those decisions".
+4. 12.15, "RECENT PAPERS" ASKS WHAT RECENT MEANS, the product owner's remark on
+   `recent papers on statins`.
+5. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
    row:
    - "334" expects a clarifying ask and is refused as off-topic
    - "tell me about the tree of life" expects an answer
@@ -688,8 +663,8 @@ What is open and not on this list as its own item, each recorded in
    Nothing blocks on it. A fourth row joins them: G-035's Taxonomy must-cite
    URL. ITEM 12.2 MAY CLOSE SOME OF THESE ON ITS OWN, since they are the same
    check.
-4. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
-5. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
+6. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
+7. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
    established that when no code template matches, the plan-tier model writes
    the Cypher fresh, and two drafts are not equivalent. The data already
    exists: `CypherQueryOutput.template` is None exactly in that case, and
@@ -700,7 +675,7 @@ What is open and not on this list as its own item, each recorded in
    evidence. Key it on the query having been drafted. The stronger version of
    this item is to close the remaining model path entirely, the way `27d68ae`
    closed it for gene questions.
-6. 11.29's BUILD, now that its scoping document exists and is measured. Read
+8. 11.29's BUILD, now that its scoping document exists and is measured. Read
    `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md`
    first: it counts how many golden questions need multi-hop (five, all walking
    one already-built shape), how many need data the graph does not hold
@@ -709,7 +684,7 @@ What is open and not on this list as its own item, each recorded in
    grounding gate, which accepts a verbatim excerpt and rejects a faithful
    paraphrase, is what actually stands between the product and being worth
    reading instead of a general chatbot.
-7. 11.38, a bounded trial of the probability model, if the product owner wants
+9. 11.38, a bounded trial of the probability model, if the product owner wants
    it. The cheap first step is a SHADOW RUN on the guardrail: it decides in
    parallel, its answer is only recorded and never acted on, which produces
    calibration data from this product's own questions rather than a vendor
@@ -718,7 +693,10 @@ What is open and not on this list as its own item, each recorded in
 
    The three discussion items this list carried are all closed: 11.30 was
    built, 11.32 was answered with measurement, and 11.29's discussion produced
-   the document named in item 5. 11.22's live check was already done.
+   the document named in item 8. 11.22's live check was already done.
+10. 11.11, ANSWERS MODELLED ON THE REFERENCE PROTOTYPE'S DEPTH, FORMATTING AND
+   STRUCTURE. Listed as being built until 2026-09-24, with nobody on it; 12.9
+   and 12.10 answered part of its ask.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining
@@ -727,26 +705,18 @@ a standing option, not as queued work.
 
 ### How to start the next session
 
-1. Read "Where we stopped" above, starting with the one-table summary of the
-   2026-09-23 overnight session, then the 2026-09-22 table, then the
-   2026-09-21 table, then the Set 11 table, all in `testing/UI_fixes_done.md`.
+1. Read "Where we stopped" above, then the session tables under "Session
+   history" in `testing/UI_fixes_done.md`, newest first.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
    carrying only `develop`.
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
-4. Pick up the tracker at the top of this plan, section 2, which is the
-   current order (UPDATED 2026-09-24: the rest of this step describes
-   2026-09-23). Then "Next, in order" at item 1, SET 12, the second tester's seven
-   questions, of which zero are answered today. Its three pieces (12.1 the
-   disease anchor's breadth, 12.2 the guardrail's literature vocabulary, 12.4
-   the refusal's follow-up invitation) are independent and can run in
-   parallel, and the Marfan phenotype check belongs to 12.1 rather than
-   standing alone. Items 2 to 4 are the product owner's calls and nothing
-   blocks on them. Awaiting their retest: items 1 to 7 in
-   `testing/Shipped_2026-09-23.md` and items 7 to 22 in
-   `testing/Shipped_2026-09-22.md`. The call ceiling is measured and stays at
-   twenty.
+4. Pick up section 2 of the tracker at the top of this plan: the product
+   owner's retests first, then "Next, in order" at item 1, 12.14. Awaiting
+   their retest: items 1 to 17 in `testing/Shipped_2026-09-23.md` and items 7
+   to 22 in `testing/Shipped_2026-09-22.md`. The call ceiling is measured and
+   stays at twenty.
 
 ## Developer items
 

@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-23.
+Kick-off: 2026-05-06. Last updated: 2026-09-24.
 
 ## Status at a glance
 
@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-23.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is the first item under "Next, in order" in `testing/UI_fix_plan.md`'s "Where we stopped" section, which owns the cutoff. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 624 (DECISIONS.md).
+Decisions logged: 627 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -971,6 +971,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-23 (day) to 2026-09-24. SET 12 AND ANSWERS THAT ANSWER THE QUESTION.
+
+- The cadence: the UI fix loop, so no build phase. Pull requests only for the three `.claude/` changes.
+- The record: item by item in `testing/UI_fix_plan.md` and, since the split, `testing/UI_fixes_done.md`.
+
+- WHAT LANDED, in the order it shipped: 12.1, a disease question gets the breadth a gene question has (`02130d7`); 12.2, the guardrail stops refusing literature questions, whatever their capitals (`f63b272`); 12.4, a refusal says "Ask another question" (`955c4ac`); 12.7, a question naming no gene and no disease finds the papers (`7c1ebc4`, `29c8687`); 12.8, the trust line counts sources (`a4960b3`), corrected by 12.11 to count pages (`d355cd9`); 12.12, broken sentences and restatement paragraphs leave the answer (`d355cd9`); 12.10, answers answer the question (`5d53f78`); 12.13, the history rail opens a saved answer asked in the same tab (`5d53f78`); 12.9, the two depths differ on every question (`5a25f72`); 12.3, a very short question is asked back (`84c2971`, `9b9ff2b`); 12.16 parts 1, 2 and 4, no hardcoded decisions (`1cd5968`, `84c2971`, `a565fd7`). All live on develop and awaiting the product owner's retest, `testing/Shipped_2026-09-23.md` items 8 to 17.
+- THE DECISION THAT CHANGES THE PRODUCT: a second, cheap model may judge whether a reworded answer sentence says more than the exact record words it quotes, after code has checked the quote, the numbers, the negation and any verdict opener. Code-only checking had passed 0 of 53 faithful sentences. It amends the deterministic-acceptance rule for this one case, pull request #101.
+- REVERSED OR HELD, with the reason: the new answer instruction alone was reverted, because it made the model paraphrase everything the gate then stripped and GERD fell back to a list; it shipped only with the model check. 12.3's first build, decided by word lists and template questions, was withdrawn before merging on the product owner's instruction: "Please do not hardcode! Hopefully not that dumb".
+- THE PLAN WAS SPLIT on the product owner's instruction, after three readability rounds on one 2,572-line file: what is being built and what is next stay in the plan, every closed item moves to the done file; proven with the no-loss check across both, 21,419 facts, none lost. Pull requests #102 and #103 taught the session-closing skills the rule.
+- DECISIONS LOGGED: the model check, structure-not-words for the checker, 12.3 as a classifier, the depth rules, no test question in a prompt, the plan's split. Five LEARNINGS.md rows, the most transferable being that a per-sentence check certifies sentences and never the reference between them.
+- STILL OPEN: 12.14, a phenotype question answered with the wrong kind of record; 12.17, an occasional refusal at the think step; 12.16 part 3, literature routing still a word list; 12.15, a year range for "recent". Production is unchanged on `v0.2.0`.
 
 2026-09-23 (overnight), THE GRAPH AUDIT AND THE SAVED ANSWER. An unsupervised session: the product owner approved a named list before sleeping, then authorised picking up further work from the fix plan. Eight agents ran, tiered by task. UI fix loop, so no build phase and no pull request. Everything is on develop; production is unchanged on `v0.2.0`.
 
