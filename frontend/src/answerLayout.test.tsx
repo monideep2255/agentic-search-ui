@@ -197,6 +197,43 @@ describe("records never render inline", () => {
     expect(screen.getByTestId("claim-text-3").tagName.toLowerCase()).toBe("tr");
     expect(tables[1]).toContainElement(screen.getByTestId("claim-text-4"));
   });
+
+  /*
+   * Item 12.9 (2026-09-23): a Researcher table's "Identifier" column is the
+   * design's identifier cell (`.rtab td.g`) whatever the id looks like. RED
+   * before: "@GENE_BRCA1" and "omim 138079" fail `isIdentifierCell`'s shape
+   * test, so they rendered in body type beside a mono CURIE. Populate-checked:
+   * the name and status cells in the same rows stay out of mono.
+   */
+  it("sets every cell under the Identifier header in mono, whatever the id looks like", () => {
+    renderEvents([
+      envelope("token", { text: "Records found\n\n", marker_ids: [], kind: "heading" }),
+      envelope("token", { text: "", marker_ids: [], kind: "table_header", cells: ["Record", "Identifier", "Status"] }),
+      envelope("token", {
+        text: "Literature entity name: BRCA1 [1]. ",
+        marker_ids: ["c1"],
+        kind: "table_row",
+        cells: ["BRCA1", "@GENE_BRCA1", "Recruiting"],
+      }),
+      envelope("token", {
+        text: "omim title: BREAST-OVARIAN CANCER [2]. ",
+        marker_ids: ["c2"],
+        kind: "table_row",
+        cells: ["BREAST-OVARIAN CANCER", "omim 138079", ""],
+      }),
+      citation("c1", 1),
+      citation("c2", 2),
+      DONE,
+    ]);
+    for (const index of [0, 1]) {
+      const cells = within(screen.getByTestId(`claim-text-${index}`)).getAllByRole("cell");
+      expect(getComputedStyle(cells[1]!).fontFamily).toMatch(/monospace/);
+      expect(getComputedStyle(cells[0]!).fontFamily).not.toMatch(/monospace/);
+    }
+    const first = within(screen.getByTestId("claim-text-0")).getAllByRole("cell");
+    expect(first[1]).toHaveTextContent("@GENE_BRCA1");
+    expect(getComputedStyle(first[2]!).fontFamily).not.toMatch(/monospace/);
+  });
 });
 
 describe("clean copy and accessible citations", () => {
@@ -272,5 +309,35 @@ describe("on a phone", () => {
     expect(name).toHaveTextContent("Familial cancer of breast");
     expect(within(name!).getByRole("button", { name: "Source 1, layer 2" })).toBeInTheDocument();
     expect(id).toHaveTextContent("C0346153");
+  });
+
+  it("keeps the Identifier column in mono on a stacked row too (item 12.9)", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("max-width:720px"),
+        media: query,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    renderEvents([
+      envelope("token", { text: "", marker_ids: [], kind: "table_header", cells: ["Record", "Identifier"] }),
+      envelope("token", {
+        text: "Literature entity name: BRCA1 [1]. ",
+        marker_ids: ["c1"],
+        kind: "table_row",
+        cells: ["BRCA1", "@GENE_BRCA1"],
+      }),
+      citation("c1", 1),
+      DONE,
+    ]);
+    const [name, id] = Array.from(screen.getByTestId("claim-text-0").children) as HTMLElement[];
+    expect(name).toHaveTextContent("BRCA1");
+    expect(id).toHaveTextContent("@GENE_BRCA1");
+    expect(getComputedStyle(id!).fontFamily).toMatch(/monospace/);
+    expect(getComputedStyle(name!).fontFamily).not.toMatch(/monospace/);
   });
 });

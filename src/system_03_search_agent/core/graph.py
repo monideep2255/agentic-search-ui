@@ -509,7 +509,9 @@ from system_03_search_agent.harness.harness import (
 )
 from system_03_search_agent.harness.tiers import Tier
 from system_03_search_agent.synthesis.answer_layout import (
+    IDENTIFIER_COLUMN_LABEL,
     MAX_HEADINGS,
+    PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
     TABLE_HEADINGS,
     GroundingInput,
@@ -517,13 +519,18 @@ from system_03_search_agent.synthesis.answer_layout import (
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
+    first_column_label,
     grounding_input,
     heading_is_supported,
+    is_plain_language,
     key_terms,
     parse_synth_layout,
     placeholder_link_count,
     placeholder_links_note,
+    plain_record_label,
+    record_identifier,
     record_label,
+    record_status_or_year,
     table_second_cell,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
@@ -9033,20 +9040,35 @@ def _answer_tokens(
     - A `paragraph_break` wherever the model's reply changed paragraph.
     - A `heading` before a paragraph, Researcher only, when the model wrote
       one and `heading_is_supported` accepts it, at most `MAX_HEADINGS`.
-    - After the prose: the findings-tail note and its sentences as claims
-      (every depth but Researcher), or the Researcher listing, grouped by
-      record type under a code-built heading, as `table_row` tokens when
-      every record in the group carries the second column
-      (`answer_layout.TABLE_COLUMNS`) and `list_item` tokens otherwise.
+    - After the prose: the code-built listing of every record, whose shape
+      is the reader's (item 12.9, rule 2, 2026-09-23). Plain language gets
+      ONE list under `answer_layout.PLAIN_SOURCES_HEADING`, one `list_item`
+      per record carrying its title alone. Every other depth gets the
+      records grouped by type under a code-built heading, each group a
+      table (`table_header`, then `table_row` tokens) whose columns are the
+      record's name, its identifier (`answer_layout.record_identifier`),
+      the mapping column where every record in the group carries it
+      (`answer_layout.TABLE_COLUMNS`), and a status or year column where
+      the records' own fields carry one; a group with nothing but a name to
+      show stays a list.
     - The disclosure notes, each a `note`.
+
+    THE FIREWALL (item 12.9, rule 5; Section 14.1). The depth changes the
+    `cells`, the headings, the table shape and, upstream, the opening
+    sentence's words. It never changes a row's `text` (the grounded
+    sentence), its own marker, which records are listed, or `citations`:
+    those were fixed by the grounding pass before this function runs, and
+    this function only decides how each already-cited record is shown.
 
     Bold terms (`emphasis`) are set on the lead summary sentence in every
     depth, and on other Researcher prose sentences only, from the run's
     resolved entity mentions and record names.
     """
     citation_by_display = {citation.display_index: citation for citation in citations}
+    citation_by_id = {citation.citation_id: citation for citation in citations}
     finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
     researcher = audience_depth == "researcher"
+    plain = is_plain_language(audience_depth)
     # UI fix 11.27 over-corrected: gating `terms` to Researcher meant the
     # code-built lead summary carried no `emphasis` in Plain language at all,
     # so `AnswerScreen.mainPointFor` always fell back to null and nothing but
@@ -9102,7 +9124,40 @@ def _answer_tokens(
         if prepared.entity_type == "Disease" and prepared.curie:
             disease_citation_by_curie.setdefault(prepared.curie, prepared.citation_id)
 
+    def identifier_for(finding: SynthFinding) -> str:
+        # The record's own identifier, read from its row and, for a live
+        # NCBI record whose row keeps only its title, from the id its own
+        # citation carries. Never from a model.
+        citation = citation_by_id.get(finding.citation_id)
+        return record_identifier(
+            _row_for(finding, findings),
+            citation.source if citation is not None else "",
+            citation.source_id if citation is not None else "",
+        )
+
+    def plain_listing(sentences: tuple[str, ...]) -> None:
+        # Item 12.9, rule 2: ONE list for a reader with no technical
+        # background, in the order the rows were grounded, each row the
+        # record's title and its own citation chip. No type headings, no
+        # identifiers, no mapping cells: those are the Researcher table's.
+        # Every record the Researcher tables list is listed here, because
+        # both walk the same `sentences`.
+        heading(PLAIN_SOURCES_HEADING)
+        for sentence in sentences:
+            ids = marker_ids(sentence)
+            finding = finding_by_citation_id.get(ids[0]) if ids else None
+            if finding is None:
+                sentence_token(sentence)
+                continue
+            label = plain_record_label(
+                finding, _row_fields_for(finding, findings), identifier_for(finding)
+            )
+            sentence_token(sentence, kind="list_item", cells=[label])
+
     def listing(sentences: tuple[str, ...]) -> None:
+        if plain:
+            plain_listing(sentences)
+            return
         # Grouped by the plain NOUN of the record type, not the raw type:
         # the graph writes "Gene" and `ncbi_efetch` writes "gene", and
         # keyed on the raw type a two-gene answer showed "Gene records
@@ -9137,48 +9192,87 @@ def _answer_tokens(
         for noun in ordered_keys:
             entries = groups[noun]
             entity_type = type_for_group[noun]
-            second_cells = [
-                table_second_cell(entity_type, _row_fields_for(finding, findings), condition_names)
-                if finding is not None
-                else None
+            row_fields_by_entry = [
+                _row_fields_for(finding, findings) if finding is not None else None
                 for _, finding in entries
             ]
-            # A table when the type has a mapping AND at least one row has a
-            # non-empty second cell; an empty cell asserts nothing, so a row
-            # whose links were all placeholders still belongs in the table.
-            as_table = (
+            second_cells = [
+                table_second_cell(entity_type, row_fields, condition_names)
+                if finding is not None
+                else None
+                for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
+            ]
+            # The mapping column when the type has one AND at least one row
+            # has a non-empty second cell; an empty cell asserts nothing, so
+            # a row whose links were all placeholders still belongs in it.
+            mapped = (
                 entity_type in TABLE_COLUMNS
                 and all(cell is not None for cell in second_cells)
                 and any(cell for cell in second_cells)
             )
+            # Item 12.9, rule 2: the record's identifier, and its status or
+            # year where its own fields carry one. A column appears only
+            # when at least one record in the group has a value for it, so
+            # no table carries a column of blanks.
+            identifiers = [
+                identifier_for(finding) if finding is not None else ""
+                for _, finding in entries
+            ]
+            extras = [
+                record_status_or_year(entity_type, row_fields, mapping_shown=mapped)
+                if finding is not None
+                else None
+                for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
+            ]
+            extra_label = next((extra[0] for extra in extras if extra is not None), None)
+            has_identifier = any(identifiers)
+            columns = [first_column_label(entity_type)]
+            if has_identifier:
+                columns.append(IDENTIFIER_COLUMN_LABEL)
+            if mapped:
+                columns.append(TABLE_COLUMNS[entity_type][2])
+            if extra_label is not None:
+                columns.append(extra_label)
+            as_table = len(columns) > 1
+            records_heading = (
+                f"{noun[:1].upper()}{noun[1:]} records found" if noun else "Records found"
+            )
             if as_table:
-                heading(TABLE_HEADINGS.get(entity_type, f"{noun[:1].upper()}{noun[1:]} records found"))
-                _, first_label, second_label = TABLE_COLUMNS[entity_type]
+                heading(
+                    TABLE_HEADINGS.get(entity_type, records_heading) if mapped else records_heading
+                )
                 tokens.append(
-                    TokenPayload(
-                        text="", marker_ids=[], kind="table_header",
-                        cells=[first_label, second_label],
-                    )
+                    TokenPayload(text="", marker_ids=[], kind="table_header", cells=columns)
                 )
             else:
-                heading(f"{noun[:1].upper()}{noun[1:]} records found" if noun else "Records found")
-            for (sentence, finding), second in zip(entries, second_cells, strict=True):
+                heading(records_heading)
+            for (sentence, finding), row_fields, second, identifier, extra in zip(
+                entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
+            ):
                 if finding is None:
                     sentence_token(sentence)
                     continue
-                row_fields = _row_fields_for(finding, findings)
                 label = record_label(finding, row_fields)
-                if as_table and second is not None:
-                    linked = [
+                if not as_table:
+                    sentence_token(sentence, kind="list_item", cells=[label])
+                    continue
+                cells = [label]
+                if has_identifier:
+                    cells.append(identifier)
+                if mapped:
+                    cells.append(second or "")
+                if extra_label is not None:
+                    cells.append(extra[1] if extra is not None and extra[0] == extra_label else "")
+                linked = (
+                    [
                         disease_citation_by_curie[curie]
                         for curie in condition_ids_for_row(entity_type, row_fields)
                         if curie in disease_citation_by_curie
                     ]
-                    sentence_token(
-                        sentence, kind="table_row", cells=[label, second], extra_marker_ids=linked
-                    )
-                else:
-                    sentence_token(sentence, kind="list_item", cells=[label])
+                    if mapped
+                    else []
+                )
+                sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
 
     if summary_sentence:
         # Always emphasize the lead summary, not Researcher only: it is the
@@ -10372,6 +10466,11 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # different units the way the lead sentence and the note did in
         # the reported answer (a summary total next to a differently
         # scoped shown-count in the note).
+        #
+        # Item 12.9, rule 1 (2026-09-23): the depth reaches this sentence's
+        # WORDS only. The records it counts, the markers it carries and the
+        # total it states are the same at every depth, from the same
+        # `summary_findings` and `shown_slots`.
         summary_sentence = answer_summary_sentence(
             summary_findings,
             shown_slots,
@@ -10379,6 +10478,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             _known_total_available(findings) if _ok_finding_was_truncated(findings) else None,
             lambda finding: _row_for(finding, findings),
             condition_names,
+            audience_depth=query.audience_depth,
         )
         for token in _answer_tokens(
             audience_depth=query.audience_depth,

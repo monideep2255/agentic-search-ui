@@ -466,3 +466,179 @@ def test_the_placeholder_count_is_the_real_number_of_excluded_links() -> None:
         "('not provided', 'not specified' or 'see cases') are not listed."
     )
     assert placeholder_links_note(0) is None
+
+
+# ---------------------------------------------------------------------------
+# Item 12.9 (2026-09-23): what each depth's reader is shown. The names are
+# imported inside each arm so a revert of the change fails the arm rather
+# than the whole module's collection. Mutations run by hand before these
+# were kept are named per arm.
+# ---------------------------------------------------------------------------
+
+_MARKER = r"\[(\d+)\]"
+
+
+def _fold_summary(**kwargs) -> str:
+    from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
+
+    v1 = _fold_finding(1, "SequenceVariant", "ClinVar:1", "NM_1")
+    v2 = _fold_finding(2, "SequenceVariant", "ClinVar:2", "NM_2")
+    d1 = _fold_finding(3, "Disease", "MedGen:C0342276", "Maturity-onset diabetes of the young", resolved=True)
+    rows = {
+        "cq-1": {"fields": {"name": "NM_1", "clinvar_condition_ids": ["MedGen:C0342276", "MedGen:C3661900"]}},
+        "cq-2": {"fields": {"name": "NM_2", "clinvar_condition_ids": ["MedGen:C3888631", "MedGen:C0342276"]}},
+        "cq-3": {"fields": {"name": "OMIM"}},
+    }
+    sentence = answer_summary_sentence(
+        [v1, v2, d1],
+        {"cq-1": 1, "cq-2": 2, "cq-3": 3},
+        "HNF1A",
+        1212,
+        lambda f: rows[f.citation_id],
+        _NAMES,
+        **kwargs,
+    )
+    assert sentence is not None
+    return sentence
+
+
+def test_12_9_the_plain_opening_cites_exactly_what_the_technical_one_does() -> None:
+    """Rule 1: everyday nouns and no titles inline, over the same count, the
+    same total and the same markers in the same order. Mutation: routing the
+    plain depth through the technical branch makes the first assertion red."""
+    import re
+
+    plain = _fold_summary(audience_depth="plain_language")
+    technical = _fold_summary()
+    assert plain == (
+        "I found 2 genetic variants related to HNF1A, out of 1212 available [1][2], "
+        "linked to 2 conditions [3]."
+    ), plain
+    assert technical.startswith("Found 2 sequence variant records for HNF1A, of 1212 available")
+    assert re.findall(_MARKER, plain) == re.findall(_MARKER, technical) == ["1", "2", "3"]
+    for title in ("NM_1", "NM_2", "Maturity-onset diabetes of the young"):
+        assert title not in plain, (title, plain)
+    # The other three depths the contract accepts keep the technical form.
+    for depth in ("researcher", "clinical_brief", "deep_technical"):
+        assert _fold_summary(audience_depth=depth) == technical
+
+
+def test_12_9_a_plain_opening_with_no_subject_says_on_this_topic() -> None:
+    from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
+
+    papers = [
+        SynthFinding(
+            ref_index=index, citation_id=f"ne-{index}", layer="layer_2_api", tool="ncbi_efetch",
+            field="title", field_value=f"Paper title {index}",
+            source_url=f"https://pubmed.ncbi.nlm.nih.gov/{index}/", entity_type="pubmed",
+        )
+        for index in (1, 2)
+    ]
+    slots = {"ne-1": 1, "ne-2": 2}
+    assert answer_summary_sentence(
+        papers, slots, "", None, lambda f: None, audience_depth="plain_language"
+    ) == "I found 2 published papers on this topic [1][2]."
+    assert answer_summary_sentence(papers, slots, "", None, lambda f: None) == (
+        "Found 2 pubmed records: Paper title 1 [1] and Paper title 2 [2]."
+    )
+
+
+def test_12_9_plain_nouns_are_everyday_words() -> None:
+    from system_03_search_agent.synthesis.answer_layout import plain_noun
+
+    assert plain_noun("Disease", 2) == "conditions"
+    assert plain_noun("medgen", 1) == "condition"
+    assert plain_noun("pubmed", 1) == "published paper"
+    assert plain_noun("Publication", 3) == "published papers"
+    assert plain_noun("Clinical trial", 2) == "clinical trials"
+    assert plain_noun("SequenceVariant", 2) == "genetic variants"
+    assert plain_noun("Gene", 1) == plain_noun("gene", 1) == "gene"
+    assert plain_noun("SomethingNew", 2) == "records", "an unknown type is never guessed at"
+
+
+@pytest.mark.parametrize(
+    ("row", "source", "source_id", "expected"),
+    [
+        # A row field that IS the identifier, verbatim.
+        ({"curie": "", "fields": {"name": "t", "nct_id": "NCT00590109"}}, "", "", "NCT00590109"),
+        ({"curie": "", "fields": {"rsid": "rs80357906"}}, "", "", "rs80357906"),
+        ({"curie": "", "fields": {"pubtator_id": "@GENE_BRCA1"}}, "", "", "@GENE_BRCA1"),
+        ({"curie": "", "fields": {"accession": "VCV000017661"}}, "", "", "VCV000017661"),
+        # A bare PMID field names its system.
+        ({"curie": "", "fields": {"pmid": "33388079"}}, "", "", "PMID:33388079"),
+        # A graph row's CURIE.
+        ({"curie": "MedGen:C0346153", "fields": {"name": "x"}}, "", "", "MedGen:C0346153"),
+        # A live record whose row keeps only its title: the id its citation carries.
+        ({"curie": "", "fields": {"title": "t"}}, "pubmed", "33388079", "PMID:33388079"),
+        ({"curie": "", "fields": {"symbol": "BRCA2"}}, "gene", "675", "NCBIGene:675"),
+        # A MedGen UID is not a concept id, so it is never written "MedGen:".
+        ({"curie": "", "fields": {"title": "t"}}, "medgen", "9346", "medgen 9346"),
+        # Nothing to read: an empty cell, never a guess.
+        ({"curie": "", "fields": {"title": "t"}}, "ncbi_efetch", "unknown", ""),
+        (None, "", "", ""),
+    ],
+)
+def test_12_9_the_identifier_is_read_from_the_record(row, source, source_id, expected) -> None:
+    """Rule 2's identifier column. Mutation: dropping the citation fallback
+    turns the PubMed and gene cases red; dropping `_LAYER2_CURIE_PREFIXES`
+    turns them "pubmed 33388079" and "gene 675"."""
+    from system_03_search_agent.synthesis.answer_layout import record_identifier
+
+    assert record_identifier(row, source, source_id) == expected
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "fields", "expected"),
+    [
+        # A trial's status is already its table's mapping column: not twice.
+        ("Clinical trial", {"overall_status": "RECRUITING"}, None),
+        ("assembly", {"assemblystatus": "Complete Genome"}, ("Status", "Complete Genome")),
+        ("gds", {"pdat": "2019/03/15"}, ("Published", "2019")),
+        ("Pathogen Detection isolate", {"collection_date": "2013-03-05"}, ("Collected", "2013")),
+        ("gds", {"pdat": "not dated"}, None),
+        ("Disease", {"name": "x"}, None),
+        ("Disease", None, None),
+    ],
+)
+def test_12_9_status_or_year_comes_only_from_the_records_own_fields(
+    entity_type, fields, expected
+) -> None:
+    from system_03_search_agent.synthesis.answer_layout import record_status_or_year
+
+    assert record_status_or_year(entity_type, fields) == expected
+
+
+def test_12_9_a_trial_keeps_its_status_when_its_group_shows_no_status_column() -> None:
+    """When some trials in a group carry no status, the mapping column is
+    not on the table, so the status must reach the status column instead of
+    being dropped. Mutation: ignoring `mapping_shown` makes this red."""
+    from system_03_search_agent.synthesis.answer_layout import record_status_or_year
+
+    fields = {"overall_status": "RECRUITING"}
+    assert record_status_or_year("Clinical trial", fields, mapping_shown=False) == (
+        "Status",
+        "RECRUITING",
+    )
+    assert record_status_or_year("Clinical trial", fields, mapping_shown=True) is None
+
+
+def test_12_9_a_plain_label_is_a_title_and_never_a_code() -> None:
+    """Rule 2, plain: titles only. Mutation: returning `record_label`
+    unchanged makes the two code cases red."""
+    from system_03_search_agent.synthesis.answer_layout import plain_record_label
+
+    named = _finding(1, "Familial cancer of breast", curie="MedGen:C0346153")
+    assert plain_record_label(named, {"name": "Familial cancer of breast"}, "MedGen:C0346153") == (
+        "Familial cancer of breast"
+    )
+    # No name at all: the label falls back to the CURIE, a code.
+    nameless = _finding(2, "MedGen:C0346153", field="curie", curie="MedGen:C0346153")
+    assert plain_record_label(nameless, {}, "MedGen:C0346153") == "Condition"
+    # G-019: the graph's MeSH name is the identifier wearing a name.
+    mesh = _finding(3, "MeSH:D999999", field="curie", entity_type="OntologyClass", curie="MeSH:D999999")
+    assert plain_record_label(mesh, {"name": "[MeSH] D999999"}, "MeSH:D999999") == "Medical topic"
+    # A real title that happens to carry a short number keeps its words.
+    gene = _finding(4, "BRCA1 and 53BP1 in repair", entity_type="Gene", curie="NCBIGene:672")
+    assert plain_record_label(gene, {"name": "BRCA1 and 53BP1 in repair"}, "NCBIGene:672") == (
+        "BRCA1 and 53BP1 in repair"
+    )

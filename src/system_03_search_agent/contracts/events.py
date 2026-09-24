@@ -292,7 +292,13 @@ class TokenPayload(BaseModel):
         ]
         | None
     ) = None
-    cells: list[Annotated[str, Field(max_length=500)]] | None = Field(None, max_length=2)
+    # Item 12.9 (2026-09-23): up to FOUR cells, widened from two. A
+    # Researcher table row carries the record's name, its identifier, the
+    # mapping column where its type has one, and a status or year where the
+    # record carries one. Additive per Section 2.6: a wider bound, so every
+    # payload that validated before still validates, and `cells` still means
+    # "the display values, in column order, labelled by the table_header".
+    cells: list[Annotated[str, Field(max_length=500)]] | None = Field(None, max_length=4)
     emphasis: list[Annotated[str, Field(max_length=200)]] | None = Field(
         None, max_length=12
     )

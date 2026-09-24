@@ -303,6 +303,12 @@ def test_the_count_note_is_absent_off_this_shape_and_on_a_failed_search() -> Non
 
 @pytest.mark.asyncio
 async def test_write_puts_the_count_under_an_isolate_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The isolate count sits under the answer, and each Researcher row
+    shows the isolate's genes beside its name.
+
+    Item 12.9 (2026-09-23) REVERSED the exact two-cell row this arm pinned:
+    rule 2 gives a Researcher row its record's identifier and, where the
+    record carries one, a year, so the row is read by column label now."""
     from system_03_search_agent.harness.coordinator_worker import Finding
     from tests.system_03_search_agent.core.test_write_answer_structure import _install
     from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
@@ -330,9 +336,21 @@ async def test_write_puts_the_count_under_an_isolate_answer(monkeypatch: pytest.
     assert done.payload["trust_outcome"] != "refuse"
     # Measured live on the first pass (2026-09-22): the listing showed the
     # isolate's name alone and the citation's identity read "unknown". The
-    # genes ride in the table's second cell and the identity is the accession.
-    rows = [e.payload for e in result["events"] if e.type == "token" and e.payload.get("kind") == "table_row"]
-    assert rows and rows[0]["cells"] == ["AZ-TG59983", "acrF, blaCTX-M-15"], rows
+    # genes ride in the table's row beside the name and the identity is the
+    # accession.
+    #
+    # Item 12.9 (2026-09-23) widened this Researcher row, which this arm
+    # pinned at exactly two cells: rule 2 adds the record's identifier (its
+    # BioSample accession) and, where the record carries one, a year (its
+    # own collection date's). Read by column label, so the genes are still
+    # asserted to sit beside the name they belong to.
+    tokens_all = [e.payload for e in result["events"] if e.type == "token"]
+    header = next(t["cells"] for t in tokens_all if t.get("kind") == "table_header")
+    assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
+    rows = [t for t in tokens_all if t.get("kind") == "table_row"]
+    assert rows and rows[0]["cells"] == [
+        "AZ-TG59983", "SAMN02442784", "acrF, blaCTX-M-15", "2013"
+    ], rows
     assert any("Isolates and their AMR genes" in t for t in tokens), tokens
     citations = [e.payload for e in result["events"] if e.type == "citation"]
     assert citations and all(c["source_id"] == "SAMN02442784" for c in citations), citations
