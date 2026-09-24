@@ -864,8 +864,9 @@ sentence. Write the value as plain text, never inside quotation marks.
 paper's conclusions: do not copy it out. SYNTHESISE it. Write the sentence \
 in your own plain words to answer the question, and put the record's exact \
 supporting words inside the marker, like this: \
-Caffeine improves endurance performance [4: "caffeine enhances endurance \
-performance"]. The words inside the quotes must be copied character for \
+Washing hands cuts the spread of chest infections [4: "hand hygiene \
+reduced respiratory infection transmission"]. The words inside the quotes \
+must be copied character for \
 character from finding 4, a short contiguous span of about five to thirty \
 words, never the whole finding. Your sentence may use plain, everyday \
 words in place of the paper's terms, but it must say NOTHING MORE than the \

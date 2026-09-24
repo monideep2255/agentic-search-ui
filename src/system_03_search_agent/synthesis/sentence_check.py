@@ -5,7 +5,7 @@ the boundary is stated here where the next reader will look.
 `production-standards` says acceptance is decided by a deterministic rule and
 never by a model's judgement. Measured the same day, code-only checking passed
 0 of 53 of the answer model's written sentences across six live replies,
-because the model paraphrases ("kidney" for "renal") and no fixed rule can tell
+because the model paraphrases (an everyday word for a technical one) and no fixed rule can tell
 a faithful synonym from an invention. The product owner chose to let a second,
 cheap model decide that ONE question.
 
@@ -53,8 +53,9 @@ source, that the sentence rests on. An item is SUPPORTED only when a \
 careful reader of the quotes alone would agree the sentence claims nothing \
 more than they do.
 
-Allowed: rewording in plain language, everyday synonyms ("kidney" for \
-"renal", "mouth" for "oral cavity"), shortening, naming the subject the \
+Allowed: rewording in plain language, everyday synonyms ("hand washing" \
+for "hand hygiene", "bone thinning" for "osteoporosis"), shortening, naming \
+the subject the \
 quotes are about, and reporting phrases such as "a review found".
 
 NOT supported: any fact, number, population, cause, comparison or outcome \

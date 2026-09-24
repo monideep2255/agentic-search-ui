@@ -237,6 +237,12 @@ GUARD_SYSTEM_INSTRUCTION: Final = (
     # specific shape so the model stops using phrasing as a proxy for topic.
     #
     # Scoped narrowly to a substance, exposure, or behavior's effect on a
+    # Item 12.16 part 1 (2026-09-24): the example here used to be the
+    # tester's own coffee question, which is teaching to the test. The
+    # product owner ruled out hardcoding; the example is now a neutral one
+    # from outside `testing/User-feedback/`, and the coffee question's
+    # admission was re-measured live after the change.
+    #
     # PHYSIOLOGICAL or health outcome, not to "effective" in general: this
     # system already correctly refuses "is this investment strategy "
     # "effective" and "which study technique is most effective for exams",
@@ -244,7 +250,7 @@ GUARD_SYSTEM_INSTRUCTION: Final = (
     # it is not; only the phrasing bias is being corrected.
     "A question asking whether a substance, food, exposure, or behavior "
     "affects a physiological, health, or exercise-performance outcome is on "
-    "topic, for example 'does coffee help exercise performance' or 'is "
+    "topic, for example 'does vitamin D help bone strength' or 'is "
     "intermittent fasting effective for weight loss', even though it is "
     "phrased as a plain question rather than as an explicit request for "
     "papers or studies. It is answered by returning published evidence, "

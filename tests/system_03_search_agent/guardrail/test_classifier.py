@@ -266,7 +266,13 @@ def test_the_instruction_names_physiological_outcome_questions_as_on_topic() -> 
     assert "physiological, health, or exercise-performance outcome" in (
         GUARD_SYSTEM_INSTRUCTION
     )
-    assert "does coffee help exercise performance" in GUARD_SYSTEM_INSTRUCTION
+    # Item 12.16 part 1 (2026-09-24): the example is neutral now, never a
+    # question from `testing/User-feedback/`, which would be teaching to the
+    # test. The pin moves with it, so the paragraph still cannot vanish.
+    assert "does vitamin D help bone strength" in GUARD_SYSTEM_INSTRUCTION
+    assert "coffee" not in GUARD_SYSTEM_INSTRUCTION.lower(), (
+        "a tester's question must not be the prompt's own example"
+    )
 
 
 def test_the_physiological_carveout_does_not_swallow_non_biomedical_effective() -> None:
