@@ -1555,6 +1555,7 @@ Evidence, with a full transcript per question and a re-runnable script:
 | The fix-2 screenshots | Judged on the product owner's two criteria: information 12 of 13, answered 3 of 13 | `6f8902e` | Evidence in `testing/Developer/reports/2026-09-23_fix2/` |
 | The fix plan | Split into what is open and what is closed | `164aa1d` | Done |
 | Pull requests #101, #102, #103 | The model-check rule, the done file in the fix loop, the two session-closing skills | `08e5e86`, `058f3d8`, `90f12f3` | Merged |
+| D5, the API's deploy | SQLAlchemy 2.1.0, published to PyPI at 20:36 UTC, entered the API build of `39c6e55` at 20:49 through `sqlalchemy>=2.0`, loaded the newer `psycopg` driver the image does not carry, and failed the health check at `alembic upgrade head`. Railway kept the previous deployment, so develop kept serving. The product owner chose to pin `sqlalchemy>=2.0,<2.1` in `requirements.txt` and `pyproject.toml`. Evidence: Railway deployments `b398df00`, built with `sqlalchemy-2.1.0`, and `b0d91550`, built with `sqlalchemy-2.0.54` | the commit after `39c6e55` | Fixed; its own deploy of both services is the proof |
 
 ### The 2026-09-23 overnight session, what it did
 

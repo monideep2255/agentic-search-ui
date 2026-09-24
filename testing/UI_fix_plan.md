@@ -446,8 +446,10 @@ product owner's retest, and nothing is being built between sessions.
 
 What is live on develop:
 
-- Product code through `9b9ff2b`, with both Railway services at SUCCESS on
-  `e5ab0c4`. Every commit after it is documents and rules.
+- Product code through `9b9ff2b`, plus one dependency pin, D5. SQLAlchemy
+  2.1.0 was released during the session's last build and stopped the API
+  deploying the checkpoint commit `39c6e55`, so the commit after it pins
+  SQLAlchemy below 2.1. Every other later commit is documents and rules.
 - The session shipped 12.11, 12.12, 12.10, 12.13, 12.9, 12.3 and parts 1, 2
   and 4 of 12.16. Its session table is under "Session history" in
   `testing/UI_fixes_done.md`.
@@ -609,6 +611,10 @@ The longer standing list is unchanged:
     were left as written: cosmetic, and three cannot pass the no-loss check.
   - One agent worktree, fully merged, stays locked by the running editor
     session and clears when it ends.
+- A lock file for the Python build. `requirements.txt` gives ranges rather
+  than versions, so every Railway build resolves afresh, and D5 showed a
+  release can reach develop thirteen minutes after it is published. Not
+  started, and it is the product owner's call.
 
 ### Next, in order
 

@@ -33,7 +33,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 The next action is always one line, kept current here. Right now it is:
 
 - WORK SECTION 2 OF THE FIX PLAN'S TRACKER FROM THE TOP. Three answers for a fresh session, one line each:
-  - WHAT IS LIVE ON DEVELOP: product code through `9b9ff2b`. Every later commit is documents and rules, and both Railway services redeploy on every push: they were at SUCCESS on `90f12f3`, the last push before the 2026-09-24 checkpoint. The session of 2026-09-23 to 24 shipped Set 12 (12.1 to 12.4, 12.7 to 12.13, and parts 1, 2 and 4 of 12.16): answers that answer the question, checked by a second model against the exact words they quote; plain language and researcher that differ on every question; a very short question asked back with choices a classifier writes; the history rail opening a saved answer. Production is unchanged on `v0.2.0`.
+  - WHAT IS LIVE ON DEVELOP: product code through `9b9ff2b`, plus one dependency pin, D5, which caps SQLAlchemy below 2.1 so the API deploys again. Every other later commit is documents and rules, and both Railway services redeploy on every push. The session of 2026-09-23 to 24 shipped Set 12 (12.1 to 12.4, 12.7 to 12.13, and parts 1, 2 and 4 of 12.16): answers that answer the question, checked by a second model against the exact words they quote; plain language and researcher that differ on every question; a very short question asked back with choices a classifier writes; the history rail opening a saved answer. Production is unchanged on `v0.2.0`.
   - WHAT AWAITS THE PRODUCT OWNER'S RETEST: items 12 to 17 in `testing/Shipped_2026-09-23.md` first, then its items 1 to 11, then items 7 to 22 in `testing/Shipped_2026-09-22.md`, plus the four one-look checks (11.14, 11.36, 9.12, 8.4).
   - THE ONE NEXT ACTION: after the retests, `testing/UI_fix_plan.md`, "Next, in order", item 1, 12.14: `What phenotypic features are associated with Marfan syndrome?` answers with variant and gene records at both depths, a confident answer of the wrong kind.
   - Start at the top of `testing/UI_fix_plan.md`: "Where every feature stands" says what is being built and what is next, and "Where we stopped" is the cutoff. Every closed item, its detail and the session tables are in `testing/UI_fixes_done.md` since the plan was split on 2026-09-24.
@@ -48,7 +48,7 @@ The next action is always one line, kept current here. Right now it is:
 - THE SLOW PLAIN-TERMS EXPLANATION IS FIXED: an exploratory question with no shape takes the record template instead of a generated query the graph's statement timeout killed; proven live at 10.6 to 14.8 seconds against about 100 (`2bc8ec0`), APPROVED by retest the same day.
 - ONE THING A SESSION MUST NOT UNDO CASUALLY: do not add a word count or a paragraph shape back to the plain-language directive (arms in `tests/system_03_search_agent/synthesis/test_answer_quality.py` go red if one returns).
 - PRODUCTION IS ON `v0.2.0`, released 2026-09-20, tag `cde4f59`, and carries NOTHING from 2026-09-21 onward. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`. When the product owner approves a release, follow `docs/build/Release_flow.md`; CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first.
-- CI DID NOT RUN on any push from the evening of 2026-09-22 onward (`27d68ae` through `e5ab0c4` on 2026-09-24, re-checked at the 2026-09-24 checkpoint): GitHub reports every job "was not started because recent account payments have failed or your spending limit needs to be increased", a billing setting only the product owner can change, after a green run on `02063b0` twenty minutes earlier. The four gates CI would have run were run locally with CI's own commands before every push (`ruff check` over the whole repository, `isort` per gate 2, the full unit suite: 5796 passed, 0 failed, at the last code push on 2026-09-24). Check `gh run list --branch develop --limit 3` before trusting this line in either direction.
+- CI DID NOT RUN on any push from the evening of 2026-09-22 onward (`27d68ae` through `e5ab0c4` on 2026-09-24, re-checked at the 2026-09-24 checkpoint): GitHub reports every job "was not started because recent account payments have failed or your spending limit needs to be increased", a billing setting only the product owner can change, after a green run on `02063b0` twenty minutes earlier. The four gates CI would have run were run locally with CI's own commands before every push (`ruff check` over the whole repository, `isort` per gate 2, the full unit suite: 5796 passed, 0 failed, at the last code push on 2026-09-24). A push that changes only markdown never triggers CI, by the workflow's own `paths-ignore`. Check `gh run list --branch develop --limit 3` before trusting this line in either direction.
 - SET 11 IS MOSTLY LIVE; the per-item truth is the Set 11 table in `testing/UI_fixes_done.md` since the plan was split on 2026-09-24, which owns this fact. Sets 1 to 7 are approved, 8 and 9 live on develop, 10 now has item 10.3 run and 10.1 done.
 - THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation.
 - Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, never let two builders own one file region. And one more from 2026-09-22: a live measurement shares the NCBI rate pool with every agent, so an agent working alongside one is forbidden live calls until it ends, and the measurement counts rate-limit signals so contamination is visible rather than assumed absent.
@@ -98,6 +98,12 @@ What is true on disk at the close:
   the whole repository exits 0. Counts are in the Priority-2 row of
   `CLAUDE.md`, computed rather than asserted.
 - Production is unchanged, still on `v0.2.0`.
+- The develop API could not deploy the checkpoint commit `39c6e55`.
+  SQLAlchemy 2.1.0, published 13 minutes before the build, loads a
+  database driver the image does not carry. The product owner chose to
+  pin SQLAlchemy below 2.1 the same evening (D5, in this session's table
+  in `testing/UI_fixes_done.md`), and develop served its previous build
+  in between.
 
 WHAT LANDED, in the terms a person notices:
 
@@ -112,6 +118,7 @@ WHAT LANDED, in the terms a person notices:
 | 12.3 | A one-to-three-word opening question is asked back, with choices a classifier writes for the subject |
 | 12.16, parts 1, 2 and 4 | No tester's question is a prompt's example, the ask-back decision is a classifier's, and the answer checker's phrase lists became structural rules |
 | The fix plan | Split in two: `testing/UI_fix_plan.md` for what is being built and what is next, `testing/UI_fixes_done.md` for every closed item |
+| D5 | The API deploys again: SQLAlchemy is capped below 2.1, on the product owner's call |
 
 WHAT DID NOT LAND, and each is recorded rather than rounded up:
 

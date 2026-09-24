@@ -13,7 +13,12 @@ langsmith>=0.10
 # Database
 psycopg2-binary>=2.9
 redis>=5.0
-sqlalchemy>=2.0
+# D5, 2026-09-24: capped below 2.1. SQLAlchemy 2.1.0 loads the newer
+# `psycopg` driver for a postgresql:// address that names no driver, and this
+# image installs psycopg2-binary only, so the first build to resolve 2.1.0
+# failed its health check at `alembic upgrade head`. Lift the cap only
+# together with a driver decision and a test run on 2.1.
+sqlalchemy>=2.0,<2.1
 alembic>=1.13
 
 # Auth and security

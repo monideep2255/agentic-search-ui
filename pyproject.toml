@@ -16,7 +16,9 @@ dependencies = [
     "litellm>=1.40",
     "psycopg2-binary>=2.9",
     "redis>=5.0",
-    "sqlalchemy>=2.0",
+    # D5, 2026-09-24: capped below 2.1, see requirements.txt for the full
+    # rationale.
+    "sqlalchemy>=2.0,<2.1",
     "alembic>=1.13",
     "PyJWT>=2.13",
     "argon2-cffi>=23.1",
