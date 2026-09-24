@@ -61,7 +61,7 @@ START WITH THE RETEST QUERIES THE PRODUCT OWNER WAS GIVEN, in this order:
 - Query 64, subject terms named in words rather than coded: `What MeSH terms are assigned to PMID 11237011?` should show 26 real terms, never a `[MeSH] D000818` style code.
 - Query 65, the opening count agreeing with the list beneath it: `Which diseases are associated with BRCA1?`.
 - Query 66, the phenotypic features of Marfan syndrome. One live run settles the single gap the 23 September work left open, and that entry says plainly what is not yet known about it.
-- Query 67, a past search reopening with the answer it gave. Use `What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?`, whose answer has a table, since the backend, the screen and the seam between them were built separately and the table is where a seam would show. The product owner reported on 2026-09-23 that clicking it instead re-ran the search; this retest is part of the diagnosis.
+- Query 67, a past search reopening with the answer it gave. Use `What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?`, whose answer has a table, since the backend, the screen and the seam between them were built separately and the table is where a seam would show. The product owner reported on 2026-09-23 that clicking it instead re-ran the search; fixed the same night, so also try it on a search asked in the same tab.
 
 They came from someone who had never seen the product, six of their seven questions returned nothing on 2026-09-14, and all seven answer now. That is the largest change in behaviour to check and the one a person feels first, alongside the rest of section 10: queries 68 and 69.
 
@@ -71,7 +71,7 @@ Then the four one-look checks, each a single glance rather than a search: query 
 
 Then the batch from the night of 22 September, still untested: queries 23 to 44 across sections 3, 4 and 5. That is the two lost searches, the coordinate range, the generic-word guard, the BioProject and BioSample accessions, and the whole isolate set.
 
-Queries 72 to 75, section 11, are still being built and are not on develop; do not retest them until the shipped list says they are live.
+Then section 11, live since the evening of 23 September: query 73 (answers that answer the question, Shipped item 14), query 74 (the trust line agreeing with the sources count, item 12) and query 75 (no broken sentences, item 13). Queries 72 and 76 are still being built; do not retest them until the shipped list says they are live.
 
 Query numbers are permanent. A new query takes the next free number and sits in the section it belongs to, so the numbers do not run in strict order inside a section. Nothing is ever renumbered, because other documents point at these numbers.
 
@@ -1136,7 +1136,7 @@ Expected:
 
 Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
 
-Status: Reported broken 2026-09-23, under diagnosis (UI_fix_plan item 10.2). The product owner reported that clicking a past search re-ran it instead of showing the saved answer. Query 51 covers the rail itself.
+Status: Awaiting retest (Shipped_2026-09-23 item 15; UI_fix_plan item 12.13). The product owner reported on 2026-09-23 that clicking a past search re-ran it instead of showing the saved answer; a search asked in the same tab never got marked as saved. Fixed and live at `5d53f78`. Query 51 covers the rail itself.
 
 ## 8. Stop, feedback and the connection
 
@@ -1389,7 +1389,7 @@ Expected:
 
 Why it matters: a student and a clinician asking the same disease question still want different depth, and this question could not be used to check that until the refusal behind it was fixed.
 
-Status: Blocked on the product owner's decision (UI_fix_plan items 12.9 and 12.10, section 2). Code-only checking passed 0 of 53 written sentences on 2026-09-23. Do not retest yet.
+Status: In progress (UI_fix_plan item 12.9), on the product owner's direction of 2026-09-23 that the two depths differ on every question. Do not retest yet.
 
 ### 73. A question with no gene or disease is answered, not just listed
 
@@ -1407,7 +1407,7 @@ Expected:
 
 Why it matters: a person asking a plain-language question wants the answer, not a bibliography they have to read themselves.
 
-Status: Blocked on the product owner's decision (UI_fix_plan items 12.9 and 12.10, section 2). Code-only checking passed 0 of 53 written sentences on 2026-09-23. Do not retest yet.
+Status: Awaiting retest (Shipped_2026-09-23 item 14; UI_fix_plan item 12.10). Live at `5d53f78`: a second, cheap model checks each reworded sentence against the exact words it quotes. Known: two of six live reruns fell back to a list.
 
 ### 74. The sources count agrees with what is shown
 
@@ -1442,6 +1442,24 @@ Expected:
 Why it matters: a reader who spots the same paper named three different ways in one answer stops trusting the answer was actually checked before it was shown.
 
 Status: Awaiting retest (Shipped_2026-09-23 item 13; UI_fix_plan item 12.12)
+
+### 76. A one-to-three-word question is asked back
+
+Testing: a very short question gets a clarifying question with choices, instead of an answer built on one silent guess at what it meant.
+
+Query: `reflux disease`, then `GERD`, then `BRCA1`, each as a new search. Then `Any trials for GERD?` and `What is GERD?`.
+
+Steps: ask each in a fresh conversation. Then ask `BRCA1`-style short follow-ups inside a conversation, for example `and BRCA2?` after a BRCA1 answer.
+
+Expected:
+
+- The first three are asked back: "What would you like to know about ...?" with four questions to pick from, such as symptoms and treatment, linked genes, clinical trials and recent research. Picking one runs that question.
+- `Any trials for GERD?` and `What is GERD?` are answered, not asked back: they say what they want.
+- A short follow-up inside a conversation is answered, since the conversation already says what it is about.
+
+Why it matters: the product owner's words, approving it on 2026-09-23: "If clarify needed -> yes approved". A two-word question like `reflux disease` could mean its symptoms, its trials or its genes, and answering one silent reading of it hides the other three from the reader.
+
+Status: In progress (UI_fix_plan item 12.3). Do not retest yet.
 
 ## Workflow for the product owner
 
