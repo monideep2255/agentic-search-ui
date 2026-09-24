@@ -1,0 +1,26 @@
+{
+  "depth": "plain_language",
+  "question": "Does coffee help make exercise more effective?",
+  "outcome": "ask",
+  "words": 95,
+  "paragraphs": 1,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "sources": [
+    "11583104",
+    "33388079",
+    "34291426",
+    "36870101",
+    "40626862"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 5 pubmed records: Caffeine and exercise: metabolism, endurance and performance. [1], International society of sports nutrition position stand: caffeine and exercise performance. [2], Effects of Caffeine on Resistance Exercise: A Review of Recent Research. [3], The effect of caffeine on subsequent sleep: A systematic review and meta-analysis. [4] and Coffee and cardiovascular disease. [5]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- Effects of Caffeine on Resistance Exercise: A Review of Recent Research.\n- The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.\n- Coffee and cardiovascular disease.\n\n(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q5"
+}

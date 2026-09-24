@@ -27,6 +27,7 @@ This is the one document that lists every query worth typing into the product, w
 - [8. Stop, feedback and the connection](#8-stop-feedback-and-the-connection)
 - [9. Screens, phone width, the tour and the disclaimer](#9-screens-phone-width-the-tour-and-the-disclaimer)
 - [10. Questions with no gene and no disease in them](#10-questions-with-no-gene-and-no-disease-in-them)
+- [11. Answers that answer the question](#11-answers-that-answer-the-question)
 - [Workflow for the product owner](#workflow-for-the-product-owner)
 - [Workflow for the developer](#workflow-for-the-developer)
 - [Where each query came from](#where-each-query-came-from)
@@ -53,18 +54,24 @@ When an answer does not match what is expected, screenshot it into `testing/Prod
 
 As of 23 September 2026. Everything named here is live on develop and none of it has been retested yet, so this is the queue rather than a summary.
 
-START WITH SECTION 10, queries 68 to 71. They came from someone who had never seen the product, six of their seven questions returned nothing on 2026-09-14, and all seven answer now. That is the largest change in behaviour to check and the one a person feels first.
+START WITH THE RETEST QUERIES THE PRODUCT OWNER WAS GIVEN, in this order:
 
-Then these two, because they are where a mistake is most likely and most costly:
-
-- Query 67, a past search reopening with the answer it gave. Pick a question whose answer had a table, such as an isolate question. The backend, the screen and the seam between them were built separately, so the table is where a seam would show.
+- Query 70, the same question with capitalisation and wording varied: `any trials for gerd?`, `recent papers on statins`, `what does the literature say about metformin`, and `is there a trial recruiting for melanoma`. All four used to be refused as "outside biomedical research".
+- Query 71, what sits under an answer that found nothing: `What variants cause ZZZFAKE1?` should read "Ask another question" below the refusal, with no suggestion chips.
+- Query 64, subject terms named in words rather than coded: `What MeSH terms are assigned to PMID 11237011?` should show 26 real terms, never a `[MeSH] D000818` style code.
+- Query 65, the opening count agreeing with the list beneath it: `Which diseases are associated with BRCA1?`.
 - Query 66, the phenotypic features of Marfan syndrome. One live run settles the single gap the 23 September work left open, and that entry says plainly what is not yet known about it.
+- Query 67, a past search reopening with the answer it gave. Use `What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?`, whose answer has a table, since the backend, the screen and the seam between them were built separately and the table is where a seam would show. The product owner reported on 2026-09-23 that clicking it instead re-ran the search; this retest is part of the diagnosis.
 
-Then the rest of the 23 September work: query 64 (subject terms in words), query 65 (the opening count agreeing with the list beneath it), and query 60 (the MCP configuration, whose address no longer drops the s from https).
+They came from someone who had never seen the product, six of their seven questions returned nothing on 2026-09-14, and all seven answer now. That is the largest change in behaviour to check and the one a person feels first, alongside the rest of section 10: queries 68 and 69.
+
+Then the rest of the 23 September work: query 60 (the MCP configuration, whose address no longer drops the s from https).
 
 Then the four one-look checks, each a single glance rather than a search: query 3 (the answer-modes info button), query 4 (the mode locking once a search starts), query 7 (copying an answer carries no citation-card text) and query 9 (two visits, different scientists, the same answer).
 
 Then the batch from the night of 22 September, still untested: queries 23 to 44 across sections 3, 4 and 5. That is the two lost searches, the coordinate range, the generic-word guard, the BioProject and BioSample accessions, and the whole isolate set.
+
+Queries 72 to 75, section 11, are still being built and are not on develop; do not retest them until the shipped list says they are live.
 
 Query numbers are permanent. A new query takes the next free number and sits in the section it belongs to, so the numbers do not run in strict order inside a section. Nothing is ever renumbered, because other documents point at these numbers.
 
@@ -1115,7 +1122,9 @@ Status: Removed (Product test 20)
 
 Testing: clicking a search in the history rail shows the answer already given, at once, instead of paying for a second one.
 
-Steps: sign in, ask a question whose answer has a TABLE, such as an isolate question from section 5, wait for the answer, start a new search, then click that first question in "Your searches".
+Query: `What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?`, as the example whose answer has a table.
+
+Steps: sign in, ask the query above, wait for the answer, start a new search, then click that first question in "Your searches".
 
 Expected:
 
@@ -1127,7 +1136,7 @@ Expected:
 
 Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 2; UI_fix_plan item 10.2). Query 51 covers the rail itself.
+Status: Reported broken 2026-09-23, under diagnosis (UI_fix_plan item 10.2). The product owner reported that clicking a past search re-ran it instead of showing the saved answer. Query 51 covers the rail itself.
 
 ## 8. Stop, feedback and the connection
 
@@ -1324,7 +1333,7 @@ Status: Awaiting retest (Shipped_2026-09-23 item 11; UI_fix_plan item 12.7)
 
 Testing: capitalisation does not decide whether a question is medical.
 
-Query: `any trials for gerd?` in lower case, then `recent papers on statins`, then `what does the literature say about metformin`
+Query: `any trials for gerd?` in lower case, then `recent papers on statins`, then `what does the literature say about metformin`, then `is there a trial recruiting for melanoma`
 
 Steps: ask each as a new search.
 
@@ -1333,6 +1342,7 @@ Expected:
 - Each is accepted and searched.
 - None is answered with "This looks outside biomedical research. I can help with a gene, variant, pathogen, or paper question."
 - Before 2026-09-23, `Any trials for GERD?` was accepted and `any trials for gerd?` was refused, because the capitals matched a gene-symbol pattern rather than because the question was understood.
+- `is there a trial recruiting for melanoma` was refused the same way before 2026-09-23, and answers with real ClinicalTrials.gov studies now.
 
 Why it matters: a person who types in lower case, or whose question names no gene in capitals, was being told their subject was outside biomedical research. That reads as a statement about their field, not about the product.
 
@@ -1342,7 +1352,7 @@ Status: Awaiting retest (Shipped_2026-09-23 item 9; UI_fix_plan item 12.2)
 
 Testing: a refusal does not invite the reader into a conversation that has nothing in it.
 
-Query: anything the product cannot answer. A made-up gene symbol works.
+Query: `What variants cause ZZZFAKE1?`
 
 Steps: ask it, wait for the refusal, then read everything below the refusal block.
 
@@ -1356,6 +1366,82 @@ Expected:
 Why it matters: the tester's own words were "If it didn't have an answer, why would I 'continue the conversation'? Maybe 'ask another question?'". Pressing the first chip sent a question about an "it" with no antecedent, so the product then asked them which gene they meant: its own suggestion walked them from one dead end into another.
 
 Status: Awaiting retest (Shipped_2026-09-23 item 10; UI_fix_plan item 12.4)
+
+## 11. Answers that answer the question
+
+Work in progress on `testing/UI_fix_plan.md` items 12.9 to 12.12, not yet on
+develop. Recorded here so the queries exist ahead of the ship, and so the
+retest happens on the right questions once the shipped list says they are
+live.
+
+### 72. Plain language and researcher mode read differently on the same disease question
+
+Testing: the two answer modes still change how a real answer is written, not just its length, once depth is measured on an answer that previously refused outright.
+
+Query: `What phenotypic features are associated with Marfan syndrome?`, asked once in Plain language and once in Researcher.
+
+Steps: ask it in Plain language mode, New search, switch to Researcher, ask it again.
+
+Expected:
+
+- The two answers read differently. Plain language uses simpler, everyday wording.
+- Researcher mode reads more technical, and is not thinner in substance than the plain language version.
+
+Why it matters: a student and a clinician asking the same disease question still want different depth, and this question could not be used to check that until the refusal behind it was fixed.
+
+Status: Blocked on the product owner's decision (UI_fix_plan items 12.9 and 12.10, section 2). Code-only checking passed 0 of 53 written sentences on 2026-09-23. Do not retest yet.
+
+### 73. A question with no gene or disease is answered, not just listed
+
+Testing: an answer to a question naming no gene and no disease actually answers the question in plain sentences drawn from the cited papers, rather than handing back a bare list of titles.
+
+Query: `Does coffee help make exercise more effective?`, then `What positive and negative genes do ashkenazi jewish people have?`
+
+Steps: ask each as a new search.
+
+Expected:
+
+- The coffee question's opening paragraph states what the published evidence reports about caffeine and exercise performance, in plain sentences, never a yes-or-no verdict or advice, each sentence cited.
+- The ashkenazi question's opening paragraph names the genes the papers actually name, such as BRCA1, BRCA2 and APC I1307K, each cited.
+- Neither answer reads "Found 5 pubmed records:" followed only by a list of titles with no explanatory sentence.
+
+Why it matters: a person asking a plain-language question wants the answer, not a bibliography they have to read themselves.
+
+Status: Blocked on the product owner's decision (UI_fix_plan items 12.9 and 12.10, section 2). Code-only checking passed 0 of 53 written sentences on 2026-09-23. Do not retest yet.
+
+### 74. The sources count agrees with what is shown
+
+Testing: the "Based on N sources" trust line names the same number as the SOURCES section on the page.
+
+Query: any answer, for example `Which diseases are associated with BRCA1?`
+
+Steps: get an answer, read the "Based on N sources" line under the answer, then count the SOURCES section on the page.
+
+Expected:
+
+- The two numbers are the same.
+
+Why it matters: two numbers on the same screen disagreeing about the same count undermines trust in both of them, not just the wrong one.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 12; UI_fix_plan item 12.11)
+
+### 75. A papers list reads as clean prose, with no record repeated
+
+Testing: a papers-based answer carries no leftover formatting defects and lists each record once.
+
+Query: `papers on the effects of caffeine on exercise performance`
+
+Steps: ask it, then read the whole answer closely.
+
+Expected:
+
+- No paragraph starts with a lowercase letter or a stray quote mark.
+- No paragraph reads "Another is titled ..." with no first paper named before it.
+- No restatement paragraph ("One is titled X. Another is titled Y"). A paper may appear twice, in the opening sentence and in the list, never three times. Measured 2026-09-23: twice is what ships today.
+
+Why it matters: a reader who spots the same paper named three different ways in one answer stops trusting the answer was actually checked before it was shown.
+
+Status: Awaiting retest (Shipped_2026-09-23 item 13; UI_fix_plan item 12.12)
 
 ## Workflow for the product owner
 
@@ -1397,3 +1483,4 @@ For the wider suite, `testing/Developer/Developer_workflows.md` has the full spe
 | 8. Stop, feedback and the connection | `Product/Product_workflows.md` tests 9, 10, 21 |
 | 10. Questions with no gene and no disease in them | `User-feedback/` (a second tester's four screenshots); `Shipped_2026-09-23.md` items 8 to 11; `UI_fix_plan.md` items 12.1, 12.2, 12.4, 12.7 |
 | 9. Screens, phone width, the tour and the disclaimer | `Product/Product_workflows.md` tests 11, 15, 17, 22; `Shipped_2026-09-20.md` retest item 4; `UI_fix_plan.md` item 11.30; `Shipped_2026-09-23.md` item 1 |
+| 11. Answers that answer the question | `UI_fix_plan.md` items 12.9 to 12.12 |

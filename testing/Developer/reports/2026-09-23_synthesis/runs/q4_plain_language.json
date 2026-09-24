@@ -1,0 +1,26 @@
+{
+  "depth": "plain_language",
+  "question": "papers on the effects of caffeine on exercise performance",
+  "outcome": "ask",
+  "words": 113,
+  "paragraphs": 1,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "sources": [
+    "11583104",
+    "25355191",
+    "32589582",
+    "33388079",
+    "36615805"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 5 pubmed records: Caffeine and exercise: metabolism, endurance and performance. [1], Exercise and sport performance with low doses of caffeine. [2], Caffeine effects on systemic metabolism, oxidative-inflammatory pathways, and exercise performance. [3], International society of sports nutrition position stand: caffeine and exercise performance. [4] and Effects of Caffeine Intake on Endurance Running Performance and Time to Exhaustion: A Systematic Review and Meta-Analysis. [5]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- Exercise and sport performance with low doses of caffeine.\n- Caffeine effects on systemic metabolism, oxidative-inflammatory pathways, and exercise performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- Effects of Caffeine Intake on Endurance Running Performance and Time to Exhaustion: A Systematic Review and Meta-Analysis.\n\n(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q4"
+}

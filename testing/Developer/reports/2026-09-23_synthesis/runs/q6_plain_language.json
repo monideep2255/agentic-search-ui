@@ -1,0 +1,26 @@
+{
+  "depth": "plain_language",
+  "question": "Are there any beneficial variants typically found in people of mediterranean descent?",
+  "outcome": "ask",
+  "words": 125,
+  "paragraphs": 1,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "sources": [
+    "16225031",
+    "34582790",
+    "35098403",
+    "37782073",
+    "39042260"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 5 pubmed records: Diagnosis and management of G6PD deficiency. [1], High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population. [2], Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium. [3], Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas. [4] and Molecular analyses of MEFV gene mutation variants in Turkish population. [5]. \n\n## Pubmed records found\n\n- Diagnosis and management of G6PD deficiency.\n- High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.\n- Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium.\n- Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.\n- Molecular analyses of MEFV gene mutation variants in Turkish population.\n\n(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q6"
+}

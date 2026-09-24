@@ -1,0 +1,19 @@
+{
+  "depth": "researcher",
+  "question": "Does coffee help make exercise more effective?",
+  "outcome": "refuse",
+  "words": 0,
+  "paragraphs": 0,
+  "headings": 0,
+  "list_items": 0,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": null,
+  "sources": [],
+  "notes": [],
+  "errors": [
+    "step/think: the plan tier's response did not match the think classification schema"
+  ],
+  "answer": "\n",
+  "key": "q5"
+}

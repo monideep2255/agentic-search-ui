@@ -1,0 +1,23 @@
+{
+  "depth": "researcher",
+  "question": "Are there any beneficial variants typically found in people of mediterranean descent?",
+  "outcome": "answer",
+  "words": 147,
+  "paragraphs": 2,
+  "headings": 2,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "16225031",
+    "34582790",
+    "35098403",
+    "37782073",
+    "39042260"
+  ],
+  "notes": [],
+  "errors": [],
+  "answer": "Found 6 pubmed records: Molecular analyses of MEFV gene mutation variants in Turkish population. [1], Diagnosis and management of G6PD deficiency. [2], High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population. [3], Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium. [4], Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas. [5] and Molecular analyses of MEFV gene mutation variants in Turkish population. [6]. \n\n## Familial Mediterranean Fever\nThe most common co-variant was the R202Q/M694V genotype (n = 507, 16.98%) [1]. \n\n## Pubmed records found\n\n- Diagnosis and management of G6PD deficiency.\n- High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.\n- Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium.\n- Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.\n- Molecular analyses of MEFV gene mutation variants in Turkish population.\n",
+  "key": "q6"
+}

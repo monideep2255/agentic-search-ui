@@ -1,0 +1,32 @@
+{
+  "depth": "researcher",
+  "question": "Any trials for GERD?",
+  "outcome": "ask",
+  "words": 152,
+  "paragraphs": 1,
+  "headings": 4,
+  "list_items": 7,
+  "table_rows": 5,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 12 sources, not yet confirmed",
+  "sources": [
+    "1795938",
+    "29132520",
+    "33351044",
+    "36170502",
+    "37034973",
+    "37516506",
+    "@DISEASE_Gastroesophageal_Reflux",
+    "NCT00141960",
+    "NCT00163306",
+    "NCT00181805",
+    "NCT00184522",
+    "NCT00235677"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+  ],
+  "errors": [],
+  "answer": "Found 5 clinical trial records for GERD: Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease [1], Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) [2], Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents [3], On Demand Treatment of Reflux Disease [4] and Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study [5]. \n\n## Clinical trial records found\n\n- Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease / COMPLETED\n- Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) / COMPLETED\n- Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents / COMPLETED\n- On Demand Treatment of Reflux Disease / COMPLETED\n- Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study / COMPLETED\n\n## Pubmed records found\n\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal reflux disease in children: What's new right now?\n- Gastroesophageal Reflux Disease.\n\n## Medgen records found\n\n- Gastroesophageal reflux (GERD)\n\n## Literature entity records found\n\n- Gastroesophageal Reflux\n\n(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)\n",
+  "key": "q3"
+}
