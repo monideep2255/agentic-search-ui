@@ -302,7 +302,14 @@ Built: ✅ · Live: 🚀 · Approved: 👍
 
 Batch: screens and pages.
 
-What you will see: the white box stays one width from progress to answer. The header and footer stay put, both in the lighter NCBI blue, with smooth changes between screens. New search is a filled blue button. The sign-in box is centred. Pushed as commits `ff80814` and `3e1ee64`, live on develop on 2026-09-12 and checked by screenshot at 1280px and 390px.
+What you will see:
+
+- the white box stays one width from progress to answer.
+- The header and footer stay put, both in the lighter NCBI blue, with smooth changes between screens.
+- New search is a filled blue button.
+- The sign-in box is centred.
+
+Pushed as commits `ff80814` and `3e1ee64`, live on develop on 2026-09-12 and checked by screenshot at 1280px and 390px.
 
 ### 2.1 Centre the sign-in box (R7)
 
@@ -1795,15 +1802,21 @@ most of it. Set 12's seven questions now answer or are asked back (12.3),
 this plan is the current state. This section is fully refreshed at the next
 session checkpoint.
 
-The cutoff. It is updated at the end of every working session, so the next
-session starts here rather than reconstructing state. LAST UPDATED 2026-09-23
-MORNING, when the product owner brought a second tester's feedback and it was
-re-run against today's code before anything was planned. THE ONE THING TO KNOW:
-six of that tester's seven questions still return no citation at all, unchanged
-since the 2026-09-14 build they were asked on, so SET 12 IS NOW THE PRIORITY
-and is item 1 of "Next, in order". The overnight session that preceded it ran
-unsupervised after the product owner approved a named list and then authorised
-picking up further work. Eight agents ran, tiered by task. What it did:
+The cutoff.
+
+- It is updated at the end of every working session, so the next
+  session starts here rather than reconstructing state.
+- LAST UPDATED 2026-09-23 MORNING, when the product owner brought a second
+  tester's feedback and it was re-run against today's code before anything
+  was planned.
+- THE ONE THING TO KNOW: six of that tester's seven questions still return no
+  citation at all, unchanged since the 2026-09-14 build they were asked on,
+  so SET 12 IS NOW THE PRIORITY and is item 1 of "Next, in order".
+- The overnight session that preceded it ran unsupervised after the product
+  owner approved a named list and then authorised picking up further work.
+- Eight agents ran, tiered by task.
+
+What it did:
 
 - Fixed 11.30's second half, the MCP address that downgraded an HTTPS request
   to plaintext, in the app rather than in a deployment setting
@@ -2255,11 +2268,14 @@ What is open and not on this list as its own item, each recorded in
    1, because a question that can be answered should be answered rather than
    queried back, and item 1 changes how many of them can be answered.
 3. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
-   row: "334" expects a clarifying ask and is refused as off-topic; "tell me
-   about the tree of life" expects an answer; the pathogenicity classification
-   request expects a flag rather than a medical-advice refusal. Nothing blocks
-   on it. A fourth row joins them: G-035's Taxonomy must-cite URL. ITEM 12.2
-   MAY CLOSE SOME OF THESE ON ITS OWN, since they are the same check.
+   row:
+   - "334" expects a clarifying ask and is refused as off-topic
+   - "tell me about the tree of life" expects an answer
+   - the pathogenicity classification request expects a flag rather than a
+     medical-advice refusal
+   Nothing blocks on it. A fourth row joins them: G-035's Taxonomy must-cite
+   URL. ITEM 12.2 MAY CLOSE SOME OF THESE ON ITS OWN, since they are the same
+   check.
 4. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
 5. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
    established that when no code template matches, the plan-tier model writes
