@@ -71,6 +71,7 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | The day's shipped list: one row per item shipped that day, the numbered "What to retest" items, and what was measured rather than built | `testing/Shipped_<YYYY-MM-DD>.md` | A pointer by item number, never a copy |
 | Where every feature stands: features being built and still to do, additional notes | The high-level tracker at the top of `testing/UI_fix_plan.md`, refreshed by this checkpoint from the item rows it summarises, since it is a derived index and can drift | Nowhere else |
 | Every finished feature, its test query and its retest item | The "Done features at a glance" table at the top of `testing/UI_fixes_done.md`, in step with `testing/Test_queries_and_workflows.md` and the shipped lists | Nowhere else |
+| Every query worth typing, what a person should see, and each query's test status | `testing/Test_queries_and_workflows.md` | A pointer by query number, never a copy |
 | The tracked counts on line 32 of `CLAUDE.md` and `AGENTS.md` (Python tests, decisions, learnings) and Plan.md's "Decisions logged" line | This checkpoint, in Step 5d, from the values `tracker/check_doc_drift.py` computes | Nowhere else |
 
 `PROGRESS.md` is the one deliberate exception to the pointer rule, and it is worth saying why. Every other row above avoids restating a fact because a second copy drifts. `PROGRESS.md` restates many of them on purpose, in different words, because its reader cannot follow a pointer into `tracker/phase_N.M.md` and get anything useful out of it. The protection against drift is that it is refreshed at Step 5b of every checkpoint, from the same sources, rather than edited ad hoc.
@@ -146,7 +147,7 @@ Confirm before writing. Ask if unclear from context:
 - The "Where we stopped" section: rewrite it in place. It is the cutoff, and the next session starts from it rather than reconstructing state. It carries what is live, what is parked and why, what is waiting on the product owner, the known loose ends, and the ordered next actions.
 - An item that was merged and then reverted is NOT quietly returned to its earlier status. Say it was reverted, and say what question is open, or the next session will re-land the same work into the same defect.
 - Refresh the "Where every feature stands" tracker at the top of `testing/UI_fix_plan.md` for every item that changed state this session: features still to implement, features done (with the approval exceptions named item by item), and additional notes. It is a derived index of the rows below it and drifts if left alone.
-- Add one row per item to the session table under "Where we stopped" for every item this session touched.
+- Add a session table, one row per item this session touched, under "Session history" in `testing/UI_fixes_done.md`, where the session tables have lived since the 2026-09-24 split. "Where we stopped" in the plan keeps only the cutoff.
 - Rewrite "Next, in order" and step 4 of "How to start the next session" in place, so item 1 is genuinely next and the retest range names the right item numbers.
 
 ### Step 5b: PROGRESS.md, the plain-language update (all modes)
@@ -185,6 +186,12 @@ Rules for the writing, which are stricter here than anywhere else in the repo:
 - "What the day taught": a short closing note.
 
 The continuation prompt and the fix plan point at these items by number, so a retest item's number must not be renumbered once written.
+
+Then the test queries, `testing/Test_queries_and_workflows.md`, which the product owner asked three times on 2026-09-23 to keep in step with the shipped list and the fix plan:
+
+- Every item shipped this session has a query: the exact text a person types, what they should see, and a Status line naming its shipped retest item and its item in `testing/UI_fixes_done.md`.
+- An item still being built gets its query written with the status "In progress", so the query exists before the item lands.
+- "What to retest first" lists every query awaiting retest, newest work first.
 
 ### Step 5d: the tracked counts (all modes)
 
@@ -238,6 +245,7 @@ Before declaring the checkpoint done, verify:
 - [ ] UI-fix-loop mode: the "Where every feature stands" tracker at the top of `testing/UI_fix_plan.md` agrees with every item row it summarises (spot-check each item that changed state).
 - [ ] All modes: every failure the session hit is a row in LEARNINGS.md.
 - [ ] All modes: the counts on CLAUDE.md and AGENTS.md line 32 and Plan.md's decisions line equal the drift check's computed values.
+- [ ] UI-fix-loop mode: every item whose state changed says the same status in all four places that carry it: its own row, the plan's tracker, the done file's index, and its query's Status line in `testing/Test_queries_and_workflows.md`. Measured 2026-09-24: seven statuses had gone stale in the items' own rows because only the tracker at the top was updated.
 - [ ] The fresh-session test: from the continuation prompt's Step 2 alone, a new session can state what is live, what awaits retest and where, and the one next action.
 
 ## Output
