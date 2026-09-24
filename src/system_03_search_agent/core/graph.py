@@ -481,7 +481,13 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
-from system_03_search_agent.core import accession, breadth_plan, coordinate_window, isolate_search
+from system_03_search_agent.core import (
+    accession,
+    breadth_plan,
+    clarify,
+    coordinate_window,
+    isolate_search,
+)
 from system_03_search_agent.core.next_step import (
     build_next_step_query,
     entity_type_noun,
@@ -2066,11 +2072,127 @@ async def resolve_window_genes(
     return coordinate_window.genes_in_window(records, window)
 
 
+#: Fix-plan item 12.3, REDESIGNED 2026-09-24 on the product owner's
+#: instruction, in their words: "Please do not hardcode! Hopefully not that
+#: dumb". The STRUCTURAL trigger this rule keeps is the owner's own number,
+#: stated under item 11.38: "Jev becomes our classfier -> 1-3 words ->
+#: clarification question or move forward". Whether to ask, and what to
+#: ask, is `core.clarify`'s classifier's decision, never a word list; see
+#: that module's docstring for the full account, including where Jev's own
+#: Bool question type slots into `ask_back` once it leaves the backlog.
+_MAX_CLARIFY_TRIGGER_WORDS: Final[int] = 3
+
+#: The classifier's own share of `budget_for_step("think", "lookup")`,
+#: never the whole thing. It must leave room for the REAL think classify
+#: call that still runs afterward on an `ask_back=False` verdict or ANY
+#: classifier failure, both of which fall through to the ordinary flow
+#: below this block.
+_CLARIFY_BUDGET_FRACTION: Final[float] = 0.2
+
+#: A short classification needs no long completion. Comfortably above the
+#: JSON-escaped form of a 220-character question plus four 220-character
+#: options, with room for the fixed key names.
+_CLARIFY_MAX_TOKENS: Final[int] = 300
+
+
+async def _clarify_or_proceed(
+    harness: Harness, trace_id: str, sink: _EventSink, text: str
+) -> clarify.ClarifyDecision | None:
+    """The guard-tier ask-or-proceed call, or None on ANY failure.
+
+    None is the fail-open signal. The caller, `think_node`, proceeds with
+    the search on None exactly as it would if this function had never been
+    called, per the product owner's instruction that a broken or absent
+    classifier must never block a question that could otherwise be
+    answered: an unparseable reply, a wrong shape, a timeout
+    (`HarnessCallError`), or a per-query cap hit
+    (`cost_control.QueryCapExceededError`) all fall through here rather
+    than being enumerated separately by the caller.
+
+    The `cost` event is emitted the moment the call RETURNS, before any
+    attempt to parse its content, because that is the moment money was
+    actually spent; a reply this function then rejects as unusable still
+    cost what it cost.
+
+    Each failure is logged at WARNING with the trace id and the
+    exception's CLASS NAME only, never its message or the model's reply
+    text: the message could echo untrusted model output, and this sink is
+    not scoped to carry that (`ai-security-standards.md`).
+    """
+    messages = clarify.build_clarify_messages(text)
+    budget_s = budget_for_step("think", "lookup") * _CLARIFY_BUDGET_FRACTION
+    try:
+        response = await _dispatch_tier_call(
+            harness,
+            trace_id,
+            "guard",
+            "think",
+            messages,
+            budget_s=budget_s,
+            max_tokens=_CLARIFY_MAX_TOKENS,
+            cache_prefix=None,
+        )
+    except (cost_control.QueryCapExceededError, HarnessCallError) as exc:
+        logger.warning(
+            "clarify classifier call failed (trace %s): %s",
+            trace_id,
+            type(exc).__name__,
+        )
+        return None
+    sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "guard"))
+    try:
+        return clarify.parse_clarify_reply(response.content)
+    except clarify.ClarifyUnavailableError as exc:
+        logger.warning(
+            "clarify classifier reply unusable (trace %s): %s",
+            trace_id,
+            type(exc).__name__,
+        )
+        return None
+
+
 async def think_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
+
+    # Fix-plan item 12.3, REDESIGNED 2026-09-24. Checked FIRST: before the
+    # exact-ID pre-pass below, before any resolver, and before the Think
+    # classification call further down, so a question the classifier asks
+    # back never pays for either. Gated on `_session_memory(state) is
+    # None`, i.e. this question OPENS the conversation: `load_for_caller`
+    # returns None for exactly "a session that has no memory yet, which is
+    # the ordinary first turn", so a follow-up such as "and BRCA2?" never
+    # reaches the classifier at all, since memory already supplies its
+    # subject (docs/build/Search_and_conversation_behaviour.md). The word
+    # count is the product owner's own trigger from item 11.38 ("1-3
+    # words"), a plain whitespace split with no punctuation stripping and
+    # no word list: everything past the trigger is `core.clarify`'s model
+    # decision, never code.
+    if _session_memory(state) is None:
+        trigger_words = query.text.strip().split()
+        if trigger_words and len(trigger_words) <= _MAX_CLARIFY_TRIGGER_WORDS:
+            decision = await _clarify_or_proceed(harness, trace_id, sink, query.text)
+            if decision is not None and decision.ask_back:
+                think_payload = ThinkPayload(
+                    narrative=(
+                        "the clarify classifier read a one-to-three-word "
+                        "opening question and decided it names a subject "
+                        "rather than a request, so the answer asks which "
+                        "aspect is meant before any search"
+                    ),
+                    query_class="lookup",
+                    resolved_entities=[],
+                    clarifying_question=decision.question,
+                    clarifying_options=list(decision.options),
+                )
+                sink.emit("think", think_payload)
+                return sink.result(
+                    query_class="lookup",
+                    resolved_entities=[],
+                    clarification_needed=decision.question,
+                )
 
     # T-4.7-05, Section 17's exact-ID-first order: a deterministic, LOCAL,
     # non-async pre-pass runs FIRST, before any model call. Only text NOT

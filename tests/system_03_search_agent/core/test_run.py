@@ -167,7 +167,7 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 def _valid_query(**overrides: object) -> Query:
-    """The shared query fixture. Its default text ("hello") is
+    """The shared query fixture. Its default text ("what can you do") is
     deliberately one of `core.graph._NO_TOOL_QUERY_TEXTS` (T-2.1-08), so
     plan_node selects no tool here, leaving this file's stub-era
     assertions (an empty `tool_calls` list, `total_tool_calls == 0`)
@@ -175,9 +175,17 @@ def _valid_query(**overrides: object) -> Query:
     that no tool selection logic exists. Real cypher_query dispatch is
     covered in tests/system_03_search_agent/core/test_graph.py, which
     exercises the compiled graph directly with a substantive query text.
+
+    FOUR WORDS, NOT ONE ("hello", changed 2026-09-24), since fix-plan item
+    12.3, REDESIGNED the same day: a one-to-three-word opening question
+    now makes its OWN guard-tier classifier call
+    (`core.graph._clarify_or_proceed`) before any of this, which "hello"
+    would have triggered, inserting an extra model call and cost event
+    ahead of this file's own fixed call counts and event sequences. Four
+    words is past that trigger.
     """
     base: dict[str, object] = {
-        "text": "hello",
+        "text": "what can you do",
         "session_id": "session-1",
         "trace_id": "trace-1",
         "user_id": None,
@@ -333,8 +341,8 @@ class TestRunEmitsTheFullFiveNodeLoop:
 
 
 # ---------------------------------------------------------------------------
-# T-2.1 rework: every `_valid_query()` use above defaults to "hello",
-# core.graph._NO_TOOL_QUERY_TEXTS's no-tool path, leaving run() and
+# T-2.1 rework: every `_valid_query()` use above defaults to "what can you
+# do", core.graph._NO_TOOL_QUERY_TEXTS's no-tool path, leaving run() and
 # run_streaming() with zero coverage of real tool dispatch through their
 # own real entry points (tests/system_03_search_agent/core/test_graph.py
 # exercises the compiled graph directly, which is a different call path).
