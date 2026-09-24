@@ -66,7 +66,7 @@ Wait for docs-sync to complete before proceeding. Its edits may add files to the
 
 ### What docs-sync owns, and what it must not touch
 
-docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`: `requirements/Plan.md`, `requirements/phase_6/Continuation_prompt.md`, `PROGRESS.md`, `testing/UI_fix_plan.md`, `testing/Shipped_<date>.md`, `LEARNINGS.md` and the tracked counts. So at a session boundary run `/phase-checkpoint` BEFORE `/ship`.
+docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`: `requirements/Plan.md`, `requirements/phase_6/Continuation_prompt.md`, `PROGRESS.md`, `testing/UI_fix_plan.md`, `testing/UI_fixes_done.md`, `testing/Test_queries_and_workflows.md`, `testing/Shipped_<date>.md`, `LEARNINGS.md` and the tracked counts. So at a session boundary run `/phase-checkpoint` BEFORE `/ship`.
 
 Ship checks it ran: the "LAST UPDATED" date in the fix plan's "Where we stopped" section and the continuation prompt's session-boundary date must be today's, or the ship stops and says the checkpoint is missing. Memory recorded "checkpoint then ship" as a standing convention on 2026-09-20, and a convention that lives only in memory is not enforcement.
 
@@ -218,6 +218,11 @@ So the check is three questions, and ALL THREE must clear before anything is rem
 1. Unmerged commits: `git log develop..<branch> --oneline`. Non-empty means stop.
 2. Uncommitted work in the worktree: `git -C <worktree-path> status --short` and `git -C <worktree-path> diff --stat`. ANY modified tracked file means stop, regardless of what the commit log says. Untracked files are classified individually, never dismissed as scratch by default.
 3. Reverted-after-merge: `git log --oneline --grep="Revert" develop | head`, and check whether the branch's commit was merged and then reverted. An ancestor of `develop` whose change is no longer in the tree is PARKED work, not finished work.
+
+Two situations change HOW a worktree is removed, both measured on 2026-09-24:
+
+- Locked by a running process. `git worktree list` shows `locked`, and the lock reason names a process id. If `ps -p <pid>` shows that process running, leave the worktree: it is released when the process ends. Never `git worktree remove -f -f` past a live lock.
+- A link into the main checkout. An agent that ran the frontend suite in its worktree linked `frontend/node_modules` to the main checkout's. `unlink` any such link first (`test -L <path> && unlink <path>`), then remove the worktree, so no removal can follow the link into the main checkout's files.
 
 Only when all three clear: `git worktree remove --force <path>`, `git worktree prune`, and `git branch -D <branch>`.
 
