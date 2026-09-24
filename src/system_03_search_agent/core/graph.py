@@ -2059,11 +2059,140 @@ async def resolve_window_genes(
     return coordinate_window.genes_in_window(records, window)
 
 
+#: Fix-plan item 12.3 (2026-09-23), the product owner's approved design, in
+#: their own words: "If clarify needed -> yes approved". A question of one to
+#: three words, with no word from this set, that OPENS a conversation (a
+#: follow-up inside a conversation is never asked back, since memory already
+#: supplies its subject: see `_bare_topic_clarification`'s one call site)
+#: reads as a bare topic ("reflux disease", "GERD", "BRCA1", "MeSH", "Marfan")
+#: rather than a specific request, and gets asked back instead of guessed at.
+#: Any of these words present exempts the question ("What is GERD?", "Any
+#: trials for GERD?"), because it already states what is wanted.
+_BARE_TOPIC_QUESTION_WORDS: Final = frozenset(
+    {
+        "what",
+        "which",
+        "how",
+        "why",
+        "who",
+        "when",
+        "where",
+        "is",
+        "are",
+        "does",
+        "do",
+        "can",
+        "should",
+        "list",
+        "show",
+        "tell",
+        "find",
+        "any",
+    }
+)
+
+#: A fourth word states enough of a request to search rather than ask
+#: ("Any trials for GERD?"), so the check is narrowly one to three words.
+_MAX_BARE_TOPIC_WORDS: Final[int] = 3
+
+#: Keeps every one of the four full questions below well under
+#: `ThinkPayload.clarifying_options`'s 220-character-per-item bound, with
+#: room to spare for the longest template ("Which genes or variants are
+#: linked to ... ?") even against a pathologically long single "word".
+_MAX_BARE_TOPIC_CHARS: Final[int] = 150
+
+
+@dataclass(frozen=True)
+class _BareTopicClarification:
+    """The clarifying question and its four one-click options."""
+
+    question: str
+    options: tuple[str, str, str, str]
+
+
+def _bare_topic_clarification(text: str) -> _BareTopicClarification | None:
+    """A bare one-to-three-word topic's clarifying question, or None.
+
+    None when the text is not this shape at all: empty, more than
+    `_MAX_BARE_TOPIC_WORDS` words, or carrying a word from
+    `_BARE_TOPIC_QUESTION_WORDS`. Tokenized the same way
+    `_is_memory_bound_follow_up` and `_needs_clarification` already tokenize
+    a question elsewhere in this module (`token.strip("?.,;:!\"'()")` on each
+    whitespace-split word), so a trailing question mark never exempts a bare
+    topic on its own: "GERD?" strips to the single token "GERD" and is still
+    asked back, since a question mark alone does not say what is wanted.
+
+    This function does not check whether the question opens a conversation;
+    it has no `state` to check that against. Its one call site in
+    `think_node` gates on `_session_memory(state) is None` first, so a
+    follow-up such as "and BRCA2?" is never even offered to this function:
+    session memory already supplies its subject.
+
+    A pure greeting ("hello", "hi", "thanks") is exempt via the SAME
+    `_NO_TOOL_QUERY_TEXTS` set `_select_planned_tool_call` already checks,
+    never asked back as though it were an ambiguous biomedical topic.
+    "hello" is not a shorter, ruder version of "GERD"; it is not a topic at
+    all, and the person typing it would read "What would you like to know
+    about hello?" as the product malfunctioning, not as help.
+    """
+    normalized = text.strip().lower()
+    if not normalized or normalized in _NO_TOOL_QUERY_TEXTS:
+        return None
+    tokens = [token.strip("?.,;:!\"'()") for token in text.strip().split()]
+    tokens = [token for token in tokens if token]
+    if not tokens or len(tokens) > _MAX_BARE_TOPIC_WORDS:
+        return None
+    if any(token.lower() in _BARE_TOPIC_QUESTION_WORDS for token in tokens):
+        return None
+    topic = " ".join(tokens)[:_MAX_BARE_TOPIC_CHARS]
+    return _BareTopicClarification(
+        question=f"What would you like to know about {topic}?",
+        options=(
+            f"What is {topic} and what are its symptoms?",
+            f"Which genes or variants are linked to {topic}?",
+            f"Are there clinical trials for {topic}?",
+            f"What does recent research say about {topic}?",
+        ),
+    )
+
+
 async def think_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
+
+    # Fix-plan item 12.3 (2026-09-23). Checked FIRST: before the exact-ID
+    # pre-pass below, before any resolver, and before the Think model call
+    # further down. The product owner's design is explicit that this is
+    # "decided in code, before any search, so it costs nothing and the
+    # answer is instant. No model decides it." Gated on
+    # `_session_memory(state) is None`, i.e. this question OPENS the
+    # conversation: `load_for_caller` returns None for exactly "a session
+    # that has no memory yet, which is the ordinary first turn", so a
+    # follow-up such as "and BRCA2?" never reaches
+    # `_bare_topic_clarification` at all, since memory already supplies its
+    # subject (docs/build/Search_and_conversation_behaviour.md).
+    if _session_memory(state) is None:
+        bare_topic = _bare_topic_clarification(query.text)
+        if bare_topic is not None:
+            think_payload = ThinkPayload(
+                narrative=(
+                    "the question is a bare topic of three words or fewer "
+                    "with no question word, so the answer asks which aspect "
+                    "before any search"
+                ),
+                query_class="lookup",
+                resolved_entities=[],
+                clarifying_question=bare_topic.question,
+                clarifying_options=list(bare_topic.options),
+            )
+            sink.emit("think", think_payload)
+            return sink.result(
+                query_class="lookup",
+                resolved_entities=[],
+                clarification_needed=bare_topic.question,
+            )
 
     # T-4.7-05, Section 17's exact-ID-first order: a deterministic, LOCAL,
     # non-async pre-pass runs FIRST, before any model call. Only text NOT

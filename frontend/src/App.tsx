@@ -1779,6 +1779,12 @@ export function App() {
                  * exactly today's behaviour and what an older backend gives.
                  */
                 nextStepQuery={view.nextStepQuery}
+                // UI fix plan item 12.3. The four ready-made questions for a
+                // bare-topic clarification ("reflux disease", "GERD"), read
+                // from the same `think` event `view.clarification` already
+                // reads, so the two can never disagree about which run they
+                // describe.
+                clarifyingOptions={view.clarificationOptions}
                 onAsk={(next) => void ask(next, depth, true)}
               />
             }

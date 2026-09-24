@@ -314,6 +314,65 @@ class TestThinkPayload:
         with pytest.raises(ValidationError):
             ResolvedEntity(text="BRCA1", curie="NCBIGene:672", confidence=1.5)
 
+    def test_clarifying_options_defaults_to_none(self) -> None:
+        """Fix-plan item 12.3. An older producer that has never heard of
+        this field still validates, and item 7.5's own clarification
+        ("which gene, variant or condition do you mean") never sets it."""
+        payload = ThinkPayload(
+            narrative="ok",
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question="One more detail is needed",
+        )
+        assert payload.clarifying_options is None
+
+    def test_clarifying_options_at_max_items_accepted(self) -> None:
+        payload = ThinkPayload(
+            narrative="ok",
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question="What would you like to know about GERD?",
+            clarifying_options=[
+                "What is GERD and what are its symptoms?",
+                "Which genes or variants are linked to GERD?",
+                "Are there clinical trials for GERD?",
+                "What does recent research say about GERD?",
+            ],
+        )
+        assert payload.clarifying_options is not None
+        assert len(payload.clarifying_options) == 4
+
+    def test_clarifying_options_over_max_items_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            ThinkPayload(
+                narrative="ok",
+                query_class="lookup",
+                resolved_entities=[],
+                clarifying_question="What would you like to know about GERD?",
+                clarifying_options=["one", "two", "three", "four", "five"],
+            )
+
+    def test_clarifying_options_item_at_max_length_accepted(self) -> None:
+        payload = ThinkPayload(
+            narrative="ok",
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question="ok",
+            clarifying_options=["x" * 220],
+        )
+        assert payload.clarifying_options is not None
+        assert len(payload.clarifying_options[0]) == 220
+
+    def test_clarifying_options_item_over_max_length_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            ThinkPayload(
+                narrative="ok",
+                query_class="lookup",
+                resolved_entities=[],
+                clarifying_question="ok",
+                clarifying_options=["x" * 221],
+            )
+
 
 class TestPlanPayload:
     def test_example_from_spec(self) -> None:

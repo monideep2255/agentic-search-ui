@@ -163,6 +163,22 @@ class ThinkPayload(BaseModel):
     ]
     resolved_entities: list[ResolvedEntity] = Field(default_factory=list, max_length=20)
     clarifying_question: str | None = Field(None, max_length=500)
+    # Fix-plan item 12.3 (2026-09-23), the product owner's approved design: a
+    # bare one-to-three-word question that opens a conversation ("reflux
+    # disease", "GERD") gets a clarifying question PLUS a short set of full
+    # questions the reader can pick with one click, rather than only the
+    # free-text field item 7.5 already gives every clarification. ADDITIVE
+    # and OPTIONAL, default None, per system-design-patterns pattern 10: an
+    # older producer or consumer that has never heard of this field is
+    # unaffected, and every clarification that is not this bare-topic shape
+    # (item 7.5's "which gene, variant or condition do you mean") leaves it
+    # None exactly as before this field existed. Always four items when set
+    # (`core.graph._bare_topic_clarification`), capped at 4 defensively
+    # rather than trusting the producer never to grow the list, the same
+    # posture every other bounded array on this payload already takes.
+    clarifying_options: list[Annotated[str, Field(max_length=220)]] | None = Field(
+        None, max_length=4
+    )
 
 
 class ToolCall(BaseModel):

@@ -75,6 +75,17 @@ export interface ThinkPayload {
   query_class: "lookup" | "single_hop" | "multi_hop" | "aggregate" | "exploratory";
   resolved_entities: ResolvedEntity[];
   clarifying_question: string | null;
+  /**
+   * UI fix plan item 12.3 (2026-09-23). Four full questions the reader can
+   * pick with one click, set only for a bare one-to-three-word topic that
+   * opens a conversation ("reflux disease", "GERD"). OPTIONAL AND
+   * NULLABLE on the wire, mirroring `contracts/events.py`: an older
+   * backend omits it, item 7.5's own clarification ("which gene, variant
+   * or condition do you mean") never sets it, and every consumer treats
+   * absent and null identically, exactly like the three persona fields on
+   * `ToolCall` above.
+   */
+  clarifying_options?: string[] | null;
 }
 
 export interface ToolCall {
@@ -401,7 +412,10 @@ function isThinkPayload(value: unknown): value is ThinkPayload {
     ["lookup", "single_hop", "multi_hop", "aggregate", "exploratory"].includes(value.query_class) &&
     Array.isArray(value.resolved_entities) &&
     value.resolved_entities.every(isResolvedEntity) &&
-    isNullableString(value.clarifying_question)
+    isNullableString(value.clarifying_question) &&
+    (value.clarifying_options === undefined ||
+      value.clarifying_options === null ||
+      isStringArray(value.clarifying_options))
   );
 }
 

@@ -79,6 +79,21 @@ export interface FollowUpProps {
    * hunting for New search.
    */
   isRefusal?: boolean;
+  /**
+   * UI fix plan item 12.3. Four ready-made questions to pick from, set
+   * only when the run's `clarification` is a bare-topic clarification
+   * ("reflux disease", "GERD"), never for item 7.5's own "which gene,
+   * variant or condition do you mean" clarification.
+   *
+   * Rendered REGARDLESS of `isRefusal`, unlike `hints` below. A
+   * clarification counts as a refusal (see `isRefusal`'s own doc), and
+   * item 12.4 is right to hide the generic three hints under one, since
+   * their referring words ("it", "those") have no antecedent yet. These
+   * four are different: they are the answer to the clarification itself,
+   * so hiding them would turn "ask which aspect" into a second dead end
+   * rather than the one click item 12.3 exists to offer.
+   */
+  clarifyingOptions?: string[] | null;
 }
 
 export function FollowUp({
@@ -87,6 +102,7 @@ export function FollowUp({
   nextStep = null,
   nextStepQuery = null,
   isRefusal = false,
+  clarifyingOptions = null,
 }: FollowUpProps) {
   const [text, setText] = useState("");
 
@@ -233,6 +249,46 @@ export function FollowUp({
           >
             Yes, go deeper
           </Box>
+        </Box>
+      ) : null}
+
+      {/*
+        UI fix plan item 12.3. Rendered with NO `!isRefusal` guard, on
+        purpose: a clarification IS a refusal (`App.tsx` sets `isRefusal`
+        from the same `refusal || refusalLabel` check either way), and
+        these four questions are the answer to it, not a suggestion that
+        assumes something was already found. Reuses the hint chips' own
+        style below verbatim, the shipped precedent for a clickable pill in
+        this component, per this repository's design-consistency rule.
+      */}
+      {clarifyingOptions && clarifyingOptions.length > 0 ? (
+        <Box
+          data-testid="clarifying-options"
+          sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.5 }}
+        >
+          {clarifyingOptions.map((option) => (
+            <Box
+              key={option}
+              component="button"
+              type="button"
+              data-testid="clarifying-option"
+              onClick={() => onAsk?.(option)}
+              sx={{
+                font: "inherit",
+                fontSize: 12.5,
+                px: 1.4,
+                py: 0.5,
+                borderRadius: 999,
+                cursor: "pointer",
+                color: designTokens.inkMuted,
+                bgcolor: designTokens.surfaceSunk,
+                border: `1px solid ${designTokens.line}`,
+                "&:hover": { color: designTokens.ink, borderColor: designTokens.lineStrong },
+              }}
+            >
+              {option}
+            </Box>
+          ))}
         </Box>
       ) : null}
 

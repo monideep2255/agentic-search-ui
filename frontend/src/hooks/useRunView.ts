@@ -308,6 +308,19 @@ export interface RunView {
    */
   clarification: string | null;
   /**
+   * The four ready-made questions to pick from, or an empty array (UI fix
+   * plan item 12.3).
+   *
+   * Read from the SAME `think` event as `clarification` above, never
+   * computed independently, so the two can never name different runs.
+   * Populated only for a bare one-to-three-word topic that opens a
+   * conversation ("reflux disease", "GERD"); item 7.5's own clarification
+   * ("which gene, variant or condition do you mean") sends no options, so
+   * this stays empty for that shape, exactly as it does for every run
+   * before this field existed.
+   */
+  clarificationOptions: string[];
+  /**
    * The refusal's short neutral label, or null (R13, R44).
    *
    * SEPARATE FROM `refusal` rather than prepended to it, because the two
@@ -376,6 +389,7 @@ export const EMPTY_RUN_VIEW: RunView = {
   failure: null,
   refusal: null,
   clarification: null,
+  clarificationOptions: [],
   refusalLabel: null,
   refusalLink: null,
   capMessage: null,
@@ -1251,6 +1265,23 @@ export function useRunView(events: AgentEvent[]): RunView {
         : null;
 
     /*
+     * THE FOUR OPTIONS TO PICK FROM (UI fix plan item 12.3).
+     *
+     * Read from the SAME `clarifyingThink` event found above, never a
+     * separate search, so this can never name a different run's options.
+     * `clarifying_options` is optional and nullable on the wire; absent,
+     * null, or (defensively) a non-array all resolve to the same empty
+     * array a run with no options already returns.
+     */
+    const clarificationOptions =
+      clarifyingThink !== undefined && Array.isArray(clarifyingThink.payload.clarifying_options)
+        ? clarifyingThink.payload.clarifying_options
+            .filter((option): option is string => typeof option === "string")
+            .map((option) => option.trim())
+            .filter((option) => option.length > 0)
+        : [];
+
+    /*
      * PRECEDENCE, stated rather than left to the order of the ternaries.
      *
      *   A failed guardrail wins outright. The question never reached Think,
@@ -1361,6 +1392,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       failure,
       refusal,
       clarification,
+      clarificationOptions,
       refusalLabel,
       refusalLink,
       capMessage,
