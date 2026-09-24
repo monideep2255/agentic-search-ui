@@ -189,7 +189,7 @@ def _value(line: str) -> str:
     return line.split("name: ", 1)[1] if "name: " in line else line
 
 
-def _state() -> dict[str, object]:
+def _state(depth: str = "researcher") -> dict[str, object]:
     from system_03_search_agent.harness.coordinator_worker import Finding
 
     rows = _mesh_rows()
@@ -198,7 +198,7 @@ def _state() -> dict[str, object]:
         session_id="session-mesh",
         trace_id="trace-mesh",
         user_id=None,
-        audience_depth="researcher",
+        audience_depth=depth,  # type: ignore[arg-type]
     )
     finding = Finding(
         call_id="cq-mesh",
@@ -228,22 +228,50 @@ def _state() -> dict[str, object]:
     }
 
 
-def _answer_text(result) -> str:
+def _token_payloads(result) -> list[dict]:
+    return [event.payload for event in result["events"] if event.type == "token"]
+
+
+def _answer_text(result, *, skip_identifier_column: bool = False) -> str:
     """Every visible token, text and table cell alike, as one string.
 
     Joining `text` alone is NOT faithful: a `table_row` token's visible
     content lives in `cells` while its `text` is a different sentence
     (established by worker B1 on 2026-09-22 against a real run). An arm that
     read `text` only could assert a term's absence while it was on screen.
+
+    `skip_identifier_column` leaves out exactly the cells under an
+    "Identifier" header (item 12.9's Researcher column) and nothing else, so
+    an arm can assert a code appears nowhere EXCEPT in its own labelled cell.
     """
     parts: list[str] = []
-    for event in result["events"]:
-        if event.type != "token":
-            continue
-        payload = event.payload
+    identifier_at: int | None = None
+    for payload in _token_payloads(result):
+        cells = [str(cell) for cell in (payload.get("cells") or [])]
+        if payload.get("kind") == "table_header":
+            identifier_at = cells.index("Identifier") if "Identifier" in cells else None
         parts.append(str(payload.get("text") or ""))
-        parts.extend(str(cell) for cell in (payload.get("cells") or []))
+        if (
+            skip_identifier_column
+            and payload.get("kind") == "table_row"
+            and identifier_at is not None
+        ):
+            cells = [cell for at, cell in enumerate(cells) if at != identifier_at]
+        parts.extend(cells)
     return " ".join(parts)
+
+
+def _identifier_by_name(result) -> dict[str, str]:
+    """Each Researcher table row's name cell mapped to its Identifier cell."""
+    mapping: dict[str, str] = {}
+    identifier_at: int | None = None
+    for payload in _token_payloads(result):
+        cells = payload.get("cells") or []
+        if payload.get("kind") == "table_header":
+            identifier_at = cells.index("Identifier") if "Identifier" in cells else None
+        elif payload.get("kind") == "table_row" and identifier_at is not None:
+            mapping[cells[0]] = cells[identifier_at]
+    return mapping
 
 
 @pytest.mark.asyncio
@@ -258,15 +286,60 @@ async def test_the_answer_names_mesh_terms_in_words(wired) -> None:
     or a refusal; asserting the headings are present would pass on an answer
     that showed both the heading and the code. All four distinct headings are
     required, so an answer that resolved one id and reused it cannot pass.
+
+    Item 12.9 (2026-09-23) MOVED ONE THING, deliberately. Rule 2 gives every
+    Researcher table an "Identifier" column, so each term's MeSH id is now
+    on the page in its own labelled cell beside the term, which is the
+    product owner's direction. The G-019 defect was a code standing IN
+    PLACE of the term, so this arm now asserts exactly that is gone: every
+    term is its row's name, and no code appears anywhere on the page except
+    in the Identifier column. The plain-language arm below keeps the
+    original form, no code anywhere at all.
     """
     wired()
-    answer = _answer_text(await graph_module.write_node(_state()))
+    result = await graph_module.write_node(_state())
+    answer = _answer_text(result, skip_identifier_column=True)
 
     for heading in _TERMS.values():
         assert heading in answer, (heading, answer)
     for curie in _TERMS:
         assert curie not in answer, (curie, answer)
     assert len(set(_TERMS.values())) == 4
+    # The identifier column holds each term's own code, beside its own name.
+    identifier_by_name = _identifier_by_name(result)
+    assert identifier_by_name == {name: curie for curie, name in _TERMS.items()} | {
+        "[MeSH] D999999": _UNRESOLVED
+    }, identifier_by_name
+
+
+@pytest.mark.asyncio
+async def test_a_plain_language_answer_shows_the_terms_and_no_code_at_all(wired) -> None:
+    """Item 12.9 (2026-09-23), rules 1 and 2: in plain language the
+    code-built half of the page, its opening sentence and its one list,
+    carries G-019's original assertion in full: every term in words and not
+    one MeSH code, the unresolved control included. Its name, "[MeSH]
+    D999999", is its code wearing a name, so its row reads as its everyday
+    noun instead, and it stays listed and cited.
+
+    Scoped to the code-built half on purpose. The model's own prose is rule
+    3's, and it may quote a record's only citable value when that value is a
+    code; this item does not rewrite what the model wrote.
+
+    Populate-checked: the four headings must be in the list, so an empty or
+    refused answer cannot pass, and the control's row must exist."""
+    wired()
+    result = await graph_module.write_node(_state("plain_language"))
+    tokens = _token_payloads(result)
+    opening = next(t["text"] for t in tokens if t["kind"] == "claim")
+    cells = [cell for t in tokens if t["kind"] == "list_item" for cell in t["cells"]]
+    assert opening.startswith("I found 5 medical topics related to PMID:11237011 "), opening
+    for heading in _TERMS.values():
+        assert heading in cells, (heading, cells)
+    assert "Medical topic" in cells, cells
+    code_built = " ".join([opening, *cells])
+    for curie in [*_TERMS, _UNRESOLVED]:
+        assert curie not in code_built, (curie, code_built)
+        assert curie.split(":", 1)[1] not in code_built, (curie, code_built)
 
 
 @pytest.mark.asyncio

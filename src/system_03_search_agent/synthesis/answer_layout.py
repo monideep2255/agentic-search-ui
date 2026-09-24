@@ -28,6 +28,26 @@ grounded sentences:
 - Lists and tables are never written by the model. `write_node` builds them
   in code from the prepared findings, one grounded sentence per record.
 
+Item 12.9 (2026-09-23, product owner: "The plain vs researcher should vary
+duh for all questions. Not just a few"). The code-built half of the page now
+speaks to its reader too, under the product owner's six rules:
+
+- Rule 1: the opening sentence. Plain language reads "I found 5 published
+  papers on this topic [1][2]...", everyday nouns and no titles inline
+  (`answer_summary_sentence`'s plain branch, `plain_noun`); every other depth
+  keeps the technical "Found 5 pubmed records: <titles>" form.
+- Rule 2: the record list. Plain language gets ONE list under
+  `PLAIN_SOURCES_HEADING`, titles only (`plain_record_label`); Researcher gets
+  the records grouped by type as tables with an `IDENTIFIER_COLUMN_LABEL`
+  column (`record_identifier`) and a status or year column where the record
+  carries one (`record_status_or_year`).
+- Rule 5, the line not crossed (Section 14.1's firewall): depth changes the
+  wording, the headings, the layout and the display cells, NEVER which
+  records are cited or listed. The grounded sentence behind every row, its
+  marker and the citation set are built before any of this runs and are the
+  same at every depth; everything in this module that reads the depth only
+  chooses how an already-cited record is displayed.
+
 Depends on:
     - system_03_search_agent.synthesis.grounding (content_tokens,
       _split_sentences, _licensed_question_content, _canonicalize_relational)
@@ -292,6 +312,238 @@ TABLE_HEADINGS: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Item 12.9 (2026-09-23): what each depth's reader is shown.
+# ---------------------------------------------------------------------------
+
+#: The one depth that speaks to a reader with no technical background. Every
+#: other depth (`researcher`, and the `clinical_brief` and `deep_technical`
+#: values only GraphQL, the CLI and MCP can send) keeps the technical form,
+#: so this item changes nothing for them beyond the Researcher tables.
+PLAIN_LANGUAGE_DEPTH = "plain_language"
+
+#: Rule 2's heading over the one plain-language list, in the product owner's
+#: words.
+PLAIN_SOURCES_HEADING = "Where this answer comes from"
+
+#: The Researcher tables' identifier column. One label for every record
+#: type, as the approved Researcher layout's mixed-record table has it
+#: (`testing/Developer/reports/2026-09-14_handover_inputs/design/
+#: Researcher.dc.html`), because a single table can hold a graph gene
+#: ("NCBIGene:672") beside a live one, and each cell already names its own
+#: system.
+IDENTIFIER_COLUMN_LABEL = "Identifier"
+
+
+def is_plain_language(audience_depth: str) -> bool:
+    """Whether the code-built half of the page speaks plain language."""
+    return audience_depth == PLAIN_LANGUAGE_DEPTH
+
+
+#: Everyday nouns for rule 1, keyed by `entity_type_noun` of a record's type
+#: (so the graph's "Gene" and `ncbi_efetch`'s "gene" share one entry), as
+#: (singular, plural). The product owner named papers, clinical trials,
+#: conditions, genes and genetic variants; the rest follow the same rule, a
+#: word a reader with no technical background would use. A type not listed
+#: is a "record", never a guess at what it is.
+_PLAIN_NOUNS: dict[str, tuple[str, str]] = {
+    "disease": ("condition", "conditions"),
+    "medgen": ("condition", "conditions"),
+    "gene": ("gene", "genes"),
+    "sequence variant": ("genetic variant", "genetic variants"),
+    "variant record": ("genetic variant", "genetic variants"),
+    "literature variant": ("genetic variant", "genetic variants"),
+    "clinvar": ("genetic variant", "genetic variants"),
+    "dbvar": ("genetic variant", "genetic variants"),
+    "clinical trial": ("clinical trial", "clinical trials"),
+    "pubmed": ("published paper", "published papers"),
+    "pmc": ("published paper", "published papers"),
+    "publication": ("published paper", "published papers"),
+    "article": ("published paper", "published papers"),
+    "literature entity": ("literature index entry", "literature index entries"),
+    "pathogen detection isolate": ("pathogen sample", "pathogen samples"),
+    "organism taxon": ("organism", "organisms"),
+    "taxonomy": ("organism", "organisms"),
+    "biological process": ("body process", "body processes"),
+    "molecular activity": ("molecular activity", "molecular activities"),
+    "cellular component": ("part of the cell", "parts of the cell"),
+    "ontology class": ("medical topic", "medical topics"),
+    "mesh": ("medical topic", "medical topics"),
+    "omim": ("genetics catalogue entry", "genetics catalogue entries"),
+    "gtr": ("genetic test", "genetic tests"),
+    "gds": ("research dataset", "research datasets"),
+    "bioproject": ("research project", "research projects"),
+    "biosample": ("biological sample", "biological samples"),
+    "sra": ("sequencing dataset", "sequencing datasets"),
+    "assembly": ("genome assembly", "genome assemblies"),
+    "protein": ("protein", "proteins"),
+    "chemical entity": ("chemical", "chemicals"),
+}
+_PLAIN_NOUN_FALLBACK = ("record", "records")
+
+
+def plain_noun(entity_type: str, count: int = 1) -> str:
+    """The everyday word for `count` records of `entity_type`."""
+    singular, plural = _PLAIN_NOUNS.get(
+        entity_type_noun(entity_type) if entity_type else "", _PLAIN_NOUN_FALLBACK
+    )
+    return singular if count == 1 else plural
+
+
+#: The first column's label in a Researcher table whose type has no mapping
+#: column of its own, keyed like `_PLAIN_NOUNS`. "Record" otherwise, the
+#: approved layout's word for a table of mixed records.
+_FIRST_COLUMN_LABELS: dict[str, str] = {
+    "disease": "Disease",
+    "medgen": "Disease",
+    "gene": "Gene",
+    "sequence variant": "Variant",
+    "variant record": "Variant",
+    "literature variant": "Variant",
+    "clinvar": "Variant",
+    "clinical trial": "Trial",
+    "pubmed": "Paper",
+    "pmc": "Paper",
+    "publication": "Paper",
+    "article": "Paper",
+    "pathogen detection isolate": "Isolate",
+}
+
+
+def first_column_label(entity_type: str) -> str:
+    """The label over a Researcher table's name column."""
+    spec = TABLE_COLUMNS.get(entity_type)
+    if spec is not None:
+        return spec[1]
+    return _FIRST_COLUMN_LABELS.get(entity_type_noun(entity_type) if entity_type else "", "Record")
+
+
+#: The longest an identifier or a status cell may run. `CitationPayload.
+#: source_id` is bounded at the same 128.
+MAX_IDENTIFIER_CHARS = 128
+
+#: A row field that IS its record's identifier, in the order
+#: `core.graph._layer3_citation_for_synth_finding` reads a Layer 3 record's
+#: identity, then the accession fields the Layer 2 summaries carry, each
+#: with the prefix that makes a bare number say which system it belongs to.
+#: The prefixes are the graph's own (`tools.graph_schema_constants.
+#: CURIE_PREFIXES`), so a paper reads "PMID:..." whichever layer found it.
+_IDENTIFIER_FIELDS: tuple[tuple[str, str], ...] = (
+    ("nct_id", ""),
+    ("pubtator_id", ""),
+    ("rsid", ""),
+    ("pmid", "PMID:"),
+    ("biosample_acc", ""),
+    ("accession", ""),
+    ("project_acc", ""),
+    ("assemblyaccession", ""),
+    ("taxid", "NCBITaxon:"),
+)
+
+#: The Layer 2 databases whose records the graph also holds, and the graph's
+#: CURIE prefix for them. Deliberately NOT MedGen: a MedGen ESummary's id is
+#: its UID, and "MedGen:" in this graph prefixes a concept id (C0346153), a
+#: different number, so the two must never be written the same way.
+_LAYER2_CURIE_PREFIXES: dict[str, str] = {
+    "pubmed": "PMID",
+    "gene": "NCBIGene",
+    "taxonomy": "NCBITaxon",
+}
+
+
+def record_identifier(
+    row: dict[str, Any] | None, citation_source: str = "", citation_source_id: str = ""
+) -> str:
+    """The record's own identifier for a Researcher table cell, or "".
+
+    Read only from the record itself, never from a model: first a row field
+    that IS an identifier (`_IDENTIFIER_FIELDS`), then the graph row's CURIE,
+    then, for a live NCBI record whose row keeps only its title (a PubMed
+    paper's row is `{"title": ...}`), the record id its own citation already
+    carries (`CitationPayload.source_id`, built from the same retrieved
+    record by `tools.ncbi_efetch.build_layer2_citation`). So the cell always
+    names the record the row's citation chip opens, in the words its source
+    card uses.
+
+    A bare Layer 2 number is given its system, "PMID:12345678" rather than
+    "12345678", from `_LAYER2_CURIE_PREFIXES`; any other database is written
+    as the source card writes it ("omim 138079").
+    """
+    fields = (row or {}).get("fields")
+    if isinstance(fields, dict):
+        for key, prefix in _IDENTIFIER_FIELDS:
+            value = fields.get(key)
+            if isinstance(value, bool) or not isinstance(value, (str, int)):
+                continue
+            text = str(value).strip()
+            if not text:
+                continue
+            if prefix and not text.startswith(prefix):
+                text = prefix + text
+            return text[:MAX_IDENTIFIER_CHARS]
+    curie = str((row or {}).get("curie") or "").strip()
+    if curie:
+        return curie[:MAX_IDENTIFIER_CHARS]
+    source_id = (citation_source_id or "").strip()
+    if not source_id or source_id == "unknown":
+        return ""
+    if not source_id.isdigit():
+        return source_id[:MAX_IDENTIFIER_CHARS]
+    database = (citation_source or "").strip()
+    prefix = _LAYER2_CURIE_PREFIXES.get(database.lower())
+    if prefix:
+        return f"{prefix}:{source_id}"[:MAX_IDENTIFIER_CHARS]
+    return (f"{database} {source_id}" if database else source_id)[:MAX_IDENTIFIER_CHARS]
+
+
+#: A record's own status field, for the Researcher table's last column.
+_STATUS_FIELDS: tuple[str, ...] = ("overall_status", "assemblystatus")
+
+#: A record's own date fields, each with the label its year is shown under.
+#: Only the year is shown, read from the field's own text.
+_YEAR_FIELDS: tuple[tuple[str, str], ...] = (
+    ("pdat", "Published"),
+    ("publicationdate", "Published"),
+    ("registration_date", "Registered"),
+    ("submissiondate", "Submitted"),
+    ("createdate", "Created"),
+    ("collection_date", "Collected"),
+)
+_YEAR = re.compile(r"(?<!\d)(1[89]\d{2}|20\d{2})(?!\d)")
+
+
+def record_status_or_year(
+    entity_type: str, row_fields: dict[str, Any] | None, *, mapping_shown: bool = True
+) -> tuple[str, str] | None:
+    """`(column label, value)` for the Researcher table's status or year
+    column, or None when the record's own fields carry neither.
+
+    A status is shown verbatim; a date field contributes only its year,
+    under a label naming what the date is ("Published", "Collected"). A
+    field that is already this type's mapping column (a trial's
+    `overall_status`) is skipped while that column is on the table
+    (`mapping_shown`), so a table never shows one value twice, and is used
+    here when it is not, so a status is never lost. Nothing here reads a
+    model or fills a gap: a record with no such field gets None, and its
+    cell stays empty.
+    """
+    if not isinstance(row_fields, dict):
+        return None
+    mapped = TABLE_COLUMNS.get(entity_type, ("",))[0] if mapping_shown else ""
+    for key in _STATUS_FIELDS:
+        value = row_fields.get(key)
+        if key != mapped and isinstance(value, str) and value.strip():
+            return ("Status", value.strip()[:MAX_IDENTIFIER_CHARS])
+    for key, label in _YEAR_FIELDS:
+        value = row_fields.get(key)
+        if not isinstance(value, str):
+            continue
+        match = _YEAR.search(value)
+        if match:
+            return (label, match.group(1))
+    return None
+
+
 def condition_ids_for_row(entity_type: str, row_fields: dict[str, Any] | None) -> list[str]:
     """The fold's CURIE list on one row, or an empty list."""
     spec = TABLE_COLUMNS.get(entity_type)
@@ -420,6 +672,54 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
         if candidate and candidate.strip() and not _URL_PREFIX.match(candidate):
             return candidate.strip()[:500]
     return finding.citation_id[:500]
+
+
+def plain_record_label(
+    finding: SynthFinding, row_fields: dict[str, Any] | None, identifier: str = ""
+) -> str:
+    """The one cell a plain-language list row shows: the record's title.
+
+    Item 12.9, rule 2: titles only, no identifiers or type codes. It is
+    `record_label` unchanged whenever that is a name or a title, which is
+    nearly always. Only when the label is a code does the row read as its
+    everyday noun instead ("Medical topic"), so no code reaches a reader who
+    asked for plain language. A label is a code when it IS one of the
+    record's codes (its identifier, its CURIE, its row `id`, the citation
+    id), or when it carries the identifier's own accession as a word: the
+    graph names every MeSH class "[MeSH] D000818" (golden question G-019),
+    which is the identifier wearing a name. The record is not hidden: the
+    row keeps its own grounded sentence and its citation chip, which is
+    where the code lives for anyone who wants it.
+    """
+    label = record_label(finding, row_fields)
+    codes = {
+        code
+        for code in (
+            identifier,
+            finding.curie,
+            finding.citation_id,
+            str((row_fields or {}).get("id") or ""),
+        )
+        if code
+    }
+    if label not in codes and not _carries_accession(label, codes):
+        return label
+    noun = plain_noun(finding.entity_type)
+    return noun[:1].upper() + noun[1:]
+
+
+def _carries_accession(label: str, codes: set[str]) -> bool:
+    """Whether `label` contains a code's accession (the part after its last
+    colon) as a whole word. Only accessions of five or more characters with
+    a digit count, so a gene symbol or a short number in a real title can
+    never trip it."""
+    for code in codes:
+        accession = code.rsplit(":", 1)[-1].strip()
+        if len(accession) < 5 or not any(ch.isdigit() for ch in accession):
+            continue
+        if re.search(r"(?<![\w])" + re.escape(accession) + r"(?![\w])", label):
+            return True
+    return False
 
 
 def table_second_cell(
@@ -627,8 +927,19 @@ def answer_summary_sentence(
     total_available: int | None,
     row_for: Any,
     condition_names: dict[str, str | None] | None = None,
+    *,
+    audience_depth: str = "researcher",
 ) -> str | None:
     """The code-built sentence that opens an answer (2026-09-14).
+
+    Item 12.9, rule 1 (2026-09-23): in plain language the same sentence
+    speaks to a reader with no technical background: "I found 4 conditions
+    related to BRCA1 [1][2][3][4]." Everyday nouns (`plain_noun`), no titles
+    inline, and EXACTLY the records, the count, the total and the markers of
+    the technical form below, in the same order, because both are built from
+    the one `counted` list and the one fold computation here. Only the words
+    around the markers differ. With no subject to name (a topic question
+    names no gene), it says "on this topic", the question shown above it.
 
     "Found 4 disease records for BRCA1: Familial cancer of breast [1],
     ... and Fanconi anemia complementation group S [4]." or, past
@@ -697,6 +1008,61 @@ def answer_summary_sentence(
             by_page[page] = finding
     counted = list(by_page.values()) + unkeyed
 
+    def joined(items: list[str]) -> str:
+        return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+    markers = sorted(display_slots[f.citation_id] for f in counted)
+    total = (
+        total_available
+        if total_available is not None and total_available > len(counted)
+        else None
+    )
+    # The fold: every linked condition's readable title, and the cited ones
+    # named with their markers. One computation serves both depths, so the
+    # plain sentence cannot cite a different condition from the technical one.
+    titles: list[str] = []
+    named_diseases: list[SynthFinding] = []
+    if anchors:
+        titles, _placeholders, _unresolved = condition_titles(linked_curies, condition_names)
+        named_diseases = [
+            f
+            for f in sorted(cited, key=lambda f: display_slots[f.citation_id])
+            if f.curie in linked_set
+            and f.name_resolved
+            and not is_placeholder_condition_title(f.field_value)
+        ][:MAX_SUMMARY_NAMES]
+
+    if is_plain_language(audience_depth):
+        # Grouped by the everyday noun, so the graph's "Gene" and a live
+        # "gene" record are one count, as they are in the technical form.
+        nouns: dict[str, list[Any]] = {}
+        for finding in counted:
+            singular = plain_noun(finding.entity_type, 1)
+            entry = nouns.setdefault(singular, [0, plain_noun(finding.entity_type, 2)])
+            entry[0] += 1
+        what = joined(
+            [
+                f"{count} {singular if count == 1 else plural}"
+                for singular, (count, plural) in nouns.items()
+            ]
+        )
+        about = (
+            f" related to {clip_to_word(entity_label, 200)}"
+            if entity_label and entity_label.strip()
+            else " on this topic"
+        )
+        body = f"I found {what}{about}"
+        if total is not None:
+            body += f", out of {total} available"
+        body += " " + "".join(f"[{slot}]" for slot in markers)
+        if not titles:
+            return body + "."
+        conditions = "condition" if len(titles) == 1 else "conditions"
+        clause = f", linked to {len(titles)} {conditions}"
+        if named_diseases:
+            clause += " " + "".join(f"[{display_slots[f.citation_id]}]" for f in named_diseases)
+        return body + clause + "."
+
     counts: dict[str, int] = {}
     for finding in counted:
         noun = entity_type_noun(finding.entity_type) if finding.entity_type else "record"
@@ -706,16 +1072,12 @@ def answer_summary_sentence(
         unit = "record" if count == 1 else "records"
         return f"{count} {noun} {unit}" if noun != "record" else f"{count} {unit}"
 
-    def joined(items: list[str]) -> str:
-        return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
-
     parts = [plural(noun, count) for noun, count in counts.items()]
     what = joined(parts)
     subject = f" for {clip_to_word(entity_label, 200)}" if entity_label and entity_label.strip() else ""
     head = f"Found {what}{subject}"
-    markers = sorted(display_slots[f.citation_id] for f in counted)
-    if total_available is not None and total_available > len(counted):
-        head += f", of {total_available} available"
+    if total is not None:
+        head += f", of {total} available"
 
     if len(counted) <= MAX_SUMMARY_NAMES:
         named = [
@@ -726,24 +1088,18 @@ def answer_summary_sentence(
     else:
         body = f"{head} " + "".join(f"[{slot}]" for slot in markers)
 
-    if not anchors:
-        return body + "."
-
-    titles, _placeholders, _unresolved = condition_titles(linked_curies, condition_names)
     if not titles:
         return body + "."
-    named_diseases = [
-        f"{clip_to_word(f.field_value, 200)} [{display_slots[f.citation_id]}]"
-        for f in sorted(cited, key=lambda f: display_slots[f.citation_id])
-        if f.curie in linked_set
-        and f.name_resolved
-        and not is_placeholder_condition_title(f.field_value)
-    ][:MAX_SUMMARY_NAMES]
     others = len(titles) - len(named_diseases)
     noun = "disease" if len(titles) == 1 else "diseases"
     clause = f", linked to {len(titles)} {noun}"
     if named_diseases:
-        clause += ": " + joined(named_diseases)
+        clause += ": " + joined(
+            [
+                f"{clip_to_word(f.field_value, 200)} [{display_slots[f.citation_id]}]"
+                for f in named_diseases
+            ]
+        )
         if others > 0:
             clause += f" and {others} {'other' if others == 1 else 'others'}"
     return body + clause + "."

@@ -12,6 +12,26 @@ Populate-checks, each shown red by patching the control out inside the test:
   can pass vacuously.
 - The cited source set is the prepared set in both modes: compared across a
   Plain language and a Researcher run of the same reply.
+
+Item 12.9 (2026-09-23, the product owner's six rules), the arms at the end
+of this file, each shown red against the code before the change:
+- Rules 1 and 2: the two depths open with different sentences over the same
+  markers, Plain language lists titles only under one heading, and every
+  Researcher row carries its record's own identifier.
+- Rule 4: with no model prose at all (the structured fallback) the two
+  depths still differ.
+- Rule 5, THE FIREWALL: across five fixtures, both depths emit exactly the
+  same citation ids, list every cited record as its own row, and carry the
+  same grounded sentence behind every row. Populate-checked: the arm first
+  asserts the two pages really differ, so it can never pass by comparing a
+  page with itself.
+
+Coverage statement (goal-contracts): graph records with model prose, a
+folded variant-to-disease table, the structured fallback, live PubMed papers
+cited through the real Layer 2 builder, and a mix of graph, trial and paper
+records. Not exercised here: the live model, the live graph, and the
+`clinical_brief` and `deep_technical` depths, which take the technical form
+by the same `is_plain_language` test the plain arms exercise.
 """
 
 from __future__ import annotations
@@ -154,8 +174,25 @@ def _sources(result) -> list[str]:
     return sorted(e.payload["source_id"] for e in result["events"] if e.type == "citation")
 
 
+def _tables(tokens: list[dict]) -> list[tuple[list[str], list[dict]]]:
+    """Each table as `(header cells, its table_row tokens)`, in order."""
+    tables: list[tuple[list[str], list[dict]]] = []
+    for token in tokens:
+        if token["kind"] == "table_header":
+            tables.append((token["cells"], []))
+        elif token["kind"] == "table_row" and tables:
+            tables[-1][1].append(token)
+    return tables
+
+
 @pytest.mark.asyncio
 async def test_researcher_carries_supported_headings_paragraphs_and_a_listing(monkeypatch) -> None:
+    """Item 12.9 (2026-09-23) REVERSED the listing this arm pinned. It read
+    the three diseases as one-cell `list_item`s, identical to Plain
+    language. The product owner's rule 2 gives Researcher the records
+    grouped by type as a table with an identifier column, so they are now
+    rows of a "Disease | Identifier" table, each naming its own MedGen
+    record. The headings, the paragraphs and the markers are unchanged."""
     _install(monkeypatch, _structured_reply)
     tokens = _tokens(await graph_module.write_node(_state("researcher")))
     kinds = [t["kind"] for t in tokens]
@@ -163,10 +200,15 @@ async def test_researcher_carries_supported_headings_paragraphs_and_a_listing(mo
     headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
     assert headings == ["Disease associations", "Disease records found"], headings
     assert "paragraph_break" in kinds
-    list_items = [t for t in tokens if t["kind"] == "list_item"]
-    assert [t["cells"] for t in list_items] == [
-        ["disease name number 1"], ["disease name number 2"], ["disease name number 3"]
+    headers = [t["cells"] for t in tokens if t["kind"] == "table_header"]
+    assert headers == [["Disease", "Identifier"]], headers
+    table_rows = [t for t in tokens if t["kind"] == "table_row"]
+    assert [t["cells"] for t in table_rows] == [
+        ["disease name number 1", "MedGen:C1"],
+        ["disease name number 2", "MedGen:C2"],
+        ["disease name number 3", "MedGen:C3"],
     ]
+    assert "list_item" not in kinds, kinds
     for token in tokens:
         if token["kind"] in ("claim", "list_item", "table_row"):
             assert token["marker_ids"], token
@@ -193,16 +235,21 @@ async def test_an_unsupported_heading_appears_without_the_check(monkeypatch) -> 
 
 @pytest.mark.asyncio
 async def test_plain_language_lists_its_records_in_code_and_ends_on_the_note(monkeypatch) -> None:
-    """Product-owner direction 2026-09-14: the structure is the same in every
-    mode. Plain language shows no MODEL heading (its prose stays short and
-    unheaded), but the records are grouped in code under a code-built
-    heading as list or table rows, never the run-on findings tail, and the
-    answer still ends on the medical-advice note."""
+    """Product-owner direction 2026-09-14: the records are listed in code in
+    every mode, never as the run-on findings tail, and Plain language shows
+    no MODEL heading (its prose stays short and unheaded). The answer still
+    ends on the medical-advice note.
+
+    Item 12.9 (2026-09-23) REVERSED one half of the 2026-09-14 direction,
+    "the structure is the same in every mode", which this arm pinned by
+    asserting the Researcher heading "Disease records found" here too. Rule
+    2 gives Plain language ONE list under the product owner's own heading,
+    "Where this answer comes from", titles only."""
     _install(monkeypatch, lambda lines: f"{lines[1]} [1].\n\n## Disease associations\n{lines[2]} [2].")
     tokens = _tokens(await graph_module.write_node(_state("plain_language")))
     headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
     assert "Disease associations" not in headings, headings
-    assert "Disease records found" in headings, headings
+    assert headings == ["Where this answer comes from"], headings
     assert any(t["kind"] == "list_item" for t in tokens), {t["kind"] for t in tokens}
     assert not any(t["text"].startswith("Note: the records below") for t in tokens)
     assert tokens[-1] == {
@@ -218,12 +265,18 @@ async def test_plain_language_lead_summary_still_carries_emphasis(monkeypatch) -
     frontend always fell back to null and nothing but the title ever bolded
     ("now nothing is bold", product owner, live test after `aedf53d`). The
     lead (code-built) summary sentence must carry a non-empty `emphasis` in
-    Plain language too, the one arm that would have caught this."""
+    Plain language too, the one arm that would have caught this.
+
+    Item 12.9 (2026-09-23) changed the sentence this arm reads, not the
+    property. It pinned the Plain language lead as the Researcher's "Found
+    3 disease records for BRCA1: <titles>", and rule 1 reversed that: plain
+    language names no titles inline, so its main point is the subject it
+    names, BRCA1, and that is what must still be emphasised."""
     _install(monkeypatch, _structured_reply)
     tokens = _tokens(await graph_module.write_node(_state("plain_language")))
     claims = [t for t in tokens if t["kind"] == "claim"]
-    assert claims[0]["text"].startswith("Found 3 disease records for BRCA1: "), claims[0]
-    assert claims[0]["emphasis"] and "disease name number 1" in claims[0]["emphasis"], claims[0]
+    assert claims[0]["text"].startswith("I found 3 conditions related to BRCA1 "), claims[0]
+    assert claims[0]["emphasis"] and "BRCA1" in claims[0]["emphasis"], claims[0]
 
 
 @pytest.mark.asyncio
@@ -307,28 +360,43 @@ async def test_variant_records_become_a_variant_to_disease_table(monkeypatch) ->
     puts "not provided" into the disease list and the placeholder
     assertion red; dropping the fold clause from `answer_summary_sentence`
     turns the "linked to 1 disease" assertion red.
+
+    Item 12.9 (2026-09-23) REVERSED the two-column tables and the one-cell
+    disease list this arm pinned: rule 2 adds each record's identifier, so
+    the variant table reads "Variant | Identifier | Associated disease(s)"
+    and the linked diseases are a "Disease | Identifier" table. The mapping,
+    the markers, the placeholder rule and the summary clause are unchanged.
     """
     monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
     _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
     tokens = _tokens(await graph_module.write_node(_state("researcher", rows=_FOLDED_VARIANT_ROWS)))
-    header = [t for t in tokens if t["kind"] == "table_header"]
-    assert header and header[0]["cells"] == ["Variant", "Associated disease(s)"]
-    rows = [t["cells"] for t in tokens if t["kind"] == "table_row"]
-    assert rows == [
-        ["variant number 1", "Maturity-onset diabetes of the young"],
-        ["variant number 2", ""],
+    # Item 12.9 (2026-09-23): each table now carries its records' own
+    # identifiers in an "Identifier" column (rule 2), so the variant table
+    # reads "Variant | Identifier | Associated disease(s)" and the disease
+    # list it links to is a "Disease | Identifier" table rather than a list.
+    # The mapping itself, the markers and the placeholder rule are unchanged.
+    tables = _tables(tokens)
+    assert [header for header, _ in tables] == [
+        ["Disease", "Identifier"],
+        ["Variant", "Identifier", "Associated disease(s)"],
+    ], tables
+    (_, disease_rows), (_, variant_rows) = tables
+    assert [t["cells"] for t in variant_rows] == [
+        ["variant number 1", "ClinVar:1", "Maturity-onset diabetes of the young"],
+        ["variant number 2", "ClinVar:2", ""],
     ]
     # Every row cites its own record; the first row also cites the disease
-    # its cell names, and no cell carries a raw code.
-    table_rows = [t for t in tokens if t["kind"] == "table_row"]
-    assert len(table_rows[0]["marker_ids"]) == 2 and len(table_rows[1]["marker_ids"]) == 1
-    assert not any("MedGen:" in cell for row in rows for cell in row)
+    # its cell names, and no mapping cell carries a raw code: the disease is
+    # named in words, and its code lives only in its own Identifier cell.
+    assert len(variant_rows[0]["marker_ids"]) == 2 and len(variant_rows[1]["marker_ids"]) == 1
+    assert not any("MedGen:" in t["cells"][2] for t in variant_rows)
     headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
     assert "Variant-to-disease mapping" in headings
     assert headings.index("Disease records found") < headings.index("Variant-to-disease mapping")
-    list_items = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
-    assert list_items == ["Maturity-onset diabetes of the young"], list_items
-    assert "not provided" not in " ".join(list_items)
+    assert [t["cells"] for t in disease_rows] == [
+        ["Maturity-onset diabetes of the young", "MedGen:C0342276"]
+    ], disease_rows
+    assert "not provided" not in " ".join(cell for t in disease_rows for cell in t["cells"])
     notes = [t["text"] for t in tokens if t["kind"] == "note"]
     assert any(n.startswith("2 variant links to ClinVar placeholder conditions") for n in notes), notes
     first = next(t["text"] for t in tokens if t["kind"] == "claim")
@@ -404,12 +472,371 @@ async def test_the_structured_fallback_lists_records_in_every_depth(monkeypatch)
     run-on "Disease name: ..." claims. Measured live: 3 of 5 Plain language
     runs of "What genes are associated with MODY?" took this branch.
     Mutation that turns this red: render `fallback_sentences` as plain
-    `sentence_token`s for non-Researcher depths again."""
+    `sentence_token`s for non-Researcher depths again.
+
+    Item 12.9 (2026-09-23) changed the heading this arm read, not the
+    property: the Plain language listing is now the one list under "Where
+    this answer comes from" (rule 2), so that is the heading asserted."""
     _install(monkeypatch, lambda lines: "Nothing here matches any record at all.")
     tokens = _tokens(await graph_module.write_node(_state("plain_language")))
     kinds = [t["kind"] for t in tokens]
     assert "list_item" in kinds, kinds
-    assert "Disease records found" in [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert headings == ["Where this answer comes from"], headings
     assert not any(
         t["kind"] == "claim" and t["text"].startswith("Disease name") for t in tokens
     ), [t["text"] for t in tokens if t["kind"] == "claim"]
+
+
+# ---------------------------------------------------------------------------
+# Item 12.9 (2026-09-23): the two depths differ on every question, and the
+# evidence does not. The product owner's direction, in their words: "The
+# plain vs researcher should vary duh for all questions. Not just a few".
+# ---------------------------------------------------------------------------
+
+# Two real-shaped papers, in the order `_ncbi_efetch_output_to_structured_
+# fields` sorts a PubMed breadth result (by record URL).
+_PAPERS = (
+    ("31234567", "Caffeine ingestion and endurance cycling performance in trained athletes"),
+    (
+        "33388079",
+        (
+            "International society of sports nutrition position stand: caffeine and "
+            "exercise performance"
+        ),
+    ),
+)
+
+_STATUS_TRIAL_ROWS = [
+    graph_module._pseudo_row(
+        "Clinical trial",
+        {
+            "name": f"trial title number {index}",
+            "nct_id": f"NCT0000000{index}",
+            "overall_status": "RECRUITING",
+        },
+        f"https://clinicaltrials.gov/study/NCT0000000{index}",
+    )
+    for index in range(1, 3)
+]
+
+
+#: One abstract per paper, two sentences each, so an abstract is its own
+#: finding beside the title and the prose can quote it.
+_ABSTRACTS = {
+    "31234567": (
+        "Caffeine improved time-trial performance in trained cyclists. "
+        "The effect was seen at moderate doses."
+    ),
+    "33388079": (
+        "Caffeine is effective for enhancing many types of exercise performance. "
+        "Individual responses vary widely."
+    ),
+}
+
+
+def _restating(lines: dict[int, str]) -> str:
+    return " ".join(f"{body} [{index}]." for index, body in lines.items())
+
+
+def _quoting_abstracts(lines: dict[int, str]) -> str:
+    """A reply that quotes each abstract's first sentence verbatim, as a
+    compliant model does, and restates every other finding. The quote cites
+    the ABSTRACT finding, while the list row for the same paper cites its
+    TITLE finding: one record, two citations."""
+    parts = []
+    for index, body in lines.items():
+        if " abstract: " in body:
+            sentence = body.split(" abstract: ", 1)[1].split(". ", 1)[0].rstrip(".")
+            parts.append(f"{sentence} [{index}].")
+        else:
+            parts.append(f"{body} [{index}].")
+    return " ".join(parts)
+
+
+def _no_prose(lines: dict[int, str]) -> str:
+    return "Nothing here matches any record at all."
+
+
+def _papers_finding(call_id: str, *, abstracts: bool = False):
+    """PubMed papers as `act_node` leaves them: the real breadth shaping, and
+    the typed output kept for the Layer 2 citation builder."""
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    records = [
+        NcbiEfetchRecord(
+            id=pmid,
+            db="pubmed",
+            fields={"title": title, **({"abstract": _ABSTRACTS[pmid]} if abstracts else {})},
+            source_url=f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+        )
+        for pmid, title in _PAPERS
+    ]
+    output = NcbiEfetchOutput(
+        status="ok", action="fetch", records=records, record_count=len(records),
+        total_available=len(records), truncated=False,
+    )
+    finding = Finding(
+        call_id=call_id, tool="ncbi_efetch", layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(
+            output, "pubmed_abstracts"
+        ),
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+    return finding, output
+
+
+def _papers_state(depth: str, *, abstracts: bool = False) -> dict[str, object]:
+    """A topic question answered from PubMed alone: no gene, so no subject."""
+    query = Query(
+        text="Does caffeine improve exercise performance?",
+        session_id="session-papers",
+        trace_id="trace-papers",
+        user_id=None,
+        audience_depth=depth,  # type: ignore[arg-type]
+    )
+    finding, output = _papers_finding("ne-papers", abstracts=abstracts)
+    return {
+        "query": query,
+        "harness": harness_module.Harness(trace_id=query.trace_id),
+        "seq": 0,
+        "start_monotonic": time.monotonic(),
+        "findings": [finding],
+        "findings_count": 1,
+        "layer2_raw_outputs": {"ne-papers": output},
+        "topic_search_term": "caffeine AND exercise AND performance",
+    }
+
+
+def _mixed_state(depth: str) -> dict[str, object]:
+    """The disease question's graph records, plus trials carrying a status
+    and live papers, each call under a fixed id so both depths mint the same
+    citation ids."""
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    state = _state(depth)
+    trials = Finding(
+        call_id="ct-mixed", tool="clinicaltrials_search", layer="layer_3_enrichment",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok", "row_count": 2, "total_available": 2, "truncated": False,
+            "rows": _STATUS_TRIAL_ROWS, "error": None,
+        },
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+    papers, output = _papers_finding("ne-mixed")
+    state["findings"] = [*state["findings"], trials, papers]  # type: ignore[misc]
+    state["findings_count"] = 3
+    state["layer2_raw_outputs"] = {"ne-mixed": output}
+    return state
+
+
+def _folded_state(depth: str) -> dict[str, object]:
+    return _state(depth, rows=_FOLDED_VARIANT_ROWS)
+
+
+def _papers_with_abstracts_state(depth: str) -> dict[str, object]:
+    return _papers_state(depth, abstracts=True)
+
+
+def _opening(result) -> str:
+    return next(t["text"] for t in _tokens(result) if t["kind"] == "claim")
+
+
+def _rows(result) -> list[dict]:
+    return [t for t in _tokens(result) if t["kind"] in ("list_item", "table_row")]
+
+
+def _citation_ids(result) -> list[str]:
+    return sorted(e.payload["citation_id"] for e in result["events"] if e.type == "citation")
+
+
+def _done(result) -> dict:
+    return next(e.payload for e in result["events"] if e.type == "done")
+
+
+@pytest.mark.asyncio
+async def test_12_9_a_disease_question_opens_and_lists_for_its_reader(monkeypatch) -> None:
+    """Rules 1 and 2 on the disease question.
+
+    RED before the change: both depths opened "Found 3 disease records for
+    BRCA1: <titles>" and listed the same three one-cell rows under "Disease
+    records found", so the two answers were the same text.
+    """
+    _install(monkeypatch, _structured_reply)
+    plain = await graph_module.write_node(_state("plain_language"))
+    _install(monkeypatch, _structured_reply)
+    researcher = await graph_module.write_node(_state("researcher"))
+
+    # Rule 1: the plain opening speaks to its reader, over the same records.
+    assert _opening(plain) == "I found 3 conditions related to BRCA1 [1][2][3]. ", _opening(plain)
+    assert _opening(researcher).startswith(
+        "Found 3 disease records for BRCA1: disease name number 1 [1], "
+    ), _opening(researcher)
+    plain_lead = next(t for t in _tokens(plain) if t["kind"] == "claim")
+    researcher_lead = next(t for t in _tokens(researcher) if t["kind"] == "claim")
+    assert len(plain_lead["marker_ids"]) == 3
+    assert plain_lead["marker_ids"] == researcher_lead["marker_ids"]
+    assert "disease name number" not in plain_lead["text"], "plain language names no titles inline"
+
+    # Rule 2, plain: one heading, one list, titles only.
+    plain_tokens = _tokens(plain)
+    headings = [t["text"].strip() for t in plain_tokens if t["kind"] == "heading"]
+    assert headings == ["Where this answer comes from"], headings
+    assert not any(t["kind"] in ("table_header", "table_row") for t in plain_tokens)
+    assert [t["cells"] for t in _rows(plain)] == [
+        ["disease name number 1"], ["disease name number 2"], ["disease name number 3"]
+    ]
+
+    # Rule 2, researcher: the identifier column names each row's own record,
+    # the one its citation chip opens.
+    source_id = {
+        e.payload["citation_id"]: e.payload["source_id"]
+        for e in researcher["events"]
+        if e.type == "citation"
+    }
+    ((header, rows),) = _tables(_tokens(researcher))
+    assert header == ["Disease", "Identifier"], header
+    assert [row["cells"][1] for row in rows] == ["MedGen:C1", "MedGen:C2", "MedGen:C3"]
+    for row in rows:
+        assert row["cells"][1] == source_id[row["marker_ids"][0]], row
+
+
+@pytest.mark.asyncio
+async def test_12_9_a_papers_question_gives_plain_titles_and_a_researcher_pmids(monkeypatch) -> None:
+    """The product owner's own example, a topic question answered from
+    PubMed, with each paper cited through the real Layer 2 builder.
+
+    RED before the change: both depths opened "Found 2 pubmed records:
+    <titles>" and listed the two titles alone, with no PMID anywhere.
+    """
+    _install(monkeypatch, _restating)
+    plain = await graph_module.write_node(_papers_state("plain_language"))
+    _install(monkeypatch, _restating)
+    researcher = await graph_module.write_node(_papers_state("researcher"))
+
+    assert _opening(plain) == "I found 2 published papers on this topic [1][2]. ", _opening(plain)
+    assert _opening(researcher).startswith("Found 2 pubmed records: "), _opening(researcher)
+    assert [t["cells"] for t in _rows(plain)] == [[title] for _, title in _PAPERS]
+    assert all(t["kind"] == "list_item" for t in _rows(plain))
+
+    ((header, rows),) = _tables(_tokens(researcher))
+    assert header == ["Paper", "Identifier"], header
+    assert [t["cells"] for t in rows] == [[title, f"PMID:{pmid}"] for pmid, title in _PAPERS]
+    # Populate check: the PMID in each row is the one its own citation carries.
+    assert _sources(researcher) == [pmid for pmid, _ in _PAPERS]
+
+
+@pytest.mark.asyncio
+async def test_12_9_with_no_model_prose_the_two_depths_still_differ(monkeypatch) -> None:
+    """Rule 4. The model's prose grounds nothing, so the code-built records
+    are the whole answer. This is the branch the 2026-09-23 diagnosis found
+    identical at both depths on every question where both fell back to it.
+
+    RED before the change: same opening, same one-cell list, same heading.
+    """
+    _install(monkeypatch, _no_prose)
+    plain = await graph_module.write_node(_state("plain_language"))
+    _install(monkeypatch, _no_prose)
+    researcher = await graph_module.write_node(_state("researcher"))
+
+    for result in (plain, researcher):
+        # Populate check: the structured fallback really ran, and the only
+        # prose on the page is the code-built opening sentence.
+        notes = [t["text"] for t in _tokens(result) if t["kind"] == "note"]
+        assert any(
+            note.startswith("Note: the written summary of these records could not be verified")
+            for note in notes
+        ), notes
+        assert [t["kind"] for t in _tokens(result)].count("claim") == 1
+
+    assert _opening(plain) != _opening(researcher)
+    assert _opening(plain).startswith("I found 3 conditions related to BRCA1 "), _opening(plain)
+    assert [t["kind"] for t in _rows(plain)] == ["list_item"] * 3
+    assert [t["kind"] for t in _rows(researcher)] == ["table_row"] * 3
+    assert [t["cells"] for t in _rows(plain)] != [t["cells"] for t in _rows(researcher)]
+    assert _citation_ids(plain) == _citation_ids(researcher)
+
+
+# (state builder, Synth reply, whether the fold's MedGen resolver is faked)
+_FIREWALL_CASES = {
+    "model prose over graph records": (_state, _structured_reply, False),
+    "a folded variant-to-disease table": (_folded_state, lambda lines: f"{lines[1]} [1].", True),
+    "the structured fallback": (_state, _no_prose, False),
+    "live PubMed papers": (_papers_state, _restating, False),
+    "papers whose abstracts the prose quotes": (
+        _papers_with_abstracts_state, _quoting_abstracts, False
+    ),
+    "graph, trial and paper records together": (_mixed_state, _restating, False),
+}
+
+
+def _page_by_citation_id(result) -> dict[str, str]:
+    return {
+        e.payload["citation_id"]: e.payload["source_url"]
+        for e in result["events"]
+        if e.type == "citation"
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("case", list(_FIREWALL_CASES))
+async def test_12_9_the_firewall_depth_changes_the_display_never_the_evidence(
+    monkeypatch, case: str
+) -> None:
+    """Rule 5, THE LINE NOT CROSSED (Section 14.1's firewall): both depths
+    cite exactly the same records, every one listed as its own clickable
+    row, with the same grounded sentence behind it and the same verdict.
+    Depth changes wording, layout and columns, never which evidence is shown.
+
+    "Every record listed" is checked per RECORD, by its page, and not per
+    citation id, because that is the rule's own word and what a reader sees:
+    when the prose quotes a paper's abstract, that quote carries its own
+    citation while the paper's list row carries its title's, one record and
+    two chips, at both depths alike. The abstracts case exercises exactly
+    that, and asserts it happened, so the per-record check cannot pass on a
+    fixture where the two readings coincide.
+
+    POPULATE-CHECKED FIRST: the two pages are asserted to differ, in their
+    opening sentence and in their list cells, so this arm can never pass by
+    comparing a page with itself. That is also what turns it RED against the
+    code before the change, where the two pages were identical.
+    """
+    build, reply, folded = _FIREWALL_CASES[case]
+    if folded:
+        monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, reply)
+    plain = await graph_module.write_node(build("plain_language"))
+    _install(monkeypatch, reply)
+    researcher = await graph_module.write_node(build("researcher"))
+
+    assert _opening(plain) != _opening(researcher), "populate check: the openings must differ"
+    assert [t["cells"] for t in _rows(plain)] != [t["cells"] for t in _rows(researcher)], (
+        "populate check: the lists must differ"
+    )
+
+    # Exactly the same citations.
+    assert _citation_ids(plain), "populate check: the answer cited nothing"
+    assert _citation_ids(plain) == _citation_ids(researcher)
+    # Every cited record has its own row, which carries a citation of it.
+    for result in (plain, researcher):
+        page_of = _page_by_citation_id(result)
+        listed = {page_of[row["marker_ids"][0]] for row in _rows(result)}
+        assert listed == set(page_of.values()), (listed, set(page_of.values()))
+    if build is _papers_with_abstracts_state:
+        # Populate check for the per-record reading: the prose really did
+        # cite an abstract, so some citation has no list row of its own.
+        own = {row["marker_ids"][0] for row in _rows(plain)}
+        assert set(_citation_ids(plain)) - own, "no abstract was cited; the case proves nothing"
+    # The grounded sentence behind every row, and the record it cites, are
+    # the same at both depths, whatever order the rows are shown in.
+    assert sorted((row["text"], row["marker_ids"][0]) for row in _rows(plain)) == sorted(
+        (row["text"], row["marker_ids"][0]) for row in _rows(researcher)
+    )
+    # The same verdict on the same evidence.
+    assert _done(plain)["trust_outcome"] == _done(researcher)["trust_outcome"]

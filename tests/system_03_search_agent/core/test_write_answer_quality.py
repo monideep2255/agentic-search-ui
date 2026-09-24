@@ -210,14 +210,32 @@ async def test_without_the_answer_ids_the_prompt_returns_to_the_handoff_order(mo
     assert "ANSWER FINDINGS" not in prompts[0]
 
 
+#: The opening sentence per depth. Item 12.9 (2026-09-23) REVERSED this arm's
+#: old expectation that both depths open identically: rule 1 has Plain
+#: language speak to a reader with no technical background, everyday nouns
+#: and no titles inline, over the same three records and the same markers.
+_OPENING_BY_DEPTH = {
+    "plain_language": "I found 3 conditions related to BRCA1 [1][2][3].",
+    "researcher": "Found 3 disease records for BRCA1: disease name number 1 [1], ",
+}
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("depth", ["plain_language", "researcher"])
 async def test_the_first_sentence_names_a_disease_and_trials_follow(monkeypatch, depth: str) -> None:
+    """The answer opens on the diseases, cited, with the trials after them.
+
+    Item 12.9 (2026-09-23) REVERSED this arm's old expectation that both
+    depths open with the same "Found 3 disease records for BRCA1: <titles>"
+    sentence: rule 1 has Plain language open "I found 3 conditions related
+    to BRCA1 [1][2][3]." (`_OPENING_BY_DEPTH`). What stays pinned at both
+    depths is the property: the same three records and markers, then the
+    trials."""
     _install(monkeypatch, _relating_reply)
     result = await graph_module.write_node(_state(depth))
     claims = _claims(result)
     first = claims[0]["text"]
-    assert first.startswith("Found 3 disease records for BRCA1: disease name number 1 [1], "), first
+    assert first.startswith(_OPENING_BY_DEPTH[depth]), first
     assert claims[0]["marker_ids"] and len(claims[0]["marker_ids"]) == 3, claims[0]
     # Trials follow the diseases: as prose in Plain language, as list rows in
     # Researcher (where their restatements are dropped for the list).
@@ -246,6 +264,11 @@ def _restating_reply(lines: dict[int, str]) -> str:
 
 @pytest.mark.asyncio
 async def test_researcher_drops_restatements_the_list_carries_and_keeps_a_cited_summary(monkeypatch) -> None:
+    """Item 12.9 (2026-09-23) REVERSED the shape this arm pinned, one-cell
+    `list_item` rows: rule 2 makes each Researcher group a table with an
+    identifier column, so the rows are read from `table_row` too. The
+    property is unchanged: the restatements go, and the list names all six
+    records once, in order."""
     _install(monkeypatch, _restating_reply)
     result = await graph_module.write_node(_state("researcher"))
     tokens = _tokens(result)
@@ -253,7 +276,11 @@ async def test_researcher_drops_restatements_the_list_carries_and_keeps_a_cited_
     assert len(prose) == 1, [t["text"] for t in prose]
     assert prose[0]["text"].startswith("Found 3 disease records for BRCA1: "), prose[0]
     assert prose[0]["marker_ids"], "the summary must be cited"
-    list_rows = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
+    # Item 12.9 (2026-09-23): Researcher records are table rows now, each
+    # group a table with an identifier column (rule 2), so the rows are read
+    # from `table_row` as well as `list_item`. The first cell is still the
+    # record's name, and the six records and their order are unchanged.
+    list_rows = [t["cells"][0] for t in tokens if t["kind"] in ("list_item", "table_row")]
     assert list_rows == [
         "disease name number 1", "disease name number 2", "disease name number 3",
         "BRCA1", "trial title number 1", "trial title number 2",
@@ -398,6 +425,10 @@ def test_answer_call_ids_pick_the_graph_call_and_trials_only_when_asked() -> Non
 
 @pytest.mark.asyncio
 async def test_no_url_reaches_the_prompt_for_an_intronic_variant_row(monkeypatch) -> None:
+    """Item 12.9 (2026-09-23) moved where this arm finds the variant's name
+    cell: a Researcher record is now a `table_row` in a table with an
+    identifier column (rule 2), no longer a one-cell `list_item`. The
+    property is unchanged: no URL anywhere, and the cell reads the name."""
     row = {
         "node_or_edge_type": "SequenceVariant",
         "curie": "ClinVar:1179956",
@@ -416,7 +447,9 @@ async def test_no_url_reaches_the_prompt_for_an_intronic_variant_row(monkeypatch
     assert "http" not in "\n".join(_FINDING_LINE.findall(prompts[0])[0]).lower(), prompts[0]
     texts = [t["text"] for t in _tokens(result)]
     assert not any("source URL" in text or "source_url" in text for text in texts), texts
-    cells = [t["cells"][0] for t in _tokens(result) if t["kind"] == "list_item"]
+    # Item 12.9 (2026-09-23): a Researcher record is a table row now (rule
+    # 2), so its name cell is read from `table_row` as well as `list_item`.
+    cells = [t["cells"][0] for t in _tokens(result) if t["kind"] in ("list_item", "table_row")]
     assert "NM_000162.5(GCK):c.363+318G>A" in cells, cells
 
 

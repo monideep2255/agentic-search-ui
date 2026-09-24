@@ -278,6 +278,22 @@ export function isIdentifierCell(cell: string): boolean {
   return /^(?:[A-Za-z][\w.-]*:\S+|[A-Z]{1,4}\d{6,}|NCT\d{8}|rs\d+)$/.test(cell.trim());
 }
 
+/*
+ * Item 12.9 (2026-09-23): the Researcher table's identifier column, labelled
+ * by the backend (`synthesis/answer_layout.py`'s `IDENTIFIER_COLUMN_LABEL`).
+ * Every cell under it is the design system's identifier cell, the
+ * prototype's `.rtab td.g` (`RTAB_ID` above), whatever the value's shape, so
+ * a PubTator id ("@GENE_BRCA1") or a live record's "omim 138079" sits in the
+ * same mono as a CURIE beside it rather than in body type. `isIdentifierCell`
+ * still decides every other column, unchanged.
+ */
+export const IDENTIFIER_COLUMN_LABEL = "Identifier";
+
+/** Where a record table's identifier column is, or -1 when it has none. */
+export function identifierColumn(header: string[] | null): number {
+  return header ? header.indexOf(IDENTIFIER_COLUMN_LABEL) : -1;
+}
+
 /** The Plain language closing line, shown on its own rather than as a note. */
 export const MEDICAL_NOTE_PREFIX = "This is a research summary, not medical advice";
 
@@ -1241,6 +1257,8 @@ export function AnswerBody({
     const visibleRows = isPaginated
       ? block.rows.slice(currentPage * RECORDS_PAGE_SIZE, currentPage * RECORDS_PAGE_SIZE + RECORDS_PAGE_SIZE)
       : block.rows;
+    const idColumn = identifierColumn(block.header);
+    const isIdAt = (cell: string, column: number) => column === idColumn || isIdentifierCell(cell);
     const heading =
       block.label !== null ? (
         <Typography
@@ -1290,7 +1308,7 @@ export function AnswerBody({
                       component="span"
                       key={c}
                       sx={
-                        isIdentifierCell(cell)
+                        isIdAt(cell, c + 1)
                           ? RTAB_ID
                           : { fontSize: 13.5, lineHeight: 1.45, color: designTokens.inkMuted }
                       }
@@ -1351,7 +1369,7 @@ export function AnswerBody({
                     <Box
                       component="td"
                       key={c}
-                      sx={isIdentifierCell(cell) ? { ...RTAB_CELL, ...RTAB_ID } : RTAB_CELL}
+                      sx={isIdAt(cell, c) ? { ...RTAB_CELL, ...RTAB_ID } : RTAB_CELL}
                     >
                       {cell}
                     </Box>
