@@ -8,6 +8,26 @@ The ordered work list for fixing the product after the first testing round on 20
 
 So you can check progress without reading the code.
 
+## Table of contents
+
+- [Where every feature stands](#where-every-feature-stands)
+- [Progress at a glance](#progress-at-a-glance)
+- [How to read this](#how-to-read-this)
+- [Set 1: let people in](#set-1-let-people-in)
+- [Set 2: a steady frame](#set-2-a-steady-frame)
+- [Set 3: refusals and Stop](#set-3-refusals-and-stop)
+- [Set 4: stay signed in, history on phones](#set-4-stay-signed-in-history-on-phones)
+- [Set 5: Integrations and the disclaimer](#set-5-integrations-and-the-disclaimer)
+- [Set 6: let automated checks see a real answer](#set-6-let-automated-checks-see-a-real-answer)
+- [Set 7: a conversation that remembers](#set-7-a-conversation-that-remembers)
+- [Set 8: search every layer, with the scientists](#set-8-search-every-layer-with-the-scientists)
+- [Set 9: answers worth reading](#set-9-answers-worth-reading)
+- [Set 10: reliable flagship answers, and saved history](#set-10-reliable-flagship-answers-and-saved-history)
+- [Set 11: live feedback of 2026-09-13 and 2026-09-14](#set-11-live-feedback-of-2026-09-13-and-2026-09-14)
+- [Set 12: the second tester's questions](#set-12-the-second-testers-questions)
+- [Where we stopped](#where-we-stopped)
+- [Developer detail](#developer-detail)
+
 ## Where every feature stands
 
 The high-level tracker, kept at the top so nobody has to read the sets to
@@ -21,63 +41,73 @@ written here BEFORE it is built. Other folders are evidence referenced from
 here, never a work queue of their own: `testing/User-feedback/` holds a second
 tester's screenshots and is referenced by set 12.
 
-### 1. Waiting on you: retests
+REORGANISED AGAIN the same evening, on the product owner's instruction, into
+their three sections:
 
-Each of these is built, live on develop, and needs your eyes before it counts
-as done. Nothing is blocked on them.
+1. Features being built right now, in priority order
+2. Features to do, in priority order
+3. Done
 
-| What to check | Where the steps are | Item |
-|---|---|---|
-| The seven questions your skip manager asked, all of which now answer | `testing/Shipped_2026-09-23.md`, retest items 8 to 11 | 12.1, 12.2, 12.4, 12.7 |
-| The overnight batch: saved answers, MeSH terms, the record count, the MCP address | `testing/Shipped_2026-09-23.md`, retest items 1 to 7 | 10.2, 11.30 and four others |
-| The night of 2026-09-22: the two lost searches, the coordinate range, the accessions, the isolate set | `testing/Shipped_2026-09-22.md`, retest items 7 to 22 | various |
-| Four one-look checks, under a minute each | the items' own rows below | 11.14, 11.36, 9.12, 8.4 |
+### 1. Being built right now, in priority order
 
-### 2. Waiting on you: decisions
+Every row here is part of item 1 of "Next, in order" (in "Where we
+stopped") except 11.11, so the rows keep the order the tracker already
+listed them in.
 
-Each is written so the answer is yes, no, or pick one. None blocks work in
-flight.
+| Priority | Feature, in plain words | Item | Where it stands |
+|---|---|---|---|
+| 1 | The answer answers the question instead of listing what was found | 12.10 | IN PROGRESS 2026-09-23. DECIDED by the product owner the same evening: YES, a second, cheap model checks each written sentence against the exact record words it quotes, while code still verifies character for character that the quote is in the record. Code-only checking had passed 0 of 53 sentences |
+| 2 | The sources chip and the trust line agree with each other | 12.11 | BUILT 2026-09-23, not yet on develop. It now counts distinct pages, the same key the source list merges on. A regression from 12.8 the same day: the line counts citations and the list counts distinct pages |
+| 3 | Broken sentences and repeated records in the answer | 12.12 | BUILT 2026-09-23, not yet on develop. An orphan fragment starting lowercase with a stray quote mark, a paragraph opening "Another is titled" with no first, and the same records shown up to three times |
+| 4 | A search clicked in the history rail re-runs instead of showing its saved answer | 12.13 | IN PROGRESS 2026-09-23 on the product owner's yes. One frontend change |
+| 5 | Plain language and researcher stop returning the same text | 12.9 | IN PROGRESS with 12.10, 2026-09-23. The two depths differ once the model's own prose survives, and the model check decided that evening is what lets it survive. The fix-2 screenshots showed researcher SHORTER on the Marfan phenotype question |
+| 6 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
 
-| The decision | What it affects | Item |
-|---|---|---|
-| Is twenty sources the right ceiling? | Every answer hits it and then tells the reader it was cut short, which is a large part of why a good answer reads as a thin one | the ceiling, measured and unchanged |
-| Four golden test rows disagree with what the product does, row by row | The test set only, nothing a user sees | the golden rows |
-| Should a one-to-three-word question be asked back, such as `Reflux disease`? | Short questions today are answered on one silent reading of what they meant | 12.3 |
-| Does the Plain language answer keep its small grey medical-advice line? | One line under every plain-language answer | 9.11 |
-| The trust-line wording | One line under every answer | 9.9 |
+### 2. To do, in priority order
 
-### 3. Being built right now
+Your retests come first, since they are your next action. The rest follow
+"Next, in order" in "Where we stopped": 12.14 belongs to its item 1, which
+names the Marfan phenotype question; then its items 2 to 7. Rows that list
+does not rank keep the order the tracker already listed them in.
+
+| Priority | Feature, in plain words | Item | Waiting on | Where it stands, what it affects, or where the steps are |
+|---|---|---|---|---|
+| 1 | The seven questions your skip manager asked, all of which now answer | 12.1, 12.2, 12.4, 12.7 | Your retest | `testing/Shipped_2026-09-23.md`, retest items 8 to 11 |
+| 2 | The overnight batch: saved answers, MeSH terms, the record count, the MCP address | 10.2, 11.30 and four others | Your retest | `testing/Shipped_2026-09-23.md`, retest items 1 to 7 |
+| 3 | The night of 2026-09-22: the two lost searches, the coordinate range, the accessions, the isolate set | various | Your retest | `testing/Shipped_2026-09-22.md`, retest items 7 to 22 |
+| 4 | Four one-look checks, under a minute each | 11.14, 11.36, 9.12, 8.4 | Your retest | the items' own rows below |
+| 5 | A question about phenotypic features names none | 12.14 | Nobody on it | RAISED 2026-09-23 from the fix-2 screenshots. NOT STARTED, nobody on it |
+| 6 | Should a one-to-three-word question be asked back, such as `Reflux disease`? | 12.3 | Your decision | Short questions today are answered on one silent reading of what they meant |
+| 7 | Four golden test rows disagree with what the product does, row by row | the golden rows | Your decision | The test set only, nothing a user sees |
+| 8 | Is twenty sources the right ceiling? | the ceiling, measured and unchanged | Your decision | Every answer hits it and then tells the reader it was cut short, which is a large part of why a good answer reads as a thin one |
+| 9 | Tell the reader when the system wrote its own search rather than using a checked one | "Next, in order" item 5 | Nobody on it | Not started. The data exists: `CypherQueryOutput.template` is None exactly then. THE TRAP: the degradation is `ok` to `ok`, never `empty` |
+| 10 | Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | Parked | A discussion that precedes a build. Its scoping document now exists and is measured: `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md` |
+| 11 | A bounded trial of the probability model | 11.38 | Parked | Backlog only, nothing designed and nothing promised |
+| 12 | Does the Plain language answer keep its small grey medical-advice line? | 9.11 | Your decision | One line under every plain-language answer |
+| 13 | The trust-line wording | 9.9 | Your decision | One line under every answer |
+| 14 | Judge answer quality once answering is reliable | 10.4 | Nobody on it | Not built. After the release, once 10.3's consistency run shows reliable answering |
+| 15 | The load-dependent frontend tests | D4, under "Developer follow-through" | Nobody on it | Journey 7 FIXED 2026-09-23. The load-dependent suite is diagnosed and was still being worked at the close of that session |
+| 16 | Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | Parked | A discussion that precedes a build under `/bossman-mode`, reclassified 2026-09-22 |
+| 17 | The explanation half of 11.31 | 11.31 | Parked | Parked. You approved the current state as is on 2026-09-21 |
+| 18 | The byte ceiling at 50,000 | see its row | Parked | Parked |
+
+What the Waiting on column means:
+
+- Your decision: waiting on you: decisions. Each is written so the answer is:
+  yes, no, or pick one. None blocks work in flight
+- Nobody on it: still to build, nobody on it
+- Your retest: waiting on you: retests. Each of these is built, live on
+  develop, and needs your eyes before it counts as done. Nothing is blocked
+  on them
+- Parked: parked, and discussions that precede a build
+
+### 3. Done
+
+#### Done and fixed
 
 | Feature, in plain words | Item | Where it stands |
 |---|---|---|
-| The answer answers the question instead of listing what was found | 12.10 | IN PROGRESS 2026-09-23. DECIDED by the product owner the same evening: YES, a second, cheap model checks each written sentence against the exact record words it quotes, while code still verifies character for character that the quote is in the record. Code-only checking had passed 0 of 53 sentences |
-| The sources chip and the trust line agree with each other | 12.11 | BUILT 2026-09-23, not yet on develop. It now counts distinct pages, the same key the source list merges on. A regression from 12.8 the same day: the line counts citations and the list counts distinct pages |
-| Broken sentences and repeated records in the answer | 12.12 | BUILT 2026-09-23, not yet on develop. An orphan fragment starting lowercase with a stray quote mark, a paragraph opening "Another is titled" with no first, and the same records shown up to three times |
-| A search clicked in the history rail re-runs instead of showing its saved answer | 12.13 | IN PROGRESS 2026-09-23 on the product owner's yes. One frontend change |
 | The trust line stops undercounting an answer's sources | 12.8 | FIXED 2026-09-23, superseded in part by 12.11. It counted distinct DATABASES, which is right for "confirmed by N independent sources" and wrong for "based on N sources". Two counts now |
-| Plain language and researcher stop returning the same text | 12.9 | IN PROGRESS with 12.10, 2026-09-23. The two depths differ once the model's own prose survives, and the model check decided that evening is what lets it survive. The fix-2 screenshots showed researcher SHORTER on the Marfan phenotype question |
-| Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | In progress: the detail agent is modelling answers on it. The answer-writing model is unchanged; switching models is a separate decision |
-
-### 4. Still to build, nobody on it
-
-| Feature, in plain words | Item | Where it stands |
-|---|---|---|
-| A question about phenotypic features names none | 12.14 | RAISED 2026-09-23 from the fix-2 screenshots. NOT STARTED, nobody on it |
-| Tell the reader when the system wrote its own search rather than using a checked one | "Next, in order" item 5 | Not started. The data exists: `CypherQueryOutput.template` is None exactly then. THE TRAP: the degradation is `ok` to `ok`, never `empty` |
-| Judge answer quality once answering is reliable | 10.4 | Not built. After the release, once 10.3's consistency run shows reliable answering |
-| The load-dependent frontend tests | D4, under "Developer follow-through" | Journey 7 FIXED 2026-09-23. The load-dependent suite is diagnosed and was still being worked at the close of that session |
-
-### 5. Parked, and discussions that precede a build
-
-| Feature, in plain words | Item | Where it stands |
-|---|---|---|
-| Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | A discussion that precedes a build under `/bossman-mode`, reclassified 2026-09-22 |
-| Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | A discussion that precedes a build. Its scoping document now exists and is measured: `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md` |
-| A bounded trial of the probability model | 11.38 | Backlog only, nothing designed and nothing promised |
-| The explanation half of 11.31 | 11.31 | Parked. You approved the current state as is on 2026-09-21 |
-| The byte ceiling at 50,000 | see its row | Parked |
-
-### 6. Done
 
 Every numbered item in sets 1 to 9 is built and live on develop. All are
 approved except these, each in its own row further down:
@@ -89,8 +119,13 @@ approved except these, each in its own row further down:
 - 9.9, approved for the one-line shape; the wording still your decision
 - 9.11, your decision, not an approval
 
-Set 10 has 10.1 built, live and approved, 10.2 built and awaiting retest, and
-10.3 run. Set 11:
+Set 10:
+
+- 10.1 built, live and approved
+- 10.2 built and awaiting retest
+- and 10.3 run
+
+Set 11:
 
 - 17 rows live and approved
 - 11.22 verified live, 11.34 fixed and live
@@ -127,9 +162,9 @@ Set 12, your skip manager's feedback, raised and built 2026-09-23: 12.1, 12.2,
   that path and closed it for the measured questions
 - OMIM is live WITH `filter_omim_titles`; the two ship together and neither is
   enabled or removed without the other
-- Measured rather than built: the call ceiling stays at twenty (24 runs, none
-  refused, the worst pass 17 of 20); item 10.3's consistency run (86 of 150
-  answered; 25 questions answer every time, 18 never)
+- Measured rather than built:
+  - the call ceiling stays at twenty (24 runs, none refused, the worst pass 17 of 20)
+  - item 10.3's consistency run (86 of 150 answered; 25 questions answer every time, 18 never)
 - Superseded, not to build: 9.3, 9.4, 9.10, 11.1, 11.13 and 11.15. Accepted as
   not a defect: 11.37
 - The Set 11 table carries two rows for 11.34; the row marked FIXED and live
@@ -185,26 +220,6 @@ So Set 11 now has two parts, and the split is worth knowing before you edit it:
 Nothing was reworded when that split was made. It was verified by checking all
 720 substantive fragments of the previous version against the new one, with zero
 missing.
-
-## Table of contents
-
-- [Where every feature stands](#where-every-feature-stands)
-- [Progress at a glance](#progress-at-a-glance)
-- [How to read this](#how-to-read-this)
-- [Set 1: let people in](#set-1-let-people-in)
-- [Set 2: a steady frame](#set-2-a-steady-frame)
-- [Set 3: refusals and Stop](#set-3-refusals-and-stop)
-- [Set 4: stay signed in, history on phones](#set-4-stay-signed-in-history-on-phones)
-- [Set 5: Integrations and the disclaimer](#set-5-integrations-and-the-disclaimer)
-- [Set 6: let automated checks see a real answer](#set-6-let-automated-checks-see-a-real-answer)
-- [Set 7: a conversation that remembers](#set-7-a-conversation-that-remembers)
-- [Set 8: search every layer, with the scientists](#set-8-search-every-layer-with-the-scientists)
-- [Set 9: answers worth reading](#set-9-answers-worth-reading)
-- [Set 10: reliable flagship answers, and saved history](#set-10-reliable-flagship-answers-and-saved-history)
-- [Set 11: live feedback of 2026-09-13 and 2026-09-14](#set-11-live-feedback-of-2026-09-13-and-2026-09-14)
-- [Set 12: the second tester's questions](#set-12-the-second-testers-questions)
-- [Where we stopped](#where-we-stopped)
-- [Developer detail](#developer-detail)
 
 ## Set 1: let people in
 
@@ -1454,15 +1469,22 @@ Under `.claude/rules/attack-the-constraint.md`, the transport is not the
 constraint, so optimising it buys nothing a person would feel.
 
 On reliability, yes, and the product owner's instinct is right, but the thing
-that buys it is the half of their sentence that does not mention MCP: "reverse
-engineer the NCBI API, see what data exists, and build functions around them".
-That is a measured, typed function surface, and it removes a real class of wrong
-answer, namely the agent choosing an endpoint or a parameter that does not mean
-what it assumed. It is also the exact method that closed G-035 on the night of
-2026-09-22: the FTP tree was measured live first (521 MB, 584,433 rows, a 17.7
-second full scan), a wire contract was pinned from those numbers, and the shape
-went from never answering to 5 of 5. That method is available today, one tool at
-a time, with no protocol change and no new execution surface.
+that buys it is the half of their sentence that does not mention MCP:
+
+- "reverse engineer the NCBI API, see what data exists, and build functions around them".
+
+- That is a measured, typed function surface
+- and it removes a real class of wrong answer, namely the agent choosing an
+  endpoint or a parameter that does not mean what it assumed.
+
+It is also the exact method that closed G-035 on the night of 2026-09-22:
+
+- the FTP tree was measured live first (521 MB, 584,433 rows, a 17.7 second full scan)
+- a wire contract was pinned from those numbers
+- and the shape went from never answering to 5 of 5.
+
+That method is available today, one tool at a time, with no protocol change and
+no new execution surface.
 
 So the two halves separate cleanly, and only one of them is blocked:
 
@@ -1473,10 +1495,12 @@ So the two halves separate cleanly, and only one of them is blocked:
   distribution argument, not a speed or reliability one, and it stays a
   scoping discussion against Section 6 as this detail already says.
 
-Worth stating plainly, because the naming invites the confusion: this product
-already HAS an MCP surface, at `/mcp`, and it points the other way. It exists so
-other agents can call this product. Item 11.32 would point MCP inward, at our
-own calls, which is the direction that adds the hop.
+Worth stating plainly, because the naming invites the confusion:
+
+- This product already HAS an MCP surface, at `/mcp`, and it points the other way.
+- It exists so other agents can call this product.
+- Item 11.32 would point MCP inward, at our own calls, which is the direction
+  that adds the hop.
 
 #### Detail 11.38
 
@@ -1502,9 +1526,10 @@ questions yet.
 | Price | Input tokens billable, OUTPUT TOKENS FREE. Vendor claims $42 per billion input tokens |
 | Vendor speed and cost claim | 193.6x faster and 244.6x cheaper on their own "System One" tasks: 0.114s and $0.000081 against 8.566s and $0.013880 |
 
-THE LIMITATION THAT DECIDES WHERE IT CAN GO, in the vendor's own words: "Jev
-does not produce reasoning traces, explanations, or free-form text" and "It is
-not a drop-in replacement for a chat model."
+THE LIMITATION THAT DECIDES WHERE IT CAN GO, in the vendor's own words:
+
+- "Jev does not produce reasoning traces, explanations, or free-form text"
+- and "It is not a drop-in replacement for a chat model."
 
 That single sentence sorts the whole question. The product owner named three
 places. Two of them are decisions, and Jev is built for exactly that shape. The
@@ -1724,8 +1749,8 @@ Evidence, with a full transcript per question and a re-runnable script:
 | 12.8 | The trust line under an answer undercounts its sources: "Based on 1 source" beneath five cited papers | FIXED 2026-09-23, awaiting the product owner's retest | MEASURED across fourteen runs on 2026-09-23 and PRE-EXISTING, not caused by today's work, though 12.7's deduplication made it more visible. What the reader sees against what the line claims: 20 cited sources reads "Based on 4 sources"; 12 reads "Based on 3 sources"; 5 reads "Based on 2 sources", and after 12.7's dedup the same answer reads "Based on 1 source" over five clickable papers. So the line has never counted what the reader can see. From the user's chair this is a plain falsehood on screen under every answer, and it undersells the work: a reader told an answer rests on one source discounts it. Evidence: `testing/Developer/reports/2026-09-23_set12/both_depths/` |
 | 12.9 | Plain language and researcher return the SAME text, which is the defect 11.31 was raised for and marked fixed on 2026-09-21 | DIAGNOSED 2026-09-23, NOT BUILT, and it is the product owner's decision | MEASURED 2026-09-23 by asking all seven questions at both depths: identical word counts to the digit on four of the seven, `reflux disease` 213 and 213, `GERD` 185 and 185, the coffee question 932 and 932, the Mediterranean question 639 and 639. Three did differ, so it is not universal, which is why it needs a diagnosis rather than a patch. 11.31 was approved on 2026-09-21 on the understanding that the two modes had been separated; either these paths never read `audience_depth`, or something downstream drops it. THE ANSWER, established by execution on 2026-09-23 and it is not what the item assumed: 11.31 IS NOT BROKEN, IT IS BYPASSED. The depth DOES reach the model, which DOES write different prose: the plain-language prompt is 2651 characters against researcher's 2537, different digests, each opening with its own `AUDIENCE DEPTH:` line, and the model returns 1507 characters against 1657. THEN THE GROUNDING GATE DELETES ALL OF IT: researcher lost 21 of 21 sentences on the first pass and 11 of 11 on the repair. THE SMOKING GUN is that the final grounding call receives the SAME input digest at both depths and returns the same 20 claims, while every earlier stage differs. That input is `build_structured_fallback_narrative`, and the three producers of the shipped answer take no depth argument DELIBERATELY: the fallback narrative, `answer_summary_sentence`, and `tail_is_listing` being unconditionally true by product-owner direction of 2026-09-14. Correlation is exact across all fourteen runs: every question where both depths fell back to the code-built narrative returned the same answer, and no question where neither fell back was identical. A SECOND MECHANISM POINTS THE WRONG WAY: `drop_record_restatements` runs at RESEARCHER DEPTH ONLY, and six of seven researcher answers contain NO model prose at all, so a researcher currently gets strictly LESS than a plain-language reader. THE THREE OPTIONS, laid out as options rather than a recommendation, all of them the product owner's call: let the code-built half read the depth, which Section 14.1's firewall forbids today; change what the grounding gate accepts, whose obvious version 11.31 already measured and rejected; or keep changing the INPUT the way version 5 did with NCBI's gene summary, noting that six of the seven questions resolve to PubMed records with no equivalent plain-English field. Evidence: `testing/Developer/reports/2026-09-23_set12/worker_depth.md`, `both_depths_rerun/` and `probe_depth_stages/` |
 | 12.10 | "Did it provide the information, and did it answer the question?" The answers list what was found instead of answering | RAISED 2026-09-23 by the product owner after retesting all seven on develop. DECIDED THE SAME DAY: option B, change what the gate accepts. IN PROGRESS. THE DESIGN, so the loosening is deterministic and inspectable rather than a similarity score: the model may write a sentence in its own words when it attaches the EXACT words from the cited record that support it, as `[N: "exact words"]`. Code then checks four things, every one exact: the quoted words are really in record N; every content word of the sentence comes from those quoted words or the question, allowing only word endings to differ (enhances, enhancing, enhanced) and a short closed list of reporting words (study, review, found, suggests, according); every number is in the quote; and a quote that says no or not cannot be restated as a yes. A sentence with no quote is judged exactly as before. WHAT IS STILL FORBIDDEN: any word the record does not contain, any number it does not contain, and turning a negative finding positive. THE RESIDUAL RISK, stated so it is chosen rather than discovered: the same words from one short quote can be reordered to change who does what to whom. It is bounded by the quote being short, and the quote travels with the citation so it can be shown | JUDGED 2026-09-23 against the product owner's own two criteria, from their seven screenshots in `testing/User-feedback/fix-1/`. INFORMATION PROVIDED: six of seven. QUESTION ANSWERED: ONE of seven. The product owner's own words for the target: asked what the weather is, the answer is not "I found raining throughout the week in Bethesda", it is "today is sunny but sources say rain over the weekend". THE ONE THAT WORKS PROVES THE MACHINERY CAN: `GERD` returns real prose, "The typical symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx. GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus ... most effectively treated with proton-pump inhibitors", every sentence cited. THE OTHERS DUMP RECORDS. "Does coffee help make exercise more effective?" answers "Found 5 pubmed records:" and five titles, and never says whether coffee helps, though the papers it found include the sports nutrition position stand that answers it. The ashkenazi question returns papers naming BRCA1, BRCA2 and APC I1307K, which IS the answer, and never states it. THE MECHANISM, and it is the same grounding gate 12.9 named: a sentence that QUOTES a record passes the gate, a sentence that SYNTHESISES across records fails it, so what survives is restatement. That is why three of the seven carry a paragraph reading "One trial is named X. Another is named Y. A third is named Z", which is the degenerate prose the gate rewards. It also produces broken output: the caffeine answer's third paragraph is an orphan fragment starting lowercase, `however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue".`, and the ashkenazi answer's second paragraph opens "Another is titled" with no first. AND THE SAME RECORDS APPEAR UP TO THREE TIMES: once in the opening sentence, once in the restatement paragraph, once in the table. THIS IS THE SAME ROOT CAUSE AS 12.9 and the two should be decided together. MEASURED THE SAME DAY, AND IT DOES NOT WORK AS BUILT. With the new instruction the model wrote exactly the conversational answer asked for, for example "GERD stands for gastroesophageal reflux disease ... The most common symptoms are heartburn and regurgitation" and "Caffeine at doses of 3 to 6 mg per kilogram consistently improves exercise performance", each sentence faithful to its paper. It attached the quotes on most runs and none on one. THEN THE CODE CHECK DELETED ALL OF IT: 0 of 53 sentences survived across six live replies (GERD, coffee and ashkenazi, twice each), because the model paraphrases, "kidney" for "renal", "mouth" for "oral cavity", "change" for "mutation", and a fixed rule cannot tell a synonym from an invention. Four rounds of tightening the rule (sentences resting on several quotes, word endings, the paper's own title, grammatical glue words) and an instruction to keep the paper's own terms moved it from 0 to 0. Replayed offline over the captured replies: `testing/Developer/reports/2026-09-23_synthesis/replay_gate.py`. WORSE, THE NEW INSTRUCTION ALONE IS A REGRESSION: it makes the model paraphrase, so GERD, which answered on 2026-09-23 by quoting its abstract, dropped to a bare list. The instruction was therefore REVERTED and does not ship; the gate's quote support stays, since it only ever accepts more. THE DECISION THIS NEEDS, the product owner's alone because it changes a written rule (`production-standards`: acceptance is decided by a deterministic rule, never by a model): may a second, cheap model check each sentence against the exact record words it quotes, with the quote itself still verified by code character for character? Evidence: `testing/Developer/reports/2026-09-23_synthesis/`. DECIDED 2026-09-23 BY THE PRODUCT OWNER: YES to a model check. THE DESIGN: every check that CAN be exact stays exact and runs first, the quote is in the record character for character, every number is in the quote, and the sentence negates exactly when its quote does. Only the question code cannot answer, whether a reworded sentence says what its quote says, goes to the guard-tier model, all sentences of one answer in ONE call. It fails closed: an unreadable reply, a timeout or a spent budget accepts nothing, so the answer falls back to what code alone accepts today. This AMENDS `production-standards`' rule that acceptance is never a model's judgement, recorded in DECISIONS.md, and the rule's text changes on its own branch and pull request because it sits under `.claude/` |
-| 12.11 | The sources chip and the trust line disagree: "SOURCES 12" beside "Based on 14 sources" | RAISED 2026-09-23 from the same screenshots. BUILT the same day on the product owner's direction, not yet on develop. The fix-2 screenshots found it again on `recent papers on statins`, 6 against SOURCES 5 |
-| 12.12 | Broken sentences and repeated records: the caffeine answer's third paragraph is `however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue".`, the ashkenazi answer opens a paragraph "Another is titled" with no first, and the same records appear up to three times | RAISED 2026-09-23 from the same screenshots, directed by the product owner the same day. BUILT 2026-09-23, not yet on develop. The fix-2 screenshots found the same defect on `recent papers on statins`: "so that clinical judgment remains necessary in making the decision to use them", which the connective rule now drops | THREE DETERMINISTIC RULES in the grounding pass, all stricter: a sentence whose first word is an ordinary lowercase word, or whose quotation marks do not pair, is a fragment and is dropped whole; a sentence opening "Another", "A second", "A third" or "The other" is dropped when the sentence before it did not survive, the same rule 9.7 applies to "They" and "It"; and a model sentence that only restates a record's title, which the listing below already shows, is dropped at both depths rather than researcher only. The listing keeps every record, so no source is lost with a dropped sentence | INTRODUCED BY 12.8 EARLIER THE SAME DAY, so this is a regression and is recorded as one. 12.8 was asked to make the line count "the distinct sources the reader can actually see and click"; it counts distinct CITATION IDS instead, and the source list below deduplicates by URL, so an answer with 14 citations over 12 distinct pages reads "Based on 14 sources" above a list headed 12. Measured on two of the seven screenshots: `GERD` shows SOURCES 12 with "Based on 14 sources", and the caffeine question shows SOURCES 5 with "Based on 6 sources". Before 12.8 the two numbers were obviously different things, 4 against 12; now they are close enough to read as a defect. THE FIX is to count distinct `source_url`, the same identity the list uses, so the two can never disagree |
+| 12.11 | The sources chip and the trust line disagree: "SOURCES 12" beside "Based on 14 sources" | RAISED 2026-09-23 from the same screenshots. BUILT the same day on the product owner's direction, not yet on develop. The fix-2 screenshots found it again on `recent papers on statins`, 6 against SOURCES 5 | INTRODUCED BY 12.8 EARLIER THE SAME DAY, so this is a regression and is recorded as one. 12.8 was asked to make the line count "the distinct sources the reader can actually see and click"; it counts distinct CITATION IDS instead, and the source list below deduplicates by URL, so an answer with 14 citations over 12 distinct pages reads "Based on 14 sources" above a list headed 12. Measured on two of the seven screenshots: `GERD` shows SOURCES 12 with "Based on 14 sources", and the caffeine question shows SOURCES 5 with "Based on 6 sources". Before 12.8 the two numbers were obviously different things, 4 against 12; now they are close enough to read as a defect. THE FIX is to count distinct `source_url`, the same identity the list uses, so the two can never disagree |
+| 12.12 | Broken sentences and repeated records: the caffeine answer's third paragraph is `however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue".`, the ashkenazi answer opens a paragraph "Another is titled" with no first, and the same records appear up to three times | RAISED 2026-09-23 from the same screenshots, directed by the product owner the same day. BUILT 2026-09-23, not yet on develop. The fix-2 screenshots found the same defect on `recent papers on statins`: "so that clinical judgment remains necessary in making the decision to use them", which the connective rule now drops | THREE DETERMINISTIC RULES in the grounding pass, all stricter: a sentence whose first word is an ordinary lowercase word, or whose quotation marks do not pair, is a fragment and is dropped whole; a sentence opening "Another", "A second", "A third" or "The other" is dropped when the sentence before it did not survive, the same rule 9.7 applies to "They" and "It"; and a model sentence that only restates a record's title, which the listing below already shows, is dropped at both depths rather than researcher only. The listing keeps every record, so no source is lost with a dropped sentence |
 | 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer: "why clicking on the saved answer re runs the search, shouldnt it just show what was searched" | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. DIAGNOSED; the product owner said YES to the fix on 2026-09-23 and it is IN PROGRESS | A GAP IN 10.2, NOT A MISSED DEPLOY: both 10.2 commits are on develop. `hasSavedAnswer` is set in exactly one place, `mergeServerHistory` (`frontend/src/App.tsx:316`), which runs once per sign-in. A question asked since the page loaded is added to the rail without it, so `onOpen` (`App.tsx:1947-1973`) falls through to `ask()` and searches again. A row restored at sign-in opens its saved answer correctly. THE SCREENSHOT PROVES A SECOND SEARCH RAN: 22 sources against the original 23, and a VARIANT RECORDS paragraph the first answer did not have. THE FIX, one change: mark the row as saved once a signed-in run lands, or refresh the history list after each run. Evidence: `testing/Developer/reports/2026-09-23_fix2/history_rerun.md` |
 | 12.14 | `What phenotypic features are associated with Marfan syndrome?` names no phenotypic feature at either depth | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. NOT STARTED | Plain language answered "Found 1 disease record, 37 sequence variant records and 3 gene records for Marfan syndrome" and researcher "Found 1 disease record for Marfan syndrome: Marfan syndrome." The question asks for features and the answer substitutes an adjacent record type. This is the honest gap Shipped_2026-09-23 retest item 5 named: removing the dead template stopped a search that could never work, and nothing that CAN answer it runs instead. Evidence: `testing/Developer/reports/2026-09-23_fix2/findings.md` |
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
@@ -1975,10 +2000,16 @@ lost search is disclosed). What remains is small, and none of it blocks:
   language answers keep the small medical-advice line (9.11), and the
   trust-line wording (9.9).
 
-The longer standing list is unchanged: the three `theme.ts` logo tokens, the
-six undesigned surfaces, whether answers carry a medical-advice notice, the
-720px nav, the 20-source citation cap, the provenance note, the mode toggle's
-placement, and the trust-line wording.
+The longer standing list is unchanged:
+
+- the three `theme.ts` logo tokens
+- the six undesigned surfaces
+- whether answers carry a medical-advice notice
+- the 720px nav
+- the 20-source citation cap
+- the provenance note
+- the mode toggle's placement
+- and the trust-line wording.
 
 ### Loose ends, named rather than left
 
