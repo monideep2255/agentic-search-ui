@@ -1574,6 +1574,50 @@ TWO CONSTRAINTS THAT BIND ANY TRIAL, both from rules already in force:
   in front of everything until it has a fallback that is proven by execution
   rather than asserted.
 
+### The product owner's direction on the model architecture, 2026-09-23
+
+Added on the product owner's instruction, IN THEIR OWN WORDS, unedited. Quoted
+rather than paraphrased because they asked that the wording not be changed.
+
+> 1. Do we need to rethink the model use architecture, this ties into use of Jev from TypeSafe that we need to discuss.
+>
+> a) Jev becomes our classfier -> 1-3 words -> clarification question or move forward -> guardrails on the terms of relevancy or any place where a choice needs to be made.
+> b) Here is where I do think converting our NCBI APIs and enrichment calls into functions MCP style do make sense. This way easy for Jev to help with the classifer
+> c) We use Jev as a classifier where ever we are making those decisions
+> d) Ideally we need opensource model but if frontier are needed then so be it.
+>
+> For instance, example, how models should be chosen, using frontier models as example, if equivalent opensource is available then amazing
+>
+> OpenAI/Claude example:
+>
+> Luna/Haiku/Sonnet for query classification, metadata cleanup, simple extraction, routing, or highvolume answer drafts.
+> Sol/Opus 5.5 for multi-step retrieval planning, evidence synthesis, code generation, complex user
+> questions, and tool-using workflows.
+> Astra/Fable 5.1 for difficult scientific reasoning, ambiguous tasks, high-risk decisions, or final
+> escalation when lower-cost models cannot reach a quality threshold.
+>
+> Then another thing you added was the model check.
+
+Where this connects to items already in this plan, stated by the assistant and
+kept separate from the quote above:
+
+- Point a), the 1-3 word clarification question: item 12.3, the product
+  owner's open decision, with the fix-2 evidence (`BRCA1`, `MeSH`, `Marfan`
+  and `recent papers on statins` all answered without asking).
+- Point b), NCBI APIs and enrichment calls as MCP-style functions: item 11.32,
+  parked as a discussion that precedes a build.
+- THE MODEL CHECK: a decision point added on 2026-09-23 under items 12.9 and
+  12.10, approved by the product owner the same evening. A guard-tier model
+  decides whether a sentence the answer model REWORDED says anything more than
+  the exact record words it quotes, after code has verified the quote is in
+  the record character for character, the numbers are in the quote and the
+  negation matches. It fails closed. It is exactly the kind of yes-or-no
+  decision point point c) names, and a candidate for Jev's Bool question type
+  once a shadow run has calibrated it. It amends the first constraint above
+  (the cite-or-refuse gate stays deterministic) for that one bounded case: the
+  rule text changes in pull request #101, and the reasoning is in DECISIONS.md
+  on 2026-09-23.
+
 ONE STANDING RULE TO HOLD AGAINST IT, `system-design-patterns` pattern 11 again:
 on a recurring failure, iterate the harness first and swap the model second. So
 a probability-emitting model is worth a bounded trial on its own merits, never
