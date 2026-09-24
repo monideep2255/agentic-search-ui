@@ -71,7 +71,7 @@ Then the four one-look checks, each a single glance rather than a search: query 
 
 Then the batch from the night of 22 September, still untested: queries 23 to 44 across sections 3, 4 and 5. That is the two lost searches, the coordinate range, the generic-word guard, the BioProject and BioSample accessions, and the whole isolate set.
 
-Then section 11, live since the evening of 23 September: query 73 (answers that answer the question, Shipped item 14), query 74 (the trust line agreeing with the sources count, item 12) and query 75 (no broken sentences, item 13). Queries 72 and 76 are still being built; do not retest them until the shipped list says they are live.
+Then section 11, live since the evening of 23 September: query 73 (answers that answer the question, Shipped item 14), query 74 (the trust line agreeing with the sources count, item 12) and query 75 (no broken sentences, item 13). Then query 72 (the two depths differ on every question, item 16) and query 76 (a very short question is asked back, item 17), both live since 24 September.
 
 Query numbers are permanent. A new query takes the next free number and sits in the section it belongs to, so the numbers do not run in strict order inside a section. Nothing is ever renumbered, because other documents point at these numbers.
 
@@ -1389,7 +1389,7 @@ Expected:
 
 Why it matters: a student and a clinician asking the same disease question still want different depth, and this question could not be used to check that until the refusal behind it was fixed.
 
-Status: In progress (UI_fix_plan item 12.9), on the product owner's direction of 2026-09-23 that the two depths differ on every question. Do not retest yet.
+Status: Awaiting retest (Shipped_2026-09-23 item 16; UI_fix_plan item 12.9). Live 2026-09-24; measured on all 12 full feedback questions, every one differs by depth.
 
 ### 73. A question with no gene or disease is answered, not just listed
 
@@ -1453,13 +1453,13 @@ Steps: ask each in a fresh conversation. Then ask `BRCA1`-style short follow-ups
 
 Expected:
 
-- The first three are asked back: "What would you like to know about ...?" with four questions to pick from, such as symptoms and treatment, linked genes, clinical trials and recent research. Picking one runs that question.
+- The first three are asked back: "What would you like to know about ...?" with a few questions to pick from, written for that subject by a classifier model rather than a fixed list: symptoms and treatments for a condition, linked diseases and variants for a gene. Picking one runs that question.
 - `Any trials for GERD?` and `What is GERD?` are answered, not asked back: they say what they want.
 - A short follow-up inside a conversation is answered, since the conversation already says what it is about.
 
 Why it matters: the product owner's words, approving it on 2026-09-23: "If clarify needed -> yes approved". A two-word question like `reflux disease` could mean its symptoms, its trials or its genes, and answering one silent reading of it hides the other three from the reader.
 
-Status: In progress (UI_fix_plan item 12.3). Do not retest yet.
+Status: Awaiting retest (Shipped_2026-09-23 item 17; UI_fix_plan item 12.3). Live 2026-09-24. A model makes the call, so a borderline word such as `MeSH` can go either way (asked back 2 times in 3).
 
 ## Workflow for the product owner
 

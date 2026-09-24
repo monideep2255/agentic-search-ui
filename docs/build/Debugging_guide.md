@@ -835,4 +835,4 @@ grep -rn "async def act_node" src/
 
 That is the habit this guide is built around. Line numbers are deliberately absent throughout: a line number is a claim that goes stale silently on the next edit, and a symbol name is greppable and self-correcting.
 
-Last updated: 2026-09-23.
+Last updated: 2026-09-24.
