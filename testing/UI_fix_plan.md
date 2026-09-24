@@ -304,7 +304,7 @@ Batch: screens and pages.
 
 What you will see:
 
-- the white box stays one width from progress to answer.
+- The white box stays one width from progress to answer.
 - The header and footer stay put, both in the lighter NCBI blue, with smooth changes between screens.
 - New search is a filled blue button.
 - The sign-in box is centred.
@@ -2273,6 +2273,7 @@ What is open and not on this list as its own item, each recorded in
    - "tell me about the tree of life" expects an answer
    - the pathogenicity classification request expects a flag rather than a
      medical-advice refusal
+
    Nothing blocks on it. A fourth row joins them: G-035's Taxonomy must-cite
    URL. ITEM 12.2 MAY CLOSE SOME OF THESE ON ITS OWN, since they are the same
    check.
