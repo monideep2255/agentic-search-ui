@@ -472,12 +472,18 @@ def test_plain_language_keeps_every_sentence_sourced_and_asks_for_no_paraphrase(
     """
     directive = findings_module._DEPTH_DIRECTIVES["plain_language"]
 
-    assert "must restate a finding and end with that finding's marker" in directive, (
+    assert "must rest on a finding and end with that finding's marker" in directive, (
         f"populate-check: cite-or-refuse is not stated: {directive!r}"
     )
-    assert "rather than rewording" in directive, (
-        f"populate-check: the no-paraphrase instruction is missing, and "
-        f"without it the explanation is stripped by the gate: {directive!r}"
+    # Items 12.9 and 12.10 (2026-09-23) replaced "quote it exactly rather
+    # than rewording it". The product owner chose to let a faithful synthesis
+    # through, so rewording is allowed ONLY with the record's exact words
+    # inside the marker, which code verifies and the model check reads.
+    # Without that instruction a reworded sentence carries no quote and is
+    # stripped, which is how this depth failed before.
+    assert "exact supporting words inside the marker" in directive, (
+        f"populate-check: the quote-anchored instruction is missing, and "
+        f"without it a reworded explanation is stripped by the gate: {directive!r}"
     )
     # The firewall: a depth directive may never constrain which tokens may
     # appear. Version 1 did ("do not print CURIEs") and made the depth

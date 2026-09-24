@@ -831,6 +831,13 @@ of the knowledge graph returned FOR THIS QUESTION, so they are the answer \
 set, not background reading. Each one is a verified fact. Write a short, \
 plain answer to the user's question using ONLY those findings.
 
+ANSWER THE QUESTION THAT WAS ASKED. Read the findings, work out what they \
+say about the question, and say that, the way a knowledgeable person would \
+reply in conversation. Do not report what you found ("I found five \
+records", "one paper is titled X, another is titled Y"): the system lists \
+every record below your answer, so your job is what they mean for the \
+question. Where the findings disagree or only partly answer, say so.
+
 A finding that is only a record identifier, such as \
 "Disease record MedGen:C0346153", is still an answer: state the \
 identifier. Identifiers are how this system's records are named, and some \
@@ -844,15 +851,32 @@ supports it, written as [N] where N is that finding's number. Put the \
 marker at the end of the clause it supports, before the punctuation.
 2. One marker per fact. A sentence that uses two findings carries two \
 markers, [1][2]. Never let one marker cover two facts.
-3. State a finding's value as it is written in the finding, in full and \
-exactly, and quote each cited value in its own sentence. Do not rephrase, \
-shorten or abbreviate an identifier, a name, or a number. When several \
-values share a prefix, such as a transcript in front of each variant \
-name, repeat the whole value every time rather than writing the prefix \
-once and listing the remainders, and never pack several findings' values \
-into one sentence: a value that is not quoted whole is deleted by the \
-code check, and so is every other value in the same sentence. Write the \
-value as plain text, never inside quotation marks.
+3. A SHORT finding, an identifier, a name, a number or a label: state its \
+value as it is written in the finding, in full and exactly, in its own \
+sentence. Do not rephrase, shorten or abbreviate an identifier, a name, or \
+a number. When several values share a prefix, such as a transcript in \
+front of each variant name, repeat the whole value every time rather than \
+writing the prefix once and listing the remainders, and never pack several \
+findings' values into one sentence: a value that is not quoted whole is \
+deleted by the code check, and so is every other value in the same \
+sentence. Write the value as plain text, never inside quotation marks.
+3a. A LONG finding, an abstract, a summary, a trial description or a \
+paper's conclusions: do not copy it out. SYNTHESISE it. Write the sentence \
+in your own plain words to answer the question, and put the record's exact \
+supporting words inside the marker, like this: \
+Caffeine improves endurance performance [4: "caffeine enhances endurance \
+performance"]. The words inside the quotes must be copied character for \
+character from finding 4, a short contiguous span of about five to thirty \
+words, never the whole finding. Your sentence may use plain, everyday \
+words in place of the paper's terms, but it must say NOTHING MORE than the \
+quoted words: no extra fact, cause, population, comparison or certainty. \
+Every number must be in the quote. If the quote says no or not, your \
+sentence must too, and a sentence must never turn a negative finding into \
+a positive one: quote the narrower span that says exactly what you state. \
+A sentence may carry two quotes, [4: "first span"][4: "second span"], when \
+it draws on both. Code checks the quote is really in the finding and a \
+second reviewer checks the sentence says no more than it; a sentence that \
+fails either is deleted.
 4. Use only the identifiers the question and the findings give you. Never \
 substitute a name you happen to know for an identifier you were given: if \
 the question says NCBIGene:672, write NCBIGene:672, not the gene symbol \
@@ -1400,13 +1424,14 @@ _DEPTH_DIRECTIVES: dict[str, str] = {
         "background and no familiarity with NCBI, in everyday words and "
         "short sentences. Open by answering the question directly. Then "
         "explain what the answer MEANS, using the findings that are plain "
-        "descriptions of a record, such as a gene summary, and quoting "
-        "their words exactly rather than rewording them. Cover everything "
+        "descriptions of a record, such as a gene summary, and putting "
+        "it in simpler words with the exact supporting words inside the "
+        "marker, as rule 3a says. Cover everything "
         "the findings show, but do NOT restate the records one by one and "
         "do not list them: the records found are listed below your answer "
         "by the system, so write about what they show. Give this reader as "
         "much as they need to understand it and no more. Every sentence "
-        "must restate a finding and end with that finding's marker, because "
+        "must rest on a finding and end with that finding's marker, because "
         "a sentence without one is deleted. No headings, no lists, no "
         "tables."
     ),
@@ -1417,7 +1442,7 @@ _DEPTH_DIRECTIVES: dict[str, str] = {
         "short sections; start each with a heading line of two to five plain "
         "topic words written as '## Topic', followed by one paragraph of two "
         "to four sentences. Separate paragraphs with a blank line. Every "
-        "sentence ends with the marker of the finding it restates, because a "
+        "sentence ends with the marker of the finding it rests on, because a "
         "sentence without one is deleted. Do not restate the records one by "
         "one and do not write lists or tables: the records found are listed "
         "below your answer by the system, so write about what they show."
@@ -1604,7 +1629,8 @@ def build_answer_context_directive(
         "index, the trials registry). Mention them only after the answer. "
         "Keep them brief, except where one is a plain description of a "
         "record, such as a gene summary: use that one's own words to "
-        "explain what the answer means, quoting it exactly."
+        "explain what the answer means, in your words with its exact "
+        "supporting words inside the marker (rule 3a)."
     )
 
 
@@ -1639,7 +1665,8 @@ def build_explanatory_directive(synth_findings: list[SynthFinding]) -> str:
     return (
         f"PLAIN DESCRIPTIONS: {_marker_span(sorted(markers))} are written-out "
         "descriptions of a record rather than a value. Use them to explain "
-        "what the answer means, quoting their words exactly."
+        "what the answer means, in your words with their exact supporting "
+        "words inside the marker (rule 3a)."
     )
 
 
@@ -1658,15 +1685,20 @@ def build_explanatory_directive(synth_findings: list[SynthFinding]) -> str:
 # above records at length: four versions of a depth directive failed by
 # instructing shape or brevity, and one failed by constraining WHICH TOKENS
 # could appear, which broke the grounding pass and refused a whole answer.
-# This line constrains no token. A verdict is unquotable from a paper title
-# in any case, so the grounding pass is the control and this is the prompt
-# saying the same thing earlier.
+# This line constrains no token. The grounding pass is the control and this
+# is the prompt saying the same thing earlier. Since items 12.9 and 12.10 a
+# sentence may synthesise a paper in its own words, but only resting on the
+# paper's quoted words, "yes" is not among the reporting words the code check
+# lets through, and the model check rejects advice and verdicts by name.
 TOPIC_ANSWER_DIRECTIVE = (
     "PUBLISHED LITERATURE: this question named no gene, variant or disease, "
     "so the findings below are published papers, found by searching the "
     "literature for the question's own words. Report WHAT HAS BEEN "
-    "PUBLISHED: say what each paper is and what it is about. The papers are "
-    "the answer. Never give a verdict, a recommendation or an opinion of "
+    "PUBLISHED: answer the question from what the papers report, the way a "
+    "reviewer would summarise the evidence, for example that a position "
+    "stand or several studies report an effect, and where they disagree. Do "
+    "not list the papers one by one; the system lists them below your "
+    "answer. Never give a verdict, a recommendation or an opinion of "
     "your own, and never tell the reader whether something works for them "
     "or what they should do, even where a paper says so."
 )

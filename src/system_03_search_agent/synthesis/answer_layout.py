@@ -679,6 +679,23 @@ def answer_summary_sentence(
     counted = [f for f in cited if not (anchors and f.curie in linked_set)]
     if not counted:
         counted = list(anchors)
+    # Items 12.9 and 12.10 (2026-09-23), measured live: once the prose could
+    # cite a paper's abstract as well as its title, "Found 10 pubmed records"
+    # sat above a list of 5 papers, because two citations of one paper were
+    # counted as two records. One record per page, keyed by exact
+    # `source_url` as the list and the trust line key it, keeping the
+    # finding that NAMES the record (its title) when there is one.
+    by_page: dict[str, SynthFinding] = {}
+    unkeyed: list[SynthFinding] = []
+    for finding in sorted(counted, key=lambda f: display_slots[f.citation_id]):
+        page = (finding.source_url or "").strip()
+        if not page:
+            unkeyed.append(finding)
+            continue
+        kept = by_page.get(page)
+        if kept is None or (kept.field not in _LABEL_FIELDS and finding.field in _LABEL_FIELDS):
+            by_page[page] = finding
+    counted = list(by_page.values()) + unkeyed
 
     counts: dict[str, int] = {}
     for finding in counted:

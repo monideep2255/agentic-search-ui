@@ -1156,6 +1156,47 @@ export function App() {
     );
   }, [view.landed, view.meta, searchView]);
 
+  /*
+   * Item 12.13: a row asked THIS tab session never got `hasSavedAnswer`,
+   * because the only writer of that field was `mergeServerHistory`, run
+   * once per sign-in (see that function's docstring). So clicking the row
+   * a person just answered fell to `onOpen`'s re-ask branch instead of
+   * opening what they already have, which is what the diagnosis at
+   * `testing/Developer/reports/2026-09-23_fix2/history_rerun.md` traced.
+   *
+   * Set optimistically here, the moment THIS run lands, rather than by
+   * re-fetching `/v1/history`: `_capture_interaction` (`core/run.py`)
+   * writes the `interactions` row in a `finally` block that only runs
+   * after every event, `done` included, has already been yielded to the
+   * client, so a re-fetch issued right at `landed` can still race the
+   * write and 404. That race is exactly why `onOpen` already falls back
+   * to a fresh `ask()` on any `fetchHistoryAnswer` failure (see that
+   * handler); an optimistic flag here is safe because the existing
+   * fallback catches the rare case where the write has not landed yet,
+   * the same guard the meta effect above relies on for its own writes.
+   *
+   * Guests are excluded (`signedIn`, mirroring `onOpen`'s own `token`
+   * check): a guest run's answer is never stored server side, so marking
+   * it saved would send `onOpen` to a fetch that always fails, for no
+   * gain over the unconditional re-ask a guest already gets.
+   */
+  useEffect(() => {
+    if (!view.landed || !signedIn) return;
+    const question = searchView.name === "answer" || searchView.name === "run"
+      ? searchView.question
+      : null;
+    if (question === null) return;
+    const entryId = activeEntryId.current;
+    if (entryId === null) return;
+    setHistory((current) =>
+      current.map((item) =>
+        item.id === entryId && item.question === question && item.hasSavedAnswer !== true
+          ? { ...item, hasSavedAnswer: true }
+          : item,
+      ),
+    );
+  }, [view.landed, signedIn, searchView]);
+
   const ask = useCallback(
     async (
       question: string,

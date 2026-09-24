@@ -733,6 +733,63 @@ def _quote_is_valid(quote: str, finding: SynthFinding) -> bool:
     return bool(value) and form in value
 
 
+def exact_synthesis_checks_pass(
+    claim_text: str,
+    pairs: list[tuple[str, SynthFinding]],
+    licensed_question: str = "",
+) -> bool:
+    """Checks 1, 3 and 4, the ones code can decide exactly.
+
+    1. Every quote is in its own record, character for character.
+    3. Every number in the sentence is in a quote, the question or a cited
+       record's own identifier.
+    4. The sentence negates exactly when one of its quotes does.
+
+    Since item 12.10's decision (2026-09-23) these are also the gate in front
+    of the model check: a sentence reaches the model only after all three
+    pass, so the model is never asked about a quote that is not real, a
+    number that is not there, or a flipped denial.
+    """
+    if not pairs or not all(_quote_is_valid(quote, finding) for quote, finding in pairs):
+        return False
+    if _VERDICT_OPENER.match(claim_text):
+        return False
+    quotes = " ".join(quote for quote, _ in pairs)
+    context = " ".join(f"{f.curie} {f.entity_type}" for _, f in pairs)
+    if not numbers_are_supported(claim_text, quotes, licensed_question, record_context=context):
+        return False
+    return _negates(claim_text) == any(_negates(quote) for quote, _ in pairs)
+
+
+# Item 12.10, measured live on 2026-09-23: "Yes, the caffeine in coffee can
+# make exercise more effective" passed the model check. The product's
+# standing line (item 12.7) is that it reports published evidence and never
+# hands a person a verdict, so a reworded sentence may not OPEN by answering
+# yes or no. Exact, and in front of the model. A sentence such as "No study
+# found an effect" is untouched: only the bare verdict word with a comma.
+_VERDICT_OPENER = re.compile(r"^\s*(?:yes|no)\s*[,.;:!]", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class SynthesisCandidate:
+    """A reworded sentence that passed every exact check but the word check.
+
+    Item 12.10, decided by the product owner on 2026-09-23: whether such a
+    sentence says what its quotes say is the one question code cannot answer
+    (a synonym and an invention look the same to it), so it goes to the
+    guard-tier model. `key` is what the second grounding pass looks up.
+    """
+
+    key: tuple[str, tuple[str, ...]]
+    sentence: str
+    quotes: tuple[str, ...]
+
+
+def synthesis_key(claim_text: str, quotes: list[str] | tuple[str, ...]) -> tuple[str, tuple[str, ...]]:
+    """The identity of one sentence-with-quotes, normalized, order kept."""
+    return (normalize(claim_text), tuple(_quote_form(quote) for quote in quotes))
+
+
 def synthesis_is_supported_by(
     claim_text: str,
     pairs: list[tuple[str, SynthFinding]],
@@ -758,16 +815,10 @@ def synthesis_is_supported_by(
     `licensed_question` must already be filtered by
     `_licensed_question_content`, the same licence the strict path gives.
     """
-    if not pairs or not all(_quote_is_valid(quote, finding) for quote, finding in pairs):
+    if not exact_synthesis_checks_pass(claim_text, pairs, licensed_question):
         return False
     quotes = " ".join(quote for quote, _ in pairs)
     context = " ".join(f"{f.curie} {f.entity_type}" for _, f in pairs)
-    # 3. Numbers come from the quotes, the question or the record's own id.
-    if not numbers_are_supported(claim_text, quotes, licensed_question, record_context=context):
-        return False
-    # 4. Polarity: the sentence negates exactly when one of its quotes does.
-    if _negates(claim_text) != any(_negates(quote) for quote, _ in pairs):
-        return False
     # 2. Every content word is licensed by the quotes, the record's own
     # label, the question, or the reporting vocabulary. Never the whole
     # record: that is the design 11.31 measured and rejected.
@@ -1065,6 +1116,8 @@ def run_grounding_pass(
     core_ask_required: bool = True,
     question: str = "",
     evidence_quotes: tuple[str, ...] | None = None,
+    verified_syntheses: frozenset[tuple[str, tuple[str, ...]]] | None = None,
+    candidate_sink: list[SynthesisCandidate] | None = None,
 ) -> GroundingResult:
     """Run Section 8.2's seven steps over one Synth narrative.
 
@@ -1114,6 +1167,10 @@ def run_grounding_pass(
     # UI fix set 9, item 9.7: whether the sentence before this one survived,
     # so a pronoun opener whose antecedent was discarded can be recognised.
     previous_survived = False
+    # Item 12.10 (2026-09-23): the records the last SHOWN sentence cited, so a
+    # reworded sentence that refers back ("This condition ...") can be held
+    # to the record it refers back to.
+    previous_refs: set[int] = set()
 
     for sentence_index, sentence in enumerate(_split_sentences(narrative)):
         # Build phase 6.2, T-6.2-15. Nothing in this sentence is committed to
@@ -1249,6 +1306,28 @@ def run_grounding_pass(
                 and bool(pairs)
                 and synthesis_is_supported_by(claim_text, pairs, licensed_question, labels)
             )
+            # Item 12.10 (2026-09-23): the model check. A sentence whose words
+            # code could not license, but which passed every exact check, is
+            # accepted only when the model approved THIS sentence with THESE
+            # quotes. On the first pass it is collected instead, so the caller
+            # can ask the model once for every such sentence in the answer.
+            if (
+                not strict_ok
+                and not synthesized
+                and pairs
+                and exact_synthesis_checks_pass(claim_text, pairs, licensed_question)
+            ):
+                key = synthesis_key(claim_text, [pair_quote for pair_quote, _ in pairs])
+                if verified_syntheses is not None and key in verified_syntheses:
+                    synthesized = True
+                elif candidate_sink is not None:
+                    candidate_sink.append(
+                        SynthesisCandidate(
+                            key=key,
+                            sentence=claim_text,
+                            quotes=tuple(pair_quote for pair_quote, _ in pairs),
+                        )
+                    )
             if synthesized and quote is None:
                 # Carried by the quotes on the markers after it; the claim
                 # keeps the first of them as the words it rests on.
@@ -1356,11 +1435,22 @@ def run_grounding_pass(
         #   removes, so no source is lost with the sentence.
         if kept_parts:
             probe = "".join(part for part, _ in kept_parts)
+            this_refs = {ref for _, ref in kept_parts if ref is not None}
+            reworded = any(claim.evidence_quote for claim in pending_claims)
             if (
                 _is_unbalanced_fragment(probe)
                 or _opens_mid_sentence(probe)
                 or (_opens_on_bare_pronoun(probe) and not previous_survived)
                 or (_opens_on_continuation(probe) and not previous_survived)
+                # Item 12.10, measured live on 2026-09-23: after a sentence
+                # about Familial Mediterranean fever, "This condition can
+                # cause ... neonatal hyperbilirubinemia, acute hemolysis"
+                # rested faithfully on a G6PD paper's quote, so "this
+                # condition" silently changed disease. Each sentence was true
+                # to its own quote; the reference between them was false. A
+                # REWORDED sentence that refers back must cite a record the
+                # sentence before it cited.
+                or (reworded and _refers_back(probe) and not (this_refs & previous_refs))
             ):
                 stripped += len(pending_claims)
                 pending_claims.clear()
@@ -1391,7 +1481,10 @@ def run_grounding_pass(
                 surviving_sentences.append(rebuilt)
                 surviving_origins.append(sentence_index)
                 survived_this = True
+                previous_refs = {ref for _, ref in kept_parts if ref is not None}
         previous_survived = survived_this
+        if not survived_this:
+            previous_refs = set()
 
     if core_ask_required and not claims:
         # Step 7: stripping removed the query's core ask. Discard the
@@ -1495,6 +1588,21 @@ _CONTINUATION_OPENERS: tuple[str, ...] = (
     "the rest ",
     "also ",
 )
+
+
+_REFERRING_OPENERS: frozenset[str] = frozenset(
+    {"this", "these", "that", "those", "it", "they", "its", "their", "such", "both"}
+)
+
+
+def _refers_back(text: str) -> bool:
+    """True when a sentence's subject points at the one before it (12.10).
+
+    "This condition", "These variants", "It", "They", "Such mutations":
+    a first word that only names something already on the page.
+    """
+    words = normalize(text).split()
+    return bool(words) and words[0] in _REFERRING_OPENERS
 
 
 def _opens_on_continuation(text: str) -> bool:

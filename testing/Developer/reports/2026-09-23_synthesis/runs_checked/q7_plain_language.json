@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "What positive and negative genes do ashkenazi jewish people have?",
+  "outcome": "answer",
+  "words": 210,
+  "paragraphs": 2,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "10926794",
+    "19690183",
+    "34870614",
+    "35944511",
+    "42753012"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 8 pubmed records [1][2][3][4][5][6][7][8]. \nThree specific inherited changes in the BRCA1 and BRCA2 genes, called founder mutations, have been studied in Ashkenazi Jewish ovarian cancer patients, who had a 25% chance of carrying one of them [1]. In a large testing program in Ontario, about 10% of Ashkenazi Jewish people tested for these three founder mutations had a positive result [2]. Among people in that Ontario program who tested negative for the three founder mutations and then had full gene sequencing, about 3% turned out to carry other harmful variants in BRCA1 or BRCA2 [2]. A separate gene change called APC I1307K has also been studied in Ashkenazi Jewish people, with those carrying one copy having about 1.7 times higher odds of colorectal cancer [3]. The same study concluded that Ashkenazi Jewish ovarian cancer patients are a group with a high likelihood of carrying BRCA mutations regardless of family history [1]. \n\n## Pubmed records found\n\n- Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients.\n- The 6q22.33 locus and breast cancer susceptibility.\n- Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis.\n- Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study.\n- An update on APC I1307K homozygosity: observations from a large multigene panel testing cohort.\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q7"
+}

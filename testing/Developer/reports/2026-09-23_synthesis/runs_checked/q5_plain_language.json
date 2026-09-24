@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "Does coffee help make exercise more effective?",
+  "outcome": "answer",
+  "words": 313,
+  "paragraphs": 2,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "11583104",
+    "33388079",
+    "36870101",
+    "38466174",
+    "40626862"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \nYes, the caffeine in coffee can make exercise more effective, but the evidence points to caffeine itself as the active ingredient, and drinking it as coffee may not work as well as taking pure caffeine [1] [2]. A major sports nutrition society's official position is that caffeine improves many types of exercise, with the most consistent benefits seen in aerobic endurance, and that it works at doses of 3\u20136 mg per kilogram of body weight taken about 60 minutes before exercise [2]. There is no evidence that caffeine before exercise causes dehydration or other adverse effects [1]. The benefits can vary from person to person, partly due to genetic differences in how individuals metabolize caffeine, as well as habitual intake and other factors [2]. Despite the large body of research, a review of common questions and misconceptions notes that many uncertainties about caffeine's effectiveness and safety remain, including whether it dehydrates you, whether it works for everyone, whether there are sex differences in its effects, and whether it causes heart problems [3]. The relationship between coffee and heart health is complex: moderate coffee consumption is associated with a reduced risk of hypertension, type 2 diabetes, heart attack, arrhythmias, heart failure, and even overall mortality, though unfiltered coffee may raise LDL cholesterol and coffee may acutely increase premature ventricular contractions [4]. Caffeine consumed too close to bedtime can reduce total sleep time by about 45 minutes and sleep efficiency by 7%, so to protect sleep a cup of coffee should be consumed at least 8.8 hours before bed and a standard pre-workout supplement at least 13.2 hours before bed [5]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.\n- Common questions and misconceptions about caffeine supplementation: what does the scientific evidence really show?\n- Coffee and cardiovascular disease.\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q5"
+}

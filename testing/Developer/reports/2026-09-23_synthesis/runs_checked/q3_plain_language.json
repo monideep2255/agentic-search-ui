@@ -1,0 +1,32 @@
+{
+  "depth": "plain_language",
+  "question": "Any trials for GERD?",
+  "outcome": "answer",
+  "words": 238,
+  "paragraphs": 2,
+  "headings": 4,
+  "list_items": 7,
+  "table_rows": 5,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 12 sources",
+  "sources": [
+    "1795938",
+    "24503367",
+    "29132520",
+    "36170502",
+    "37034973",
+    "37516506",
+    "@DISEASE_Gastroesophageal_Reflux",
+    "NCT00141960",
+    "NCT00163306",
+    "NCT00181805",
+    "NCT00184522",
+    "NCT00235677"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 5 clinical trial records for GERD: Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease [4], Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) [5], Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents [6], On Demand Treatment of Reflux Disease [7] and Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study [8]. \nGERD is a condition where stomach contents flow back into the esophagus or mouth, causing symptoms like heartburn and regurgitation [1]. It can affect quality of life and may lead to complications including inflammation of the esophagus, narrowing of the esophagus, and a condition called Barrett esophagus that can precede esophageal cancer [1]. In children, reflux is common and often normal, but GERD is a less common, more serious form that may need medical management [2]. Reflux symptoms are among the most common reasons people visit primary care providers [3]. \n\n## Clinical trial records found\n\n- Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease / COMPLETED\n- Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) / COMPLETED\n- Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents / COMPLETED\n- On Demand Treatment of Reflux Disease / COMPLETED\n- Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study / COMPLETED\n\n## Pubmed records found\n\n- Gastroesophageal reflux disease.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal reflux disease in children: What's new right now?\n- Gastroesophageal Reflux Disease.\n\n## Medgen records found\n\n- Gastroesophageal reflux (GERD)\n\n## Literature entity records found\n\n- Gastroesophageal Reflux\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q3"
+}

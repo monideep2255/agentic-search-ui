@@ -170,6 +170,94 @@ describe("App: opening a history item (item 10.2)", () => {
     expect(screen.queryByTestId("saved-answer-body")).not.toBeInTheDocument();
   });
 
+  it("opens the saved answer for a question asked THIS session, once it lands, with no re-run", async () => {
+    // Item 12.13. Mutation: dropping the `view.landed` effect that sets
+    // `hasSavedAnswer: true` on this tab's own row (or gating it on the
+    // wrong flag) turns this red: `onOpen` would fall through to `ask`
+    // a second time instead of fetching the saved answer, because a row
+    // created by `ask` carries no `hasSavedAnswer` from `mergeServerHistory`
+    // (that function only runs once per sign-in, not after this run lands).
+    // No restored server history here on purpose: the row under test must
+    // be the LOCAL one `ask` created, never a `mergeServerHistory` copy.
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+    fetchHistoryAnswerMock.mockResolvedValue(SAVED_ANSWER);
+    createRunMock.mockResolvedValue({ run_id: "row-1", persona_name: "Mendel" });
+
+    const frame = (seq: number, type: string, payload: unknown): string =>
+      `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+        type,
+        version: "v1",
+        trace_id: "row-1",
+        seq,
+        ts: "2026-09-23T00:00:00Z",
+        payload,
+      })}\n\n`;
+    const STREAM = [
+      frame(0, "guard", { passed: true, category: "ok", reason: null }),
+      frame(1, "think", {
+        narrative: "Resolving the gene named in the question.",
+        query_class: "single_hop",
+        resolved_entities: [],
+        clarifying_question: null,
+      }),
+      frame(2, "plan", { narrative: "Read the curated edges.", tool_calls: [] }),
+      frame(3, "tool_result", {
+        call_id: "c1", tool: "cypher_query", layer: "layer_1_graph",
+        status: "ok", summary: "", result_count: 1, truncated: false,
+      }),
+      frame(4, "token", { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["k1"] }),
+      frame(5, "citation", {
+        citation_id: "k1", display_index: 1, source: "NCBI Gene", source_id: "672",
+        source_url: "https://www.ncbi.nlm.nih.gov/672", layer: "layer_1_graph",
+        field: "cypher_query", claim_text: "x", evidence_kind: "curated assertion",
+        assertion_confidence: "high", population_ancestry_context: null,
+        license: "public domain",
+      }),
+      frame(6, "trust_signal", {
+        outcome: "answer", risk_tier: "low", grounded: true, triangulated: false,
+      }),
+      frame(7, "done", {
+        total_cost_usd: 0.0031, total_tool_calls: 1, elapsed_ms: 11400,
+        trust_outcome: "answer",
+      }),
+    ].join("");
+    openEventStreamMock.mockImplementation(() => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(STREAM));
+          controller.close();
+        },
+      });
+      return Promise.resolve(
+        new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }),
+      );
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // Ask the question live in this tab, and let the run land.
+    await user.type(
+      mainArea().getByRole("textbox", { name: /question/i }),
+      "What is BRCA1?",
+    );
+    await user.click(
+      mainArea().getByRole("button", { name: /^search the knowledge graph$/i }),
+    );
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+
+    // Click the just-answered row from the rail.
+    const rail = await screen.findByTestId("history-rail");
+    await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
+
+    expect(await screen.findByTestId("saved-answer-marker")).toBeInTheDocument();
+    // Exactly the one run from asking; the click must not start a second.
+    expect(createRunMock).toHaveBeenCalledTimes(1);
+    expect(fetchHistoryAnswerMock).toHaveBeenCalledWith("test-token", "row-1");
+  });
+
   it("Run again beside the saved answer performs a fresh search", async () => {
     // Mutation: wiring Run again to do nothing, or to re-show the same
     // saved answer instead of calling `createRun`, turns this red.

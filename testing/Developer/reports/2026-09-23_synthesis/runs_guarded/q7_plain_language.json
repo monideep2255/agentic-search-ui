@@ -1,0 +1,26 @@
+{
+  "depth": "plain_language",
+  "question": "What positive and negative genes do ashkenazi jewish people have?",
+  "outcome": "ask",
+  "words": 135,
+  "paragraphs": 1,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "sources": [
+    "10926794",
+    "1828838",
+    "19690183",
+    "34870614",
+    "35944511"
+  ],
+  "notes": [
+    "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 5 pubmed records: Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients. [1], Frequency of the Tay-Sachs disease splice and insertion mutations in the UK Ashkenazi Jewish population. [2], The 6q22.33 locus and breast cancer susceptibility. [3], Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis. [4] and Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study. [5]. \n\n## Pubmed records found\n\n- Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients.\n- Frequency of the Tay-Sachs disease splice and insertion mutations in the UK Ashkenazi Jewish population.\n- The 6q22.33 locus and breast cancer susceptibility.\n- Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis.\n- Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study.\n\n(Note: the written summary of these records could not be verified against them, so this answer lists the records found instead)\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q7"
+}

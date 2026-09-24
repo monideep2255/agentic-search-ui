@@ -1,0 +1,23 @@
+{
+  "depth": "researcher",
+  "question": "Are there any beneficial variants typically found in people of mediterranean descent?",
+  "outcome": "answer",
+  "words": 197,
+  "paragraphs": 5,
+  "headings": 5,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "16225031",
+    "34582790",
+    "35098403",
+    "37782073",
+    "39042260"
+  ],
+  "notes": [],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \n\n## G6PD Deficiency\nThe condition causes a disease spectrum including neonatal hyperbilirubinemia, acute hemolysis, and chronic hemolysis, although persons may also be asymptomatic [1]. \n\n## Familial Mediterranean Fever\nFamilial Mediterranean fever is a monogenic autoinflammatory disorder caused by mutations in the MEFV gene that mainly affects people of Mediterranean descent, with higher incidence in Turkish, Jewish, Arabic, and Armenian populations [2]. A study of 27,504 patients from 35 institutions in Turkey and Northern Cyprus examined genotype-phenotype correlations and how specific variants contribute to clinical findings [2]. The most common co-variant was the R202Q/M694V genotype [3]. \n\n## Hemoglobinopathies\nThis study focused on Hispanic rather than Mediterranean-descended patients specifically [4]. \n\n## Neurodevelopmental Disorders\nMultilocus pathogenic variation was identified in 51 families (28.9%), mostly driven by runs of homozygosity reflecting identical-by-descent haplotypes [5]. This study documents the high genetic heterogeneity underlying neurodevelopmental disorders in the Turkish population but reports pathogenic rather than beneficial variation [5]. \n\n## Pubmed records found\n\n- Diagnosis and management of G6PD deficiency.\n- High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.\n- Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium.\n- Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.\n- Molecular analyses of MEFV gene mutation variants in Turkish population.\n",
+  "key": "q6"
+}

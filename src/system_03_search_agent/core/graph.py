@@ -552,6 +552,7 @@ from system_03_search_agent.synthesis.freshness import (
 from system_03_search_agent.synthesis.grounding import (
     GroundedClaim,
     GroundingResult,
+    SynthesisCandidate,
     display_index_by_citation_id,
     extract_evidence_quotes,
     run_grounding_pass,
@@ -563,6 +564,11 @@ from system_03_search_agent.synthesis.refuse import (
     build_fallback_link,
     build_refusal_text,
     refusal_message_for,
+)
+from system_03_search_agent.synthesis.sentence_check import (
+    SentenceCheckUnreadable,
+    approved_keys,
+    build_sentence_check_messages,
 )
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
@@ -6881,6 +6887,83 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
 #: measure: skipping is free, timing out is not.
 _WRITE_REPAIR_MIN_BUDGET_S = 5.0
 
+# Items 12.9 and 12.10 (2026-09-23): the model check on reworded sentences
+# runs only with at least this much of the write budget left, and is itself
+# capped, so it can never be the reason an answer times out. Below the floor
+# it is skipped, which approves nothing: the answer is what code alone
+# accepts, exactly as before the check existed.
+_SENTENCE_CHECK_MIN_BUDGET_S = 4.0
+_SENTENCE_CHECK_MAX_BUDGET_S = 12.0
+
+
+async def _ground_with_sentence_check(
+    narrative: str,
+    synth_findings: list[SynthFinding],
+    *,
+    question: str,
+    evidence_quotes: tuple[str, ...],
+    harness: Harness,
+    trace_id: str,
+    budget_s: float,
+) -> GroundingResult:
+    """Ground a reply, asking the guard-tier model about reworded sentences.
+
+    Decided by the product owner on 2026-09-23 (items 12.9 and 12.10; the
+    reasoning is in `synthesis/sentence_check.py`). Two grounding passes over
+    the same reply:
+
+    1. The ordinary pass, collecting every reworded sentence that passed all
+       of code's exact checks (quote in the record, numbers, negation) and
+       failed only the word check.
+    2. When there are any, ONE guard-tier call about all of them, then the
+       pass again, accepting exactly the sentences the model approved with
+       exactly those quotes.
+
+    Fails closed at every step: no candidates, too little budget, the cost
+    cap, a failed or timed-out call, or an unreadable reply all return the
+    first pass unchanged, which is what code alone accepts.
+    """
+    candidates: list[SynthesisCandidate] = []
+    first = run_grounding_pass(
+        narrative,
+        synth_findings,
+        core_ask_required=True,
+        question=question,
+        evidence_quotes=evidence_quotes,
+        candidate_sink=candidates,
+    )
+    if not candidates or budget_s < _SENTENCE_CHECK_MIN_BUDGET_S:
+        return first
+    try:
+        response = await _dispatch_tier_call(
+            harness,
+            trace_id,
+            "guard",
+            "write",
+            build_sentence_check_messages(candidates),
+            budget_s=min(budget_s - 1.0, _SENTENCE_CHECK_MAX_BUDGET_S),
+            max_tokens=256,
+            # A checker must not read the answering agent's prefix, for the
+            # same measured reason the guardrail's classifier does not.
+            cache_prefix=None,
+        )
+        approved = approved_keys(_response_text(response), candidates)
+    except (cost_control.QueryCapExceededError, HarnessCallError, SentenceCheckUnreadable) as exc:
+        logger.warning(
+            "sentence check approved nothing (trace %s): %s", trace_id, type(exc).__name__
+        )
+        return first
+    if not approved:
+        return first
+    return run_grounding_pass(
+        narrative,
+        synth_findings,
+        core_ask_required=True,
+        question=question,
+        evidence_quotes=evidence_quotes,
+        verified_syntheses=approved,
+    )
+
 
 def _code_built_lines_will_cite(
     omitted_findings: list[SynthFinding],
@@ -9571,12 +9654,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # to write (naming a finding whose value it never saw) resolve to a
     # real finding anyway, which is exactly the wrong-chip risk this split
     # exists to avoid.
-    grounding = run_grounding_pass(
+    grounding = await _ground_with_sentence_check(
         model_layout.narrative,
         prompt_findings,
-        core_ask_required=True,
         question=query.text,
         evidence_quotes=evidence_quotes,
+        harness=harness,
+        trace_id=trace_id,
+        budget_s=write_budget_s - (time.monotonic() - write_started_at),
     )
 
     # T-4.5-07, finding F-4.5-06 breach 2: the completeness repair.
@@ -9712,12 +9797,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                     _response_text(repaired_text)
                 )
                 repaired_layout = grounding_input(parse_synth_layout(repaired_reply))
-                repaired_grounding = run_grounding_pass(
+                repaired_grounding = await _ground_with_sentence_check(
                     repaired_layout.narrative,
                     prompt_findings,
-                    core_ask_required=True,
                     question=query.text,
                     evidence_quotes=repaired_quotes,
+                    harness=harness,
+                    trace_id=trace_id,
+                    budget_s=write_budget_s - (time.monotonic() - write_started_at),
                 )
                 reported_before = {
                     claim.finding.citation_id for claim in grounding.claims
