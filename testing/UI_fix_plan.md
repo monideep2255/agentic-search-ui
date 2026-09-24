@@ -1625,7 +1625,22 @@ rather than paraphrased because they asked that the wording not be changed.
 Added later the same evening, again in the product owner's own words, unedited:
 
 > What we need to be able to do in here. We are a agentic search:
-> A conventional chatbot produces text in response to a question. An agent works through a sequence: 1. It interprets an objective. 2. It makes a plan. 3. It uses tools, such as a terminal, browser, spreadsheet, or internal system. 4. It checks intermediate results. 5. It adjusts when something fails. 6. It produces or applies a final result. For example, “modernize this legacy service” is not one answer. It may require locating dependencies, changing thousands of lines, running tests, investigating failures, revising code, documenting changes, and opening a review. The modelʼs value depends on completing the entire loop, not simply generating a plausible code snippet.
+> A conventional chatbot produces text in response to a question.
+> An agent works through a sequence: 1.
+> It interprets an objective.
+> 2.
+> It makes a plan.
+> 3.
+> It uses tools, such as a terminal, browser, spreadsheet, or internal system.
+> 4.
+> It checks intermediate results.
+> 5.
+> It adjusts when something fails.
+> 6.
+> It produces or applies a final result.
+> For example, “modernize this legacy service” is not one answer.
+> It may require locating dependencies, changing thousands of lines, running tests, investigating failures, revising code, documenting changes, and opening a review.
+> The modelʼs value depends on completing the entire loop, not simply generating a plausible code snippet.
 
 Where this connects to items already in this plan, stated by the assistant and
 kept separate from the quote above:
