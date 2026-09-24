@@ -137,3 +137,9 @@ testing/Product/feedback/inbox/*
 
 # The local loop runner's record of citations shown in earlier runs
 testing/Developer/scripts/reported_ids.json
+
+# The product owner's own testing screenshots. Referenced by testing/UI_fix_plan.md
+# as evidence, never committed: they are large binaries, they carry whatever is
+# on screen including a signed-in session, and the plan already records what
+# each one showed. Untracked on 2026-09-23 at the product owner's instruction.
+testing/User-feedback/
