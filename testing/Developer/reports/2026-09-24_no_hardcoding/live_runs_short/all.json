@@ -1,0 +1,775 @@
+[
+ {
+  "question": "reflux disease",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about reflux disease?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about reflux disease?",
+  "clarifying_options": [
+   "What is reflux disease?",
+   "What are the symptoms of reflux disease?",
+   "Which treatments are available for reflux disease?",
+   "Are there recent clinical trials on reflux disease?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 1
+ },
+ {
+  "question": "reflux disease",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about reflux disease?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about reflux disease?",
+  "clarifying_options": [
+   "What is reflux disease?",
+   "Which genes or variants are linked to reflux disease?",
+   "Are there clinical trials for reflux disease?",
+   "What does recent research say about reflux disease treatments?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 2
+ },
+ {
+  "question": "reflux disease",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about reflux disease?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about reflux disease?",
+  "clarifying_options": [
+   "What is reflux disease and what are its symptoms?",
+   "Which genes or genetic variants are associated with reflux disease?",
+   "Are there clinical trials for treatments of reflux disease?",
+   "What does recent research say about reflux disease?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 3
+ },
+ {
+  "question": "GERD",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about GERD?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about GERD?",
+  "clarifying_options": [
+   "What is GERD and what are its symptoms?",
+   "Which genetic variants are associated with GERD?",
+   "Are there clinical trials for GERD treatments?",
+   "What does recent research say about GERD?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 1
+ },
+ {
+  "question": "GERD",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about GERD?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about GERD?",
+  "clarifying_options": [
+   "What is gastroesophageal reflux disease (GERD)?",
+   "Which genes are associated with GERD?",
+   "What clinical trials are studying GERD treatments?",
+   "What does recent research say about GERD?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 2
+ },
+ {
+  "question": "GERD",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about GERD?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about GERD?",
+  "clarifying_options": [
+   "What is GERD?",
+   "Which genes or variants are linked to GERD?",
+   "Are there clinical trials for GERD treatments?",
+   "What does recent research say about GERD?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 3
+ },
+ {
+  "question": "BRCA1",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about BRCA1?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about BRCA1?",
+  "clarifying_options": [
+   "What is the BRCA1 gene?",
+   "Which genetic variants of BRCA1 are associated with disease?",
+   "Are there clinical trials involving BRCA1?",
+   "What does recent literature say about BRCA1?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 1
+ },
+ {
+  "question": "BRCA1",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about BRCA1?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about BRCA1?",
+  "clarifying_options": [
+   "What is the BRCA1 gene?",
+   "What genetic variants of BRCA1 are known?",
+   "What diseases are associated with BRCA1?",
+   "Are there clinical trials mentioning BRCA1?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 2
+ },
+ {
+  "question": "BRCA1",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about BRCA1?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about BRCA1?",
+  "clarifying_options": [
+   "What is the BRCA1 gene?",
+   "What diseases or conditions is BRCA1 linked to?",
+   "Are there clinical trials involving BRCA1 mutations?",
+   "What recent research is available on BRCA1?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 3
+ },
+ {
+  "question": "MeSH",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about MeSH?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about MeSH?",
+  "clarifying_options": [
+   "What diseases or conditions are indexed with MeSH terms?",
+   "Which genes are associated with a MeSH term?",
+   "What recent literature is indexed under a specific MeSH term?",
+   "Are there clinical trials related to a MeSH term?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 1
+ },
+ {
+  "question": "MeSH",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about MeSH?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about MeSH?",
+  "clarifying_options": [
+   "What is MeSH?",
+   "Which papers use MeSH terms for a specific disease?",
+   "How are MeSH terms assigned to articles?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 2
+ },
+ {
+  "question": "MeSH",
+  "depth": "plain_language",
+  "tokens": [],
+  "citations": [],
+  "clarifying_question": null,
+  "clarifying_options": null,
+  "event_types": [
+   "guard",
+   "cost",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 3
+ },
+ {
+  "question": "Marfan",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about Marfan?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about Marfan?",
+  "clarifying_options": [
+   "What is Marfan syndrome?",
+   "Which gene is associated with Marfan syndrome?",
+   "Are there clinical trials on Marfan syndrome?",
+   "What does recent research say about Marfan syndrome?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 1
+ },
+ {
+  "question": "Marfan",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about Marfan syndrome?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about Marfan syndrome?",
+  "clarifying_options": [
+   "What is Marfan syndrome?",
+   "Which gene is linked to Marfan syndrome?",
+   "What are the symptoms of Marfan syndrome?",
+   "Are there clinical trials for Marfan syndrome?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 2
+ },
+ {
+  "question": "Marfan",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about Marfan syndrome?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about Marfan syndrome?",
+  "clarifying_options": [
+   "What is Marfan syndrome?",
+   "Which genes are associated with Marfan syndrome?",
+   "What publications are available on Marfan syndrome?",
+   "Are there clinical trials for Marfan syndrome?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 3
+ },
+ {
+  "question": "hello",
+  "depth": "plain_language",
+  "tokens": [],
+  "citations": [],
+  "clarifying_question": null,
+  "clarifying_options": null,
+  "event_types": [
+   "guard",
+   "cost",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 1
+ },
+ {
+  "question": "hello",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": null,
+    "text": "What would you like to know about health topics?",
+    "cells": null
+   }
+  ],
+  "citations": [],
+  "clarifying_question": "What would you like to know about health topics?",
+  "clarifying_options": [
+   "Find information about a specific gene?",
+   "Look up clinical trials for a condition?",
+   "Search for published research on a disease?",
+   "Find details about genetic variants?"
+  ],
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "plan",
+   "token",
+   "trust_signal",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 2
+ },
+ {
+  "question": "hello",
+  "depth": "plain_language",
+  "tokens": [],
+  "citations": [],
+  "clarifying_question": null,
+  "clarifying_options": null,
+  "event_types": [
+   "guard",
+   "cost",
+   "done"
+  ],
+  "outcome": "refuse",
+  "trust_line": null,
+  "errors": [],
+  "attempt": 3
+ },
+ {
+  "question": "papers on caffeine",
+  "depth": "plain_language",
+  "tokens": [
+   {
+    "kind": "claim",
+    "text": "I found 5 published papers on this topic [6][7][8][9][10]. ",
+    "cells": null
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "Caffeine works primarily by blocking adenosine receptors, and also affects calcium signaling and phosphodiesterase activity [1] [2] [3]. ",
+    "cells": null
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "At low to moderate doses, caffeine improves alertness, attention, and reaction time, while effects on memory and complex decision-making are less consistent [2]. ",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "Physical performance benefits appear at doses above about 200 mg [2]. ",
+    "cells": null
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "Moderate intake appears safe and may offer some benefits, while excessive consumption can worsen anxiety, especially in those predisposed to anxiety disorders [3]. ",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "The evidence on depression is mixed, with some studies suggesting a possible protective effect of moderate intake and others finding no significant association [3]. ",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "Individual differences in caffeine metabolism and genetics substantially affect how people respond [3]. ",
+    "cells": null
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "On appetite, caffeine taken before a meal may reduce short-term food intake, though coffee consumed hours before eating had minimal effect, and evidence on appetite hormones and perceptions was inconclusive [4]. ",
+    "cells": null
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "Caffeine is also used in skincare products because it can penetrate the skin, act as an antioxidant, protect against UV damage, and stimulate hair growth [5]. ",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "It is used in anti-cellulite products because it breaks down fat in cells [5]. ",
+    "cells": null
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "claim",
+    "text": "Concerns about caffeine include growing rates of abuse and dependence, and the review notes that even doses below the recognized toxic range could contribute to harm in some individuals [1]. ",
+    "cells": null
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "heading",
+    "text": "Where this answer comes from\n\n",
+    "cells": null
+   },
+   {
+    "kind": "list_item",
+    "text": "Pubmed title: Caffeine's mechanisms of action and its cosmetic use [6]. ",
+    "cells": [
+     "Caffeine's mechanisms of action and its cosmetic use."
+    ]
+   },
+   {
+    "kind": "list_item",
+    "text": "Pubmed title: Caffeine: cognitive and physical performance enhancer or psychoactive drug [7]. ",
+    "cells": [
+     "Caffeine: cognitive and physical performance enhancer or psychoactive drug?"
+    ]
+   },
+   {
+    "kind": "list_item",
+    "text": "Pubmed title: A review of caffeine's effects on cognitive, physical and occupational performance [8]. ",
+    "cells": [
+     "A review of caffeine's effects on cognitive, physical and occupational performance."
+    ]
+   },
+   {
+    "kind": "list_item",
+    "text": "Pubmed title: Caffeine, coffee, and appetite control: a review [9]. ",
+    "cells": [
+     "Caffeine, coffee, and appetite control: a review."
+    ]
+   },
+   {
+    "kind": "list_item",
+    "text": "Pubmed title: Coffee and mental disorders: How caffeine affects anxiety and depression [10]. ",
+    "cells": [
+     "Coffee and mental disorders: How caffeine affects anxiety and depression."
+    ]
+   },
+   {
+    "kind": "paragraph_break",
+    "text": "\n\n",
+    "cells": null
+   },
+   {
+    "kind": "note",
+    "text": "This is a research summary, not medical advice.",
+    "cells": null
+   }
+  ],
+  "citations": [
+   "ne-afa3aa0ce880-7",
+   "ne-afa3aa0ce880-8",
+   "ne-afa3aa0ce880-10",
+   "ne-afa3aa0ce880-9",
+   "ne-afa3aa0ce880-6",
+   "ne-afa3aa0ce880-1",
+   "ne-afa3aa0ce880-2",
+   "ne-afa3aa0ce880-3",
+   "ne-afa3aa0ce880-4",
+   "ne-afa3aa0ce880-5"
+  ],
+  "clarifying_question": null,
+  "clarifying_options": null,
+  "event_types": [
+   "guard",
+   "cost",
+   "cost",
+   "think",
+   "cost",
+   "plan",
+   "cost",
+   "tool_start",
+   "tool_start",
+   "tool_start",
+   "tool_result",
+   "tool_result",
+   "tool_result",
+   "step",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "token",
+   "citation",
+   "citation",
+   "citation",
+   "citation",
+   "citation",
+   "citation",
+   "citation",
+   "citation",
+   "citation",
+   "citation",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "trust_signal",
+   "cost",
+   "done"
+  ],
+  "outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "errors": []
+ }
+]
