@@ -8,7 +8,8 @@ This is the one document that lists every query worth typing into the product, w
 - `testing/Shipped_2026-09-23.md`
 - `testing/User-feedback/`, a second tester's screenshots, with their comment in each filename
 - `testing/Product/queries/Isolate_search_queries_and_workflow.md`
-- `testing/UI_fix_plan.md`
+- `testing/UI_fix_plan.md`, what is being built and what is next
+- `testing/UI_fixes_done.md`, every item that is built and live, with its test query and retest item
 
 ## Table of contents
 
@@ -84,10 +85,10 @@ Found by the browser run on 2026-09-12. Full report with screenshots: `testing/D
 - An answer can open with "These include…" without saying what "these" are, and a "one further gene record" note can show as a grey sentence with no source. Not confirmed closed by any named fix; still worth reporting if seen.
 - After sign-up, your guest searches do appear in your history, but no message says so. Not confirmed closed.
 - Answers sometimes take more than 25 seconds. Only partly addressed: the specific hundred-second BRCA1 question is fixed, query 10, but a 127.1-second run against a 13.6-second median is recorded as still open and unowned in `testing/Shipped_2026-09-20.md`.
-- A citation chip can read as a code such as `MedGen:C0346153` even though the sentence beside it names the disease in words. Closed: query 1's own expected behaviour now requires disease names in words, never a bare code, and UI_fix_plan item 11.5 ("Citations are too big and overwhelm the answer," Live, approved 2026-09-22) moved citations to small raised numbers with a hover or tap card, so the code itself no longer sits in the chip.
+- A citation chip can read as a code such as `MedGen:C0346153` even though the sentence beside it names the disease in words. Closed: query 1's own expected behaviour now requires disease names in words, never a bare code, and UI_fixes_done item 11.5 ("Citations are too big and overwhelm the answer," Live, approved 2026-09-22) moved citations to small raised numbers with a hover or tap card, so the code itself no longer sits in the chip.
 - An answer's first sentence can come out garbled, for example "BRCA1 (gene symbol BRCA1 [1]. These are…". Not confirmed closed by any named fix; still worth reporting if seen.
 - A returning guest cannot see how many searches are left until they run one. No longer applicable: the guest search limit itself was removed on 2026-09-12, query 53, so there is no limit left to show in advance.
-- `testing/Shipped_2026-09-20.md`'s "What is still open" recorded an unowned MODY-genes grounding failure: "What genes are associated with MODY?" failed grounding on 5 of 6 runs. Included here because entry 7 sends the reader to a MODY question. Later addressed: UI_fix_plan items 11.19 and 11.20, both "Live, approved 2026-09-22," fixed MODY's gene and organism resolution specifically, though neither row names this exact grounding-failure measurement as its closure.
+- `testing/Shipped_2026-09-20.md`'s "What is still open" recorded an unowned MODY-genes grounding failure: "What genes are associated with MODY?" failed grounding on 5 of 6 runs. Included here because entry 7 sends the reader to a MODY question. Later addressed: UI_fixes_done items 11.19 and 11.20, both "Live, approved 2026-09-22," fixed MODY's gene and organism resolution specifically, though neither row names this exact grounding-failure measurement as its closure.
 
 ## What this document does not cover
 
@@ -159,7 +160,7 @@ Expected:
 
 Why it matters: a promise about word count that is not kept reads as the product not knowing itself; describing who each mode suits is a promise it can actually keep.
 
-Status: Awaiting retest (UI_fix_plan item 11.36)
+Status: Awaiting retest (UI_fixes_done item 11.36)
 
 ### 4. The mode locks once a search starts
 
@@ -174,7 +175,7 @@ Expected:
 
 Why it matters: a person who changes their mind mid-search should not get an answer that is a confused mix of both depths.
 
-Status: Awaiting retest (UI_fix_plan item 9.12)
+Status: Awaiting retest (UI_fixes_done item 9.12)
 
 ### 5. Trust signals and sources across layers
 
@@ -216,7 +217,7 @@ Expected:
 
 Why it matters: a researcher copying an answer into their own notes should get what they read on screen, not hidden accessibility text mixed into the middle of their notes.
 
-Status: Awaiting retest (UI_fix_plan item 11.14; a real selection of 1,703 characters checked live held none of that text)
+Status: Awaiting retest (UI_fixes_done item 11.14; a real selection of 1,703 characters checked live held none of that text)
 
 ### 7. Suggested next step and missing-information notes
 
@@ -237,7 +238,7 @@ Expected:
 
 Why it matters: a researcher who does not know an answer was incomplete may treat it as the whole picture, so the honesty about what was left out is part of the answer, not an optional extra.
 
-Status: Approved (Product test 13); the old Notes block (the unverified-summary note and the further-records note) was removed from the screen and approved 2026-09-22 (UI_fix_plan item 11.35).
+Status: Approved (Product test 13); the old Notes block (the unverified-summary note and the further-records note) was removed from the screen and approved 2026-09-22 (UI_fixes_done item 11.35).
 
 ### 8. The scientist name at the top
 
@@ -270,7 +271,7 @@ Expected:
 
 Why it matters: the persona is decoration, and a person comparing notes with a colleague who got a different scientist name should still be looking at the same evidence.
 
-Status: Awaiting retest (UI_fix_plan item 8.4)
+Status: Awaiting retest (UI_fixes_done item 8.4)
 
 ### 10. The hundred-second question, fixed
 
@@ -322,7 +323,7 @@ Expected:
 
 Why it matters: a person who does not know a search silently failed will treat a partial answer as the whole picture; telling them lets them decide whether to ask again.
 
-Status: Approved (UI_fix_plan, "What is live on develop")
+Status: Approved (UI_fixes_done, "What is live on develop")
 
 ### 13. A quote spanning more than one sentence keeps its source link
 
@@ -339,7 +340,7 @@ Expected:
 
 Why it matters: a retrieved record that gets shown and then quietly loses the link proving where it came from is a citation the reader cannot check, which defeats the point of citing it at all.
 
-Status: Awaiting retest (UI_fix_plan item 11.34, fixed and live 2026-09-21; item 11.22, verified live 2026-09-22 and still awaiting the product owner's look, is the same check: a paper's own words reaching the answer, cited)
+Status: Awaiting retest (UI_fixes_done item 11.34, fixed and live 2026-09-21; item 11.22, verified live 2026-09-22 and still awaiting the product owner's look, is the same check: a paper's own words reaching the answer, cited)
 
 ### 14. NCBI's own gene summary is retrieved and shown as a source
 
@@ -356,7 +357,7 @@ Expected:
 
 Why it matters: a person wants the gene's official description somewhere they can check it, even while the fuller explanation built from it is still to come.
 
-Status: Approved for the retrieval half (UI_fix_plan item 11.31, "What is live on develop"); the explanation half is parked, not built.
+Status: Approved for the retrieval half (UI_fixes_done item 11.31, "What is live on develop"); the explanation half is parked, not built.
 
 ### 15. A gene-to-disease question's notes agree with each other
 
@@ -405,7 +406,7 @@ Expected:
 
 Why it matters: a wall of sources is unreadable, and a person should be able to see how much was found without scrolling past dozens of near-duplicate rows.
 
-Status: Approved (Shipped_2026-09-20 retest item 3; UI_fix_plan item 11.26, "Live, approved 2026-09-22")
+Status: Approved (Shipped_2026-09-20 retest item 3; UI_fixes_done item 11.26, "Live, approved 2026-09-22")
 
 ### 18. The wait stays readable
 
@@ -422,7 +423,7 @@ Expected:
 
 Why it matters: a person staring at the progress screen for tens of seconds should be able to read what it is telling them, not just see it flash by.
 
-Status: Approved (Shipped_2026-09-20 retest item 5; UI_fix_plan item 11.28, "Live, approved 2026-09-22")
+Status: Approved (Shipped_2026-09-20 retest item 5; UI_fixes_done item 11.28, "Live, approved 2026-09-22")
 
 ### 19. The same question returns the same set of sources
 
@@ -438,7 +439,7 @@ Expected:
 
 Why it matters: an answer that changes its evidence base every time it is asked the same question is not trustworthy, even if each individual answer looks fine.
 
-Status: Approved (Shipped_2026-09-20 retest item 6; UI_fix_plan item 11.21, "Live, approved 2026-09-22, both decisions done")
+Status: Approved (Shipped_2026-09-20 retest item 6; UI_fixes_done item 11.21, "Live, approved 2026-09-22, both decisions done")
 
 ### 64. Subject terms are named, not coded
 
@@ -1136,7 +1137,7 @@ Expected:
 
 Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 15; UI_fix_plan item 12.13). The product owner reported on 2026-09-23 that clicking a past search re-ran it instead of showing the saved answer; a search asked in the same tab never got marked as saved. Fixed and live at `5d53f78`. Query 51 covers the rail itself.
+Status: Awaiting retest (Shipped_2026-09-23 item 15; UI_fixes_done item 12.13). The product owner reported on 2026-09-23 that clicking a past search re-ran it instead of showing the saved answer; a search asked in the same tab never got marked as saved. Fixed and live at `5d53f78`. Query 51 covers the rail itself.
 
 ## 8. Stop, feedback and the connection
 
@@ -1233,7 +1234,7 @@ Expected:
 
 Why it matters: a developer following printed setup instructions should not have to debug the instructions themselves before they can use the integration.
 
-Status: Awaiting retest (UI_fix_plan item 11.30; Shipped_2026-09-23 item 1). The end-to-end half is already proven live on develop by the developer check below, which is why this is the one item of the 23 September set that did not need a signed-in session to verify.
+Status: Awaiting retest (UI_fixes_done item 11.30; Shipped_2026-09-23 item 1). The end-to-end half is already proven live on develop by the developer check below, which is why this is the one item of the 23 September set that did not need a signed-in session to verify.
 
 ### 61. The disclaimer
 
@@ -1308,7 +1309,7 @@ Expected:
 
 Why it matters: a person types whichever name they know. A product that answers one and refuses the other looks broken in a way they cannot diagnose, and they will not think to try a synonym.
 
-Status: Awaiting retest (Shipped_2026-09-23 items 8 and 10; UI_fix_plan item 12.1)
+Status: Awaiting retest (Shipped_2026-09-23 items 8 and 10; UI_fixes_done item 12.1)
 
 ### 69. A question about a chemical, a food or a population
 
@@ -1327,7 +1328,7 @@ Expected:
 
 Why it matters: the product has a gene resolver and a disease resolver, so a question naming a chemical or a population used to reach nothing at all. Most questions a non-specialist asks are this shape.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 11; UI_fix_plan item 12.7)
+Status: Awaiting retest (Shipped_2026-09-23 item 11; UI_fixes_done item 12.7)
 
 ### 70. The same question in lower case
 
@@ -1346,7 +1347,7 @@ Expected:
 
 Why it matters: a person who types in lower case, or whose question names no gene in capitals, was being told their subject was outside biomedical research. That reads as a statement about their field, not about the product.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 9; UI_fix_plan item 12.2)
+Status: Awaiting retest (Shipped_2026-09-23 item 9; UI_fixes_done item 12.2)
 
 ### 71. What sits under an answer that found nothing
 
@@ -1365,7 +1366,7 @@ Expected:
 
 Why it matters: the tester's own words were "If it didn't have an answer, why would I 'continue the conversation'? Maybe 'ask another question?'". Pressing the first chip sent a question about an "it" with no antecedent, so the product then asked them which gene they meant: its own suggestion walked them from one dead end into another.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 10; UI_fix_plan item 12.4)
+Status: Awaiting retest (Shipped_2026-09-23 item 10; UI_fixes_done item 12.4)
 
 ## 11. Answers that answer the question
 
@@ -1373,6 +1374,9 @@ Work in progress on `testing/UI_fix_plan.md` items 12.9 to 12.12, not yet on
 develop. Recorded here so the queries exist ahead of the ship, and so the
 retest happens on the right questions once the shipped list says they are
 live.
+
+UPDATED 2026-09-24: all of section 11 is now LIVE on develop and awaiting
+retest, and its items' records are in `testing/UI_fixes_done.md`.
 
 ### 72. Plain language and researcher mode read differently on the same disease question
 
@@ -1389,7 +1393,7 @@ Expected:
 
 Why it matters: a student and a clinician asking the same disease question still want different depth, and this question could not be used to check that until the refusal behind it was fixed.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 16; UI_fix_plan item 12.9). Live 2026-09-24; measured on all 12 full feedback questions, every one differs by depth.
+Status: Awaiting retest (Shipped_2026-09-23 item 16; UI_fixes_done item 12.9). Live 2026-09-24; measured on all 12 full feedback questions, every one differs by depth.
 
 ### 73. A question with no gene or disease is answered, not just listed
 
@@ -1407,7 +1411,7 @@ Expected:
 
 Why it matters: a person asking a plain-language question wants the answer, not a bibliography they have to read themselves.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 14; UI_fix_plan item 12.10). Live at `5d53f78`: a second, cheap model checks each reworded sentence against the exact words it quotes. Known: two of six live reruns fell back to a list.
+Status: Awaiting retest (Shipped_2026-09-23 item 14; UI_fixes_done item 12.10). Live at `5d53f78`: a second, cheap model checks each reworded sentence against the exact words it quotes. Known: two of six live reruns fell back to a list.
 
 ### 74. The sources count agrees with what is shown
 
@@ -1423,7 +1427,7 @@ Expected:
 
 Why it matters: two numbers on the same screen disagreeing about the same count undermines trust in both of them, not just the wrong one.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 12; UI_fix_plan item 12.11)
+Status: Awaiting retest (Shipped_2026-09-23 item 12; UI_fixes_done item 12.11)
 
 ### 75. A papers list reads as clean prose, with no record repeated
 
@@ -1441,7 +1445,7 @@ Expected:
 
 Why it matters: a reader who spots the same paper named three different ways in one answer stops trusting the answer was actually checked before it was shown.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 13; UI_fix_plan item 12.12)
+Status: Awaiting retest (Shipped_2026-09-23 item 13; UI_fixes_done item 12.12)
 
 ### 76. A one-to-three-word question is asked back
 
@@ -1459,7 +1463,7 @@ Expected:
 
 Why it matters: the product owner's words, approving it on 2026-09-23: "If clarify needed -> yes approved". A two-word question like `reflux disease` could mean its symptoms, its trials or its genes, and answering one silent reading of it hides the other three from the reader.
 
-Status: Awaiting retest (Shipped_2026-09-23 item 17; UI_fix_plan item 12.3). Live 2026-09-24. A model makes the call, so a borderline word such as `MeSH` can go either way (asked back 2 times in 3).
+Status: Awaiting retest (Shipped_2026-09-23 item 17; UI_fixes_done item 12.3). Live 2026-09-24. A model makes the call, so a borderline word such as `MeSH` can go either way (asked back 2 times in 3).
 
 ## Workflow for the product owner
 
@@ -1491,14 +1495,14 @@ For the wider suite, `testing/Developer/Developer_workflows.md` has the full spe
 
 | Section | Source documents |
 |---|---|
-| 1. Basic search and answers | `Product/Product_workflows.md` tests 1, 7, 12, 13, 14; `Shipped_2026-09-22.md` items 1, 6; `Shipped_2026-09-20.md` retest items 1, 2, 3, 5, 6; `UI_fix_plan.md` "What is live on develop" and items 8.4, 9.12, 11.14, 11.31, 11.34, 11.35, 11.36; `Shipped_2026-09-23.md` items 3, 4, 5 |
+| 1. Basic search and answers | `Product/Product_workflows.md` tests 1, 7, 12, 13, 14; `Shipped_2026-09-22.md` items 1, 6; `Shipped_2026-09-20.md` retest items 1, 2, 3, 5, 6; `UI_fixes_done.md` "What is live on develop" and items 8.4, 9.12, 11.14, 11.31, 11.34, 11.35, 11.36; `Shipped_2026-09-23.md` items 3, 4, 5 |
 | 2. Follow-up questions and conversation | `Product/Product_workflows.md` test 2 |
 | 3. Genes, variants and diseases | `Shipped_2026-09-22.md` items 3, 5, 7, 8, 12, 13; `Shipped_2026-09-23.md` item 6 |
 | 4. Chromosome windows and accessions | `Shipped_2026-09-22.md` items 2, 9, 10, 11, 14, 15, 16 |
 | 5. Pathogen isolates | `Product/queries/Isolate_search_queries_and_workflow.md` queries 1 to 12; `Shipped_2026-09-22.md` items 17 to 22 |
-| 6. Refusals, off-topic and compute requests | `Product/Product_workflows.md` tests 8, 19; `Shipped_2026-09-22.md` item 4; `UI_fix_plan.md` "What is live on develop" |
-| 7. Sign in, sessions and history | `Product/Product_workflows.md` tests 3, 4, 5, 6, 16, 18, 20; `Shipped_2026-09-23.md` item 2; `UI_fix_plan.md` item 10.2 |
+| 6. Refusals, off-topic and compute requests | `Product/Product_workflows.md` tests 8, 19; `Shipped_2026-09-22.md` item 4; `UI_fixes_done.md` "What is live on develop" |
+| 7. Sign in, sessions and history | `Product/Product_workflows.md` tests 3, 4, 5, 6, 16, 18, 20; `Shipped_2026-09-23.md` item 2; `UI_fixes_done.md` item 10.2 |
 | 8. Stop, feedback and the connection | `Product/Product_workflows.md` tests 9, 10, 21 |
-| 10. Questions with no gene and no disease in them | `User-feedback/` (a second tester's four screenshots); `Shipped_2026-09-23.md` items 8 to 11; `UI_fix_plan.md` items 12.1, 12.2, 12.4, 12.7 |
-| 9. Screens, phone width, the tour and the disclaimer | `Product/Product_workflows.md` tests 11, 15, 17, 22; `Shipped_2026-09-20.md` retest item 4; `UI_fix_plan.md` item 11.30; `Shipped_2026-09-23.md` item 1 |
-| 11. Answers that answer the question | `UI_fix_plan.md` items 12.9 to 12.12 |
+| 10. Questions with no gene and no disease in them | `User-feedback/` (a second tester's four screenshots); `Shipped_2026-09-23.md` items 8 to 11; `UI_fixes_done.md` items 12.1, 12.2, 12.4, 12.7 |
+| 9. Screens, phone width, the tour and the disclaimer | `Product/Product_workflows.md` tests 11, 15, 17, 22; `Shipped_2026-09-20.md` retest item 4; `UI_fixes_done.md` item 11.30; `Shipped_2026-09-23.md` item 1 |
+| 11. Answers that answer the question | `UI_fixes_done.md` items 12.9 to 12.12 |

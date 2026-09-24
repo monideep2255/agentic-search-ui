@@ -49,7 +49,7 @@ The next action is always one line, kept current here. Right now it is:
 - ONE THING A SESSION MUST NOT UNDO CASUALLY: do not add a word count or a paragraph shape back to the plain-language directive (arms in `tests/system_03_search_agent/synthesis/test_answer_quality.py` go red if one returns).
 - PRODUCTION IS ON `v0.2.0`, released 2026-09-20, tag `cde4f59`, and carries NOTHING from 2026-09-21 or 2026-09-22. Settle any doubt with `git tag --sort=-creatordate | head` and `git log origin/production -1`. When the product owner approves a release, follow `docs/build/Release_flow.md`; CI on the release pull request must be green, and whether develop and production use separate NCBI keys must be confirmed first.
 - CI DID NOT RUN on any push from the evening of 2026-09-22 onward (`27d68ae` through `66fe042`): GitHub reports every job "was not started because recent account payments have failed or your spending limit needs to be increased", a billing setting only the product owner can change, after a green run on `02063b0` twenty minutes earlier. The four gates CI would have run were run locally with CI's own commands before the push (`ruff check` over the whole repository, `isort` per gate 2, the full unit suite: 5176 passed, 0 failed). Check `gh run list --branch develop --limit 3` before trusting this line in either direction.
-- SET 11 IS MOSTLY LIVE; the per-item truth is the Set 11 table in `testing/UI_fix_plan.md`, which owns this fact. Sets 1 to 7 are approved, 8 and 9 live on develop, 10 now has item 10.3 run and 10.1 done.
+- SET 11 IS MOSTLY LIVE; the per-item truth is the Set 11 table in `testing/UI_fixes_done.md` since the plan was split on 2026-09-24, which owns this fact. Sets 1 to 7 are approved, 8 and 9 live on develop, 10 now has item 10.3 run and 10.1 done.
 - THE VERDICT THAT SHOULD SHAPE WHAT YOU PICK UP, given by the product owner on 2026-09-20: the answers look surface level, and general chatbots answer better. That is a judgement on the ANSWER PATH, not on presentation.
 - Carry forward for any future parallel fix pass: split builders by the files they write, pin any new wire contract first, give each a goal contract, never let two builders own one file region. And one more from 2026-09-22: a live measurement shares the NCBI rate pool with every agent, so an agent working alongside one is forbidden live calls until it ends, and the measurement counts rate-limit signals so contamination is visible rather than assumed absent.
 
@@ -71,7 +71,7 @@ WHERE TO LOOK, in the order a fresh session should read them:
 |---|---|
 | What shipped on 2026-09-20, and what to retest | `testing/Shipped_2026-09-20.md`, the day's summary |
 | Where the last session stopped, and what is next | `testing/UI_fix_plan.md`, section "Where we stopped", read with the two corrections in Step 2 above |
-| Per-item status: built, live, approved, what to retest | `testing/UI_fix_plan.md`, the single owner of this fact |
+| Per-item status: built, live, approved, what to retest | `testing/UI_fix_plan.md` for items being built or still to do, `testing/UI_fixes_done.md` for items built and live, split on 2026-09-24 |
 | What the product owner tests by hand | `testing/Product/Product_workflows.md`, 21 tests in plain steps |
 | What must the product do, and what is broken | `testing/Developer/Developer_workflows.md`, 50 workflows in three tiers |
 | How do I run any of it | `testing/Developer/Developer_workflows.md`, the three layers and the run commands |
@@ -474,4 +474,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-09-23.
+Last updated: 2026-09-24.
