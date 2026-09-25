@@ -18,6 +18,7 @@ Everything needed to test the product by hand or by machine, and the record of w
 | See what shipped on a given day | `UI_fixes_done.md`: its "Session history" tables, and its "Shipped days, 2026-09-20 to 2026-09-23" section, which keeps what the daily shipped lists of those days recorded |
 | See what is to do, what is being built and what awaits your retest | `UI_fix_plan.md`, the board: To do, Build in progress, Retest, in that order |
 | See every item that is built and live, the detail behind every card on the board, and where the last session stopped | `UI_fixes_done.md`, split out of the plan on 2026-09-24 |
+| See the remaining work outside the UI fix loop | `Future.md`: every open item from `requirements/Plan.md`'s Phase 7 and the archived continuation prompt's open items, each checked against the code first, with the closed ones and their evidence listed below it |
 
 ## The folders
 

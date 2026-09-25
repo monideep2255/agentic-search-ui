@@ -37,6 +37,7 @@ After the retests: To do item 1 in `testing/UI_fix_plan.md`, currently 12.14.
 | What is not started, being built, or live awaiting retest | `testing/UI_fix_plan.md`, the board |
 | The cutoff, the ordered next actions, what is parked and why, every closed item | `testing/UI_fixes_done.md`, starting at "Where we stopped" |
 | The exact queries to type and what a person should see | `testing/Test_queries_and_workflows.md` |
+| The remaining work outside the UI fix loop: the Phase 7 backlog and open findings | `testing/Future.md` |
 | Which documents the session-closing skills keep current, and their current shape | `tracker/Living_documents.md` |
 | Why something was decided | `DECISIONS.md`, newest rows last |
 | What broke and what fixed it | `LEARNINGS.md` |
