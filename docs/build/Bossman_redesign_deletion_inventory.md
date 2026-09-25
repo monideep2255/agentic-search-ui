@@ -108,6 +108,8 @@ Where the last column says yes, deleting the file may delete the only test of a 
 
 The four streaming files must be deleted or kept together: three of them import `core/test_phase_4_16_premise.py` at module level, and deleting it alone breaks collection.
 
+Ruled by the product owner on 2026-09-25 (`DECISIONS.md`, card 37): the four streaming files above were deleted together in build phase 8.5; `tools/test_graph_query_service_premise.py`, `eval/test_phase_5_1_premise.py` and `eval/test_phase_5_1_mutation.py` are kept.
+
 ## Test files kept as answer behaviour
 
 Premise gates, 15 files, 10,819 lines, 178 tests:
