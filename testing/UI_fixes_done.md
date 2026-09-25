@@ -7,7 +7,8 @@ accepted. What is being built and what is next live in
 `testing/UI_fix_plan.md`, which is the product owner's source of truth for
 work. Since the plan became a board on 2026-09-24, with only To do,
 Build in progress and Retest, this file also holds the cutoff, "Where
-we stopped", and the detail behind every item still on the board.
+we stopped", and the detail behind every item still on the board except the
+architecture cards, whose detail sits under the board's To do.
 
 ## Table of contents
 
@@ -281,7 +282,10 @@ What the Waiting on column means:
 - Your retest: waiting on you: retests. Each of these is built, live on
   develop, and needs your eyes before it counts as done. Nothing is blocked
   on them
-- Parked: parked, and discussions that precede a build
+- Parked: parked, and never work the product owner will build. A discussion
+  that precedes a build waits on Nobody on it, not Parked. Corrected
+  2026-09-24 on the product owner's instruction, after discussions that
+  precede a build had been marked Parked
 
 ### How the board came to be
 
@@ -457,6 +461,12 @@ option rather than a queued task.
 
 ### What is parked, and why
 
+- THE ARCHITECTURE WORK IS NOT PARKED. The product owner will build it, so
+  its six cards, 8 to 13 in the board's To do, wait on nobody. Corrected
+  2026-09-24 on their instruction: the board had marked three of those
+  items Parked and moved every word of their detail into this file. That
+  detail, with their direction on the model architecture, now sits under
+  the board's To do.
 - THE OMIM DISPATCH IS NO LONGER PARKED. It was enabled and reverted on
   2026-09-21 because `breadth_plan.filter_omim_titles` existed and nothing
   called it. On 2026-09-22 the filter was wired into the act result path and
@@ -601,13 +611,22 @@ board on 2026-09-24.
 
 ### Next, in order
 
-REWRITTEN 2026-09-24 at the session checkpoint.
+REWRITTEN 2026-09-24 at the session checkpoint, and REORDERED the same
+evening on the product owner's instruction: their architecture work joins as
+items 8 to 13, and none of it is parked.
 
 - The old items 1 and 2 are done and live: Set 12's questions, and 12.3.
   Their records are in `testing/UI_fixes_done.md`.
 - Nothing below is a retest. Every item is engineering or a decision, ordered
   by what the person typing the question feels first.
-- The To do column of `testing/UI_fix_plan.md` follows the same order.
+- The To do column of `testing/UI_fix_plan.md` follows the same order, card
+  for card, from 1 to 14. Its cards 15 to 20 come after this list: the
+  decisions 9.11 and 9.9, then 10.4, the lock file decision, and the two
+  parked cards.
+- Items 8 to 13 keep the product owner's own order, and they may re-rank
+  them: points a) and c) of their direction on the model architecture, then
+  b), then d), then the agentic loop, then 11.29 and 11.38. Their detail
+  now sits under To do on the board, not in this file.
 
 What is open and not on this list as its own item:
 
@@ -638,8 +657,8 @@ What is open and not on this list as its own item:
 3. 12.16 PART 3, WHICH QUESTIONS COUNT AS A REQUEST FOR PAPERS BECOMES A
    CLASSIFIER'S DECISION, on the product owner's instruction that decisions are
    not hardcoded; today it is a word list. It is also where their architecture
-   direction under 11.38 points: "We use Jev as a classifier where ever we are
-   making those decisions".
+   direction, item 8 below, points: "We use Jev as a classifier where ever we
+   are making those decisions".
 4. 12.15, "RECENT PAPERS" ASKS WHAT RECENT MEANS, the product owner's remark on
    `recent papers on statins`.
 5. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
@@ -664,7 +683,39 @@ What is open and not on this list as its own item:
    evidence. Key it on the query having been drafted. The stronger version of
    this item is to close the remaining model path entirely, the way `27d68ae`
    closed it for gene questions.
-8. 11.29's BUILD, now that its scoping document exists and is measured. Read
+8. JEV AS THE CLASSIFIER WHEREVER A CHOICE NEEDS TO BE MADE, points a) and c)
+   of the product owner's direction on the model architecture: whether a
+   one-to-three-word question gets a clarification question or moves forward,
+   guardrails on relevancy, and which resource to pull. In their words: "We
+   use Jev as a classifier where ever we are making those decisions". The
+   decision points already recorded as candidates:
+   - 12.3's ask-back, decided today by the guard tier and later by Jev at the
+     same point
+   - item 3's literature-request routing
+   - the model check under 12.9 and 12.10, a candidate for Jev's Bool
+     question type once a shadow run has calibrated it
+
+   Which of the three places Jev fits, and why a shadow run comes first, is
+   in 11.38's detail, item 13.
+9. OUR NCBI APIS AND ENRICHMENT CALLS AS MCP-STYLE FUNCTIONS, point b) of the
+   direction and item 11.32, so Jev can help with the classifier. 11.32's
+   detail separates two halves:
+   - the typed, measured function surface per database, in scope as ordinary
+     work on the existing seven tools
+   - the MCP envelope around it, scoped against the locked Section 6 tool list
+     and signed off before any work starts
+10. MODELS CHOSEN PER TASK BY TIER, point d) of the direction and the product
+   owner's example of how models should be chosen: open source where an
+   equivalent is available, frontier models where they are needed. The
+   standing rule at the end of the direction holds against it: iterate the
+   harness first and swap the model second.
+11. THE AGENTIC LOOP, the product owner's second quote under their direction:
+   interpret the objective, make a plan, use tools, check intermediate
+   results, adjust when something fails, and produce or apply the final
+   result. Their point is that the value lies in completing the entire loop,
+   not simply in generating something plausible. Its words are under To do on
+   the board.
+12. 11.29's BUILD, now that its scoping document exists and is measured. Read
    `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md`
    first: it counts how many golden questions need multi-hop (five, all walking
    one already-built shape), how many need data the graph does not hold
@@ -672,18 +723,21 @@ What is open and not on this list as its own item:
    motivating count of zero here. Its own first recommendation is that the
    grounding gate, which accepts a verbatim excerpt and rejects a faithful
    paraphrase, is what actually stands between the product and being worth
-   reading instead of a general chatbot.
-9. 11.38, a bounded trial of the probability model, if the product owner wants
-   it. The cheap first step is a SHADOW RUN on the guardrail: it decides in
-   parallel, its answer is only recorded and never acted on, which produces
+   reading instead of a general chatbot. Its detail sits under To do on the
+   board.
+13. 11.38, a bounded trial of the probability model, which the product owner
+   will build. The cheap first step is a SHADOW RUN on the guardrail: it
+   decides in parallel, its answer is only recorded and never acted on, which
+   produces
    calibration data from this product's own questions rather than a vendor
    benchmark. Output tokens are free, which is what makes that affordable.
    Acting on a confidence number is a separate and much larger decision.
 
    The three discussion items this list carried are all closed: 11.30 was
    built, 11.32 was answered with measurement, and 11.29's discussion produced
-   the document named in item 8. 11.22's live check was already done.
-10. 11.11, ANSWERS MODELLED ON THE REFERENCE PROTOTYPE'S DEPTH, FORMATTING AND
+   the document named in item 12. 11.22's live check was already done. 11.32's
+   build is item 9, and 11.38's detail sits under To do on the board.
+14. 11.11, ANSWERS MODELLED ON THE REFERENCE PROTOTYPE'S DEPTH, FORMATTING AND
    STRUCTURE. Listed as being built until 2026-09-24, with nobody on it; 12.9
    and 12.10 answered part of its ask.
 
@@ -720,298 +774,7 @@ Built: · Live: · Approved:
 
 ### Set 11, still open
 
-Set 11's intro below defines most of the status words these rows use.
-
-| # | Your feedback | Status | Where it stands |
-|---|---|---|---|
-| 11.11 | Use your reference prototype for answer depth, formatting and structure; it writes with a different model family | Queued | Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision |
-| 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
-| 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
-| 11.38 | Try the new model on OpenRouter that returns probabilities with its output, and decide where calibrated confidence belongs in the architecture: the guardrail, the choice of which resource to pull, and the cite-or-refuse gate | Discussion, precursor to a build | Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](#detail-1138) |
-
-#### Detail 11.29
-
-The ask: Think big about connecting the dots: if everything were in the
-knowledge graph, from PubMed literature to sequence, clinical and PubChem data,
-how do we find hard edges (direct relationships) and soft edges (indirect,
-through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid
-knowledge-graph model?
-
-Status: Discussion, not started
-
-Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it
-needs its own session rather than a slot in the fix loop. Three things are worth
-settling before it opens. FIRST, most of the premise is not this repository's to
-decide: "everything is in the graph" is Systems 1 and 2, which live in a
-separate repository, and `.claude/rules/file-protection.md` forbids this
-repository writing into the graph at all, by direction of data flow.
-
-System 3 can only read. SECOND, vector embeddings, RAG pipelines and
-knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in
-`.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named
-trigger at all, so it stops and asks by rule. Discussing is free, building is
-not. THIRD, the multi-hop half is already real and measured rather than
-hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
-SyntaxError, so the broad search traverses `participates_in` alone and GO
-molecular activities and cellular components are not reached
-(`2026-09-19_breadth_wiring/build.md`).
-
-That is a soft-edge limitation sitting in the product today, and it costs one
-graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
-when asked whether the product fails because the data is absent or because we
-cannot find the path between things that are present: BOTH, and the headline
-verdict is blunter than either: "the answers all look surface level and most
-chatbots like ChatGPT, Claude, Gemini can answer better".
-
-That is a judgement on the ANSWER PATH, not on presentation, and it is the bar
-11.29 has to clear: not "does it cite" but "is it worth reading instead of a
-general chatbot". Every presentation-side fix in Set 11 leaves that bar
-untouched
-
-#### Detail 11.32
-
-The ask, in the product owner's own words: "Why dont we wrap our layer 2 and
-layer 3, the api calls in internal mcps ... can understand from the API keys on
-how to setup things for each database. Maybe just add to the list for now."
-
-Status: Not started. Raised 2026-09-20, backlog only.
-
-THE SOURCE MATERIAL THEY NAMED, both verified to exist on 2026-09-20: <!-- local-refs: allow -->
-
-| What | Where |
-|---|---|
-| The connection maps and per-database deep dives | `reference/personal-os-work/NIH/NCBI Technical-development-workflow/Architecture-and-databases` <!-- local-refs: allow --> |
-| The databases paper | the `NCBI-databases-paper-09-2025` folder inside it |
-| Open this first | `NCBI_database_connection_map.md`, then `NCBI_databases_deep_dive.md` and `NCBI_enterprise_infrastructure_deep_dive.md` |
-
-NOTHING IS DESIGNED AND NOTHING IS PROMISED. This crosses the tool-integration
-boundary the locked technical specification's Section 6 defines, which names
-seven tools and their transports, so under `.claude/rules/v1-scope-boundary.md`
-it is scoped against that section and signed off before any work starts, never
-the other way round.
-
-Two questions to settle when it is scoped, neither decided here. Whether an
-internal MCP server is a TRANSPORT SWAP underneath the existing seven tools,
-which would leave every tool schema and call site unchanged the way build phase
-4.11's HTTPS graph service did, or a RE-CUT of what the tools are, which is a
-contract-version event under `system-design-patterns` pattern 10. And what it
-buys over the direct calls the tools make today, since
-`.claude/rules/supply-chain-security.md` treats every MCP server as an execution
-surface running with the app's own credentials, so the answer has to be worth
-that.
-
-ANSWERED 2026-09-22, when the product owner asked directly whether wrapping
-Layer 2 and Layer 3 in MCP would be faster and more reliable. The honest answer
-splits their question in two, because the valuable half is not the MCP half.
-
-On speed, no, and this is measured rather than argued. MCP is a protocol for one
-process to offer tools to another. It does not change what NCBI returns or how
-fast NCBI returns it, so wrapping our own calls in it adds a hop rather than
-removing one. Item 11.4 measured where the wait actually is: the searches take
-about a second, and the wait was the writing step. Item 11.8 then cut the median
-answer from 26.5 to 19.7 seconds by working on that step, not on the transport.
-Under `.claude/rules/attack-the-constraint.md`, the transport is not the
-constraint, so optimising it buys nothing a person would feel.
-
-On reliability, yes, and the product owner's instinct is right, but the thing
-that buys it is the half of their sentence that does not mention MCP:
-
-- "reverse engineer the NCBI API, see what data exists, and build functions around them".
-
-- That is a measured, typed function surface
-- and it removes a real class of wrong answer, namely the agent choosing an
-  endpoint or a parameter that does not mean what it assumed.
-
-It is also the exact method that closed G-035 on the night of 2026-09-22:
-
-- the FTP tree was measured live first (521 MB, 584,433 rows, a 17.7 second full scan)
-- a wire contract was pinned from those numbers
-- and the shape went from never answering to 5 of 5.
-
-That method is available today, one tool at a time, with no protocol change and
-no new execution surface.
-
-So the two halves separate cleanly, and only one of them is blocked:
-
-- The typed, measured function surface per database: valuable, in scope as
-  ordinary work on the existing seven tools, and provably effective here.
-- The MCP envelope around it: a transport change that earns its keep only if
-  these tools must be callable by agents outside this product. That is a
-  distribution argument, not a speed or reliability one, and it stays a
-  scoping discussion against Section 6 as this detail already says.
-
-Worth stating plainly, because the naming invites the confusion:
-
-- This product already HAS an MCP surface, at `/mcp`, and it points the other way.
-- It exists so other agents can call this product.
-- Item 11.32 would point MCP inward, at our own calls, which is the direction
-  that adds the hop.
-
-#### Detail 11.38
-
-The ask, raised 2026-09-22: try the new model on OpenRouter that returns
-probabilities with its output, because it could help the guardrail and the step
-where the agent chooses which resource to pull.
-
-Status: Not started. Backlog only, nothing designed and nothing promised.
-
-WHAT IT IS, established 2026-09-23 from the two sources the product owner
-supplied, `https://typesafe.ai/` and
-`https://openrouter.ai/docs/guides/community/jev`. Read as vendor claims, which
-is what they are; nothing below has been measured against this product's own
-questions yet.
-
-| Fact | Value |
-|---|---|
-| Model id | `typesafe/jev-1.13`, alias `~typesafe/jev-latest` |
-| Maker | TypeSafe, who call it a "System One Model" |
-| Endpoint | `POST https://openrouter.ai/api/alpha/decisions`, NOT chat completions |
-| Question types | Choice: the selected option, a probability for every option, and a confidence. Bool: the probability of yes. Score: a probability-weighted position, a probability per level, and a confidence |
-| Context | 32,000 tokens, state plus questions |
-| Price | Input tokens billable, OUTPUT TOKENS FREE. Vendor claims $42 per billion input tokens |
-| Vendor speed and cost claim | 193.6x faster and 244.6x cheaper on their own "System One" tasks: 0.114s and $0.000081 against 8.566s and $0.013880 |
-
-THE LIMITATION THAT DECIDES WHERE IT CAN GO, in the vendor's own words:
-
-- "Jev does not produce reasoning traces, explanations, or free-form text"
-- and "It is not a drop-in replacement for a chat model."
-
-That single sentence sorts the whole question. The product owner named three
-places. Two of them are decisions, and Jev is built for exactly that shape. The
-third is writing, and Jev cannot do it at all.
-
-| Where | Shape today | Does Jev fit |
-|---|---|---|
-| Guardrail | A Guard-tier chat model classifies the input, and the answer is taken as certain | YES. This is a Choice with a confidence, which is what the step actually needs. A borderline question could be asked about rather than guessed at |
-| Which resource to pull | Think and Plan pick from a fixed plan per question shape | YES, and it is the better of the two. The option set is closed and known, which is the condition a typed decision needs |
-| Writing the answer | The Synth tier writes prose with inline citations | NO. It emits no free-form text. Not a candidate, at any price |
-
-ON "ZERO HALLUCINATIONS", which is on the vendor's front page and should be read
-carefully rather than quoted. The honest version of that claim is structural: a
-decision constrained to a fixed option set cannot return an option outside the
-set. That is real and it is worth something here, since this product's failures
-include the model reading MODY as an organism (item 11.19). It is NOT a claim
-that the chosen option is correct, and it must never be repeated to a user as
-though it were.
-
-WHY THE INSTINCT IS SOUND, independently of which model it turns out to be. The
-loop currently makes three decisions that are taken as if certain and are not:
-
-| Decision | Where | What is lost today |
-|---|---|---|
-| Is this input safe and on topic | Guardrail | A borderline question is admitted or refused outright, with no middle path such as asking the person what they meant |
-| Which resource answers this | Think and Plan | A wrong pick is invisible: the answer comes back confidently sourced from the wrong place |
-| Is this claim supported | Write, the cite-or-refuse gate | The gate is deterministic by design, which is correct; a calibrated confidence would inform what the answer SAYS about its own certainty, never whether the gate passes |
-
-A calibrated confidence turns each of those from a silent guess into a number
-that can be acted on, and the third one is the trust moat: a product that can
-say "I am not sure" honestly is worth more than one that is fluent and wrong.
-
-WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated. A CORRECTION
-FIRST, recorded rather than quietly fixed: on the night of 2026-09-22 the
-assistant said trying this model would be a config change under
-`system-design-patterns` pattern 11, reversible in one edit. That was said
-before the model was identified and it is WRONG for this model. Jev answers on
-its own `/api/alpha/decisions` endpoint, not on chat completions, so
-`resolve_model()` pointing a tier at it does nothing. A trial needs a new client
-path in the harness, which is a small build rather than a config edit. The cost
-estimate moves with it.
-
-What remains cheap: the trial is still bounded and reversible, because the two
-candidate call sites are decisions with closed option sets, and either can fall
-back to today's path on any error. Output tokens being free makes a
-side-by-side shadow run, where Jev decides in parallel and its answer is only
-recorded rather than acted on, unusually affordable. That shadow run is the
-right first step, because it produces this product's own calibration data
-instead of a vendor benchmark.
-
-What is NOT cheap: ACTING on a confidence number. A threshold anywhere in the
-loop is a new control with its own failure modes, it must be calibrated against
-this product's own questions, and under `.claude/rules/goal-contracts.md` a
-threshold is a verify surface that must not be quietly lowered later to make
-results look better.
-
-TWO CONSTRAINTS THAT BIND ANY TRIAL, both from rules already in force:
-
-- The cite-or-refuse gate stays DETERMINISTIC. `.claude/rules/production-standards.md`
-  requires accept or reject by exact or substring match and says outright that
-  fuzzy scoring may rank repair suggestions but never gates acceptance. So a
-  confidence number may inform what an answer SAYS about its own certainty, and
-  may never decide whether a citation passes. This is the place a probability
-  model is most tempting and most dangerous.
-- `/api/alpha/decisions` is an ALPHA endpoint, and the guardrail is on the path
-  of every single query. A dependency that can change under us does not belong
-  in front of everything until it has a fallback that is proven by execution
-  rather than asserted.
-
-### The product owner's direction on the model architecture, 2026-09-23
-
-Added on the product owner's instruction, IN THEIR OWN WORDS, unedited. Quoted
-rather than paraphrased because they asked that the wording not be changed.
-
-> 1. Do we need to rethink the model use architecture, this ties into use of Jev from TypeSafe that we need to discuss.
->
-> a) Jev becomes our classfier -> 1-3 words -> clarification question or move forward -> guardrails on the terms of relevancy or any place where a choice needs to be made.
-> b) Here is where I do think converting our NCBI APIs and enrichment calls into functions MCP style do make sense. This way easy for Jev to help with the classifer
-> c) We use Jev as a classifier where ever we are making those decisions
-> d) Ideally we need opensource model but if frontier are needed then so be it.
->
-> For instance, example, how models should be chosen, using frontier models as example, if equivalent opensource is available then amazing
->
-> OpenAI/Claude example:
->
-> Luna/Haiku/Sonnet for query classification, metadata cleanup, simple extraction, routing, or highvolume answer drafts.
-> Sol/Opus 5.5 for multi-step retrieval planning, evidence synthesis, code generation, complex user
-> questions, and tool-using workflows.
-> Astra/Fable 5.1 for difficult scientific reasoning, ambiguous tasks, high-risk decisions, or final
-> escalation when lower-cost models cannot reach a quality threshold.
->
-> Then another thing you added was the model check.
-
-Added later the same evening, again in the product owner's own words, unedited:
-
-> What we need to be able to do in here. We are a agentic search:
-> A conventional chatbot produces text in response to a question.
-> An agent works through a sequence: 1.
-> It interprets an objective.
-> 2.
-> It makes a plan.
-> 3.
-> It uses tools, such as a terminal, browser, spreadsheet, or internal system.
-> 4.
-> It checks intermediate results.
-> 5.
-> It adjusts when something fails.
-> 6.
-> It produces or applies a final result.
-> For example, “modernize this legacy service” is not one answer.
-> It may require locating dependencies, changing thousands of lines, running tests, investigating failures, revising code, documenting changes, and opening a review.
-> The modelʼs value depends on completing the entire loop, not simply generating a plausible code snippet.
-
-Where this connects to items already in this plan, stated by the assistant and
-kept separate from the quote above:
-
-- Point a), the 1-3 word clarification question: item 12.3, the product
-  owner's open decision, with the fix-2 evidence (`BRCA1`, `MeSH`, `Marfan`
-  and `recent papers on statins` all answered without asking).
-- Point b), NCBI APIs and enrichment calls as MCP-style functions: item 11.32,
-  parked as a discussion that precedes a build.
-- THE MODEL CHECK: a decision point added on 2026-09-23 under items 12.9 and
-  12.10, approved by the product owner the same evening. A guard-tier model
-  decides whether a sentence the answer model REWORDED says anything more than
-  the exact record words it quotes, after code has verified the quote is in
-  the record character for character, the numbers are in the quote and the
-  negation matches. It fails closed. It is exactly the kind of yes-or-no
-  decision point point c) names, and a candidate for Jev's Bool question type
-  once a shadow run has calibrated it. It amends the first constraint above
-  (the cite-or-refuse gate stays deterministic) for that one bounded case: the
-  rule text changes in pull request #101, and the reasoning is in DECISIONS.md
-  on 2026-09-23.
-
-ONE STANDING RULE TO HOLD AGAINST IT, `system-design-patterns` pattern 11 again:
-on a recurring failure, iterate the harness first and swap the model second. So
-a probability-emitting model is worth a bounded trial on its own merits, never
-as the answer to a failure the harness has not been worked on yet.
+Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-24. That covers Set 11's open rows with the detail behind them, and the product owner's direction on the model architecture of 2026-09-23.
 
 ### Set 12, still open
 
