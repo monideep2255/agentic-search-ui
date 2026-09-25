@@ -1,0 +1,22 @@
+{
+ "record": {
+  "label": "MARFAN",
+  "question": "What phenotypic features are associated with Marfan syndrome?",
+  "audience_depth": "plain_language",
+  "session_id": "pr81-a12bfa16432e",
+  "started_at": "2026-09-25T10:35:51Z",
+  "run_id": "fe226f3f-fbeb-48e1-bb90-85ab65c3fece",
+  "error": "TimeoutError('The read operation timed out')",
+  "seconds": 623.0,
+  "first_token_seconds": null,
+  "timed_out": false,
+  "guard": {},
+  "trust_outcome": null,
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "rate_limit_signals": 0
+ },
+ "events": [],
+ "answer_text": ""
+}

@@ -1,0 +1,2353 @@
+{
+ "record": {
+  "label": "G-033",
+  "question": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+  "audience_depth": "plain_language",
+  "session_id": "pr81-785b5da0959c",
+  "started_at": "2026-09-25T10:34:10Z",
+  "run_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+  "seconds": 21.5,
+  "first_token_seconds": 21.5,
+  "timed_out": false,
+  "guard": {
+   "passed": true,
+   "category": "ok",
+   "reason": null
+  },
+  "trust_outcome": "ask",
+  "trust_line": "Based on 24 sources, not yet confirmed",
+  "citations": 25,
+  "distinct_sources": 24,
+  "rate_limit_signals": 0
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 0,
+   "ts": "2026-09-25T10:32:35.986690Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 2,
+   "ts": "2026-09-25T10:32:39.387714Z",
+   "payload": {
+    "narrative": "Connecting gene variants to disease risk via multiple evidence sources. (colorectal cancer: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "MLH1",
+      "curie": "NCBIGene:4292",
+      "confidence": 1.0
+     },
+     {
+      "text": "MSH2",
+      "curie": "NCBIGene:4436",
+      "confidence": 1.0
+     },
+     {
+      "text": "colorectal cancer",
+      "curie": "MedGen:C0346629",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 4,
+   "ts": "2026-09-25T10:32:39.389550Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:4292. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8b44b39c2368",
+      "layer": "layer_1_graph",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-bcac779af83d",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-980bbd7c8310",
+      "layer": "layer_3_enrichment",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-a92d12b59a9f",
+      "layer": "layer_3_enrichment",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-566e4a669ef6",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e15a539dae7d",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-35fe4358be47",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e08018e8d9d0",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-012e3ae675d1",
+      "layer": "layer_3_enrichment",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d388903f1923",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2606c0c7a0e3",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-97d087675220",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-5dba53e81b88",
+      "layer": "layer_1_graph",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "MLH1",
+      "curie": "NCBIGene:4292",
+      "confidence": 1.0
+     },
+     {
+      "text": "MSH2",
+      "curie": "NCBIGene:4436",
+      "confidence": 1.0
+     },
+     {
+      "text": "colorectal cancer",
+      "curie": "MedGen:C0346629",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 6,
+   "ts": "2026-09-25T10:32:39.390521Z",
+   "payload": {
+    "call_id": "cq-8b44b39c2368",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 7,
+   "ts": "2026-09-25T10:32:39.390555Z",
+   "payload": {
+    "call_id": "ne-bcac779af83d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 8,
+   "ts": "2026-09-25T10:32:39.390565Z",
+   "payload": {
+    "call_id": "pa-980bbd7c8310",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 9,
+   "ts": "2026-09-25T10:32:39.390573Z",
+   "payload": {
+    "call_id": "ct-a92d12b59a9f",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 10,
+   "ts": "2026-09-25T10:32:39.390580Z",
+   "payload": {
+    "call_id": "ne-566e4a669ef6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 11,
+   "ts": "2026-09-25T10:32:39.390588Z",
+   "payload": {
+    "call_id": "ne-e15a539dae7d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 12,
+   "ts": "2026-09-25T10:32:39.390595Z",
+   "payload": {
+    "call_id": "ne-35fe4358be47",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 13,
+   "ts": "2026-09-25T10:32:39.390603Z",
+   "payload": {
+    "call_id": "ne-e08018e8d9d0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 14,
+   "ts": "2026-09-25T10:32:39.390610Z",
+   "payload": {
+    "call_id": "pa-012e3ae675d1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 15,
+   "ts": "2026-09-25T10:32:39.390618Z",
+   "payload": {
+    "call_id": "ne-d388903f1923",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 16,
+   "ts": "2026-09-25T10:32:39.390626Z",
+   "payload": {
+    "call_id": "ne-2606c0c7a0e3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 17,
+   "ts": "2026-09-25T10:32:39.390634Z",
+   "payload": {
+    "call_id": "ne-97d087675220",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 18,
+   "ts": "2026-09-25T10:32:39.390642Z",
+   "payload": {
+    "call_id": "cq-5dba53e81b88",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 19,
+   "ts": "2026-09-25T10:32:39.549493Z",
+   "payload": {
+    "call_id": "pa-980bbd7c8310",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 20,
+   "ts": "2026-09-25T10:32:39.646744Z",
+   "payload": {
+    "call_id": "ct-a92d12b59a9f",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 21,
+   "ts": "2026-09-25T10:32:39.649503Z",
+   "payload": {
+    "call_id": "ne-e15a539dae7d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 22,
+   "ts": "2026-09-25T10:32:39.678215Z",
+   "payload": {
+    "call_id": "ne-566e4a669ef6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 23,
+   "ts": "2026-09-25T10:32:39.722431Z",
+   "payload": {
+    "call_id": "ne-bcac779af83d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 24,
+   "ts": "2026-09-25T10:32:39.846729Z",
+   "payload": {
+    "call_id": "ne-97d087675220",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 25,
+   "ts": "2026-09-25T10:32:39.865878Z",
+   "payload": {
+    "call_id": "ne-35fe4358be47",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 26,
+   "ts": "2026-09-25T10:32:39.910139Z",
+   "payload": {
+    "call_id": "cq-8b44b39c2368",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "7 row(s) of 7",
+    "result_count": 7,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 27,
+   "ts": "2026-09-25T10:32:39.951093Z",
+   "payload": {
+    "call_id": "cq-5dba53e81b88",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "6 row(s) of 6",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 28,
+   "ts": "2026-09-25T10:32:40.091652Z",
+   "payload": {
+    "call_id": "pa-012e3ae675d1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 29,
+   "ts": "2026-09-25T10:32:40.259421Z",
+   "payload": {
+    "call_id": "ne-d388903f1923",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 30,
+   "ts": "2026-09-25T10:32:40.288994Z",
+   "payload": {
+    "call_id": "ne-2606c0c7a0e3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 31,
+   "ts": "2026-09-25T10:32:40.353591Z",
+   "payload": {
+    "call_id": "ne-e08018e8d9d0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 32,
+   "ts": "2026-09-25T10:32:40.355251Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 33,
+   "ts": "2026-09-25T10:32:56.136960Z",
+   "payload": {
+    "text": "I found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer [3][4][5][6][7][8][9]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-1",
+     "cq-8b44b39c2368-2",
+     "cq-8b44b39c2368-3",
+     "cq-8b44b39c2368-4",
+     "cq-8b44b39c2368-5",
+     "cq-8b44b39c2368-6",
+     "cq-8b44b39c2368-7"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "colorectal cancer",
+     "MLH1",
+     "MSH2"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 34,
+   "ts": "2026-09-25T10:32:56.137027Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 35,
+   "ts": "2026-09-25T10:32:56.137036Z",
+   "payload": {
+    "text": "The protein partners with another repair protein called PMS2 to form a complex called MutL alpha, which is part of the DNA mismatch repair system [1]. ",
+    "marker_ids": [
+     "ne-97d087675220-18"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 36,
+   "ts": "2026-09-25T10:32:56.137043Z",
+   "payload": {
+    "text": "When this complex finds a spelling mistake in DNA, it helps create a break in the DNA strand so the error can be cut out and corrected [1]. ",
+    "marker_ids": [
+     "ne-97d087675220-18"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 37,
+   "ts": "2026-09-25T10:32:56.137049Z",
+   "payload": {
+    "text": "This gene was found to be often mutated in a hereditary form of colon cancer [1]. ",
+    "marker_ids": [
+     "ne-97d087675220-18"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 38,
+   "ts": "2026-09-25T10:32:56.137054Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 39,
+   "ts": "2026-09-25T10:32:56.137060Z",
+   "payload": {
+    "text": "One study found that disrupting key interaction points in MLH1 can cause a failure of mismatch repair [2]. ",
+    "marker_ids": [
+     "ne-e08018e8d9d0-27"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 40,
+   "ts": "2026-09-25T10:32:56.137065Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 41,
+   "ts": "2026-09-25T10:32:56.137072Z",
+   "payload": {
+    "text": "Where this answer comes from\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 42,
+   "ts": "2026-09-25T10:32:56.137077Z",
+   "payload": {
+    "text": "Gene NCBIGene:4292, name: mutL homolog 1 [3]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-1"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "mutL homolog 1"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 43,
+   "ts": "2026-09-25T10:32:56.137083Z",
+   "payload": {
+    "text": "Disease name: Muir-Torr\u00c3\u00a9 syndrome [4]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-2"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Muir-Torr\u00c3\u00a9 syndrome"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 44,
+   "ts": "2026-09-25T10:32:56.137090Z",
+   "payload": {
+    "text": "Disease name: Colorectal cancer, hereditary nonpolyposis, type 2 [5]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-3"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Colorectal cancer, hereditary nonpolyposis, type 2"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 45,
+   "ts": "2026-09-25T10:32:56.137096Z",
+   "payload": {
+    "text": "Disease name: Mismatch repair cancer syndrome 1 [6]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-4"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Mismatch repair cancer syndrome 1"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 46,
+   "ts": "2026-09-25T10:32:56.137102Z",
+   "payload": {
+    "text": "Gene NCBIGene:4436, name: mutS homolog 2 [7]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-5"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "mutS homolog 2"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 47,
+   "ts": "2026-09-25T10:32:56.137109Z",
+   "payload": {
+    "text": "Disease name: Lynch syndrome 1 [8]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-6"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Lynch syndrome 1"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 48,
+   "ts": "2026-09-25T10:32:56.137115Z",
+   "payload": {
+    "text": "Disease name: Mismatch repair cancer syndrome 2 [9]. ",
+    "marker_ids": [
+     "cq-8b44b39c2368-7"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Mismatch repair cancer syndrome 2"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 49,
+   "ts": "2026-09-25T10:32:56.137122Z",
+   "payload": {
+    "text": "Gene symbol: MLH1 [10]. ",
+    "marker_ids": [
+     "ne-bcac779af83d-8"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "MLH1"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 50,
+   "ts": "2026-09-25T10:32:56.137128Z",
+   "payload": {
+    "text": "Pubmed title: Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays [11]. ",
+    "marker_ids": [
+     "ne-e08018e8d9d0-9"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 51,
+   "ts": "2026-09-25T10:32:56.137134Z",
+   "payload": {
+    "text": "Clinvar title: NM_000249.4(MLH1):c.545+1271_677+737delinsCA [12]. ",
+    "marker_ids": [
+     "ne-d388903f1923-10"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "NM_000249.4(MLH1):c.545+1271_677+737delinsCA"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 52,
+   "ts": "2026-09-25T10:32:56.137140Z",
+   "payload": {
+    "text": "DNA MISMATCH REPAIR PROTEIN MLH1 [13]. ",
+    "marker_ids": [
+     "ne-2606c0c7a0e3-11"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "DNA MISMATCH REPAIR PROTEIN MLH1; MLH1"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 53,
+   "ts": "2026-09-25T10:32:56.137147Z",
+   "payload": {
+    "text": "MLH1 [13]. ",
+    "marker_ids": [
+     "ne-2606c0c7a0e3-11"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "DNA MISMATCH REPAIR PROTEIN MLH1; MLH1"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 54,
+   "ts": "2026-09-25T10:32:56.137153Z",
+   "payload": {
+    "text": "Clinical trial name: The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [14]. ",
+    "marker_ids": [
+     "ct-a92d12b59a9f-13"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 55,
+   "ts": "2026-09-25T10:32:56.137158Z",
+   "payload": {
+    "text": "Pubmed title: Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome [15]. ",
+    "marker_ids": [
+     "ne-e08018e8d9d0-16"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 56,
+   "ts": "2026-09-25T10:32:56.137164Z",
+   "payload": {
+    "text": "Clinvar title: NM_000249.4(MLH1):c.453+625_545+920delinsT [16]. ",
+    "marker_ids": [
+     "ne-d388903f1923-17"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "NM_000249.4(MLH1):c.453+625_545+920delinsT"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 57,
+   "ts": "2026-09-25T10:32:56.137171Z",
+   "payload": {
+    "text": "Clinical trial name: Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C) [17]. ",
+    "marker_ids": [
+     "ct-a92d12b59a9f-19"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C)"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 58,
+   "ts": "2026-09-25T10:32:56.137177Z",
+   "payload": {
+    "text": "Pubmed title: AI-generated MLH1 small binder improves prime editing efficiency [18]. ",
+    "marker_ids": [
+     "ne-e08018e8d9d0-22"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "AI-generated MLH1 small binder improves prime editing efficiency."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 59,
+   "ts": "2026-09-25T10:32:56.137183Z",
+   "payload": {
+    "text": "Clinvar title: NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [19]. ",
+    "marker_ids": [
+     "ne-d388903f1923-23"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "NM_000249.4(MLH1):c.1418A>T (p.His473Leu)"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 60,
+   "ts": "2026-09-25T10:32:56.137190Z",
+   "payload": {
+    "text": "Clinical trial name: Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [20]. ",
+    "marker_ids": [
+     "ct-a92d12b59a9f-24"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 61,
+   "ts": "2026-09-25T10:32:56.137195Z",
+   "payload": {
+    "text": "Pubmed title: Disruption of protein-protein interaction hotspots in the C-terminal domain of MLH1 confers mismatch repair deficiency [2]. ",
+    "marker_ids": [
+     "ne-e08018e8d9d0-27"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Disruption of protein-protein interaction hotspots in the C-terminal domain of MLH1 confers mismatch repair deficiency."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 62,
+   "ts": "2026-09-25T10:32:56.137202Z",
+   "payload": {
+    "text": "Clinvar title: NM_000249.4(MLH1):c.884+5T>A [21]. ",
+    "marker_ids": [
+     "ne-d388903f1923-28"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "NM_000249.4(MLH1):c.884+5T>A"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 63,
+   "ts": "2026-09-25T10:32:56.137207Z",
+   "payload": {
+    "text": "Clinical trial name: Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [22]. ",
+    "marker_ids": [
+     "ct-a92d12b59a9f-29"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible)"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 64,
+   "ts": "2026-09-25T10:32:56.137213Z",
+   "payload": {
+    "text": "Pubmed title: Mismatch repair MLH complexes make distinct contributions to post-replicative mismatch repair versus trinucleotide repeat expansions [23]. ",
+    "marker_ids": [
+     "ne-e08018e8d9d0-32"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Mismatch repair MLH complexes make distinct contributions to post-replicative mismatch repair versus trinucleotide repeat expansions."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 65,
+   "ts": "2026-09-25T10:32:56.137220Z",
+   "payload": {
+    "text": "Clinvar title: NM_000249.4(MLH1):c.1039-1013G>A [24]. ",
+    "marker_ids": [
+     "ne-d388903f1923-33"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "NM_000249.4(MLH1):c.1039-1013G>A"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 66,
+   "ts": "2026-09-25T10:32:56.137226Z",
+   "payload": {
+    "text": "Clinical trial name: Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver [25]. ",
+    "marker_ids": [
+     "ct-a92d12b59a9f-34"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 67,
+   "ts": "2026-09-25T10:32:56.137232Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 68,
+   "ts": "2026-09-25T10:32:56.137238Z",
+   "payload": {
+    "text": "Note: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.",
+    "marker_ids": [],
+    "kind": "note",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 69,
+   "ts": "2026-09-25T10:32:56.137244Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 70,
+   "ts": "2026-09-25T10:32:56.137249Z",
+   "payload": {
+    "text": "This is a research summary, not medical advice.",
+    "marker_ids": [],
+    "kind": "note",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 71,
+   "ts": "2026-09-25T10:32:56.137259Z",
+   "payload": {
+    "citation_id": "ne-97d087675220-18",
+    "display_index": 1,
+    "source": "gene",
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_2_api",
+    "field": "summary",
+    "claim_text": "The protein partners with another repair protein called PMS2 to form a complex called MutL alpha, which is part of the DNA mismatch repair system",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 72,
+   "ts": "2026-09-25T10:32:56.137286Z",
+   "payload": {
+    "citation_id": "ne-e08018e8d9d0-27",
+    "display_index": 2,
+    "source": "pubmed",
+    "source_id": "41480639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41480639/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "One study found that disrupting key interaction points in MLH1 can cause a failure of mismatch repair",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 73,
+   "ts": "2026-09-25T10:32:56.137296Z",
+   "payload": {
+    "citation_id": "cq-8b44b39c2368-1",
+    "display_index": 3,
+    "source": "NCBIGene",
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "Gene NCBIGene:4292, name: mutL homolog 1 A live NCBI value for this field is more current per Section 7.1 ('MLH1'); see citation [10].",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "mutL homolog 1"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 74,
+   "ts": "2026-09-25T10:32:56.137305Z",
+   "payload": {
+    "citation_id": "cq-8b44b39c2368-2",
+    "display_index": 4,
+    "source": "ncbi_efetch",
+    "source_id": "MedGen:C1321489",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1321489",
+    "layer": "layer_2_api",
+    "field": "name",
+    "claim_text": "Disease name: Muir-Torr\u00c3\u00a9 syndrome",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 75,
+   "ts": "2026-09-25T10:32:56.137313Z",
+   "payload": {
+    "citation_id": "cq-8b44b39c2368-3",
+    "display_index": 5,
+    "source": "ncbi_efetch",
+    "source_id": "MedGen:C1333991",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1333991",
+    "layer": "layer_2_api",
+    "field": "name",
+    "claim_text": "Disease name: Colorectal cancer, hereditary nonpolyposis, type 2",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 76,
+   "ts": "2026-09-25T10:32:56.137320Z",
+   "payload": {
+    "citation_id": "cq-8b44b39c2368-4",
+    "display_index": 6,
+    "source": "ncbi_efetch",
+    "source_id": "MedGen:C5399763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5399763",
+    "layer": "layer_2_api",
+    "field": "name",
+    "claim_text": "Disease name: Mismatch repair cancer syndrome 1",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 77,
+   "ts": "2026-09-25T10:32:56.137327Z",
+   "payload": {
+    "citation_id": "cq-8b44b39c2368-5",
+    "display_index": 7,
+    "source": "NCBIGene",
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "Gene NCBIGene:4436, name: mutS homolog 2",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "mutS homolog 2"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 78,
+   "ts": "2026-09-25T10:32:56.137335Z",
+   "payload": {
+    "citation_id": "cq-8b44b39c2368-6",
+    "display_index": 8,
+    "source": "ncbi_efetch",
+    "source_id": "MedGen:C2936783",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2936783",
+    "layer": "layer_2_api",
+    "field": "name",
+    "claim_text": "Disease name: Lynch syndrome 1",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 79,
+   "ts": "2026-09-25T10:32:56.137342Z",
+   "payload": {
+    "citation_id": "cq-8b44b39c2368-7",
+    "display_index": 9,
+    "source": "ncbi_efetch",
+    "source_id": "MedGen:C5436806",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5436806",
+    "layer": "layer_2_api",
+    "field": "name",
+    "claim_text": "Disease name: Mismatch repair cancer syndrome 2",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 80,
+   "ts": "2026-09-25T10:32:56.137349Z",
+   "payload": {
+    "citation_id": "ne-bcac779af83d-8",
+    "display_index": 10,
+    "source": "gene",
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292/",
+    "layer": "layer_2_api",
+    "field": "symbol",
+    "claim_text": "gene symbol: MLH1",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 81,
+   "ts": "2026-09-25T10:32:56.137356Z",
+   "payload": {
+    "citation_id": "ne-e08018e8d9d0-9",
+    "display_index": 11,
+    "source": "pubmed",
+    "source_id": "17510385",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 82,
+   "ts": "2026-09-25T10:32:56.137363Z",
+   "payload": {
+    "citation_id": "ne-d388903f1923-10",
+    "display_index": 12,
+    "source": "clinvar",
+    "source_id": "242650",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242650/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000249.4(MLH1):c.545+1271_677+737delinsCA",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 83,
+   "ts": "2026-09-25T10:32:56.137370Z",
+   "payload": {
+    "citation_id": "ne-2606c0c7a0e3-11",
+    "display_index": 13,
+    "source": "omim",
+    "source_id": "120436",
+    "source_url": "https://omim.org/entry/120436",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "DNA MISMATCH REPAIR PROTEIN MLH1",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 84,
+   "ts": "2026-09-25T10:32:56.137378Z",
+   "payload": {
+    "citation_id": "ct-a92d12b59a9f-13",
+    "display_index": 14,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT00261456",
+    "source_url": "https://clinicaltrials.gov/study/NCT00261456",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 85,
+   "ts": "2026-09-25T10:32:56.137391Z",
+   "payload": {
+    "citation_id": "ne-e08018e8d9d0-16",
+    "display_index": 15,
+    "source": "pubmed",
+    "source_id": "30998989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30998989/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 86,
+   "ts": "2026-09-25T10:32:56.137401Z",
+   "payload": {
+    "citation_id": "ne-d388903f1923-17",
+    "display_index": 16,
+    "source": "clinvar",
+    "source_id": "242651",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242651/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000249.4(MLH1):c.453+625_545+920delinsT",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 87,
+   "ts": "2026-09-25T10:32:56.137411Z",
+   "payload": {
+    "citation_id": "ct-a92d12b59a9f-19",
+    "display_index": 17,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT01876511",
+    "source_url": "https://clinicaltrials.gov/study/NCT01876511",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C)",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 88,
+   "ts": "2026-09-25T10:32:56.137421Z",
+   "payload": {
+    "citation_id": "ne-e08018e8d9d0-22",
+    "display_index": 18,
+    "source": "pubmed",
+    "source_id": "40769155",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: AI-generated MLH1 small binder improves prime editing efficiency",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 89,
+   "ts": "2026-09-25T10:32:56.137428Z",
+   "payload": {
+    "citation_id": "ne-d388903f1923-23",
+    "display_index": 19,
+    "source": "clinvar",
+    "source_id": "4686835",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4686835/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000249.4(MLH1):c.1418A>T (p.His473Leu)",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 90,
+   "ts": "2026-09-25T10:32:56.137435Z",
+   "payload": {
+    "citation_id": "ct-a92d12b59a9f-24",
+    "display_index": 20,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT02760849",
+    "source_url": "https://clinicaltrials.gov/study/NCT02760849",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 91,
+   "ts": "2026-09-25T10:32:56.137442Z",
+   "payload": {
+    "citation_id": "ne-d388903f1923-28",
+    "display_index": 21,
+    "source": "clinvar",
+    "source_id": "4852684",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4852684/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000249.4(MLH1):c.884+5T>A",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 92,
+   "ts": "2026-09-25T10:32:56.137449Z",
+   "payload": {
+    "citation_id": "ct-a92d12b59a9f-29",
+    "display_index": 22,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT02993068",
+    "source_url": "https://clinicaltrials.gov/study/NCT02993068",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible)",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 93,
+   "ts": "2026-09-25T10:32:56.137456Z",
+   "payload": {
+    "citation_id": "ne-e08018e8d9d0-32",
+    "display_index": 23,
+    "source": "pubmed",
+    "source_id": "41648604",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41648604/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Mismatch repair MLH complexes make distinct contributions to post-replicative mismatch repair versus trinucleotide repeat expansions",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 94,
+   "ts": "2026-09-25T10:32:56.137463Z",
+   "payload": {
+    "citation_id": "ne-d388903f1923-33",
+    "display_index": 24,
+    "source": "clinvar",
+    "source_id": "4856878",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4856878/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000249.4(MLH1):c.1039-1013G>A",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 95,
+   "ts": "2026-09-25T10:32:56.137469Z",
+   "payload": {
+    "citation_id": "ct-a92d12b59a9f-34",
+    "display_index": 25,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT03005002",
+    "source_url": "https://clinicaltrials.gov/study/NCT03005002",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 96,
+   "ts": "2026-09-25T10:32:56.137487Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-97d087675220-18",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 97,
+   "ts": "2026-09-25T10:32:56.137502Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-e08018e8d9d0-27",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 98,
+   "ts": "2026-09-25T10:32:56.137511Z",
+   "payload": {
+    "outcome": "flag",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-8b44b39c2368-1",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 99,
+   "ts": "2026-09-25T10:32:56.137519Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": false,
+    "citation_id": "cq-8b44b39c2368-2",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 100,
+   "ts": "2026-09-25T10:32:56.137527Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": false,
+    "citation_id": "cq-8b44b39c2368-3",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 101,
+   "ts": "2026-09-25T10:32:56.137535Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": false,
+    "citation_id": "cq-8b44b39c2368-4",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 102,
+   "ts": "2026-09-25T10:32:56.137543Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": false,
+    "citation_id": "cq-8b44b39c2368-5",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 103,
+   "ts": "2026-09-25T10:32:56.137550Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": false,
+    "citation_id": "cq-8b44b39c2368-6",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 104,
+   "ts": "2026-09-25T10:32:56.137557Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": false,
+    "citation_id": "cq-8b44b39c2368-7",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 105,
+   "ts": "2026-09-25T10:32:56.137565Z",
+   "payload": {
+    "outcome": "flag",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-bcac779af83d-8",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 106,
+   "ts": "2026-09-25T10:32:56.137573Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-e08018e8d9d0-9",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 107,
+   "ts": "2026-09-25T10:32:56.137581Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d388903f1923-10",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 108,
+   "ts": "2026-09-25T10:32:56.137588Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-2606c0c7a0e3-11",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 109,
+   "ts": "2026-09-25T10:32:56.137597Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-a92d12b59a9f-13",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 110,
+   "ts": "2026-09-25T10:32:56.139570Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-e08018e8d9d0-16",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 111,
+   "ts": "2026-09-25T10:32:56.139610Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d388903f1923-17",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 112,
+   "ts": "2026-09-25T10:32:56.139669Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-a92d12b59a9f-19",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 113,
+   "ts": "2026-09-25T10:32:56.139690Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-e08018e8d9d0-22",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 114,
+   "ts": "2026-09-25T10:32:56.139702Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d388903f1923-23",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 115,
+   "ts": "2026-09-25T10:32:56.139713Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-a92d12b59a9f-24",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 116,
+   "ts": "2026-09-25T10:32:56.139725Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d388903f1923-28",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 117,
+   "ts": "2026-09-25T10:32:56.139736Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-a92d12b59a9f-29",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 118,
+   "ts": "2026-09-25T10:32:56.139744Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-e08018e8d9d0-32",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 119,
+   "ts": "2026-09-25T10:32:56.139752Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d388903f1923-33",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 120,
+   "ts": "2026-09-25T10:32:56.139760Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-a92d12b59a9f-34",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 121,
+   "ts": "2026-09-25T10:32:56.139778Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "81baa821-a8b1-43e2-843d-a242cb5a72ee",
+   "seq": 123,
+   "ts": "2026-09-25T10:32:56.139851Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 5452,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 24 sources, not yet confirmed",
+    "layer_calls_used": 19,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer [3][4][5][6][7][8][9]. \n\nThe protein partners with another repair protein called PMS2 to form a complex called MutL alpha, which is part of the DNA mismatch repair system [1]. When this complex finds a spelling mistake in DNA, it helps create a break in the DNA strand so the error can be cut out and corrected [1]. This gene was found to be often mutated in a hereditary form of colon cancer [1]. \n\nOne study found that disrupting key interaction points in MLH1 can cause a failure of mismatch repair [2]. \n\nWhere this answer comes from\n\nGene NCBIGene:4292, name: mutL homolog 1 [3]. Disease name: Muir-Torr\u00c3\u00a9 syndrome [4]. Disease name: Colorectal cancer, hereditary nonpolyposis, type 2 [5]. Disease name: Mismatch repair cancer syndrome 1 [6]. Gene NCBIGene:4436, name: mutS homolog 2 [7]. Disease name: Lynch syndrome 1 [8]. Disease name: Mismatch repair cancer syndrome 2 [9]. Gene symbol: MLH1 [10]. Pubmed title: Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays [11]. Clinvar title: NM_000249.4(MLH1):c.545+1271_677+737delinsCA [12]. DNA MISMATCH REPAIR PROTEIN MLH1 [13]. MLH1 [13]. Clinical trial name: The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [14]. Pubmed title: Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome [15]. Clinvar title: NM_000249.4(MLH1):c.453+625_545+920delinsT [16]. Clinical trial name: Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C) [17]. Pubmed title: AI-generated MLH1 small binder improves prime editing efficiency [18]. Clinvar title: NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [19]. Clinical trial name: Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [20]. Pubmed title: Disruption of protein-protein interaction hotspots in the C-terminal domain of MLH1 confers mismatch repair deficiency [2]. Clinvar title: NM_000249.4(MLH1):c.884+5T>A [21]. Clinical trial name: Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [22]. Pubmed title: Mismatch repair MLH complexes make distinct contributions to post-replicative mismatch repair versus trinucleotide repeat expansions [23]. Clinvar title: NM_000249.4(MLH1):c.1039-1013G>A [24]. Clinical trial name: Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver [25]. \n\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.\n\nThis is a research summary, not medical advice."
+}

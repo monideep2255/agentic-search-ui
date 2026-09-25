@@ -75,7 +75,7 @@ def git(*args: str, check: bool = True) -> str:
 def preflight(no_push: bool) -> None:
     if git("rev-parse", "--abbrev-ref", "HEAD") != "develop":
         sys.exit("Switch to develop first: git checkout develop")
-    if git("status", "--porcelain"):
+    if git("status", "--porcelain", "--untracked-files=no"):
         sys.exit("The working tree has changes. Commit or set them aside first.")
     if not git("rev-parse", "-q", "--verify", f"refs/tags/{TAG}", check=False):
         git("fetch", "-q", "origin", f"refs/tags/{TAG}:refs/tags/{TAG}")
