@@ -17,6 +17,7 @@ The plan for one night. Every card in the To do column of `testing/UI_fix_plan.m
 - [How the night runs](#how-the-night-runs)
 - [What needs a yes before the run starts](#what-needs-a-yes-before-the-run-starts)
 - [What will not happen tonight](#what-will-not-happen-tonight)
+- [How to bin the overnight build](#how-to-bin-the-overnight-build)
 - [The product owner's answers](#the-product-owners-answers)
 - [Night log](#night-log)
 
@@ -272,6 +273,19 @@ The rules require an explicit, itemized grant for each of these. They are asked 
 - No new tool beyond the seven, and no MCP server around them.
 - No vector embeddings, RAG pipeline, sub-query decomposition or frontier escalation, unless a named trigger is confirmed.
 - No production release: `v0.2.0` stays on production.
+- No database migration. A card that needs one stops and waits for the product owner, so restoring the code is always a complete undo.
+
+## How to bin the overnight build
+
+The product owner's instruction, 2026-09-25: "do not completely destroy what we have on develop today. Build a mechanism that if I do not like what you built overnight, we can bin it."
+
+- The rollback point: the git tag `pre-overnight-2026-09-25`, commit `14be13a`, pushed to GitHub before any overnight code landed. Develop's product code there is identical to `f3aaf6f`, where the session started.
+- Bin everything: `python3 testing/Developer/scripts/bin_overnight.py --all --yes`. Every product path (`src/`, `frontend/`, `tests/`, `services/`, `eval/`, `alembic/`, the dependency files, `railway.json`, `.github/`) goes back exactly to the tag as one new commit on develop. No force-push, no lost history. Documents and decisions stay.
+- Bin one phase: `python3 testing/Developer/scripts/bin_overnight.py --phase 8.2 --yes` reverts that phase's merge only.
+- See first, change nothing: run either without `--yes`, or run `--list` to see the overnight merges and every Railway setting changed.
+- Railway settings: every develop variable changed overnight is logged in `testing/Overnight_settings_log.json` with its value before; binning puts each back, or deletes it if it did not exist before.
+- The instant fallback: the develop deployments serving the rollback point were API `008542c2-d69c-4bb5-9398-ef1ad0efe8ec` and web `88ccc316-dea5-4589-9053-aaded1d20ee2`. Either can be redeployed from Railway in one click.
+- Proven on 2026-09-25 in two throwaway clones: one simulated phase binned alone, and two simulated phases binned together, each leaving every product path identical to the tag, including a modified file, an added file and a deleted one.
 
 ## The product owner's answers
 
@@ -285,6 +299,20 @@ One line per answer, in the order asked. Each has its row in `DECISIONS.md` unde
 - Card 11: check once, re-plan once, after the searches. No sub-question splitting.
 - Card 12: cited soft edges, no vectors or RAG. Order as the scoping document gives it.
 - New card 44, item 13.1, raised tonight: passages that answer the question, from NCBI's LitSense. Probe first, build in phase 8.4 if the probe holds. No RAG pipeline of our own.
+- Tonight only: unattended run, merging my own phase PRs under the stated conditions, the next phase without your retest, builders without tmux panes. All four granted; they expire at the morning report.
+- Phase 8.1: its own branch and pull request, with judge and adversary rounds, like every other phase.
+- Golden run: once per phase; revert a phase on any drop below 86 of 150; two fresh test accounts on develop per run.
+- Night spend: up to $12 of the $20 OpenRouter balance; $8 kept for your retest. Two golden runs at most, a 10-question writer bench. Develop's caps unchanged.
+- Card 1: fetch the clinical features from MedGen through the existing tool; say plainly when MedGen lists none. Joins phase 8.1.
+- Card 23: checked searches for the named questions, drafting kept for new shapes and disclosed (card 7). Phase 8.3.
+- Card 42: leave as approved. No code-placed NCBI text. The card leaves the board as decided.
+- Card 14 (11.11): closed. 12.9 and 12.10 answered enough of it; depth moves to the writer bench.
+- Card 6: the citation cap rises from 20 to 30. Phase 8.1.
+- Card 43: the byte ceiling rises to 70,000 so paper questions can reach 30 sources. One ticket with card 6, phase 8.1.
+- Card 31: label every number with what it counts; drop "not shown above". Phase 8.4.
+- Card 32: ship the 2026-09-14 provenance note as proposed. Phase 8.4.
+- Card 33: the toggle stays before asking and is also added to the answer strip; switching re-runs the question. Phase 8.4.
+- Rollback: the tag `pre-overnight-2026-09-25` and `bin_overnight.py`, proven in two throwaway clones. No database migration tonight.
 
 ## Night log
 
