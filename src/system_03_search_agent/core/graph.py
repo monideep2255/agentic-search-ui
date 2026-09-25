@@ -1339,14 +1339,81 @@ def _build_think_messages(
     ]
 
 
+#: T-8.1-01: how much of a failed Think reply is echoed back on the retry.
+#: `production-standards`'s bounded-context-items obligation: this is a
+#: hard cap enforced before the string is placed in a prompt, independent
+#: of any schema `maxLength`, since this string never passes through
+#: `_ThinkClassification` at all.
+_THINK_RETRY_ECHO_CHARS = 300
+
+
+#: T-8.1-01: live traffic showed the plan tier answering Think's call with
+#: the right shape except for one substituted key: `"why"` or `"reason"`
+#: in place of the required `"narrative"` field (measured twice in about
+#: forty live runs, `testing/Developer/reports/2026-09-23_user_feedback/
+#: q5_coffee_exercise.txt` and `.../2026-09-23_set12/breadth_runs/
+#: q5_coffee_exercise.txt`, both attempts of the existing retry). This is
+#: a deterministic KEY rename, never a content decision: the value under
+#: the alias key is carried over unchanged, nothing about which query_class
+#: or entities to report is inferred or guessed here.
+_THINK_NARRATIVE_KEY_ALIASES = ("why", "reason", "rationale", "explanation")
+
+
+def _repair_think_narrative_key(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Rename a synonym key to `narrative` when `narrative` itself is absent.
+
+    Returns `parsed` unchanged (same object) when no repair applies, so a
+    caller can tell whether anything was attempted with an `is` check.
+    Only fires when renaming would not ALSO leave an extra, still-unknown
+    key behind: `_ThinkClassification` forbids extra fields
+    (`extra="forbid"`), so a reply carrying `why` alongside some other
+    unmodeled key is left alone and still fails validation honestly rather
+    than being coerced into looking clean.
+    """
+    if "narrative" in parsed:
+        return parsed
+    known_keys = {"query_class", "narrative", "entities"}
+    for alias in _THINK_NARRATIVE_KEY_ALIASES:
+        if alias not in parsed or not isinstance(parsed[alias], str):
+            continue
+        other_keys = set(parsed) - {alias}
+        if not other_keys <= known_keys:
+            continue
+        repaired = dict(parsed)
+        repaired["narrative"] = repaired.pop(alias)
+        return repaired
+    return parsed
+
+
+def _think_validation_detail(exc: ValidationError) -> str:
+    """A bounded, actionable summary of a `_ThinkClassification` failure.
+
+    Field name and pydantic's own generic message only (e.g. "narrative:
+    Field required"), never the raw input value: pydantic's default
+    `ValidationError.__str__` embeds `input_value`, which would put an
+    unbounded slice of the model's own reply into a message that this
+    code later feeds back into a second model call and into a `step_error`
+    surfaced to the caller. Capped at the first 5 errors so a
+    maximally-malformed reply cannot inflate this past the 256-character
+    cap already applied where this message is read.
+    """
+    parts = []
+    for error in exc.errors()[:5]:
+        loc = ".".join(str(piece) for piece in error["loc"]) or "(root)"
+        parts.append(f"{loc}: {error['msg']}")
+    return "; ".join(parts)
+
+
 def _parse_think_classification(content: str) -> _ThinkClassification:
     """Deterministic accept-or-raise on the model's text.
 
     Mirrors `guardrail.classifier.parse_classification` exactly:
     `production-standards` requires a deterministic accept-or-reject rule
     for structured model output, never a lenient partial parse. Tolerates
-    exactly one cosmetic deviation, a surrounding markdown code fence,
-    because models add one routinely and it changes no field value.
+    two cosmetic deviations: a surrounding markdown code fence (changes no
+    field value), and one synonym key for `narrative`
+    (`_repair_think_narrative_key`, T-8.1-01). Neither repair ever invents
+    or reinterprets a VALUE, only where an already-present value sits.
     """
     stripped = content.strip()
     if stripped.startswith("```"):
@@ -1369,10 +1436,17 @@ def _parse_think_classification(content: str) -> _ThinkClassification:
 
     try:
         return _ThinkClassification.model_validate(parsed)
-    except ValidationError as exc:
+    except ValidationError as first_exc:
+        repaired = _repair_think_narrative_key(parsed)
+        if repaired is not parsed:
+            try:
+                return _ThinkClassification.model_validate(repaired)
+            except ValidationError:
+                pass
         raise ThinkClassificationUnavailableError(
-            "the plan tier's response did not match the think classification schema"
-        ) from exc
+            "the plan tier's response did not match the think classification "
+            f"schema ({_think_validation_detail(first_exc)})"
+        ) from first_exc
 
 
 #: The organism a gene symbol is resolved against when the query names
@@ -2245,6 +2319,15 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # fabricated or defaulted classification (T-4.7-04).
     classification: _ThinkClassification | None = None
     parse_error: ThinkClassificationUnavailableError | None = None
+    # T-8.1-01: attempt 2 no longer resends byte-identical messages. A
+    # systematic key-naming habit (measured live: the model substitutes
+    # "why" or "reason" for the required "narrative" key) reproduces
+    # identically on an unchanged retry, which is why the prior blind
+    # retry never actually recovered these two live cases. `call_messages`
+    # grows by exactly one exchange (the bad reply, echoed and bounded, plus
+    # the specific field-level error) so the model sees what was wrong,
+    # never a hint at what content to report.
+    call_messages = think_messages
     for attempt in (1, 2):
         try:
             response = await _dispatch_tier_call(
@@ -2258,7 +2341,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 "think",
                 # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after
                 # the question, never spliced into the system block.
-                think_messages,
+                call_messages,
                 budget_s=budget_for_step("think", "lookup"),
                 # No stable prefix ahead of the classification instruction
                 # (2026-09-13, UI fix set 7). Measured on develop after the
@@ -2295,6 +2378,25 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 len(content),
                 content[:200],
             )
+            if attempt == 1:
+                # Bounded echo of the bad reply (never the full thing) plus
+                # the exact schema complaint, so the second attempt corrects
+                # the actual mistake instead of repeating it. Both pieces
+                # are model output already logged above; nothing here is
+                # user-controllable beyond the query the model already saw.
+                call_messages = think_messages + [
+                    {"role": "assistant", "content": content[:_THINK_RETRY_ECHO_CHARS]},
+                    {
+                        "role": "user",
+                        "content": (
+                            "That reply did not match the required schema: "
+                            f"{exc}. Reply again with a single JSON object "
+                            'using exactly these keys: "query_class", '
+                            '"narrative", "entities". No other key name for '
+                            "the reasoning field is accepted."
+                        ),
+                    },
+                ]
 
     if classification is None:
         # The model answered twice, and both answers were unusable. A step
