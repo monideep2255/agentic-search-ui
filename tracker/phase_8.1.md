@@ -34,7 +34,7 @@ This phase is not in Section 25. Phases 8.1 to 8.5 are the product owner's To do
 
 ### T-8.1-01: A good question never comes back as a refusal because the think step's reply was malformed
 
-Status: todo
+Status: in-review, builder A, `0020941`: a mislabelled key is repaired and a failed validation is retried with the error, never defaulted; 10 of 10 live runs answered
 Card: 2, item 12.17
 Builder: A
 Files: `src/system_03_search_agent/core/graph.py` and its tests
@@ -46,7 +46,7 @@ Acceptance:
 
 ### T-8.1-02: An answer can cite up to 30 sources, and a question about papers can reach 30
 
-Status: todo
+Status: in-review, builder A, `b843ba0`: `_MAX_CITATIONS_PER_ANSWER` and `_MAX_FINDINGS_FOR_MODEL_PROMPT` 20 to 30, `_MAX_FINDING_TOTAL_BYTES` 50,000 to 70,000; about $0.017 per paper question, cap $0.10
 Cards: 6 and 43
 Builder: A
 Files: `src/system_03_search_agent/core/graph.py` (`_MAX_CITATIONS_PER_ANSWER`), `src/system_03_search_agent/harness/coordinator_worker.py` (`_MAX_FINDING_TOTAL_BYTES`), and their tests
@@ -58,7 +58,7 @@ Acceptance:
 
 ### T-8.1-03: No search takes two minutes when the median is fourteen seconds, or the cause is written down
 
-Status: todo
+Status: diagnosed, not fixed (F-8.1-05); card 22 stays in To do
 Card: 22
 Builder: A
 Files: `src/system_03_search_agent/core/graph.py` if the cause is there; otherwise none
@@ -153,6 +153,14 @@ Severity: high: without it card 1 is not fixed
 
 `_parse_medgen_clinical_features` (commit `888016d`) returns 30 capped features for Marfan syndrome, but `core/graph.py`'s `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` (about line 5330) does not list `clinical_features`, so the field never reaches the writing model. The exact change is in `testing/Developer/reports/2026-09-25_phase_8.1/builder_C.md`.
 
+### F-8.1-05: The 127-second run outlived two 30-second timeouts
+
+Status: open, card 22 stays in To do
+Raised by: builder A, T-8.1-03
+Severity: medium: one run in the 2026-09-20 set, and a timeout that does not stop its work is a latent risk on every query
+
+Commit `2bc8ec0` does not explain it: that fix excludes the multi-hop class, which the HNF1A question belongs to, and lives in `tools/cypher_templates.py`. Two independent 30-second timeouts sat on the run's path, yet it took 127.1 seconds and succeeded, which points at a timeout that cancels the wait but not the work running in its thread. The fix is outside `core/graph.py`. Evidence: `testing/Developer/reports/2026-09-25_phase_8.1/builder_A.md`.
+
 ### F-8.1-01: The trust verdict varies because it is computed over whichever sentences the model's prose grounded that run
 
 Status: confirmed; fix decided by the lead, routed to builder A (T-8.1-05b)
@@ -176,3 +184,4 @@ The writing model abbreviated a disease name in one MODY run, and the exact-matc
 ## History
 
 - 2026-09-25 05:05 UTC: phase opened by the lead; eight tickets written; builders A, B and C dispatched in parallel, each in its own worktree.
+- 2026-09-25: builders B, C and A merged in that order; T-8.1-07's fix reverted (F-8.1-03); builder A resumed for T-8.1-05b and T-8.1-06b in `core/graph.py`.
