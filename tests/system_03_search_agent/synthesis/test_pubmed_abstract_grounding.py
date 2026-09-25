@@ -280,7 +280,7 @@ def test_the_findings_block_truncates_rather_than_overflow_when_abstracts_push_i
     # A second, independent source of equally bulky findings (a graph-shaped
     # Finding, the same shape `_finding()` in test_breadth_wiring.py already
     # uses), so the COMBINED set, as a real multi-source answer would
-    # assemble it, is what pushes the block past 12,000 chars, not the
+    # assemble it, is what pushes the block past MAX_FINDINGS_BLOCK_CHARS, not the
     # pubmed abstracts alone.
     filler_rows = [
         {
@@ -395,3 +395,94 @@ def test_ground_claim_rejects_a_word_overlapping_claim_that_is_not_a_substring()
         "populate-check: an exact match must still ground, or this arm would "
         "pass on a ground_claim that rejects everything."
     )
+
+
+def _prompt_finding(ref: int, field: str, value: str, url: str, entity_type: str) -> Any:
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        ref_index=ref,
+        citation_id=f"call-{ref}",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field=field,
+        field_value=value,
+        source_url=url,
+        entity_type=entity_type,
+    )
+
+
+def test_a_thirty_finding_prompt_with_long_abstracts_reaches_the_model_whole() -> None:
+    """F-8.1-A08 (fix-and-verify round): the prompt slice is 30 findings
+    (`core/graph.py`'s `_MAX_FINDINGS_FOR_MODEL_PROMPT`, the product owner's
+    decision of 2026-09-25), and the rendered block must not silently cut it.
+
+    The shape is the longest one the live path can put in a prompt: the
+    breadth plan fetches at most `PUBMED_RESULT_CAP` (5) papers per
+    question, so 5 abstracts, each at the 2,000-character field cap, plus a
+    Gene ESummary summary at the same cap, beside 24 short rows (graph
+    records, paper titles, ClinVar rows). At the old 12,000 characters the
+    block stopped before the last of them; at `MAX_FINDINGS_BLOCK_CHARS`
+    every one of the 30 is in the text the model reads, which is what "your
+    30-source choice actually takes effect" requires.
+    """
+    from system_03_search_agent.synthesis.findings import build_synth_messages
+
+    long_text = ("Results: the cohort showed a consistent association. " * 60)[
+        :MAX_FIELD_VALUE_CHARS
+    ]
+    prompt: list[Any] = []
+    for n in range(10):
+        prompt.append(
+            _prompt_finding(
+                len(prompt) + 1,
+                "name",
+                f"Disease number {n}",
+                f"https://www.ncbi.nlm.nih.gov/medgen/{100 + n}",
+                "Disease",
+            )
+        )
+    prompt.append(
+        _prompt_finding(
+            len(prompt) + 1, "summary", long_text, "https://www.ncbi.nlm.nih.gov/gene/672", "gene"
+        )
+    )
+    for n in range(5):
+        url = f"https://pubmed.ncbi.nlm.nih.gov/{3000 + n}/"
+        prompt.append(
+            _prompt_finding(
+                len(prompt) + 1, "title", f"A cohort study of BRCA1 carriers {n}", url, "pubmed"
+            )
+        )
+        prompt.append(_prompt_finding(len(prompt) + 1, "abstract", long_text, url, "pubmed"))
+    while len(prompt) < 30:
+        n = len(prompt)
+        prompt.append(
+            _prompt_finding(
+                n + 1,
+                "title",
+                f"ClinVar variant record {n}",
+                f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{5000 + n}/",
+                "clinvar",
+            )
+        )
+    assert len(prompt) == 30
+    long_values = sum(1 for f in prompt if len(f.field_value) >= 1900)
+    assert long_values == 6, "populate-check: five abstracts and one summary at the cap"
+
+    old_cap_lines = render_findings_block(prompt, 12_000).count("\n") + 1
+    assert old_cap_lines < 30, (
+        f"populate-check: this shape must be cut at the old 12,000 characters "
+        f"({old_cap_lines} of 30 rendered), or it proves nothing about the raise"
+    )
+
+    messages = build_synth_messages("What research papers discuss BRCA1?", prompt)
+    user_content = messages[-1]["content"]
+    shown = [n for n in range(1, 31) if f"\n[{n}] " in f"\n{user_content}"]
+    assert len(shown) == 30, f"only {len(shown)} of 30 prompt findings reached the model"
+    assert len(render_findings_block(prompt)) <= MAX_FINDINGS_BLOCK_CHARS
+
+
+def test_block_cap_is_the_fix_round_value() -> None:
+    """F-8.1-A08: pinned so a later edit that lowers it is a visible change."""
+    assert MAX_FINDINGS_BLOCK_CHARS == 18_000
