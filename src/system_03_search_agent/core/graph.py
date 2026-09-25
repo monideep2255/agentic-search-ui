@@ -10305,6 +10305,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -10343,6 +10344,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -10401,6 +10403,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -10641,6 +10644,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -11549,6 +11553,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 if next_step_offer is not None
                 else None
             ),
+            decisions=_done_decisions(harness),
         ),
     )
     return sink.result()
@@ -11569,6 +11574,7 @@ def _partial_result_for_cap(
             elapsed_ms=elapsed_ms,
             trust_outcome="flag",
             layer_calls_used=call_budget.calls_made(),
+            decisions=_done_decisions(harness),
         ),
     )
     return sink.result()

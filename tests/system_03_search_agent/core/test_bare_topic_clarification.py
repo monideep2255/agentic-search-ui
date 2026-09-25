@@ -723,3 +723,105 @@ async def test_a_question_asked_back_cancels_the_literature_decision(
     think = _payload(events, "think")
     assert think is not None and think["clarifying_question"] == clarify.RECENT_WINDOW_QUESTION
     assert started.is_set() and cancelled.is_set(), base
+
+
+# ---------------------------------------------------------------------------
+# Card 6: every decision a run made rides on its `done` event, and the
+# decisions at one step overlap rather than queue.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_searched_question_carries_its_decisions_on_done(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+
+    events = await _run("which papers discuss statin side effects")
+    done = _payload(events, "done")
+    assert done is not None
+    names = [d["name"] for d in done["decisions"]]
+    assert "think.recent_years" in names and "plan.literature" in names, names
+    for record in done["decisions"]:
+        assert record["decided_by"] == "jev" and record["guard_choice"] == record["chosen"]
+
+
+@pytest.mark.asyncio
+async def test_a_question_asked_back_carries_its_decisions_on_done(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=_clarify_reply("insulin"))
+    _install_decide(monkeypatch, {"think.ask_back": "ask_back"})
+
+    events = await _run("insulin")
+    done = _payload(events, "done")
+    assert done is not None
+    assert "think.ask_back" in [d["name"] for d in done["decisions"]]
+
+
+@pytest.mark.asyncio
+async def test_recent_years_overlaps_thinks_own_classification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The recent_years decision below will not answer until Think's own
+    classification call has STARTED. Run one after the other, it would time
+    out, no pick would be made, and the question would be searched; run
+    side by side, the pick arrives and the question is asked back."""
+    think_started = asyncio.Event()
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    real_dispatch = harness_module.litellm.acompletion
+
+    async def _dispatch(*args: Any, **kwargs: Any) -> Any:
+        joined = "\n".join(str(m.get("content") or "") for m in kwargs.get("messages") or [])
+        if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
+            think_started.set()
+        return await real_dispatch(*args, **kwargs)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
+    base = _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
+        if point == "think.recent_years":
+            await asyncio.wait_for(think_started.wait(), timeout=1.0)
+        return await inner(harness, trace_id, point, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    events = await _run("recent papers on statins")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] == clarify.RECENT_WINDOW_QUESTION, base
+
+
+@pytest.mark.asyncio
+async def test_the_literature_decision_is_under_way_before_thinks_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Plan's decision starts at Think, ahead of Think's own model call,
+    so by the time Plan needs it there is nothing left to wait for."""
+    order: list[str] = []
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    real_dispatch = harness_module.litellm.acompletion
+
+    async def _dispatch(*args: Any, **kwargs: Any) -> Any:
+        joined = "\n".join(str(m.get("content") or "") for m in kwargs.get("messages") or [])
+        if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
+            order.append("think")
+        return await real_dispatch(*args, **kwargs)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
+    _install_decide(monkeypatch)
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
+        order.append(point)
+        return await inner(harness, trace_id, point, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    await _run("which papers discuss statin side effects")
+    assert order.index("plan.literature") < order.index("think"), order
+    assert order.index("think.recent_years") < order.index("think"), order
