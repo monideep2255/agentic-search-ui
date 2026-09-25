@@ -136,9 +136,10 @@
   <header class="masthead">
     <div class="eyebrow">System 3 &middot; Phase 6</div>
     <h1>How one build phase runs</h1>
-    <p class="standfirst">The loop that repeats 26 times, once per phase in section 25 of the
-      technical specification. This is the sync check: if any step here is not what you pictured,
-      that is the thing to change before we start building.</p>
+    <p class="standfirst">Redesigned 2026-09-24, when you accepted all eight decisions in
+      <code>docs/build/Bossman_mode_redesign.md</code>. Work is picked by what a person sees first,
+      every phase fits in 8 hours and 8 agents, review stops at two rounds, and every phase ends on
+      the deployed develop app, where a product reviewer looks before you do.</p>
   </header>
 
   <section>
@@ -147,32 +148,37 @@
       <div class="role" style="--role-tone: var(--you)">
         <span class="role-name">Product owner</span>
         <span class="role-who">You</span>
-        <span class="role-note">Approve the PR, decide scope, judge whether a UI feels right. You talk only to the lead.</span>
+        <span class="role-note">Merge the PR, retest on develop. Your verdict is the only thing that sets done. You talk only to the lead.</span>
       </div>
       <div class="role" style="--role-tone: var(--accent)">
-        <span class="role-name">Lead engineer</span>
-        <span class="role-who">Me, reasoning model</span>
-        <span class="role-note">Decompose, dispatch, coordinate, own the board. Never builds when there are two or more tasks.</span>
+        <span class="role-name">Tech lead</span>
+        <span class="role-who">Me, depth tier</span>
+        <span class="role-note">Pick the phase, split it by file, write each ticket's acceptance in your words, decide, report. Never writes the code it will judge.</span>
       </div>
       <div class="role" style="--role-tone: var(--active)">
         <span class="role-name">Builders</span>
-        <span class="role-who">Balance tier, 2 to N</span>
-        <span class="role-note">One ticket each, in parallel, each in its own worktree when they write concurrently.</span>
+        <span class="role-who">Balance tier</span>
+        <span class="role-note">One ticket, one file fence, the tests for it. Never dispatches an agent, never edits outside the fence.</span>
+      </div>
+      <div class="role" style="--role-tone: var(--muted)">
+        <span class="role-name">Clerk</span>
+        <span class="role-who">Speed tier</span>
+        <span class="role-note">Board rows, counts, the handoff file, doc sync, by copying fields. Never restates a fact in its own words.</span>
       </div>
       <div class="role" style="--role-tone: var(--done)">
         <span class="role-name">Judge</span>
-        <span class="role-who">Strongest model, 1</span>
-        <span class="role-note">The quality gate. Produces cited evidence, never a verdict. The only role that may set done.</span>
+        <span class="role-who">Depth tier, one round</span>
+        <span class="role-note">Correctness, security, the production gates, and "break it, does a test go red". Never closes its own findings.</span>
       </div>
       <div class="role" style="--role-tone: var(--blocked)">
         <span class="role-name">Adversary</span>
-        <span class="role-who">Strongest model, 0 or 1</span>
-        <span class="role-note">Attacks what the judge certified. Files findings, never closes them.</span>
+        <span class="role-who">Depth tier, one round</span>
+        <span class="role-note">Hunts the confident wrong answer and the lying trust signal on any runnable change. Files, never closes.</span>
       </div>
-      <div class="role" style="--role-tone: var(--muted)">
-        <span class="role-name">Support</span>
-        <span class="role-who">Researcher, test writer</span>
-        <span class="role-note">Cheap and scoped. Read-only agents stay in the shared checkout.</span>
+      <div class="role" style="--role-tone: var(--you)">
+        <span class="role-name">Product reviewer</span>
+        <span class="role-who">A script captures, depth judges</span>
+        <span class="role-note">Drives develop at 1280 and 390 beside the prototype, asks the golden questions, reads answers against a five-line rubric. Closes nothing.</span>
       </div>
     </div>
   </section>
@@ -184,13 +190,15 @@
       <div class="stage" style="--stage-tone: var(--accent)">
         <div class="spine"><div class="marker">1</div><div class="thread"></div></div>
         <div class="stage-body">
-          <div class="stage-title">Open the phase<span class="actor">lead</span><span class="model">depth &middot; high</span></div>
-          <p class="stage-text">Read the phase's row in section 25: what it delivers, what it
-            depends on, its branch name. Verify every dependency phase is merged. If one is not,
-            stop and report rather than building on unmerged work.</p>
+          <div class="stage-title">Pick and open the phase<span class="actor">lead</span><span class="model">depth &middot; high</span></div>
+          <p class="stage-text">Pick by what a person sees first: a wrong or missing answer, then a
+            slow one, then a screen that looks wrong. Section 25 still says what a phase delivers
+            and which dependencies are real, so a real dependency still goes first. Read the handoff
+            file rather than rebuilding state from the board.</p>
           <div class="io">
+            <span class="r">HANDOFF.md</span>
             <span class="r">Technical_specification.md &sect;25</span>
-            <span class="r">tracker/BOARD.md</span>
+            <span class="r">Plan.md Phase 7</span>
           </div>
         </div>
       </div>
@@ -200,8 +208,7 @@
         <div class="stage-body">
           <div class="stage-title">Read what already broke<span class="actor">lead</span><span class="model">depth &middot; low</span></div>
           <p class="stage-text">Filter the learnings log to this phase, its tools, and its layers
-            before scoping anything. Past dead ends are cheaper to read than to rediscover. This is
-            the step that stops the same wall being hit twice.</p>
+            before scoping anything. Past dead ends are cheaper to read than to rediscover.</p>
           <div class="io"><span class="r">LEARNINGS.md, filtered</span></div>
         </div>
       </div>
@@ -209,14 +216,14 @@
       <div class="stage" style="--stage-tone: var(--accent)">
         <div class="spine"><div class="marker">3</div><div class="thread"></div></div>
         <div class="stage-body">
-          <div class="stage-title">Decompose into tickets<span class="actor">lead</span><span class="model">depth &middot; high</span></div>
-          <p class="stage-text">Split the phase into non-overlapping tickets. Each carries checkable
-            acceptance criteria, the spec section it traces to, its dependencies, and the exact files
-            it may touch, so two builders can never aim at the same file. A ticket with no spec
-            anchor is either scope creep or a spec gap, and both come back to you.</p>
+          <div class="stage-title">Split by file fence<span class="actor">lead</span><span class="model">depth &middot; high</span></div>
+          <p class="stage-text">Every ticket names the exact files it may touch and no two share a
+            file. Each carries one acceptance sentence in your words and the test command that
+            proves it. Before ticketing any screen, the lead reads the design coverage table, so a
+            surface with no design is named as a gap rather than invented.</p>
           <div class="io">
+            <span class="r">docs/build/design/README.md</span>
             <span class="w">tracker/phase_N.M.md</span>
-            <span class="w">tracker/board.html, auto</span>
           </div>
         </div>
       </div>
@@ -224,9 +231,11 @@
       <div class="stage" style="--stage-tone: var(--accent)">
         <div class="spine"><div class="marker">4</div><div class="thread"></div></div>
         <div class="stage-body">
-          <div class="stage-title">Branch and brief<span class="actor">lead</span><span class="model">depth + speed &middot; low</span></div>
-          <p class="stage-text">Cut <code>phase/N.M-description</code> from main. Dispatch
-            researchers first if an API is unfamiliar, so builders never start blind.</p>
+          <div class="stage-title">Preflight and dispatch<span class="actor">lead</span><span class="model">depth &middot; low</span></div>
+          <p class="stage-text">Probe each transport, cut <code>phase/N.M-description</code>, and plan
+            the 8 dispatches before the first one, so the review round never runs out. Each builder
+            gets its ticket, its fence, the files it needs and the learnings that name them, and
+            nothing else: no history, no board, no conversation, no permission to dispatch.</p>
           <div class="io"><span class="w">git branch</span></div>
         </div>
       </div>
@@ -236,107 +245,83 @@
         <div class="stage-body">
           <div class="stage-title">Builders work in parallel<span class="actor">builders</span><span class="model">balance &middot; medium</span></div>
           <p class="stage-text">Each claims a ticket and sets it to in progress the moment it picks
-            it up, not when it finishes. Concurrent writers each get their own worktree; readers stay
-            in the shared checkout. A builder that finishes sets in review, never done.</p>
+            it up. Concurrent writers each get their own worktree. A builder that finishes sets in
+            review, never done. Anything that breaks is written to the learnings log the moment it
+            happens.</p>
           <div class="io">
-            <span class="r">tech spec, its own tool section</span>
-            <span class="r">Tool_implementation_mechanics.md</span>
             <span class="w">source and tests</span>
             <span class="w">tracker/phase_N.M.md, own ticket only</span>
+            <span class="w">LEARNINGS.md</span>
           </div>
         </div>
       </div>
 
-      <div class="stage" style="--stage-tone: var(--active)">
+      <div class="stage" style="--stage-tone: var(--blocked)">
         <div class="spine"><div class="marker">6</div><div class="thread"></div></div>
         <div class="stage-body">
-          <div class="stage-title">Something breaks<span class="actor">whoever hit it</span><span class="model">inherits its own</span></div>
-          <p class="stage-text">Written the moment it happens, not reconstructed at phase end: what
-            broke, what was tried and did not work, what actually fixed it. The dead ends are half
-            the value, because they are what the next agent would otherwise try first.</p>
-          <div class="io"><span class="w">LEARNINGS.md</span></div>
-        </div>
-      </div>
-
-      <div class="stage" style="--stage-tone: var(--done)">
-        <div class="spine"><div class="marker">7</div><div class="thread"></div></div>
-        <div class="stage-body">
-          <div class="stage-title">The judge grades<span class="actor">judge</span><span class="model">depth &middot; high or extra high</span></div>
-          <p class="stage-text">Cites file and line for every code claim and pastes real command
-            output for every test claim. If it cannot produce evidence, that check fails. It also
-            checks one level up: do the finished tickets actually satisfy the phase, or did every
-            builder succeed at a task while the decomposition missed the point. Then it closes
-            tickets, which no other role may do.</p>
+          <div class="stage-title">Judge, adversary, one fix<span class="actor">judge, adversary</span><span class="model">depth &middot; high</span></div>
+          <p class="stage-text">One judge round with cited evidence for every claim, then one
+            adversary round on anything runnable, then one fix-and-verify: one fix agent per file,
+            and a fresh verifier, never the judge. If it still blocks, the phase stops and you get
+            two options, merge with the open item named or revert. There is no third round, even if
+            you would authorise one. If more than half of a round's findings are about the phase's
+            own tests, the phase stops writing checks and escalates.</p>
           <div class="io">
             <span class="r">the diff, the tests</span>
-            <span class="w">tracker/phase_N.M.md, done or rejected</span>
+            <span class="w">tracker/phase_N.M.md, Findings</span>
           </div>
         </div>
       </div>
 
-      <div class="stage" style="--stage-tone: var(--blocked)">
+      <div class="stage" style="--stage-tone: var(--accent)">
+        <div class="spine"><div class="marker">7</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Gates, in order<span class="actor">lead</span><span class="model">depth &middot; medium</span></div>
+          <p class="stage-text">verify, then eval-harness when answer generation was touched, then
+            dev-standards when code shipped, then the learnings coverage check. The judge grades the
+            work; these decide whether it is allowed to ship.</p>
+          <div class="io"><span class="w">test and check output</span></div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--accent)">
         <div class="spine"><div class="marker">8</div><div class="thread"></div></div>
         <div class="stage-body">
-          <div class="stage-title">The adversary attacks<span class="actor">adversary</span><span class="model">depth &middot; high</span></div>
-          <p class="stage-text">Only on a phase that produced something runnable. It throws hostile,
-            unscripted queries at the system, especially ones where the graph returns nothing and the
-            agent must refuse rather than invent. A green judge is necessary and not sufficient: the
-            judge tests what someone thought to specify, and a fluent wrong answer is not on that
-            list. It over-reports on purpose and never closes its own findings.</p>
-          <div class="io"><span class="w">tracker/phase_N.M.md, Findings</span></div>
-        </div>
-      </div>
-
-      <div class="stage" style="--stage-tone: var(--blocked)">
-        <div class="spine"><div class="marker">8b</div><div class="thread"></div></div>
-        <div class="stage-body">
-          <div class="stage-title">The round budget<span class="actor">lead</span><span class="model">two rounds, then a human</span></div>
-          <p class="stage-text">Stages 7 and 8 get ONE fix-and-reverify round, not unlimited passes.
-            Findings are grouped BY FILE and every finding in one file goes to a single fix agent
-            working serially, because two parallel agents editing the same function are each correct
-            and blind to the other, which is how two correct fixes compose into a defect neither
-            reviewer sees. Fixes name a category, never a list of instances. Re-verification goes to
-            a FRESH agent, never the judge that filed the findings. If round 2 still blocks, or any
-            finding sits inside an earlier fix, the phase STOPS and hands the product owner the open
-            findings, a diff per attempt and the options. There is no round 3.</p>
-          <p class="stage-text">Why: build phases 2.1 and 4.2 ran five and six rounds, and in both,
-            every round found its worst defect inside the previous round's fix. Rising scrutiny was
-            never the lever.</p>
-          <div class="io">
-            <span class="r">tracker/phase_N.M.md, Findings</span>
-            <span class="w">Round, Regression of</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stage" style="--stage-tone: var(--accent)">
-        <div class="spine"><div class="marker">9</div><div class="thread"></div></div>
-        <div class="stage-body">
-          <div class="stage-title">Gates, in order<span class="actor">lead</span><span class="model">depth + balance &middot; medium</span></div>
-          <p class="stage-text">verify, then eval-harness when answer generation was touched, then
-            dev-standards when code shipped, then release-workflow with its security scan. These are
-            not optional because the judge passed. The judge grades the work; these decide whether it
-            is allowed to ship.</p>
-          <div class="io">
-            <span class="r">Evaluation_playbook.md</span>
-            <span class="w">test and scan output</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stage" style="--stage-tone: var(--accent)">
-        <div class="spine"><div class="marker">10</div><div class="thread"></div></div>
-        <div class="stage-body">
-          <div class="stage-title">Close the board and ship<span class="actor">lead</span><span class="model">depth &middot; low</span></div>
-          <p class="stage-text">Evidence recorded on every ticket, board closed, renderer re-run as a
-            backstop in case a hook was bypassed, artifact republished. Then docs sync, commit, push,
-            and open the pull request.</p>
+          <div class="stage-title">Checkpoint and PR<span class="actor">lead, clerk</span><span class="model">speed &middot; low</span></div>
+          <p class="stage-text">Tickets stay at in review. The checkpoint says what you will notice,
+            in your words, what merges open, and the budget used: hours of 8, dispatches of 8,
+            rounds of 2. Then docs sync, commit, push, and the pull request.</p>
           <div class="io">
             <span class="w">tracker/BOARD.md</span>
-            <span class="w">tracker/board.html</span>
-            <span class="w">the published board</span>
-            <span class="w">DECISIONS.md</span>
+            <span class="w">HANDOFF.md</span>
             <span class="w">pull request</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--you)">
+        <div class="spine"><div class="marker">9</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">You merge<span class="actor">product owner</span><span class="model">human</span></div>
+          <p class="stage-text">You read the checkpoint, not the diff, and merge. Develop deploys.</p>
+          <div class="io"><span class="r">the pull request</span><span class="r">the board</span></div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--you)">
+        <div class="spine"><div class="marker">10</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Product review<span class="actor">product reviewer</span><span class="model">script, then depth &middot; medium</span></div>
+          <p class="stage-text">Every changed screen on develop at 1280 and 390 beside the prototype,
+            with a horizontal overflow check. On an answer-path change, the 50 golden questions three
+            times each: any drop in the answered count stops everything else landing until it is
+            fixed or reverted. Then the answers are read against five lines: does the first sentence
+            answer, would a researcher learn something, do the two depths differ, how long did it
+            take, does each screen match its design.</p>
+          <div class="io">
+            <span class="r">prototype/app.html</span>
+            <span class="r">run_consistency.py</span>
+            <span class="w">testing/Developer/reports</span>
           </div>
         </div>
       </div>
@@ -344,15 +329,30 @@
       <div class="stage" style="--stage-tone: var(--you)">
         <div class="spine"><div class="marker">11</div><div class="thread"></div></div>
         <div class="stage-body">
-          <div class="stage-title">You review<span class="actor">product owner</span><span class="model">human</span></div>
-          <p class="stage-text">You get a checkpoint naming what was built, the judge result, the
-            adversary findings, every gate outcome, and what was decided without asking. You read the
-            PR, not the diff of 59 config files. Nothing proceeds to the next phase until you merge
-            and say go.</p>
-          <div class="io"><span class="r">the pull request</span><span class="r">the board</span></div>
+          <div class="stage-title">You retest<span class="actor">product owner</span><span class="model">human</span></div>
+          <p class="stage-text">You retest on develop with the product review as the list of what to
+            look at first. Your verdict sets done, or sends defects back to the builders under the
+            same budget.</p>
+          <div class="io"><span class="r">the product review</span></div>
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <section>
+    <h2>Budgets, and what happens at each</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Budget</th><th>Limit</th><th>On hitting it</th></tr></thead>
+        <tbody>
+          <tr><td>Wall clock</td><td class="f">8 hours</td><td>Stop, write the handoff, escalate with options</td></tr>
+          <tr><td>Review rounds</td><td class="f">1 + 1, then 1 fix</td><td>Merge with the open item named, or revert. No third round</td></tr>
+          <tr><td>Agent dispatches</td><td class="f">8, reviewers included</td><td>Ask you before the ninth. Workers never dispatch</td></tr>
+          <tr><td>Instrument share</td><td class="f">over half</td><td>Stop writing checks and escalate</td></tr>
+          <tr><td>Answer rate</td><td class="f">any drop</td><td>Stop and fix, or revert, before anything else lands</td></tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -362,13 +362,16 @@
       <table>
         <thead><tr><th>File</th><th>Holds</th><th>Written by</th><th>When</th></tr></thead>
         <tbody>
-          <tr><td class="f">tracker/BOARD.md</td><td>Phase index and status</td><td>Lead</td><td>Phase open and close</td></tr>
-          <tr><td class="f">tracker/phase_N.M.md</td><td>Tickets and adversary findings</td><td>Lead, builders, judge, each on its own states</td><td>Continuously</td></tr>
+          <tr><td class="f">tracker/BOARD.md</td><td>Phase status and open flags</td><td>Lead</td><td>Phase open and close</td></tr>
+          <tr><td class="f">tracker/phase_N.M.md</td><td>Tickets, and every finding as a ledger row</td><td>Each role on its own states</td><td>Continuously</td></tr>
           <tr><td class="f">tracker/board.html</td><td>The page you read</td><td>The renderer, via hook</td><td>Automatically, on every board edit</td></tr>
+          <tr><td class="f">HANDOFF.md</td><td>What a fresh session needs</td><td>The checkpoint</td><td>Every checkpoint and budget stop</td></tr>
+          <tr><td class="f">testing/Developer/reports</td><td>The product review's captures and report</td><td>The product reviewer</td><td>Stage 10</td></tr>
+          <tr><td class="f">requirements/Plan.md</td><td>The build narrative</td><td>The checkpoint</td><td>Every checkpoint</td></tr>
           <tr><td class="f">LEARNINGS.md</td><td>What broke and what fixed it</td><td>Whoever hit the problem</td><td>At the moment of failure</td></tr>
           <tr><td class="f">DECISIONS.md</td><td>Choices between alternatives</td><td>Lead</td><td>When a choice is made</td></tr>
           <tr><td class="f">source and tests</td><td>The actual product</td><td>Builders</td><td>During the phase</td></tr>
-          <tr><td class="f">the locked specs</td><td>PRD, tech spec, memo</td><td>Nobody</td><td>Frozen until step 6.2</td></tr>
+          <tr><td class="f">the locked specs</td><td>PRD, tech spec, memo</td><td>Nobody</td><td>Frozen</td></tr>
         </tbody>
       </table>
     </div>
@@ -378,23 +381,22 @@
     <h2>Which model runs where</h2>
     <p class="stage-text" style="margin-bottom:14px">These are build-time capability tiers, assigned
       to the agents that write System 3 itself. They are a separate concept from the product's own
-      guard, plan, and synth runtime tiers, which route models per user query at serve time and get
-      chosen by model-bench at build phase 7.0. Both are called tiers, but they name different things:
-      one sizes the agent doing the building, the other picks the model that answers a live query.
-      Do not conflate the two. The rule for the build-time tiers: spend reasoning where a mistake is
-      expensive and cascades, spend cheaply where the task is bounded and the instructions are clear.</p>
+      guard, plan, and synth runtime tiers, which route models per user query at serve time. Both
+      are called tiers, but they name different things. The rule for the build-time tiers: spend
+      reasoning where a mistake is expensive and cascades, spend cheaply where the task is bounded
+      and the instructions are clear.</p>
     <div class="table-scroll">
       <table>
         <thead><tr><th>Role</th><th>Tier</th><th>Effort</th><th>Why this tier</th></tr></thead>
         <tbody>
-          <tr><td>Lead, planning and decomposition</td><td class="f">depth</td><td>high</td><td>A bad split cascades into every builder downstream. The most expensive place to be wrong.</td></tr>
-          <tr><td>Lead, mechanical steps</td><td class="f">depth</td><td>low</td><td>Same session, but cutting a branch and closing a board need no reasoning. Keep the lead thin.</td></tr>
-          <tr><td>Researcher, bulk reading</td><td class="f">speed</td><td>low</td><td>The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model.</td></tr>
-          <tr><td>Researcher, analysis</td><td class="f">balance</td><td>medium</td><td>When the research needs a judgment rather than a summary.</td></tr>
-          <tr><td>Builder</td><td class="f">balance</td><td>medium</td><td>Well-scoped construction against clear acceptance criteria.</td></tr>
-          <tr><td>Judge</td><td class="f">depth</td><td>high or extra high</td><td>A missed defect here is the most expensive thing in the loop, because it ships.</td></tr>
-          <tr><td>Adversary</td><td class="f">depth</td><td>high</td><td>Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap tier will not find what the judge missed.</td></tr>
-          <tr><td>Test writer</td><td class="f">balance</td><td>medium</td><td>Bounded work against a finished artifact.</td></tr>
+          <tr><td>Tech lead</td><td class="f">depth</td><td>high, low for routine steps</td><td>A bad split cascades into every builder downstream. The most expensive place to be wrong.</td></tr>
+          <tr><td>Builder</td><td class="f">balance</td><td>medium</td><td>Bounded construction against clear acceptance.</td></tr>
+          <tr><td>Clerk</td><td class="f">speed</td><td>low</td><td>Mechanical copying of fields. Restating in its own words is how false sentences got in.</td></tr>
+          <tr><td>Judge</td><td class="f">depth</td><td>high</td><td>A missed defect here ships. A weaker review has cost whole rounds.</td></tr>
+          <tr><td>Adversary</td><td class="f">depth</td><td>high</td><td>Finding a fluent, plausible, wrong answer needs real adversarial reasoning.</td></tr>
+          <tr><td>Fix agent</td><td class="f">balance</td><td>medium</td><td>Bounded repair of named findings, one agent per file.</td></tr>
+          <tr><td>Verifier</td><td class="f">depth</td><td>high</td><td>It re-derives the judge's verdicts from scratch.</td></tr>
+          <tr><td>Product reviewer</td><td class="f">depth</td><td>medium</td><td>It does your kind of judgement; a script does the capture.</td></tr>
         </tbody>
       </table>
     </div>
@@ -423,29 +425,34 @@
   <section>
     <h2>Where this can still go wrong</h2>
     <div class="callout">
-      <h3>Three known weak points, stated rather than hidden</h3>
+      <h3>Known weak points, stated rather than hidden</h3>
+      <p>The golden run's outcomes vary between runs of one question. Three passes reduce that noise
+        and do not remove it, so only you may accept a drop.</p>
+      <p>The golden run counts answered questions, not correct ones. A fluent wrong answer still
+        counts as answered; the rubric read and your retest are what catch it.</p>
+      <p>The product review runs after merge, because develop is the only deployment a branch
+        reaches. A drop blocks further landings and forces a fix or a revert; it cannot stop the
+        merge that caused it.</p>
       <p>A board edit made through a shell command instead of the Edit tool bypasses the sync hook
         and leaves your page stale. Mitigated by re-rendering at phase close, not eliminated.</p>
-      <p>The golden fixtures at phase 5.1 have no named domain sign-off owner. If an expected answer
-        is wrong, a wrong agent passes the gate, which is the exact failure the gate exists to catch.</p>
-      <p>Playwright is not installed. Until it is, the UI gate on phases 1.2 and 4.5 has nothing
-        behind it.</p>
     </div>
   </section>
 
   <section>
     <h2>What this costs you</h2>
     <div class="you-note">
-      <p>Two touchpoints per phase: a checkpoint to read, and a pull request to merge. More on
-        phases 1.2 and 4.5, where you judge whether the interface actually feels right, which no
-        agent can do for you. Between those, nothing needs you unless something blocks, and a
-        blocked stop is a clean end state rather than a failure to hide.</p>
+      <p>Three touchpoints per phase: a checkpoint to read, a pull request to merge, and a retest on
+        develop with the product review in hand. Between those, nothing needs you unless a budget is
+        hit or something blocks, and a blocked stop is a clean end state rather than a failure to
+        hide. Build mode and the UI fix loop merge into one cadence with a risk dial after the next
+        build phase.</p>
     </div>
   </section>
 
   <footer>
-    Generated 2026-07-26 from the Phase 5 harness. The loop repeats 26 times, once per build phase
-    in section 25. Step 6.2, the one reconciliation pause, sits between phase 2.2 and phase 3.0.
+    Generated 2026-07-26 from the Phase 5 harness, redesigned 2026-09-24 from
+    <code>docs/build/Bossman_mode_redesign.md</code>. The full detail is in
+    <code>docs/build/Build_workflow_cadence.md</code> and the bossman-mode skill.
   </footer>
 
 </div>

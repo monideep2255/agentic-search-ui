@@ -9,161 +9,119 @@ This is the quick reference for a build phase. It covers three things:
 Where the other versions live:
 
 - Visual version: `docs/build/Phase_6_execution_flow.html`
-- Full detail: `.claude/skills/bossman-mode/SKILL.md`
+- Full detail: `.claude/skills/bossman-mode/SKILL.md` and its three reference files
 
-The loop repeats 26 times, once per build phase in `requirements/Technical_specification.md` section 25.
+Redesigned on 2026-09-24. The product owner accepted all eight decisions in `docs/build/Bossman_mode_redesign.md`, recorded as the last eight rows of `DECISIONS.md` that day. What the old loop did:
 
-Last updated: 2026-08-25. Restructured for readability from the 2026-08-18 version, with no content removed.
+- It ran a premise gate on every phase.
+- Its cap on review rounds could be authorised away.
+- It never looked at the deployed product.
+
+It certified 35 phases, after which the golden questions answered in 13 of 85 runs. The loop below ends every phase on the running product.
+
+Last updated: 2026-09-24.
 
 ## Table of contents
 
 - [The one-paragraph version](#the-one-paragraph-version)
-- [The twelve stages](#the-twelve-stages)
-- [Stage 5, the premise gate, and why it blocks](#stage-5-the-premise-gate-and-why-it-blocks)
+- [The stages](#the-stages)
+- [Budgets and stop conditions](#budgets-and-stop-conditions)
+- [The answer-path premise check](#the-answer-path-premise-check)
 - [Model assignment](#model-assignment)
 - [Effort and tier basis, measured 2026-08-02](#effort-and-tier-basis-measured-2026-08-02)
 - [Provider mapping](#provider-mapping)
 - [Where everything is written](#where-everything-is-written)
-- [The two verification halves](#the-two-verification-halves)
-- [Stage 4's transport preflight](#stage-4s-transport-preflight)
-- [Stages 8 and 9 have a budget: two rounds](#stages-8-and-9-have-a-budget-two-rounds)
+- [The three verification halves](#the-three-verification-halves)
+- [Transport preflight](#transport-preflight)
+- [The review loop has a budget: two rounds](#the-review-loop-has-a-budget-two-rounds)
+- [Build mode and fix mode](#build-mode-and-fix-mode)
 - [Known weak points](#known-weak-points)
 
 ## The one-paragraph version
 
-It runs like a normal engineering team.
+It runs like a small engineering team with a product person watching the screen.
 
-- Tickets: read, picked up, worked, and moved across a board as they progress
-- Agents verify the engineering: does it work, is it correct, is it safe to ship
-- The product owner verifies the product: is this the right thing, and does it meet the user need
+- Work is picked by what a person using the product sees first, not by the order of technical specification Section 25
+- Agents verify the engineering: one judge round, one adversary round, one fix-and-verify
+- A product reviewer looks at the deployed app the way a person does, and the golden questions are asked again on every answer-path change
+- The product owner verifies the product on develop, and their verdict is what closes a ticket
 
-Nothing merges without that second check.
-
-## The twelve stages
+## The stages
 
 ```mermaid
 flowchart TD
-  s1[1 Open the phase] --> s2[2 Read LEARNINGS]
-  s2 --> s3[3 Decompose into tickets]
+  s1[1 Pick and open] --> s2[2 Read LEARNINGS]
+  s2 --> s3[3 Split by file fence]
   s3 --> s4[4 Preflight and dispatch]
-  s4 --> s5[5 Premise gate]
-  s5 --> s6[6 Builders work tickets]
-  s6 --> s7[7 Record what broke]
-  s7 --> s8[8 Judge grades]
-  s8 --> s9[9 Adversary attacks]
-  s9 --> s10[10 Gates]
-  s10 --> s11[11 Close board, open PR]
-  s11 --> s12[12 Review and merge]
-  s5 -.must fail first.-> s6
-  s9 -.two rounds only.-> s6
+  s4 --> s5[5 Builders work tickets]
+  s5 --> s6[6 Judge, adversary, fix]
+  s6 --> s7[7 Gates]
+  s7 --> s8[8 Checkpoint and PR]
+  s8 --> s9[9 Owner merges]
+  s9 --> s10[10 Product review]
+  s10 --> s11[11 Owner retest]
+  s11 -.defects.-> s5
+  s6 -.two rounds only.-> s5
+  s10 -.answer rate drops.-> stop[Stop and fix or revert]
 ```
 
 | # | Stage | Who | Tier | Effort |
 |---|-------|-----|------|--------|
-| 1 | Open the phase: read section 25, verify dependencies merged | Lead | balance | medium |
-| 2 | Read `LEARNINGS.md` filtered to this phase | Lead | balance | low |
-| 3 | Decompose into tickets with acceptance criteria and file scopes | Lead | depth | high |
-| 4 | Transport preflight (`python3 tracker/preflight.py`), cut the branch, dispatch researchers | Lead, researchers | balance lead, speed research | low |
-| 5 | Write the premise gate and WATCH IT FAIL. Blocks stage 6 | Lead | depth | high |
-| 6 | Builders work tickets in parallel | Builders | balance | medium |
-| 7 | Record what broke, at the moment it breaks | Whoever hit it | inherits its own | n/a |
-| 8 | Judge grades with cited evidence, closes tickets | Judge | depth | high or extra high |
-| 9 | Adversary attacks what the judge certified | Adversary | depth | high |
-| 10 | Gates: see the breakdown below the table, they are not all run on the same schedule | Lead, test writer | balance | medium |
-| 11 | Close the board, render, republish, open the pull request | Lead | balance | low |
-| 12 | Review and merge | Product owner | human | n/a |
+| 1 | Pick the phase by what a person sees first, read `HANDOFF.md`, verify real dependencies are merged | Lead | depth | high |
+| 2 | Read `LEARNINGS.md` filtered to this phase | Lead | depth | low |
+| 3 | Split into tickets by file fence, each with an acceptance sentence in the user's words and its test command; read the design coverage table before ticketing any screen | Lead | depth | high |
+| 4 | Transport preflight (`python3 tracker/preflight.py`), cut the branch, plan the 8 dispatches, dispatch builders | Lead | depth | low |
+| 5 | Builders work tickets in parallel, each writing the tests for its own ticket | Builders | balance | medium |
+| 6 | One judge round, one adversary round, then one fix-and-verify round | Judge, adversary, fix agents, a fresh verifier | depth; fix agents balance | high |
+| 7 | Gates: `verify`, `eval-harness` on answer generation, `dev-standards` on application code, the learnings coverage check | Lead | depth | medium |
+| 8 | Checkpoint, board left at `in-review`, render, open the pull request | Lead, clerk | clerk speed | low |
+| 9 | Read the checkpoint and merge | Product owner | human | n/a |
+| 10 | Product review of the deployed develop app; the golden consistency run blocks an answer-path change | Product reviewer: a script captures, the model judges | depth | medium |
+| 11 | Retest on develop; the verdict sets `done` or sends defects back to stage 5 | Product owner | human | n/a |
 
-Before 2026-08-02, of these ten model-driven stages:
+Recording what broke is not a stage. Whoever hits a failure writes it to `LEARNINGS.md` at the moment it happens.
 
-- Five ran at `high` or `extra high` effort
-- Seven ran on the `depth` tier
+Stage 7 names three gate skills, and they are not interchangeable items on one checklist:
 
-Both numbers dropped. See "Effort and tier basis" below the model assignment table for the measured reason and per-stage reasoning.
+- `verify` is the pre-commit check: Python compile, tests, lint, git status.
+- `eval-harness` is required before shipping any answer-generation feature, per the AI answer grounding gate in `production-standards.md`.
+- `dev-standards` is the six-lens production readiness review, for a phase that shipped application code.
+- `release-workflow` stays available to invoke directly. It was mandatory at every phase end until 2026-08-10 and measured 0 real dispatches in 6 phases, so it is no longer the assumed default.
 
-Stage 10 names four gate skills, and they are not interchangeable items on one checklist. Measured against `tracker/phase_*.md` across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1):
+## Budgets and stop conditions
 
-- `release-workflow` was mandatory at every phase end per the bossman-mode rule's old "Skill chain at phase end: release-workflow -> ship (mandatory, no skips)" line. Measured dispatch count through build phase 3.4: 0 of 6 phases. Resolved at the Step 6.2 reconciliation, 2026-08-10: the bossman-mode rule now names the judge round, adversary round, and this stage's own gates as the real requirement, and `release-workflow` stays available to invoke directly rather than as an assumed default. This was a real gap between what the rule required and what actually ran, and it is being closed by rewriting the rule to match practice, not by starting to dispatch a skill nothing has needed.
-- `verify` is the pre-commit check (Python compile, tests, lint, git status) that `release-workflow` calls as part of its own local-verify step. Measured dispatch count: 1 of 5 phases (build phase 2.0).
-- `dev-standards` is the six-lens production readiness review, invoked for a full readiness check rather than on every phase automatically. Measured dispatch count: 1 of 5 phases (build phase 1.2).
-- `eval-harness` is required before shipping any answer-generation feature, per the AI answer grounding gate in `production-standards.md`. First dispatched on build phase 2.2, 2026-08-03, which is the phase that triggered it: none of the five phases before it shipped answer generation. It ran as the citation-synthesizer component gate rather than the full v1 must-pass gate, and said so explicitly, because that gate's questions span PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials, none of which have a tool until build phases 3.1 to 3.5. Superseded note, kept for the record: before 2026-08-03 this line read "0 of 5 phases, which is expected rather than a gap", since none of the five phases completed by then shipped answer generation.
+Every phase runs inside these limits (DECISIONS.md, 2026-09-24).
 
-## Stage 5, the premise gate, and why it blocks
+| Budget | Limit | Basis in the record | On hitting it |
+|--------|-------|---------------------|---------------|
+| Wall clock, phase open to "ready for owner" | 8 hours | Median phase 4 hours, 75th percentile 10; the five phases past 18 hours (2.1, 3.1, 3.4, 4.15, 5.0) each ran four or more review rounds | Stop, run `/phase-checkpoint` so `HANDOFF.md` carries the stop, escalate with options |
+| Review rounds | 1 judge and 1 adversary, then 1 fix-and-verify | 17 rounds past two, in 9 of the 13 phases reviewed after the cap | Merge with the open item named, or revert and re-split |
+| Agent dispatches | 8 per phase including every reviewer; workers never dispatch | `plan-then-fan-out`'s own ask-first line is 8; the redesign's diagnosis reached about 17 because workers fanned out | Ask the owner before the ninth |
+| Instrument share | More than half of a round's findings are about the phase's own tests or documents | Late-build share 43 to 45 percent; build phase 6.0 at 8 of 12 | Stop writing checks and escalate |
+| Answer rate | Any drop in the golden run's answered count | The latest accepted run is the floor: 86 of 150 on 2026-09-22 | Stop and fix, or revert, before anything else lands |
+| Tokens | Not set | No billing log exists in the repository | Dispatch count and wall clock are the proxy |
 
-### What is a premise gate?
+Rule 4 is unchanged: a regression found inside a fix stops the round on the spot.
 
-A premise gate is a test that runs the real model against real ground truth, and asserts the answer means the right thing.
+## The answer-path premise check
 
-Why it exists: an ordinary test suite checks the SHAPE of an answer. It can confirm rows came back and every row is cited, and both of those pass on an answer that is completely wrong. Nothing in that green suite was looking at whether the answer was true.
+A premise check is a test that runs the real model against real ground truth and asserts the answer means the right thing. An ordinary test suite checks the SHAPE of an answer: rows came back, every row is cited. Both of those pass on an answer that is completely wrong.
 
-An analogy: a spellchecker approves "the mitochondria is the powerhouse of the sell" for every word it knows how to check, and the sentence is still wrong. A premise gate is the reader who knows what the sentence was supposed to say.
+The case that created it: build phase 2.1 shipped a fully green suite that answered "which diseases are associated with BRCA1?" with twenty-five non-human orthologs. Every row carried a real, resolving NCBI citation, so every shape check passed.
 
-Concretely, from this repository: build phase 2.1 shipped a fully green suite that answered "which diseases are associated with BRCA1?" with twenty-five non-human orthologs. Every row carried a real, resolving NCBI citation, so every shape check passed.
+Where it applies now, and where it does not:
 
-What this means for you, in order:
+- Answer behaviour only: a change that can alter what an answer says, which records it names or cites, or whether a question is answered or refused.
+- For every such change, the check is the golden consistency run, 50 questions three times on develop, and it blocks. The procedure is in `.claude/skills/bossman-mode/reference/Product_review.md`.
+- An answer-path phase may still add a premise gate for a behaviour the golden questions cannot see. It is written first and seen failing before the code it grades.
+- Nothing else gets a premise gate, a mutation harness file or a coverage claim. Spread from model-generated output to CI, release and rate limiting, those instruments became the main source of findings, 43 to 45 percent late in the build. Breaking a control to see a test go red is one line on the judge's checklist.
 
-- Write the gate before the code
-- Watch it fail
-- Only then build
+The four properties that make an answer-path check worth running, each a measured failure in 2.1:
 
-A gate that has never been seen failing has proven nothing about its own ability to fail.
-
-### Why it blocks
-
-Added 2026-08-01 after build phase 2.1 failed four consecutive reviews with
-a green suite. This stage is mandatory and blocking for any phase whose
-deliverable is model-generated output. That property currently names build
-phase 2.2 (deterministic cite-or-refuse over model-generated synthesis) and
-every remaining tool phase, 3.1 to 3.5. No tool code is written until the
-gate exists and has been seen failing.
-
-What phase 2.1 cost, stated plainly because it is the argument for the
-stage: a fully green suite, and 3 of 8 real questions answered correctly.
-The worst case returned twenty-five non-human orthologs for "which diseases
-are associated with BRCA1?", `status="ok"`, every row carrying a real and
-resolving NCBI citation. Five review rounds found roughly 25 real defects,
-none of them the cause. The cause was a schema slice that handed the
-generator no Disease label at all, and it was visible from day one to
-anyone who printed what the model was actually given.
-
-A premise gate has four properties. Each one is there because its absence
-was a measured failure in 2.1:
-
-- It does NOT mock the model. Every other test in the suite does, which
-  means every one of those tests supplied a query someone already knew was
-  correct, and none of them could see a generation defect. The premise
-  evidence lives in `tests/system_03_search_agent/tools/test_cypher_query_premise.py`,
-  the one test file that calls the real model against pinned live ground
-  truth rather than a mock.
-- It asserts on the MEANING of the answer, not its shape. "Rows came back"
-  and "every row is cited" both passed on the ortholog answer.
-- Its ground truth is read from the live source and pinned, so "correct" is
-  checkable rather than plausible.
-- It runs the way PRODUCTION runs. A first draft of 2.1's gate hand-picked a
-  `query_class` per question and scored 8 of 9, where sending the stub value
-  production actually emits scored 3 of 9. A gate handed a better input than
-  production sends is a fixture, not a gate.
-
-It must also state its own coverage: which shapes of question it exercises
-and which it omits. 2.1's gate could not see finding F-2.1-A5-03 because all
-nine of its questions were one hop from a single anchor type, so a defect
-making every two-hop question unanswerable was invisible to the gate built
-to catch exactly that class. A gate with an unstated blind spot inherits the
-blind spot of the code it grades.
-
-Cost, measured on 2.1:
-
-- To write: about 40 minutes
-- Per run: $0.013 for eight real generations
-- Compared against: ten review passes at 20 to 30 minutes each
-
-It pays for itself the first time it fires. It already has: two regressions
-introduced by 2.1's own late fixes were caught by the gate rather than by a
-sixth review round.
-
-The reason it blocks rather than merely being required: a gate written after
-the code it grades is written against behavior that already exists, and will
-tend to encode that behavior as correct. Watching it fail first is what
-proves it can fail at all.
+- It does NOT mock the model. A mocked call supplies an answer someone already knew was correct.
+- It asserts on the MEANING of the answer, not its shape.
+- Its ground truth is read from the live source and pinned, so "correct" is checkable rather than plausible.
+- It runs the way PRODUCTION runs. A first draft of 2.1's gate hand-picked an input and scored 8 of 9, where the input production actually sends scored 3 of 9. The golden run meets this by asking the deployed develop API.
 
 ## Model assignment
 
@@ -171,32 +129,25 @@ The rule: spend reasoning where a mistake is expensive and cascades, spend cheap
 
 | Role | Tier | Effort | Why this tier |
 |------|------|--------|---------------|
-| Lead, planning and decomposition (stage 3) | depth | high | A bad split cascades into every builder downstream. This is the most expensive place to be wrong |
-| Lead, premise gate design (stage 5) | depth | high | The same cascading logic as decomposition, not a blanket carry-over: a weak premise gate reproduces the exact cost stage 5 exists to prevent, and its own coverage gaps are invisible to every test it grades. Build phase 2.1 shipped four consecutive failed reviews behind a green suite before this was found |
-| Lead, phase-open verification (stage 1) | balance | medium | Bounded checking against a fixed document, does section 25 name this phase, did the dependency actually merge. A miss here surfaces fast, at build start, rather than compounding silently the way a bad decomposition does |
-| Lead, routine steps (stages 2, 4, 11) | balance | low | Reading a filtered log, cutting a branch, closing a board. No reasoning, bounded, instructions already clear |
-| Lead, gate execution and readiness call (stage 10) | balance | medium | Running a finished gate skill and reading its pass or fail output is checklist work against a defined bar, not open architectural judgment |
-| Researcher, bulk reading | speed | low | The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model |
-| Researcher, analysis | balance | medium | When the research needs a judgment, not just a summary |
-| Builder | balance | medium | Well-scoped construction against clear acceptance criteria. Reserve high effort for genuinely hard builds |
-| Judge | depth | high or extra high | A missed defect here is the most expensive thing in the loop, because it ships. Measured on this repo: build phase 2.1 failed four consecutive judge and adversary reviews with a green suite before the real defect surfaced |
-| Adversary | depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap tier will not find what the judge missed |
-| Test writer | balance | medium | Bounded work against a finished artifact |
+| Tech lead, the session itself | depth | high for picking and splitting, low for routine steps | A bad split cascades into every builder downstream. This is the most expensive place to be wrong |
+| Builder | balance | medium | Well-scoped construction against clear acceptance. Build phase 4.4's two builders shipped on this tier |
+| Clerk | speed | low | Board rows, counts, the handoff file and doc sync, by copying fields. A sub-agent that restated `PROGRESS.md` in its own words introduced six false sentences (LEARNINGS.md, 2026-09-24) |
+| Judge | depth | high | A missed defect here ships. Build phase 2.1 failed four consecutive judge and adversary reviews with a green suite before the real defect surfaced |
+| Adversary | depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning |
+| Fix agent | balance | medium | Bounded repair of named findings, one agent per file |
+| Verifier | depth | high | It re-derives the judge's verdicts from scratch, so it carries the judge's cost of a miss |
+| Product reviewer | a script captures; depth judges | medium | It does the owner's kind of judgement; the capture is mechanical, so the model only judges |
 
-The role list above once also carried a Sub-planner row and an Integrator row. Both are removed. The evidence:
-
-- Across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1), `tracker/phase_*.md` shows zero dispatches of either role.
-
-If either role is genuinely needed on a future phase, add it back with its first real dispatch as evidence.
+Researcher and test writer are no longer roles. Research is the lead's own reading or the builder's, and each builder writes the tests for its own ticket.
 
 Two notes on this table:
 
-- These are build-time capability tiers, assigned to the agents that write System 3 itself. They are a separate concept from the product's own guard, plan, and synth runtime tiers, which route models per user query at serve time and are chosen by model-bench at build phase 7.0. Both are called tiers, but they name different things: one sizes the agent doing the building, the other picks the model that answers a live query. Do not conflate the two.
-- Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
+- These are build-time capability tiers, assigned to the agents that write System 3 itself. They are a separate concept from the product's own guard, plan, and synth runtime tiers, which route models per user query at serve time. Both are called tiers, but they name different things. Do not conflate the two.
+- Delegation has a fixed setup cost, and a phase has 8 dispatches. Do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
 
 ## Effort and tier basis, measured 2026-08-02
 
-Both tables above were re-tiered on this date from a prior default of `depth` and `high` on most roles. This section states the measurement behind that change and what would justify raising a rung back, so the next reader does not mistake a guess for a finding.
+Most roles were re-tiered on this date from a prior default of `depth` and `high`. This section states the measurement behind that change and what would justify raising a rung back, so the next reader does not mistake a guess for a finding.
 
 ### What is reasoning effort, and why does a rung cost anything?
 
@@ -224,37 +175,32 @@ External evidence, on capability tier:
 
 - A mid-tier model costs about 0.6 times a top-tier model and performs comparably on most development work.
 
-Internal evidence, from this repo's own build. `LEARNINGS.md`'s 2026-07-31 entry on `harness/harness.py` tier configuration records that the plan tier, configured `effort: high`, spent 970 of 1014 output tokens on a single Cypher generation on reasoning rather than content. Measured over five failing query shapes, two runs each:
+Internal evidence, from this repository's own build. `LEARNINGS.md`'s 2026-07-31 entry on `harness/harness.py` tier configuration records that the plan tier, configured `effort: high`, spent 970 of 1014 output tokens on a single Cypher generation on reasoning rather than content. Measured over five failing query shapes, two runs each:
 
 - `high`: totalled 163.0 seconds, with a worst case of 84.3 seconds on a multi-hop query
 - `effort: none`, a rung below this ladder's own `low`: totalled 6.1 seconds, with a worst case of 2.2
 
-All five runs were correct at both settings, with neither setting ever writing an entity id as a literal. The entry calls this "a 27x latency multiple for no measurable quality" and states the general lesson directly: reasoning effort is a latency setting, not just a quality setting, and its cost is invisible in the response because reasoning tokens do not appear in the content.
+All five runs were correct at both settings. The entry calls this "a 27x latency multiple for no measurable quality".
 
 That internal data point is narrower than the change made here. Reading the two together:
 
 - It proves `none` was safe for one bounded, fixed-schema Cypher generation
 - It does not prove that `medium` is safe for every role in this cadence
-- The external 76 percent figure is the direct evidence for the specific high-to-medium move applied to most roles below
+- The external 76 percent figure is the direct evidence for the specific high-to-medium move applied to most roles
 - The internal result is a strict superset of the claim actually needed, so it supports the change without overstating what was measured
 
 ### Why judge and adversary did not move
 
-Per-role reasoning is recorded inline in the "Why this tier" column above rather than repeated here. The two roles that did not move, judge and adversary, share one justification: this repo has direct evidence that a weaker review costs entire rounds, not just latency.
+The two roles that did not move share one justification: this repository has direct evidence that a weaker review costs entire rounds, not just latency.
 
 - Build phase 2.1 failed four consecutive judge and adversary reviews behind a fully green test suite before the real defect was found.
-- The fifth pass found a defect class (every two-hop question unanswerable) that the phase's own premise gate could not see.
+- The fifth pass found a defect class (every two-hop question unanswerable) that the phase's own checks could not see.
 - Reasoning effort measurably changed neither the pass rate nor the citations on a bounded lookup task.
 - It has not been measured against a review role's job, which is finding what a prior pass missed.
 
-The premise gate design step (stage 5) is treated the same way as decomposition for a stated reason, not by default. Its own section above states two things:
+The lead's split stays on `depth` and `high` for the same cascading reason: a bad split reproduces its error in every ticket, and its gaps are invisible to every test the tickets write.
 
-- A first draft of a premise gate scored 8 of 9 against a hand-picked input and 3 of 9 against what production actually sends.
-- Its coverage gaps are invisible to the very tests it grades.
-
-That is the same cascading-cost shape as a bad decomposition, so it stays on `depth` and `high`.
-
-What would justify raising a tier or a rung back: a specific, cited miss. A defect that a lower effort or tier demonstrably let through, recorded as a finding in a `tracker/phase_N.M.md` file or as a `LEARNINGS.md` entry naming the tier or effort setting as a contributing cause, the same evidentiary bar this section itself used to justify the cut. A feeling that a role "seems important" is not that bar. Per `goal-contracts`, this section is a verify surface for the tables above: weakening it back to a guess, rather than a fresh measurement, does not meet the bar it sets.
+What would justify raising a tier or a rung back: a specific, cited miss. A defect that a lower effort or tier demonstrably let through, recorded as a finding in a `tracker/phase_N.M.md` file or as a `LEARNINGS.md` entry naming the tier or effort setting as a contributing cause. A feeling that a role "seems important" is not that bar. Per `goal-contracts`, this section is a verify surface for the tables above: weakening it back to a guess does not meet the bar it sets.
 
 ## Provider mapping
 
@@ -264,7 +210,7 @@ What this section covers:
 - Three capability bands each
 - An identical five-rung effort ladder
 
-This table is the only place a provider name appears in this document. Every tier reference elsewhere, in the stage table and in the model assignment table above, points back to a row here.
+This table is the only place a provider name appears in this document. Every tier reference elsewhere points back to a row here.
 
 | Tier | What it is for | Claude | Codex | Alternate backend |
 |------|-----------------|--------|-------|-------------------|
@@ -284,15 +230,13 @@ The alternate backend is the metered fallback used when the primary provider's w
 - They name specific products and change monthly, which `writing-style` keeps out of tracked documentation
 - Writing them here would make this table stale by design
 
-They live in a local, uncommitted note instead, `docs/build/multi-model-harness/Multi_model_harness_plan.md`, alongside the cadence visualization that shows how a phase moves across the two engines.
+They live in a local, uncommitted note instead, `docs/build/multi-model-harness/Multi_model_harness_plan.md`.
 
 One constraint from that arrangement does belong here, because it governs the cadence itself rather than the configuration: the fallback is scoped by role, not applied to a whole phase.
 
-- Stages assigned Depth in the model assignment table above do not fail over. Those stages are decomposition, premise gate design, judge and adversary.
+- Stages assigned Depth for their judgement do not fail over: the lead's split, the judge, the adversary, the verifier and the product reviewer's judgement.
 - A review run on the fallback records findings and closes nothing.
-- The phase does not reach stage 12 until those stages have run on the primary provider.
-
-This is the same evidence that held judge and adversary at Depth in the first place: a weaker review costs whole rounds, not just latency.
+- The phase does not reach stage 9 until those stages have run on the primary provider, and the re-run counts against the 8 dispatches.
 
 Switching the harness to a different provider means editing this one table and nothing else. Nothing in these three places names a product directly:
 
@@ -300,35 +244,34 @@ Switching the harness to a different provider means editing this one table and n
 - The model assignment table
 - `Phase_6_execution_flow.html`
 
-So a provider swap is a single edit here, not a search-and-replace across every planning document. That indirection is the property that makes the harness portable.
-
 ## Where everything is written
 
 | File | Holds | Written by | When |
 |------|-------|-----------|------|
-| `tracker/BOARD.md` | Phase index and status | Lead | Phase open and close |
-| `tracker/phase_N.M.md` | Tickets and adversary findings | Lead, builders, judge, each on its own states | Continuously |
+| `tracker/BOARD.md` | Phase status and open flags, a status table | Lead, through the `task-tracker` skill | Phase open and close |
+| `tracker/phase_N.M.md` | Tickets, and every finding as a ledger row under Findings | Lead, builders, judge, adversary, verifier, product reviewer, each on its own states | Continuously |
 | `tracker/board.html` | The page the product owner reads | `tracker/render_board.py`, via hook | Automatically, on every board edit |
+| `HANDOFF.md` | What a fresh session needs: what is live, what awaits the owner, the one next action | `/phase-checkpoint` | Every checkpoint, and at any budget stop |
+| `testing/Developer/reports/<date>_product_review_<topic>/` | The product review's screenshots, golden run and report | The product reviewer's capture commands | Stage 10 |
+| `requirements/Plan.md` | The build narrative and the dated revision history | `/phase-checkpoint` | Every checkpoint |
 | `LEARNINGS.md` | What broke, what was tried, what fixed it | Whoever hit the problem | At the moment of failure |
 | `DECISIONS.md` | Choices between alternatives | Lead | When a choice is made |
 | Source and tests | The product | Builders | During the phase |
-| PRD, tech spec, memo | The locked contract | Nobody | Frozen until step 6.2 |
+| PRD, tech spec, memo | The locked contract | Nobody | Frozen |
 
-## The two verification halves
+No per-round report file is written under `tracker/`. A reviewer's findings are ledger rows in the phase file.
 
-The split that matters, and the reason both halves exist:
+## The three verification halves
+
+The split that matters, and the reason each part exists:
 
 - Agents verify the engineering. The judge asks whether it works, whether it is correct, and whether it is safe to ship, and must produce cited evidence for every claim. The adversary asks whether it can be made to fail in a way nobody wrote a check for.
-- The product owner verifies the product. Is this the right thing to have built, does it meet the user need, and on interface phases, does it actually feel right. No agent can answer that last one.
+- The product reviewer pre-screens the product. It looks at the deployed screens at 1280 and 390 beside the design, asks the golden questions again, and reads the answers against a five-line rubric. It closes nothing.
+- The product owner verifies the product. Is this the right thing to have built, does it meet the user need, and does it actually feel right. No agent can answer that last one, and their verdict is the only thing that sets `done`.
 
-One nuance worth keeping straight: the adversary sits on the boundary.
+One nuance worth keeping straight: the adversary sits on the boundary. It hunts the confident wrong answer, an engineering failure in mechanism and a product failure in consequence. It belongs to the agent half because finding it is mechanical; what it protects is the trust moat, which is a product concern.
 
-- It hunts the confident wrong answer.
-- That is an engineering failure in mechanism and a product failure in consequence.
-- It belongs to the agent half because finding it is mechanical.
-- What it protects is the trust moat, which is a product concern.
-
-## Stage 4's transport preflight
+## Transport preflight
 
 Added 2026-08-18, closing the priority-1 recommendation in `Build_velocity_post_mortem.md`. What `python3 tracker/preflight.py` does:
 
@@ -339,48 +282,54 @@ There is one probe per transport rather than one probe. The reason: the first at
 
 | Transport | Gates | Dead-dispatch cost |
 |-----------|-------|--------------------|
-| `product-model` | Premise-gate runs, anything calling `harness.call_tier` | 6 to 10 minutes |
+| `product-model` | The golden run, answer-path premise gates, anything calling `harness.call_tier` | 6 to 10 minutes |
 | `harness-model` | Every agent dispatch | 15 to 25 minutes |
-| `graph` | Tool-phase premise gates, live graph tests | The run, plus the misdiagnosis |
+| `graph` | Tool premise gates, live graph tests | The run, plus the misdiagnosis |
 
-Re-probe `harness-model` immediately before a review-agent dispatch at stages 8 and 9, since phase open may have been an hour earlier. Two results that are easy to misread:
+Re-probe `harness-model` immediately before a review-agent dispatch at stage 6, since phase open may have been hours earlier. Two results that are easy to misread:
 
 - A `down` result on a host that is not on the sandbox allowlist may be a denial rather than an outage. The two are indistinguishable at that layer and the script says so instead of guessing.
 - A `skipped` result means the transport was not configured, so nothing was verified, which is not the same as a pass.
 
-## Stages 8 and 9 have a budget: two rounds
+## The review loop has a budget: two rounds
 
-Added 2026-08-18. The twelve stages above describe one pass, and until this was written down nothing said what happens when stage 8 or 9 fails. In practice the answer was "run it again", which is how build phase 2.1 reached five rounds and build phase 4.2 reached six. What both had in common:
+The budget is one judge round and one adversary round, then one fix-and-verify round. If round 2 still returns a blocking finding, the phase stops and hands the owner exactly two options:
 
-- Every round found its worst defect inside the previous round's fix
-- Rising scrutiny did not lower the recurrence rate
+- Merge with the open item named.
+- Revert and re-split.
 
-So the loop was never a scrutiny problem.
+There is no round 3. The owner's authorisation does not create one.
 
-The budget is one review round plus one fix-and-reverify round. A blocking finding after round 2 escalates to the product owner. What the escalation carries:
-
-- The open findings
-- A diff summary per fix attempt
-- Any regression links
-- Options including revert-and-re-decompose
-
-There is no round 3.
+Why the cap lost its exception on 2026-09-24: added on 2026-08-18, it held in only 4 of the 13 phases reviewed after it, because each extra round could be authorised. 17 extra rounds followed, and build phase 5.0 ran seven on one control. Build phases 2.1 and 4.2, which prompted the cap, had shown that every round found its worst defect inside the previous round's fix, so rising scrutiny was never the lever.
 
 Two rules govern how fixes are dispatched inside that budget, both measured on build phase 4.2:
 
-- Group findings by file, and give every finding in one file to a single fix agent working serially. Parallel fix agents are individually correct and structurally blind to the sibling editing the same function, so two correct fixes compose into a defect no reviewer of either one sees. Round 5 of that phase, run deliberately as one agent holding every finding, found a sixth defect four parallel rounds had walked past.
-- Fix by category, never by enumerating instances. A defense that lists cases has failed here every time it was tried. The cases it listed: two control-character ranges rather than the Unicode category, three exception types rather than the base class, and five write sites rather than every write site.
+- Group findings by file, and give every finding in one file to a single fix agent working serially. Parallel fix agents are individually correct and structurally blind to the sibling editing the same function.
+- Fix by category, never by enumerating instances. A defense that lists cases has failed here every time it was tried.
 
 A finding located inside an earlier fix stops the phase mid-round, without finishing the round, because it says the fix approach is wrong rather than incomplete. Two files hold the rest:
 
-- `bossman-mode` holds the full statement of all four rules.
+- `.claude/skills/bossman-mode/reference/Review_rounds.md` holds the full statement of all four rules.
 - `task-tracker` holds the two ledger fields, `Round` and `Regression of`, that make them checkable rather than remembered.
+
+## Build mode and fix mode
+
+Two modes exist today: this build-phase cadence, and the UI fix loop (`.claude/skills/bossman-mode/reference/UI_fix_loop.md`), where a product-owner defect lands straight on develop and their retest is the verification. The product reviewer runs before the owner's retest in both.
+
+Decided on 2026-09-24 and scheduled for AFTER the next build phase closes: the two modes merge into one cadence with a risk dial, so the dial is tried once before it replaces the fix loop.
+
+- A copy or layout fix: builder, clerk and product review.
+- A change to runnable behaviour: adds the judge and the adversary.
+- Auth, the graph credential, the event schema or `.claude/`: adds a branch and a pull request.
+
+Until the merge, the develop carve-out in `.claude/rules/bossman-mode.md` stays bounded by mode.
 
 ## Known weak points
 
 Stated rather than hidden, because each one is a place the cadence can quietly fail:
 
 - A board edit made through a shell command instead of the Edit tool bypasses the sync hook and leaves the rendered page stale. Mitigated by re-rendering at phase close, not eliminated.
-- The golden fixtures at build phase 5.1 have no named domain sign-off owner. If an expected answer is wrong, a wrong agent passes the gate, which is the exact failure the gate exists to catch.
-- Playwright 1.62.0 shipped in build phase 1.2, with three passing end-to-end tests in `frontend/e2e/query-stream-and-stop.spec.ts`. The UI gate has something behind it as of that phase. Build phase 4.5 has not opened yet, so its own UI gate has nothing behind it until that phase runs.
-- The premise gate at stage 5 is only as good as its question set, and nothing mechanically checks that the set covers the shapes a phase will actually be asked. Build phase 2.1's gate omitted every two-hop question and the omission was found by an adversary, not by the gate. Stating coverage is required; verifying that the stated coverage is complete is still a human judgment.
+- The golden run's outcomes vary between runs of one question. Three passes reduce that noise and do not remove it, so a real drop and a noisy one can look alike. Only the owner may accept a drop.
+- The golden run asks 50 questions at the default depth. A defect confined to a question shape the set does not hold, or to Plain language, is invisible to it; the product reviewer's depth comparison covers three questions only.
+- The golden fixtures have no named domain sign-off owner. The run counts answered questions, not correct ones, so a fluent wrong answer still counts as answered; the rubric read and the owner's retest are what catch it.
+- The product review runs after merge, because develop is the only deployment a branch reaches. A drop blocks further landings and forces a fix or a revert; it cannot stop the merge that caused it.
