@@ -212,15 +212,19 @@ Ordered by what a person typing a question notices first: a refusal or a wrong a
 
 The phases are numbered 8.1 to 8.5, after Section 25's last phase, 7.1. They are the product owner's To do column, not Section 25 phases.
 
+Final after the product owner's answers of 2026-09-25. Every phase runs on its own branch with one pull request.
+
 | Phase | Branch | Cards | What a person will notice | Why now |
 |---|---|---|---|---|
-| 8.1 Good questions stop failing | Mode decided by the product owner's answer; see below | 2, 1 if approved, 21, 20, 19, 22, 38 | A good question answers, cites, and answers the same way twice; a phenotype question names phenotypes | A refusal or a changing answer loses the reader before anything else matters |
-| 8.2 One place where every choice is made | `phase/8.2-classifier-seam` | 8, 13, 9, 10 (the table), 3, 4, and 5's G-038 if approved | "Recent papers" asks which years; paper requests are read by a model; Jev's numbers arrive by morning | Every later phase adds a decision, so the seam comes first and Jev shadows every golden run after it |
-| 8.3 The loop checks its own work | `phase/8.3-check-and-adjust` | 11, 24, 12 (option one), 7, 23 | An empty graph never reads as "no evidence"; a drafted search is disclosed or replaced by a checked one | A confident answer of the wrong kind is the worst thing the product can say |
-| 8.4 Answers worth reading | `phase/8.4-answers-worth-reading` | 14, 42, 12 (soft edges), 25, 26, 27, 28, 31, 32, 33, 16, as approved | Answers carry NCBI's own words, connect the dots with cited paths, and label their numbers | The owner's bar: worth reading instead of a general chatbot |
-| 8.5 Housekeeping nobody sees | `phase/8.5-housekeeping` | 29, 30, 40, 41, 39, 37, 18, 34, 35, as approved | Nothing on screen | None of it changes what a person sees |
+| 8.1 Good questions stop failing | `phase/8.1-good-questions-answer` | 2, 1, 6 with 43, 21, 20, 19, 22, 38 | A good question answers, cites, and answers the same way twice; a phenotype question names phenotypes; answers can cite up to 30 sources | A refusal or a changing answer loses the reader before anything else matters |
+| 8.2 One place where every choice is made | `phase/8.2-classifier-seam` | 8, 13, 9, 10 (the table and the writer bench), 3, 4, 5 (G-038 and G-035) | "Recent papers" asks which years; paper requests and relevancy are Jev's choices; a morning table compares Jev with DeepSeek; a bench table compares writing models | Every later phase adds a decision, so the seam comes first |
+| 8.3 The loop checks its own work | `phase/8.3-check-and-adjust` | 11, 24, 12 (option one), 7, 23 | An empty graph never reads as "no evidence"; a wrong kind of result triggers one re-plan; a drafted search is disclosed or replaced by a checked one | A confident answer of the wrong kind is the worst thing the product can say |
+| 8.4 Answers worth reading | `phase/8.4-answers-worth-reading` | 44, 12 (soft edges), 25, 26, 27, 28, 31, 32, 33, 16 | One quoted sentence under each paper, cited paths that connect the dots, labelled numbers, a calm trust line, the depth toggle on the answer | The owner's bar: worth reading instead of a general chatbot |
+| 8.5 Housekeeping nobody sees | `phase/8.5-housekeeping` | 29, 30, 40, 41, 39, 37, 18, 34, 35 | Nothing on screen | None of it changes what a person sees |
 
-Group b cards join a phase only when their answer makes them buildable.
+Decided with no build: card 14 (11.11) closed, card 42 left as approved, card 15 kept as live, card 36 kept for reconciliation, card 17 waiting on its bar of 120 answered of 150.
+
+The night's budget allows two golden runs, so phases 8.1 and 8.2 can merge tonight. A later phase that gets built stays as an open pull request for the morning.
 
 ### How each phase splits by file
 
@@ -228,10 +232,9 @@ Group b cards join a phase only when their answer makes them buildable.
 
 Phase 8.1:
 
-- Builder A, Sonnet: `core/graph.py` and, if card 1 is approved, `tools/ncbi_eutils_actions.py`. Cards 2, then 1, then 22.
-- Builder B, Sonnet: `synthesis/grounding.py` and `synthesis/trust.py`. Cards 21, then 20.
-- Builder C, Sonnet: `core/breadth_plan.py`. Card 19.
-- Builder D, Haiku: `tests/system_03_search_agent/core/test_answer_readability_premise.py`. Card 38, moving the live NCBI call behind the integration marker.
+- Builder A, Sonnet: `core/graph.py` and `harness/coordinator_worker.py`. Card 2, then cards 6 and 43 as one ticket, then card 22's diagnosis.
+- Builder B, Sonnet: `synthesis/grounding.py` and `synthesis/trust.py`. Card 21, then card 20.
+- Builder C, Sonnet: `core/breadth_plan.py`, `tools/ncbi_eutils_actions.py`, `tools/ncbi_efetch.py`, `tools/ncbi_efetch_schemas.py` and `tests/system_03_search_agent/core/test_answer_readability_premise.py`. Card 1 (MedGen's summary carries 70 clinical features for Marfan syndrome in its `conceptmeta` block, measured live on 2026-09-25), then card 19, then card 38.
 
 Phase 8.2, with the seam's interface written by the lead before any builder starts, so the three code against one contract:
 
@@ -313,6 +316,18 @@ One line per answer, in the order asked. Each has its row in `DECISIONS.md` unde
 - Card 32: ship the 2026-09-14 provenance note as proposed. Phase 8.4.
 - Card 33: the toggle stays before asking and is also added to the answer strip; switching re-runs the question. Phase 8.4.
 - Rollback: the tag `pre-overnight-2026-09-25` and `bin_overnight.py`, proven in two throwaway clones. No database migration tonight.
+- Card 42 against 44, resolved: answer text stays clean; one quoted LitSense sentence per paper in the sources list, in the source card's design. Every UI change is judged from the reader's chair and screenshot at both widths.
+- Card 16: the trust line says what is true, calmly: "Based on N sources from one database"; "Confirmed by N independent sources" unchanged. Phase 8.4.
+- Card 15: keep the grey line on Plain language answers. No build; the card leaves the board.
+- Card 5: G-008 and G-045 fine; G-038 answered from NCBI Taxonomy (phase 8.2); G-035 accepts the product's Taxonomy link once both are shown to name one record.
+- Card 17 (10.4): the rubric stands in until the golden run answers 120 of 150; then a domain expert reads a sample. The card stays with that trigger.
+- Card 36: keep the gene summary; reconcile it into Section 6.2 later with card 1's MedGen field.
+- Card 37: keep the graph-service and golden-dataset test files; delete the four streaming-timing files together. Phase 8.5.
+- Card 18: a lock file with pip-compile, after the supply-chain checks. Phase 8.5.
+- Card 34: the shipped responsive values win; the design card is updated. Nothing on screen changes. Phase 8.5.
+- Card 35: install USWDS after the npm checks; theme.ts reads the same values; screenshots prove nothing moved. Phase 8.5.
+- Card 28: isolate questions narrow by location and collection year. Phase 8.4.
+- All questions answered on 2026-09-25. The run starts with phase 8.1.
 
 ## Night log
 
