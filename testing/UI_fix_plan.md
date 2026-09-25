@@ -9,7 +9,7 @@ here before it is built. The detail behind the architecture cards sits under
 To do, below its table. Every other item's detail, every closed item and every
 note behind the board are in `testing/UI_fixes_done.md`.
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-25.
 
 ## To do
 
@@ -60,6 +60,7 @@ In priority order.
 | 41 | Something deleted a tracked file from the working tree during a session, and the cause is unknown | Where we stopped, loose ends | Nobody on it |
 | 42 | The explanation half of 11.31: you approved the current state as is on 2026-09-21, and the option left, having the code place the plain source text verbatim and cited, is yours to take up or not | 11.31 | Your decision |
 | 43 | Is the byte ceiling of 50,000 still right? A product decision, deliberately not taken inside a defect fix | the byte ceiling | Your decision |
+| 44 | Show the sentences that answer the question, quoted under each paper, so nobody has to open the paper to find them: from NCBI's LitSense, probed on about ten golden questions before it is built | [13.1](#detail-131) | Nobody on it |
 
 Below sits the detail behind architecture cards 8 to 13 and card 14, 11.11.
 It moved here from `testing/UI_fixes_done.md` on 2026-09-24 without a word
@@ -302,6 +303,18 @@ TWO CONSTRAINTS THAT BIND ANY TRIAL, both from rules already in force:
   of every single query. A dependency that can change under us does not belong
   in front of everything until it has a fallback that is proven by execution
   rather than asserted.
+
+#### Detail 13.1
+
+The ask, raised by the product owner on 2026-09-25 after a codeathon: RAG-style retrieval of the specific sections of a source that answer the question, since today the product hands people sources and they still have to browse them.
+
+Status: Not started. Decided 2026-09-25 (`DECISIONS.md`): add the card, probe first.
+
+- The source: NCBI's LitSense, sentence-level search over PubMed abstracts and PMC full text, with the index hosted by NCBI. The locked technical specification already names it as a Layer 3 source in Section 5; nothing in the code calls it yet.
+- The probe, first: about ten golden literature questions sent to LitSense live, measuring whether the returned sentences answer the question and how long each call takes.
+- The build, in phase 8.4 of `testing/Overnight_build_plan_2026-09-25.md` if the probe holds: the answering sentences shown quoted under each paper, each cited. Verbatim sentences pass the cite-or-refuse gate by construction.
+- Not built: chunking or embedding full texts ourselves, which is a data-pipeline project for the data repository.
+- Budgets: one of the twenty per-query calls, a 15-second timeout, and the provisional 5 requests per second throttle, since LitSense publishes no rate limit.
 
 ### The product owner's direction on the model architecture, 2026-09-23
 

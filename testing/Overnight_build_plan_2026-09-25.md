@@ -144,7 +144,7 @@ Why A:
 
 ### Card 10: models chosen per task by tier
 
-All three tiers already run open-source models through OpenRouter (`harness/tiers.py`): DeepSeek V4 Flash for the guard tier, Kimi K2.6 for the plan tier and GLM 5.2 for the synth tier.
+All three tiers already run open-source models through OpenRouter. Develop's own settings, read on 2026-09-25: DeepSeek V4 Flash for the guard tier, DeepSeek V4 Flash for the plan tier and GLM 5.2 for the synth tier. The code's defaults in `harness/tiers.py` name Kimi K2.6 for the plan tier, and develop overrides that.
 
 - Option A, recommended: keep today's three open-source tiers and add a task-to-tier table, so every decision and step declares its tier in one place. Run Section 25's build phase 7.0 model bench per tier against the golden set before any swap. The frontier escalation tier waits for its trigger.
 - Option B: add a frontier escalation now: when an answer fails grounding or the model check, retry once on a frontier model. The PRD lists escalation as a v2 lever, so this needs its trigger confirmed.
@@ -278,6 +278,13 @@ The rules require an explicit, itemized grant for each of these. They are asked 
 One line per answer, in the order asked. Each has its row in `DECISIONS.md` under 2026-09-25.
 
 - Card 8: Jev decides the loop's small choices on develop (relevancy, the ask-back, literature routing, the recent-years ask, which resource to pull). DeepSeek, the guard tier, decides the same inputs beside it and is only recorded, for a morning comparison table. Any Jev error or timeout falls back to DeepSeek's pick. The safety checks stay as they are. This replaces the plan's option A for card 8.
+- Card 13 and the outside-service question: yes, develop only. Develop's questions may go to Jev through OpenRouter; production is untouched. The trial of the probability model is card 8's arrangement, not a shadow run.
+- Standing preference, given unprompted: open to new models, open source preferred, closed frontier models also acceptable. Folded into card 10.
+- Card 9: an in-process catalogue. Jev picks from it, code fills the inputs, the tools fetch, the writing model writes. No MCP servers.
+- Card 10: bench the writing tier tonight (GLM 5.2, two other open-source models, one closed frontier model, 15 golden questions, run locally); you pick in the morning. Cost cap raised for the local bench only. Plus a task-to-tier table.
+- Card 11: check once, re-plan once, after the searches. No sub-question splitting.
+- Card 12: cited soft edges, no vectors or RAG. Order as the scoping document gives it.
+- New card 44, item 13.1, raised tonight: passages that answer the question, from NCBI's LitSense. Probe first, build in phase 8.4 if the probe holds. No RAG pipeline of our own.
 
 ## Night log
 

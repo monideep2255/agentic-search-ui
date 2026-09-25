@@ -1,0 +1,189 @@
+# Model architecture
+
+Written 2026-09-25. This document covers:
+
+- Which language models System 3 calls today
+- What each call decides
+- How the calls hand off to each other inside one question
+- The cost, timeout and caching controls around them
+
+It does not cover the wider system diagram (the five surfaces, the request lifecycle, auth, deployment). See `visualizations/Architecture_diagram.md` at the repository root for that.
+
+## Table of contents
+
+- [The short version](#the-short-version)
+- [The three tiers](#the-three-tiers)
+- [Every model call in one question](#every-model-call-in-one-question)
+- [How the calls hand off to each other](#how-the-calls-hand-off-to-each-other)
+- [What is not a model](#what-is-not-a-model)
+- [Cost, time and caching](#cost-time-and-caching)
+- [Planned: Jev as the classifier](#planned-jev-as-the-classifier)
+- [Where to change a model](#where-to-change-a-model)
+- [What this document did not check](#what-this-document-did-not-check)
+
+## The short version
+
+- The agent loop is Guardrail, Think, Plan, Act, Write. Three of those steps and part of a fourth call a language model. Act mostly does not.
+- Every model call, in every step, goes through one function, `Harness.call_tier`, and one route: LiteLLM to OpenRouter. Nothing calls a provider SDK directly.
+- There are three tiers, not three fixed models. A tier is a job description (guard tier: the fast, cheap model used for quick yes-or-no decisions). Which real model answers a tier is a config value, read from an environment variable, not a choice made in code.
+- On develop right now, the guard tier and the plan tier are the same model, deepseek/deepseek-v4-flash. That is a deployed override, not the code's own default. The synth tier is z-ai/glm-5.2 on both develop and in code.
+- Eight model call sites exist in the loop today. Two of them (the guard tier's reworded sentence check, and a Cypher-generation fallback) exist specifically to check or replace another part of the pipeline, not to talk to the user.
+- The most important safety rule in this whole document: a model never gets to state a fact as true just because it said so. Every model output that reaches a user passes through a deterministic, non-model check first (a schema, an exact-quote match, a validator) before the next step trusts it.
+
+## The three tiers
+
+Guard tier: the fastest, cheapest model. Used for yes-or-no and short-classification decisions:
+
+- Does this question look like an attack
+- Should we ask a one-word clarifying question
+- Did this record actually get read correctly
+- Does this one sentence say more than its source
+
+Reasoning is turned fully off for this tier (`effort: none`), because reasoning tokens are billed as output tokens and this tier's job never needed them.
+
+Plan tier: the mid-range model. Used to classify what kind of question was asked and pull out the entities in it, and, on the rare path where no fixed template fits, to write one Cypher query by hand. Reasoning is also off for this tier today, because build phase 2.1 measured that turning reasoning on cost roughly 27 times the latency for identical, correct answers on this tier's current job (writing one line of Cypher against a fixed schema).
+
+Synth tier: the strongest model. It is used once per answer to turn a list of already-verified facts into prose the user reads. It runs a second time only if the first pass leaves out something it was shown. Reasoning is off here too, for the same measured reason: at any reasoning setting above none, this tier sometimes spent its whole output budget on reasoning and returned nothing usable in time.
+
+| Tier | What it is for | Model on develop | Code default | Where set |
+|------|-----------------|-------------------|---------------|-----------|
+| Guard | Fast, cheap yes/no and short classification calls | deepseek/deepseek-v4-flash | deepseek/deepseek-v4-flash | `GUARD_MODEL` env var, falls back to `_DEFAULT_MODELS["guard"]` in `src/system_03_search_agent/harness/tiers.py:53` |
+| Plan | Query classification, entity extraction, one-off Cypher generation | deepseek/deepseek-v4-flash (develop overrides the code default) | moonshotai/kimi-k2.6 | `PLAN_MODEL` env var, falls back to `_DEFAULT_MODELS["plan"]` in `src/system_03_search_agent/harness/tiers.py:54` |
+| Synth | Final answer writing from verified facts | z-ai/glm-5.2 | z-ai/glm-5.2 | `SYNTH_MODEL` env var, falls back to `_DEFAULT_MODELS["synth"]` in `src/system_03_search_agent/harness/tiers.py:55` |
+
+Develop's guard and plan tiers are currently the same model. That is a deployed environment-variable override read from Railway on 2026-09-25, not something the code does on purpose. Production's settings were not read for this document (see the last section).
+
+A tier's resolved model is fetched once per question and held for that question's whole duration, through a `TierContext` object (`src/system_03_search_agent/harness/tiers.py:150` onward). A question never observes its own guard tier switch models partway through, even if the environment variable changes while the question is running.
+
+## Every model call in one question
+
+Every row below is issued through `Harness.call_tier` (`src/system_03_search_agent/harness/harness.py:513`), the single function every model call in the loop passes through. Most rows are also wrapped by `_dispatch_tier_call` (`src/system_03_search_agent/core/graph.py:765`), the shared sequence that checks the per-query cost cap, then calls the tier, then enforces the step's timeout, in that fixed order.
+
+| Step | What the model decides or writes | Tier | What checks its output | What happens if it fails | File:line |
+|------|-----------------------------------|------|--------------------------|----------------------------|-----------|
+| Guardrail | Whether the question looks like a prompt-injection attempt against the system, as a yes/no verdict with a reason | Guard | A Pydantic schema (`InjectionClassification`, `extra="forbid"`) must parse the reply; an unparseable reply is retried once, then fails the whole question rather than being treated as admitted | The question is not admitted. A parse failure or timeout raises and the run ends with a generic "a step hit a temporary error" message, never a silent pass-through | `src/system_03_search_agent/core/graph.py:953`, classifier built in `src/system_03_search_agent/guardrail/classifier.py` |
+| Think, ask-or-proceed | Whether a question of one to three words should be asked back, with choices written for its subject, or should just proceed (item 12.3) | Guard | A parsed `ClarifyDecision` shape from `src/system_03_search_agent/core/clarify.py`; any unparseable reply, timeout, or cap hit is treated as "proceed", never as a block | Fails open on purpose: the product owner's instruction is that a broken classifier must never stop a question that could otherwise be answered, so failure just means no clarifying question is asked | `src/system_03_search_agent/core/graph.py:2125` |
+| Think, classification | What kind of question this is (a lookup, a comparison, a multi-hop question, and so on) and which entities it names | Plan | A Pydantic schema (`_ThinkClassification`) must parse; one retry on an unusable reply, with a bounded excerpt of the bad reply logged so the cause is visible | Never fabricates or defaults a classification. Two unusable replies in a row fail the step and end the question with a generic error | `src/system_03_search_agent/core/graph.py:2250` |
+| Act, Cypher generation fallback | The literal Cypher query text, only when no fixed template matches the question shape | Plan | The Cypher validator (`src/system_03_search_agent/tools/cypher_validator.py`) checks the generated text before it ever reaches the graph; a validator rejection is fed back to the model once as a repair prompt | A second failed attempt returns a tool-level error result, not a query run against the graph with unvalidated text | `src/system_03_search_agent/tools/cypher_generation.py:334`, called from `src/system_03_search_agent/tools/cypher_query.py` |
+| Act, reader pass | A short read of one free-text tool result (for example an abstract), pulling out entities and normalized ids from it | Guard | The reply is parsed into a fixed `Finding` shape; nothing free-text from this pass reaches the user unmediated, and the Write step only ever sees what this parsed shape carries | A cap breach, timeout, or classified failure degrades to an empty-but-valid `Finding` marked as not attempted, rather than raising and failing every other concurrent tool call | `src/system_03_search_agent/harness/coordinator_worker.py:471` |
+| Write, sentence check | Whether one reworded answer sentence says anything more than the exact record text it quotes, for sentences that already passed every code-only check but the wording itself | Guard | Runs only after three deterministic checks already passed (the quote is in the record character for character, every number in the sentence is in the quote, the sentence negates exactly when its quote does); the model only ever answers the one remaining question | Fails closed: no candidates, too little time budget, the cost cap, a failed or unreadable reply, or a spent budget all approve nothing, and the answer falls back to what code alone already accepted | `src/system_03_search_agent/core/graph.py:7067`, decision logic in `src/system_03_search_agent/synthesis/sentence_check.py` |
+| Write, answer synthesis | The prose answer itself, built only from the facts it was handed | Synth | The deterministic cite-or-refuse grounding gate (`src/system_03_search_agent/synthesis/grounding.py`) strips any clause that cannot be traced to a specific finding, and refuses the whole answer if that strips out the question's core ask | A step timeout or classified call failure ends the question with a generic "a step hit a temporary error" message; the model never gets a second unchecked chance to fabricate | `src/system_03_search_agent/core/graph.py:9790` |
+| Write, repair pass | A second attempt at the same answer, only when the first pass left out a fact it was shown and code alone cannot already tell the reader wrote it in another way | Synth | The same grounding gate re-runs against the repaired text | Runs only within whatever time remains of the Write step's one shared budget; if that budget or the cost cap is spent, the first pass's already-grounded answer stands | `src/system_03_search_agent/core/graph.py:9981` |
+
+That is eight call sites across five loop steps (Guardrail, Think, Act, Write, plus the ask-or-proceed decision that sits inside Think).
+
+## How the calls hand off to each other
+
+```mermaid
+sequenceDiagram
+    participant U as Person asking
+    participant G as Guardrail: guard
+    participant T as Think: plan
+    participant C as Ask-or-proceed: guard
+    participant P as Act: tools and graph
+    participant CG as Cypher fallback: plan
+    participant R as Reader pass: guard
+    participant GR as Grounding gate: code
+    participant W as Write: synth
+    participant SC as Sentence check: guard
+
+    U->>G: types a question
+    G->>G: yes or no, is this an attack
+    G->>T: admitted question moves on
+    T->>C: is this a vague follow-up
+    C-->>T: proceed, or ask a short question
+    T->>T: classify question, extract entities
+    T->>P: plan which tools and templates to run
+    P->>CG: no template fits, write Cypher
+    CG-->>P: validated query text
+    P->>R: free text result needs reading
+    R-->>P: parsed entities and ids only
+    P->>W: verified findings, never raw text
+    W->>W: write prose citing findings
+    W->>GR: check every claim against its source
+    GR-->>W: strip unsupported clauses, or refuse
+    W->>SC: check reworded sentences only
+    SC-->>W: approve exact matches only
+    W->>U: final answer with citations
+```
+
+## What is not a model
+
+Several load-bearing decisions in the loop are made by ordinary code, on purpose. A model is never asked to make them.
+
+- The cite-or-refuse grounding gate (`src/system_03_search_agent/synthesis/grounding.py`): whether a sentence in the final answer is actually supported by a retrieved fact is decided by exact match or substring match after normalization, never by a similarity score. A fuzzy match would silently pass a hallucinated quote.
+- The Cypher templates (`src/system_03_search_agent/tools/cypher_templates.py`): the everyday question shapes are answered by a fixed, parameterized query chosen in code from the bound entity type and a keyword test, not written fresh by a model each time. This exists because letting a model write Cypher for every question measured as inconsistent: the same question returned four sources on one run and five on the next.
+- The trust verdict (`src/system_03_search_agent/synthesis/trust.py`): whether an answer is safe to state outright, flag, ask about, or refuse is a lookup over risk tier, whether the claim is grounded, and whether it is triangulated across independent sources. Every step in this module is a lookup or a comparison, stated in the module's own docstring, with no model-judged step.
+- Tool calls to NCBI and enrichment APIs (EFetch, dbSNP, PubTator, LitVar2, ClinicalTrials.gov, and the graph itself over Cypher): these are ordinary HTTP or database calls, not model calls, and they return data for a model to read, never an instruction for a model to follow.
+
+## Cost, time and caching
+
+Cost caps (`src/system_03_search_agent/harness/cost_control.py`):
+
+- A per-query dollar cap
+- A per-user daily query count cap
+- A system-wide daily dollar cap
+
+Every model call goes through `_dispatch_tier_call`'s cap check first. A call that would breach the per-query cap is never dispatched at all, and the pending question is declined rather than run over budget.
+
+Per-step timeouts (`Harness.enforce_timeout` at `src/system_03_search_agent/harness/harness.py:672`, and `budget_for_step` at `src/system_03_search_agent/harness/harness.py:432`): each step's timeout is chosen by which tier answers it, not by how hard the question looks. This is because measured latency tracks the tier, not the query. By tier:
+
+- Guard: 15 seconds
+- Plan: 45 seconds
+- Synth: 45 seconds, shared across the Write step's two calls (the answer and its possible repair) rather than a full budget for each
+
+Reasoning effort is turned off (`effort: none`) on all three tiers today. This was measured, not assumed: turning reasoning on for the plan tier's Cypher generation cost roughly 27 times the latency for correct output that did not change, and turning it on for the synth tier sometimes burned the entire output budget on reasoning and returned nothing.
+
+Prompt caching (`src/system_03_search_agent/harness/cache.py`, design in `.claude/rules/prompt-cache-discipline.md`): the Think, Plan and Write calls share one stable prefix, assembled in a fixed order every time.
+
+- The system instructions
+- The tool schema list, sorted alphabetically and never reordered
+- The static graph and BioLink schema
+- The seeded few-shot examples
+
+Nothing volatile is ever placed in this prefix: not the current question, not a timestamp, not a session id. Two calls deliberately skip the prefix: the Guardrail's attack classifier and the Write step's sentence check. Both were measured to sometimes act as the answering agent instead of doing their own narrow job when the prefix came first, so they run on the bare instruction instead.
+
+## Planned: Jev as the classifier
+
+Not built yet. On 2026-09-25 the product owner decided that a separate classifier model will take over the loop's small multiple-choice decisions on develop: Jev, `typesafe/jev-1.13`, reached through OpenRouter's `POST /api/alpha/decisions` endpoint. Jev returns a chosen option plus a probability for each option and a confidence score. It cannot write free text, so it is not a candidate for anything in the "Every model call" table above except the classification-shaped decisions.
+
+The five decisions planned to move to Jev:
+
+- Whether a question is relevant to what the system covers
+- The one-to-three-word ask-back decision
+- Which literature source to route a question to
+- Whether to ask about recent years
+- Which resource to pull
+
+For each of these, the guard tier keeps making the same decision alongside Jev, purely so the two can be compared on a table later. Jev's answer is what the loop actually uses. Safety checks (the guardrail's attack classifier, the cite-or-refuse gate, the sentence check) are not part of this change. They keep working exactly as described above.
+
+```mermaid
+flowchart LR
+    Q[Loop needs a small choice] --> J[Ask Jev]
+    J -->|answers in time| D[Use Jev's choice]
+    J -->|errors or times out| F[Fall back to guard tier]
+    Q -.record only.-> GT[Guard tier also decides]
+    GT -.-> CMP[Comparison table]
+    D --> CMP
+```
+
+## Where to change a model
+
+The three tiers each resolve from an environment variable first, and a code default second: `GUARD_MODEL`, `PLAN_MODEL`, `SYNTH_MODEL`, read in `src/system_03_search_agent/harness/tiers.py:resolve_model`. Changing which real model answers a tier on a deployment is an environment variable edit, nothing more. Changing the app's own fallback default is a one-line edit to `_DEFAULT_MODELS` in the same file.
+
+The standing rule from `.claude/rules/system-design-patterns.md` pattern 11 applies here: model identity is a harness decision, never an agent decision. `resolve_model` never hardcodes a model id inline outside that one table.
+
+On a recurring failure, the standing order is to iterate the harness first and try a model swap only second. Iterating the harness means adjusting:
+
+- The prompt
+- The reasoning-effort setting
+- The timeout
+- The retry behavior
+
+Every reasoning-effort and timeout value recorded in this document was arrived at exactly that way, by measuring the current model under a harness change before ever considering a different model.
+
+## What this document did not check
+
+- Production's `GUARD_MODEL`, `PLAN_MODEL`, and `SYNTH_MODEL` values were not read from Railway for this document. Only develop's settings, read 2026-09-25, are stated above.
+- Whether the Jev classifier seam described in the planned section has any code scaffolding already in the repository was not checked beyond a grep for the name; the ticket that authorized this document states the decision as made but not yet built, and this document takes that at face value.
+- This document lists every call site found by searching for `call_tier(`, `_dispatch_tier_call(`, and the tier name strings `"guard"`, `"plan"`, `"synth"` passed to a call, across the harness, guardrail, core, tools and synthesis packages. A call site added after 2026-09-25, or one that reaches a model through a path this search did not match, would not appear here.
