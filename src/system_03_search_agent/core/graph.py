@@ -8828,77 +8828,6 @@ def _apply_conflict_flags_to_claim_trusts(
     return updated
 
 
-def _full_retrieval_conflict_exists(synth_findings: list[SynthFinding]) -> bool:
-    """T-8.1-05b (F-8.1-01): whether the FULL RETRIEVAL, every finding
-    prepared for this answer, carries a genuine Layer 1/Layer 2 value
-    conflict, independent of which claims the model's own prose happened
-    to ground this particular run.
-
-    Builder B's diagnosis (`tracker/phase_8.1.md`, F-8.1-01;
-    `testing/Developer/reports/2026-09-25_phase_8.1/builder_B.md`):
-    `_apply_conflict_flags_to_claim_trusts` only ever downgrades a
-    `ClaimTrust` that already exists in `claim_trusts`, and `claim_trusts`
-    only has one entry per GROUNDED claim. Two live runs of the identical
-    question, against the identical retrieval, produced two different
-    grounded subsets, so a real conflict present in both runs' retrieval
-    only floored the answer to `flag` on the run whose model happened to
-    write about both conflicting values in the same clause. The lead's
-    decision (option 2 of builder B's three): the same evidence must give
-    the same verdict, so this check runs over `synth_findings` directly,
-    never over `grounding.claims` or the citations built from it.
-
-    Deliberately a separate, additive check rather than a rewrite of
-    `_apply_conflict_flags_to_claim_trusts`: that function's own per-CLAIM
-    downgrade is correct and untouched, since a specific claim's own
-    `ClaimTrust.outcome` is rightly a function of what it actually cites.
-    This function answers a different, answer-level question, "does a
-    conflict exist in the evidence at all", and its caller floors the
-    ANSWER-level `trust_outcome` directly, exactly the same `aggregate`
-    most-restrictive-wins mechanism every other floor in `write_node`
-    already uses. Neither `synthesis/trust.py` nor `ClaimTrust` itself
-    changes: what a `flag` OR `answer` tier MEANS is untouched, only
-    whether the answer-level aggregate sees a `flag` at all does.
-
-    Reuses `_layer1_layer2_field_pairs`, `_paired_field_values_agree` and
-    `detect_conflict` exactly as `_apply_conflict_flags_to_claim_trusts`
-    does, so a conflict is detected on exactly the same pairs and by
-    exactly the same rule; the two can never disagree about what counts
-    as a conflict, only about which findings they are allowed to look at.
-    `_layer1_layer2_field_pairs` takes its first argument for `.citation_id`
-    alone (see its own signature, `citations: list[CitationPayload]`), and
-    `SynthFinding` carries that same attribute, so `synth_findings` is
-    passed there directly rather than converted to citations first: no
-    citation exists yet for a finding the model never mentioned, and
-    building fake ones just to satisfy a type would be manufacturing data
-    this function does not need.
-    """
-    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
-    pairs = _layer1_layer2_field_pairs(synth_findings, finding_by_citation_id)  # type: ignore[arg-type]
-    if not pairs:
-        return False
-    for graph_id, live_id in pairs.values():
-        graph_finding = finding_by_citation_id[graph_id]
-        live_finding = finding_by_citation_id[live_id]
-        graph_value = graph_finding.field_value.strip()
-        live_value = live_finding.field_value.strip()
-        if not graph_value or not live_value:
-            continue  # nothing to compare, mirrors the per-claim check's own guard
-        if _paired_field_values_agree(
-            graph_finding.field, live_finding.field, graph_value, live_value
-        ):
-            continue
-        result = detect_conflict(
-            field=graph_finding.field,
-            graph_value=graph_value,
-            live_value=live_value,
-            graph_source_url=graph_finding.source_url,
-            live_source_url=live_finding.source_url,
-        )
-        if result.is_conflict:
-            return True
-    return False
-
-
 # F-4.3-A-19, build phase 4.3. The answer-scope `trust_signal` this function
 # feeds used to compute its two safety-relevant fields inline, and both were
 # written as assertions rather than as derivations:
@@ -10560,18 +10489,6 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             claim_trusts, citations, _finding_by_citation_id(grounding.claims)
         )
         trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
-        # T-8.1-05b (F-8.1-01): the per-claim floor immediately above only
-        # ever touches a claim already in `claim_trusts`, which is exactly
-        # the grounded, model-chosen subset that made the SAME question's
-        # trust line vary run to run. This second check runs the identical
-        # conflict rule over `synth_findings`, the full retrieval, so a
-        # genuine conflict in the evidence floors the answer at `flag`
-        # every run, whether or not the model's own prose happened to
-        # mention both sides of it this time. See
-        # `_full_retrieval_conflict_exists`'s own docstring for why this is
-        # additive rather than a rewrite of the per-claim check above.
-        if trust_outcome != "refuse" and _full_retrieval_conflict_exists(synth_findings):
-            trust_outcome = aggregate([trust_outcome, "flag"])
         if structured_fallback_used and trust_outcome != "refuse":
             trust_outcome = aggregate([trust_outcome, "ask"])
 
