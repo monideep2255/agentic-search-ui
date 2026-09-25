@@ -12,7 +12,7 @@ The registry of every document a session-closing skill keeps current. One row pe
 
 `python3 tracker/check_living_docs.py` reads the same rows: `--shape` proves every named anchor still exists in its document, `--fresh` proves every freshness date is today. A red `--shape` is not an instruction to put the section back. It means the document changed shape and this registry has not caught up, which is exactly the case the decision guard in `/phase-checkpoint` exists for.
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-25.
 
 ## Table of contents
 
@@ -51,7 +51,7 @@ Last updated: 2026-09-24.
 
 `/phase-checkpoint` Step 0 reads every DECISIONS.md row below this watermark, updates the rows above for any decision that changes a document's shape or a process, then moves the watermark. The watermark is a row number and a date, never a count of rows, so the drift checker does not read it as a claim.
 
-Guarded through DECISIONS.md row 674, dated 2026-09-24, the handoff and registry rows appended after the eight accepted bossman redesign rows, which end at row 666. Of those eight, one touches a registered document (row 665, the build narrative moves out of CLAUDE.md and the board into Plan.md) and is reflected in the three rows above. The rows this redesign proposes (the handoff, the registry, the end of the daily shipped files) are guarded by construction: this registry was written from them.
+Guarded through DECISIONS.md row 716, dated 2026-09-25, the product owner's answers of the overnight plan and the lead's decisions of that night. None of them changes a registered document's shape or a process this skill runs: the overnight plan (`testing/Overnight_build_plan_2026-09-25.md`) and the settings log (`testing/Overnight_settings_log.json`) are records of one night, not living documents, and the board and the test queries keep their registered shapes.
 
 ## Why the registry lives here
 

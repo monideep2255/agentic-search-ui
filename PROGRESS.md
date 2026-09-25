@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-25.
 
 ## Table of contents
 
@@ -50,6 +50,15 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+NEW ON 25 SEPTEMBER, from an overnight build on the practice site, waiting for the product owner's retest. If they do not like it, one command puts the practice site back exactly as it was the evening before:
+
+- A good question is no longer turned away because an internal step misread its own notes. Asked ten times, both questions that used to fail answered every time.
+- Ask what physical features go with Marfan syndrome and the answer now lists them, each linked to the government's medical genetics record: aortic regurgitation, long thin fingers, a displaced eye lens and more. In the plain-language mode the answer names them in sentences; in the researcher mode they sit in a list under the answer.
+- An answer can now draw on up to thirty sources instead of twenty, so fewer answers end with a note saying they were cut short.
+- A small decision-making model now judges whether a question is on topic, whether it asks for published papers, and whether it asks for recent work without saying how recent. "Tell me about the tree of life" is now answered; a pizza question, or a pizza question slipped in as a follow-up, is still turned away.
+- Ask for "recent papers on statins" and the system now asks how far back to look, and then shows only papers from the years you picked.
+- On the fifty test questions, asked three times each, the system answered 102 of 150 times, up from 86 before, and every question behaved the same way on all three tries.
 
 NEW ON 24 SEPTEMBER, on the practice site and waiting for the product owner's retest, from a session that ran through the evening of 23 September into the next day:
 
@@ -179,11 +188,11 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 24 SEPTEMBER, in one sentence: ask about the physical features of a condition and the system still gets genes and variants instead, while every so often turning away a perfectly good question for a reason nothing on screen explains.
+THE HONEST HEADLINE AS OF 25 SEPTEMBER, in one sentence: answers are right more often and the same from one try to the next, but they still open with a stock line of counts ("Found 23 records for ...") rather than an answer, most read like lists, and overnight they got about five seconds slower.
 
-Ask what physical features go with Marfan syndrome and the system still answers with genes and variants, not phenotypes. It is the first thing to build once the product owner's retests are done.
+The first sentence of every answer is written by the code, not by the writing model, and it counts records rather than answering. Trying four different writing models overnight changed everything except that sentence. Whether to replace it is the product owner's decision.
 
-Separately, a good, ordinary question is occasionally refused at the step that works out what kind of question it is. Measured across about forty live tries, this happened twice, roughly one in twenty. The screen shows an ordinary refusal, while behind it the model doing that step had replied in a shape the system could not read. It is second in line to be built.
+A new sentence from the overnight work, "MedGen lists no clinical features for ...", appears in answers that never asked about features, once naming a record called "Seen by breast cancer nurse". It is the first thing to fix.
 
 The previous headline's complaint is largely answered this session. A plain-language answer now writes real sentences instead of only quoting a source word for word, checked twice over: once by a fixed rule, once by a second, separate model confirming the sentence says no more than its source supports. It worked for all seven plain-language questions tried live. It is not yet bulletproof: in two tries out of six the answer fell back to a plain list, one of them because the second check's call failed. In both, the system showed the list rather than a sentence that had not passed the check.
 
@@ -339,6 +348,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| An overnight build: good questions stop failing, and a decision model makes the small choices | Four questions the product owner raised were built and merged overnight with their reviews: fewer refused questions, Marfan's features named, thirty sources, and a small model deciding what is on topic and when to ask how recent. Three fixes were undone during review because each made answers less trustworthy. The practice site answered 102 of 150 test questions, up from 86; answers got about five seconds slower | 25 September |
 | How the building crew works, rebuilt | Nothing a person using the site sees changed. The automatic crew that builds the product was checked against its own record, which showed it spent more and more of its effort testing its own tests while nobody looked at the screen: after every stage had passed its reviews, the fifty test questions answered only thirteen times in eighty-five tries. It now has a reviewer that uses the practice site like a person before the product owner does, one round of review instead of up to seven, and a limit of a working day and eight helpers per stage. The to-do list became a simple board (to do, being built, to retest), every test question now says what to type and what you should see, and a short handoff note replaced a long document that kept going out of date. About 43,000 lines of old test machinery and review reports were removed, and every safety check they held was first rewritten as an ordinary test. That same evening, the board briefly lost track of the product owner's own architecture ideas, marking them "parked" and hiding their detail; the product owner caught it and they were put back where every other open item sits. The board now lists every piece of open work in the UI fix loop, including that architecture work, and a separate new file holds everything still ahead that is not part of the UI fix loop | 2026-09-24 |
 | Answers that explain themselves, and a short question that asks first | A plain-language answer now writes real sentences drawn from the papers instead of only quoting them, checked by a fast rule and then a second model before you see it. Plain language and researcher mode finally read differently on every question tried. A bare gene name or condition on its own is now asked back with choices written for that subject. Reopening a saved search in the sidebar, in the same tab, shows the answer you already got instead of searching again. The source count under an answer now matches the sources listed on the page | 2026-09-23 to 24 |
 | A night of checking what the system actually knows | Eight helpers worked through the night while nobody watched. The largest thing they found was not a bug in the code but a hole in the data: the medical database the system reads does not store the NAMES of diseases or of medical subject terms. It stores the name of the catalogue the disease came from, so a record for Marfan syndrome is filed under the word "GARD". Not one disease record anywhere contains the word "syndrome". Gene names and article titles are stored correctly, so this is a specific gap rather than an empty database. That had been recorded fourteen months ago and never fixed, and it cannot be fixed from here: the database is built by a different part of the project. What the night COULD fix, it did. Subject terms are now looked up live, so a question about what a paper is about returns twenty-six real terms instead of twenty-six reference numbers, and it costs two lookups however many terms there are. An answer that said "Found 20 records" above a list of 26 now agrees with itself. Clicking a past search shows the answer you already got instead of paying for a fresh one. A search that could never return anything was removed. And the address the integrations page prints no longer sends a secure request to an insecure one | 23 September, overnight |
@@ -650,17 +660,15 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. Wait on the product owner's retests, each now a card on the board with the exact questions to type. The evening of 24 September changed nothing a person sees; the session before it, from the evening of 23 September into 24 September, shipped an answer that writes real sentences instead of only quoting sources, plain language and researcher modes that finally read differently, a short question that is asked back with the right choices, a sidebar that reopens a saved answer, and a source count that matches its own list. All of it is on the practice site, none of it on the public one yet, and what ships to the public site next depends on what the product owner finds.
-2. Fix the phenotype question. Ask what physical features are associated with Marfan syndrome and the system still names no phenotypes at all, answering with genes and variants instead.
-3. Stop the occasional refusal of a good question at the step that works out what kind of question it is. It happened twice in about forty live tries.
-4. Let a model, rather than a fixed list of words, decide which questions are asking for published papers.
-5. When someone asks for recent papers, ask what "recent" means before searching.
-6. Decide four test questions where the gatekeeper or the expected answer disagree with what the product does: three where the gatekeeper turns away a question the test expects answered, and one where the test names an older address for an organism's record page than the one the product now links to.
-7. Decide whether twenty sources is the right ceiling. Answers hit it on most questions and then tell the reader they were cut short, which is a large part of why a good answer reads as a thin one.
-8. Tell the reader when the system wrote its own search rather than using a checked one. Last night established that when no prepared search fits a question, the system writes one from scratch each time, and two attempts at the same question are not the same search: one returned a hundred records and the next returned a single number. That variation is no longer happening on the practice site, closed by two earlier changes nobody had re-measured, but the machinery is still there and nothing on screen says which kind of search produced an answer.
-9. Decide what to do about connecting facts across several steps, now that there is a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
-10. Decide whether to try the new outside model that reports how confident it is. It cannot write answers at all, so it would only ever help the system decide things: whether a question is safe, and which source to search. The cheap first step is to let it decide in parallel and record what it would have said, without acting on it.
-11. Make answers match the reference prototype's depth, formatting and structure. The last two days' work answered part of this.
+1. Wait for the product owner's verdict on the overnight build: keep it, undo one part, or undo all of it, then their retests, each a card with the exact questions to type.
+2. Remove the stray "MedGen lists no clinical features" sentence from answers that never asked about features.
+3. Decide whether the stock opening line of counts is replaced by a sentence that answers the question. This is the product owner's decision.
+4. Decide which writing model to use. Overnight, Kimi K2.5 wrote better answers than today's model for less money; a well-known paid model did not beat either.
+5. Find out why answers got about five seconds slower overnight.
+6. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself, counts that say what they count, a calmer trust line, and narrowing bacterial sample searches by place and year.
+7. Build the step where the system checks its own results and tries once more when they do not answer the question.
+8. Tell the reader when the system wrote its own search rather than using a checked one.
+9. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph, such as other genes that turn up in the same papers, with no vector search. Background: connecting facts across several steps now has a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
 
 Done since this list was last written, overnight on 23 September, while nobody was watching:
 
@@ -762,8 +770,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| One of the developers' routine automatic checks asks a live government database for real data. When that database has a hiccup, the check fails even though nothing is wrong with the product, which happened once on 24 September | Not scheduled yet. It belongs with the checks that are allowed to use live services |
-| Answers reach their own ceiling of twenty sources and then tell the reader the result was cut short. Across thirty measured searches, twenty-four ended with a note about being trimmed and twenty-two said some of what was found is not described. This is the single biggest reason a good answer reads as a thin one | Needs a product decision first: is twenty the right number? Nobody has set it deliberately. Raising it is not free, because every extra source costs time and money on each question |
+| A sentence added overnight, "MedGen lists no clinical features for ...", appears in answers that never asked about features | The next session, the first card on the board |
+| Every answer opens with a stock line of counts written by the code, so its first sentence never answers the question | When the product owner decides what should replace it |
+| Answers got about five seconds slower overnight, a median of 21.9 seconds where it was 17.1 | Next, once the cause is measured |
 | ~~The system can quote its sources word for word but cannot explain them in its own words, because every sentence has to repeat a source exactly to pass the safety check. This is why both answer settings read like a list of records. Worked on all day on 21 September. Five attempts to fix it by rewording the instructions all failed~~ | LARGELY FIXED, 23 September. A second, separate check now reads each sentence after it is written: a fast rule confirms every quote, number and "not" it leans on is really in the source, then a second, separate model confirms the sentence says no more than the words it quotes. Live, this worked for all seven plain-language questions tried. Not yet bulletproof: in two tries out of six the answer fell back to a plain list, one of them because the second check's call failed, and the system showed the list rather than a sentence that had not passed the check |
 | ~~The practice site's back end could not take this evening's update. An outside software library it depends on released a new version thirteen minutes before the update was built, and that version looks for a different database connector than the one installed. The site kept running the previous version, so nothing anyone tests has changed, but no new back-end fix can reach it until this is settled~~ | FIXED the same evening. On the product owner's call, the library is held at the version the site was already using |
 | Ask what physical features go with a condition, such as Marfan syndrome, and the system still names no phenotypes at all, answering with genes and variants instead | First in line to be built, once the product owner's retests are done |

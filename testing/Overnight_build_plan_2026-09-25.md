@@ -335,3 +335,15 @@ Appended during the run, newest last.
 
 - 2026-09-25: plan written and committed; questions to the product owner begin.
 - 2026-09-25: moved from `docs/build/` to `testing/` on the product owner's instruction.
+- 05:05 UTC: phase 8.1 opened; builders A, B and C in parallel by file; builder D started phase 8.2's seam on files phase 8.1 did not touch.
+- 05:50 to 06:30 UTC: builders E (phase 8.5), F, G and H (phase 8.4) started on disjoint files; researcher I probed LitSense.
+- About 07:00 UTC: card 44 not built: LitSense cannot be pointed at a cited paper, and the title-anchored version gave a useful sentence for 4 of 20 papers.
+- 07:30 UTC: phase 8.1 pull request #105; judge and adversary found the MODY union check and the full-retrieval conflict floor each made answers less trustworthy; both reverted; one fix-and-verify round.
+- 07:50 UTC: `git fetch` broke on a " 2" copy of a ref file inside `.git`, likely iCloud Desktop sync; the copy was moved out, not deleted.
+- 09:43 UTC: #105 merged. Golden run 99 of 150 against a floor of 86.
+- 10:30 UTC: phase 8.2 pull request #106; round 1 found off-topic follow-ups admitted, wrong date limits and golden rows asked back; one fix-and-verify round.
+- 11:40 UTC: phase 8.5 pull request #107 merged after its verifier; the four streaming test files kept (a third control only they test).
+- 12:34 UTC: #106 merged; `CLASSIFIER_PROVIDER=jev` set on develop's API and logged for the bin script.
+- 13:34 UTC: golden run 102 of 150 with Jev deciding; median time to answer 21.9 seconds, from 17.1.
+- Spend: $6.00 of the $12 OpenRouter limit, read from the credits endpoint before and after each run.
+- Not done tonight: phase 8.4's `core/graph.py` wiring, its reviews and golden run; phase 8.3; cards 18, 35 and 39.

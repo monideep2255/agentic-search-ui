@@ -386,41 +386,16 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-24, at the close of the evening session, which rebuilt
-the harness rather than the product. THE ONE THING TO KNOW: nothing a person
-sees changed tonight. The fix plan became a board, `HANDOFF.md` replaced the
-Phase 6 continuation prompt, bossman mode was rebuilt from its measured
-diagnosis, the product owner's architecture cards were restored to To do after
-a restructure had marked them parked, an audit added every piece of open work
-that had no card, and the remaining work outside the UI fix loop got its own
-file, `testing/Future.md`. The product is as the session before left it:
-answers answer the question, each reworded sentence checked by a second model
-against the exact words it quotes. Everything that shipped awaits the product
-owner's retest, and nothing is being built between sessions.
+LAST UPDATED 2026-09-25, at the close of the overnight build. THE ONE THING TO KNOW: develop changed overnight and production did not. Three pull requests merged, each after one judge round, one adversary round (phases 8.1 and 8.2), a fix-and-verify round and a green CI: phase 8.1 (#105), phase 8.5 (#107) and phase 8.2 (#106). Jev, the decision model, now makes the loop's small choices on develop. The golden run answered 102 of 150 after the last merge, against a floor of 86, and answers got slower (median 21.9 seconds, from 17.1). If the product owner does not like any of it, `python3 testing/Developer/scripts/bin_overnight.py --all --yes` restores develop's product code to the tag `pre-overnight-2026-09-25` and takes back the one Railway setting; `--phase 8.2` bins one phase.
 
 What is live on develop:
 
-- Product code through `9b9ff2b`, plus one dependency pin, D5. SQLAlchemy
-  2.1.0 was released during the session's last build and stopped the API
-  deploying the checkpoint commit `39c6e55`, so the commit after it pins
-  SQLAlchemy below 2.1. Every later commit is documents, rules, skills and
-  tests: pull request #104's merge, `f21f439`, deployed with SUCCESS on both
-  develop services, then three commits pushed straight to develop with no PR
-  (the UI fix loop carve-out, since none touch `.claude/`): `e614ed0`
-  restores the architecture cards to To do, `a947754` adds cards 19 to 41
-  from an audit of open work with no card, and `03736d2` creates
-  `testing/Future.md` for the remaining work outside the UI fix loop.
-- The session before shipped 12.11, 12.12, 12.10, 12.13, 12.9, 12.3 and parts
-  1, 2 and 4 of 12.16. Both sessions' tables are under "Session history".
-- Not a product change: pull requests #101 to #104 changed rules, skills and
-  documents, and #104 also removed premise and mutation tests, each security
-  or cost control they pinned first re-pinned by a unit test. The three
-  commits after #104 are documents only.
+- Product code through the merge of #106 (`06f4587`), plus documents and evidence after it. `CLASSIFIER_PROVIDER=jev` is set on develop's API, logged in `testing/Overnight_settings_log.json`.
+- What each phase delivered, what was reverted inside it and why, and what stays open: `tracker/phase_8.1.md`, `tracker/phase_8.2.md`, `tracker/phase_8.5.md`, and the night's session table under "Session history".
+- Phase 8.4 (answers worth reading) is built on the branch `phase/8.4-answers-worth-reading` and not merged: the night's budget allowed two golden runs, and its `core/graph.py` wiring is not built.
 - Production is unchanged on `v0.2.0`.
 
-What awaits the product owner's retest is the Retest column of
-`testing/UI_fix_plan.md`, newest first. Each card names its query numbers in
-`testing/Test_queries_and_workflows.md`.
+What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first; each card names its query numbers in `testing/Test_queries_and_workflows.md`. Read the product review of phase 8.1 first: `testing/Developer/reports/2026-09-25_product_review_8.1/report.md`.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -620,72 +595,17 @@ board on 2026-09-24.
 
 ### Next, in order
 
-REWRITTEN 2026-09-24 at the session checkpoint, and REORDERED the same
-evening on the product owner's instruction: their architecture work joins as
-items 8 to 13, and none of it is parked. EXTENDED the same night by an audit
-of this file: items 19 to 41 are open work this file recorded that had no
-card on the board.
+REWRITTEN 2026-09-25 after the overnight build, in the order of the To do column of `testing/UI_fix_plan.md`, card for card. Items that were open on 2026-09-24 keep their text word for word, with what the night tried appended; items the night closed moved to Retest, and four the product owner decided without a build left the board (11.11 closed; 9.11 kept as live; the gene summary kept for reconciliation; 11.31's explanation half left as approved). New items come from the night's reviews, the product review and the writer bench.
 
-- The old items 1 and 2 are done and live: Set 12's questions, and 12.3.
-  Their records are in `testing/UI_fixes_done.md`.
-- Nothing below is a retest. Every item is engineering or a decision, ordered
-  by what the person typing the question feels first.
-- The To do column of `testing/UI_fix_plan.md` follows the same order, card
-  for card, from 1 to 41, its cards 15 to 18 included. Its last two cards, 42
-  and 43, come after this list: the two parked cards.
-- Items 8 to 13 keep the product owner's own order, and they may re-rank
-  them: points a) and c) of their direction on the model architecture, then
-  b), then d), then the agentic loop, then 11.29 and 11.38. Their detail
-  now sits under To do on the board, not in this file.
+The earlier framing of this list, kept because it still holds:
 
-What is open and not on this list as its own item:
+- Nothing below is a retest. Every item is engineering or a decision, ordered by what the person typing the question feels first.
+- The night's record: `testing/Overnight_build_plan_2026-09-25.md`, its answers and its log; per phase, `tracker/phase_8.1.md`, `tracker/phase_8.2.md` and `tracker/phase_8.5.md`.
 
-- The graph holds no disease names and no MeSH terms. Every `Disease` vertex
-  is named after its source vocabulary and every `OntologyClass` after its own
-  identifier, measured graph-wide. Known since build phase 2.1 as F-2.1-B07.
-  Writing the graph is Systems 1 and 2 work in the other repository, so this
-  is a hand-over rather than a task. It BOUNDS item 1: a disease question can
-  be answered from the live records and the literature, and never from the
-  graph's disease names.
-- The model's written prose still fails the grounding gate on several question
-  shapes, so the code-built table carries the answer. SUPERSEDED 2026-09-24:
-  the model check (12.10) lets a faithful reworded sentence through; two of six
-  guarded live reruns still fell back to a list, once because the checking
-  model's call failed.
-- `trust_outcome` is unstable: five runs with byte-identical evidence returned
-  `flag` four times and `ask` once.
-
-Since the audit of 2026-09-24, the first and the third of these are items 29
-and 20 below, each a card on the board.
-
-1. 12.14, A QUESTION ABOUT PHENOTYPIC FEATURES NAMES NONE. `What phenotypic
-   features are associated with Marfan syndrome?` answers with variant and gene
-   records at both depths, a confident answer of the wrong kind. The dead
-   template was removed on 2026-09-23 and nothing that CAN answer took its
-   place. Its row is under "Detail for items on the board".
-2. 12.17, A GOOD QUESTION SOMETIMES REFUSES AT THE THINK STEP. Twice in about
-   forty live runs the plan tier's reply did not match the think
-   classification schema, and the reader saw a refusal for a question the
-   product answers on every other run.
-3. 12.16 PART 3, WHICH QUESTIONS COUNT AS A REQUEST FOR PAPERS BECOMES A
-   CLASSIFIER'S DECISION, on the product owner's instruction that decisions are
-   not hardcoded; today it is a word list. It is also where their architecture
-   direction, item 8 below, points: "We use Jev as a classifier where ever we
-   are making those decisions".
-4. 12.15, "RECENT PAPERS" ASKS WHAT RECENT MEANS, the product owner's remark on
-   `recent papers on statins`.
-5. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
-   row:
-   - "334" expects a clarifying ask and is refused as off-topic
-   - "tell me about the tree of life" expects an answer
-   - the pathogenicity classification request expects a flag rather than a
-     medical-advice refusal
-
-   Nothing blocks on it. A fourth row joins them: G-035's Taxonomy must-cite
-   URL. ITEM 12.2 MAY CLOSE SOME OF THESE ON ITS OWN, since they are the same
-   check.
-6. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
-7. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
+1. An answer about something else can say "MedGen lists no clinical features for ...": 15 golden answers carry it, one "for Seen by breast cancer nurse" inside a question about how many genes relate to breast cancer. Source: `testing/Developer/reports/2026-09-25_product_review_8.1/report.md`, from phase 8.1's fix round. Added 2026-09-25 from the overnight build.
+2. Every answer opens with the code-built "Found N ... records for X" line, whatever the writing model, so its first sentence never answers the question. Source: `testing/Developer/reports/2026-09-25_writer_bench/results.md` and the 8.1 product review. Added 2026-09-25 from the overnight build.
+3. Answers got slower overnight: the golden run's median was 17.1 seconds after phase 8.1 and 21.9 after phase 8.2. Source: `testing/Developer/reports/2026-09-25_phase_8.2_golden/summary.md`. Added 2026-09-25 from the overnight build.
+4. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
    established that when no code template matches, the plan-tier model writes
    the Cypher fresh, and two drafts are not equivalent. The data already
    exists: `CypherQueryOutput.template` is None exactly in that case, and
@@ -696,39 +616,18 @@ and 20 below, each a card on the board.
    evidence. Key it on the query having been drafted. The stronger version of
    this item is to close the remaining model path entirely, the way `27d68ae`
    closed it for gene questions.
-8. JEV AS THE CLASSIFIER WHEREVER A CHOICE NEEDS TO BE MADE, points a) and c)
-   of the product owner's direction on the model architecture: whether a
-   one-to-three-word question gets a clarification question or moves forward,
-   guardrails on relevancy, and which resource to pull. In their words: "We
-   use Jev as a classifier where ever we are making those decisions". The
-   decision points already recorded as candidates:
-   - 12.3's ask-back, decided today by the guard tier and later by Jev at the
-     same point
-   - item 3's literature-request routing
-   - the model check under 12.9 and 12.10, a candidate for Jev's Bool
-     question type once a shadow run has calibrated it
-
-   Which of the three places Jev fits, and why a shadow run comes first, is
-   in 11.38's detail, item 13.
-9. OUR NCBI APIS AND ENRICHMENT CALLS AS MCP-STYLE FUNCTIONS, point b) of the
-   direction and item 11.32, so Jev can help with the classifier. 11.32's
-   detail separates two halves:
-   - the typed, measured function surface per database, in scope as ordinary
-     work on the existing seven tools
-   - the MCP envelope around it, scoped against the locked Section 6 tool list
-     and signed off before any work starts
-10. MODELS CHOSEN PER TASK BY TIER, point d) of the direction and the product
+5. MODELS CHOSEN PER TASK BY TIER, point d) of the direction and the product
    owner's example of how models should be chosen: open source where an
    equivalent is available, frontier models where they are needed. The
    standing rule at the end of the direction holds against it: iterate the
    harness first and swap the model second.
-11. THE AGENTIC LOOP, the product owner's second quote under their direction:
+6. THE AGENTIC LOOP, the product owner's second quote under their direction:
    interpret the objective, make a plan, use tools, check intermediate
    results, adjust when something fails, and produce or apply the final
    result. Their point is that the value lies in completing the entire loop,
    not simply in generating something plausible. Its words are under To do on
    the board.
-12. 11.29's BUILD, now that its scoping document exists and is measured. Read
+7. 11.29's BUILD, now that its scoping document exists and is measured. Read
    `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md`
    first: it counts how many golden questions need multi-hop (five, all walking
    one already-built shape), how many need data the graph does not hold
@@ -738,73 +637,71 @@ and 20 below, each a card on the board.
    paraphrase, is what actually stands between the product and being worth
    reading instead of a general chatbot. Its detail sits under To do on the
    board.
-13. 11.38, a bounded trial of the probability model, which the product owner
-   will build. The cheap first step is a SHADOW RUN on the guardrail: it
-   decides in parallel, its answer is only recorded and never acted on, which
-   produces
-   calibration data from this product's own questions rather than a vendor
-   benchmark. Output tokens are free, which is what makes that affordable.
-   Acting on a confidence number is a separate and much larger decision.
-
-   The three discussion items this list carried are all closed: 11.30 was
-   built, 11.32 was answered with measurement, and 11.29's discussion produced
-   the document named in item 12. 11.22's live check was already done. 11.32's
-   build is item 9, and 11.38's detail sits under To do on the board.
-14. 11.11, ANSWERS MODELLED ON THE REFERENCE PROTOTYPE'S DEPTH, FORMATTING AND
-   STRUCTURE. Listed as being built until 2026-09-24, with nobody on it; 12.9
-   and 12.10 answered part of its ask.
-15. 9.11, whether Plain language answers keep the small medical-advice line.
-   The product owner's decision.
-16. 9.9, the trust-line wording. The product owner's decision.
-17. 10.4, judging answer quality once answering is reliable.
-18. THE LOCK FILE for the Python build, the product owner's call. Its detail is
+8. 9.9, the trust-line wording. The product owner's decision.
+   Since 2026-09-25: built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop.
+9. 10.4, judging answer quality once answering is reliable.
+10. THE LOCK FILE for the Python build, the product owner's call. Its detail is
    the last of "Loose ends, named rather than left" above.
-19. THE SAME QUESTION DOES NOT ALWAYS RETURN THE SAME PAPERS, item 11.21's
+   Since 2026-09-25: decided 2026-09-25, not built.
+11. THE SAME QUESTION DOES NOT ALWAYS RETURN THE SAME PAPERS, item 11.21's
    promise. Its detail is in "Notes carried over from the old tracker" above.
-20. `trust_outcome` IS UNSTABLE on identical evidence, under "What is open and
+   Since 2026-09-25: tried 2026-09-25, not reproducible, fix reverted: `tracker/phase_8.1.md` F-8.1-03.
+12. `trust_outcome` IS UNSTABLE on identical evidence, under "What is open and
    not on this list as its own item" above.
-21. THE MODY-GENES GROUNDING FAILURE, 5 of 6 runs, unowned since 2026-09-20.
+   Since 2026-09-25: tried 2026-09-25, the fix labelled correct answers as disagreeing and was reverted: F-8.1-A13.
+13. THE MODY-GENES GROUNDING FAILURE, 5 of 6 runs, unowned since 2026-09-20.
    Under "Shipped days", 2026-09-20.
-22. THE 127.1 SECOND RUN, against a median of 13.6, unowned since 2026-09-20.
+   Since 2026-09-25: tried 2026-09-25, the fix weakened the citation check and was reverted: F-8.1-J01.
+14. THE 127.1 SECOND RUN, against a median of 13.6, unowned since 2026-09-20.
    Under "Shipped days", 2026-09-20.
-23. CLOSE THE REMAINING MODEL PATH OR REFUSE AND ASK, the first of the two
+   Since 2026-09-25: diagnosed 2026-09-25, a timeout that stops the wait but not the work: F-8.1-05.
+15. CLOSE THE REMAINING MODEL PATH OR REFUSE AND ASK, the first of the two
    items L-01's row in Set 11 names as "each its own item". Item 7 is the
    second. The questions still on that path are named under "Shipped days",
    2026-09-22.
-24. G-005, G-022 AND G-036, which L-01's deterministic half set aside: the
+16. G-005, G-022 AND G-036, which L-01's deterministic half set aside: the
    first two resolve an entity and find nothing, the third never calls
    Layer 1. Under "Loose ends, named rather than left" above.
-25. 12.16 PART 4's RESIDUAL, the switch rule anchored on a generic title word.
+17. 12.16 PART 4's RESIDUAL, the switch rule anchored on a generic title word.
    Its row is under "Detail for items on the board".
-26. A MULTI-SENTENCE RECORD RENDERS AS SEVERAL LIST ROWS under one heading,
+   Since 2026-09-25: built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop.
+18. A MULTI-SENTENCE RECORD RENDERS AS SEVERAL LIST ROWS under one heading,
    with no test. Under "Loose ends, named rather than left" above.
-27. 11.28's RESIDUAL RISK, a transient false Write on any other path. Its
+   Since 2026-09-25: a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built.
+19. 11.28's RESIDUAL RISK, a transient false Write on any other path. Its
    detail is in Set 11's detail for 11.28.
-28. THE ISOLATE SEARCH HAS NO FILTER BEYOND THE GENE PREFIX. Under "Shipped
+20. THE ISOLATE SEARCH HAS NO FILTER BEYOND THE GENE PREFIX. Under "Shipped
    days", 2026-09-22.
-29. THE GRAPH HOLDS NO DISEASE NAMES AND NO MESH TERMS, the hand-over to the
-   data repository. Under "What is open and not on this list as its own item"
-   above.
-30. 11.30's TWO COMMAND LINE SNIPPETS, blocked rather than run because no `s3`
+   Since 2026-09-25: year from the question built on the 8.4 branch, location needs the plan step.
+21. 11.30's TWO COMMAND LINE SNIPPETS, blocked rather than run because no `s3`
    client was installed. Its detail is in Set 11's detail for 11.30.
-31. D-2, FOUR UNEXPLAINED TOTALS IN ONE ANSWER, a product decision. Under
+   Since 2026-09-25: measured 2026-09-25, the page fix is on the 8.4 branch.
+22. D-2, FOUR UNEXPLAINED TOTALS IN ONE ANSWER, a product decision. Under
    "Shipped days", 2026-09-20.
-32. THE PROVENANCE NOTE, on the standing list under "What is waiting on the
+   Since 2026-09-25: the screen half is on the 8.4 branch, the backend wording is not built.
+23. THE PROVENANCE NOTE, on the standing list under "What is waiting on the
    product owner" above.
-33. THE MODE TOGGLE's PLACEMENT, on the same standing list.
-34. 2.13's FOUR TYPE VALUES, where the design card and the code disagree. The
-   product owner's decision, in 2.13's row.
-35. 2.13's STAGE 1, installing the public USWDS package, which waits for the
+   Since 2026-09-25: a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built.
+24. THE MODE TOGGLE's PLACEMENT, on the same standing list.
+   Since 2026-09-25: built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop.
+25. 2.13's STAGE 1, installing the public USWDS package, which waits for the
    product owner's yes, in 2.13's row.
-36. THE GENE SUMMARY FIELD, a Step 6.2 reconciliation item, in 11.31's detail.
-37. THE SEVEN TEST FILES the deletion inventory set aside, awaiting the
+   Since 2026-09-25: decided 2026-09-25, not built.
+26. THE SEVEN TEST FILES the deletion inventory set aside, awaiting the
    product owner's ruling. Under "Loose ends, named rather than left" above.
-38. THE LIVE NCBI CALL INSIDE THE UNIT GATE. Same place.
-39. MERGING BOSSMAN MODE's TWO MODES, which waits for the next build phase.
+   Since 2026-09-25: decided 2026-09-25; the deletion was reverted because one file pinned three controls (F-8.5-V08).
+27. MERGING BOSSMAN MODE's TWO MODES, which waits for the next build phase.
    Under "Session history", 2026-09-24 evening.
-40. `/phase-checkpoint`'s STALE CLAUDE.md LINE NUMBER. Under "Loose ends,
-   named rather than left" above.
-41. THE TRACKED FILE DELETED MID-SESSION, cause unknown. Same place.
+28. THE TRACKED FILE DELETED MID-SESSION, cause unknown. Same place.
+   Since 2026-09-25: lead found 2026-09-25: a process makes " 2" copies inside the repository mid-session (a ref file, `.git/index 2`), likely iCloud Desktop sync.
+29. Show the sentences that answer the question, quoted under each paper, so nobody has to open the paper to find them: from NCBI's LitSense, probed on about ten golden questions before it is built. Source: [13.1](#detail-131); probed twice 2026-09-25, useful for 4 of 20 papers, not built: `testing/Developer/reports/2026-09-25_phase_8.4/litsense_probe/findings.md`. Added 2026-09-25 from the overnight build.
+30. `Which BRCA1 variants are pathogenic?` lists 40 unclassified variants and the model's honest caveat is stripped. Source: `tracker/phase_8.1.md` F-8.1-A16, found 2026-09-25, older than that night. Added 2026-09-25 from the overnight build.
+31. At Researcher depth a question about a disease's features shows them in the list but not in the written answer: give them room in the prompt only when a classifier decides the question asks about features. Source: F-8.1-V01. Added 2026-09-25 from the overnight build.
+32. A graph search column named `clinical_features` would be read as MedGen's clinical features. Source: F-8.1-V02. Added 2026-09-25 from the overnight build.
+33. Two golden questions that answered on 2026-09-22 no longer do: G-004, a Salmonella isolate question that runs no search, and G-006, sequence data for PMID 11237011. Source: the golden run of 2026-09-25, `testing/Developer/reports/2026-09-25_phase_8.1_golden/`. Added 2026-09-25 from the overnight build.
+34. Jev's comparison table is mostly empty: let DeepSeek's pick land any time before the answer finishes, not within one second. Source: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md`. Added 2026-09-25 from the overnight build.
+35. An off-topic follow-up that happens to contain a biomedical word such as "cell" or "study" still gets through, as it did before tonight. Source: `tracker/phase_8.2.md` F-8.2-V01. Added 2026-09-25 from the overnight build.
+36. A picked "How far back" window is lost after a restart or deploy, and nothing tells the person. Source: F-8.2-V02. Added 2026-09-25 from the overnight build.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining
@@ -2126,6 +2023,27 @@ Evidence, with a full transcript per question and a re-runnable script:
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 ## Session history
+
+### The overnight build of 2026-09-25, in one table
+
+Run in bossman mode on the product owner's grant for one night: unattended, the lead merging its own pull requests when CI passed, both review rounds left nothing blocking and the golden run held its floor. Three pull requests merged: #105 (phase 8.1), #107 (phase 8.5) and #106 (phase 8.2). Phase 8.4 is built on its branch, not merged. The rollback point is the tag `pre-overnight-2026-09-25`; `testing/Developer/scripts/bin_overnight.py` bins the night whole or one phase at a time. The plan, the product owner's answers and the log: `testing/Overnight_build_plan_2026-09-25.md`.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| 12.17, a good question refused at the think step | A malformed reply is repaired or retried with the error, never defaulted; 10 of 10 live runs answered | Retest, query 80 |
+| 12.14, a phenotype question | MedGen's clinical features are fetched, each its own cited finding; shown in the listing at every depth and in the prose at Plain language | Retest, query 81 |
+| The source ceiling and the byte ceiling | 20 to 30 sources; 50,000 to 70,000 bytes; the findings block 12,000 to 18,000 characters so the 30 takes effect | Retest, query 82 |
+| The live NCBI unit test | Behind the integration marker | Retest, nothing to try by hand |
+| MODY genes (card 21), the trust verdict (card 20), the same papers (card 19) | Each fix was built, then reverted: the first weakened the citation check, the second labelled correct answers as disagreeing, the third changed which papers are shown with no variance to remove | To do, with the evidence |
+| The 127-second run (card 22) | Diagnosed: a timeout that stops the wait but not the work | To do |
+| Jev as the classifier, the function catalogue, the probability trial | Jev decides relevancy, paper routing and the recent-years ask on develop, the guard tier recorded beside it; 17 tool actions listed as typed functions | Retest, query 83 and the comparison table |
+| 12.15, "recent papers" | Asks how far back; the picked window narrows the search; no limit is read from a question's wording | Retest, query 84 |
+| 12.16 part 3, paper routing | A classifier's choice, the word list removed | Retest, query 85 |
+| The golden rows | G-008 and G-045 fine; G-038 now answered; G-035 accepts the product's Taxonomy link | Retest |
+| Housekeeping (phase 8.5) | The graph hand-over, the design card's type values, the checkpoint's line reference; the four streaming test files kept after the verifier found a third control only they test | Retest, nothing to try by hand; card 37 in To do |
+| The golden runs | 99 of 150 answered after phase 8.1, 102 of 150 after phase 8.2, against a floor of 86; median time to answer 17.1 then 21.9 seconds | Evidence in `testing/Developer/reports/2026-09-25_phase_8.1_golden/` and `_phase_8.2_golden/` |
+| The writer bench | Kimi K2.5 beat GLM 5.2 at lower cost; Claude Sonnet 5 did not; every answer opens on a code-built line whatever the writer | Your decision |
+| LitSense passages (card 44) | Probed twice; useful for 4 of 20 papers; not built | Your decision |
 
 ### The 2026-09-24 evening session, in one table
 

@@ -1,0 +1,1522 @@
+{
+ "record": {
+  "id": "G-030",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+  "session_id": "c103-ba7f9d3aafb6",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:09:00+00:00",
+  "run_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:1956"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 56 sources, not yet confirmed",
+  "citations": 56,
+  "distinct_sources": 55,
+  "citations_by_layer": {
+   "layer_3_enrichment": 5,
+   "layer_1_graph": 38,
+   "layer_2_api": 13
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 3,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 41,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   41,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 496,
+  "answer_start": "Found 5 clinical trial records and 38 sequence variant records for EGFR, of 4002 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][2",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 6.62,
+  "seconds": 23.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 80,
+   "citation": 56,
+   "trust_signal": 57,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 0,
+   "ts": "2026-09-25T13:07:25.169811Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 2,
+   "ts": "2026-09-25T13:07:27.719631Z",
+   "payload": {
+    "narrative": "Broad question about mutations and recruiting trials, requiring assembly across sources.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "EGFR",
+      "curie": "NCBIGene:1956",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 4,
+   "ts": "2026-09-25T13:07:27.737921Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1956. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-abd305339d7c",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-24b4cf7e4ad1",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-ca02b3356c58",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-d5730fc8a02d",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f1a102cac093",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-17389a880959",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8133b94864be",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cb28c3503f48",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-b3716a772764",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1e118e363fa7",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8b0e64ab391f",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-39571af36a74",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-f6d4f0f150bc",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "EGFR",
+      "curie": "NCBIGene:1956",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 6,
+   "ts": "2026-09-25T13:07:27.751689Z",
+   "payload": {
+    "call_id": "cq-abd305339d7c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 7,
+   "ts": "2026-09-25T13:07:27.751746Z",
+   "payload": {
+    "call_id": "ne-24b4cf7e4ad1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 8,
+   "ts": "2026-09-25T13:07:27.751758Z",
+   "payload": {
+    "call_id": "pa-ca02b3356c58",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 9,
+   "ts": "2026-09-25T13:07:27.751788Z",
+   "payload": {
+    "call_id": "ct-d5730fc8a02d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 10,
+   "ts": "2026-09-25T13:07:27.751798Z",
+   "payload": {
+    "call_id": "ne-f1a102cac093",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 11,
+   "ts": "2026-09-25T13:07:27.751807Z",
+   "payload": {
+    "call_id": "ne-17389a880959",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 12,
+   "ts": "2026-09-25T13:07:27.751815Z",
+   "payload": {
+    "call_id": "ne-8133b94864be",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 13,
+   "ts": "2026-09-25T13:07:27.751825Z",
+   "payload": {
+    "call_id": "ne-cb28c3503f48",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 14,
+   "ts": "2026-09-25T13:07:27.751834Z",
+   "payload": {
+    "call_id": "pa-b3716a772764",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 15,
+   "ts": "2026-09-25T13:07:27.751842Z",
+   "payload": {
+    "call_id": "ne-1e118e363fa7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 16,
+   "ts": "2026-09-25T13:07:27.751851Z",
+   "payload": {
+    "call_id": "ne-8b0e64ab391f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 17,
+   "ts": "2026-09-25T13:07:27.751860Z",
+   "payload": {
+    "call_id": "ne-39571af36a74",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 18,
+   "ts": "2026-09-25T13:07:27.751868Z",
+   "payload": {
+    "call_id": "cq-f6d4f0f150bc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 19,
+   "ts": "2026-09-25T13:07:27.945846Z",
+   "payload": {
+    "call_id": "pa-ca02b3356c58",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 20,
+   "ts": "2026-09-25T13:07:28.032036Z",
+   "payload": {
+    "call_id": "ne-17389a880959",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 21,
+   "ts": "2026-09-25T13:07:28.063352Z",
+   "payload": {
+    "call_id": "ne-f1a102cac093",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 22,
+   "ts": "2026-09-25T13:07:28.113466Z",
+   "payload": {
+    "call_id": "ne-24b4cf7e4ad1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 23,
+   "ts": "2026-09-25T13:07:28.129300Z",
+   "payload": {
+    "call_id": "ne-8133b94864be",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 24,
+   "ts": "2026-09-25T13:07:28.184810Z",
+   "payload": {
+    "call_id": "ct-d5730fc8a02d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 25,
+   "ts": "2026-09-25T13:07:28.245379Z",
+   "payload": {
+    "call_id": "ne-39571af36a74",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 26,
+   "ts": "2026-09-25T13:07:28.475256Z",
+   "payload": {
+    "call_id": "cq-f6d4f0f150bc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "41 row(s) of 41",
+    "result_count": 41,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 27,
+   "ts": "2026-09-25T13:07:30.410150Z",
+   "payload": {
+    "call_id": "cq-abd305339d7c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "100 row(s) of 3961",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 28,
+   "ts": "2026-09-25T13:07:30.577014Z",
+   "payload": {
+    "call_id": "pa-b3716a772764",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 29,
+   "ts": "2026-09-25T13:07:30.731207Z",
+   "payload": {
+    "call_id": "ne-1e118e363fa7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 30,
+   "ts": "2026-09-25T13:07:30.774974Z",
+   "payload": {
+    "call_id": "ne-cb28c3503f48",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 31,
+   "ts": "2026-09-25T13:07:30.779548Z",
+   "payload": {
+    "call_id": "ne-8b0e64ab391f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 32,
+   "ts": "2026-09-25T13:07:30.795141Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01994057",
+    "source_url": "https://clinicaltrials.gov/study/NCT01994057",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT04324164",
+    "source_url": "https://clinicaltrials.gov/study/NCT04324164",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT05037331",
+    "source_url": "https://clinicaltrials.gov/study/NCT05037331",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT05257967",
+    "source_url": "https://clinicaltrials.gov/study/NCT05257967",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT05341492",
+    "source_url": "https://clinicaltrials.gov/study/NCT05341492",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000076",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000076",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.840C>A (p.Asn280Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000203",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000203",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.664C>T (p.Arg222Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000496",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000496",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.494G>A (p.Arg165Gln)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000546",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000546",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.652C>A (p.Gln218Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000851",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000851",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1813A>G (p.Thr605Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000960",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000960",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2653T>G (p.Ser885Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001152",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001152",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.991G>A (p.Gly331Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001187",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001187",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1822T>A (p.Trp608Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001705",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001705",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1559C>T (p.Pro520Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001710",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001710",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2741C>G (p.Pro914Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001782",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001782",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2619A>T (p.Gly873=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002380",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002380",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2339T>C (p.Ile780Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002493",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002493",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1670A>G (p.Gln557Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002562",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002562",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.721A>G (p.Thr241Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002578",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002578",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3031G>C (p.Val1011Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002794",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3209G>A (p.Ser1070Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003132",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003132",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1463C>G (p.Thr488Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003262",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003262",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2917C>G (p.Arg973Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003305",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003305",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1049C>G (p.Ser350Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003743",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003743",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1675C>T (p.His559Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003794",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1975G>C (p.Val659Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004032",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004032",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2833A>G (p.Met945Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004363",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004363",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.541C>G (p.Gln181Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004409",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004409",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1739T>C (p.Ile580Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004521",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004521",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1582A>G (p.Asn528Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005378",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2161G>A (p.Gly721Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005727",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005727",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1605C>A (p.Cys535Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005794",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3437G>T (p.Cys1146Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1006525",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006525",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1006618",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006618",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.268C>T (p.Leu90Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1006728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006728",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.437G>A (p.Gly146Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007379",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007379",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3056C>T (p.Pro1019Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007424",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007424",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2091A>C (p.Glu697Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007797",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007797",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2150T>C (p.Val717Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008399",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008399",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3574G>A (p.Ala1192Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008401",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008401",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2537A>G (p.Lys846Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009011",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009011",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1795G>A (p.Val599Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009550",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009550",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3575C>G (p.Ala1192Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32124699",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32124699/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3905791",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905791/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "131550",
+    "source_url": "https://omim.org/entry/131550",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33096270",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33096270/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4535271",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4535271/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34195081",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34195081/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4535946",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4535946/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36535904",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36535904/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4685791",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4685791/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40373998",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40373998/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4856933",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4856933/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "8e7ca179-2a53-4ed1-9ddb-d263b6092554",
+   "seq": 227,
+   "ts": "2026-09-25T13:07:46.907465Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 6620,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 56 sources, not yet confirmed",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.95,
+      "guard_choice": "not_applicable",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 128
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.4,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 106
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records and 38 sequence variant records for EGFR, of 4002 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43]. \n\nClinical trial records found\n\nClinical trial name: A Retrospective Study of EGFR-TKIs,Gefitinib, Erlotinib and Osimertinib in NSCLC Patients Treatment [1]. Clinical trial name: Survival Outcome of EGFR-TKI in Uncommon EGFR Mutant Advanced NSCLC [2]. Clinical trial name: Osimertinib for Advanced EGFR-positive NSCLC Patients [3]. Clinical trial name: CSF Analysis in EGFR Mutant Non-Small Cell Lung Cancer With Leptomeningeal Disease [4]. Clinical trial name: EGFR/B7H3 CAR-T on Lung Cancer and Triple Negative Breast Cancer [5]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000076, name: NM_005228.5(EGFR):c.840C>A (p.Asn280Lys) [6]. SequenceVariant ClinVar:1000203, name: NM_005228.5(EGFR):c.664C>T (p.Arg222Cys) [7]. SequenceVariant ClinVar:1000496, name: NM_005228.5(EGFR):c.494G>A (p.Arg165Gln) [8]. SequenceVariant ClinVar:1000546, name: NM_005228.5(EGFR):c.652C>A (p.Gln218Lys) [9]. SequenceVariant ClinVar:1000851, name: NM_005228.5(EGFR):c.1813A>G (p.Thr605Ala) [10]. SequenceVariant ClinVar:1000960, name: NM_005228.5(EGFR):c.2653T>G (p.Ser885Ala) [11]. SequenceVariant ClinVar:1001152, name: NM_005228.5(EGFR):c.991G>A (p.Gly331Arg) [12]. SequenceVariant ClinVar:1001187, name: NM_005228.5(EGFR):c.1822T>A (p.Trp608Arg) [13]. SequenceVariant ClinVar:1001705, name: NM_005228.5(EGFR):c.1559C>T (p.Pro520Leu) [14]. SequenceVariant ClinVar:1001710, name: NM_005228.5(EGFR):c.2741C>G (p.Pro914Arg) [15]. SequenceVariant ClinVar:1001782, name: NM_005228.5(EGFR):c.2619A>T (p.Gly873=) [16]. SequenceVariant ClinVar:1002380, name: NM_005228.5(EGFR):c.2339T>C (p.Ile780Thr) [17]. SequenceVariant ClinVar:1002493, name: NM_005228.5(EGFR):c.1670A>G (p.Gln557Arg) [18]. SequenceVariant ClinVar:1002562, name: NM_005228.5(EGFR):c.721A>G (p.Thr241Ala) [19]. SequenceVariant ClinVar:1002578, name: NM_005228.5(EGFR):c.3031G>C (p.Val1011Leu) [20]. SequenceVariant ClinVar:1002794, name: NM_005228.5(EGFR):c.3209G>A (p.Ser1070Asn) [21]. SequenceVariant ClinVar:1003132, name: NM_005228.5(EGFR):c.1463C>G (p.Thr488Ser) [22]. SequenceVariant ClinVar:1003262, name: NM_005228.5(EGFR):c.2917C>G (p.Arg973Gly) [23]. SequenceVariant ClinVar:1003305, name: NM_005228.5(EGFR):c.1049C>G (p.Ser350Cys) [24]. SequenceVariant ClinVar:1003743, name: NM_005228.5(EGFR):c.1675C>T (p.His559Tyr) [25]. SequenceVariant ClinVar:1003794, name: NM_005228.5(EGFR):c.1975G>C (p.Val659Leu) [26]. SequenceVariant ClinVar:1004032, name: NM_005228.5(EGFR):c.2833A>G (p.Met945Val) [27]. SequenceVariant ClinVar:1004363, name: NM_005228.5(EGFR):c.541C>G (p.Gln181Glu) [28]. SequenceVariant ClinVar:1004409, name: NM_005228.5(EGFR):c.1739T>C (p.Ile580Thr) [29]. SequenceVariant ClinVar:1004521, name: NM_005228.5(EGFR):c.1582A>G (p.Asn528Asp) [30]. SequenceVariant ClinVar:1005378, name: NM_005228.5(EGFR):c.2161G>A (p.Gly721Ser) [31]. SequenceVariant ClinVar:1005727, name: NM_005228.5(EGFR):c.1605C>A (p.Cys535Ter) [32]. SequenceVariant ClinVar:1005794, name: NM_005228.5(EGFR):c.3437G>T (p.Cys1146Phe) [33]. SequenceVariant record ClinVar:1006525 [34]. SequenceVariant ClinVar:1006618, name: NM_005228.5(EGFR):c.268C>T (p.Leu90Phe) [35]. SequenceVariant ClinVar:1006728, name: NM_005228.5(EGFR):c.437G>A (p.Gly146Asp) [36]. SequenceVariant ClinVar:1007379, name: NM_005228.5(EGFR):c.3056C>T (p.Pro1019Leu) [37]. SequenceVariant ClinVar:1007424, name: NM_005228.5(EGFR):c.2091A>C (p.Glu697Asp) [38]. SequenceVariant ClinVar:1007797, name: NM_005228.5(EGFR):c.2150T>C (p.Val717Ala) [39]. SequenceVariant ClinVar:1008399, name: NM_005228.5(EGFR):c.3574G>A (p.Ala1192Thr) [40]. SequenceVariant ClinVar:1008401, name: NM_005228.5(EGFR):c.2537A>G (p.Lys846Arg) [41]. SequenceVariant ClinVar:1009011, name: NM_005228.5(EGFR):c.1795G>A (p.Val599Ile) [42]. SequenceVariant ClinVar:1009550, name: NM_005228.5(EGFR):c.3575C>G (p.Ala1192Gly) [43]. \n\nGene records found\n\nGene symbol: EGFR [44]. Gene name: EGFR [48]. \n\nPubmed records found\n\nPubmed title: Review on Epidermal Growth Factor Receptor (EGFR) Structure, Signaling Pathways, Interactions, and Recent Updates of EGFR Inhibitors [45]. Pubmed title: Dual EGFR-VEGF Pathway Inhibition: A Promising Strategy for Patients With EGFR-Mutant NSCLC [49]. Pubmed title: EGFR-Mutated Squamous Cell Lung Cancer and Its Association With Outcomes [51]. Pubmed title: Three-tiered EGFr domain risk stratification for individualized NOTCH3-small vessel disease prediction [53]. Pubmed title: Complex Etiologies of the Discordance Between Cystatin C- and Creatinine-Based Estimated GFR and Its Adverse Associations: Findings From the CRIC Study [55]. \n\nClinvar records found\n\nClinvar title: NM_005228.5(EGFR):c.3271+62C>G [46]. Clinvar title: NM_005228.5(EGFR):c.1881-2649C>T [50]. Clinvar title: NC_000007.13:g.(?_55086709)_(55220358_55221703)dup [52]. Clinvar title: NM_005228.5(EGFR):c.1912A>G (p.Thr638Ala) [54]. Clinvar title: NM_005228.5(EGFR):c.1632-87A>G [56]. \n\nOmim records found\n\nEPIDERMAL GROWTH FACTOR RECEPTOR [47]. EGFR [47]. \n\nNote: this answer was truncated because only 141 of the 4002 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

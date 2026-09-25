@@ -1,0 +1,1601 @@
+{
+ "record": {
+  "id": "G-022",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What phenotypic features are associated with Marfan syndrome?",
+  "session_id": "c103-6907a2804d3d",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:07:05+00:00",
+  "run_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [
+   "MedGen:C0024796"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 13 sources",
+  "citations": 84,
+  "distinct_sources": 13,
+  "citations_by_layer": {
+   "layer_2_api": 78,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 71,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 587,
+  "answer_start": "Found 1 disease record for Marfan syndrome: Marfan syndrome [11]. \n\nChronic aortic dissection can occur in Marfan syndrome patients, and endovascular repair of ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 9.281,
+  "seconds": 24.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 106,
+   "citation": 84,
+   "trust_signal": 85,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 0,
+   "ts": "2026-09-25T13:05:33.064007Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 2,
+   "ts": "2026-09-25T13:05:37.852573Z",
+   "payload": {
+    "narrative": "Asking for associated phenotypic features of a named syndrome; a single disease-annotation source answers directly. (Marfan syndrome: 1 of 17 MedGen record matched by name)",
+    "query_class": "lookup",
+    "resolved_entities": [
+     {
+      "text": "Marfan syndrome",
+      "curie": "MedGen:C0024796",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 4,
+   "ts": "2026-09-25T13:05:38.185545Z",
+   "payload": {
+    "narrative": "searching 3 layers for marfan syndrome. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-715e0f509613",
+      "layer": "layer_1_graph",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-15a12590f696",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-2e09b0baffdb",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-401ea8dc291b",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-acee8a0dc92a",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1da0d2a415b5",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-886508d54528",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7d022ee5e8b8",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Marfan syndrome",
+      "curie": "MedGen:C0024796",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 6,
+   "ts": "2026-09-25T13:05:38.187302Z",
+   "payload": {
+    "call_id": "cq-715e0f509613",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 7,
+   "ts": "2026-09-25T13:05:38.187349Z",
+   "payload": {
+    "call_id": "pa-15a12590f696",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 8,
+   "ts": "2026-09-25T13:05:38.187364Z",
+   "payload": {
+    "call_id": "ct-2e09b0baffdb",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 9,
+   "ts": "2026-09-25T13:05:38.187377Z",
+   "payload": {
+    "call_id": "ne-401ea8dc291b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 10,
+   "ts": "2026-09-25T13:05:38.187389Z",
+   "payload": {
+    "call_id": "ne-acee8a0dc92a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 11,
+   "ts": "2026-09-25T13:05:38.187401Z",
+   "payload": {
+    "call_id": "ne-1da0d2a415b5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 12,
+   "ts": "2026-09-25T13:05:38.187414Z",
+   "payload": {
+    "call_id": "pa-886508d54528",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 13,
+   "ts": "2026-09-25T13:05:38.187426Z",
+   "payload": {
+    "call_id": "ne-7d022ee5e8b8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 14,
+   "ts": "2026-09-25T13:05:38.330476Z",
+   "payload": {
+    "call_id": "ne-401ea8dc291b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 15,
+   "ts": "2026-09-25T13:05:38.334980Z",
+   "payload": {
+    "call_id": "pa-15a12590f696",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 16,
+   "ts": "2026-09-25T13:05:38.558647Z",
+   "payload": {
+    "call_id": "ct-2e09b0baffdb",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 17,
+   "ts": "2026-09-25T13:05:38.661069Z",
+   "payload": {
+    "call_id": "cq-715e0f509613",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 18,
+   "ts": "2026-09-25T13:05:38.713090Z",
+   "payload": {
+    "call_id": "ne-acee8a0dc92a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 19,
+   "ts": "2026-09-25T13:05:38.852201Z",
+   "payload": {
+    "call_id": "pa-886508d54528",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 20,
+   "ts": "2026-09-25T13:05:38.986047Z",
+   "payload": {
+    "call_id": "ne-1da0d2a415b5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "fetch: 8 record(s)",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 21,
+   "ts": "2026-09-25T13:05:39.013151Z",
+   "payload": {
+    "call_id": "ne-7d022ee5e8b8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "summary: 71 record(s)",
+    "result_count": 71,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 22,
+   "ts": "2026-09-25T13:05:39.015036Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27375805",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27375805/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0024796",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0024796",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "2402263",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/2402263/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Marfan_Syndrome",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D008382",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00270686",
+    "source_url": "https://clinicaltrials.gov/study/NCT00270686",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27375805",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27375805/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00429364",
+    "source_url": "https://clinicaltrials.gov/study/NCT00429364",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35894201",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35894201/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00485368",
+    "source_url": "https://clinicaltrials.gov/study/NCT00485368",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37058316",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37058316/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00593710",
+    "source_url": "https://clinicaltrials.gov/study/NCT00593710",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38517496",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38517496/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00651235",
+    "source_url": "https://clinicaltrials.gov/study/NCT00651235",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "15d91f7d-3894-42d2-a558-dec9d89c8aeb",
+   "seq": 299,
+   "ts": "2026-09-25T13:05:53.668166Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 9281,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 13 sources",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_literature",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 133
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 disease record for Marfan syndrome: Marfan syndrome [11]. \n\nChronic aortic dissection can occur in Marfan syndrome patients, and endovascular repair of the dissected descending aorta can be effective when graft-to-graft bridging is performed [1]. \n\nMedGen lists these clinical features: Aortic regurgitation [2], Arachnodactyly [3], Astigmatism [4], Ectopia lentis [5], Esotropia [6], Exotropia [7], Pes planus [8], Glaucoma [9] and Congestive heart failure [10]. \n\nDisease records found\n\nDisease name: Marfan syndrome [11]. \n\nPubmed records found\n\nPubmed title: Marfan syndrome [12]. Pubmed title: Endovascular Repair by Graft-to-Graft Bridging in a Patient with Marfan Syndrome [77]. Pubmed title: [Latest advances in the diagnosis and treatment of Marfan syndrome] [79]. Pubmed title: What Is Marfan Syndrome [81]. Pubmed title: Marfan syndrome [83]. \n\nMedgen records found\n\nMedgen title: Marfan syndrome [13]. \n\nClinical features MedGen lists for Marfan syndrome\n\nMedgen clinical_features: Aortic regurgitation [2]. Medgen clinical_features: Arachnodactyly [3]. Medgen clinical_features: Astigmatism [4]. Medgen clinical_features: Ectopia lentis [5]. Medgen clinical_features: Esotropia [6]. Medgen clinical_features: Exotropia [7]. Medgen clinical_features: Pes planus [8]. Medgen clinical_features: Glaucoma [9]. Medgen clinical_features: Congestive heart failure [10]. Medgen clinical_features: Hypertropia [14]. Medgen clinical_features: Micrognathia [15]. Medgen clinical_features: Mitral regurgitation [16]. Medgen clinical_features: Mitral valve prolapse [17]. Medgen clinical_features: Myopia [18]. Medgen clinical_features: Pneumothorax [19]. Medgen clinical_features: Emphysema [20]. Medgen clinical_features: Retinal detachment [21]. Medgen clinical_features: Retrognathia [22]. Medgen clinical_features: Scoliosis [23]. Medgen clinical_features: Spondylolisthesis [24]. Medgen clinical_features: Strabismus [25]. Medgen clinical_features: Dental crowding [26]. Medgen clinical_features: Tricuspid regurgitation [27]. Medgen clinical_features: Tricuspid valve prolapse [28]. Medgen clinical_features: Cataract [29]. Medgen clinical_features: Bicuspid aortic valve [30]. Medgen clinical_features: Striae distensae [31]. Medgen clinical_features: Pectus carinatum [32]. Medgen clinical_features: Dolichocephaly [33]. Medgen clinical_features: High palate [34]. Medgen clinical_features: Tall stature [35]. Medgen clinical_features: Incisional hernia [36]. Medgen clinical_features: Flexion contracture [37]. Medgen clinical_features: Aortic dissection [38]. Medgen clinical_features: Hypoplasia of the iris [39]. Medgen clinical_features: Protrusio acetabuli [40]. Medgen clinical_features: Downslanted palpebral fissures [41]. Medgen clinical_features: Deeply set eye [42]. Medgen clinical_features: Pulmonary artery dilatation [43]. Medgen clinical_features: Genu recurvatum [44]. Medgen clinical_features: Kyphoscoliosis [45]. Medgen clinical_features: Narrow foot [46]. Medgen clinical_features: Camptodactyly [47]. Medgen clinical_features: Pes cavus [48]. Medgen clinical_features: Ascending tubular aorta aneurysm [49]. Medgen clinical_features: Hammertoe [50]. Medgen clinical_features: Inferior oblique muscle overaction [51]. Medgen clinical_features: Aortic root aneurysm [52]. Medgen clinical_features: Talipes [53]. Medgen clinical_features: Narrow palate [54]. Medgen clinical_features: Microspherophakia [55]. Medgen clinical_features: Increased axial length of the globe [56]. Medgen clinical_features: Premature osteoarthritis [57]. Medgen clinical_features: Thoracic lordosis [58]. Medgen clinical_features: Mitral annular calcification [59]. Medgen clinical_features: Long face [60]. Medgen clinical_features: Disproportionate tall stature [61]. Medgen clinical_features: Decreased muscle mass [62]. Medgen clinical_features: Narrow face [63]. Medgen clinical_features: Dural ectasia [64]. Medgen clinical_features: Reduced subcutaneous adipose tissue [65]. Medgen clinical_features: Malar flattening [66]. Medgen clinical_features: Equinus calcaneus [67]. Medgen clinical_features: Joint hypermobility [68]. Medgen clinical_features: Limited elbow extension [69]. Medgen clinical_features: Pectus excavatum [70]. Medgen clinical_features: Medial rotation of the medial malleolus [71]. Medgen clinical_features: Spontaneous cerebrospinal fluid leak [72]. Medgen clinical_features: Metatarsus adductus [73]. Medgen clinical_features: Reduced upper to lower segment ratio [74]. \n\nLiterature entity records found\n\nLiterature entity name: Marfan Syndrome [75]. \n\nClinical trial records found\n\nClinical trial name: Studies of Heritable Disorders of Connective Tissue [76]. Clinical trial name: Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome [78]. Clinical trial name: Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome [80]. Clinical trial name: Losartan Versus Atenolol for the Treatment of Marfan Syndrome [82]. Clinical trial name: A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome [84]. "
+}

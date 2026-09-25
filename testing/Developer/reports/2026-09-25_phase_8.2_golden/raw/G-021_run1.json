@@ -1,0 +1,1714 @@
+{
+ "record": {
+  "id": "G-021",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which papers in the graph mention the CFTR gene, and what do they cover?",
+  "session_id": "c103-6dc511dfe0ec",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:04:53+00:00",
+  "run_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "NCBIGene:1080"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 72 sources, not yet confirmed",
+  "citations": 72,
+  "distinct_sources": 71,
+  "citations_by_layer": {
+   "layer_1_graph": 54,
+   "layer_2_api": 13,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 17,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   17,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 466,
+  "answer_start": "Found 54 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29]",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 11,
+  "server_elapsed_s": 22.065,
+  "seconds": 35.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 96,
+   "citation": 72,
+   "trust_signal": 73,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 0,
+   "ts": "2026-09-25T13:03:18.352112Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 2,
+   "ts": "2026-09-25T13:03:22.380047Z",
+   "payload": {
+    "narrative": "Requires traversal from the CFTR gene to linked papers and then reading what each paper covers.",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 4,
+   "ts": "2026-09-25T13:03:22.381908Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-eec1a03109b1",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-65facdae5bb3",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-38e918cd0efc",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-faaa66d7718e",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9b8579ace686",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-74ba58857eb6",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d6c311d9b02c",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cecd3bd16440",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a530c7cf7e46",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f47f0b292928",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-49281c883e7a",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2690a4a55899",
+      "layer": "layer_2_api",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-b680e9ab671d",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 6,
+   "ts": "2026-09-25T13:03:22.383793Z",
+   "payload": {
+    "call_id": "cq-eec1a03109b1",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 7,
+   "ts": "2026-09-25T13:03:22.383840Z",
+   "payload": {
+    "call_id": "ne-65facdae5bb3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 8,
+   "ts": "2026-09-25T13:03:22.383855Z",
+   "payload": {
+    "call_id": "pa-38e918cd0efc",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 9,
+   "ts": "2026-09-25T13:03:22.383867Z",
+   "payload": {
+    "call_id": "ct-faaa66d7718e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 10,
+   "ts": "2026-09-25T13:03:22.383879Z",
+   "payload": {
+    "call_id": "ne-9b8579ace686",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 11,
+   "ts": "2026-09-25T13:03:22.383891Z",
+   "payload": {
+    "call_id": "ne-74ba58857eb6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 12,
+   "ts": "2026-09-25T13:03:22.383903Z",
+   "payload": {
+    "call_id": "ne-d6c311d9b02c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 13,
+   "ts": "2026-09-25T13:03:22.383911Z",
+   "payload": {
+    "call_id": "ne-cecd3bd16440",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 14,
+   "ts": "2026-09-25T13:03:22.383919Z",
+   "payload": {
+    "call_id": "pa-a530c7cf7e46",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 15,
+   "ts": "2026-09-25T13:03:22.383927Z",
+   "payload": {
+    "call_id": "ne-f47f0b292928",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 16,
+   "ts": "2026-09-25T13:03:22.383940Z",
+   "payload": {
+    "call_id": "ne-49281c883e7a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 17,
+   "ts": "2026-09-25T13:03:22.383948Z",
+   "payload": {
+    "call_id": "ne-2690a4a55899",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 18,
+   "ts": "2026-09-25T13:03:22.383956Z",
+   "payload": {
+    "call_id": "cq-b680e9ab671d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 19,
+   "ts": "2026-09-25T13:03:22.541442Z",
+   "payload": {
+    "call_id": "pa-38e918cd0efc",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 20,
+   "ts": "2026-09-25T13:03:22.658745Z",
+   "payload": {
+    "call_id": "ne-9b8579ace686",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 21,
+   "ts": "2026-09-25T13:03:22.684963Z",
+   "payload": {
+    "call_id": "ne-74ba58857eb6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 22,
+   "ts": "2026-09-25T13:03:22.734418Z",
+   "payload": {
+    "call_id": "ne-d6c311d9b02c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 23,
+   "ts": "2026-09-25T13:03:22.803036Z",
+   "payload": {
+    "call_id": "ct-faaa66d7718e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 24,
+   "ts": "2026-09-25T13:03:22.835414Z",
+   "payload": {
+    "call_id": "ne-2690a4a55899",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 25,
+   "ts": "2026-09-25T13:03:22.936858Z",
+   "payload": {
+    "call_id": "cq-b680e9ab671d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "17 row(s) of 17",
+    "result_count": 17,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 26,
+   "ts": "2026-09-25T13:03:23.268356Z",
+   "payload": {
+    "call_id": "ne-65facdae5bb3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 27,
+   "ts": "2026-09-25T13:03:31.142917Z",
+   "payload": {
+    "call_id": "cq-eec1a03109b1",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "100 row(s) of 1945",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 28,
+   "ts": "2026-09-25T13:03:31.378182Z",
+   "payload": {
+    "call_id": "ne-f47f0b292928",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 29,
+   "ts": "2026-09-25T13:03:31.407047Z",
+   "payload": {
+    "call_id": "ne-cecd3bd16440",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 30,
+   "ts": "2026-09-25T13:03:31.602587Z",
+   "payload": {
+    "call_id": "ne-49281c883e7a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 31,
+   "ts": "2026-09-25T13:03:31.630124Z",
+   "payload": {
+    "call_id": "pa-a530c7cf7e46",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 32,
+   "ts": "2026-09-25T13:03:39.223926Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10075921",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10075921/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10094564",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10094564/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10200050",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10200050/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10561583",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10561583/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10581360",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10581360/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10651488",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10651488/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10666020",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10666020/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10766763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10766763/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10799517",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10799517/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10852925",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10852925/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10862786",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10862786/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10893422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10893422/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10982807",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10982807/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11025834",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11025834/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11051556",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11051556/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11095651",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11095651/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11104661",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11104661/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11109941",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11109941/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11115825",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11115825/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11117575",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11117575/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11134427",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11134427/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11146634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11146634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11158634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11158634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11168024",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11168024/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11175304",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11175304/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11186891",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11186891/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11243954",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11243954/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11304524",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11304524/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11333866",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11333866/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11354633",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11354633/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11356077",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11356077/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11379874",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11379874/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11397675",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11397675/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11400707",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11400707/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462247",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462247/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462248",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462248/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11524016",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11524016/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11529289",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11529289/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11536079",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11536079/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11569691",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11569691/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11574497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11574497/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11597137",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11597137/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11667976",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11667976/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11680956",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11680956/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11683083",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11683083/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11686989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11686989/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11688981",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11688981/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11707463",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11707463/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713441",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713441/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713719",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713719/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11715005",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11715005/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11748227",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11748227/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11756355",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11756355/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11773581",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11773581/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "602421",
+    "source_url": "https://omim.org/entry/602421",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00179439",
+    "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705266",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00865904",
+    "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01078740",
+    "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01132482",
+    "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1706438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01348204",
+    "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "50dcc1f4-8994-40df-9dd6-a2efa118f7be",
+   "seq": 275,
+   "ts": "2026-09-25T13:03:51.847882Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 11,
+    "elapsed_ms": 22065,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 72 sources, not yet confirmed",
+    "layer_calls_used": 12,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_applicable",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 195
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "wants_literature",
+      "decided_by": "jev",
+      "jev_choice": "wants_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": "wants_literature",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 169
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 54 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54]. \n\nArticle records found\n\nArticle record PMID:10075921 [1]. Article record PMID:10094564 [2]. Article record PMID:10200050 [3]. Article record PMID:10561583 [4]. Article record PMID:10581360 [5]. Article record PMID:10651488 [6]. Article record PMID:10666020 [7]. Article record PMID:10766763 [8]. Article record PMID:10799517 [9]. Article record PMID:10852925 [10]. Article record PMID:10862786 [11]. Article record PMID:10893422 [12]. Article record PMID:10982807 [13]. Article record PMID:11025834 [14]. Article record PMID:11051556 [15]. Article record PMID:11095651 [16]. Article record PMID:11104661 [17]. Article record PMID:11109941 [18]. Article record PMID:11115825 [19]. Article record PMID:11117575 [20]. Article record PMID:11134427 [21]. Article record PMID:11146634 [22]. Article record PMID:11158634 [23]. Article record PMID:11168024 [24]. Article record PMID:11175304 [25]. Article record PMID:11186891 [26]. Article record PMID:11243954 [27]. Article record PMID:11304524 [28]. Article record PMID:11333866 [29]. Article record PMID:11354633 [30]. Article record PMID:11356077 [31]. Article record PMID:11379874 [32]. Article record PMID:11397675 [33]. Article record PMID:11400707 [34]. Article record PMID:11462247 [35]. Article record PMID:11462248 [36]. Article record PMID:11524016 [37]. Article record PMID:11529289 [38]. Article record PMID:11536079 [39]. Article record PMID:11569691 [40]. Article record PMID:11574497 [41]. Article record PMID:11597137 [42]. Article record PMID:11667976 [43]. Article record PMID:11680956 [44]. Article record PMID:11683083 [45]. Article record PMID:11686989 [46]. Article record PMID:11688981 [47]. Article record PMID:11707463 [48]. Article record PMID:11713441 [49]. Article record PMID:11713719 [50]. Article record PMID:11715005 [51]. Article record PMID:11748227 [52]. Article record PMID:11756355 [53]. Article record PMID:11773581 [54]. \n\nGene records found\n\nGene symbol: CFTR [55]. Gene name: CFTR [59]. \n\nPubmed records found\n\nPubmed title: Molecular Structure of the Human CFTR Ion Channel [56]. Pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [61]. Pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [64]. Pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [67]. Pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [70]. \n\nClinvar records found\n\nClinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [57]. Clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [62]. Clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [65]. Clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [68]. Clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [71]. \n\nOmim records found\n\nCYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR [58]. CFTR [58]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [60]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [63]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [66]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [69]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [72]. \n\nNote: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

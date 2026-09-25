@@ -1360,6 +1360,52 @@ What you should see:
 - The note saying the answer was cut short appears on fewer answers than before.
 - Why it matters: 24 of 30 live answers used to hit the 20-source ceiling and tell the reader the answer was incomplete. Your decision of 2026-09-25 raised it to 30, and the two limits behind it were raised so the 30 takes effect on paper questions too.
 
+### 83. A question the word list does not know is judged, not refused (Jev as the classifier)
+
+Queries to try:
+
+- `Tell me about the tree of life`, as a new search.
+- `what is the best pizza in Chicago`, as a new search.
+- `Which diseases are associated with BRCA1?`, then as a follow-up in the same conversation `is it good with pizza?`, then `and what about it in children?`.
+- `make me a weekly workout plan`.
+
+What you should see:
+
+- The tree of life is answered, from NCBI's records, where before it was refused as off topic.
+- Pizza is refused, with today's wording. So is the pizza follow-up, and the workout plan.
+- `and what about it in children?` after BRCA1 is answered: a follow-up on the same subject is on topic.
+- Known: an off-topic follow-up that happens to contain a biomedical word such as "cell" or "study" can still get through, as it did before tonight. A To do card.
+- Why it matters: a word list decided what was on topic and refused anything it did not recognise. Jev, the decision model you chose, now makes that call for any question the list does not recognise; the list can still let a clearly biomedical question straight through.
+
+### 84. "Recent papers" asks how far back (12.15)
+
+Queries to try:
+
+- `recent papers on statins`, then pick "the last 5 years".
+- `papers on statins since 2022`.
+- `recent-onset diabetes treatment`.
+
+What you should see:
+
+- `recent papers on statins` asks "How far back should I search?" with the last 12 months, the last 5 years and the last 10 years. Picking 5 years returns only papers from those years.
+- `papers on statins since 2022` is not asked back.
+- `recent-onset diabetes treatment` is not asked back: "recent" there describes the disease, not the papers.
+- Known: after develop restarts or redeploys, a choice clicked on an earlier question searches without the year limit.
+
+### 85. Whether a question wants papers is a classifier's choice (12.16 part 3)
+
+Queries to try:
+
+- `papers on caffeine`.
+- `what does the literature say about MTHFR`.
+- `What is GERD?`.
+
+What you should see:
+
+- The first two are treated as questions about papers and answer with papers.
+- `What is GERD?` answers about the condition, not only with papers.
+- Why it matters: a fixed list of words such as "paper" and "article" decided this before; your rule is that decisions are not hardcoded.
+
 ## Workflow for the product owner
 
 1. Open the develop app: <https://search-agent-web-develop-2aeb.up.railway.app>

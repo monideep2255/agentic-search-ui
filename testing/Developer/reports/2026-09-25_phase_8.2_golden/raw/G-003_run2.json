@@ -1,0 +1,918 @@
+{
+ "record": {
+  "id": "G-003",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?",
+  "session_id": "c103-e9ed9e7a7b23",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:11:00+00:00",
+  "run_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C4552100"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 26 sources",
+  "citations": 27,
+  "distinct_sources": 25,
+  "citations_by_layer": {
+   "layer_2_api": 8,
+   "layer_3_enrichment": 8,
+   "layer_1_graph": 11
+  },
+  "must_cite_total": 4,
+  "must_cite_hits": 3,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 3,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 12,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   12
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 303,
+  "answer_start": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [2][3][4][5][6][7][9][10][11][12][13][14][15][16][17][18], linked to 1 disease: Lynch synd",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 19.549,
+  "seconds": 36.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 49,
+   "citation": 27,
+   "trust_signal": 28,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 0,
+   "ts": "2026-09-25T13:09:27.884813Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 2,
+   "ts": "2026-09-25T13:09:42.523288Z",
+   "payload": {
+    "narrative": "The question asks broadly for what is known about Lynch syndrome across multiple NCBI resources, covering multiple entity types (genes, condition, variants, trials), which is open-ended and multi-source. (Lynch syndrome: 1 of 10 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 4,
+   "ts": "2026-09-25T13:09:42.525699Z",
+   "payload": {
+    "narrative": "searching 3 layers for lynch syndrome. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-82faf310a0e2",
+      "layer": "layer_1_graph",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-548bf2e37191",
+      "layer": "layer_3_enrichment",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-0b473fe765b6",
+      "layer": "layer_3_enrichment",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4e11a12e0518",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-af2cd51997b7",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-044316b443c8",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-43271b5d1aa2",
+      "layer": "layer_3_enrichment",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ebfcc40622c2",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 6,
+   "ts": "2026-09-25T13:09:42.526819Z",
+   "payload": {
+    "call_id": "cq-82faf310a0e2",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 7,
+   "ts": "2026-09-25T13:09:42.526850Z",
+   "payload": {
+    "call_id": "pa-548bf2e37191",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 8,
+   "ts": "2026-09-25T13:09:42.526861Z",
+   "payload": {
+    "call_id": "ct-0b473fe765b6",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 9,
+   "ts": "2026-09-25T13:09:42.526870Z",
+   "payload": {
+    "call_id": "ne-4e11a12e0518",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 10,
+   "ts": "2026-09-25T13:09:42.526878Z",
+   "payload": {
+    "call_id": "ne-af2cd51997b7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 11,
+   "ts": "2026-09-25T13:09:42.526886Z",
+   "payload": {
+    "call_id": "ne-044316b443c8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 12,
+   "ts": "2026-09-25T13:09:42.526895Z",
+   "payload": {
+    "call_id": "pa-43271b5d1aa2",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 13,
+   "ts": "2026-09-25T13:09:42.526903Z",
+   "payload": {
+    "call_id": "ne-ebfcc40622c2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 14,
+   "ts": "2026-09-25T13:09:42.678223Z",
+   "payload": {
+    "call_id": "ne-4e11a12e0518",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 15,
+   "ts": "2026-09-25T13:09:42.679989Z",
+   "payload": {
+    "call_id": "pa-548bf2e37191",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "ok: 3 record(s)",
+    "result_count": 3,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 16,
+   "ts": "2026-09-25T13:09:42.884138Z",
+   "payload": {
+    "call_id": "ne-af2cd51997b7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 17,
+   "ts": "2026-09-25T13:09:42.907388Z",
+   "payload": {
+    "call_id": "ct-0b473fe765b6",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 18,
+   "ts": "2026-09-25T13:09:43.982877Z",
+   "payload": {
+    "call_id": "cq-82faf310a0e2",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "12 row(s) of 12",
+    "result_count": 12,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 19,
+   "ts": "2026-09-25T13:09:44.122723Z",
+   "payload": {
+    "call_id": "pa-43271b5d1aa2",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 20,
+   "ts": "2026-09-25T13:09:44.227689Z",
+   "payload": {
+    "call_id": "ne-ebfcc40622c2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 21,
+   "ts": "2026-09-25T13:09:44.242564Z",
+   "payload": {
+    "call_id": "ne-044316b443c8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "fetch: 8 record(s)",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 22,
+   "ts": "2026-09-25T13:09:44.244337Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1633554",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/1633554",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00141466",
+    "source_url": "https://clinicaltrials.gov/study/NCT00141466",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00262171",
+    "source_url": "https://clinicaltrials.gov/study/NCT00262171",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00341575",
+    "source_url": "https://clinicaltrials.gov/study/NCT00341575",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00450424",
+    "source_url": "https://clinicaltrials.gov/study/NCT00450424",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00508573",
+    "source_url": "https://clinicaltrials.gov/study/NCT00508573",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:27030",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/27030",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 3",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4552100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4552100",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2956",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 6",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4072",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "epithelial cell adhesion molecule",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4763",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "neurofibromin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5378",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 1, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5395",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5395",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 2, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:6224",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/6224",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "ribosomal protein S20",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7048",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7048",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta receptor 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:999",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/999",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "cadherin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "21508689",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/21508689/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/1633554",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/C537261",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24468183",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24468183/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D003123",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30134129",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30134129/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Lynch_Syndrome_II",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D055847",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34798986",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34798986/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36706841",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36706841/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "ea46a10c-a38b-4126-aa35-0be1d1a2c210",
+   "seq": 128,
+   "ts": "2026-09-25T13:10:00.579139Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 19549,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 26 sources",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.94,
+      "guard_choice": "not_literature",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 109
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.98,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 137
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [2][3][4][5][6][7][9][10][11][12][13][14][15][16][17][18], linked to 1 disease: Lynch syndrome [8]. \n\nCondition Record and Literature\n\nThe MedGen title for the condition is Lynch syndrome [1]. \n\nDisease records found\n\nDisease name: Lynch syndrome [8]. \n\nClinical trial records found\n\nClinical trial name: Implementation of a New Strategy to Identify HNPCC Patients [2]. Clinical trial name: Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [3]. Clinical trial name: Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [4]. Clinical trial name: Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [5]. Clinical trial name: Registry for Women Who Are At Risk Or May Have Lynch Syndrome [6]. \n\nGene-to-disease mapping\n\nGene NCBIGene:27030, name: mutL homolog 3 [7]. Gene NCBIGene:2956, name: mutS homolog 6 [9]. Gene NCBIGene:4072, name: epithelial cell adhesion molecule [10]. Gene NCBIGene:4292, name: mutL homolog 1 [11]. Gene NCBIGene:4436, name: mutS homolog 2 [12]. Gene NCBIGene:4763, name: neurofibromin 1 [13]. Gene NCBIGene:5378, name: PMS1 homolog 1, mismatch repair system component [14]. Gene NCBIGene:5395, name: PMS1 homolog 2, mismatch repair system component [15]. Gene NCBIGene:6224, name: ribosomal protein S20 [16]. Gene NCBIGene:7048, name: transforming growth factor beta receptor 2 [17]. Gene NCBIGene:999, name: cadherin 1 [18]. \n\nPubmed records found\n\nPubmed title: Lynch syndrome [19]. Pubmed title: Differentiating Lynch-like from Lynch syndrome [22]. Pubmed title: Lynch Syndrome-Associated Colorectal Cancer [24]. Pubmed title: Identification of Lynch Syndrome [26]. Pubmed title: Lynch Syndrome Genetics and Clinical Implications [27]. \n\nMedgen records found\n\nMedgen title: Lynch syndrome [1]. Medgen clinical_features: MedGen lists no clinical features for Lynch syndrome [20]. \n\nLiterature entity records found\n\nLiterature entity name: Lynch syndrome I (site-specific colonic cancer) [21]. Literature entity name: Colorectal Neoplasms Hereditary Nonpolyposis [23]. Literature entity name: Lynch Syndrome II [25]. "
+}

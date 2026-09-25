@@ -17,7 +17,7 @@ It does not cover the wider system diagram (the five surfaces, the request lifec
 - [How the calls hand off to each other](#how-the-calls-hand-off-to-each-other)
 - [What is not a model](#what-is-not-a-model)
 - [Cost, time and caching](#cost-time-and-caching)
-- [Planned: Jev as the classifier](#planned-jev-as-the-classifier)
+- [Jev as the classifier, live on develop](#jev-as-the-classifier-live-on-develop)
 - [Where to change a model](#where-to-change-a-model)
 - [What this document did not check](#what-this-document-did-not-check)
 
@@ -143,19 +143,24 @@ Prompt caching (`src/system_03_search_agent/harness/cache.py`, design in `.claud
 
 Nothing volatile is ever placed in this prefix: not the current question, not a timestamp, not a session id. Two calls deliberately skip the prefix: the Guardrail's attack classifier and the Write step's sentence check. Both were measured to sometimes act as the answering agent instead of doing their own narrow job when the prefix came first, so they run on the bare instruction instead.
 
-## Planned: Jev as the classifier
+## Jev as the classifier, live on develop
 
-Not built yet. On 2026-09-25 the product owner decided that a separate classifier model will take over the loop's small multiple-choice decisions on develop: Jev, `typesafe/jev-1.13`, reached through OpenRouter's `POST /api/alpha/decisions` endpoint. Jev returns a chosen option plus a probability for each option and a confidence score. It cannot write free text, so it is not a candidate for anything in the "Every model call" table above except the classification-shaped decisions.
+Built overnight on 2026-09-25 as build phase 8.2 (pull request #106) and switched on for develop with `CLASSIFIER_PROVIDER=jev`; production is unchanged, because the code default is `guard`. Jev, `typesafe/jev-1.13`, is reached through OpenRouter's `POST /api/alpha/decisions` endpoint by `harness/jev_client.py`, behind one seam, `decide()` in `harness/decide.py`. It returns a chosen option plus a probability for each option and a confidence score. It cannot write free text, so it is not a candidate for anything in the "Every model call" table above except the classification-shaped decisions.
 
-The five decisions planned to move to Jev:
+The decisions it makes on develop:
 
-- Whether a question is relevant to what the system covers
-- The one-to-three-word ask-back decision
-- Which literature source to route a question to
-- Whether to ask about recent years
-- Which resource to pull
+- Whether a question is relevant to what the system covers (`guardrail.relevancy`), asked only when the biomedical word list does not recognise the question; the list can admit but never refuse.
+- The one-to-three-word ask-back decision (`think.ask_back`); the guard tier still writes the choices offered, since Jev cannot write text.
+- Whether a question asks for papers (`plan.literature`), replacing a word list.
+- Whether a question asks for recent work without saying how recent (`think.recent_years`), which asks "How far back should I search?".
+- Which resource to pull (`plan.resource`) is NOT wired: the plan makes no runtime choice between tools today. The closed option list it would use is `tools/catalogue.py`.
 
-For each of these, the guard tier keeps making the same decision alongside Jev, purely so the two can be compared on a table later. Jev's answer is what the loop actually uses. Safety checks (the guardrail's attack classifier, the cite-or-refuse gate, the sentence check) are not part of this change. They keep working exactly as described above.
+How each decision is made:
+
+- The guard tier makes the same decision alongside Jev, purely for comparison.
+- Jev's answer is used when it arrives within 3 seconds with an offered option; otherwise the guard tier's pick is used and the reason recorded.
+- The guard tier's comparison pick is given one second after Jev answers (`GUARD_COMPARISON_GRACE_S`), so many records read not ready.
+- Every decision rides on the answer's done event in `decisions`. The first comparison table is `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md`.
 
 ```mermaid
 flowchart LR

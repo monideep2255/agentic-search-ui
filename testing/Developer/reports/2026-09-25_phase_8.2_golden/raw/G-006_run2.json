@@ -1,0 +1,245 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-e6ded2496d19",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:13:26+00:00",
+  "run_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 38,
+  "answer_start": "Found 1 derived record for PMID 11237011: PMID:11237011 [1]. \n\nDerived records found\n\nDerived PMID:11237011, gene_link_status: absent [1]. \n\nNote: the written s",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 18.485,
+  "seconds": 26.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 7,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+   "seq": 0,
+   "ts": "2026-09-25T13:11:58.801556Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+   "seq": 2,
+   "ts": "2026-09-25T13:12:05.941857Z",
+   "payload": {
+    "narrative": "Asks for several types of linked records from a single known PMID, a direct look-up across linked NCBI databases.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+   "seq": 4,
+   "ts": "2026-09-25T13:12:05.943873Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8bbd80b6e3c9",
+      "layer": "layer_1_graph",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+   "seq": 6,
+   "ts": "2026-09-25T13:12:05.944846Z",
+   "payload": {
+    "call_id": "cq-8bbd80b6e3c9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+   "seq": 7,
+   "ts": "2026-09-25T13:12:09.220284Z",
+   "payload": {
+    "call_id": "cq-8bbd80b6e3c9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+   "seq": 8,
+   "ts": "2026-09-25T13:12:09.221899Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11237011",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11237011/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "gene_link_status",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "dbf0d183-0f33-41db-a6cb-1e74158df923",
+   "seq": 20,
+   "ts": "2026-09-25T13:12:17.185308Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 18485,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 121
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.9,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 130
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 derived record for PMID 11237011: PMID:11237011 [1]. \n\nDerived records found\n\nDerived PMID:11237011, gene_link_status: absent [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

@@ -17,49 +17,42 @@ In priority order.
 
 | # | Feature, in plain words | Item | Waiting on |
 |---|---|---|---|
-| 1 | Which questions count as a request for papers becomes a classifier's decision; today it is a word list | 12.16 part 3 | Nobody on it |
-| 2 | A question asking for recent papers asks what recent means | 12.15 | Nobody on it |
-| 3 | Four golden test rows disagree with what the product does, row by row | the golden rows | Your decision |
+| 1 | An answer about something else can say "MedGen lists no clinical features for ...": 15 golden answers carry it, one "for Seen by breast cancer nurse" inside a question about how many genes relate to breast cancer | `testing/Developer/reports/2026-09-25_product_review_8.1/report.md`, from phase 8.1's fix round | Nobody on it |
+| 2 | Every answer opens with the code-built "Found N ... records for X" line, whatever the writing model, so its first sentence never answers the question | `testing/Developer/reports/2026-09-25_writer_bench/results.md` and the 8.1 product review | Your decision |
+| 3 | Answers got slower overnight: the golden run's median was 17.1 seconds after phase 8.1 and 21.9 after phase 8.2 | `testing/Developer/reports/2026-09-25_phase_8.2_golden/summary.md` | Nobody on it |
 | 4 | Tell the reader when the system wrote its own search rather than using a checked one | the drafted search | Nobody on it |
-| 5 | Jev becomes our classifier wherever a choice needs to be made: whether a one-to-three-word question gets a clarification question or moves forward, guardrails on relevancy, and which resource to pull | [direction, points a and c](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Nobody on it |
-| 6 | Our NCBI APIs and enrichment calls become functions, MCP style, so Jev can help with the classifier: internal MCP servers around the Layer 2 and Layer 3 calls | [11.32](#detail-1132), direction point b | Nobody on it |
-| 7 | Models chosen per task by tier: open source where an equivalent is available, frontier models where they are needed | [direction, point d](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Nobody on it |
-| 8 | The agentic loop: interpret the objective, make a plan, use tools, check intermediate results, adjust when something fails, produce or apply the final result | [the agentic loop](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Nobody on it |
-| 9 | Hard and soft edges over a fuller graph, "connecting the dots" | [11.29](#detail-1129) | Nobody on it |
-| 10 | A bounded trial of the probability model | [11.38](#detail-1138) | Nobody on it |
-| 11 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | Nobody on it |
-| 12 | Does the Plain language answer keep its small grey medical-advice line? | 9.11 | Your decision |
-| 13 | The trust-line wording | 9.9 | Your decision |
-| 14 | Judge answer quality once answering is reliable | 10.4 | Nobody on it |
-| 15 | A lock file for the Python build | the lock file | Your decision |
-| 16 | The same question does not always return the same papers: six identical PubMed searches returned two different sets, and `reflux disease` found nothing on one run in six | Where we stopped, notes carried over from the old tracker; tried 2026-09-25, not reproducible, fix reverted: `tracker/phase_8.1.md` F-8.1-03 | Nobody on it |
-| 17 | The trust verdict under an answer changes with nothing else changed: five runs on identical evidence gave `flag` four times and `ask` once | Where we stopped, Next, in order; tried 2026-09-25, the fix labelled correct answers as disagreeing and was reverted: F-8.1-A13 | Nobody on it |
-| 18 | `What genes are associated with MODY?` failed its citation check on 5 of 6 runs on 2026-09-20, and nobody owns it | Shipped days, 2026-09-20; tried 2026-09-25, the fix weakened the citation check and was reverted: F-8.1-J01 | Nobody on it |
-| 19 | One search took 127 seconds against a median of 14, and nobody owns it | Shipped days, 2026-09-20; diagnosed 2026-09-25, a timeout that stops the wait but not the work: F-8.1-05 | Nobody on it |
-| 20 | Close the remaining path where the system writes its own graph search, or ask the reader instead; card 7 only tells them | L-01 | Nobody on it |
-| 21 | Three golden questions get nothing from the graph: G-005 and G-022 find nothing, and G-036 never searches it | Where we stopped, loose ends | Nobody on it |
-| 22 | A reworded sentence that switches papers can point at the wrong paper when the only title word it shares is a generic one, such as "patients" | 12.16 part 4 | Nobody on it |
-| 23 | A record with several sentences shows as several list rows under one heading, and no test covers it | Where we stopped, loose ends | Nobody on it |
-| 24 | The paced handoff may show a false writing step on some other path, and nobody has checked | 11.28 | Nobody on it |
-| 25 | An isolate search can filter only by gene prefix | Shipped days, 2026-09-22 | Nobody on it |
-| 26 | The graph holds no disease names and no MeSH terms, so it goes to the data repository to fix | Where we stopped, notes carried over from the old tracker | Nobody on it |
-| 27 | The two command line examples on the Integrations page have never been run as printed | 11.30 | Nobody on it |
-| 28 | One answer shows several different totals and never says which is which | D-2, Shipped days, 2026-09-20 | Your decision |
-| 29 | The provenance note under the variant-to-disease table | Where we stopped, waiting on the product owner | Your decision |
-| 30 | Where the Plain language and Researcher toggle goes | Where we stopped, waiting on the product owner | Your decision |
-| 31 | Four text sizes and spacings differ between the design system and the code: which one wins | 2.13 | Your decision |
-| 32 | Install the public USWDS package, the base of the NCBI design system: yes or no | 2.13 | Your decision |
-| 33 | NCBI's gene summary was added beyond the locked specification's Section 6.2 table and waits for the next reconciliation | 11.31 | Your decision |
-| 34 | Seven test files the deletion inventory set aside | Where we stopped, loose ends | Your decision |
-| 35 | Merge bossman mode's two modes, due with the next build phase | Session history, 2026-09-24 evening | Nobody on it |
-| 36 | `/phase-checkpoint` names the wrong CLAUDE.md line for the tracked counts | Where we stopped, loose ends | Nobody on it |
-| 37 | Something deleted a tracked file from the working tree during a session, and the cause is unknown | Where we stopped, loose ends; lead found 2026-09-25: a process makes " 2" copies inside the repository mid-session (a ref file, `.git/index 2`), likely iCloud Desktop sync | Nobody on it |
-| 38 | The explanation half of 11.31: you approved the current state as is on 2026-09-21, and the option left, having the code place the plain source text verbatim and cited, is yours to take up or not | 11.31 | Your decision |
-| 39 | Show the sentences that answer the question, quoted under each paper, so nobody has to open the paper to find them: from NCBI's LitSense, probed on about ten golden questions before it is built | [13.1](#detail-131) | Nobody on it |
-| 40 | `Which BRCA1 variants are pathogenic?` lists 40 unclassified variants and the model's honest caveat is stripped | `tracker/phase_8.1.md` F-8.1-A16, found 2026-09-25, older than that night | Nobody on it |
-| 41 | At Researcher depth a question about a disease's features shows them in the list but not in the written answer: give them room in the prompt only when a classifier decides the question asks about features | F-8.1-V01 | Nobody on it |
-| 42 | A graph search column named `clinical_features` would be read as MedGen's clinical features | F-8.1-V02 | Nobody on it |
-| 43 | Two golden questions that answered on 2026-09-22 no longer do: G-004, a Salmonella isolate question that runs no search, and G-006, sequence data for PMID 11237011 | the golden run of 2026-09-25, `testing/Developer/reports/2026-09-25_phase_8.1_golden/` | Nobody on it |
+| 5 | Models chosen per task by tier: open source where an equivalent is available, frontier models where they are needed | [direction, point d](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Your decision: pick the writing model from `testing/Developer/reports/2026-09-25_writer_bench/results.md` |
+| 6 | The agentic loop: interpret the objective, make a plan, use tools, check intermediate results, adjust when something fails, produce or apply the final result | [the agentic loop](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Nobody on it |
+| 7 | Hard and soft edges over a fuller graph, "connecting the dots" | [11.29](#detail-1129) | Nobody on it |
+| 8 | The trust-line wording | 9.9; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Your decision |
+| 9 | Judge answer quality once answering is reliable | 10.4 | Nobody on it |
+| 10 | A lock file for the Python build | the lock file; decided 2026-09-25, not built | Nobody on it |
+| 11 | The same question does not always return the same papers: six identical PubMed searches returned two different sets, and `reflux disease` found nothing on one run in six | Where we stopped, notes carried over from the old tracker; tried 2026-09-25, not reproducible, fix reverted: `tracker/phase_8.1.md` F-8.1-03 | Nobody on it |
+| 12 | The trust verdict under an answer changes with nothing else changed: five runs on identical evidence gave `flag` four times and `ask` once | Where we stopped, Next, in order; tried 2026-09-25, the fix labelled correct answers as disagreeing and was reverted: F-8.1-A13 | Nobody on it |
+| 13 | `What genes are associated with MODY?` failed its citation check on 5 of 6 runs on 2026-09-20, and nobody owns it | Shipped days, 2026-09-20; tried 2026-09-25, the fix weakened the citation check and was reverted: F-8.1-J01 | Nobody on it |
+| 14 | One search took 127 seconds against a median of 14, and nobody owns it | Shipped days, 2026-09-20; diagnosed 2026-09-25, a timeout that stops the wait but not the work: F-8.1-05 | Nobody on it |
+| 15 | Close the remaining path where the system writes its own graph search, or ask the reader instead; card 7 only tells them | L-01 | Nobody on it |
+| 16 | Three golden questions get nothing from the graph: G-005 and G-022 find nothing, and G-036 never searches it | Where we stopped, loose ends | Nobody on it |
+| 17 | A reworded sentence that switches papers can point at the wrong paper when the only title word it shares is a generic one, such as "patients" | 12.16 part 4; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Nobody on it |
+| 18 | A record with several sentences shows as several list rows under one heading, and no test covers it | Where we stopped, loose ends; a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built | Nobody on it |
+| 19 | The paced handoff may show a false writing step on some other path, and nobody has checked | 11.28 | Nobody on it |
+| 20 | An isolate search can filter only by gene prefix | Shipped days, 2026-09-22; year from the question built on the 8.4 branch, location needs the plan step | Nobody on it |
+| 21 | The two command line examples on the Integrations page have never been run as printed | 11.30; measured 2026-09-25, the page fix is on the 8.4 branch | Nobody on it |
+| 22 | One answer shows several different totals and never says which is which | D-2, Shipped days, 2026-09-20; the screen half is on the 8.4 branch, the backend wording is not built | Your decision |
+| 23 | The provenance note under the variant-to-disease table | Where we stopped, waiting on the product owner; a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built | Your decision |
+| 24 | Where the Plain language and Researcher toggle goes | Where we stopped, waiting on the product owner; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Your decision |
+| 25 | Install the public USWDS package, the base of the NCBI design system: yes or no | 2.13; decided 2026-09-25, not built | Nobody on it |
+| 26 | Seven test files the deletion inventory set aside | Where we stopped, loose ends; decided 2026-09-25; the deletion was reverted because one file pinned three controls (F-8.5-V08) | Nobody on it |
+| 27 | Merge bossman mode's two modes, due with the next build phase | Session history, 2026-09-24 evening | Nobody on it |
+| 28 | Something deleted a tracked file from the working tree during a session, and the cause is unknown | Where we stopped, loose ends; lead found 2026-09-25: a process makes " 2" copies inside the repository mid-session (a ref file, `.git/index 2`), likely iCloud Desktop sync | Nobody on it |
+| 29 | Show the sentences that answer the question, quoted under each paper, so nobody has to open the paper to find them: from NCBI's LitSense, probed on about ten golden questions before it is built | [13.1](#detail-131); probed twice 2026-09-25, useful for 4 of 20 papers, not built: `testing/Developer/reports/2026-09-25_phase_8.4/litsense_probe/findings.md` | Your decision |
+| 30 | `Which BRCA1 variants are pathogenic?` lists 40 unclassified variants and the model's honest caveat is stripped | `tracker/phase_8.1.md` F-8.1-A16, found 2026-09-25, older than that night | Nobody on it |
+| 31 | At Researcher depth a question about a disease's features shows them in the list but not in the written answer: give them room in the prompt only when a classifier decides the question asks about features | F-8.1-V01 | Nobody on it |
+| 32 | A graph search column named `clinical_features` would be read as MedGen's clinical features | F-8.1-V02 | Nobody on it |
+| 33 | Two golden questions that answered on 2026-09-22 no longer do: G-004, a Salmonella isolate question that runs no search, and G-006, sequence data for PMID 11237011 | the golden run of 2026-09-25, `testing/Developer/reports/2026-09-25_phase_8.1_golden/` | Nobody on it |
+| 34 | Jev's comparison table is mostly empty: let DeepSeek's pick land any time before the answer finishes, not within one second | `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` | Nobody on it |
+| 35 | An off-topic follow-up that happens to contain a biomedical word such as "cell" or "study" still gets through, as it did before tonight | `tracker/phase_8.2.md` F-8.2-V01 | Nobody on it |
+| 36 | A picked "How far back" window is lost after a restart or deploy, and nothing tells the person | F-8.2-V02 | Nobody on it |
 
 Below sits the detail behind architecture cards 8 to 13 and card 14, 11.11.
 It moved here from `testing/UI_fixes_done.md` on 2026-09-24 without a word
@@ -396,31 +389,40 @@ the last column.
 
 | # | What to check, in plain words | Item | Queries |
 |---|---|---|---|
-| 1 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | 12.14 | 81 |
-| 2 | A good question is never refused because the think step's reply was malformed | 12.17 | 80 |
-| 3 | An answer can cite up to 30 sources, and a question about papers reaches them | the ceiling, the byte ceiling | 82 |
-| 4 | An NCBI outage no longer turns the build red | the live NCBI unit test | Nothing to try by hand: CI's unit gate deselects the live test |
-| 5 | "Based on N sources" equals the SOURCES count on the page | 12.11, 12.8 | 74 |
-| 6 | No broken sentences and no restatement paragraph | 12.12 | 75 |
-| 7 | The answer answers the question in plain sentences drawn from the papers, each cited | 12.10 | 73 |
-| 8 | A search clicked in the history rail, in the same tab, opens its saved answer | 12.13 | 67 |
-| 9 | Plain language and researcher differ on every question | 12.9 | 72 |
-| 10 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 |
-| 11 | The seven questions your skip manager asked all answer | 12.1 | 68, 69, 73 |
-| 12 | A literature question typed in lowercase is not refused as "Outside biomedical research" | 12.2 | 70 |
-| 13 | A refusal says "Ask another question" | 12.4 | 71 |
-| 14 | A question naming no gene and no disease finds the papers, each shown once | 12.7 | 69 |
-| 15 | The MCP configuration on the Integrations page connects, and never sends you to an `http://` address | 11.30 | 60 |
-| 16 | History shows the saved answer at once, with Run again | 10.2 | 67 |
-| 17 | MeSH terms show as real terms, each linked to its MeSH record | G-019 | 64 |
-| 18 | The opening sentence's count agrees with the list beneath it | the opening count | 65 |
-| 19 | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | the phenotype template | 66 |
-| 20 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | G-033, G-037 | 24, 25 |
-| 21 | A chromosome range is answered with its genes and records, and a range with no assembly asks which | the coordinate range | 27, 28, 29 |
-| 22 | An answer never lists the question's own words as diseases it did not address | the question's own words | 23, 25 |
-| 23 | A BioProject or BioSample accession is answered, and an unknown one is named as not found | the accessions | 30, 31, 32 |
-| 24 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | G-035 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
-| 25 | Copy an answer and paste it somewhere: no "Source 1, layer 2" text | 11.14 | 6 |
-| 26 | Open the answer-modes info button: no promise of a word count | 11.36 | 3 |
-| 27 | Change the mode while a search is running: it cannot change mid-search | 9.12 | 4 |
-| 28 | Open the app twice: different scientists, the same answer | 8.4 | 9 |
+| 1 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Jev as the classifier, golden row G-038 | 83 |
+| 2 | "Recent papers" asks how far back to search, and the choice narrows the papers | 12.15 | 84 |
+| 3 | Whether a question wants papers is a classifier's choice, not a word list | 12.16 part 3 | 85 |
+| 4 | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Jev, the probability model trial | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
+| 5 | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | 11.32, the function catalogue | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
+| 6 | Golden row G-035 accepts the Taxonomy link the product cites | the golden rows | Nothing to try by hand |
+| 7 | The graph's data gaps are handed to the repository that writes the graph | disease names, the hand-over | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
+| 8 | The design card's four type values match the shipped code | 2.13, the four type values | Nothing to try by hand |
+| 9 | `/phase-checkpoint` names the counts line by what it holds | the checkpoint line | Nothing to try by hand |
+| 10 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | 12.14 | 81 |
+| 11 | A good question is never refused because the think step's reply was malformed | 12.17 | 80 |
+| 12 | An answer can cite up to 30 sources, and a question about papers reaches them | the ceiling, the byte ceiling | 82 |
+| 13 | An NCBI outage no longer turns the build red | the live NCBI unit test | Nothing to try by hand: CI's unit gate deselects the live test |
+| 14 | "Based on N sources" equals the SOURCES count on the page | 12.11, 12.8 | 74 |
+| 15 | No broken sentences and no restatement paragraph | 12.12 | 75 |
+| 16 | The answer answers the question in plain sentences drawn from the papers, each cited | 12.10 | 73 |
+| 17 | A search clicked in the history rail, in the same tab, opens its saved answer | 12.13 | 67 |
+| 18 | Plain language and researcher differ on every question | 12.9 | 72 |
+| 19 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 |
+| 20 | The seven questions your skip manager asked all answer | 12.1 | 68, 69, 73 |
+| 21 | A literature question typed in lowercase is not refused as "Outside biomedical research" | 12.2 | 70 |
+| 22 | A refusal says "Ask another question" | 12.4 | 71 |
+| 23 | A question naming no gene and no disease finds the papers, each shown once | 12.7 | 69 |
+| 24 | The MCP configuration on the Integrations page connects, and never sends you to an `http://` address | 11.30 | 60 |
+| 25 | History shows the saved answer at once, with Run again | 10.2 | 67 |
+| 26 | MeSH terms show as real terms, each linked to its MeSH record | G-019 | 64 |
+| 27 | The opening sentence's count agrees with the list beneath it | the opening count | 65 |
+| 28 | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | the phenotype template | 66 |
+| 29 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | G-033, G-037 | 24, 25 |
+| 30 | A chromosome range is answered with its genes and records, and a range with no assembly asks which | the coordinate range | 27, 28, 29 |
+| 31 | An answer never lists the question's own words as diseases it did not address | the question's own words | 23, 25 |
+| 32 | A BioProject or BioSample accession is answered, and an unknown one is named as not found | the accessions | 30, 31, 32 |
+| 33 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | G-035 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
+| 34 | Copy an answer and paste it somewhere: no "Source 1, layer 2" text | 11.14 | 6 |
+| 35 | Open the answer-modes info button: no promise of a word count | 11.36 | 3 |
+| 36 | Change the mode while a search is running: it cannot change mid-search | 9.12 | 4 |
+| 37 | Open the app twice: different scientists, the same answer | 8.4 | 9 |

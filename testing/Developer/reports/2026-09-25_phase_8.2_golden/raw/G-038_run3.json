@@ -1,0 +1,443 @@
+{
+ "record": {
+  "id": "G-038",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "discovery",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Tell me about the tree of life.",
+  "session_id": "c103-7ce48e501b95",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:31:59+00:00",
+  "run_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "citations": 9,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 9
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 401,
+  "answer_start": "Found 5 pubmed records: On tree longevity. [5], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [6], Gradient Boosted Tree Approaches",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 4.442,
+  "seconds": 34.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 22,
+   "citation": 9,
+   "trust_signal": 10,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 0,
+   "ts": "2026-09-25T13:30:25.019640Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 2,
+   "ts": "2026-09-25T13:30:26.688144Z",
+   "payload": {
+    "narrative": "The query asks a broad, open-ended question about a general biological concept with no specific database entities or defined search path.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 4,
+   "ts": "2026-09-25T13:30:26.691112Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: tree, life",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b15fec768676",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-09a66930a5a1",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-069b4adcdcb9",
+      "layer": "layer_3_enrichment",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 6,
+   "ts": "2026-09-25T13:30:26.692681Z",
+   "payload": {
+    "call_id": "ne-b15fec768676",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 7,
+   "ts": "2026-09-25T13:30:26.692728Z",
+   "payload": {
+    "call_id": "ne-09a66930a5a1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 8,
+   "ts": "2026-09-25T13:30:26.692745Z",
+   "payload": {
+    "call_id": "pa-069b4adcdcb9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 9,
+   "ts": "2026-09-25T13:30:27.108191Z",
+   "payload": {
+    "call_id": "ne-b15fec768676",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 10,
+   "ts": "2026-09-25T13:30:27.243726Z",
+   "payload": {
+    "call_id": "pa-069b4adcdcb9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 11,
+   "ts": "2026-09-25T13:30:27.465430Z",
+   "payload": {
+    "call_id": "ne-09a66930a5a1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 12,
+   "ts": "2026-09-25T13:30:27.466889Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33305422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33305422/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34327789",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34327789/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36215064",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36215064/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38602710",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38602710/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33305422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33305422/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34327789",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34327789/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36096966",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36096966/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36215064",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36215064/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38602710",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38602710/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "bfb75853-2057-4aa0-b21b-f3a10d913c35",
+   "seq": 55,
+   "ts": "2026-09-25T13:30:56.568875Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 4442,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.relevancy",
+      "options": [
+       "on_topic",
+       "off_topic"
+      ],
+      "chosen": "on_topic",
+      "decided_by": "jev",
+      "jev_choice": "on_topic",
+      "jev_confidence": 0.89,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 181
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.97,
+      "guard_choice": "not_literature",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 135
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 203
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: On tree longevity. [5], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [6], Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer. [7], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [8] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [9]. \n\nTree Longevity\n\nTrees do not die from genetically programmed meristem senescence but are instead killed by external agents or disturbance events, with long lifespans enabled by life history traits supporting resistance to or avoidance of extrinsic mortality [1]. Sustained growth or the capacity to increase growth rates when conditions permit is a further requirement for maximum longevity, and growth plasticity and modularity are viewed as evolutionary advantages enabling survival over centuries and millennia [1]. The classic notion that shade-tolerant, late-successional species live longer than early-successional species is challenged, because extremely long-lived species do not fit that paradigm [1]. \n\nMycorrhizal Type and Forest Function\n\nTree mycorrhizal type significantly affects fungal but not bacterial alpha diversity, and higher tree diversity promotes convergence of soil microbial communities across arbuscular and ectomycorrhizal species [2]. In a separate diversity experiment, species richness was positively related to community productivity and this relationship strengthened over time, with ectomycorrhizal communities showing low initial productivity but strong biodiversity effects, while arbuscular mycorrhizal communities showed the opposite pattern [3]. \n\nSeasonal Carbon Storage\n\nNonstructural carbohydrate pools in *Quercus acutissima* and *Pinus massoniana* peaked in autumn and summer respectively, with starch pools supplemented during the growing season and soluble sugar pools largest during dormancy [4]. Branches and roots were the most dynamic organs and major carbon suppliers for the two species respectively [4]. \n\nPubmed records found\n\nPubmed title: On tree longevity [5]. Pubmed title: Tree mycorrhizal type and tree diversity shape the forest soil microbiota [6]. Pubmed title: Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer [7]. Pubmed title: Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment [8]. Pubmed title: Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits [9]. "
+}

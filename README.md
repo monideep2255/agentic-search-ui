@@ -273,6 +273,8 @@ agentic-search-ui/
 | [Knowledge graph reference](docs/data-engineering/Knowledge_graph_on_server_reference.md) | Live graph operations: SSH, Cypher examples, indexes, node/edge counts, cost |
 | [NCBI databases and APIs](docs/ncbi/NCBI_databases_and_APIs_reference.md) | All 39 NCBI databases, endpoints, rate limits, record counts |
 | [NCBI repos deep dive](docs/ncbi/NCBI_repos_deep_dive.md) | Analysis of 13 NCBI GitHub repos: code to reuse, patterns to adopt, what not to build locally |
+| [Model architecture](docs/architecture/Model_architecture.md) | Which model answers each tier on develop, every model call site in the loop, what checks each call's output, and the planned Jev classifier seam |
+| [Graph data hand over, 2026-09-25](docs/data-engineering/Graph_data_hand_over_2026-09-25.md) | Measured graph-data gaps handed from System 3 to the data-engineering repository: source-vocabulary disease names, missing phenotype edges, no MeSH term names, an empty Gene vertex |
 | [BioLink repos explained](docs/architecture/Biolink_repos_explained.md) | BioLink model categories, predicates, CURIEs used in the graph |
 | [Multi-agent system design explained](docs/architecture/Multi_agent_system_design_explained.md) | Converted external reading on how groups of AI agents fail in a shared environment, and the bounded-swarm architecture that prevents it |
 | [Project overview](docs/data-engineering/Project_overview_A_to_Z.md) | Navigation hub for the full project |

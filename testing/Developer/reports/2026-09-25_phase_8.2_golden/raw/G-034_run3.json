@@ -1,0 +1,706 @@
+{
+ "record": {
+  "id": "G-034",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kiss",
+  "query_class": "aggregate",
+  "expected_outcome": "answer",
+  "question": "How many genes in the graph are associated with breast cancer?",
+  "session_id": "c103-32f1c88876d0",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:31:31+00:00",
+  "run_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "MedGen:C1320450",
+   "MedGen:C1861471",
+   "MedGen:C1968974",
+   "MedGen:C2675521",
+   "MedGen:C2676677",
+   "MedGen:C3469522",
+   "MedGen:C4016360",
+   "MedGen:C4016581"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 3,
+  "distinct_sources": 3,
+  "citations_by_layer": {
+   "layer_2_api": 2,
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 120,
+  "answer_start": "Found 1 derived record for breast cancer: MedGen:C1320450 [2]. \n\nClinical Features\n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nDer",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 11.275,
+  "seconds": 16.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 15,
+   "citation": 3,
+   "trust_signal": 4,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 0,
+   "ts": "2026-09-25T13:29:56.401569Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 2,
+   "ts": "2026-09-25T13:29:58.263193Z",
+   "payload": {
+    "narrative": "The question asks for a count of genes associated with a disease, requiring gathering and counting over multiple records. (breast cancer: 8 of at least 20 MedGen records matched by name)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 4,
+   "ts": "2026-09-25T13:29:58.265745Z",
+   "payload": {
+    "narrative": "searching 3 layers for seen by breast cancer nurse. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-54556e9ab2f7",
+      "layer": "layer_1_graph",
+      "persona": "Ochoa",
+      "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-750739a69c39",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-b2fdfc005f3b",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3b088f2d5a0e",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-40f1c96b34e0",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-be180bdd2d8e",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-bf2042cd5f51",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-414adf5be718",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 6,
+   "ts": "2026-09-25T13:29:58.266964Z",
+   "payload": {
+    "call_id": "cq-54556e9ab2f7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ochoa",
+    "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 7,
+   "ts": "2026-09-25T13:29:58.267000Z",
+   "payload": {
+    "call_id": "pa-750739a69c39",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 8,
+   "ts": "2026-09-25T13:29:58.267011Z",
+   "payload": {
+    "call_id": "ct-b2fdfc005f3b",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 9,
+   "ts": "2026-09-25T13:29:58.267019Z",
+   "payload": {
+    "call_id": "ne-3b088f2d5a0e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 10,
+   "ts": "2026-09-25T13:29:58.267028Z",
+   "payload": {
+    "call_id": "ne-40f1c96b34e0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 11,
+   "ts": "2026-09-25T13:29:58.267037Z",
+   "payload": {
+    "call_id": "ne-be180bdd2d8e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 12,
+   "ts": "2026-09-25T13:29:58.267045Z",
+   "payload": {
+    "call_id": "pa-bf2042cd5f51",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 13,
+   "ts": "2026-09-25T13:29:58.267053Z",
+   "payload": {
+    "call_id": "ne-414adf5be718",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 14,
+   "ts": "2026-09-25T13:29:58.419521Z",
+   "payload": {
+    "call_id": "ne-3b088f2d5a0e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 15,
+   "ts": "2026-09-25T13:29:58.426092Z",
+   "payload": {
+    "call_id": "ct-b2fdfc005f3b",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 16,
+   "ts": "2026-09-25T13:29:58.546231Z",
+   "payload": {
+    "call_id": "pa-750739a69c39",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 17,
+   "ts": "2026-09-25T13:29:58.561349Z",
+   "payload": {
+    "call_id": "ne-40f1c96b34e0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 18,
+   "ts": "2026-09-25T13:30:06.563204Z",
+   "payload": {
+    "call_id": "cq-54556e9ab2f7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ochoa",
+    "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 19,
+   "ts": "2026-09-25T13:30:06.563336Z",
+   "payload": {
+    "call_id": "ne-be180bdd2d8e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 20,
+   "ts": "2026-09-25T13:30:06.563356Z",
+   "payload": {
+    "call_id": "pa-bf2042cd5f51",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 21,
+   "ts": "2026-09-25T13:30:06.699768Z",
+   "payload": {
+    "call_id": "ne-414adf5be718",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 22,
+   "ts": "2026-09-25T13:30:06.701370Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/729095",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1320450",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1320450",
+    "layer": "layer_1_graph",
+    "source": "MedGen",
+    "field": "n",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "729095",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/729095",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "56f424bc-8272-4ea7-a56d-574ef4f30d15",
+   "seq": 46,
+   "ts": "2026-09-25T13:30:11.306618Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 11275,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "layer_calls_used": 5,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_applicable",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 181
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 107
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 derived record for breast cancer: MedGen:C1320450 [2]. \n\nClinical Features\n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nDerived records found\n\nDerived MedGen:C1320450, n: 0 [2]. \n\nMedgen records found\n\nMedgen title: Seen by breast cancer nurse [3]. Medgen clinical_features: MedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nNote: this answer does not address the following entities named in the question: Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 2, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer."
+}
