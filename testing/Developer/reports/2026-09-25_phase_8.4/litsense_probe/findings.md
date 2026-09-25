@@ -12,6 +12,7 @@ A bounded live probe run on 2026-09-25 against the real LitSense API, ten questi
 - [PMID restriction](#pmid-restriction)
 - [Failure cases and misleading snippets](#failure-cases-and-misleading-snippets)
 - [Recommendation](#recommendation)
+- [The narrow version, smoke-tested the same night](#the-narrow-version-smoke-tested-the-same-night)
 
 ## Verdict
 
