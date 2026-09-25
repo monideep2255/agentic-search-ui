@@ -937,6 +937,105 @@ def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# ---------------------------------------------------------------------------
+# T-8.1-06 (tracker/phase_8.1.md): MedGen clinical features, an ADDITION
+# beyond Section 6.2's table, exactly as `gene`'s `summary` field is (see the
+# comment above `_SUMMARY_FIELDS_BY_DB["gene"]`). "What phenotypic features
+# are associated with Marfan syndrome?" answered with variant and gene
+# records at both depths, because the graph holds no phenotype edges
+# (CLAUDE.md's three-layer architecture only reaches the graph, EFetch and
+# the three enrichment APIs; a phenotype resolver is not a v1 tool). MedGen's
+# own ESummary already carries the clinical picture for a concept: measured
+# live 2026-09-25 against `esummary.fcgi?db=medgen&id=44287` (Marfan
+# syndrome, UID 44287, CUI C0024796), the `conceptmeta` field is 35KB of
+# markup with a `<ClinicalFeatures>` block of 70 `<ClinicalFeature>`
+# elements, each carrying a `<Name>` ("Aortic regurgitation",
+# "Arachnodactyly", "Ectopia lentis", ...) and an `SDUI` attribute that is
+# the HPO id ("HP:0001659") when the feature has one.
+#
+# `conceptmeta` is NOT one well-formed document: it concatenates several
+# sibling top-level elements (`<Names>...</Names><OMIM>...</OMIM>
+# <ClinicalFeatures>...</ClinicalFeatures>...`), which is why it is parsed
+# here rather than allowlisted straight into `_SUMMARY_FIELDS_BY_DB["medgen"]`
+# and handed to `ElementTree.fromstring` as-is: a document with more than one
+# root element does not parse. Wrapping it in one throwaway root element
+# fixes the shape without changing any byte of NCBI's own content.
+#
+# WHY THE 35KB BLOB ITSELF NEVER REACHES THE MODEL. `conceptmeta` also
+# carries every synonym MedGen has ever indexed for the concept (Names),
+# every cross-reference (OMIM, GTR, Orphanet, MONDO), semantic types and
+# definitions repeated per name, none of it phenotype content and all of it
+# untrusted external markup. Only the parsed, bounded `clinical_features`
+# list this function extracts is added to the record; `conceptmeta` itself
+# is never allowlisted, so it never enters `entry`'s extracted fields and
+# never reaches a prompt. This is the bounded-context-items gate in
+# `.claude/rules/production-standards.md` applied at the point of extraction
+# rather than trusted to a later truncation pass.
+_MAX_CLINICAL_FEATURES: Final[int] = 30
+_MAX_CLINICAL_FEATURE_NAME_CHARS: Final[int] = 120
+
+# `.claude/rules/production-standards.md`: "XML parsers must disable
+# external entities. NCBI EFetch returns XML: etree.XMLParser(
+# resolve_entities=False)", an `lxml` parameter this project does not depend
+# on (see `tools/ncbi_transport.py`'s "XML parsing and external entities"
+# section, which this reject mirrors for the same reason: `lxml` and
+# `defusedxml` are both new dependencies this ticket is not scoped to add,
+# `.claude/rules/supply-chain-security.md`). Stdlib `xml.etree.ElementTree`
+# does not resolve external entities or fetch external DTDs by default, so
+# XXE is not the live risk; an internal `<!ENTITY` declaration (which can
+# only appear inside a DOCTYPE) is, so any DOCTYPE or ENTITY marker anywhere
+# in the fragment is rejected before `ElementTree.fromstring` ever sees it.
+# `conceptmeta` is a content fragment, not a full document, so a legitimate
+# one never carries a DOCTYPE at all; if one appears, that is itself reason
+# enough to fail closed, no legitimate-DOCTYPE carve-out is needed the way
+# `ncbi_transport.py`'s PubMed EFetch reject needs one for the public NLM
+# DTD every genuine PubMed record declares.
+_XML_DOCTYPE_MARKER: Final[str] = "<!doctype"
+_XML_ENTITY_MARKER: Final[str] = "<!entity"
+
+
+def _parse_medgen_clinical_features(conceptmeta: Any) -> list[dict[str, str]]:
+    """The `<ClinicalFeature>` entries of a MedGen `conceptmeta` blob.
+
+    Returns `[]`, never raises, for anything that is not a usable string,
+    that fails the DOCTYPE/ENTITY reject, or that does not parse as XML once
+    wrapped: a malformed or hostile `conceptmeta` value must never crash the
+    whole `summary` call over one optional field, and "no clinical features"
+    is exactly the honest, disclosed answer the caller (`core/graph.py`,
+    outside this ticket's fence) is expected to state rather than substitute
+    a different record type for.
+
+    Each returned item is `{"name": ..., "hpo_id": ...}` (or just `{"name":
+    ...}` when the feature carries no HPO `SDUI`), name-capped at
+    `_MAX_CLINICAL_FEATURE_NAME_CHARS` and count-capped at
+    `_MAX_CLINICAL_FEATURES`, in document order (MedGen's own order, not
+    re-sorted), so a caller wanting "the first N" gets a stable answer.
+    """
+    if not isinstance(conceptmeta, str) or not conceptmeta.strip():
+        return []
+    lowered = conceptmeta.lower()
+    if _XML_ENTITY_MARKER in lowered or _XML_DOCTYPE_MARKER in lowered:
+        return []
+    try:
+        root = ElementTree.fromstring(f"<medgen_concept_meta>{conceptmeta}</medgen_concept_meta>")
+    except ElementTree.ParseError:
+        return []
+    features: list[dict[str, str]] = []
+    for element in root.iter("ClinicalFeature"):
+        if len(features) >= _MAX_CLINICAL_FEATURES:
+            break
+        name_element = element.find("Name")
+        name = (name_element.text or "").strip() if name_element is not None else ""
+        if not name:
+            continue
+        item: dict[str, str] = {"name": _cap_text(name)[:_MAX_CLINICAL_FEATURE_NAME_CHARS]}
+        hpo_id = element.get("SDUI")
+        if isinstance(hpo_id, str) and hpo_id.strip().upper().startswith("HP:"):
+            item["hpo_id"] = hpo_id.strip()
+        features.append(item)
+    return features
+
+
 async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
     """ESummary: `db=<db>&id=<ids>&retmode=json`. Case 2 live-verifies db=gene."""
     request_params = {"db": params.db, "id": ",".join(params.ids), "retmode": "json"}
@@ -988,6 +1087,18 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
             }
         else:
             extracted = _generic_summary_fields(entry)
+        # T-8.1-06: MedGen's clinical features, parsed out of the raw
+        # `conceptmeta` field and added as their own bounded key. Never add
+        # `conceptmeta` itself to `_SUMMARY_FIELDS_BY_DB["medgen"]`: see the
+        # comment above `_parse_medgen_clinical_features` for why the 35KB
+        # blob it comes from must never reach a prompt whole. An empty list
+        # is still set explicitly (not omitted) when MedGen carries no
+        # clinical features for this concept, so the caller can disclose
+        # that honestly rather than reading a missing key as "not checked".
+        if params.db == "medgen":
+            extracted["clinical_features"] = _parse_medgen_clinical_features(
+                entry.get("conceptmeta")
+            )
         records.append(
             NcbiEfetchRecord(
                 id=uid,
