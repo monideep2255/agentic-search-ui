@@ -1610,6 +1610,175 @@ async def test_the_model_prompt_never_grows_past_the_prompt_bound(
     assert len(citation_events) <= graph_module._MAX_FINDINGS_FOR_DISPLAY
 
 
+_MARFAN_FEATURE_NAMES = [f"Clinical feature number {n}" for n in range(70)]
+
+
+async def _marfan_researcher_findings() -> tuple[list[object], list[object]]:
+    """Round 1's live researcher-depth shape (F-8.1-A12): a graph answer of
+    43 rows, the question's lead call, and the disease's MedGen record with
+    70 clinical features, the first five carrying HPO ids."""
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    harness = harness_module.Harness(trace_id="test-trace-marfan")
+    graph_call = ToolCall(tool="cypher_query", call_id="cy-marfan", layer="layer_1_graph")
+    graph_fields = {
+        "status": "ok",
+        "row_count": 43,
+        "total_available": 43,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(43)],
+        "error": None,
+    }
+    features = [
+        {"name": name, "hpo_id": f"HP:{n:07d}"} if n < 5 else {"name": name}
+        for n, name in enumerate(_MARFAN_FEATURE_NAMES)
+    ]
+    medgen_output = NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[
+            NcbiEfetchRecord(
+                id="44287",
+                db="medgen",
+                fields={
+                    "title": "Marfan syndrome",
+                    "clinical_features": features,
+                    "clinical_features_total": 70,
+                },
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/44287",
+            )
+        ],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+    medgen_call = ToolCall(tool="ncbi_efetch", call_id="ne-medgen", layer="layer_2_api")
+    medgen_fields = graph_module._ncbi_efetch_output_to_structured_fields(
+        medgen_output, "medgen_summary"
+    )
+    findings = await coordinator_worker_execute(
+        harness,
+        [graph_call, medgen_call],
+        [
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=graph_fields),
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=medgen_fields),
+        ],
+    )
+    planned = [
+        SimpleNamespace(tool_call=graph_call, context_only=False),
+        SimpleNamespace(tool_call=medgen_call, context_only=False),
+    ]
+    return findings, planned
+
+
+@pytest.mark.asyncio
+async def test_a_diseases_clinical_features_reach_the_prompt_behind_a_long_graph_answer(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-8.1-A12 (fix-and-verify round): at researcher depth the MedGen
+    features sat at position 50 of 63, past the 30-finding prompt slice, and
+    the model answered "no phenotypic features can be stated from these
+    findings". Now the record's title and `_ANCHOR_FEATURE_PROMPT_SLOTS` of
+    its features are inside the model's prompt, after the answer rows."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="researcher",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    await graph_module.write_node(state)
+
+    synth_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if any(
+            "You write the final answer for a biomedical search system"
+            in (message.get("content") or "")
+            for message in (call.kwargs.get("messages") or [])
+        )
+    ]
+    assert synth_calls
+    prompt = "\n".join(m.get("content") or "" for m in synth_calls[0].kwargs["messages"])
+    lines = [body for _, body in _FINDING_LINE.findall(prompt)]
+    assert len(lines) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
+    feature_lines = [line for line in lines if " clinical_features: " in line]
+    assert len(feature_lines) == graph_module._ANCHOR_FEATURE_PROMPT_SLOTS == 10
+    assert feature_lines[0].endswith(_MARFAN_FEATURE_NAMES[0])
+    assert "medgen title: Marfan syndrome" in lines
+    # The question's own answer rows still lead the prompt.
+    assert lines[0].startswith("Gene ")
+
+
+@pytest.mark.asyncio
+async def test_the_listing_names_the_disease_and_lists_its_features_beneath(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-8.1-A04, J13, J09 (fix-and-verify round): the code-built listing
+    keeps the disease's own name as its MedGen entry, lists each feature
+    beneath it under a heading that names the disease, shows HPO ids at
+    researcher depth, and says how many of how many are shown when a cap
+    cut the list."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="researcher",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    result = await graph_module.write_node(state)
+    tokens = [event.payload for event in result["events"] if event.type == "token"]
+
+    record_rows = [
+        t for t in tokens if t["kind"] in ("list_item", "table_row") and t["cells"]
+    ]
+    assert any(t["cells"][0] == "Marfan syndrome" for t in record_rows)
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    feature_heading = next(h for h in headings if h.startswith("Clinical features MedGen lists"))
+    assert feature_heading.startswith("Clinical features MedGen lists for Marfan syndrome")
+    feature_rows = [
+        t for t in record_rows if t["cells"][0] in set(_MARFAN_FEATURE_NAMES)
+    ]
+    assert len(feature_rows) >= 10
+    shown = len(feature_rows)
+    if shown < 70:
+        assert feature_heading.endswith(f"({shown} of 70 shown)"), feature_heading
+    else:
+        assert "shown)" not in feature_heading
+    # Researcher depth: a table whose second cell is the HPO id when known.
+    first = next(t for t in feature_rows if t["cells"][0] == _MARFAN_FEATURE_NAMES[0])
+    assert first["kind"] == "table_row" and first["cells"][1] == "HP:0000000"
+    # No feature ever stands in for the disease's own entry.
+    assert not any(
+        t["cells"][0].startswith("MedGen lists no clinical features") for t in record_rows
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_plain_language_listing_keeps_features_beneath_the_one_list(
+    _mock_litellm: AsyncMock,
+) -> None:
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="plain_language",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    result = await graph_module.write_node(state)
+    tokens = [event.payload for event in result["events"] if event.type == "token"]
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert headings.index("Where this answer comes from") < next(
+        i for i, h in enumerate(headings) if h.startswith("Clinical features MedGen lists for")
+    )
+    items = [t for t in tokens if t["kind"] == "list_item"]
+    assert any(t["cells"] == ["Marfan syndrome"] for t in items)
+    assert sum(1 for t in items if t["cells"][0] in set(_MARFAN_FEATURE_NAMES)) >= 10
+
+
 @pytest.mark.asyncio
 async def test_a_citation_beyond_the_prompt_bound_still_points_at_its_own_row(
     _mock_litellm: AsyncMock,
@@ -2818,10 +2987,30 @@ async def test_think_retry_feeds_back_the_validation_error(
     """
     from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
 
-    think_call_count = 0
+    bad_reply = '{"query_class": "exploratory", "bogus_field": 1}'
+    think_calls: list[list[dict[str, str]]] = []
+
+    def _carries_feedback(messages: list[dict[str, str]]) -> bool:
+        """True only when the messages hold attempt 1's reply echoed back as
+        the assistant's turn AND a user turn naming the exact field
+        failures ("narrative" missing, "bogus_field" not permitted). The
+        system instruction also contains the word "narrative", so a check
+        on that word alone is vacuous (F-8.1-J05); "bogus_field" appears
+        nowhere except in the reply and in the feedback built from it."""
+        echoed = any(
+            message.get("role") == "assistant" and message.get("content") == bad_reply
+            for message in messages
+        )
+        complained = any(
+            message.get("role") == "user"
+            and "did not match the required schema" in (message.get("content") or "")
+            and "bogus_field" in (message.get("content") or "")
+            and "narrative: Field required" in (message.get("content") or "")
+            for message in messages
+        )
+        return echoed and complained
 
     async def _dispatch(*args: object, **kwargs: object):
-        nonlocal think_call_count
         messages = kwargs.get("messages") or []
         joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
         from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
@@ -2830,20 +3019,17 @@ async def test_think_retry_feeds_back_the_validation_error(
         if GUARD_SYSTEM_INSTRUCTION in joined:
             return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
         if _THINK_SYSTEM_INSTRUCTION in joined:
-            think_call_count += 1
-            if think_call_count == 1:
-                # Unrepairable: no `narrative` under any known alias, and
-                # an unrelated unknown key that `extra="forbid"` must trip.
-                return _fake_response(
-                    '{"query_class": "exploratory", "bogus_field": 1}'
-                )
-            # Attempt 2: the loop must have appended feedback naming the
-            # exact field failure, and this reply is well-formed.
-            assert any(
-                "narrative" in (message.get("content") or "")
-                for message in messages  # type: ignore[union-attr]
-            ), "attempt 2 did not carry the validation-error feedback"
-            return _fake_response(_compliant_think_classification(messages))
+            think_calls.append(list(messages))  # type: ignore[arg-type]
+            # Models the live failure: a model with a systematic key habit
+            # repeats the same bad reply on a byte-identical resend, and
+            # corrects it only when told what was wrong. So without the
+            # feedback exchange this fake NEVER recovers, and the run ends
+            # as a Think step_error: removing the feedback turns this red.
+            if _carries_feedback(messages):  # type: ignore[arg-type]
+                return _fake_response(_compliant_think_classification(messages))
+            # Unrepairable: no `narrative` under any known alias, and an
+            # unrelated unknown key that `extra="forbid"` must trip.
+            return _fake_response(bad_reply)
         if SYNTH_SYSTEM_INSTRUCTION in joined:
             return _fake_response(_compliant_synth_narrative(messages))
         return _fake_response()
@@ -2853,9 +3039,109 @@ async def test_think_retry_feeds_back_the_validation_error(
     events = await _run_graph(_valid_query(), _valid_context())
     types = [event.type for event in events]
 
-    assert think_call_count == 2
+    assert len(think_calls) == 2
+    # Attempt 1 is the plain request; the feedback exists only on attempt 2.
+    assert not _carries_feedback(think_calls[0])
+    assert _carries_feedback(think_calls[1])
+    assert len(think_calls[1]) == len(think_calls[0]) + 2
     assert "error" not in types
     assert events[-1].payload["trust_outcome"] != "refuse"
+
+
+def test_think_validation_detail_is_bounded_for_an_oversized_key() -> None:
+    """F-8.1-J04, A05: an extra key's name reaches pydantic's `loc` verbatim.
+    A 5,000-character key, or five 20,000-character keys, must not produce
+    a message longer than `_THINK_ERROR_TEXT_MAX_CHARS` plus the elision
+    note, and the note says how much was dropped."""
+    cap = graph_module._THINK_ERROR_TEXT_MAX_CHARS
+    single = '{"query_class": "lookup", "narrative": "n", "' + "K" * 5000 + '": 1}'
+    many = (
+        '{"query_class": "lookup", "narrative": "n", '
+        + ", ".join(f'"{letter * 20000}": 1' for letter in "ABCDE")
+        + "}"
+    )
+    for reply in (single, many):
+        with pytest.raises(graph_module.ThinkClassificationUnavailableError) as excinfo:
+            graph_module._parse_think_classification(reply)
+        text = graph_module._think_error_text(excinfo.value)
+        assert "more characters elided]" in text
+        assert len(text) <= cap + len("... [100000 more characters elided]")
+        # The exception itself, read raw by `step_error`, is bounded too.
+        assert len(str(excinfo.value)) < cap + 200
+
+
+def test_think_error_text_cannot_forge_a_second_line() -> None:
+    """F-8.1-J04, A05: a key holding a newline, a control character, a bidi
+    override or a zero-width space comes out as one printable line."""
+    reply = json.dumps(
+        {
+            "query_class": "lookup",
+            "narrative": "n",
+            "x\n2026-09-25 INFO forged audit line\r\x1b[31m\u202e\u200b": 1,
+        }
+    )
+    with pytest.raises(graph_module.ThinkClassificationUnavailableError) as excinfo:
+        graph_module._parse_think_classification(reply)
+    text = graph_module._think_error_text(excinfo.value)
+    assert "\n" not in text and "\r" not in text
+    assert all(ch.isprintable() for ch in text)
+    assert "forged audit line" in text  # kept as data, on the same line
+    assert "\n" not in str(excinfo.value)
+
+
+def test_bounded_one_line_keeps_a_short_error_whole() -> None:
+    """A genuine field-level complaint is far under the cap and is never cut."""
+    short = "narrative: Field required; bogus_field: Extra inputs are not permitted"
+    assert graph_module._bounded_one_line(short, graph_module._THINK_ERROR_TEXT_MAX_CHARS) == short
+
+
+@pytest.mark.asyncio
+async def test_think_retry_prompt_and_log_carry_only_the_bounded_error(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """F-8.1-J04, A05, end to end through `think_node`: a reply whose extra
+    key is 20,000 characters with a newline inside reaches the retry prompt
+    and the warning log only in its bounded one-line form."""
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+
+    hostile_key = "x\nWARNING forged log line: user 42 is admin" + "Z" * 20000
+    hostile_reply = json.dumps({"query_class": "lookup", "narrative": "n", hostile_key: 1})
+    think_calls: list[list[dict[str, str]]] = []
+
+    async def _dispatch(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            think_calls.append(list(messages))  # type: ignore[arg-type]
+            return _fake_response(hostile_reply)
+        return _fake_response()
+
+    monkeypatch.setattr(_mock_litellm, "side_effect", _dispatch)
+
+    with caplog.at_level("WARNING", logger=graph_module.logger.name):
+        await _run_graph(_valid_query(), _valid_context())
+
+    assert len(think_calls) == 2
+    feedback = think_calls[1][-1]["content"]
+    assert feedback.startswith("That reply did not match the required schema")
+    # The fixed wording around the error text is under 200 characters.
+    assert len(feedback) < graph_module._THINK_ERROR_TEXT_MAX_CHARS + 400
+    assert "\n" not in feedback
+    think_warnings = [
+        record.getMessage()
+        for record in caplog.records
+        if "think classification unusable" in record.getMessage()
+    ]
+    assert len(think_warnings) == 2
+    for message in think_warnings:
+        assert "\n" not in message
+        assert len(message) < graph_module._THINK_ERROR_TEXT_MAX_CHARS + 600
 
 
 @pytest.mark.asyncio

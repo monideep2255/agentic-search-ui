@@ -971,8 +971,48 @@ def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
 # never reaches a prompt. This is the bounded-context-items gate in
 # `.claude/rules/production-standards.md` applied at the point of extraction
 # rather than trusted to a later truncation pass.
-_MAX_CLINICAL_FEATURES: Final[int] = 30
+#
+# F-8.1-J09 (fix-and-verify round, 2026-09-25): the count cap rose from 30 to
+# 100. MedGen lists 70 features for Marfan syndrome (measured live
+# 2026-09-25), in MedGen's own document order, which is not an importance
+# order: the old cap of 30 silently dropped aortic root aneurysm, aortic
+# dissection and tall stature, the features a clinician looks for first.
+# 100 covers every record measured in round 1 (70, 57, 31) with room, and it
+# is still a cap: `clinical_features_total` carries how many MedGen listed,
+# so the answer can say "N of M" whenever this, or any later cap, cuts.
+MAX_CLINICAL_FEATURES: Final[int] = 100
 _MAX_CLINICAL_FEATURE_NAME_CHARS: Final[int] = 120
+
+# F-8.1-J10, A03: an HPO term id is exactly `HP:` and seven ASCII digits.
+# `fullmatch` with `re.ASCII`, not `^...$` with `\d`: `$` also matches before
+# a trailing newline, and `\d` without `re.ASCII` matches any Unicode digit.
+# An `SDUI` that does not match is dropped and the feature's name is kept.
+_HPO_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"HP:[0-9]{7}", re.ASCII)
+
+
+def is_hpo_id(value: Any) -> bool:
+    """Whether `value` is exactly one HPO term id, `HP:` plus seven digits."""
+    return isinstance(value, str) and _HPO_ID_PATTERN.fullmatch(value) is not None
+
+
+def clean_clinical_feature_name(value: Any) -> str:
+    """A MedGen feature name as one printable line, at most
+    `_MAX_CLINICAL_FEATURE_NAME_CHARS` characters, or "" when nothing is left.
+
+    F-8.1-A03, J14: text from NCBI is data, never structure. A character
+    reference such as `&#10;` decodes to a real newline inside `<Name>`, and
+    a newline in a feature name forged a numbered line in the writing
+    model's findings block ("[2] MedGen title: ..."). So every non-printable
+    character (newline, tab, control characters, a bidi override such as
+    U+202E, a zero-width space) becomes a space, whitespace collapses to
+    single spaces, and the result is cut to the cap. Also used by
+    `core/graph.py` on the way into a row, so the rule has one definition.
+    """
+    if not isinstance(value, str):
+        return ""
+    printable = "".join(ch if ch.isprintable() else " " for ch in value)
+    collapsed = " ".join(printable.split())
+    return collapsed[:_MAX_CLINICAL_FEATURE_NAME_CHARS].rstrip()
 
 # `.claude/rules/production-standards.md`: "XML parsers must disable
 # external entities. NCBI EFetch returns XML: etree.XMLParser(
@@ -994,46 +1034,55 @@ _XML_DOCTYPE_MARKER: Final[str] = "<!doctype"
 _XML_ENTITY_MARKER: Final[str] = "<!entity"
 
 
-def _parse_medgen_clinical_features(conceptmeta: Any) -> list[dict[str, str]]:
-    """The `<ClinicalFeature>` entries of a MedGen `conceptmeta` blob.
+def _parse_medgen_clinical_features(conceptmeta: Any) -> tuple[list[dict[str, str]], int] | None:
+    """The `<ClinicalFeature>` entries of a MedGen `conceptmeta` blob, and
+    how many distinct features the record lists, or None when it cannot be
+    read.
 
-    Returns `[]`, never raises, for anything that is not a usable string,
-    that fails the DOCTYPE/ENTITY reject, or that does not parse as XML once
-    wrapped: a malformed or hostile `conceptmeta` value must never crash the
-    whole `summary` call over one optional field, and "no clinical features"
-    is exactly the honest, disclosed answer the caller (`core/graph.py`,
-    outside this ticket's fence) is expected to state rather than substitute
-    a different record type for.
+    F-8.1-J11 (fix-and-verify round): "could not read" and "has none" are
+    different answers and must stay different all the way to the reader.
+    None, never raising, for anything that is not a non-blank string, that
+    fails the DOCTYPE/ENTITY reject, or that does not parse as XML once
+    wrapped: the caller then says nothing about features at all. A record
+    that parsed and carries no `ClinicalFeature` is `([], 0)`, and only that
+    one may be described as listing none.
 
-    Each returned item is `{"name": ..., "hpo_id": ...}` (or just `{"name":
-    ...}` when the feature carries no HPO `SDUI`), name-capped at
-    `_MAX_CLINICAL_FEATURE_NAME_CHARS` and count-capped at
-    `_MAX_CLINICAL_FEATURES`, in document order (MedGen's own order, not
-    re-sorted), so a caller wanting "the first N" gets a stable answer.
+    Each item is `{"name": ..., "hpo_id": ...}`, or `{"name": ...}` when the
+    feature's `SDUI` is not exactly an HPO id (`is_hpo_id`). Names pass
+    through `clean_clinical_feature_name`; a feature whose name is empty
+    after cleaning is skipped, and a repeated name (case-insensitive) is
+    kept once. The list is count-capped at `MAX_CLINICAL_FEATURES`, in
+    MedGen's own document order; the second value counts every distinct
+    feature, including any past the cap.
     """
     if not isinstance(conceptmeta, str) or not conceptmeta.strip():
-        return []
+        return None
     lowered = conceptmeta.lower()
     if _XML_ENTITY_MARKER in lowered or _XML_DOCTYPE_MARKER in lowered:
-        return []
+        return None
     try:
         root = ElementTree.fromstring(f"<medgen_concept_meta>{conceptmeta}</medgen_concept_meta>")
     except ElementTree.ParseError:
-        return []
+        return None
     features: list[dict[str, str]] = []
+    seen: set[str] = set()
+    total = 0
     for element in root.iter("ClinicalFeature"):
-        if len(features) >= _MAX_CLINICAL_FEATURES:
-            break
         name_element = element.find("Name")
-        name = (name_element.text or "").strip() if name_element is not None else ""
-        if not name:
+        raw_name = "".join(name_element.itertext()) if name_element is not None else ""
+        name = clean_clinical_feature_name(raw_name)
+        if not name or name.casefold() in seen:
             continue
-        item: dict[str, str] = {"name": _cap_text(name)[:_MAX_CLINICAL_FEATURE_NAME_CHARS]}
+        seen.add(name.casefold())
+        total += 1
+        if len(features) >= MAX_CLINICAL_FEATURES:
+            continue
+        item: dict[str, str] = {"name": name}
         hpo_id = element.get("SDUI")
-        if isinstance(hpo_id, str) and hpo_id.strip().upper().startswith("HP:"):
-            item["hpo_id"] = hpo_id.strip()
+        if is_hpo_id(hpo_id):
+            item["hpo_id"] = hpo_id
         features.append(item)
-    return features
+    return features, total
 
 
 async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
@@ -1088,17 +1137,20 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
         else:
             extracted = _generic_summary_fields(entry)
         # T-8.1-06: MedGen's clinical features, parsed out of the raw
-        # `conceptmeta` field and added as their own bounded key. Never add
+        # `conceptmeta` field and added as their own bounded keys. Never add
         # `conceptmeta` itself to `_SUMMARY_FIELDS_BY_DB["medgen"]`: see the
         # comment above `_parse_medgen_clinical_features` for why the 35KB
-        # blob it comes from must never reach a prompt whole. An empty list
-        # is still set explicitly (not omitted) when MedGen carries no
-        # clinical features for this concept, so the caller can disclose
-        # that honestly rather than reading a missing key as "not checked".
+        # blob it comes from must never reach a prompt whole.
+        #
+        # F-8.1-J11 (fix-and-verify round): both keys are set ONLY when the
+        # blob was read. `clinical_features` is then the (possibly empty)
+        # list and `clinical_features_total` the number MedGen lists; an
+        # unreadable blob sets neither, so the caller can never turn "could
+        # not read" into "MedGen lists none".
         if params.db == "medgen":
-            extracted["clinical_features"] = _parse_medgen_clinical_features(
-                entry.get("conceptmeta")
-            )
+            parsed = _parse_medgen_clinical_features(entry.get("conceptmeta"))
+            if parsed is not None:
+                extracted["clinical_features"], extracted["clinical_features_total"] = parsed
         records.append(
             NcbiEfetchRecord(
                 id=uid,
