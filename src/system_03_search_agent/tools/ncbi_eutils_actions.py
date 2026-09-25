@@ -937,6 +937,154 @@ def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# ---------------------------------------------------------------------------
+# T-8.1-06 (tracker/phase_8.1.md): MedGen clinical features, an ADDITION
+# beyond Section 6.2's table, exactly as `gene`'s `summary` field is (see the
+# comment above `_SUMMARY_FIELDS_BY_DB["gene"]`). "What phenotypic features
+# are associated with Marfan syndrome?" answered with variant and gene
+# records at both depths, because the graph holds no phenotype edges
+# (CLAUDE.md's three-layer architecture only reaches the graph, EFetch and
+# the three enrichment APIs; a phenotype resolver is not a v1 tool). MedGen's
+# own ESummary already carries the clinical picture for a concept: measured
+# live 2026-09-25 against `esummary.fcgi?db=medgen&id=44287` (Marfan
+# syndrome, UID 44287, CUI C0024796), the `conceptmeta` field is 35KB of
+# markup with a `<ClinicalFeatures>` block of 70 `<ClinicalFeature>`
+# elements, each carrying a `<Name>` ("Aortic regurgitation",
+# "Arachnodactyly", "Ectopia lentis", ...) and an `SDUI` attribute that is
+# the HPO id ("HP:0001659") when the feature has one.
+#
+# `conceptmeta` is NOT one well-formed document: it concatenates several
+# sibling top-level elements (`<Names>...</Names><OMIM>...</OMIM>
+# <ClinicalFeatures>...</ClinicalFeatures>...`), which is why it is parsed
+# here rather than allowlisted straight into `_SUMMARY_FIELDS_BY_DB["medgen"]`
+# and handed to `ElementTree.fromstring` as-is: a document with more than one
+# root element does not parse. Wrapping it in one throwaway root element
+# fixes the shape without changing any byte of NCBI's own content.
+#
+# WHY THE 35KB BLOB ITSELF NEVER REACHES THE MODEL. `conceptmeta` also
+# carries every synonym MedGen has ever indexed for the concept (Names),
+# every cross-reference (OMIM, GTR, Orphanet, MONDO), semantic types and
+# definitions repeated per name, none of it phenotype content and all of it
+# untrusted external markup. Only the parsed, bounded `clinical_features`
+# list this function extracts is added to the record; `conceptmeta` itself
+# is never allowlisted, so it never enters `entry`'s extracted fields and
+# never reaches a prompt. This is the bounded-context-items gate in
+# `.claude/rules/production-standards.md` applied at the point of extraction
+# rather than trusted to a later truncation pass.
+#
+# F-8.1-J09 (fix-and-verify round, 2026-09-25): the count cap rose from 30 to
+# 100. MedGen lists 70 features for Marfan syndrome (measured live
+# 2026-09-25), in MedGen's own document order, which is not an importance
+# order: the old cap of 30 silently dropped aortic root aneurysm, aortic
+# dissection and tall stature, the features a clinician looks for first.
+# 100 covers every record measured in round 1 (70, 57, 31) with room, and it
+# is still a cap: `clinical_features_total` carries how many MedGen listed,
+# so the answer can say "N of M" whenever this, or any later cap, cuts.
+MAX_CLINICAL_FEATURES: Final[int] = 100
+_MAX_CLINICAL_FEATURE_NAME_CHARS: Final[int] = 120
+
+# F-8.1-J10, A03: an HPO term id is exactly `HP:` and seven ASCII digits.
+# `fullmatch` with `re.ASCII`, not `^...$` with `\d`: `$` also matches before
+# a trailing newline, and `\d` without `re.ASCII` matches any Unicode digit.
+# An `SDUI` that does not match is dropped and the feature's name is kept.
+_HPO_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"HP:[0-9]{7}", re.ASCII)
+
+
+def is_hpo_id(value: Any) -> bool:
+    """Whether `value` is exactly one HPO term id, `HP:` plus seven digits."""
+    return isinstance(value, str) and _HPO_ID_PATTERN.fullmatch(value) is not None
+
+
+def clean_clinical_feature_name(value: Any) -> str:
+    """A MedGen feature name as one printable line, at most
+    `_MAX_CLINICAL_FEATURE_NAME_CHARS` characters, or "" when nothing is left.
+
+    F-8.1-A03, J14: text from NCBI is data, never structure. A character
+    reference such as `&#10;` decodes to a real newline inside `<Name>`, and
+    a newline in a feature name forged a numbered line in the writing
+    model's findings block ("[2] MedGen title: ..."). So every non-printable
+    character (newline, tab, control characters, a bidi override such as
+    U+202E, a zero-width space) becomes a space, whitespace collapses to
+    single spaces, and the result is cut to the cap. Also used by
+    `core/graph.py` on the way into a row, so the rule has one definition.
+    """
+    if not isinstance(value, str):
+        return ""
+    printable = "".join(ch if ch.isprintable() else " " for ch in value)
+    collapsed = " ".join(printable.split())
+    return collapsed[:_MAX_CLINICAL_FEATURE_NAME_CHARS].rstrip()
+
+# `.claude/rules/production-standards.md`: "XML parsers must disable
+# external entities. NCBI EFetch returns XML: etree.XMLParser(
+# resolve_entities=False)", an `lxml` parameter this project does not depend
+# on (see `tools/ncbi_transport.py`'s "XML parsing and external entities"
+# section, which this reject mirrors for the same reason: `lxml` and
+# `defusedxml` are both new dependencies this ticket is not scoped to add,
+# `.claude/rules/supply-chain-security.md`). Stdlib `xml.etree.ElementTree`
+# does not resolve external entities or fetch external DTDs by default, so
+# XXE is not the live risk; an internal `<!ENTITY` declaration (which can
+# only appear inside a DOCTYPE) is, so any DOCTYPE or ENTITY marker anywhere
+# in the fragment is rejected before `ElementTree.fromstring` ever sees it.
+# `conceptmeta` is a content fragment, not a full document, so a legitimate
+# one never carries a DOCTYPE at all; if one appears, that is itself reason
+# enough to fail closed, no legitimate-DOCTYPE carve-out is needed the way
+# `ncbi_transport.py`'s PubMed EFetch reject needs one for the public NLM
+# DTD every genuine PubMed record declares.
+_XML_DOCTYPE_MARKER: Final[str] = "<!doctype"
+_XML_ENTITY_MARKER: Final[str] = "<!entity"
+
+
+def _parse_medgen_clinical_features(conceptmeta: Any) -> tuple[list[dict[str, str]], int] | None:
+    """The `<ClinicalFeature>` entries of a MedGen `conceptmeta` blob, and
+    how many distinct features the record lists, or None when it cannot be
+    read.
+
+    F-8.1-J11 (fix-and-verify round): "could not read" and "has none" are
+    different answers and must stay different all the way to the reader.
+    None, never raising, for anything that is not a non-blank string, that
+    fails the DOCTYPE/ENTITY reject, or that does not parse as XML once
+    wrapped: the caller then says nothing about features at all. A record
+    that parsed and carries no `ClinicalFeature` is `([], 0)`, and only that
+    one may be described as listing none.
+
+    Each item is `{"name": ..., "hpo_id": ...}`, or `{"name": ...}` when the
+    feature's `SDUI` is not exactly an HPO id (`is_hpo_id`). Names pass
+    through `clean_clinical_feature_name`; a feature whose name is empty
+    after cleaning is skipped, and a repeated name (case-insensitive) is
+    kept once. The list is count-capped at `MAX_CLINICAL_FEATURES`, in
+    MedGen's own document order; the second value counts every distinct
+    feature, including any past the cap.
+    """
+    if not isinstance(conceptmeta, str) or not conceptmeta.strip():
+        return None
+    lowered = conceptmeta.lower()
+    if _XML_ENTITY_MARKER in lowered or _XML_DOCTYPE_MARKER in lowered:
+        return None
+    try:
+        root = ElementTree.fromstring(f"<medgen_concept_meta>{conceptmeta}</medgen_concept_meta>")
+    except ElementTree.ParseError:
+        return None
+    features: list[dict[str, str]] = []
+    seen: set[str] = set()
+    total = 0
+    for element in root.iter("ClinicalFeature"):
+        name_element = element.find("Name")
+        raw_name = "".join(name_element.itertext()) if name_element is not None else ""
+        name = clean_clinical_feature_name(raw_name)
+        if not name or name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        total += 1
+        if len(features) >= MAX_CLINICAL_FEATURES:
+            continue
+        item: dict[str, str] = {"name": name}
+        hpo_id = element.get("SDUI")
+        if is_hpo_id(hpo_id):
+            item["hpo_id"] = hpo_id
+        features.append(item)
+    return features, total
+
+
 async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
     """ESummary: `db=<db>&id=<ids>&retmode=json`. Case 2 live-verifies db=gene."""
     request_params = {"db": params.db, "id": ",".join(params.ids), "retmode": "json"}
@@ -988,6 +1136,21 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
             }
         else:
             extracted = _generic_summary_fields(entry)
+        # T-8.1-06: MedGen's clinical features, parsed out of the raw
+        # `conceptmeta` field and added as their own bounded keys. Never add
+        # `conceptmeta` itself to `_SUMMARY_FIELDS_BY_DB["medgen"]`: see the
+        # comment above `_parse_medgen_clinical_features` for why the 35KB
+        # blob it comes from must never reach a prompt whole.
+        #
+        # F-8.1-J11 (fix-and-verify round): both keys are set ONLY when the
+        # blob was read. `clinical_features` is then the (possibly empty)
+        # list and `clinical_features_total` the number MedGen lists; an
+        # unreadable blob sets neither, so the caller can never turn "could
+        # not read" into "MedGen lists none".
+        if params.db == "medgen":
+            parsed = _parse_medgen_clinical_features(entry.get("conceptmeta"))
+            if parsed is not None:
+                extracted["clinical_features"], extracted["clinical_features_total"] = parsed
         records.append(
             NcbiEfetchRecord(
                 id=uid,

@@ -1,0 +1,674 @@
+{
+ "record": {
+  "id": "G-034",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kiss",
+  "query_class": "aggregate",
+  "expected_outcome": "answer",
+  "question": "How many genes in the graph are associated with breast cancer?",
+  "session_id": "c103-0f73b33e6197",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T09:53:21+00:00",
+  "run_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "MedGen:C1320450",
+   "MedGen:C1861471",
+   "MedGen:C1968974",
+   "MedGen:C2675521",
+   "MedGen:C2676677",
+   "MedGen:C3469522",
+   "MedGen:C4016360",
+   "MedGen:C4016581"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 3,
+  "distinct_sources": 3,
+  "citations_by_layer": {
+   "layer_2_api": 2,
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 130,
+  "answer_start": "Found 1 derived record for breast cancer: MedGen:C1320450 [2]. \n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nMedGen lists no clinic",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 9.018,
+  "seconds": 18.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 16,
+   "citation": 3,
+   "trust_signal": 4,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 0,
+   "ts": "2026-09-25T09:51:47.147606Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 2,
+   "ts": "2026-09-25T09:51:48.923640Z",
+   "payload": {
+    "narrative": "The query asks for a count of genes associated with a specific disease, which requires aggregating over multiple records. (breast cancer: 8 of at least 20 MedGen records matched by name)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 4,
+   "ts": "2026-09-25T09:51:49.459979Z",
+   "payload": {
+    "narrative": "searching 3 layers for seen by breast cancer nurse. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-41d315341558",
+      "layer": "layer_1_graph",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-d0e7672f6da8",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-63aa6421c73d",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-215f894378e8",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-fdc057bfb7fd",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-978f5dafbdd6",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-5da5c5396200",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4ce971e43d9d",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 6,
+   "ts": "2026-09-25T09:51:49.461592Z",
+   "payload": {
+    "call_id": "cq-41d315341558",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 7,
+   "ts": "2026-09-25T09:51:49.461640Z",
+   "payload": {
+    "call_id": "pa-d0e7672f6da8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 8,
+   "ts": "2026-09-25T09:51:49.461657Z",
+   "payload": {
+    "call_id": "ct-63aa6421c73d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 9,
+   "ts": "2026-09-25T09:51:49.461670Z",
+   "payload": {
+    "call_id": "ne-215f894378e8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 10,
+   "ts": "2026-09-25T09:51:49.461684Z",
+   "payload": {
+    "call_id": "ne-fdc057bfb7fd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 11,
+   "ts": "2026-09-25T09:51:49.461698Z",
+   "payload": {
+    "call_id": "ne-978f5dafbdd6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 12,
+   "ts": "2026-09-25T09:51:49.461711Z",
+   "payload": {
+    "call_id": "pa-5da5c5396200",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 13,
+   "ts": "2026-09-25T09:51:49.461724Z",
+   "payload": {
+    "call_id": "ne-4ce971e43d9d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 14,
+   "ts": "2026-09-25T09:51:49.663226Z",
+   "payload": {
+    "call_id": "ne-215f894378e8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 15,
+   "ts": "2026-09-25T09:51:49.673272Z",
+   "payload": {
+    "call_id": "ct-63aa6421c73d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 16,
+   "ts": "2026-09-25T09:51:49.813634Z",
+   "payload": {
+    "call_id": "ne-fdc057bfb7fd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 17,
+   "ts": "2026-09-25T09:51:51.460262Z",
+   "payload": {
+    "call_id": "pa-d0e7672f6da8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 18,
+   "ts": "2026-09-25T09:51:54.589105Z",
+   "payload": {
+    "call_id": "cq-41d315341558",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 19,
+   "ts": "2026-09-25T09:51:54.589271Z",
+   "payload": {
+    "call_id": "ne-978f5dafbdd6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 20,
+   "ts": "2026-09-25T09:51:54.589322Z",
+   "payload": {
+    "call_id": "pa-5da5c5396200",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 21,
+   "ts": "2026-09-25T09:51:54.745729Z",
+   "payload": {
+    "call_id": "ne-4ce971e43d9d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 22,
+   "ts": "2026-09-25T09:51:54.747723Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/729095",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1320450",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1320450",
+    "layer": "layer_1_graph",
+    "source": "MedGen",
+    "field": "n",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "729095",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/729095",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "c3766d5d-1a4d-4a5d-a362-0fa176354d90",
+   "seq": 47,
+   "ts": "2026-09-25T09:52:03.473356Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 9018,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 derived record for breast cancer: MedGen:C1320450 [2]. \n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nDerived records found\n\nDerived MedGen:C1320450, n: 0 [2]. \n\nMedgen records found\n\nMedgen title: Seen by breast cancer nurse [3]. Medgen clinical_features: MedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nNote: this answer does not address the following entities named in the question: Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 2, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer."
+}

@@ -246,11 +246,23 @@ _TRUNCATED_DEPTH_MARKER = "<truncated: maximum nesting depth exceeded>"
 # - 22 rows or more: the ceiling fires and the list shrinks to 21 rows.
 #
 # So the realistic path is unaffected and the ceiling still bites on a
-# payload past it. The VALUE is deliberately unchanged: whether 50,000 is
-# the right ceiling now that a single field may carry 2000 characters is
-# a product decision, not one to take inside a defect fix, and 21 rows is
-# already more than any shipped breadth cap requests.
-_MAX_FINDING_TOTAL_BYTES = 50_000
+# payload past it. The 50,000 value was deliberately left unchanged at the
+# time of that 2026-09-22 measurement: whether it was the right ceiling
+# once a single field could carry 2000 characters was a product decision,
+# not one to take inside a defect fix.
+#
+# T-8.1-02, DECISIONS.md 2026-09-25: raised from 50,000 to 70,000, the
+# product decision the note above deferred. `_MAX_CITATIONS_PER_ANSWER`
+# and `_MAX_FINDINGS_FOR_MODEL_PROMPT` (`core/graph.py`) rose from 20 to 30
+# in the same ticket, and the 2026-09-22 measurement above already showed
+# the arithmetic this forces: 20 rows of 2000-character-abstract PubMed
+# records serialize to 45,841 bytes, so 30 such rows need roughly 68,800
+# bytes, past the old 50,000 ceiling. Without this change the byte ceiling
+# would fire before the citation cap on exactly the paper questions the
+# citation-cap raise exists to help, and the 30-source cap would never
+# take effect on them. Gene and variant records stay short and never
+# approach either ceiling.
+_MAX_FINDING_TOTAL_BYTES = 70_000
 
 # F-2.0-08: the fixed per-step timeout budget for the isolated reader
 # pass's single `call_tier("guard", ...)` call. Matches

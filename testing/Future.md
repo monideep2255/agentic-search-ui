@@ -7,7 +7,7 @@ Every piece of remaining work that is not on the board. The board, `testing/UI_f
 
 Each row of both sources was checked against the code, the tracker and the done file before it was listed. A row the evidence showed closed is under "Checked and closed" with that evidence. A row that could not be settled is listed as open with "Check first" in its card. The detail stays in the source each card names; this file only points to it. Code paths are under `src/system_03_search_agent/` and test paths under `tests/system_03_search_agent/` unless written in full.
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-25.
 
 ## Table of contents
 
@@ -67,6 +67,7 @@ Ordered from the chair of the person using the product: what they notice first (
 | 44 | PubTator and LitVar hand each other variant ids in different shapes. No code chains the two today | Archive: F-3.3-A-11. Detail in `tracker/phase_3.3.md` | Nobody on it |
 | 45 | A LitVar row with no identity can ship as an empty but successful match. Not seen on live data | Archive: F-3.3-RR-02. Detail in `tracker/phase_3.3.md` | Nobody on it |
 | 46 | The isolate distance lookup can fall back to a different metric. Not seen firing on about 9,400 rows | Archive: F-3.5-A-11. Code at `tools/pathogen_detection.py:376`; detail in `tracker/phase_3.5.md` | Nobody on it |
+| 47 | At the locked specification's next reconciliation, add two NCBI fields the code reads beyond Section 6.2's table: the gene record's `summary` (item 11.31, kept by the product owner on 2026-09-25) and the MedGen record's clinical features parsed from `conceptmeta` (phase 8.1, card 1) | DECISIONS.md, 2026-09-25, card 36; `tracker/phase_8.1.md`, F-8.1-V03 | The next reconciliation |
 
 Already on the board, so not repeated here:
 

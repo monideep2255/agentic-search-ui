@@ -545,6 +545,8 @@ from system_03_search_agent.synthesis.disease_names import (
     resolve_concept_ids,
 )
 from system_03_search_agent.synthesis.findings import (
+    CLINICAL_FEATURES_FIELD,
+    NO_CLINICAL_FEATURES_PREFIX,
     SynthFinding,
     apply_resolved_disease_names,
     build_completeness_directive,
@@ -624,6 +626,11 @@ from system_03_search_agent.tools.ncbi_dbsnp import ncbi_dbsnp
 from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput, NcbiDbsnpOutput
 from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi_efetch
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput, NcbiEfetchOutput
+from system_03_search_agent.tools.ncbi_eutils_actions import (
+    MAX_CLINICAL_FEATURES,
+    clean_clinical_feature_name,
+    is_hpo_id,
+)
 from system_03_search_agent.tools.pathogen_detection import (
     build_citation as pathogen_build_citation,
 )
@@ -1339,14 +1346,129 @@ def _build_think_messages(
     ]
 
 
+#: T-8.1-01: how much of a failed Think reply is echoed back on the retry.
+#: `production-standards`'s bounded-context-items obligation: this is a
+#: hard cap enforced before the string is placed in a prompt, independent
+#: of any schema `maxLength`, since this string never passes through
+#: `_ThinkClassification` at all.
+_THINK_RETRY_ECHO_CHARS = 300
+
+
+#: T-8.1-01: live traffic showed the plan tier answering Think's call with
+#: the right shape except for one substituted key: `"why"` or `"reason"`
+#: in place of the required `"narrative"` field (measured twice in about
+#: forty live runs, `testing/Developer/reports/2026-09-23_user_feedback/
+#: q5_coffee_exercise.txt` and `.../2026-09-23_set12/breadth_runs/
+#: q5_coffee_exercise.txt`, both attempts of the existing retry). This is
+#: a deterministic KEY rename, never a content decision: the value under
+#: the alias key is carried over unchanged, nothing about which query_class
+#: or entities to report is inferred or guessed here.
+_THINK_NARRATIVE_KEY_ALIASES = ("why", "reason", "rationale", "explanation")
+
+
+def _repair_think_narrative_key(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Rename a synonym key to `narrative` when `narrative` itself is absent.
+
+    Returns `parsed` unchanged (same object) when no repair applies, so a
+    caller can tell whether anything was attempted with an `is` check.
+    Only fires when renaming would not ALSO leave an extra, still-unknown
+    key behind: `_ThinkClassification` forbids extra fields
+    (`extra="forbid"`), so a reply carrying `why` alongside some other
+    unmodeled key is left alone and still fails validation honestly rather
+    than being coerced into looking clean.
+    """
+    if "narrative" in parsed:
+        return parsed
+    known_keys = {"query_class", "narrative", "entities"}
+    for alias in _THINK_NARRATIVE_KEY_ALIASES:
+        if alias not in parsed or not isinstance(parsed[alias], str):
+            continue
+        other_keys = set(parsed) - {alias}
+        if not other_keys <= known_keys:
+            continue
+        repaired = dict(parsed)
+        repaired["narrative"] = repaired.pop(alias)
+        return repaired
+    return parsed
+
+
+#: F-8.1-J04, J05, A05 (fix-and-verify round): the hard character cap on
+#: any Think validation-error text before it is placed in the retry prompt
+#: or written to the log. `production-standards`'s bounded-context-items
+#: obligation: the cap is enforced before injection, not trusted to a
+#: later reader. Needed because pydantic's `loc` for an extra key IS the
+#: key name the model wrote, verbatim and unbounded (measured in round 1:
+#: one 5,000-character key gave a 5,105-character message, five
+#: 20,000-character keys gave 100,246). 300 characters holds the five
+#: field-level complaints a real malformed reply produces ("narrative:
+#: Field required; bogus_field: Extra inputs are not permitted" is 60),
+#: so a genuine error is never cut; only a reply whose KEY NAMES are
+#: themselves oversized is elided.
+_THINK_ERROR_TEXT_MAX_CHARS: Final[int] = 300
+
+
+def _bounded_one_line(text: str, max_chars: int) -> str:
+    """`text` as one printable line, at most `max_chars` characters plus a
+    short elision note naming how many characters were dropped.
+
+    Every non-printable character (newline, tab, any control character, a
+    bidi override such as U+202E, a zero-width space) becomes a space, then
+    runs of whitespace collapse to one. So a model-written key such as
+    `"x\\nWARNING forged log line"` can neither start a second log line nor
+    a second line in a prompt. Pure and deterministic.
+    """
+    printable = "".join(ch if ch.isprintable() else " " for ch in text)
+    collapsed = " ".join(printable.split())
+    if len(collapsed) <= max_chars:
+        return collapsed
+    elided = len(collapsed) - max_chars
+    return f"{collapsed[:max_chars]}... [{elided} more characters elided]"
+
+
+def _think_validation_detail(exc: ValidationError) -> str:
+    """A bounded, actionable summary of a `_ThinkClassification` failure.
+
+    Field name and pydantic's own generic message only (e.g. "narrative:
+    Field required"), never the raw input value: pydantic's default
+    `ValidationError.__str__` embeds `input_value`, which would put an
+    unbounded slice of the model's own reply into a message that this
+    code later feeds back into a second model call and into a `step_error`
+    surfaced to the caller.
+
+    The first 5 errors only, and the whole summary goes through
+    `_bounded_one_line` at `_THINK_ERROR_TEXT_MAX_CHARS`: the 5-error cap
+    alone bounds the COUNT, not the length, since an extra key's `loc` is
+    the model's own key name at whatever length it wrote (F-8.1-J04).
+    """
+    parts = []
+    for error in exc.errors()[:5]:
+        loc = ".".join(str(piece) for piece in error["loc"]) or "(root)"
+        parts.append(f"{loc}: {error['msg']}")
+    return _bounded_one_line("; ".join(parts), _THINK_ERROR_TEXT_MAX_CHARS)
+
+
+def _think_error_text(exc: BaseException) -> str:
+    """The one form of a Think parse failure that leaves this module: the
+    retry prompt and the warning log both read this, never `str(exc)` raw.
+
+    Bounded again here, not only inside `_think_validation_detail`, so the
+    guarantee holds for every `ThinkClassificationUnavailableError` message
+    whatever builds it, and so a reader of `think_node` can see the bound
+    at the point of injection rather than trusting a helper two calls away.
+    """
+    return _bounded_one_line(str(exc), _THINK_ERROR_TEXT_MAX_CHARS)
+
+
 def _parse_think_classification(content: str) -> _ThinkClassification:
     """Deterministic accept-or-raise on the model's text.
 
     Mirrors `guardrail.classifier.parse_classification` exactly:
     `production-standards` requires a deterministic accept-or-reject rule
     for structured model output, never a lenient partial parse. Tolerates
-    exactly one cosmetic deviation, a surrounding markdown code fence,
-    because models add one routinely and it changes no field value.
+    two cosmetic deviations: a surrounding markdown code fence (changes no
+    field value), and one synonym key for `narrative`
+    (`_repair_think_narrative_key`, T-8.1-01). Neither repair ever invents
+    or reinterprets a VALUE, only where an already-present value sits.
     """
     stripped = content.strip()
     if stripped.startswith("```"):
@@ -1369,10 +1491,17 @@ def _parse_think_classification(content: str) -> _ThinkClassification:
 
     try:
         return _ThinkClassification.model_validate(parsed)
-    except ValidationError as exc:
+    except ValidationError as first_exc:
+        repaired = _repair_think_narrative_key(parsed)
+        if repaired is not parsed:
+            try:
+                return _ThinkClassification.model_validate(repaired)
+            except ValidationError:
+                pass
         raise ThinkClassificationUnavailableError(
-            "the plan tier's response did not match the think classification schema"
-        ) from exc
+            "the plan tier's response did not match the think classification "
+            f"schema ({_think_validation_detail(first_exc)})"
+        ) from first_exc
 
 
 #: The organism a gene symbol is resolved against when the query names
@@ -2245,6 +2374,15 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # fabricated or defaulted classification (T-4.7-04).
     classification: _ThinkClassification | None = None
     parse_error: ThinkClassificationUnavailableError | None = None
+    # T-8.1-01: attempt 2 no longer resends byte-identical messages. A
+    # systematic key-naming habit (measured live: the model substitutes
+    # "why" or "reason" for the required "narrative" key) reproduces
+    # identically on an unchanged retry, which is why the prior blind
+    # retry never actually recovered these two live cases. `call_messages`
+    # grows by exactly one exchange (the bad reply, echoed and bounded, plus
+    # the specific field-level error) so the model sees what was wrong,
+    # never a hint at what content to report.
+    call_messages = think_messages
     for attempt in (1, 2):
         try:
             response = await _dispatch_tier_call(
@@ -2258,7 +2396,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 "think",
                 # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after
                 # the question, never spliced into the system block.
-                think_messages,
+                call_messages,
                 budget_s=budget_for_step("think", "lookup"),
                 # No stable prefix ahead of the classification instruction
                 # (2026-09-13, UI fix set 7). Measured on develop after the
@@ -2282,19 +2420,43 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         except ThinkClassificationUnavailableError as exc:
             parse_error = exc
             content = response.content if isinstance(response.content, str) else ""
-            # Bounded and escaped: the length, and the first 200 characters
-            # as a repr, so a newline or control character in the reply
-            # cannot forge a second log line. Model output only, never a
-            # credential or an account field.
+            # F-8.1-J04, A05: the error text is model-steerable (an extra
+            # key's name reaches it verbatim), so it is bounded and made one
+            # line ONCE, here, and both readers below take this form only.
+            error_text = _think_error_text(exc)
+            # Bounded and escaped: the error text through `_think_error_text`
+            # (one printable line, capped), the reply's length, and its first
+            # 200 characters as a repr, so a newline or control character in
+            # the reply or in a key name cannot forge a second log line.
+            # Model output only, never a credential or an account field.
             logger.warning(
                 "think classification unusable (attempt %d of 2, trace %s): "
                 "%s; reply length %d, starts %r",
                 attempt,
                 trace_id,
-                exc,
+                error_text,
                 len(content),
                 content[:200],
             )
+            if attempt == 1:
+                # Bounded echo of the bad reply (never the full thing) plus
+                # the exact schema complaint, so the second attempt corrects
+                # the actual mistake instead of repeating it. Both pieces
+                # are bounded model output; nothing here is user-controllable
+                # beyond the query the model already saw.
+                call_messages = think_messages + [
+                    {"role": "assistant", "content": content[:_THINK_RETRY_ECHO_CHARS]},
+                    {
+                        "role": "user",
+                        "content": (
+                            "That reply did not match the required schema: "
+                            f"{error_text}. Reply again with a single JSON object "
+                            'using exactly these keys: "query_class", '
+                            '"narrative", "entities". No other key name for '
+                            "the reasoning field is accepted."
+                        ),
+                    },
+                ]
 
     if classification is None:
         # The model answered twice, and both answers were unusable. A step
@@ -5327,6 +5489,12 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # is withheld for the reason `_NCBI_EFETCH_ROW_IDENTITY_FIELDS`
     # withholds `gene_id`: it identifies the record rather than saying
     # anything about it, and the question already resolved it.
+    #
+    # The record's clinical features are NOT listed here, on purpose
+    # (F-8.1-A11, fix-and-verify round). They reach synthesis as one row per
+    # feature, built from the record by `_with_medgen_clinical_feature_rows`
+    # below, never as a field of the title row: one string joining every
+    # feature could not be quoted by a sentence naming one of them.
     "medgen_summary": ("title", "definition", "semantictype"),
 }
 
@@ -5446,6 +5614,136 @@ def _unwrap_medgen_fields(fields: dict[str, Any]) -> dict[str, Any]:
     return unwrapped
 
 
+#: F-8.1-A11 (fix-and-verify round). The row fields a MedGen clinical
+#: feature row carries besides the feature's name, which sits first under
+#: `CLINICAL_FEATURES_FIELD` so `_pick_representative_field` (insertion
+#: order when a row has no `name` field) always cites the name itself. These
+#: three are read only by the code-built listing (`_answer_tokens`, through
+#: `_clinical_feature_row`), never shown to a model.
+_FEATURE_HPO_FIELD: Final[str] = "hpo_id"
+_FEATURE_TOTAL_FIELD: Final[str] = "clinical_features_total"
+_FEATURE_DISEASE_FIELD: Final[str] = "disease_title"
+
+#: The longest disease title a feature row, or the "lists none" sentence,
+#: carries. MedGen titles run to about 100 characters; the bound keeps one
+#: hostile title from growing every feature row of its record.
+_MAX_FEATURE_DISEASE_TITLE_CHARS: Final[int] = 200
+
+
+def _medgen_no_clinical_features_text(disease_title: str) -> str:
+    """F-8.1-J11, J13, A04: the one sentence that says a record lists none.
+
+    Composed by code from a value already fetched AND read (the record's
+    `conceptmeta` parsed and carries no `ClinicalFeature`), cited to that
+    record, and naming the disease, so a listing that carries several
+    MedGen records never shows an anonymous "no clinical features" line.
+    States what a record contains and decides nothing about what to search
+    or how to classify the question. Never produced for a record whose
+    features could not be read (`_with_medgen_clinical_feature_rows`).
+    """
+    return f"{NO_CLINICAL_FEATURES_PREFIX}{disease_title}"
+
+
+def _feature_disease_title(title_row: dict[str, Any]) -> str:
+    """The record's own title as one printable line, or "" when absent."""
+    title = title_row["fields"].get("title")
+    if not isinstance(title, str):
+        return ""
+    printable = "".join(ch if ch.isprintable() else " " for ch in title)
+    return " ".join(printable.split())[:_MAX_FEATURE_DISEASE_TITLE_CHARS].rstrip()
+
+
+def _with_medgen_clinical_feature_rows(
+    records: list[Any], title_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """F-8.1-A11, J09, J10, J11, J14, A03 (fix-and-verify round): each
+    admitted MedGen title row, followed by one row PER clinical feature the
+    record lists, every one carrying the record's own `source_url`.
+
+    WHY ONE ROW PER FEATURE. The first version joined every feature into one
+    string on one row. `grounding.ground_claim` accepts containment in
+    either direction and nothing else, so a sentence naming ONE feature
+    ("Marfan syndrome is associated with ectopia lentis [7]") is neither
+    contained in a 30-feature string nor contains it, and every such
+    sentence was stripped live (F-8.1-A11: the model named all 30, the gate
+    kept none). With a row, and so a finding, per feature, that sentence
+    contains its own finding's value and grounds under the unchanged gate.
+    A row still carries exactly one field a model is shown (`render_finding_
+    body`), the reason `_pubmed_abstract_rows` adds rows the same way.
+
+    What a feature row carries: the name under `CLINICAL_FEATURES_FIELD`,
+    its HPO id only when it is exactly one (`is_hpo_id`), how many features
+    the record lists in total, and the disease's own title; the last three
+    for the code-built listing. Names are cleaned again with the tool's own
+    rule (`clean_clinical_feature_name`): this is parsed NCBI text one hop
+    from the live response, and a newline in it once forged a finding line
+    in the writing model's prompt (F-8.1-J14).
+
+    Three cases, and the difference between the last two is the point
+    (F-8.1-J11):
+
+    - The record lists features: one row each, at most
+      `ncbi_eutils_actions.MAX_CLINICAL_FEATURES`.
+    - The record was read and lists none (`clinical_features == []`, total
+      0): one row saying so, naming the disease.
+    - The record could not be read (neither key present, the tool's signal
+      for an unreadable `conceptmeta`): no row at all. Nothing is said
+      about its features, because nothing is known.
+
+    Interleaved (title, its features, the next title, ...), so a record's
+    features follow its own title in every walk of the rows. Matched to the
+    admitted `title_rows` by `source_url`, like `_pubmed_abstract_rows`, so
+    this never adds a record the title cap did not admit.
+    """
+    by_url = {record.source_url: record for record in records if record.source_url}
+    out: list[dict[str, Any]] = []
+    for row in title_rows:
+        out.append(row)
+        record = by_url.get(row["source_url"])
+        if record is None:
+            continue
+        features = record.fields.get(CLINICAL_FEATURES_FIELD)
+        total = record.fields.get(_FEATURE_TOTAL_FIELD)
+        if not isinstance(features, list) or not isinstance(total, int) or isinstance(total, bool):
+            continue
+        disease_title = _feature_disease_title(row)
+        feature_rows: list[dict[str, Any]] = []
+        for item in features[:MAX_CLINICAL_FEATURES]:
+            if not isinstance(item, Mapping):
+                continue
+            name = clean_clinical_feature_name(item.get("name"))
+            if not name:
+                continue
+            fields: dict[str, Any] = {CLINICAL_FEATURES_FIELD: name}
+            if is_hpo_id(item.get(_FEATURE_HPO_FIELD)):
+                fields[_FEATURE_HPO_FIELD] = item[_FEATURE_HPO_FIELD]
+            fields[_FEATURE_TOTAL_FIELD] = max(total, len(features))
+            fields[_FEATURE_DISEASE_FIELD] = disease_title
+            feature_rows.append(
+                {
+                    "curie": "",
+                    "node_or_edge_type": row["node_or_edge_type"],
+                    "fields": fields,
+                    "source_url": row["source_url"],
+                }
+            )
+        if not features and total == 0 and disease_title:
+            feature_rows.append(
+                {
+                    "curie": "",
+                    "node_or_edge_type": row["node_or_edge_type"],
+                    "fields": {
+                        CLINICAL_FEATURES_FIELD: _medgen_no_clinical_features_text(disease_title),
+                        _FEATURE_TOTAL_FIELD: 0,
+                        _FEATURE_DISEASE_FIELD: disease_title,
+                    },
+                    "source_url": row["source_url"],
+                }
+            )
+        out.extend(feature_rows)
+    return out
+
+
 def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -> list[Any]:
     """Item 2b (2026-09-22): the OMIM summary records whose own title names
     `gene_symbol` in a symbol field, and no others.
@@ -5560,6 +5858,12 @@ def _ncbi_efetch_output_to_structured_fields(
         rows = rows[:_BREADTH_ROW_CAP]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
             rows = rows + _pubmed_abstract_rows(output.records, rows)
+        if purpose == _MEDGEN_SUMMARY_PURPOSE:
+            # T-8.1-06b, rebuilt in the fix-and-verify round (F-8.1-A11):
+            # one row per clinical feature behind its record's title row,
+            # read from the record, never from the title row's fields. See
+            # `_with_medgen_clinical_feature_rows` for why one row each.
+            rows = _with_medgen_clinical_feature_rows(output.records, rows)
         if purpose == _SRA_SUMMARY_PURPOSE:
             for row in rows:
                 runs = row["fields"].get("runs")
@@ -6256,7 +6560,7 @@ async def act_node(state: GraphState) -> dict[str, Any]:
 # happened.
 # ---------------------------------------------------------------------------
 
-_MAX_CITATIONS_PER_ANSWER = 20
+_MAX_CITATIONS_PER_ANSWER = 30
 
 # Answer quality fix (2026-09-20). `_MAX_CITATIONS_PER_ANSWER` above used to
 # be the ONE number doing two different jobs at once: how many findings
@@ -6267,19 +6571,30 @@ _MAX_CITATIONS_PER_ANSWER = 20
 # was incomplete, even though the table rows below the prose are built
 # entirely in code from a finding's own structured fields and never pass
 # through a model at all. `_MAX_CITATIONS_PER_ANSWER` itself is left alone,
-# unchanged, for `_citations_from_findings` below, a build-phase-2.1-era
-# function that is not on this live path (see its own docstring) and whose
-# tests assert on it directly.
+# unchanged in VALUE-SOURCE terms, for `_citations_from_findings` below, a
+# build-phase-2.1-era function that is not on this live path (see its own
+# docstring) and whose tests assert on it directly.
+#
+# T-8.1-02, DECISIONS.md 2026-09-25 ("the per-answer citation cap
+# `_MAX_CITATIONS_PER_ANSWER` rises from 20 to 30"): raised here from 20 to
+# 30. That decision's own reasoning text describes this constant as "the
+# same constant [that] bounds what the writing model sees", which was true
+# BEFORE the split above and is not true of THIS constant any more; it
+# describes `_MAX_FINDINGS_FOR_MODEL_PROMPT` below, which is raised to 30
+# in the same commit so the decision's intent (a paper question can
+# actually reach 30 citations) is honoured on the live path, not only in
+# this now-dormant constant's name.
 #
 # The hard ceiling on how many findings reach one Synth model call's own
 # prompt (`render_findings_block`/`build_synth_messages`). This is the
 # hallucination control `system-design-patterns.md` pattern 7 exists for:
 # never inline more raw facts into a model's context than it can be
 # trusted not to invent past (`synthesis/findings.py`'s own module
-# docstring makes the same point about `MAX_FINDINGS_PER_PROMPT`). The
-# VALUE is unchanged, still 20; only the name is new, so this job can never
-# again be silently re-merged with the one below.
-_MAX_FINDINGS_FOR_MODEL_PROMPT = 20
+# docstring makes the same point about `MAX_FINDINGS_PER_PROMPT`). Raised
+# from 20 to 30 by the same T-8.1-02 decision above: this is the constant
+# that decision's reasoning actually describes, so it is the one that must
+# move for a paper question to be ABLE to reach 30 cited sources.
+_MAX_FINDINGS_FOR_MODEL_PROMPT = 30
 
 # The much higher ceiling on how many already-fetched, code-built rows may
 # reach the citation list, the disclosure table and the findings tail.
@@ -6293,6 +6608,54 @@ _MAX_FINDINGS_FOR_MODEL_PROMPT = 20
 # multi-agent pipeline gate still requires the bound to exist, just at a
 # value the tool's own output can actually reach.
 _MAX_FINDINGS_FOR_DISPLAY = _PLAN_TOOL_CALL_ROW_LIMIT
+
+# F-8.1-A12 (fix-and-verify round, 2026-09-25). How many of the
+# `_MAX_FINDINGS_FOR_MODEL_PROMPT` slots the question's disease keeps for
+# the clinical features on its own MedGen record (plus one for the record's
+# title, so the model reads which disease they belong to).
+#
+# Why 10. It is the same figure as `_LEAD_FINDINGS_QUOTA`, the slots the
+# question's own graph rows are guaranteed: with 11 reserved, 19 remain,
+# so those 10 still land in the prompt with room for context. It is twice
+# the five features card 1 asks an answer to name, so a few sentences the
+# gate strips cannot take the answer below five. And it is well under the
+# measured record sizes (70 for Marfan syndrome, 57 and 31 for the other
+# records round 1 read), so the prompt never becomes a feature list with
+# the graph answer squeezed out; the code-built listing carries all of them.
+_ANCHOR_FEATURE_PROMPT_SLOTS: Final[int] = 10
+
+
+def _anchor_disease_prompt_reservation(synth_findings: list[SynthFinding]) -> list[str]:
+    """The citation ids `write_node` keeps inside the model's prompt slice
+    for the question's disease: each MedGen record's title, then its
+    clinical feature findings, at most `_ANCHOR_FEATURE_PROMPT_SLOTS`
+    features in all, in MedGen's own order.
+
+    Clinical feature findings exist only on the `medgen_summary` breadth
+    call, which `breadth_plan.plan_disease_search` plans for a question
+    whose anchor resolved to a disease, by that disease's own concept id,
+    so "the question's anchor is a disease with clinical features" is read
+    off the findings themselves rather than off the question's wording: no
+    question-shape rule is involved. A record that lists none contributes
+    its one "lists none" finding, which is the honest answer to a phenotype
+    question about it. Empty when there are no such findings.
+    """
+    features = [f for f in synth_findings if f.field == CLINICAL_FEATURES_FIELD]
+    features = features[:_ANCHOR_FEATURE_PROMPT_SLOTS]
+    if not features:
+        return []
+    reserved: list[str] = []
+    for url in dict.fromkeys((f.source_url or "").strip() for f in features):
+        title = next(
+            (f for f in synth_findings if f.field == "title" and (f.source_url or "").strip() == url),
+            None,
+        )
+        if title is not None:
+            reserved.append(title.citation_id)
+        reserved.extend(
+            f.citation_id for f in features if (f.source_url or "").strip() == url
+        )
+    return reserved
 
 
 def _tool_execution_outcome(
@@ -9093,6 +9456,35 @@ def _row_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] |
     return _row_behind_synth_finding(findings, finding)
 
 
+def _clinical_feature_row(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any]:
+    """The `fields` of the one MedGen clinical feature row a feature finding
+    was built from, or {} when none matches.
+
+    Not `_row_fields_for`: every feature row shares its record's page URL
+    with the record's title row, and that lookup returns the first URL
+    match in the call, the title row, for all of them (the GO-row defect
+    `_row_for`'s docstring records, one record type over). Matched here on
+    the finding's own call, its URL and its own value under
+    `CLINICAL_FEATURES_FIELD`, so each feature reads its own HPO id.
+    """
+    url = (finding.source_url or "").strip()
+    for candidate in findings:
+        fields = candidate.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        if finding.call_id and candidate.call_id != finding.call_id:
+            continue
+        for row in fields.get("rows", []):
+            row_fields = row.get("fields")
+            if (
+                isinstance(row_fields, dict)
+                and str(row.get("source_url") or "").strip() == url
+                and row_fields.get(CLINICAL_FEATURES_FIELD) == finding.field_value
+            ):
+                return row_fields
+    return {}
+
+
 def _row_fields_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
     """The raw row's `fields` for a prepared finding, matched by source URL."""
     row = _row_for(finding, findings)
@@ -9257,6 +9649,77 @@ def _answer_tokens(
             citation.source_id if citation is not None else "",
         )
 
+    def split_feature_sentences(
+        sentences: tuple[str, ...],
+    ) -> tuple[tuple[str, ...], dict[str, list[tuple[str, SynthFinding]]]]:
+        # F-8.1-A04, J13 (fix-and-verify round): a MedGen record's clinical
+        # feature rows are listed BENEATH the record's own entry, under a
+        # heading naming the disease, never as records of their own in the
+        # record table (where "Aortic regurgitation" would sit in a column
+        # headed "Disease").
+        records: list[str] = []
+        blocks: dict[str, list[tuple[str, SynthFinding]]] = {}
+        for sentence in sentences:
+            ids = marker_ids(sentence)
+            finding = finding_by_citation_id.get(ids[0]) if ids else None
+            if finding is not None and finding.field == CLINICAL_FEATURES_FIELD:
+                blocks.setdefault((finding.source_url or "").strip(), []).append(
+                    (sentence, finding)
+                )
+            else:
+                records.append(sentence)
+        return tuple(records), blocks
+
+    def feature_block(entries: list[tuple[str, SynthFinding]]) -> None:
+        rows = [_clinical_feature_row(finding, findings) for _, finding in entries]
+        # The "lists none" sentence: its record was read and carries no
+        # features. Shown as its own line, the disease named in its text.
+        for (sentence, finding), row in zip(entries, rows, strict=True):
+            if row.get(_FEATURE_TOTAL_FIELD) == 0:
+                sentence_token(sentence, kind="list_item", cells=[finding.field_value])
+        features = [
+            (sentence, finding, row)
+            for (sentence, finding), row in zip(entries, rows, strict=True)
+            if row.get(_FEATURE_TOTAL_FIELD) != 0
+        ]
+        if not features:
+            return
+        disease = next(
+            (row[_FEATURE_DISEASE_FIELD] for _, _, row in features if row.get(_FEATURE_DISEASE_FIELD)),
+            "",
+        )
+        totals = [
+            row[_FEATURE_TOTAL_FIELD]
+            for _, _, row in features
+            if isinstance(row.get(_FEATURE_TOTAL_FIELD), int)
+        ]
+        total = max(totals) if totals else len(features)
+        title = f"Clinical features MedGen lists for {disease}" if disease else (
+            "Clinical features MedGen lists"
+        )
+        # F-8.1-J09: whenever a cap cut the list (the tool's own, the
+        # display cap or the byte ceiling), the reader is told how many of
+        # how many are shown, never handed a partial list as complete.
+        if len(features) < total:
+            title = f"{title} ({len(features)} of {total} shown)"
+        heading(title)
+        hpo_ids = [str(row.get(_FEATURE_HPO_FIELD) or "") for _, _, row in features]
+        as_table = not plain and any(hpo_ids)
+        if as_table:
+            tokens.append(
+                TokenPayload(
+                    text="",
+                    marker_ids=[],
+                    kind="table_header",
+                    cells=["Clinical feature", IDENTIFIER_COLUMN_LABEL],
+                )
+            )
+        for (sentence, finding, _), hpo_id in zip(features, hpo_ids, strict=True):
+            if as_table:
+                sentence_token(sentence, kind="table_row", cells=[finding.field_value, hpo_id])
+            else:
+                sentence_token(sentence, kind="list_item", cells=[finding.field_value])
+
     def plain_listing(sentences: tuple[str, ...]) -> None:
         # Item 12.9, rule 2: ONE list for a reader with no technical
         # background, in the order the rows were grounded, each row the
@@ -9264,6 +9727,7 @@ def _answer_tokens(
         # identifiers, no mapping cells: those are the Researcher table's.
         # Every record the Researcher tables list is listed here, because
         # both walk the same `sentences`.
+        sentences, feature_blocks = split_feature_sentences(sentences)
         heading(PLAIN_SOURCES_HEADING)
         for sentence in sentences:
             ids = marker_ids(sentence)
@@ -9275,11 +9739,16 @@ def _answer_tokens(
                 finding, _row_fields_for(finding, findings), identifier_for(finding)
             )
             sentence_token(sentence, kind="list_item", cells=[label])
+        # Beneath the one list, so the list itself stays one list: each
+        # disease's features under a heading that names the disease.
+        for entries in feature_blocks.values():
+            feature_block(entries)
 
     def listing(sentences: tuple[str, ...]) -> None:
         if plain:
             plain_listing(sentences)
             return
+        sentences, feature_blocks = split_feature_sentences(sentences)
         # Grouped by the plain NOUN of the record type, not the raw type:
         # the graph writes "Gene" and `ncbi_efetch` writes "gene", and
         # keyed on the raw type a two-gene answer showed "Gene records
@@ -9395,6 +9864,18 @@ def _answer_tokens(
                     else []
                 )
                 sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
+            # Each record in this group that has clinical features gets them
+            # directly beneath the group that names it.
+            for _, finding in entries:
+                if finding is None:
+                    continue
+                block = feature_blocks.pop((finding.source_url or "").strip(), None)
+                if block:
+                    feature_block(block)
+        # A block whose record has no entry above (its title was not
+        # admitted) still reaches the reader, last.
+        for remaining in feature_blocks.values():
+            feature_block(remaining)
 
     if summary_sentence:
         # Always emphasize the lead summary, not Researcher only: it is the
@@ -9632,7 +10113,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # UI fix 11.21 wiring: the answer-shape calls take the first ten
         # slots, then every context call shares the rest one row per
         # round, so the breadth rows never crowd the graph answer out.
-        # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20), so
+        # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30), so
         # the answer's own shape always lands inside the model's prompt
         # slice too, regardless of how large the display cap grows.
         lead_quota=_LEAD_FINDINGS_QUOTA,
@@ -9720,6 +10201,16 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     synth_findings, placeholder_findings_dropped = drop_placeholder_condition_findings(
         synth_findings
     )
+
+    # F-8.1-A12's prompt-slot reservation (`reserve_prompt_slots` with
+    # `_anchor_disease_prompt_reservation`) is deliberately NOT called here.
+    # Round 2 (F-8.1-V01) showed it takes 11 of the 30 prompt slots on every
+    # disease-anchored question, phenotype-shaped or not, and can push the
+    # definitional abstracts out of `What is Marfan syndrome?`. The lead
+    # withdrew the call rather than merge that trade: a disease's features
+    # still reach the reader in the code-built listing at every depth. The
+    # follow-up is to reserve the slots only when a classifier decides the
+    # question asks for phenotypes (phase 8.2's seam), recorded on the board.
 
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 
@@ -10352,10 +10843,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # fewer facts than exist. Its two sources are the findings cap (more
     # citable rows existed than `_MAX_FINDINGS_FOR_DISPLAY` could admit) and
     # the citation cap. Compared against `_MAX_FINDINGS_FOR_DISPLAY`
-    # (2026-09-20), not `_MAX_CITATIONS_PER_ANSWER`: the latter is now the
-    # model-prompt bound alone, and an answer routinely carries more than
-    # 20 citations once the tail lists the full display set, which is not a
-    # cut and must not be reported as one.
+    # (2026-09-20), not `_MAX_CITATIONS_PER_ANSWER`: T-8.1-02 corrected this
+    # comment, which previously named `_MAX_CITATIONS_PER_ANSWER` itself as
+    # "the model-prompt bound alone". That constant is dormant on this live
+    # path (see its own definition's comment); `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    # is the actual model-prompt bound, and an answer routinely carries more
+    # than `_MAX_FINDINGS_FOR_MODEL_PROMPT` citations once the tail lists
+    # the full display set, which is not a cut and must not be reported as
+    # one.
     citations_capped = findings_capped or len(citations) >= _MAX_FINDINGS_FOR_DISPLAY
 
     # F-2.1-10/F-2.1-11/F-2.1-C12 fix: a result the user is shown only part

@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-25.
 
 Every entry has the same three parts:
 
@@ -44,6 +44,7 @@ The daily shipped lists of 2026-09-20, 2026-09-22 and 2026-09-23 were folded in 
 - [9. Screens, phone width, the tour and the disclaimer](#9-screens-phone-width-the-tour-and-the-disclaimer)
 - [10. Questions with no gene and no disease in them](#10-questions-with-no-gene-and-no-disease-in-them)
 - [11. Answers that answer the question](#11-answers-that-answer-the-question)
+- [12. The overnight build of 2026-09-25](#12-the-overnight-build-of-2026-09-25)
 - [Workflow for the product owner](#workflow-for-the-product-owner)
 - [Workflow for the developer](#workflow-for-the-developer)
 - [Where each query came from](#where-each-query-came-from)
@@ -1313,6 +1314,52 @@ What you should see:
 - Known: a model makes the call, not a list, so a borderline word such as `MeSH` can go either way (asked back 2 times in 3).
 - Why it matters: the product owner's words, approving it on 2026-09-23: "If clarify needed -> yes approved". A two-word question like `reflux disease` could mean its symptoms, its trials or its genes, and answering one silent reading of it hides the other three from the reader.
 
+## 12. The overnight build of 2026-09-25
+
+Built overnight from the board's To do column, by the plan in `testing/Overnight_build_plan_2026-09-25.md`. Everything here is on develop only. If you do not like it, `python3 testing/Developer/scripts/bin_overnight.py --all --yes` puts develop's product code back exactly as it was before the night.
+
+### 80. A good question is not refused at the think step (12.17)
+
+Queries to try:
+
+- `Does coffee help make exercise more effective?` at Researcher depth, three times, each as a new search.
+- `is there a trial recruiting for melanoma` at Researcher depth, three times.
+
+What you should see:
+
+- Each is answered every time.
+- Never a refusal that says the plan tier's response did not match the think classification.
+- Why it matters: both questions failed about twice in forty live runs, and the reader saw a refusal for a question the product answers on every other run. The think step now repairs a mislabelled field and retries with the error when a reply is malformed, and never guesses a classification.
+
+### 81. A question about a disease's features names them (12.14)
+
+Queries to try:
+
+- `What phenotypic features are associated with Marfan syndrome?` at Plain language.
+- The same question at Researcher.
+- `What is Marfan syndrome?` at Researcher, to check it still opens on what the disease is.
+
+What you should see:
+
+- At Plain language, the answer names several of the features MedGen lists for Marfan syndrome, for example aortic regurgitation, arachnodactyly or ectopia lentis, each cited to MedGen.
+- At Researcher, a section "Clinical features MedGen lists for Marfan syndrome" lists them, each cited to MedGen, with its HPO id. It says how many of how many are shown when the list is cut.
+- Known: at Researcher the written answer above the list may not name the features. Setting aside room for them in every disease answer pushed other answers' definitions out, so it was withdrawn; the follow-up, doing it only when a question asks about features, is a To do card.
+- Known: the written answer names the first features MedGen lists, which are not always the most important. Aortic root aneurysm is in the list, not always in the sentences.
+- Why it matters: this question used to answer with variant and gene records, a confident answer of the wrong kind.
+
+### 82. An answer can cite up to 30 sources (cards 6 and 43)
+
+Queries to try:
+
+- `What does the literature say about MTHFR C677T?` at Researcher.
+- `Which diseases are associated with BRCA1?` at Researcher.
+
+What you should see:
+
+- The count of sources can go past 20, up to 30, where before every answer stopped at 20.
+- The note saying the answer was cut short appears on fewer answers than before.
+- Why it matters: 24 of 30 live answers used to hit the 20-source ceiling and tell the reader the answer was incomplete. Your decision of 2026-09-25 raised it to 30, and the two limits behind it were raised so the 30 takes effect on paper questions too.
+
 ## Workflow for the product owner
 
 1. Open the develop app: <https://search-agent-web-develop-2aeb.up.railway.app>
@@ -1493,8 +1540,8 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
-| 12.14 | A phenotypic-features question names none | Query 66 shows today's answer |
-| 12.17 | A good question sometimes refuses at the think step | Nothing to try by hand: not built, and seen twice in about forty live runs, so no query triggers it on demand |
+| 12.14 | A question about a disease's features names them | Query 81 |
+| 12.17 | A good question is not refused at the think step | Query 80 |
 | 12.16 part 3 | Which questions count as a request for papers becomes a classifier's decision | Nothing to try by hand: not built, and a routing change a person cannot see |
 | 12.15 | A question asking for recent papers asks what recent means | Nothing to try by hand: not built. Today `recent papers on statins` is answered without asking (query 70) |
 | the golden rows | Four golden test rows disagree with what the product does | Nothing to try by hand: the test set only, and the product owner's decision |
