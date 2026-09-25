@@ -1,26 +1,51 @@
 """Section 10.2: the cheap non-LLM pre-filter.
 
 Step 1 of the Section 10.1 pipeline. Runs entirely in Python with no model
-call, so a confident match costs nothing. Three checks, in this order:
+call, so a confident match costs nothing. Two refusing checks, in this order,
+in `screen`:
 
     1. Injection markers. Literal patterns that are never a real question.
     2. Medical-advice requests. A verdict about the asker, not evidence.
-    3. The biomedical allowlist. No match at all is off-topic.
+
+And one ADMITTING shortcut, `clears_biomedical_allowlist`, which
+`core/graph.py`'s guardrail node reads on its own:
+
+    3. The biomedical allowlist. A match means the question plainly names
+       something biomedical, so the relevancy classifier is not asked.
 
 Order matters and is not the order Section 10.2 lists them in. Injection runs
 FIRST because an injection payload routinely carries biomedical terms whose
 only job is to clear the allowlist, so a query can be simultaneously on-topic
 and hostile. Checking the allowlist first would say nothing useful about it.
 
+## The allowlist admits, it never refuses (build phase 8.2, 2026-09-25)
+
+Until 2026-09-25 a question that missed this vocabulary list was REFUSED as
+off topic here, in 0.0 seconds, before any model read it. A word list was
+deciding what counts as biomedicine, and every question it did not happen to
+cover was told the product does not do biology: "Tell me about the tree of
+life" and "does coffee help exercise performance" were both refused that way.
+DECISIONS.md, 2026-09-25 (cards 8 and 9), moves that decision to a
+classifier: a miss here now sends the question to
+`harness.decide(point="guardrail.relevancy")` in the guardrail node, and only
+that classifier's "off_topic" refuses, with the same wording as before
+(`OFF_TOPIC_REASON`). A hit here still skips that call, so a plainly
+biomedical question stays fast and free.
+
+The non-English abstention that used to sit here (finding ADV-02: a Spanish
+clinical-trials question was refused because this English list could not
+read it) is gone with the refusal it guarded against. Every miss, in any
+language, now reaches a multilingual classifier.
+
 ## What this module is NOT
 
 It is a coarse, fast net, and Section 10.2 says so directly: "The pre-filter
 is a coarse, fast net; it is not expected to catch everything, and it does not
-need to." A query that clears the allowlist and matches no block pattern is
-NOT admitted here. It returns `None`, meaning undecided, and Section 10.1 step
-3 hands it to the Guard-tier model.
+need to." A query that matches no block pattern is NOT admitted by `screen`.
+It returns `None`, meaning undecided, and Section 10.1 step 3 hands it to the
+Guard-tier model, which judges injection and topicality on every question.
 
-That distinction is the whole design. This module can only refuse or abstain.
+That distinction is the whole design. `screen` can only refuse or abstain.
 It can never admit, so a gap here costs a model call rather than a breach.
 
 ## The asymmetry that shapes every pattern below
@@ -65,7 +90,7 @@ from system_03_search_agent.tools.graph_schema_constants import (
     VERTEX_LABELS,
 )
 
-__all__ = ["clears_biomedical_allowlist", "normalize", "screen"]
+__all__ = ["OFF_TOPIC_REASON", "clears_biomedical_allowlist", "normalize", "screen"]
 
 
 # ---------------------------------------------------------------------------
@@ -601,11 +626,13 @@ def _is_conversational(text: str) -> bool:
 
 
 def clears_biomedical_allowlist(text: str) -> bool:
-    """Whether the query mentions anything biomedical at all.
+    """Whether the query plainly names something biomedical.
 
-    Exposed separately from `screen` because the integration layer and the
-    tests both need to ask this question on its own, and because a failure
-    here is the single most likely cause of a wrongly refused real question.
+    An ADMISSION shortcut, never a refusal (build phase 8.2): a hit means
+    the guardrail node skips the relevancy classifier for this question; a
+    miss means that classifier decides, and only its "off_topic" refuses.
+    A miss says only that this English vocabulary list did not recognise a
+    word, which is why it may no longer decide anything on its own.
     """
     if _is_conversational(text):
         return True
@@ -624,85 +651,15 @@ def clears_biomedical_allowlist(text: str) -> bool:
     return any(pattern.search(text) for pattern in _IDENTIFIER_PATTERNS)
 
 
-_NON_ASCII_LETTER: Final = re.compile(r"[^\x00-\x7F]")
-
-# The most common English function words. Their presence is weak evidence the
-# query is English; their complete absence is stronger evidence it is not.
-#
-# This closes the residual left by the non-ASCII check below. "Welche
-# Krankheiten sind mit dem Gen assoziiert?" is a real German question written
-# in pure ASCII with no cognate the vocabulary carries, so the non-ASCII test
-# does not fire and the allowlist refuses it as off-topic. Measured, not
-# hypothesised.
-#
-# Deliberately a SMALL, closed list of function words rather than a growing
-# per-language biomedical vocabulary. Adding German, French, and Spanish terms
-# would be the infinite-blocklist trap this repo recorded on 2026-08-03: the
-# languages you thought of get covered and the rest do not. Function words are
-# finite, they are the same for every English query, and a query that contains
-# none of them is one this English keyword list cannot judge either way.
-_ENGLISH_FUNCTION_WORDS: Final[frozenset[str]] = frozenset(
-    {
-        "the", "a", "an", "is", "are", "was", "were", "be", "been", "do",
-        "does", "did", "what", "which", "who", "whom", "whose", "when",
-        "where", "why", "how", "of", "for", "in", "on", "to", "with", "from",
-        "by", "about", "and", "or", "but", "that", "this", "these", "those",
-        "there", "it", "its", "as", "at", "any", "all", "some", "many",
-        "much", "more", "most", "can", "could", "would", "should", "will",
-        "has", "have", "had", "tell", "show", "give", "find", "list", "me",
-        "my", "you", "your", "please",
-    }
+#: What an off-topic refusal says, byte for byte the sentence this module
+#: refused with before 2026-09-25 and the one `guardrail/classifier.py`'s
+#: own off-topic verdict uses, so a person refused by either judge reads the
+#: same thing. `core/graph.py` refuses with it when the relevancy classifier
+#: decides "off_topic".
+OFF_TOPIC_REASON: Final = (
+    "I answer questions about biomedical evidence from NCBI data: genes, "
+    "variants, diseases, publications, and sequencing records."
 )
-
-
-def _shows_no_sign_of_english(text: str) -> bool:
-    """Whether the query contains no English function word at all.
-
-    A weak signal used in one direction only: to ABSTAIN, never to refuse. A
-    short English query ("BRCA1 variants?") can legitimately contain none, and
-    the cost of abstaining on it is one model call.
-    """
-    tokens = set(normalize(text).split())
-    return not (tokens & _ENGLISH_FUNCTION_WORDS)
-
-
-def _is_unreadable_by_the_allowlist(text: str) -> bool:
-    """Whether the allowlist structurally cannot judge this query's topic.
-
-    The vocabulary is English. A question written in Spanish, German, Russian,
-    or Chinese contains no term it can match, so a miss says nothing about
-    whether the question is biomedical: it only says the check does not speak
-    the language.
-
-    Finding ADV-02 measured the consequence, and it was the worst class of
-    defect this phase can produce. "Que ensayos clinicos existen para el
-    tratamiento del cancer de mama?" is a real clinical-trials question and
-    was refused outright as off-topic. No security test can see that, and the
-    user is simply told this system does not cover their subject.
-
-    So the pre-filter abstains here instead of refusing, and the Guard-tier
-    classifier, which is multilingual, decides. This costs one model call on a
-    non-English query and costs nothing on the English path.
-
-    Deliberately triggers on ANY non-ASCII letter, including accented Latin
-    such as "Muller" or "cafe au lait". Those usually carry enough English to
-    clear the allowlist anyway, so the extra abstention is rare, and erring
-    toward a model call rather than a refusal is the correct direction for
-    every check in this module.
-    """
-    return bool(_NON_ASCII_LETTER.search(text)) or _shows_no_sign_of_english(text)
-
-
-def _screen_off_topic(text: str) -> GuardVerdict | None:
-    if clears_biomedical_allowlist(text):
-        return None
-    if _is_unreadable_by_the_allowlist(text):
-        return None
-    return refused(
-        "off_topic",
-        "I answer questions about biomedical evidence from NCBI data: genes, "
-        "variants, diseases, publications, and sequencing records.",
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -711,7 +668,7 @@ def _screen_off_topic(text: str) -> GuardVerdict | None:
 
 
 def screen(text: str) -> GuardVerdict | None:
-    """Section 10.2's three checks.
+    """Section 10.2's two refusing checks: injection, then medical advice.
 
     Returns a refusal for a confident match, or `None` meaning undecided.
 
@@ -719,6 +676,9 @@ def screen(text: str) -> GuardVerdict | None:
     permission to proceed; it only means this step found nothing conclusive
     and Section 10.1 step 3 must run. A caller that treats `None` as an
     admission has removed the entire Guard-tier layer.
+
+    Topicality is no longer judged here (build phase 8.2, 2026-09-25): see
+    the module docstring and `clears_biomedical_allowlist`.
     """
     normalized = normalize(text)
 
@@ -726,8 +686,4 @@ def screen(text: str) -> GuardVerdict | None:
     if injection is not None:
         return injection
 
-    advice = _screen_medical_advice(normalized)
-    if advice is not None:
-        return advice
-
-    return _screen_off_topic(text)
+    return _screen_medical_advice(normalized)

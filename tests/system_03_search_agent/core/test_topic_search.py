@@ -717,6 +717,42 @@ async def test_a_question_that_resolves_an_entity_never_takes_the_topic_path(
     assert "BRCA1[Title/Abstract]" in spy.search_terms, spy.search_terms
 
 
+def _stub_decisions(monkeypatch: pytest.MonkeyPatch, literature: str | None) -> list[str]:
+    """Stub `core.graph.decide` (build phase 8.2). `plan.literature` answers
+    `literature` (None: no usable pick); every other point answers its safe
+    option. Returns the points asked, in order.
+
+    Whether a question asks for the published literature has been a
+    classifier's call since 2026-09-25 (card 3), never a word list, so these
+    arms say what the classifier decided rather than which words were typed.
+    """
+    from system_03_search_agent.contracts.events import DecisionRecord
+
+    safe = {
+        "guardrail.relevancy": "on_topic",
+        "think.ask_back": "proceed",
+        "think.recent_years": "not_applicable",
+        "plan.literature": literature,
+    }
+    asked: list[str] = []
+
+    async def _decide(harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any) -> Any:
+        asked.append(point)
+        pick = safe.get(point)
+        if pick is None:
+            return DecisionRecord(
+                name=point, options=list(options), chosen=next(iter(options)),
+                decided_by="guard", fallback_reason="timeout",
+            )
+        return DecisionRecord(
+            name=point, options=list(options), chosen=pick, decided_by="jev",
+            jev_choice=pick, guard_choice=pick, agreed=True,
+        )
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    return asked
+
+
 def _memory(
     *mentions: tuple[str, str], entity_type: str = "Gene"
 ) -> SessionMemorySummary:
@@ -846,7 +882,7 @@ async def test_a_one_word_continuation_still_binds_the_remembered_entity(
         "query_class": "exploratory",
     }
     assert breadth_plan.topic_search_words("and in women?") == ["women"]
-    assert not breadth_plan.asks_for_published_literature("and in women?")
+    _stub_decisions(monkeypatch, literature="not_literature")
     result = await graph_module.plan_node(state)  # type: ignore[arg-type]
     assert result["topic_search_term"] == "", result["topic_search_term"]
     assert next(c.tool_call.tool for c in result["tool_calls"]) == "cypher_query"
@@ -875,14 +911,17 @@ async def test_a_question_asking_for_papers_reaches_the_papers_whatever_resolved
 
     Here the model is FORCED to label it, which is the flip a live run
     cannot be made to produce on demand. The reader asked for papers, so
-    papers are what runs."""
+    papers are what runs. Who says the reader asked for papers is the
+    `plan.literature` classifier since build phase 8.2, stubbed here."""
     _install_model(monkeypatch, disease_mention="caffeine")
+    asked = _stub_decisions(monkeypatch, literature="wants_literature")
     spy = _TopicToolSpy(monkeypatch)
     monkeypatch.setattr(
         graph_module, "resolve_disease_mention_to_curies",
         lambda mention: _resolved(["MedGen:C1386553", "MedGen:C0521652"]),
     )
     events = await _events(Q4, session_id="topic-flip")
+    assert "plan.literature" in asked, asked
     assert spy.search_terms == [MEASURED_TERMS[Q4]], spy.search_terms
     assert spy.graph_calls == 0
     assert "cypher_query" not in _plan_tools(events), _plan_tools(events)
@@ -941,7 +980,7 @@ async def test_a_gene_question_that_also_asks_for_papers_keeps_the_gene_path(
     monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _symbol)
     spy = _TopicToolSpy(monkeypatch)
     question = "recent papers on BRCA1"
-    assert breadth_plan.asks_for_published_literature(question)
+    _stub_decisions(monkeypatch, literature="wants_literature")
     events = await _events(question, session_id="topic-gene-papers")
     assert spy.graph_calls >= 1
     assert "cypher_query" in _plan_tools(events), _plan_tools(events)
@@ -965,7 +1004,7 @@ async def test_a_request_for_papers_beats_the_remembered_entity_even_at_one_word
     spy = _TopicToolSpy(monkeypatch)
     question = "papers on caffeine"
     assert breadth_plan.topic_search_words(question) == ["caffeine"]
-    assert breadth_plan.asks_for_published_literature(question)
+    _stub_decisions(monkeypatch, literature="wants_literature")
     await _events_with_memory(
         question, "topic-mem-papers", _memory(("BRCA1", "NCBIGene:672"))
     )
@@ -974,28 +1013,45 @@ async def test_a_request_for_papers_beats_the_remembered_entity_even_at_one_word
 
 
 @pytest.mark.asyncio
-async def test_a_trials_question_about_a_disease_is_untouched_by_that_rule(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize(
+    ("literature", "takes_the_topic_path"),
+    [
+        # `Any trials for GERD?` must keep its disease path, its MedGen
+        # record and its trials leg: a trial is the ClinicalTrials.gov
+        # registry, a different source the disease path already searches.
+        ("not_literature", False),
+        # No usable pick is treated as not asking for papers, which is what
+        # this path did before the decision existed.
+        (None, False),
+        # The same resolved disease with the classifier saying papers: the
+        # literature search runs, whatever words were typed.
+        ("wants_literature", True),
+    ],
+)
+async def test_the_classifier_not_the_words_decides_a_disease_questions_path(
+    monkeypatch: pytest.MonkeyPatch, literature: str | None, takes_the_topic_path: bool
 ) -> None:
-    """`Any trials for GERD?` must keep its 20 citations. A trial is the
-    ClinicalTrials.gov registry, a different source the disease path
-    already searches, so `trial` and `trials` are deliberately not
-    literature words. Same for the ambiguous `study`, `studies` and
-    `research`: "what studies exist for GERD?" is a disease question that
-    would lose its MedGen record and its trials leg to a bare PubMed
-    search."""
-    for question in (
-        "Any trials for GERD?",
-        "what studies exist for GERD?",
-        "the latest research on GERD",
-        "GERD",
-        "reflux disease",
-    ):
-        assert not breadth_plan.asks_for_published_literature(question), question
-    # Populate check: the same function says yes to the words that ARE a
-    # request for the published literature.
-    for question in (Q4, "papers on GERD", "recent publications about BRCA1"):
-        assert breadth_plan.asks_for_published_literature(question), question
+    """Build phase 8.2, card 3: the word list that decided this until
+    2026-09-25 is gone. One question, one resolved disease, and only the
+    `plan.literature` decision differs between the three arms, so the path
+    taken is the classifier's call and nothing else's.
+
+    MUTATION PROOF: making `plan_node` ignore `literature_choice` (always
+    False) turns the `wants_literature` arm red."""
+    _install_model(monkeypatch, disease_mention="GERD")
+    _stub_decisions(monkeypatch, literature=literature)
+    spy = _TopicToolSpy(monkeypatch)
+    monkeypatch.setattr(
+        graph_module, "resolve_disease_mention_to_curies",
+        lambda mention: _resolved(["MedGen:C5563728"]),
+    )
+    events = await _events("Any trials for GERD?", session_id=f"topic-disease-{literature}")
+    if takes_the_topic_path:
+        assert spy.graph_calls == 0
+        assert "cypher_query" not in _plan_tools(events), _plan_tools(events)
+    else:
+        assert spy.graph_calls >= 1
+        assert "cypher_query" in _plan_tools(events), _plan_tools(events)
 
 
 @pytest.mark.asyncio

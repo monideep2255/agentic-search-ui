@@ -282,17 +282,25 @@ def test_bare_gene_symbol_questions_clear_the_allowlist(text: str) -> None:
         "how do I learn to play guitar",
     ],
 )
-def test_genuinely_off_topic_queries_are_still_refused(text: str) -> None:
+def test_genuinely_off_topic_queries_are_never_admitted_by_the_allowlist(text: str) -> None:
     """The over-broad symbol pattern must not make off-topic unreachable.
+
+    Build phase 8.2 (2026-09-25) moved the REFUSAL to a classifier: the
+    allowlist now only admits, and a miss sends the question to
+    `decide(point="guardrail.relevancy")` in the guardrail node, whose
+    "off_topic" refuses (`test_guardrail_node_integration.py`, the
+    relevancy arms). So the property this arm has always protected,
+    "these never slip past on vocabulary", is now asserted on the
+    allowlist itself, and `screen` must leave them UNDECIDED rather than
+    refuse them in code.
 
     The last three cases were added alongside the literature-vocabulary
     widening (fix-plan item 12.2) as the mutation check for that change:
     none of these contains a literature word, a domain word, or an
     identifier shape, so the widened allowlist must still miss all of them.
     """
-    verdict = screen(text)
-    assert verdict is not None, f"leaked through: {text!r}"
-    assert verdict.category == "off_topic"
+    assert clears_biomedical_allowlist(text) is False, f"admitted on vocabulary: {text!r}"
+    assert screen(text) is None, "topicality is the classifier's call, never screen()'s"
 
 
 # ---------------------------------------------------------------------------
@@ -365,12 +373,15 @@ def test_conversational_openers_are_not_refused_as_off_topic(text: str) -> None:
 
 
 def test_the_exemption_matches_the_whole_query_not_a_prefix() -> None:
-    """Otherwise every blocked query is one greeting away from admission."""
-    assert screen("hello") is None
+    """Otherwise every off-topic query is one greeting away from admission.
+
+    Since build phase 8.2 the allowlist admits and a classifier refuses, so
+    the property is that a greeting prefix does not win an ADMISSION: the
+    smuggled question still misses the allowlist and goes to the classifier.
+    """
+    assert clears_biomedical_allowlist("hello") is True
     smuggled = "hello, and also what is the capital of France"
-    verdict = screen(smuggled)
-    assert verdict is not None
-    assert verdict.category == "off_topic"
+    assert clears_biomedical_allowlist(smuggled) is False
 
 
 def test_a_greeting_carrying_an_injection_is_still_refused() -> None:

@@ -1,21 +1,23 @@
-"""Fix-plan item 12.3, REDESIGNED 2026-09-24: `core.clarify`'s own strict
-parse, in isolation from the graph.
+"""Fix-plan item 12.3: `core.clarify`'s own strict parse, in isolation from
+the graph.
 
-The product owner's instruction was "Please do not hardcode! Hopefully not
-that dumb", so the decision and the four options now come from a guard-tier
-model reply rather than a word list and four templates. What stays code, and
-what this file grades, is the STRICT bound on what a reply may say: a
-`ClarifyDecision` this module accepts is always safe to hand straight to
+REDESIGNED 2026-09-24 ("Please do not hardcode! Hopefully not that dumb")
+and SPLIT 2026-09-25 (build phase 8.2, builder J): whether to ask back is
+now `decide(point="think.ask_back")`'s call, and `core.clarify` only WRITES
+the question and the choices. What stays code, and what this file grades,
+is the STRICT bound on what a reply may say: a `ClarifyChoices` this module
+accepts is always safe to hand straight to
 `ThinkPayload.clarifying_question`/`clarifying_options` with no further
 checking, and anything this module rejects becomes `ClarifyUnavailableError`,
-never a fabricated or partially-trusted decision.
+never a fabricated or partially-trusted question.
 
 Exercised:
-    `ClarifyDecision` accepts a well-formed `ask_back=True` reply (2, 3 and
-    4 options) and a well-formed `ask_back=False` reply, and rejects: too
-    few or too many options, a question or option that does not read as a
-    question, an empty question or option, a string over the character
-    bound, an extra field, and a missing required field.
+    `ClarifyChoices` accepts a well-formed reply (2, 3 and 4 options), and
+    rejects: too few or too many options, a question or option that does not
+    read as a question, an empty question or option, a string over the
+    character bound, an extra field (including the retired `ask_back`, so
+    the writer can never make the decision again), and a missing required
+    field.
     `parse_clarify_reply` accepts a code-fenced reply exactly like a bare
     one, and raises `ClarifyUnavailableError`, never any other exception,
     on invalid JSON, on JSON that is not an object, and on a
@@ -25,10 +27,11 @@ Exercised:
     message carries the question inside matching delimiter tags, and two
     calls for the same text use two DIFFERENT tags.
 
-NOT exercised: the guard-tier call itself, the 1-to-3-word trigger, or the
-fail-open behaviour on a failed call. `core.graph._clarify_or_proceed` and
-`think_node`'s wiring own those; `test_bare_topic_clarification.py` covers
-them through the real five-node graph with the model stubbed.
+NOT exercised: the guard-tier call itself, the ask-back decision, the
+1-to-3-word trigger, or the fail-open behaviour on a failed call.
+`core.graph`'s `think_node` and `_write_clarify_choices` own those;
+`test_bare_topic_clarification.py` covers them through the real five-node
+graph with the model and `decide()` stubbed.
 """
 
 from __future__ import annotations
@@ -43,7 +46,6 @@ from system_03_search_agent.core import clarify
 
 def _reply(**overrides: object) -> dict[str, object]:
     base: dict[str, object] = {
-        "ask_back": True,
         "question": "What would you like to know about insulin?",
         "options": [
             "What is insulin?",
@@ -56,59 +58,56 @@ def _reply(**overrides: object) -> dict[str, object]:
     return base
 
 
-class TestClarifyDecisionAskBackTrue:
+class TestClarifyChoices:
     @pytest.mark.parametrize("count", [2, 3, 4])
     def test_accepts_two_to_four_options(self, count: int) -> None:
         options = [f"Is this option {i}?" for i in range(count)]
-        decision = clarify.ClarifyDecision.model_validate(_reply(options=options))
-        assert decision.ask_back is True
-        assert len(decision.options) == count
+        choices = clarify.ClarifyChoices.model_validate(_reply(options=options))
+        assert len(choices.options) == count
 
     def test_rejects_one_option(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(_reply(options=["Only one?"]))
+            clarify.ClarifyChoices.model_validate(_reply(options=["Only one?"]))
 
     def test_rejects_zero_options(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(_reply(options=[]))
+            clarify.ClarifyChoices.model_validate(_reply(options=[]))
 
     def test_rejects_five_options(self) -> None:
-        # Caught by `Field(max_length=4)` itself, before the conditional
-        # validator ever runs, so this also proves the bound holds
-        # regardless of `ask_back`.
+        # Caught by `Field(max_length=4)` itself, before the validator runs.
         options = [f"Option {i}?" for i in range(5)]
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(_reply(options=options))
+            clarify.ClarifyChoices.model_validate(_reply(options=options))
 
     def test_rejects_a_question_with_no_question_mark(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(
+            clarify.ClarifyChoices.model_validate(
                 _reply(question="What would you like to know about insulin")
             )
 
     def test_rejects_an_empty_question(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(_reply(question=""))
+            clarify.ClarifyChoices.model_validate(_reply(question=""))
 
     def test_rejects_a_whitespace_only_question(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(_reply(question="   "))
+            clarify.ClarifyChoices.model_validate(_reply(question="   "))
 
     def test_rejects_an_option_with_no_question_mark(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(
+            clarify.ClarifyChoices.model_validate(
                 _reply(options=["What is insulin", "A real one?"])
             )
 
     def test_rejects_an_empty_option(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(
+            clarify.ClarifyChoices.model_validate(
                 _reply(options=["", "A real one?"])
             )
 
     def test_rejects_a_question_over_the_character_bound(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(
+            clarify.ClarifyChoices.model_validate(
                 _reply(question="A" * (clarify.MAX_CLARIFY_TEXT_CHARS + 1) + "?")
             )
 
@@ -117,71 +116,44 @@ class TestClarifyDecisionAskBackTrue:
         # question mark itself is the last of the allowed characters.
         question = "A" * (clarify.MAX_CLARIFY_TEXT_CHARS - 1) + "?"
         assert len(question) == clarify.MAX_CLARIFY_TEXT_CHARS
-        decision = clarify.ClarifyDecision.model_validate(_reply(question=question))
-        assert decision.question == question
+        choices = clarify.ClarifyChoices.model_validate(_reply(question=question))
+        assert choices.question == question
 
     def test_rejects_an_option_over_the_character_bound(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(
+            clarify.ClarifyChoices.model_validate(
                 _reply(options=["A" * (clarify.MAX_CLARIFY_TEXT_CHARS + 1) + "?", "A real one?"])
             )
 
 
-class TestClarifyDecisionAskBackFalse:
-    def test_accepts_empty_question_and_options(self) -> None:
-        decision = clarify.ClarifyDecision.model_validate(
-            {"ask_back": False, "question": "", "options": []}
-        )
-        assert decision.ask_back is False
-        assert decision.question == ""
-        assert decision.options == []
-
-    def test_the_looks_like_a_question_checks_do_not_apply(self) -> None:
-        # The conditional validator returns immediately when ask_back is
-        # false, so a false reply is never held to the "looks like a
-        # question" bar its own options never need to clear.
-        decision = clarify.ClarifyDecision.model_validate(
-            {"ask_back": False, "question": "not a question", "options": ["also not one"]}
-        )
-        assert decision.ask_back is False
-
-    def test_still_rejects_five_options(self) -> None:
-        options = [f"option {i}" for i in range(5)]
-        with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(
-                {"ask_back": False, "question": "", "options": options}
-            )
-
-
-class TestClarifyDecisionShape:
+class TestClarifyChoicesShape:
     def test_rejects_an_extra_field(self) -> None:
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(_reply(extra_field="unexpected"))
+            clarify.ClarifyChoices.model_validate(_reply(extra_field="unexpected"))
 
-    @pytest.mark.parametrize("missing", ["ask_back", "question", "options"])
+    @pytest.mark.parametrize("missing", ["question", "options"])
     def test_rejects_a_missing_required_field(self, missing: str) -> None:
         payload = _reply()
         del payload[missing]
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(payload)
+            clarify.ClarifyChoices.model_validate(payload)
 
-    def test_rejects_ask_back_as_an_unrecognisable_string(self) -> None:
-        # Pydantic's own lax bool coercion accepts "true"/"false"/"yes"/"no"
-        # and similar, so this uses a string that is not one of those,
-        # rather than asserting a coercion pydantic deliberately performs.
+    def test_rejects_the_retired_ask_back_field(self) -> None:
+        # The writer no longer decides whether to ask (build phase 8.2):
+        # a reply that tries to is rejected whole, never half-read.
         with pytest.raises(ValidationError):
-            clarify.ClarifyDecision.model_validate(_reply(ask_back="banana"))
+            clarify.ClarifyChoices.model_validate(_reply(ask_back=True))
 
 
 class TestParseClarifyReply:
     def test_accepts_a_bare_json_object(self) -> None:
-        decision = clarify.parse_clarify_reply(json.dumps(_reply()))
-        assert decision.ask_back is True
+        choices = clarify.parse_clarify_reply(json.dumps(_reply()))
+        assert choices.question == "What would you like to know about insulin?"
 
     def test_accepts_a_code_fenced_json_object(self) -> None:
         fenced = "```json\n" + json.dumps(_reply()) + "\n```"
-        decision = clarify.parse_clarify_reply(fenced)
-        assert decision.ask_back is True
+        choices = clarify.parse_clarify_reply(fenced)
+        assert len(choices.options) == 4
 
     def test_raises_clarify_unavailable_on_invalid_json(self) -> None:
         with pytest.raises(clarify.ClarifyUnavailableError):
@@ -200,7 +172,7 @@ class TestParseClarifyReply:
             clarify.parse_clarify_reply(json.dumps(_reply(options=["only one?"])))
 
     def test_raises_clarify_unavailable_never_a_bare_validation_error(self) -> None:
-        # The caller (`core.graph._clarify_or_proceed`) catches exactly
+        # The caller (`core.graph._write_clarify_choices`) catches exactly
         # `ClarifyUnavailableError`. A `ValidationError` escaping this
         # function unwrapped would not be caught there and would crash
         # `think_node` instead of falling through to search.
@@ -245,3 +217,37 @@ class TestBuildClarifyMessages:
         # corrupt exactly the identifiers this system exists to look up.
         messages = clarify.build_clarify_messages("c.123A>G")
         assert "c.123A>G" in messages[1]["content"]
+
+
+class TestRecentWindowChoices:
+    """Build phase 8.2, card 4: the three windows, in the person's words,
+    each readable back by the planner as exactly the window it names."""
+
+    def test_three_windows_in_the_product_owners_order(self) -> None:
+        choices = clarify.recent_window_choices("recent papers on statins")
+        assert choices.question == clarify.RECENT_WINDOW_QUESTION
+        assert choices.options == [
+            "Recent papers on statins from the last 12 months?",
+            "Recent papers on statins from the last 5 years?",
+            "Recent papers on statins from the last 10 years?",
+        ]
+
+    def test_each_choice_reads_back_as_its_own_window(self) -> None:
+        from datetime import date
+
+        from system_03_search_agent.core import breadth_plan
+
+        today = date(2026, 9, 25)
+        labels = [
+            breadth_plan.parse_publication_window(option, today=today).label  # type: ignore[union-attr]
+            for option in clarify.recent_window_choices("recent papers on statins?").options
+        ]
+        assert labels == ["the last 12 months", "the last 5 years", "the last 10 years"]
+
+    def test_a_long_question_is_cut_at_a_word_and_stays_in_bounds(self) -> None:
+        long_question = "recent papers on " + "statin " * 60
+        choices = clarify.recent_window_choices(long_question)
+        for option in choices.options:
+            assert len(option) <= clarify.MAX_CLARIFY_TEXT_CHARS
+            assert option.endswith("?")
+            assert " stati from" not in option

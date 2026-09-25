@@ -1878,6 +1878,10 @@ _MEMORY_READERS_ALLOWED = {
     # because tool calls execute against fresh retrieval, and never
     # `write_node`, because memory must never become a citable source.
     "think_node",
+    # Build phase 8.2 (2026-09-25): `think_node` now starts the Think step's
+    # decisions and runs the step's body, `_think`, which is where the
+    # memory suffix is read. Same step, same permission.
+    "_think",
     "plan_node",
     # Added 2026-09-13 (UI fix set 7, item 7.1): the guardrail reads memory
     # through `_is_memory_bound_follow_up`, a deterministic rule that sets
@@ -2011,8 +2015,8 @@ def test_p10_memory_is_never_injected_into_the_act_or_write_step() -> None:
     # direction too. An empty walk, or a walk that stopped finding the real
     # sites because a helper was renamed, would satisfy the assertion above
     # while proving nothing. The two permitted sites must actually be there.
-    assert "_memory_suffix" in sites.get("think_node", set()), (
-        "think_node no longer reads session memory, so either the feature "
+    assert "_memory_suffix" in sites.get("_think", set()), (
+        "the Think step's body, `_think`, no longer reads session memory, so either the feature "
         "was removed or this walk has stopped seeing the real call sites and "
         f"the assertion above is vacuous. sites={sorted(sites)}"
     )

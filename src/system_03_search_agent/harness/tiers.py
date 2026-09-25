@@ -56,6 +56,37 @@ _DEFAULT_MODELS: dict[Tier, str] = {
     "synth": "z-ai/glm-5.2",
 }
 
+# Jev, the classifier-seam model (build phase 8.2, DECISIONS.md 2026-09-25,
+# cards 8, 9, 10 and 13), is not a fourth tier: it answers a fixed set of
+# closed-option decisions through OpenRouter's `/api/alpha/decisions`
+# endpoint, never a chat-completions call, and `harness.decide.decide` is
+# the only caller. Its default model id still lives in `_DEFAULT_MODELS`
+# above, keyed `"jev"` rather than a `Tier`, because
+# `test_no_model_id_shaped_string_outside_the_default_table` scans this
+# repository for exactly one allowed table of model-id-shaped literals and
+# `_DEFAULT_MODELS` is it (system-design-patterns.md pattern 11): a second
+# table, even one this file also owns, would be a second place a model id
+# is allowed to appear, which is the thing pattern 11 forbids. The `# type:
+# ignore` documents the one place this dict's `Tier`-keyed annotation is
+# knowingly widened for that reason.
+_DEFAULT_MODELS["jev"] = "typesafe/jev-1.13"  # type: ignore[index]
+
+_JEV_ENV_VAR = "JEV_MODEL"
+
+
+def resolve_jev_model() -> str:
+    """Resolve Jev's model id: `JEV_MODEL` env var, else `_DEFAULT_MODELS["jev"]`.
+
+    Mirrors `resolve_model`'s env-first-then-default shape exactly, kept as
+    a separate function rather than folded into `resolve_model` because Jev
+    is not one of the three `Tier` values and `_validate_tier` must keep
+    rejecting anything outside {"guard", "plan", "synth"}.
+    """
+    env_value = os.environ.get(_JEV_ENV_VAR)
+    if env_value:
+        return env_value
+    return _DEFAULT_MODELS["jev"]  # type: ignore[index]
+
 
 # Fallback OpenRouter per-model pricing, (input_price_per_token,
 # output_price_per_token) in USD, for models litellm's own static map does

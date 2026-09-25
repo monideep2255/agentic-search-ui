@@ -1354,7 +1354,7 @@
       ],
       "must_cite": [
         "https://www.ncbi.nlm.nih.gov/pathogens/",
-        "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=562"
+        "https://www.ncbi.nlm.nih.gov/taxonomy/562"
       ],
       "forbidden": [
         "undisclosed_truncation"
