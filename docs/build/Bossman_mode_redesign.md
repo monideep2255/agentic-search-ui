@@ -18,7 +18,7 @@ Was it worth it? Partly. The build phases produced a real engine, about 70,000 l
 
 ### Where the lines went, from git
 
-Measured with `git diff --numstat` between each phase branch's merge base and its tip, for the 35 phase merges on `develop` from PR #5 (build phase 1.0, 2026-07-27) to PR #92 (build phase 6.2, 2026-09-01). Product means `src/`, `frontend/src/`, `services/`, `deploy*` and `.github/gates/`. Tests means any path under `tests/`, `frontend/e2e/`, `e2e_support`, or a `.test.` or `.spec.` file. Record means `tracker/`, `docs/`, `requirements/`, `testing/` and any `.md`.
+Measured with `git diff --numstat` between each phase branch's merge base and its tip, for the 35 phase merges on `develop` from build phase 1.0, merged as PR #5 on 2026-07-27, to build phase 6.2, merged as PR #92 on 2026-09-01. Product means `src/`, `frontend/src/`, `services/`, `deploy*` and `.github/gates/`. Tests means any path under `tests/`, `frontend/e2e/`, `e2e_support`, or a `.test.` or `.spec.` file. Record means `tracker/`, `docs/`, `requirements/`, `testing/` and any `.md`.
 
 | Measure | Lines inserted |
 | --- | --- |

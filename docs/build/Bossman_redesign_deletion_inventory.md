@@ -17,6 +17,7 @@ Measured on 2026-09-24 against the working tree.
 - [Tracker report files to delete](#tracker-report-files-to-delete)
 - [Premise-gate and mutation text removed from skills and docs](#premise-gate-and-mutation-text-removed-from-skills-and-docs)
 - [What else must change in the same commit as the deletions](#what-else-must-change-in-the-same-commit-as-the-deletions)
+- [Done 2026-09-24](#done-2026-09-24)
 
 ## The totals
 

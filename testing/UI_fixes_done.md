@@ -382,35 +382,33 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-24, at the close of the session that ran from the evening
-of 2026-09-23. THE ONE THING TO KNOW: answers now answer the question. The
-answer model writes plain sentences from the papers, code checks every quote,
-number and negation, and a second, cheap model checks that each reworded
-sentence says no more than its quote. Everything that shipped awaits the
-product owner's retest, and nothing is being built between sessions.
+LAST UPDATED 2026-09-24, at the close of the evening session, which rebuilt
+the harness rather than the product. THE ONE THING TO KNOW: nothing a person
+sees changed tonight. The fix plan became a board, `HANDOFF.md` replaced the
+Phase 6 continuation prompt, and bossman mode was rebuilt from its measured
+diagnosis. The product is as the session before left it: answers answer the
+question, each reworded sentence checked by a second model against the exact
+words it quotes. Everything that shipped awaits the product owner's retest,
+and nothing is being built between sessions.
 
 What is live on develop:
 
 - Product code through `9b9ff2b`, plus one dependency pin, D5. SQLAlchemy
   2.1.0 was released during the session's last build and stopped the API
   deploying the checkpoint commit `39c6e55`, so the commit after it pins
-  SQLAlchemy below 2.1. Every other later commit is documents and rules.
-- The session shipped 12.11, 12.12, 12.10, 12.13, 12.9, 12.3 and parts 1, 2
-  and 4 of 12.16. Its session table is under "Session history" in
-  `testing/UI_fixes_done.md`.
-- Not a product change: this plan was split in two on 2026-09-24, and pull
-  requests #101, #102 and #103 changed one rule and the two session-closing
-  skills.
+  SQLAlchemy below 2.1. Every later commit is documents, rules, skills and
+  tests; the last is pull request #104's merge, `f21f439`, deployed with
+  SUCCESS on both develop services.
+- The session before shipped 12.11, 12.12, 12.10, 12.13, 12.9, 12.3 and parts
+  1, 2 and 4 of 12.16. Both sessions' tables are under "Session history".
+- Not a product change: pull requests #101 to #104 changed rules, skills and
+  documents, and #104 also removed premise and mutation tests, each security
+  or cost control they pinned first re-pinned by a unit test.
 - Production is unchanged on `v0.2.0`.
 
 What awaits the product owner's retest is the Retest column of
-`testing/UI_fix_plan.md`; the closing table of
-`testing/Test_queries_and_workflows.md` gives each retest item's query. In
-this order, as the daily shipped lists numbered them:
-
-- Items 12 to 17 of the 2026-09-23 list, the newest work.
-- Items 1 to 11 of the same list.
-- Items 7 to 22 of the 2026-09-22 list.
+`testing/UI_fix_plan.md`, newest first. Each card names its query numbers in
+`testing/Test_queries_and_workflows.md`.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -563,8 +561,18 @@ The longer standing list is unchanged:
     after tuning.
   - Some dense paragraphs in older sections, carried over by the plan's split,
     were left as written: cosmetic, and three cannot pass the no-loss check.
-  - One agent worktree, fully merged, stays locked by the running editor
-    session and clears when it ends.
+  - The leftover agent worktree was removed at the evening close, its branch
+    already merged into develop.
+- ADDED 2026-09-24 evening, from the harness session:
+  - Seven test files the deletion inventory set aside await the product
+    owner's ruling: `docs/build/Bossman_redesign_deletion_inventory.md`.
+  - A test inside the unit gate makes a live NCBI call, so an NCBI outage can
+    turn CI red with nothing wrong in the code. It belongs behind the
+    integration marker. Not started.
+  - `/phase-checkpoint` still says the tracked counts sit on CLAUDE.md line
+    32; since the trim they sit on line 31. The drift check finds them by
+    content, so nothing fails, but the sentence is stale and changing it
+    needs a pull request, since it is under `.claude/`.
 - A lock file for the Python build. `requirements.txt` gives ranges rather
   than versions, so every Railway build resolves afresh, and D5 showed a
   release can reach develop thirteen minutes after it is published. Not
@@ -686,19 +694,17 @@ a standing option, not as queued work.
 
 ### How to start the next session
 
-1. Read "Where we stopped" above, then the session tables under "Session
-   history" in `testing/UI_fixes_done.md`, newest first.
+1. Read `HANDOFF.md`, then "Where we stopped" above, then the session tables
+   under "Session history" below, newest first.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
    carrying only `develop`.
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
 4. Pick up the board, `testing/UI_fix_plan.md`: the product owner's retests
-   in its Retest column first, then its To do column at item 1, 12.14. Awaiting
-   their retest: items 1 to 17 of the 2026-09-23 shipped list and items 7
-   to 22 of the 2026-09-22 list, each a query in
-   `testing/Test_queries_and_workflows.md`. The call ceiling is measured and
-   stays at twenty.
+   in its Retest column first, each card naming its queries in
+   `testing/Test_queries_and_workflows.md`, then its To do column at item 1,
+   12.14. The call ceiling is measured and stays at twenty.
 
 ## Detail for items on the board
 
@@ -2292,6 +2298,20 @@ Evidence, with a full transcript per question and a re-runnable script:
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 ## Session history
+
+### The 2026-09-24 evening session, in one table
+
+No product code changed. Everything merged as pull request #104, `f21f439`.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| The fix plan | Became a board: To do, Build in progress, Retest; everything else moved to this file | Done |
+| The test queries | One shape per feature; every item accounted for; three new queries, 77 to 79 | Done |
+| The daily shipped lists | Folded into the test queries and "Shipped days" below, then deleted; no new ones are written | Done |
+| `HANDOFF.md` and the registry | Replace the Phase 6 continuation prompt; the checkpoint opens with a decision guard | Done |
+| Bossman mode | Diagnosed in `docs/build/Bossman_mode_redesign.md`, all eight decisions accepted and built | Done; merging its two modes waits for the next build phase |
+| The deletions | 50 review reports and 26 premise or mutation test files, each security or cost control re-pinned first | Done; seven files await the product owner's ruling |
+| CLAUDE.md | Narrative moved verbatim into `requirements/Plan.md`; 54 KB to 24 KB | Done |
 
 ### The 2026-09-23 evening to 2026-09-24 session, in one table
 

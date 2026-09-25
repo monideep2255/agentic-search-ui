@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-24.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is item 1 of the To do column on the board, `testing/UI_fix_plan.md`; the cutoff is "Where we stopped" in `testing/UI_fixes_done.md`. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 641 (DECISIONS.md).
+Decisions logged: 642 (DECISIONS.md).
 
 Deliverables produced:
 
@@ -1049,6 +1049,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-24 (evening). THE BOARD, THE HANDOFF AND BOSSMAN MODE REBUILT. No product code changed; merged as pull request #104, because `.claude/` changed.
+
+- The cadence: the UI fix loop's session boundary, so no build phase. Every change is documents, rules, skills and tests.
+- THE FIX PLAN BECAME A BOARD on the product owner's instruction: To do, Build in progress, Retest, in that order, and nothing else. Every other section moved to `testing/UI_fixes_done.md`, proven by the no-loss script.
+- THE TEST QUERIES took one shape per feature (the feature, queries to try, what you should see) and absorbed the three daily shipped lists, which were then deleted. Three lessons the gate placed in LEARNINGS.md were not there and were moved verbatim first.
+- `HANDOFF.md` REPLACED THE PHASE 6 CONTINUATION PROMPT, which the product owner had already archived. A registry, `tracker/Living_documents.md`, names every living document's shape, and `/phase-checkpoint` opens with a decision guard, so a reshaped document is not rebuilt by a stale instruction. Daily shipped files stopped.
+- BOSSMAN MODE WAS DIAGNOSED AND REBUILT. `docs/build/Bossman_mode_redesign.md` measured that late in the build 43 to 45 percent of review findings were defects in the harness's own tests, and that the golden questions answered in 13 of 85 runs after every phase had passed review. The product owner accepted all eight decisions: a product reviewer that uses develop before their retest, one judge and one adversary round with no third, an 8-hour and 8-dispatch budget, no worker fan-out, premise gates only for answer behaviour, and the narrative out of CLAUDE.md.
+- THE DELETIONS RAN "SAFE FIRST": 50 review reports and 26 premise or mutation test files, about 43,000 lines, each security or cost control first re-pinned by a unit test shown red then green. Seven files await the product owner's ruling.
+- CLAUDE.md fell from 54 KB to 24 KB; its narrative moved verbatim into this document under "Build phase history, moved out of CLAUDE.md".
+- DECISIONS LOGGED: fourteen rows dated 2026-09-24 in the evening, from the board to the safe-first deletions. Five LEARNINGS.md rows, the most transferable being that a worker's own sub-agents report to the lead, not to it.
+- STILL OPEN: the product owner's retests on the board, then 12.14. Production is unchanged on `v0.2.0`.
 
 2026-09-23 (day) to 2026-09-24. SET 12 AND ANSWERS THAT ANSWER THE QUESTION.
 
