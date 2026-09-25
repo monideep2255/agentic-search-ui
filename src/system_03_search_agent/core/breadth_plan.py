@@ -560,59 +560,16 @@ TOPIC_MAX_WORDS: Final[int] = 8
 TOPIC_RESULT_CAP: Final[int] = PUBMED_RESULT_CAP
 
 
-#: Words that say the reader is asking for the PUBLISHED LITERATURE. Added
-#: 2026-09-23 after review, for the defect below.
-#:
-#: THE DEFECT. `resolve_disease_mention_to_curies("caffeine")` binds EIGHT
-#: MedGen concepts, measured live: "Caffeine dependence", "Caffeine
-#: withdrawal", "Organic mental disorder caused by caffeine", "Allergy to
-#: caffeine" and four more. Every one of them is a real disorder, so no
-#: semantic-type check can reject them; that hypothesis was built, measured
-#: and killed. They bind because MedGen's NAME INDEX matches any title
-#: CONTAINING the word, and the question was not about any of them. Whether
-#: they reach the answer depends on whether the Think model happens to label
-#: `caffeine` a disease span on that run, which is a sample, not a rule: a
-#: reviewer measured the flip at about 1 run in 3 and eight runs here
-#: reproduced it 0 times. On a flipped run the reader who asked for papers
-#: on caffeine and exercise got two MedGen records about caffeine
-#: intoxication instead of five papers.
-#:
-#: THE RULE, from the reader's chair: they typed "papers on". They should
-#: get papers. So when the question asks for the published literature and
-#: no gene resolved, the literature search is what runs, whatever the model
-#: labelled. That is deterministic because it reads only the typed text.
-#:
-#: WHAT IS DELIBERATELY ABSENT, and each omission is the line this list is
-#: drawn at rather than an oversight:
-#:
-#: - `trial`, `trials`. A trial is the ClinicalTrials.gov registry, a
-#:   different source, and the disease path ALREADY searches it. `Any
-#:   trials for GERD?` must keep its 20 citations, and it does.
-#: - `study`, `studies`, `research`. Ambiguous: "what studies exist for
-#:   GERD?" is a disease question that would lose its MedGen record and its
-#:   trials leg to a bare PubMed search. Narrow beats broad where the
-#:   broad version takes something away.
-_LITERATURE_WORDS: Final[frozenset[str]] = frozenset(
-    (
-        "article", "articles", "literature", "paper", "papers", "preprint",
-        "preprints", "pubmed", "publication", "publications",
-    )
-)
-
-
-def asks_for_published_literature(question: str | None) -> bool:
-    """Whether the question asks for the published literature by name.
-
-    A pure function of the typed text, word-bounded, with no model call and
-    no network call in it, which is what lets it decide a path without
-    breaking item 11.21's one-question-one-source-set promise.
-    """
-    if not isinstance(question, str):
-        return False
-    return any(
-        match.group(0).strip("'-") in _LITERATURE_WORDS
-        for match in _TOPIC_WORD.finditer(question.lower())
-    )
+# WHETHER A QUESTION ASKS FOR THE PUBLISHED LITERATURE is no longer decided
+# here. From 2026-09-23 to 2026-09-25 a word list (`paper`, `papers`,
+# `literature`, `article`, `publication`, `preprint`, `pubmed` and their
+# plurals) decided it, so a question the list did not happen to cover was
+# treated as not wanting papers. Build phase 8.2 (DECISIONS.md 2026-09-25,
+# card 3, item 12.16 part 3) moved the decision to a classifier,
+# `decide(point="plan.literature")` in `core/graph.py`'s `plan_node`. The
+# defect the list was added for still stands and is handled there: MedGen's
+# name index binds "caffeine" to eight caffeine DISORDERS, so a question
+# that asks for papers must reach the papers whatever Think labelled.
 
 
 def topic_search_words(question: str | None) -> list[str]:

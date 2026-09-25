@@ -672,3 +672,54 @@ async def test_the_picked_window_narrows_the_pubmed_search_to_those_years(
     assert pubmed and pubmed[0]["term"] == f"statins AND {expected.clause()}", pubmed
     plan = _payload(events, "plan")
     assert plan is not None and "published the last 5 years" in plan["narrative"], plan
+
+
+# ---------------------------------------------------------------------------
+# plan.literature (build phase 8.2, card 3): started by Think, read by Plan.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_literature_decision_starts_at_think_and_plan_reads_it_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Think starts it so it overlaps Think's own work; Plan reads that same
+    decision rather than asking again, so a search question asks it once."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch)
+
+    await _run("which papers discuss statin side effects")
+    assert asked.count("plan.literature") == 1, asked
+
+
+@pytest.mark.asyncio
+async def test_a_question_asked_back_cancels_the_literature_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No search follows a question asked back, so the literature decision
+    Think started is stopped rather than left spending, and it is never
+    read."""
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    base = _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
+        if point == "plan.literature":
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+        return await inner(harness, trace_id, point, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    events = await _run("recent papers on statins")
+    await asyncio.sleep(0)
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] == clarify.RECENT_WINDOW_QUESTION
+    assert started.is_set() and cancelled.is_set(), base

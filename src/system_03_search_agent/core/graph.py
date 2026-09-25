@@ -990,8 +990,13 @@ class _RunDecisions:
     records: list[DecisionRecord] = dataclasses.field(default_factory=list)
     #: `plan.literature`, started at Think so it runs alongside Think's own
     #: classification call, and awaited by Plan, which is the step that
-    #: needs it. None until Think starts it.
+    #: needs it. None until Think starts it, and None again once Plan has
+    #: read it into `literature_record`.
     literature_task: asyncio.Task[DecisionRecord | None] | None = None
+    literature_record: DecisionRecord | None = None
+    #: True once the literature decision has been asked for this run, so
+    #: Plan never asks twice.
+    literature_asked: bool = False
 
 
 #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
@@ -1080,6 +1085,27 @@ def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
     """Stop a decision nobody will read, so it spends nothing more."""
     if task is not None and not task.done():
         task.cancel()
+
+
+async def _literature_choice(
+    harness: Harness, trace_id: str, text: str, *, ask_if_missing: bool
+) -> str | None:
+    """`plan.literature`'s usable pick for this run, or None.
+
+    Think starts the decision (`think_node`), so by the time Plan reads it,
+    it has usually long finished: reading it costs no wait. With
+    `ask_if_missing`, a run whose Think never started it (Plan called on
+    its own) asks now instead. Read once per run, never asked twice.
+    """
+    entry = _run_decisions(harness)
+    if entry.literature_task is not None:
+        task, entry.literature_task = entry.literature_task, None
+        entry.literature_record = await task
+        entry.literature_asked = True
+    if not entry.literature_asked and ask_if_missing:
+        entry.literature_record = await _decide_point(harness, trace_id, _LITERATURE, text)
+        entry.literature_asked = True
+    return _usable_choice(entry.literature_record)
 
 
 # ---------------------------------------------------------------------------
@@ -2677,22 +2703,47 @@ async def _run_think_classification(
 async def think_node(state: GraphState) -> dict[str, Any]:
     """The Think step (Section 3.2), and where its own decisions start.
 
-    Build phase 8.2: `decide(point="think.recent_years")` starts the
-    moment the node does, so it overlaps everything Think does before it
-    is needed, and any path out of the node that never reads it cancels
-    it rather than letting it spend on.
+    Build phase 8.2: `decide(point="think.recent_years")` and
+    `decide(point="plan.literature")` both start the moment the node does,
+    so they overlap everything Think does before either is needed: the
+    person waits for one decision, not three (card 6). Recent-years is read
+    here; the literature decision is Plan's, handed over still running
+    (`_RunDecisions.literature_task`). Any path out of this node that ends
+    the search, a question asked back, a cap hit, a step error, cancels
+    whatever is still in flight rather than letting it spend on.
     """
     harness = state["harness"]
     query = state["query"]
+    small_talk = _is_small_talk(query.text)
     recent_task: asyncio.Task[DecisionRecord | None] = asyncio.create_task(
         _no_decision()
-        if _is_small_talk(query.text)
+        if small_talk
         else _decide_point(harness, query.trace_id, _RECENT_YEARS, query.text)
     )
+    decisions = _run_decisions(harness)
+    if not small_talk and not decisions.literature_asked:
+        decisions.literature_task = asyncio.create_task(
+            _decide_point(harness, query.trace_id, _LITERATURE, query.text)
+        )
+    result: dict[str, Any] | None = None
     try:
-        return await _think(state, recent_task)
+        result = await _think(state, recent_task)
+        return result
     finally:
         _cancel_if_pending(recent_task)
+        if result is None or not _search_goes_ahead(result):
+            _cancel_if_pending(decisions.literature_task)
+            decisions.literature_task = None
+
+
+def _search_goes_ahead(think_result: dict[str, Any]) -> bool:
+    """Whether Think handed the question on to be searched, which is the
+    only case Plan will read the literature decision."""
+    return not (
+        think_result.get("cap_exceeded")
+        or think_result.get("step_error")
+        or think_result.get("clarification_needed")
+    )
 
 
 def _is_small_talk(text: str) -> bool:
@@ -5172,6 +5223,14 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # person clicked after `think.recent_years` asked them how recent.
     publication_window = breadth_plan.parse_publication_window(query.text)
 
+    # Build phase 8.2, card 3: the literature decision Think started. Read
+    # here whether or not the branch below needs it, so it is never left
+    # running past the step it was started for, and so its record reaches
+    # the `done` event. It has usually finished long before now.
+    literature_choice = await _literature_choice(
+        harness, trace_id, query.text, ask_if_missing=False
+    )
+
     # Fix-plan item 2 (2026-09-22): an accession question plans NCBI record
     # summaries and no graph call, since the graph holds no projects,
     # samples, runs or assemblies; see the `planned is None` branch below.
@@ -5208,10 +5267,17 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # exercise got two MedGen records about caffeine intoxication.
     #
     # The cause is a model sample and cannot be made deterministic. The
-    # CONSEQUENCE can: when the question names the published literature and
-    # no gene resolved, the literature search is what runs. `breadth_plan.
-    # asks_for_published_literature` reads only the typed text, so the path
-    # is a fixed function of the question.
+    # CONSEQUENCE can: when the question asks for the published literature
+    # and no gene resolved, the literature search is what runs.
+    #
+    # WHO DECIDES "asks for the published literature" (build phase 8.2,
+    # card 3, item 12.16 part 3): `decide(point="plan.literature")`, a
+    # classifier, never the word list (`paper`, `papers`, `literature` and
+    # seven more) that decided it until 2026-09-25. A question the list did
+    # not happen to cover was treated as not wanting papers. It is asked
+    # only when it can change the plan, here, with no gene resolved; Think
+    # started it, so reading it costs no wait. No usable pick counts as
+    # not asking for papers, which is what this path did before it existed.
     #
     # `target_curies` is THINK'S OWN list, deliberately, not
     # `planned.cypher_input.target_entities`: the latter carries a
@@ -5219,8 +5285,14 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # stop a new question about papers reaching the papers.
     topic_term: str | None = None
     if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
-        asks_for_literature = breadth_plan.asks_for_published_literature(query.text)
         gene_resolved = _first_gene_curie(target_curies) is not None
+        asks_for_literature = False
+        if not gene_resolved:
+            if literature_choice is None:
+                literature_choice = await _literature_choice(
+                    harness, trace_id, query.text, ask_if_missing=True
+                )
+            asks_for_literature = literature_choice == "wants_literature"
         if not gene_resolved and (asks_for_literature or not target_curies):
             topic_term = breadth_plan.build_topic_term(query.text)
         # SESSION MEMORY BOUND AN ANTECEDENT, and which of the two wins

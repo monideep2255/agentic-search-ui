@@ -889,6 +889,7 @@ async def test_decision_calls_are_separate_and_carry_no_stable_prefix(
         assert graph_module._STABLE_PREFIX not in contents
     systems = [c.kwargs["messages"][0]["content"] for c in decision_calls]
     assert any(graph_module._RECENT_YEARS.instructions in s for s in systems), systems
+    assert any(graph_module._LITERATURE.instructions in s for s in systems), systems
 
 
 @pytest.mark.asyncio
