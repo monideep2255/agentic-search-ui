@@ -403,6 +403,112 @@ def test_a_medgen_summary_row_carries_the_name_and_the_definition() -> None:
 
 
 # ---------------------------------------------------------------------------
+# T-8.1-06b (F-8.1-04): `clinical_features` reaches the row, and reaches it
+# as a citable string, never a Python list `ground_claim` could not quote.
+# ---------------------------------------------------------------------------
+
+
+def _medgen_output_with_clinical_features(features: object) -> NcbiEfetchOutput:
+    return NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[
+            NcbiEfetchRecord(
+                id="44287",
+                db="medgen",
+                fields={
+                    "title": "Marfan syndrome",
+                    "definition": {"value": _DEFINITION},
+                    "semantictype": {"value": "Disease or Syndrome"},
+                    "clinical_features": features,
+                },
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/44287",
+            )
+        ],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+
+
+def test_clinical_features_reach_the_row_as_a_quotable_string() -> None:
+    """POPULATE CHECK, T-8.1-06b: F-8.1-04 said the field was dropped
+    BEFORE synthesis ever saw it. Red against the pre-allowlist-fix code
+    by construction: `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]`
+    without `clinical_features` filters this key out entirely, so the
+    title row would carry no such key at all.
+
+    Two rows now, not one: `_medgen_clinical_feature_rows` adds a SECOND
+    row carrying `clinical_features` as its OWN field, because
+    `_pick_representative_field` always picks `title` over it on a single
+    shared row (measured live: the allowlist fix alone changed nothing a
+    reader saw). The title row still carries the raw key too, harmlessly
+    unpicked; the second row is what actually reaches Synth's prompt.
+    """
+    output = _medgen_output_with_clinical_features(
+        [
+            {"name": "Aortic regurgitation", "hpo_id": "HP:0001659"},
+            {"name": "Arachnodactyly", "hpo_id": "HP:0001166"},
+            {"name": "Tall stature"},
+        ]
+    )
+    shaped = graph_module._ncbi_efetch_output_to_structured_fields(output, "medgen_summary")
+    title_row, feature_row = shaped["rows"]
+    assert title_row["fields"]["title"] == "Marfan syndrome"
+    text = feature_row["fields"]["clinical_features"]
+    assert isinstance(text, str), type(text)
+    assert "Aortic regurgitation (HP:0001659)" in text
+    assert "Arachnodactyly (HP:0001166)" in text
+    # No HPO id for the third: the name alone, not a dangling "()".
+    assert "Tall stature" in text
+    assert "Tall stature (" not in text
+    # Cited to the same record as the title row.
+    assert feature_row["source_url"] == title_row["source_url"]
+    # The feature row carries clinical_features ALONE, so
+    # `_pick_representative_field` has nothing else to prefer over it.
+    assert list(feature_row["fields"]) == ["clinical_features"]
+
+
+def test_no_clinical_features_states_the_honest_sentence_not_a_drop() -> None:
+    """The acceptance criterion in the ticket's own words: when MedGen
+    lists no clinical features, the answer must be able to SAY SO, cited
+    to the same MedGen record, rather than a missing key or an empty list
+    a clause could never ground against.
+    """
+    output = _medgen_output_with_clinical_features([])
+    shaped = graph_module._ncbi_efetch_output_to_structured_fields(output, "medgen_summary")
+    title_row, feature_row = shaped["rows"]
+    assert feature_row["fields"]["clinical_features"] == (
+        graph_module._MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    )
+    # Still cited to the record: the sentence rides on a row whose own
+    # source_url is the MedGen record, unchanged by an empty feature list.
+    assert feature_row["source_url"] == "https://www.ncbi.nlm.nih.gov/medgen/44287"
+    assert title_row["source_url"] == feature_row["source_url"]
+
+
+def test_medgen_clinical_features_text_direct_unit_cases() -> None:
+    """`_medgen_clinical_features_text` in isolation, every input shape it
+    documents handling: a genuine list, an empty list, a non-list (the
+    field missing or malformed upstream), and a list whose items are
+    themselves malformed (skipped, never raising).
+    """
+    fn = graph_module._medgen_clinical_features_text
+    no_features = graph_module._MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    assert fn([]) == no_features
+    assert fn(None) == no_features
+    assert fn("not a list") == no_features
+    assert fn([{"name": ""}, {"hpo_id": "HP:0001659"}, "not a dict"]) == no_features
+    assert fn([{"name": "Ectopia lentis", "hpo_id": "HP:0001083"}]) == (
+        "Ectopia lentis (HP:0001083)"
+    )
+    # A mix of one usable and one malformed item: the malformed one is
+    # skipped, not fatal to the whole field.
+    mixed = fn([{"name": "Scoliosis"}, {"hpo_id": "HP:no_name_here"}])
+    assert mixed == "Scoliosis"
+
+
+# ---------------------------------------------------------------------------
 # End to end: the seven-question defect, offline.
 # ---------------------------------------------------------------------------
 

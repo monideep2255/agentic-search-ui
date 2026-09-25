@@ -5429,7 +5429,17 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # is withheld for the reason `_NCBI_EFETCH_ROW_IDENTITY_FIELDS`
     # withholds `gene_id`: it identifies the record rather than saying
     # anything about it, and the question already resolved it.
-    "medgen_summary": ("title", "definition", "semantictype"),
+    #
+    # T-8.1-06b (F-8.1-04): `clinical_features` added. Builder C's
+    # `_parse_medgen_clinical_features` (`tools/ncbi_eutils_actions.py`)
+    # always sets this key for a `db="medgen"` record, a bounded list of
+    # `{"name": ..., "hpo_id": ...}` dicts, but it was never listed here,
+    # so a phenotype question's own answer was silently dropped before it
+    # reached the writing model: confirmed empirically by builder C with a
+    # live run that still answered from PubMed, ClinVar and trials with no
+    # phenotype ever cited. See `_medgen_clinical_features_text` below for
+    # the string this list becomes before synthesis ever sees it.
+    "medgen_summary": ("title", "definition", "semantictype", "clinical_features"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -5548,6 +5558,99 @@ def _unwrap_medgen_fields(fields: dict[str, Any]) -> dict[str, Any]:
     return unwrapped
 
 
+#: T-8.1-06b (F-8.1-04). What the answer says when MedGen genuinely lists
+#: no clinical features for a resolved disease concept: a plain, code-built
+#: fact, cited to that same MedGen record, never a substitute record type
+#: and never a silent drop. Composed by code from a value already fetched
+#: (the record's own `clinical_features` list is empty), not a classifier's
+#: decision: `tracker/phase_8.1.md`'s goal contract forbids a hardcoded
+#: decision ("a decision is a classifier's call, code only verifies"),
+#: and this states a fact about what a record contains, deciding nothing
+#: about what to search or how to classify the question.
+_MEDGEN_NO_CLINICAL_FEATURES_TEXT: Final[str] = (
+    "MedGen lists no clinical features for this condition"
+)
+
+
+def _medgen_clinical_features_text(features: Any) -> str:
+    """Turn a MedGen record's `clinical_features` list into one citable,
+    quotable string, the same shape `_sra_run_accessions` already gives
+    `sra_summary`'s `runs` field for the identical reason:
+    `synthesis/grounding.ground_claim` matches a clause against source TEXT
+    by containment, so a Python list can never be quoted, only a string.
+
+    `features` is `list[dict[str, str]]` in the live shape
+    (`ncbi_eutils_actions._parse_medgen_clinical_features`'s own
+    `{"name": ..., "hpo_id": ...}` items), always present as a key on a
+    `db="medgen"` record, empty when MedGen carries none for the concept.
+    Reads defensively (`isinstance` at every level, skips a malformed
+    item rather than raising) since this is untrusted parsed content one
+    hop removed from a live NCBI response, per
+    `.claude/rules/ai-security-standards.md`'s "treat AI/external output
+    as untrusted" discipline extended to any upstream parser's output.
+
+    Returns `_MEDGEN_NO_CLINICAL_FEATURES_TEXT` for anything that is not a
+    non-empty list of usable items, so "MedGen was asked and had nothing"
+    reads identically whether the list was empty, missing, or malformed,
+    never as a silently blank field.
+    """
+    if not isinstance(features, list) or not features:
+        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    parts: list[str] = []
+    for item in features:
+        if not isinstance(item, Mapping):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        hpo_id = item.get("hpo_id")
+        if isinstance(hpo_id, str) and hpo_id.strip():
+            parts.append(f"{name.strip()} ({hpo_id.strip()})")
+        else:
+            parts.append(name.strip())
+    if not parts:
+        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    return ", ".join(parts)
+
+
+def _medgen_clinical_feature_rows(title_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """T-8.1-06b (F-8.1-04): one additional citeable row per admitted
+    MedGen title row, carrying that record's own `clinical_features` text
+    as ITS OWN field, so `_pick_representative_field` never has to choose
+    between it and `title` on the same row.
+
+    Mirrors `_pubmed_abstract_rows`'s own ADDITIONAL-row pattern for the
+    identical structural reason, stated in `render_findings_block`'s own
+    docstring: a `SynthFinding` carries exactly one `field`/`field_value`
+    pair, so a fact that must reach Synth's own prose needs its own row
+    whenever the row it started on already carries a field that always
+    wins the pick. Measured live: adding `clinical_features` to
+    `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` alone did not change
+    the answer at all. `title` kept winning `_pick_representative_field`
+    (documented insertion-order behaviour), so the model was shown
+    `MedGen title: Marfan syndrome` and nothing else; a live run after
+    that fix alone still named zero phenotypes.
+
+    Matched to `title_rows` by `source_url`, the same identity
+    `_pubmed_abstract_rows` uses, so this only adds a row for a record the
+    title path already admitted, never a new record.
+    """
+    feature_rows: list[dict[str, Any]] = []
+    for row in title_rows:
+        text = row["fields"].get("clinical_features")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        feature_rows.append(
+            {
+                "curie": "",
+                "node_or_edge_type": row["node_or_edge_type"],
+                "fields": {"clinical_features": text},
+                "source_url": row["source_url"],
+            }
+        )
+    return feature_rows
+
+
 def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -> list[Any]:
     """Item 2b (2026-09-22): the OMIM summary records whose own title names
     `gene_symbol` in a symbol field, and no others.
@@ -5653,6 +5756,18 @@ def _ncbi_efetch_output_to_structured_fields(
     if purpose == _MEDGEN_SUMMARY_PURPOSE:
         for row in rows:
             row["fields"] = _unwrap_medgen_fields(row["fields"])
+            # T-8.1-06b (F-8.1-04): stringify BEFORE the row reaches
+            # synthesis, the same discipline `_SRA_SUMMARY_PURPOSE` below
+            # already applies to `runs`. Always runs when the key is
+            # present at all (it always is, on a real medgen record,
+            # per `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` above),
+            # so an empty list becomes the honest "no clinical features"
+            # sentence rather than reaching `ground_claim` as a Python
+            # list no clause could ever quote.
+            if "clinical_features" in row["fields"]:
+                row["fields"]["clinical_features"] = _medgen_clinical_features_text(
+                    row["fields"]["clinical_features"]
+                )
     if purpose in _BREADTH_FIELDS_BY_PURPOSE:
         # A breadth result is sorted by record URL, a property of the
         # record and not of the response order, then cut to the fixed cap,
@@ -5662,6 +5777,26 @@ def _ncbi_efetch_output_to_structured_fields(
         rows = rows[:_BREADTH_ROW_CAP]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
             rows = rows + _pubmed_abstract_rows(output.records, rows)
+        if purpose == _MEDGEN_SUMMARY_PURPOSE:
+            # T-8.1-06b (F-8.1-04), round 2: the allowlist addition above
+            # alone does NOT reach the model. Confirmed live: with
+            # `clinical_features` merely added to the same row as `title`,
+            # `_pick_representative_field` still picks `title` (documented
+            # insertion-order behaviour, `omim_summary`'s own comment above
+            # names the same rule), so `render_finding_body` shows only
+            # "Disease record MedGen:...` / `title: Marfan syndrome`" and
+            # the phenotype text never reaches Synth's prompt at all. A
+            # live run of the Marfan question after the allowlist-only fix
+            # still answered with 0 phenotypes named, only the record's
+            # title and a fallback listing.
+            #
+            # Same fix shape as `_PUBMED_ABSTRACTS_PURPOSE` above, for the
+            # identical structural reason: `render_finding_body` and
+            # `_pick_representative_field` show exactly one field per
+            # finding, so a fact that must reach the model's own prose
+            # needs its OWN row when the row it started on already carries
+            # a field that always wins the pick.
+            rows = rows + _medgen_clinical_feature_rows(rows)
         if purpose == _SRA_SUMMARY_PURPOSE:
             for row in rows:
                 runs = row["fields"].get("runs")
