@@ -29,6 +29,7 @@ import { Component, createRef, Fragment, useEffect, useRef, useState } from "rea
 import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
+import { DepthStripToggle, type AudienceDepth } from "../controls/DepthControl";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
 import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
@@ -1020,6 +1021,14 @@ export interface AnswerScreenProps extends AnswerBodyContent {
    */
   onFlagSource?: (n: number) => void;
   flaggedSources?: number[];
+  /**
+   * Card 33. Present only from the answer screen's caller when a landed
+   * answer's depth can be switched in place, which today is every live turn:
+   * a streaming preview has no landed depth to switch yet, and a folded
+   * previous turn is a question the reader is no longer looking at.
+   */
+  onDepthChange?: (value: AudienceDepth) => void;
+  depthValue?: AudienceDepth;
 }
 
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
@@ -1269,6 +1278,21 @@ export interface AnswerBodyProps extends AnswerBodyContent {
    * main point is the lead's first emphasised term.
    */
   question?: string | null;
+  /**
+   * Card 33 (2026-09-25). Present only for the live turn: `AnswerScreen`
+   * passes this to the one `AnswerBody` call that renders the current
+   * answer, never to the streaming preview or to a folded previous turn,
+   * both of which either have no landed depth to switch or belong to a
+   * question the reader is no longer looking at.
+   *
+   * When present, the status strip renders `DepthStripToggle` beside `Show
+   * work`. Choosing the other depth calls this with the NEW depth; it is
+   * `AnswerScreen`'s caller's job to re-run the question at it, the same
+   * as any other depth change.
+   */
+  onDepthChange?: (value: AudienceDepth) => void;
+  /** Which button `DepthStripToggle` lights up. Ignored when `onDepthChange` is absent. */
+  depthValue?: AudienceDepth;
 }
 
 /**
@@ -1329,6 +1353,8 @@ export function AnswerBody({
   streaming = false,
   writing = false,
   question = null,
+  onDepthChange,
+  depthValue,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
@@ -1836,24 +1862,46 @@ export function AnswerBody({
               {elapsedMs !== null ? `${(elapsedMs / 1000).toFixed(1)}s · ` : ""}
               {meta}
             </Typography>
-            {steps.length > 0 ? (
+            {/*
+              Card 33. `Main.dc.html` and `Researcher.dc.html` draw the depth
+              toggle and `Show work` as one trailing group, `margin-left:
+              auto` on the GROUP rather than on `Show work` alone, so a
+              status strip carrying only the toggle (no reasoning steps to
+              show) still pins it to the right instead of losing the auto
+              margin along with the button that used to carry it.
+            */}
+            {onDepthChange || steps.length > 0 ? (
               <Box
-                component="button"
-                type="button"
-                onClick={() => setWorkOpen((open) => !open)}
-                aria-expanded={workOpen}
                 sx={{
                   ml: "auto",
-                  font: "inherit",
-                  fontSize: 13,
-                  border: 0,
-                  bgcolor: "transparent",
-                  color: designTokens.link,
-                  cursor: "pointer",
-                  p: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.75,
+                  flexWrap: "wrap",
                 }}
               >
-                {workOpen ? "Hide work ▴" : "Show work ▾"}
+                {onDepthChange ? (
+                  <DepthStripToggle value={depthValue} onChange={onDepthChange} />
+                ) : null}
+                {steps.length > 0 ? (
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={() => setWorkOpen((open) => !open)}
+                    aria-expanded={workOpen}
+                    sx={{
+                      font: "inherit",
+                      fontSize: 13,
+                      border: 0,
+                      bgcolor: "transparent",
+                      color: designTokens.link,
+                      cursor: "pointer",
+                      p: 0,
+                    }}
+                  >
+                    {workOpen ? "Hide work ▴" : "Show work ▾"}
+                  </Box>
+                ) : null}
               </Box>
             ) : null}
           </Box>
@@ -2596,6 +2644,8 @@ export function AnswerScreen({
   systemNotes = [],
   onFlagSource,
   flaggedSources = [],
+  onDepthChange,
+  depthValue,
 }: AnswerScreenProps) {
   /*
    * UI fix set 7 (R22). Bring the new turn's heading into view when a
@@ -2826,6 +2876,8 @@ export function AnswerScreen({
                     failure={failure}
                     capMessage={capMessage}
                     systemNotes={systemNotes}
+                    onDepthChange={onDepthChange}
+                    depthValue={depthValue}
                     onFlagSource={onFlagSource}
                     flaggedSources={flaggedSources}
                   />

@@ -2021,6 +2021,23 @@ export function App() {
               )
             }
             onNewSearch={startNewSearch}
+            /*
+             * Card 33 (2026-09-25). Switching the answer's own depth toggle
+             * re-runs the SAME question at the OTHER depth, through the same
+             * `ask` a typed follow-up uses, `continuesThread=true` so the
+             * answer just read folds into the thread instead of vanishing:
+             * it counts as one new question against the daily cap, and the
+             * new answer lands the same way any other follow-up's does.
+             *
+             * `depthValue={depth}` is `App`'s own state, the same value
+             * `HomeScreen` and the follow-up's dispatch already read, so the
+             * strip's toggle can never show a mode this run was not actually
+             * asked at. `AnswerScreen` never renders the toggle while a run
+             * is in flight (it only reaches the live `AnswerBody` call on
+             * the landed branch), so there is nothing further to lock here.
+             */
+            onDepthChange={(next) => void ask(searchView.question, next, true)}
+            depthValue={depth}
           />
         );
       }
