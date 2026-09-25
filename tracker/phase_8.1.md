@@ -12,8 +12,8 @@ This phase is not in Section 25. Phases 8.1 to 8.5 are the product owner's To do
 - [Budget](#budget)
 - [Tickets](#tickets)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
-- [Findings](#findings)
 - [History](#history)
+- [Findings](#findings)
 
 ## Goal contract
 
@@ -132,6 +132,12 @@ Acceptance:
 - The trust line's wording (card 16): phase 8.4. T-8.1-05 changes stability only.
 - The golden run measures default depth only; the product reviewer asks three answered questions at each depth.
 
+## History
+
+- 2026-09-25 05:05 UTC: phase opened by the lead; eight tickets written; builders A, B and C dispatched in parallel, each in its own worktree.
+- 2026-09-25 07:20 UTC: builder A's follow-ups merged (T-8.1-05b, 06b, 06c); gates run for the pull request.
+- 2026-09-25: builders B, C and A merged in that order; T-8.1-07's fix reverted (F-8.1-03); builder A resumed for T-8.1-05b and T-8.1-06b in `core/graph.py`.
+
 ## Findings
 
 Written the moment a finding is established. Each: ID, status, raised by, severity, round.
@@ -187,10 +193,3 @@ Raised by: builder B, T-8.1-04, live run 4 of 7
 Severity: low: the gate is right to reject it; the answer falls back to the code-built list for that clause
 
 The writing model abbreviated a disease name in one MODY run, and the exact-match gate correctly rejected the clause. The fix is in the writing instruction, outside builder B's fence, and is not taken tonight.
-
-
-## History
-
-- 2026-09-25 05:05 UTC: phase opened by the lead; eight tickets written; builders A, B and C dispatched in parallel, each in its own worktree.
-- 2026-09-25 07:20 UTC: builder A's follow-ups merged (T-8.1-05b, 06b, 06c); gates run for the pull request.
-- 2026-09-25: builders B, C and A merged in that order; T-8.1-07's fix reverted (F-8.1-03); builder A resumed for T-8.1-05b and T-8.1-06b in `core/graph.py`.
