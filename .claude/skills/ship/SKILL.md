@@ -19,7 +19,7 @@ A single ritual to end a work block: run the local gates, bring docs in line wit
 
 ## Step 0: the gates, before anything is staged
 
-No verification ran before a push until this step existed. The product owner set standing pre-push checks on 2026-09-12 and 2026-09-20, and until now they lived only in memory and in the continuation prompt, never enforced here. CI on GitHub has been unable to run since 2026-09-22 because of the account's billing setting, and this repository also works in a UI fix loop where pushes go straight to `develop` with no PR and no review round. That leaves the local gates below as the only gates a push actually has.
+No verification ran before a push until this step existed. The product owner set standing pre-push checks on 2026-09-12 and 2026-09-20, and until now they lived only in memory and in the old continuation prompt, never enforced here. CI on GitHub has been unable to run since 2026-09-22 because of the account's billing setting, and this repository also works in a UI fix loop where pushes go straight to `develop` with no PR and no review round. That leaves the local gates below as the only gates a push actually has.
 
 ### Gate on the exit code, never through a pipe
 
@@ -41,6 +41,7 @@ A chain like `pytest ... | tail -3 && git commit` reports `tail`'s exit code, no
 - `bash .github/gates/gate04_unit_suite.sh`: whenever any Python file under `src/`, `tests/`, `services/` or `tracker/` changed. Roughly five minutes. A docs-only change skips this and the report says so.
 - `npm run build` in `frontend/`: whenever any file under `frontend/` changed. Railway's own build is what fails silently otherwise, and this is the only local check that would catch it first.
 - `python tracker/check_doc_drift.py --check`: always. It collects the suite, roughly two minutes.
+- `python3 tracker/check_living_docs.py --fresh`: always at a session boundary. It proves `/phase-checkpoint` ran today by reading the dates the registry names (Step 1 below says why).
 
 ### A red gate stops the ship
 
@@ -66,9 +67,9 @@ Wait for docs-sync to complete before proceeding. Its edits may add files to the
 
 ### What docs-sync owns, and what it must not touch
 
-docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`: `requirements/Plan.md`, `requirements/phase_6/Continuation_prompt.md`, `PROGRESS.md`, `testing/UI_fix_plan.md`, `testing/UI_fixes_done.md`, `testing/Test_queries_and_workflows.md`, `testing/Shipped_<date>.md`, `LEARNINGS.md` and the tracked counts. So at a session boundary run `/phase-checkpoint` BEFORE `/ship`.
+docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`, and the list of those documents is not written here: it is every row of `tracker/Living_documents.md` whose owner is `/phase-checkpoint` (the handoff, the board, the done file, the test queries, Plan.md, PROGRESS.md and the tracked counts, as of 2026-09-24). So at a session boundary run `/phase-checkpoint` BEFORE `/ship`.
 
-Ship checks it ran: the "LAST UPDATED" date in the fix plan's "Where we stopped" section and the continuation prompt's session-boundary date must be today's, or the ship stops and says the checkpoint is missing. Memory recorded "checkpoint then ship" as a standing convention on 2026-09-20, and a convention that lives only in memory is not enforcement.
+Ship checks it ran with one command, `python3 tracker/check_living_docs.py --fresh`. It reads the registry's freshness column and requires every registered date line to be today's, or the ship stops and says the checkpoint is missing. No file path and no section name is hardcoded here: when the product owner reshapes a document, the registry row changes and this check follows it. Memory recorded "checkpoint then ship" as a standing convention on 2026-09-20, and a convention that lives only in memory is not enforcement.
 
 ## Step 1b: stray file sweep
 
@@ -240,7 +241,7 @@ This step is deletion, so it follows `file-protection`: say what is going before
 - Do NOT push with an unexplained stray file in the tree. Every path from BOTH of Step 1b's sources, `git status --porcelain` and the filesystem walk, is classified there, or the push waits. A clean `git status` is not evidence the tree is clean, since `.gitignore` hides the duplicate-copy family from it.
 - Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
 - Do NOT push with any Step 0 gate red or unrun
-- Do NOT push at a session boundary before `/phase-checkpoint` has run today
+- Do NOT push at a session boundary before `/phase-checkpoint` has run today, which `python3 tracker/check_living_docs.py --fresh` proves rather than asserts
 
 ## Output
 

@@ -16,7 +16,7 @@ Its whole reason for existing is that the product owner asks "where are we" mid-
 2. `git status --short`: whether anything is uncommitted right now.
 3. `tracker/BOARD.md`: the phase in flight and its open flags.
 4. `tracker/phase_N.M.md` for that phase, bottom first: the newest sections carry the current state, and a WITHDRAWN or superseded heading there outranks anything older in the same file.
-5. `requirements/phase_6/Continuation_prompt.md`, the "State now" and "The next session starts here" sections: what the last session left for this one.
+5. `HANDOFF.md`: what is live, what awaits the product owner, and the one next action the last session left for this one.
 
 Skip any of these that cannot answer the question at hand. Reading all five costs little; reading none and answering from memory is the failure this skill prevents.
 
