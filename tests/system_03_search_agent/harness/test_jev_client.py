@@ -10,7 +10,9 @@ live in `testing/Developer/reports/2026-09-25_phase_8.2/builder_D.md`.
 
 from __future__ import annotations
 
+import asyncio
 import json
+import time
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -223,3 +225,74 @@ async def test_call_jev_sends_the_callers_description(monkeypatch: pytest.Monkey
     assert body["state"] == "the person's own words"
     assert question["instructions"] == "Decide whether it is biomedical."
     assert question["criteria"] == {"relevant": "It is.", "not_relevant": "It is not."}
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2 fix round, F-8.2-J03 and F-8.2-J06: the 3-second bound is a
+# TOTAL bound on the call. httpx's own timeout float is four per-phase limits,
+# and its read limit is the gap between two chunks, so a body that trickles in
+# steadily outlasted it: the judge measured one decision held for 14 seconds.
+# ---------------------------------------------------------------------------
+
+
+async def _slow_post(*_args: Any, **_kwargs: Any) -> httpx.Response:
+    await asyncio.sleep(5.0)
+    return _response(_success_body())
+
+
+async def _call_once() -> JevResult:
+    return await call_jev(
+        model="typesafe/jev-1.13",
+        question_key="guardrail.relevancy",
+        state="x",
+        options=["relevant", "not_relevant"],
+        api_key="test-key",
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_slow_jev_is_cut_off_at_three_seconds_in_total(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fake Jev that answers correctly after 5 seconds. Goes red if the
+    total bound is removed, or if `_TIMEOUT_S` is raised past 5 seconds."""
+    monkeypatch.setattr(jev_client_module, "_post", _slow_post)
+    started = time.monotonic()
+    with pytest.raises(JevCallError) as excinfo:
+        await _call_once()
+    elapsed = time.monotonic() - started
+    assert excinfo.value.reason == "timeout"
+    assert "in total" in str(excinfo.value)
+    assert 2.9 <= elapsed < 3.5, elapsed
+
+
+@pytest.mark.asyncio
+async def test_a_body_that_trickles_in_cannot_outlast_the_total_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The judge's exact shape, through the REAL `_post` and a real httpx
+    client: the headers arrive at once, then the JSON body in four pieces
+    1.5 seconds apart. No single gap reaches 3 seconds, so a per-read limit
+    never fires; only a bound on the whole call can stop it."""
+    body = json.dumps(_success_body()).encode()
+    size = len(body) // 4 + 1
+    pieces = [body[i : i + size] for i in range(0, len(body), size)]
+
+    async def _trickle() -> Any:
+        for piece in pieces:
+            await asyncio.sleep(1.5)
+            yield piece
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=_trickle())
+
+    real_client = httpx.AsyncClient
+
+    def _client_with_trickling_transport(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return real_client(*args, transport=httpx.MockTransport(_handler), **kwargs)
+
+    monkeypatch.setattr(jev_client_module.httpx, "AsyncClient", _client_with_trickling_transport)
+    started = time.monotonic()
+    with pytest.raises(JevCallError) as excinfo:
+        await _call_once()
+    elapsed = time.monotonic() - started
+    assert excinfo.value.reason == "timeout"
+    assert elapsed < 3.5, elapsed

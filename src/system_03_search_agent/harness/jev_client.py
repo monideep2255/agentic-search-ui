@@ -80,7 +80,8 @@ back directly.
 
 No retries inside this module (ai-security-standards, tool-call-budgets):
 the caller's fallback to the guard tier's own pick IS the retry, per this
-ticket's brief. A 3-second timeout and a host-pinned, literal URL (never
+ticket's brief. A 3-second TOTAL timeout on the whole call (see
+`_TIMEOUT_S`) and a host-pinned, literal URL (never
 built from caller input) are both non-negotiable per
 `tool-call-budgets.md` and `production-standards.md`'s multi-agent
 pipeline gate.
@@ -88,6 +89,7 @@ pipeline gate.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Mapping, Sequence
 from typing import Annotated, Any
@@ -96,7 +98,20 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
+
+#: The whole call's bound, connect to last byte of the body, in seconds.
+#: Enforced by `asyncio.wait_for` around `_post` in `call_jev`, because the
+#: same float handed to `httpx.AsyncClient(timeout=...)` sets four SEPARATE
+#: per-phase limits (connect, read, write, pool), and httpx's read limit is
+#: the gap between two received chunks, not the response. Measured by the
+#: phase 8.2 judge (F-8.2-J03): a server that sent the headers at once and
+#: the body in 2-second pieces held one decision for 14 seconds, and Jev's
+#: pick was still used.
 _TIMEOUT_S = 3.0
+
+#: Public name for the bound above, read by `harness.decide` to size how
+#: long it waits for Jev before treating the call as timed out.
+JEV_TOTAL_TIMEOUT_S = _TIMEOUT_S
 
 JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invalid_option"
 
@@ -182,9 +197,11 @@ def _build_body(
 async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
     """The bare POST, split out so tests can monkeypatch this one seam.
 
-    No retry here (see the module docstring): a single attempt, a 3-second
-    timeout, and the literal, host-pinned `JEV_DECISIONS_URL` constant,
-    never a URL built from caller input.
+    No retry here (see the module docstring): a single attempt and the
+    literal, host-pinned `JEV_DECISIONS_URL` constant, never a URL built
+    from caller input. The per-phase httpx limits below are a first line
+    only; the call's real bound is `call_jev`'s total timeout around this
+    whole function, which a slow, steadily trickling body cannot outlast.
     """
     async with httpx.AsyncClient(timeout=_TIMEOUT_S) as client:
         return await client.post(JEV_DECISIONS_URL, headers=headers, json=body)
@@ -211,7 +228,7 @@ async def call_jev(
 
     Raises:
         JevCallError: reason="timeout" on a request that does not complete
-            within 3 seconds; reason="http_error" on a non-200 response or
+            within 3 seconds in total, body included; reason="http_error" on a non-200 response or
             a transport-level failure (connection refused, DNS failure,
             and so on); reason="malformed_reply" when the response body is
             not valid JSON or does not match the confirmed response shape
@@ -235,10 +252,13 @@ async def call_jev(
 
     start = time.monotonic()
     try:
-        response = await _post(headers, body)
-    except httpx.TimeoutException as exc:
+        # The TOTAL bound (F-8.2-J03): connect, send, and the whole body
+        # read, however it trickles in. `_post` finishes reading the body
+        # before it returns, so nothing slow is left outside this wait.
+        response = await asyncio.wait_for(_post(headers, body), timeout=_TIMEOUT_S)
+    except (TimeoutError, httpx.TimeoutException) as exc:
         raise JevCallError(
-            f"Jev did not respond within {_TIMEOUT_S}s for decision {question_key!r}; "
+            f"Jev did not answer within {_TIMEOUT_S}s in total for decision {question_key!r}; "
             "fall back to the guard tier's pick for this decision",
             reason="timeout",
         ) from exc

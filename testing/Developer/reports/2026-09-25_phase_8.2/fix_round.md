@@ -46,6 +46,35 @@ Live, `CLASSIFIER_PROVIDER=jev`, real guard model and real Jev, real `guardrail_
 
 Live runs spent so far: 2 of 14.
 
+### Item 4, F-8.2-J03, J04 and A12: a real total timeout on Jev, and no waiting on the comparison
+
+What the person notices: with Jev switched on, a slow Jev can hold a decision for at most about 3 seconds, not 16; once Jev has answered, nobody waits for the guard model's comparison pick for more than one second; and when Jev fails, the guard model's answer is used whenever it has arrived.
+
+What changed:
+
+- `harness/jev_client.py`: `call_jev` wraps the whole POST, body read included, in `asyncio.wait_for(..., 3.0)`. httpx's timeout float is four per-phase limits, and its read limit is the gap between two chunks, which is why a trickling body lasted 14 seconds. `JEV_TOTAL_TIMEOUT_S` names the bound for `decide`.
+- `harness/decide.py`: the `asyncio.gather` under a 16-second `wait_for` is replaced by two tasks waited on separately.
+  - Jev is waited for up to `_JEV_WAIT_S` (its own 3-second bound plus 0.5 s, an outer net only).
+  - Jev decided: the guard's comparison pick gets `GUARD_COMPARISON_GRACE_S = 1.0` second. One not ready by then is cancelled and the record says `fallback_reason: "guard_not_ready"` with `guard_choice` None. A dedicated field would be plainer, but `DecisionRecord` lives in `contracts/`, outside this fence, so the existing free-text field carries it and the constant documents the value.
+  - Jev failed: the guard's pick decides, waited for within `_GUARD_FALLBACK_WAIT_S` (its own 15-second budget plus 1). The pick is read from the task itself, so one that has arrived is never discarded by an outer limit.
+  - Anything still running when `decide` returns or is cancelled is cancelled in a `finally`, and every child task's exception is marked read, so no asyncio "never retrieved" ERROR is logged (this also fixes F-8.2-A05, see item 7).
+
+Measured wall time of `decide()`, from `pytest --durations` on the new tests (`tests/system_03_search_agent/harness/test_decide.py`):
+
+| Case | Fake Jev | Fake guard | decide() wall time | Decided by, record |
+| --- | --- | --- | --- | --- |
+| Jev in time, guard slow | answers at once | 5 s | 1.00 s | jev; `guard_not_ready`; the guard call cancelled |
+| Jev in time, guard inside the grace | answers at once | 0.3 s | 0.30 s | jev; guard pick recorded, `agreed` false |
+| Jev slow (real `call_jev`) | 5 s | 0.2 s | 3.00 s | guard; its 0.2 s pick used; `timeout` |
+| Jev slow, guard slow | 5 s | 4 s | 4.00 s | guard; its 4 s pick used |
+| Jev ignores its own bound and hangs | 30 s | 0.2 s | 3.50 s | guard; the arrived pick used, not discarded |
+
+`call_jev` alone, `tests/system_03_search_agent/harness/test_jev_client.py`: a 5-second fake endpoint and a real httpx client fed a body in four pieces 1.5 s apart both end in `JevCallError(reason="timeout")` at 3.00 s.
+
+Checked against the pre-fix `decide.py` (the committed file swapped in, then restored and `cmp`-verified): the slow-guard, hanging-Jev and cancellation tests all failed on it, 3 failed.
+
+Suite: 1620 passed, 56 skipped, 1 deselected. The new timing tests add about 21 seconds to the run.
+
 ## Findings left open, and why
 
 Filled in at the end.

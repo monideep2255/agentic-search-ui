@@ -18,6 +18,8 @@ Covers, per the ticket's explicit acceptance criteria:
 
 from __future__ import annotations
 
+import asyncio
+import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -25,6 +27,7 @@ import litellm
 import pytest
 
 from system_03_search_agent.harness import decide as decide_module
+from system_03_search_agent.harness import jev_client as jev_client_module
 from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.harness.jev_client import JevCallError, JevResult
@@ -369,3 +372,182 @@ async def test_no_description_keeps_the_original_guard_prompt(
 )
 def test_guard_reply_parse_is_whole_token_and_unambiguous(reply: str, expected: str | None) -> None:
     assert decide_module._parse_guard_choice(reply, ["on_topic", "off_topic"]) == expected
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2 fix round, F-8.2-J03, J04 and A12: how long decide() waits.
+#
+# - Jev answered in time: the guard's comparison pick gets at most
+#   GUARD_COMPARISON_GRACE_S, then is recorded as not ready.
+# - Jev failed (its 3-second TOTAL bound, measured through the real
+#   `call_jev` with a 5-second fake Jev): the guard's pick decides, waited
+#   for within the guard's own budget.
+# - A guard pick that has arrived is never discarded by an outer limit.
+# Each arm asserts the wall time; the fix round's report records them.
+# ---------------------------------------------------------------------------
+
+
+def _patch_slow_guard(monkeypatch: pytest.MonkeyPatch, *, delay_s: float, reply: str) -> dict[str, bool]:
+    seen = {"cancelled": False}
+
+    async def _acompletion(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        try:
+            await asyncio.sleep(delay_s)
+        except asyncio.CancelledError:
+            seen["cancelled"] = True
+            raise
+        return _fake_llm_response(reply)
+
+    monkeypatch.setattr(litellm, "acompletion", _acompletion)
+    monkeypatch.setattr(
+        litellm, "get_model_info", lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6}
+    )
+    return seen
+
+
+def _patch_slow_jev_post(monkeypatch: pytest.MonkeyPatch, *, delay_s: float) -> None:
+    """A fake Jev endpoint that answers correctly, but only after `delay_s`,
+    under the REAL `call_jev`, so its own total bound is what cuts it off."""
+
+    async def _post(*_args: object, **_kwargs: object) -> object:
+        import httpx
+
+        await asyncio.sleep(delay_s)
+        return httpx.Response(200, content=b"{}")
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+
+
+def _jev_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    _patch_cap(monkeypatch)
+
+
+def test_the_comparison_grace_is_at_most_one_second() -> None:
+    assert 0 < decide_module.GUARD_COMPARISON_GRACE_S <= 1.0
+
+
+@pytest.mark.asyncio
+async def test_jev_in_time_does_not_wait_for_a_slow_guard_comparison(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _jev_mode(monkeypatch)
+    seen = _patch_slow_guard(monkeypatch, delay_s=5.0, reply="not_relevant")
+    monkeypatch.setattr(decide_module, "call_jev", AsyncMock(return_value=_jev_result(choice="relevant")))
+
+    started = time.monotonic()
+    record = await decide(Harness(trace_id="w1"), "w1", "guardrail.relevancy", "x", _OPTIONS)
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0.05)  # let the cancellation reach the call
+
+    assert elapsed < decide_module.GUARD_COMPARISON_GRACE_S + 0.5, elapsed
+    assert record.decided_by == "jev" and record.chosen == "relevant"
+    assert record.guard_choice is None and record.agreed is None
+    assert record.fallback_reason == decide_module.GUARD_NOT_READY
+    assert seen["cancelled"], "a comparison nobody will read must stop spending"
+
+
+@pytest.mark.asyncio
+async def test_a_guard_comparison_inside_the_grace_is_recorded(monkeypatch: pytest.MonkeyPatch) -> None:
+    _jev_mode(monkeypatch)
+    _patch_slow_guard(monkeypatch, delay_s=0.3, reply="not_relevant")
+    monkeypatch.setattr(decide_module, "call_jev", AsyncMock(return_value=_jev_result(choice="relevant")))
+
+    record = await decide(Harness(trace_id="w2"), "w2", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert record.decided_by == "jev"
+    assert record.guard_choice == "not_relevant" and record.agreed is False
+    assert record.fallback_reason is None
+
+
+@pytest.mark.asyncio
+async def test_a_slow_jev_times_out_at_three_seconds_and_the_ready_guard_pick_decides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.2-J03 and J04 together: a 5-second Jev is cut off by its own
+    total bound, and the guard pick that arrived at 0.2 s is used."""
+    _jev_mode(monkeypatch)
+    _patch_slow_guard(monkeypatch, delay_s=0.2, reply="not_relevant")
+    _patch_slow_jev_post(monkeypatch, delay_s=5.0)
+
+    started = time.monotonic()
+    record = await decide(Harness(trace_id="w3"), "w3", "guardrail.relevancy", "x", _OPTIONS)
+    elapsed = time.monotonic() - started
+
+    assert 2.9 <= elapsed < 3.6, elapsed
+    assert record.decided_by == "guard"
+    assert record.chosen == "not_relevant" and record.guard_choice == "not_relevant"
+    assert record.fallback_reason == "timeout"
+
+
+@pytest.mark.asyncio
+async def test_a_failed_jev_waits_for_a_slow_guard_pick_within_its_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _jev_mode(monkeypatch)
+    _patch_slow_guard(monkeypatch, delay_s=4.0, reply="not_relevant")
+    _patch_slow_jev_post(monkeypatch, delay_s=5.0)
+
+    started = time.monotonic()
+    record = await decide(Harness(trace_id="w4"), "w4", "guardrail.relevancy", "x", _OPTIONS)
+    elapsed = time.monotonic() - started
+
+    assert 3.9 <= elapsed < 4.6, elapsed
+    assert record.decided_by == "guard" and record.guard_choice == "not_relevant"
+    assert record.chosen == "not_relevant"
+
+
+@pytest.mark.asyncio
+async def test_a_guard_pick_that_arrived_is_never_discarded_by_the_outer_wait(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The judge's F-8.2-J04 shape: a Jev call that ignores its own bound
+    and hangs. decide() stops waiting at its outer net, and the guard pick
+    that arrived at 0.2 s still decides."""
+    _jev_mode(monkeypatch)
+    _patch_slow_guard(monkeypatch, delay_s=0.2, reply="not_relevant")
+
+    async def _hanging_jev(**_kwargs: object) -> JevResult:
+        await asyncio.sleep(30)
+        return _jev_result()
+
+    monkeypatch.setattr(decide_module, "call_jev", _hanging_jev)
+
+    started = time.monotonic()
+    record = await decide(Harness(trace_id="w5"), "w5", "guardrail.relevancy", "x", _OPTIONS)
+    elapsed = time.monotonic() - started
+
+    assert elapsed < decide_module._JEV_WAIT_S + 0.5, elapsed
+    assert record.decided_by == "guard" and record.guard_choice == "not_relevant"
+    assert record.chosen == "not_relevant"
+    assert record.fallback_reason == "timeout"
+
+
+@pytest.mark.asyncio
+async def test_cancelling_a_decision_leaves_no_unretrieved_asyncio_error(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """F-8.2-A05: cancelling a decision in flight used to leave the inner
+    gathering future holding an error nobody read, and asyncio logged it
+    at ERROR on ordinary refusals."""
+    import gc
+
+    _jev_mode(monkeypatch)
+    _patch_slow_guard(monkeypatch, delay_s=5.0, reply="relevant")
+
+    async def _failing_jev(**_kwargs: object) -> JevResult:
+        await asyncio.sleep(0.05)
+        raise JevCallError("down", reason="http_error")
+
+    monkeypatch.setattr(decide_module, "call_jev", _failing_jev)
+
+    task = asyncio.create_task(decide(Harness(trace_id="w6"), "w6", "guardrail.relevancy", "x", _OPTIONS))
+    await asyncio.sleep(0.2)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    await asyncio.sleep(0)
+    gc.collect()
+    await asyncio.sleep(0)
+    assert not [r for r in caplog.records if "never retrieved" in r.getMessage()]
