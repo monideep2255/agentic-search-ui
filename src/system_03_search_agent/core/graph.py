@@ -898,19 +898,25 @@ _RELEVANCY: Final = _DecisionSpec(
     options=("on_topic", "off_topic"),
     instructions=(
         "The state is a question a person typed into a biomedical evidence search "
-        "engine. Decide whether its subject is biology, medicine, health or the "
-        "life sciences."
+        "engine. When the question is a follow-up, the state also gives the "
+        "previous question of the same conversation, and a word such as 'it' or "
+        "'that' in the new question may refer back to it. Decide whether the NEW "
+        "question's subject is biology, medicine, health or the life sciences."
     ),
     criteria={
         "on_topic": (
             "Its subject is biology, medicine, health, genetics, living organisms "
             "or the scientific literature, in any language, including how a food, "
-            "substance, exposure or behaviour affects the body or health."
+            "substance, exposure or behaviour affects the body or health, and "
+            "including a follow-up that asks more about the previous question's "
+            "biomedical subject."
         ),
         "off_topic": (
             "Its subject is not biological or medical at all, for example sport, "
-            "finance, politics, travel, entertainment, shopping or general "
-            "programming."
+            "finance, politics, travel, weather, entertainment, shopping or general "
+            "programming. A follow-up that asks about something unrelated to "
+            "biology or medicine is off topic even when the previous question was "
+            "biomedical."
         ),
     },
 )
@@ -1196,7 +1202,7 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
     if not prefilter.clears_biomedical_allowlist(query.text):
         relevancy_task = asyncio.create_task(
-            _decide_point(harness, trace_id, _RELEVANCY, query.text)
+            _decide_point(harness, trace_id, _RELEVANCY, _relevancy_state(query.text, state))
         )
     try:
         return await _guardrail_after_prefilter(state, sink, relevancy_task)
@@ -1293,6 +1299,7 @@ async def _guardrail_after_prefilter(
             }
         }
 
+    classifier_off_topic_set_aside = False
     if not classifier_verdict.admitted:
         if classifier_verdict.category == "off_topic" and _is_memory_bound_follow_up(
             query.text, state
@@ -1303,7 +1310,10 @@ async def _guardrail_after_prefilter(
             # is set aside and the question continues to the forbidden
             # screen and to Think, where memory binds "it". Only an
             # off-topic verdict is ever set aside; an injection verdict is
-            # final.
+            # final. Build phase 8.2 fix round (F-8.2-A01): when the
+            # allowlist missed, the set-aside now also needs the relevancy
+            # decision below, which reads the previous question, to agree.
+            classifier_off_topic_set_aside = True
             logger.info(
                 "guard off-topic verdict set aside for a memory-bound follow-up "
                 "(trace %s)",
@@ -1312,17 +1322,28 @@ async def _guardrail_after_prefilter(
         else:
             return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
-    # The relevancy decision, when one was asked for. Only a real "off_topic"
-    # pick refuses: no usable pick fails open, since the injection classifier
-    # above has already judged topicality on this question too. A memory-bound
-    # follow-up keeps the same allowance the classifier's own off-topic
-    # verdict gets above: its subject is the remembered entity.
+    # The relevancy decision, when one was asked for (the allowlist missed).
+    # A real "off_topic" pick refuses, on a follow-up exactly as on a first
+    # question (F-8.2-A01): a follow-up's decision is given the previous
+    # question too (`_relevancy_state`), so "and what about it in children?"
+    # after a BRCA1 question is judged with BRCA1 in view, while "is it good
+    # pizza?" is judged as the pizza question it is. Before this fix, the
+    # referring word alone set aside both judges' off-topic verdicts, and
+    # almost any English sentence carries "it", "that" or "this".
+    #
+    # No usable pick fails open when the injection classifier admitted the
+    # question, since that classifier has already judged topicality too.
+    # When the classifier's own off-topic verdict was set aside above on the
+    # referring-word rule alone, nothing that saw the conversation has said
+    # the question is on topic, so that verdict stands.
     if relevancy_task is not None:
         relevancy = _usable_choice(await relevancy_task)
-        if relevancy == "off_topic" and not _is_memory_bound_follow_up(query.text, state):
+        if relevancy == "off_topic":
             return _decline_for_guardrail(
                 state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
             )
+        if relevancy is None and classifier_off_topic_set_aside:
+            return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.
     forbidden_verdict = forbidden.screen(query.text)
@@ -4977,6 +4998,40 @@ def _is_memory_bound_follow_up(text: str, state: GraphState) -> bool:
     return bool(tokens & _REFERRING_WORDS)
 
 
+def _relevancy_state(text: str, state: GraphState) -> str:
+    """What `guardrail.relevancy` reads: the question, and for a follow-up
+    the previous question it points back at.
+
+    Build phase 8.2 fix round, F-8.2-A01. A follow-up ("and what about it in
+    children?") names no subject of its own, so judged alone it reads as off
+    topic; the old answer was to set the verdict aside whenever the text held
+    a referring word, which also admitted "is it good pizza?". Handing the
+    decision the previous question instead lets the classifier judge the
+    follow-up the way a person would, and its "off_topic" then refuses a
+    follow-up exactly as it refuses a first question.
+
+    A first question, or one with no referring word, is judged on its own
+    text alone, byte for byte what the decision read before this fix. The
+    previous question is the person's own earlier words, already bounded to
+    200 characters by the memory contract (`MAX_OPEN_THREAD_LENGTH`), and
+    `decide` caps the whole state again; nothing retrieved and nothing
+    written by a model enters it. When the stored memory predates open
+    threads, the most recently resolved entity's mention stands in.
+    """
+    if not _is_memory_bound_follow_up(text, state):
+        return text
+    memory = _session_memory(state)
+    if memory is None:
+        return text
+    if memory.open_threads:
+        previous = memory.open_threads[-1]
+    elif memory.resolved_entities:
+        previous = memory.resolved_entities[-1].mention
+    else:
+        return text
+    return f"Previous question in this conversation: {previous}\nNew question: {text}"
+
+
 #: What the answer says when a follow-up points at nothing. Under
 #: `ThinkPayload.clarifying_question`'s 500-character bound.
 CLARIFICATION_QUESTION: Final = (
@@ -5027,8 +5082,10 @@ def _memory_suffix(state: GraphState, tier: Tier) -> str:
     call sites are Think and Plan by construction. The guardrail never
     receives this block: it reads memory only through
     `_is_memory_bound_follow_up`, a deterministic rule applied after its
-    verdict (UI fix set 7, item 7.1, 2026-09-13). It exists as the single
-    declaration those call sites are checked against.
+    verdict (UI fix set 7, item 7.1, 2026-09-13), and `_relevancy_state`,
+    which hands the relevancy decision a follow-up's previous question
+    (build phase 8.2 fix round). It exists as the single declaration those
+    call sites are checked against.
 
     ## What this block does and does not do today (F-4.5-A-09)
 

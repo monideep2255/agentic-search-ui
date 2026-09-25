@@ -1892,6 +1892,13 @@ _MEMORY_READERS_ALLOWED = {
     # still hold that neither `act_node` nor `write_node` reads memory.
     "guardrail_node",
     "_is_memory_bound_follow_up",
+    # Build phase 8.2 fix round (F-8.2-A01): the relevancy decision on a
+    # pronoun follow-up is handed the previous question the pronoun points
+    # at, the person's own earlier words, so its "off_topic" can refuse a
+    # follow-up exactly as it refuses a first question. This is the
+    # separate closed-option decision call, not the guard classifier's
+    # prompt, which still carries nothing from memory.
+    "_relevancy_state",
     # Item 7.5 (2026-09-13): Think asks a clarifying question only when no
     # remembered antecedent exists, so the rule must read memory; it reads
     # the same accessor Plan's binding reads and injects nothing.
