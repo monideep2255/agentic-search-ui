@@ -216,7 +216,14 @@ def test_the_topic_search_is_one_relevance_sorted_pubmed_esearch() -> None:
     payload = call.tool_input.root.model_dump()
     assert payload["action"] == "search" and payload["db"] == "pubmed"
     assert payload["term"] == MEASURED_TERMS[Q4]
-    assert payload["retmax"] == breadth_plan.TOPIC_RESULT_CAP
+    # T-8.1-07 (tracker/phase_8.1.md): the ESearch call itself asks for a
+    # wider candidate pool (`PUBMED_SEARCH_OVERFETCH`), not the final display
+    # count (`TOPIC_RESULT_CAP`). `plan_literature_follow_up`'s `select_ids`
+    # picks the highest PMIDs out of that pool deterministically, so the
+    # final five are stable even when NCBI's own relevance ranking near the
+    # old five-result cutoff is not.
+    assert payload["retmax"] == breadth_plan.PUBMED_SEARCH_OVERFETCH
+    assert breadth_plan.TOPIC_RESULT_CAP == breadth_plan.PUBMED_RESULT_CAP
     assert payload["sort"] == "relevance"
 
 

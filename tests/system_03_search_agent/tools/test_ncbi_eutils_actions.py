@@ -719,6 +719,180 @@ class TestSummary:
         )
 
     @pytest.mark.asyncio
+    async def test_medgen_clinical_features_are_parsed_out_of_conceptmeta(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """T-8.1-06 (tracker/phase_8.1.md): a phenotype question names
+        phenotypes. `clinical_features` is an addition beyond Section 6.2's
+        table, exactly as `gene`'s `summary` field is: `conceptmeta` never
+        reaches the caller whole (see the comment above
+        `_parse_medgen_clinical_features`), only this parsed, bounded list.
+
+        The fixture's `conceptmeta` mirrors MedGen's real shape for Marfan
+        syndrome (UID 44287), measured live 2026-09-25: several sibling
+        top-level elements (`Names`, `ClinicalFeatures`, ...), not one
+        document, with the HPO id on the `ClinicalFeature` element's own
+        `SDUI` attribute.
+        """
+        conceptmeta = (
+            "<Names><Name type=\"preferred\">Marfan syndrome</Name></Names>"
+            "<ClinicalFeatures>"
+            '<ClinicalFeature uid="8153" CUI="C0003504" TUI="T047" SDUI="HP:0001659">'
+            "<Name>Aortic regurgitation</Name>"
+            "<SemanticType>Disease or Syndrome</SemanticType>"
+            "</ClinicalFeature>"
+            '<ClinicalFeature uid="2047" CUI="C0003706" TUI="T019" SDUI="HP:0001166">'
+            "<Name>Arachnodactyly</Name>"
+            "</ClinicalFeature>"
+            '<ClinicalFeature uid="41704" CUI="C0013581" TUI="T019">'
+            "<Name>No HPO id on this one</Name>"
+            "</ClinicalFeature>"
+            "</ClinicalFeatures>"
+        )
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "result": {
+                            "uids": ["44287"],
+                            "44287": {
+                                "uid": "44287",
+                                "conceptid": "C0024796",
+                                "title": "Marfan syndrome",
+                                "definition": "A connective tissue disorder.",
+                                "semantictype": ["Disease or Syndrome"],
+                                "conceptmeta": conceptmeta,
+                            },
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.summary(
+            NcbiEfetchSummaryInput(action="summary", db="medgen", ids=["44287"])
+        )
+        assert output.status == "ok"
+        fields = output.records[0].fields
+        assert "conceptmeta" not in fields, (
+            "the raw 35KB conceptmeta blob must never reach the caller whole"
+        )
+        features = fields["clinical_features"]
+        assert features == [
+            {"name": "Aortic regurgitation", "hpo_id": "HP:0001659"},
+            {"name": "Arachnodactyly", "hpo_id": "HP:0001166"},
+            {"name": "No HPO id on this one"},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_medgen_with_no_clinical_features_states_an_empty_list(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When MedGen carries no `ClinicalFeatures` block at all (a concept
+        with nothing but names and cross-references), the key is still
+        present as `[]`, never omitted, so a caller can disclose "MedGen
+        lists no clinical features for this concept" instead of reading a
+        missing key as "not checked" (the ticket's acceptance criterion)."""
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "result": {
+                            "uids": ["1"],
+                            "1": {
+                                "uid": "1",
+                                "conceptid": "C0000001",
+                                "title": "A concept with no clinical features",
+                                "conceptmeta": "<Names><Name>x</Name></Names>",
+                            },
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.summary(
+            NcbiEfetchSummaryInput(action="summary", db="medgen", ids=["1"])
+        )
+        assert output.records[0].fields["clinical_features"] == []
+
+    @pytest.mark.asyncio
+    async def test_medgen_clinical_features_are_capped_in_count(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The ticket's own measurement, 70 `ClinicalFeature` entries for
+        Marfan syndrome, is capped to `_MAX_CLINICAL_FEATURES` (30) before it
+        reaches a prompt, per `.claude/rules/production-standards.md`'s
+        multi-agent pipeline gate (`maxItems` on every array)."""
+        many = "".join(
+            f'<ClinicalFeature SDUI="HP:{i:07d}"><Name>Feature {i}</Name></ClinicalFeature>'
+            for i in range(70)
+        )
+        conceptmeta = f"<ClinicalFeatures>{many}</ClinicalFeatures>"
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "result": {
+                            "uids": ["44287"],
+                            "44287": {
+                                "uid": "44287",
+                                "conceptid": "C0024796",
+                                "title": "Marfan syndrome",
+                                "conceptmeta": conceptmeta,
+                            },
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.summary(
+            NcbiEfetchSummaryInput(action="summary", db="medgen", ids=["44287"])
+        )
+        features = output.records[0].fields["clinical_features"]
+        assert len(features) == ncbi_eutils_actions._MAX_CLINICAL_FEATURES
+        assert features[0]["name"] == "Feature 0"
+
+    @pytest.mark.asyncio
+    async def test_medgen_conceptmeta_with_a_doctype_or_entity_is_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`.claude/rules/production-standards.md`: NCBI XML parsers must
+        disable external entities. `conceptmeta` is a content fragment, so a
+        legitimate one never carries a DOCTYPE; one that does is rejected
+        outright rather than parsed, matching `ncbi_transport.py`'s own
+        DOCTYPE/ENTITY reject for the same reason. Fails closed to an empty
+        list, never a crash, never the raw markup passed through."""
+        hostile = (
+            '<!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+            "<ClinicalFeatures><ClinicalFeature><Name>&xxe;</Name></ClinicalFeature>"
+            "</ClinicalFeatures>"
+        )
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "result": {
+                            "uids": ["1"],
+                            "1": {
+                                "uid": "1",
+                                "conceptid": "C0000001",
+                                "title": "hostile",
+                                "conceptmeta": hostile,
+                            },
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.summary(
+            NcbiEfetchSummaryInput(action="summary", db="medgen", ids=["1"])
+        )
+        assert output.records[0].fields["clinical_features"] == []
+
+    @pytest.mark.asyncio
     async def test_clinvar_germline_classification_passed_through_as_object(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1031,6 +1205,59 @@ class TestSummary:
             f"got {output.record_count}: {[r.id for r in output.records]}"
         )
         assert output.records[0].id == "672"
+
+
+# ===========================================================================
+# _parse_medgen_clinical_features, direct unit tests (T-8.1-06)
+# ===========================================================================
+
+
+class TestParseMedgenClinicalFeatures:
+    """Below the `summary()`-level tests above: `_parse_medgen_clinical_features`
+    exercised directly against non-string and malformed input, which never
+    reaches NCBI at all and so never needs a scripted transport."""
+
+    def test_none_and_non_string_input_yields_empty_list(self) -> None:
+        assert ncbi_eutils_actions._parse_medgen_clinical_features(None) == []
+        assert ncbi_eutils_actions._parse_medgen_clinical_features(42) == []
+        assert ncbi_eutils_actions._parse_medgen_clinical_features(["not", "a", "string"]) == []
+
+    def test_blank_string_yields_empty_list(self) -> None:
+        assert ncbi_eutils_actions._parse_medgen_clinical_features("") == []
+        assert ncbi_eutils_actions._parse_medgen_clinical_features("   ") == []
+
+    def test_malformed_xml_fails_closed_to_empty_list(self) -> None:
+        assert ncbi_eutils_actions._parse_medgen_clinical_features("<ClinicalFeatures><unclosed") == []
+
+    def test_a_feature_with_no_name_element_is_skipped(self) -> None:
+        conceptmeta = (
+            "<ClinicalFeatures>"
+            '<ClinicalFeature SDUI="HP:0000001"><SemanticType>x</SemanticType></ClinicalFeature>'
+            "<ClinicalFeature><Name>Real feature</Name></ClinicalFeature>"
+            "</ClinicalFeatures>"
+        )
+        assert ncbi_eutils_actions._parse_medgen_clinical_features(conceptmeta) == [
+            {"name": "Real feature"}
+        ]
+
+    def test_an_sdui_that_is_not_an_hpo_id_is_dropped(self) -> None:
+        """`SDUI` is MedGen's generic source-descriptor-unique-id column and
+        is not always an HPO term (it can be a MeSH id like `D008382`, seen
+        live on MedGen's own `Names` block for Marfan syndrome). Only a
+        genuine `HP:`-prefixed value is surfaced as `hpo_id`."""
+        conceptmeta = (
+            '<ClinicalFeatures><ClinicalFeature SDUI="D008382">'
+            "<Name>Not an HPO term</Name></ClinicalFeature></ClinicalFeatures>"
+        )
+        assert ncbi_eutils_actions._parse_medgen_clinical_features(conceptmeta) == [
+            {"name": "Not an HPO term"}
+        ]
+
+    def test_a_long_name_is_capped(self) -> None:
+        long_name = "x" * 500
+        conceptmeta = f"<ClinicalFeatures><ClinicalFeature><Name>{long_name}</Name></ClinicalFeature></ClinicalFeatures>"
+        (feature,) = ncbi_eutils_actions._parse_medgen_clinical_features(conceptmeta)
+        assert len(feature["name"]) <= ncbi_eutils_actions._MAX_CLINICAL_FEATURE_NAME_CHARS
 
 
 # ===========================================================================

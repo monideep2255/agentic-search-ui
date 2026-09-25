@@ -103,7 +103,15 @@ def test_first_stage_for_a_gene_plans_pubmed_clinvar_omim_in_fixed_order() -> No
     assert all(call.tool == "ncbi_efetch" and call.layer == "layer_2_api" for call in calls)
     assert all(call.prefix == "ne" for call in calls)
     pubmed, clinvar, omim = (call.tool_input.root for call in calls)
-    assert (pubmed.db, pubmed.term, pubmed.retmax) == ("pubmed", "GCK[Title/Abstract]", 5)
+    # T-8.1-07 (tracker/phase_8.1.md): the PubMed ESearch call's own retmax
+    # is the overfetch buffer, not the final PUBMED_RESULT_CAP; the
+    # follow-up's `select_ids` (highest PMID first) does the real, stable
+    # narrowing to five. ClinVar and OMIM are unaffected by this ticket.
+    assert (pubmed.db, pubmed.term, pubmed.retmax) == (
+        "pubmed",
+        "GCK[Title/Abstract]",
+        bp.PUBMED_SEARCH_OVERFETCH,
+    )
     assert (clinvar.db, clinvar.term, clinvar.retmax) == ("clinvar", "GCK[gene]", 10)
     assert (omim.db, omim.term, omim.retmax) == ("omim", "GCK", 10)
 
@@ -141,6 +149,31 @@ def test_first_stage_stays_under_the_per_query_call_ceiling() -> None:
     21.3's twenty even beside the four calls `plan_node` already makes.
     """
     assert len(bp.plan_first_stage("BRCA1", "breast cancer")) == 3
+
+
+def test_pubmed_search_overfetches_a_candidate_pool_wider_than_the_final_cap() -> None:
+    """T-8.1-07 (tracker/phase_8.1.md): six identical local runs of the GERD
+    question returned two distinct PubMed citation sets on 2026-09-23,
+    measured on wiring nobody had changed since. Before this ticket, the
+    PubMed ESearch call's own `retmax` WAS `PUBMED_RESULT_CAP`, so
+    `plan_literature_follow_up`'s deterministic highest-PMID reselection had
+    nothing to re-sort: it received at most five ids, whatever NCBI's
+    relevance ranking happened to put in that window on a given call, and
+    could only reorder them. Requesting a wider pool first is what makes the
+    module's own stated design intent, "the planner never re-sorts by
+    relevance", actually hold at the boundary rather than only inside it.
+    """
+    assert bp.PUBMED_SEARCH_OVERFETCH > bp.PUBMED_RESULT_CAP
+    (pubmed_call,) = [c for c in bp.plan_first_stage("BRCA1", None) if c.purpose == "pubmed_search"]
+    assert pubmed_call.tool_input.root.retmax == bp.PUBMED_SEARCH_OVERFETCH
+    (topic_call,) = bp.plan_topic_search("papers on caffeine and exercise performance")
+    assert topic_call.tool_input.root.retmax == bp.PUBMED_SEARCH_OVERFETCH
+    # The follow-up still narrows to the same final count regardless of how
+    # wide the pool was: a bigger candidate set cannot leak more citations
+    # than the product's own per-source cap allows.
+    wide_pool = [str(100_000 + i) for i in range(bp.PUBMED_SEARCH_OVERFETCH)]
+    (fetch, _annotate) = bp.plan_literature_follow_up(wide_pool)
+    assert len(fetch.tool_input.root.ids) == bp.PUBMED_RESULT_CAP
 
 
 # ---------------------------------------------------------------------------
