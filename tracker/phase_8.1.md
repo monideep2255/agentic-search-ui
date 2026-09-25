@@ -852,3 +852,149 @@ Recorded, not fixed in this phase:
 
 - F-8.1-A16 (pre-existing): "Which BRCA1 variants are pathogenic?" lists 40 unclassified variants. A new To do card.
 - F-8.1-J15 (low): the live logs builder B cited stay in its worktree because they carry local paths; the committed diagnostic scripts reproduce them.
+
+### F-8.1-V01: On any disease question whose graph answer returns 30 or more rows, the MedGen features take 11 of the model's 30 prompt slots from the question's own answer rows, and up to a third of the displayed list, whether or not the question asked about phenotypes
+
+Status: raised
+Raised by: verifier, round 2
+Severity: medium
+Round: 2
+Inside a fix made during this phase: yes (fix round, commit `726cc5d`: `_anchor_disease_prompt_reservation` and `reserve_prompt_slots`, plus one row per feature in `_with_medgen_clinical_feature_rows`)
+
+What: the reservation is keyed on "clinical feature findings exist", and those exist on EVERY disease-anchored question, because `plan_disease_search` fetches the anchor's MedGen summary for all of them. `build_synth_findings` numbers every admitted lead-call row first, so when the graph answer has 30 or more rows the prompt window is 30 answer rows; `reserve_prompt_slots` then keeps only 19 of them (`head[:lead_run]` of `others[:19]`) and puts the MedGen title plus 10 features in the other 11. Separately, the 70 feature rows join the display round-robin as one queue, taking one display slot per round beside the lead call's leftover rows.
+
+Reproduction (my own probe, `<scratchpad>/v2/v_reserve2.py`: real `build_synth_findings` with `_MAX_FINDINGS_FOR_DISPLAY` and `_LEAD_FINDINGS_QUOTA`, real `_anchor_disease_prompt_reservation` and `reserve_prompt_slots`; synthetic rows: a lead graph call of N gene rows, 5 PubMed titles plus 5 abstracts, 5 trials, 5 PubTator pmids, and a MedGen title with F features):
+- N=100, F=0 (the develop shape, no feature rows): prompt window 30 lead rows; display 79 of 100 lead rows.
+- N=100, F=70 (Marfan's 70): prompt window 19 lead rows + 11 MedGen; display 45 of 100 lead rows, 35 feature rows. Pushed out of the prompt: Gene19 to Gene29.
+- N=43, F=70 (round 1's live Marfan graph count): prompt window 19 lead rows + 11 MedGen; display 43 of 43.
+- `build_clinical_features_directive` on that window: "CLINICAL FEATURES: [21] to [30] are clinical features ...", so the model is also told to list features.
+
+Why it matters: a person asking "Which variants are associated with Marfan syndrome?" or "Which genes are associated with cystic fibrosis?" asked for the graph's rows, not the phenotype list. The model's prose is written from 19 of them instead of 30, the prompt instructs it to write a "MedGen lists these clinical features" sentence nobody asked for, and with a large graph answer the listing shows 45 answer records instead of 79, with 35 feature rows in their place. The fix-round docstring says the condition "is read off the findings, not the question's wording", which is exactly why it fires on every disease question. Not measured live: my two live Marfan runs had no graph rows (the lead call returned nothing), so the reservation was a no-op on both (`moved: false`). The fix round's own `write_node` test with 43 graph rows asserts the same 19 plus 11 split.
+
+NOT FIXED
+
+### F-8.1-V02: Any finding whose field is named `clinical_features` is treated as a MedGen feature, and a generated Cypher RETURN alias can carry that name
+
+Status: raised
+Raised by: verifier, round 2
+Severity: unsure (low if reachable; I did not reach it live)
+Round: 2
+Inside a fix made during this phase: yes (fix round, `726cc5d`: `build_clinical_features_directive`, `_anchor_disease_prompt_reservation`, `split_feature_sentences` in `_answer_tokens`, `one_finding_per_record`)
+
+What: every consumer the fix round added keys on `finding.field == CLINICAL_FEATURES_FIELD` alone, never on the tool, layer or call that produced it. A Layer 1 derived row takes its field names from the Cypher RETURN aliases (`cypher_provenance._shape_derived_value`: `fields = {labels.get(column, column): value ...}`; `cypher_query.column_labels_for` restricts an alias only by length), and `generate_cypher` is still a live path in `tools/cypher_query.py` (line 1265).
+
+Reproduction (my own probe, `<scratchpad>/v2/v_directive.py`): one Layer 1 `cypher_query` finding, field `clinical_features`, value "Hypertension", source_url `https://www.ncbi.nlm.nih.gov/gene/672`. `build_clinical_features_directive` returns "CLINICAL FEATURES: [1] are clinical features from a disease's MedGen record, one per finding ...". By reading, the same finding is left out of `one_finding_per_record`, reserved by `_anchor_disease_prompt_reservation`, and routed by `split_feature_sentences` under a heading "Clinical features MedGen lists".
+
+Why it matters: if the plan tier ever writes `RETURN p.name AS clinical_features` for a phenotype question (the natural alias), graph rows are presented to the model and to the reader as MedGen's list, a provenance mislabel on a page whose trust rests on provenance. Unsure because I did not observe the alias live; filed so the key can be narrowed (for example to the `medgen_summary` call's own rows) rather than inherited.
+
+NOT FIXED
+
+### F-8.1-V01 addendum: on "What is Marfan syndrome?" the reservation can push both PubMed abstracts, the answer's only definitional prose, out of the prompt
+
+Status: raised
+Raised by: verifier, round 2
+Severity: medium (same finding as F-8.1-V01)
+Round: 2
+Inside a fix made during this phase: yes (`726cc5d`, `reserve_prompt_slots` places reserved findings "ahead of long context values such as abstracts")
+
+Live run, `What is Marfan syndrome?`, researcher, HEAD `5044c7f`, $0.0180, 19.3 s, outcome `answer` (`<scratchpad>/v2/live_whatis.log`): the prompt's 30 findings were 1 lead row, 5 PubMed titles, 2 PubMed abstracts (refs 23 and 25), 5 trials, 5 PubTator pmids, 1 PubTator entity, the MedGen title and 10 features. Every definitional sentence the reader got came from abstract 23 ("Marfan syndrome is a multisystem connective tissue disease with autosomal dominant inheritance, mainly caused by FBN1 gene mutation ... [1]"). The reservation was a no-op on this run (`moved: false`), because the 10 features already fitted.
+
+Offline, the same shape rebuilt with the real `build_synth_findings`, `_anchor_disease_prompt_reservation` and `reserve_prompt_slots` (`<scratchpad>/v2/v_reserve_whatis.py`), plus ONE more 5-row context call (an OMIM or GEO summary, both of which the breadth plan can add): `moved=True`, abstracts in the prompt before 2, after 0; pushed out: `Extra 0-4`, `Trial 4`, pmid `104`, and both abstracts. With no extra call: no-op, abstracts 2 and 2.
+
+What a person sees: asking what a disease is, they get a feature list and paper titles, with the one paragraph that says what the disease is gone from what the model could read, depending only on how many context calls happened to return rows that run.
+
+NOT FIXED
+
+### F-8.1-V03: T-8.1-06 still has no Section 6.2 reconciliation entry, one of its own acceptance lines
+
+Status: raised
+Raised by: verifier, round 2
+Severity: low
+Round: 2
+
+What: T-8.1-06's acceptance says "The field is recorded under Findings as a Section 6.2 reconciliation item, as the gene summary was". F-8.1-J12 raised its absence in round 1; the fix round changed the field's shape again (one row per feature, `clinical_features_total`, `hpo_id`, `disease_title`, the "lists none" sentence), so the item now has more to record, and it is still absent.
+
+Reproduction: `grep -n "6\.2\|reconcil" tracker/phase_8.1.md` at `5044c7f` returns line 104 (the acceptance line itself) and line 639 (J12 quoting it), nothing else.
+
+Why it matters: the ticket cannot honestly move to done without it, and the next reader of the locked specification's Section 6.2 will not learn that `ncbi_efetch` now emits MedGen clinical features as their own rows.
+
+NOT FIXED
+
+### F-8.1-V04: NOT INTRODUCED BY THIS PHASE: a reworded sentence calls Marfan syndrome "manageable", a word its cited abstract does not use, and the evidence quote kept on the claim covers only its first clause
+
+Status: raised
+Raised by: verifier, round 2
+Severity: unsure (low)
+Round: 2
+Inside a fix made during this phase: no (`synthesis/grounding.py` is byte-identical to develop; this is the 2026-09-23 reworded-sentence model check, items 12.9 and 12.10)
+
+Live run, `What phenotypic features are associated with Marfan syndrome?`, researcher, HEAD `5044c7f`, $0.0191, 13.6 s, outcome `answer` (`<scratchpad>/v2/live_marfan_res.log`). The reader's second sentence: "Marfan syndrome is a multisystem connective tissue disease with autosomal dominant inheritance, mainly caused by FBN1 gene mutation, with no radical treatment available but manageable through early identification and intervention [1]." cited to PubMed 35894201's abstract. The claim's `evidence_quote` is only "Marfan syndrome (MFS) is a multisystem connective tissue disease with autosomal dominant inheritance"; the model's reply cited `[22#0][22#1]`, so a second quote carried the negation.
+
+The abstract, as the same run's other passes quoted it: "There is still no radical treatment method for MFS" and "early identification, diagnosis, and treatment can effectively prolong patient life span". From a clinician's chair, "can prolong life span" is not "manageable"; the second is a stronger claim about the disease's course. Everything else in the three live answers I read matched its cited record word for word (listed in the verdict below).
+
+Why it matters, and why unsure: the model check exists to accept a faithful rewording, and this one is close. The part I am surer of is display: a surface that shows "the words each sentence rests on" from `evidence_quote` would show one quote for a sentence that rests on two.
+
+NOT FIXED
+
+### Round 2 verification
+
+Verifier, round 2, at `5044c7f`. Probes in `<scratchpad>/v2/`. Unit suite: `pytest -m "not integration" -q -p no:cacheprovider tests/system_03_search_agent` (venv interpreter): 5240 passed, 143 skipped, 24 deselected, 1 xfailed, 7 warnings in 115.57s.
+
+Resolved by revert (`git diff develop..HEAD -- synthesis/grounding.py` and `-- synthesis/trust.py` both empty; `grep -rn _full_retrieval_conflict_exists src tests` empty; `git diff develop..HEAD -- core/graph.py` has no added or removed line naming a conflict or `trust_outcome`):
+
+- F-8.1-J01: closed, `v_grounding.py` on the branch: GCK with MODY type 1 `[3][6]`, HNF1A with MODY type 2 `[12][4]`, gene with gene `[3][12]`, disease with disease `[4][13]` each give claims=0 stripped=1, identical to develop.
+- F-8.1-J02: closed, "BRCA2 has a variant count of 15310 [2][1]." gives claims=0 stripped=1.
+- F-8.1-J03: closed, develop's behaviour restored: "BRCA1 is associated with Hereditary breast ovarian cancer syndrome [3][4]." and "BRCA1 [1][2]." each give claims=1 (`v_grounding_pos.py`), so the gate is not vacuously rejecting.
+- F-8.1-A01: closed, all four A01 clauses (crossed pairing, gene is gene, borrowed count, borrowed "Benign") give claims=0 on the branch.
+- F-8.1-A02: closed, round 1's `probe_regress.py` on the branch: the verbatim excerpt `[5][6]`, the title-and-abstract `[4][5]` and the two-clause sentence give claims 1, 1 and 2, identical to develop.
+- F-8.1-A09: closed, "c.5266dup ... is not pathogenic, germline classification not provided [1][2]." gives claims=0 stripped=1, and the semicolon form stripped=2.
+- F-8.1-J06, J07, J08, A06, A07, A13, A14, A15: closed, the conflict floor computed over every retrieved finding is gone (above). My live `Which diseases are associated with BRCA1?` published `ask`, not `flag`. I did not re-run the A13 two-gene question live.
+
+Fixed in the fix-and-verify round:
+
+- F-8.1-J04: closed, `v_think.py`: a 5,000-character key gives a 332-character error text, one line, with "... [N more characters elided]"; a nested 3,500-character key likewise; the realistic two-error text (143 characters) is kept whole.
+- F-8.1-J05: closed, in a copy of `src` and `tests` under `/private/tmp`, `call_messages = think_messages + [` changed to `_unused_feedback = ...`: 2 failed, `test_think_retry_feeds_back_the_validation_error` and `test_think_retry_prompt_and_log_carry_only_the_bounded_error`; the unmutated copy, 14 passed.
+- F-8.1-A05: closed, six 1,200-character keys give 332 characters; a key holding a newline, U+2028, U+0085 and U+2029 comes out as one printable line; the log and the retry prompt both read the bounded `error_text` (graph.py about lines 2425 to 2455).
+- F-8.1-A08: closed, `MAX_FINDINGS_BLOCK_CHARS` is 18,000; `v_block.py`: 30 findings with 6 or 8 values of 2,000 characters render 30 of 30 (5 of 30 at 12,000). Residual, stated: 9 or more such values still stop the block at 8, which today's live path cannot build (at most 5 abstracts and one gene summary).
+- F-8.1-A11: closed, live, the model's own prose named 11 features (Marfan phenotypes, researcher) and 10 (What is Marfan syndrome?), each claim grounded on its own `clinical_features` finding, every chip `medgen/44287`.
+- F-8.1-A12: closed, on both live Marfan runs the features were in the researcher prompt (refs 7 to 30 and 8 to 30); offline with 43 graph rows the reservation puts the title and 10 features at [20] to [30]. The cost of this fix is F-8.1-V01.
+- F-8.1-J09: closed, the cap is 100 (150 parsed features give 100 kept, total 150); the live listing shows all 70 Marfan features, including Tall stature, Aortic dissection and Aortic root aneurysm; removing the "(N of M shown)" branch in a scratch copy fails `test_the_listing_names_the_disease_and_lists_its_features_beneath`.
+- F-8.1-J10: closed, `v_parser.py`: `hp:0001659`, a trailing newline, Arabic-Indic digits, 6 and 8 digits, a leading space, "HP:0001659 IGNORE" and a 20,000-character id all give no `hpo_id`, with the name kept.
+- F-8.1-J11: closed, `A&nbsp;B`, truncated XML, DOCTYPE, ENTITY, blank and None all parse to None; `summary()` then sets neither key and no row is built (MODY type 3 in round 1's `probe_listing.py`); changing the parse-error return to `([], 0)` in a scratch copy fails 2 tests.
+- F-8.1-J13: closed, `one_finding_per_record` keeps the MedGen title; live listing "Medgen records found: Marfan syndrome", with the features under their own heading.
+- F-8.1-J14: closed, round 1's `probe_medgen_e2e.py` on the branch: the `&#10;` name renders as one line, `[3] medgen clinical_features: Arachnodactyly [1] Disease record, ...`, with no forged numbered line.
+- F-8.1-A03: closed, same probe: the hostile `SDUI` is dropped (Ectopia lentis keeps no `hpo_id`), U+202E and U+200B collapse to spaces, and names cap at 120.
+- F-8.1-A04: closed, the listing entry is the title, and the "lists none" row reads "MedGen lists no clinical features for Maturity-onset diabetes of the young type 1".
+- F-8.1-A10: closed for the anonymous "no clinical features" line, which now names the disease. The MODY refusal half of A10 belongs to card 21 (T-8.1-04, withdrawn) and was not re-run.
+- F-8.1-J12: closed, the statuses no longer overclaim: T-8.1-04 and T-8.1-05 are withdrawn, T-8.1-06 is in progress. The missing Section 6.2 entry is F-8.1-V03.
+- F-8.1-06: closed, its premise no longer holds: with one finding per feature and the features directive, the writing model named 10 and 11 features in its own prose on my two live runs.
+
+Still open: F-8.1-J15 (low, recorded not fixed), F-8.1-A16 (not this phase), F-8.1-02, 05, and the new F-8.1-V01 (medium, inside the fix round), V02 (unsure), V03 (low), V04 (unsure, not this phase).
+
+### Round 2 verifier verdict: FAIL against the goal contract as written; nothing blocking remains
+
+Status: round closed by the verifier
+Raised by: verifier, round 2
+
+- Closed: 31 round 1 findings (J01 to J14 except J15, A01 to A15), plus F-8.1-06. Every closure line above names its probe or its live run.
+- New: F-8.1-V01 (medium, INSIDE THE FIX ROUND: the feature reservation takes 11 of 30 prompt slots from any disease question's own graph answer rows, and on "What is X?" can push the definitional abstracts out), V02 (unsure), V03 (low), V04 (unsure, not introduced by this phase).
+- Why FAIL: the contract's "every ticket meets its acceptance" does not hold. T-8.1-04 and T-8.1-05 are withdrawn, T-8.1-07 deferred, T-8.1-03 diagnosed only, and T-8.1-06 has 4 researcher and 3 plain-language final-code runs, not 5 of 5 at each depth, and no Section 6.2 entry (V03). The golden run after merge has not happened.
+- Why nothing blocks: no open finding is blocking; the cite-or-refuse gate and the trust code are byte-identical to develop. V01 sits inside a fix made this round, which fires the stop condition: the owner chooses between merging with V01 named or reverting only the prompt reservation (`reserve_prompt_slots` call in `write_node`), which would leave one finding per feature, the cleaning, the "N of M" disclosure and the listing intact.
+
+Verified with my own probes: the four stacked-marker attack shapes and two positive controls on the branch's grounding, side by side with a fresh `git show develop:` copy; the Think error bound and one-line form; the J05 mutation in a `/private/tmp` copy (red when the feedback line is removed); the findings block at 18,000; the MedGen parser on 22 hostile or malformed inputs; round 1's end-to-end MedGen probe and listing probe; two more scratch-copy mutations (the "N of M" branch, the parse-error return); the directive's absence without features, its marker-only text, the system message's byte equality across requests and with develop's; the reservation's displacement on synthetic findings through the real admission, reservation and render functions; three live runs ($0.0180, $0.0191, $0.0191) with the prompt, every grounding pass and the answer dumped; the unit suite.
+
+Only read, not probed: the listing's plain-language layout; the live reachability of V02's Cypher alias; the golden consistency run (not run); the A13 two-gene question (not re-run live); whether a large graph answer and 70 features co-occur live today (my two live Marfan runs returned no graph rows, so the reservation never moved anything live).
+
+Clinician's reading of the three live answers: every sentence matched its cited record except V04's "manageable". The BRCA1 answer named the four MedGen diseases correctly and listed the Gene and OMIM records twice (already recorded by the fix round, not this phase's change).
+
+Correction to the verdict's first line, by the verifier: the count is 29 round 1 findings (J01 to J14, A01 to A15), plus F-8.1-06, so 30 closed, not 31.
+
+### Lead decision after round 2
+
+Written by the lead, 2026-09-25. There is no third round; the rule allows merge with the open items named, or revert.
+
+- F-8.1-V01: the reservation call in `write_node` is withdrawn (reverted), keeping the helper. A clinician asking `What is Marfan syndrome?` must get its definition, and the reservation could push it out on every disease question to serve the rarer phenotype question. Features still reach the reader in the code-built listing at both depths, and in the prose at plain language depth. The test that pinned the reservation now pins its absence. Follow-up card: reserve the slots only when a classifier decides the question asks for phenotypes, through phase 8.2's seam.
+- F-8.1-V02 (unsure): merged open. Any finding field named `clinical_features` is read as MedGen's; a drafted Cypher alias of that name would be misread. A To do card.
+- F-8.1-V03 (low): the MedGen clinical features field is added to `testing/Future.md`'s reconciliation items with the gene summary.
+- F-8.1-V04 (unsure, pre-existing): merged open, a To do card.
+- Merging with these open, and with T-8.1-04, T-8.1-05 and T-8.1-07 withdrawn to To do (cards 21, 20 and 19) and T-8.1-03 diagnosed only (card 22). What merges is verified: the Think repair (card 2), 30 sources that take effect (cards 6 and 43), MedGen's clinical features on the page (card 1, partly), the live test behind the integration marker (card 38).

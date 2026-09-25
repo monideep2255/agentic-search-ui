@@ -554,7 +554,6 @@ from system_03_search_agent.synthesis.findings import (
     build_synth_findings,
     build_synth_messages,
     drop_placeholder_condition_findings,
-    reserve_prompt_slots,
     unreported_findings,
 )
 from system_03_search_agent.synthesis.freshness import (
@@ -10203,19 +10202,15 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         synth_findings
     )
 
-    # F-8.1-A12 (fix-and-verify round): when the question's disease has
-    # clinical features on its MedGen record, up to
-    # `_ANCHOR_FEATURE_PROMPT_SLOTS` of them, with the record's own title,
-    # are moved inside the prompt slice below. Without this a graph answer
-    # of more than 30 rows pushed every feature out of the model's sight.
-    # A no-op when they already fit, and it renumbers, so it runs here,
-    # before `row_types` and the slice read the numbering.
-    synth_findings = reserve_prompt_slots(
-        synth_findings,
-        _anchor_disease_prompt_reservation(synth_findings),
-        _MAX_FINDINGS_FOR_MODEL_PROMPT,
-        lead_call_ids=answer_call_ids,
-    )
+    # F-8.1-A12's prompt-slot reservation (`reserve_prompt_slots` with
+    # `_anchor_disease_prompt_reservation`) is deliberately NOT called here.
+    # Round 2 (F-8.1-V01) showed it takes 11 of the 30 prompt slots on every
+    # disease-anchored question, phenotype-shaped or not, and can push the
+    # definitional abstracts out of `What is Marfan syndrome?`. The lead
+    # withdrew the call rather than merge that trade: a disease's features
+    # still reach the reader in the code-built listing at every depth. The
+    # follow-up is to reserve the slots only when a classifier decides the
+    # question asks for phenotypes (phase 8.2's seam), recorded on the board.
 
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 

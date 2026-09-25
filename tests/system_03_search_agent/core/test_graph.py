@@ -1675,14 +1675,17 @@ async def _marfan_researcher_findings() -> tuple[list[object], list[object]]:
 
 
 @pytest.mark.asyncio
-async def test_a_diseases_clinical_features_reach_the_prompt_behind_a_long_graph_answer(
+async def test_a_long_graph_answer_keeps_its_prompt_slots_from_clinical_features(
     _mock_litellm: AsyncMock,
 ) -> None:
-    """F-8.1-A12 (fix-and-verify round): at researcher depth the MedGen
-    features sat at position 50 of 63, past the 30-finding prompt slice, and
-    the model answered "no phenotypic features can be stated from these
-    findings". Now the record's title and `_ANCHOR_FEATURE_PROMPT_SLOTS` of
-    its features are inside the model's prompt, after the answer rows."""
+    """F-8.1-V01 (round 2): reserving prompt slots for a disease's clinical
+    features took 11 of the 30 on every disease-anchored question, phenotype
+    or not, and could push a definition out of `What is Marfan syndrome?`.
+    The lead withdrew the reservation, so a long graph answer keeps all 30
+    slots and the features reach the reader through the code-built listing
+    (the test below). Re-enabling the unconditional reservation turns this
+    red; the follow-up gates it on a classifier deciding the question asks
+    for phenotypes."""
     findings, planned = await _marfan_researcher_findings()
     query = _valid_query(
         text="What phenotypic features are associated with Marfan syndrome?",
@@ -1706,10 +1709,8 @@ async def test_a_diseases_clinical_features_reach_the_prompt_behind_a_long_graph
     lines = [body for _, body in _FINDING_LINE.findall(prompt)]
     assert len(lines) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
     feature_lines = [line for line in lines if " clinical_features: " in line]
-    assert len(feature_lines) == graph_module._ANCHOR_FEATURE_PROMPT_SLOTS == 10
-    assert feature_lines[0].endswith(_MARFAN_FEATURE_NAMES[0])
-    assert "medgen title: Marfan syndrome" in lines
-    # The question's own answer rows still lead the prompt.
+    assert feature_lines == []
+    # The question's own answer rows lead the prompt and fill it.
     assert lines[0].startswith("Gene ")
 
 
