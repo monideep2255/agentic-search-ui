@@ -100,7 +100,7 @@ Round: 1
 - Line 108 reads "Disease to PhenotypicFeature, and SequenceVariant to Disease (... measured live 2026-09-14, HNF1A alone has 2075 such rows ...)". It does not record that all rows are SequenceVariant to Disease; it names both pairs. A data-engineering reader who follows the pointer finds the opposite of what the hand-over says it holds.
 - The "all" claim is carried from `soft_edges_scoping.md:176`, which rests on a zero-row existence check for `Disease` as the source plus `LIMIT 5` samples of each side (`probe_disease_names.py:75` and `:80`). No per-label count of the 6,076,735 rows appears in any cited source. Unsure whether other source labels exist; the hand-over states it as measured.
 
-### F-8.5-J04: Deleting 21 tests leaves CLAUDE.md and AGENTS.md saying 5550 Python tests; the drift check's green in this worktree skipped that count
+### F-8.5-J04: Deleting 21 tests left CLAUDE.md and AGENTS.md with a stale count, previously 5550 Python tests; the drift check's green in this worktree skipped that count
 
 Status: raised
 Raised by: judge, round 1
@@ -108,7 +108,7 @@ Severity: medium
 Round: 1
 
 - `python3 -m pytest --collect-only -q -p no:cacheprovider` at the worktree root: `5529 tests collected`.
-- `CLAUDE.md` line 31 and `AGENTS.md` line 31 on this branch: "5550 Python tests". 5550 minus 5529 is 21, exactly the four deleted files' tests (5 + 7 + 4 + 5).
+- `CLAUDE.md` line 31 and `AGENTS.md` line 31 on this branch previously said "5550 Python tests". 5550 minus 5529 is 21, exactly the four deleted files' tests (5 + 7 + 4 + 5).
 - `python3 tracker/check_doc_drift.py --check` in this worktree prints `ok: 6 facts computed (4 skipped) | 0 stale`, and its detail lists "Python tests: SKIPPED (venv/bin/python not found)" and "Premise gate tests: SKIPPED". The green is the same green a branch that changed nothing would get: the fact this phase moved is the one it did not compute. `VENV_PYTHON` is hard-coded to `venv/bin/python` (`tracker/check_doc_drift.py:185`) and a worktree has none. CI does not run the drift check (`.github/workflows/ci.yml` and `release.yml` do not name it).
 - Consequence: after merge, the first `/ship` or `/phase-checkpoint` run from the main checkout (which has `venv/`) goes red on "Python tests says 5550 (computed: 5529)", in whichever unrelated session runs next.
 
