@@ -604,7 +604,8 @@ board on 2026-09-24.
   returned two distinct result sets, and the GERD questions moved 20 citations
   to 19 with one paper swapped. Separately, which path a question takes is a
   model call, so it is a sample: `reflux disease` resolved nothing on one run
-  in six. Nobody had looked. Not yet its own item.
+  in six. Nobody had looked. Not yet its own item. Since the audit of
+  2026-09-24 it is card 19 on the board.
 - OMIM is live WITH `filter_omim_titles`; the two ship together and neither is
   enabled or removed without the other
 - The cutoff and the ordered next actions are in "Where we stopped"
@@ -613,16 +614,17 @@ board on 2026-09-24.
 
 REWRITTEN 2026-09-24 at the session checkpoint, and REORDERED the same
 evening on the product owner's instruction: their architecture work joins as
-items 8 to 13, and none of it is parked.
+items 8 to 13, and none of it is parked. EXTENDED the same night by an audit
+of this file: items 19 to 41 are open work this file recorded that had no
+card on the board.
 
 - The old items 1 and 2 are done and live: Set 12's questions, and 12.3.
   Their records are in `testing/UI_fixes_done.md`.
 - Nothing below is a retest. Every item is engineering or a decision, ordered
   by what the person typing the question feels first.
 - The To do column of `testing/UI_fix_plan.md` follows the same order, card
-  for card, from 1 to 14. Its cards 15 to 20 come after this list: the
-  decisions 9.11 and 9.9, then 10.4, the lock file decision, and the two
-  parked cards.
+  for card, from 1 to 41, its cards 15 to 18 included. Its last two cards, 42
+  and 43, come after this list: the two parked cards.
 - Items 8 to 13 keep the product owner's own order, and they may re-rank
   them: points a) and c) of their direction on the model architecture, then
   b), then d), then the agentic loop, then 11.29 and 11.38. Their detail
@@ -644,6 +646,9 @@ What is open and not on this list as its own item:
   model's call failed.
 - `trust_outcome` is unstable: five runs with byte-identical evidence returned
   `flag` four times and `ask` once.
+
+Since the audit of 2026-09-24, the first and the third of these are items 29
+and 20 below, each a card on the board.
 
 1. 12.14, A QUESTION ABOUT PHENOTYPIC FEATURES NAMES NONE. `What phenotypic
    features are associated with Marfan syndrome?` answers with variant and gene
@@ -740,6 +745,58 @@ What is open and not on this list as its own item:
 14. 11.11, ANSWERS MODELLED ON THE REFERENCE PROTOTYPE'S DEPTH, FORMATTING AND
    STRUCTURE. Listed as being built until 2026-09-24, with nobody on it; 12.9
    and 12.10 answered part of its ask.
+15. 9.11, whether Plain language answers keep the small medical-advice line.
+   The product owner's decision.
+16. 9.9, the trust-line wording. The product owner's decision.
+17. 10.4, judging answer quality once answering is reliable.
+18. THE LOCK FILE for the Python build, the product owner's call. Its detail is
+   the last of "Loose ends, named rather than left" above.
+19. THE SAME QUESTION DOES NOT ALWAYS RETURN THE SAME PAPERS, item 11.21's
+   promise. Its detail is in "Notes carried over from the old tracker" above.
+20. `trust_outcome` IS UNSTABLE on identical evidence, under "What is open and
+   not on this list as its own item" above.
+21. THE MODY-GENES GROUNDING FAILURE, 5 of 6 runs, unowned since 2026-09-20.
+   Under "Shipped days", 2026-09-20.
+22. THE 127.1 SECOND RUN, against a median of 13.6, unowned since 2026-09-20.
+   Under "Shipped days", 2026-09-20.
+23. CLOSE THE REMAINING MODEL PATH OR REFUSE AND ASK, the first of the two
+   items L-01's row in Set 11 names as "each its own item". Item 7 is the
+   second. The questions still on that path are named under "Shipped days",
+   2026-09-22.
+24. G-005, G-022 AND G-036, which L-01's deterministic half set aside: the
+   first two resolve an entity and find nothing, the third never calls
+   Layer 1. Under "Loose ends, named rather than left" above.
+25. 12.16 PART 4's RESIDUAL, the switch rule anchored on a generic title word.
+   Its row is under "Detail for items on the board".
+26. A MULTI-SENTENCE RECORD RENDERS AS SEVERAL LIST ROWS under one heading,
+   with no test. Under "Loose ends, named rather than left" above.
+27. 11.28's RESIDUAL RISK, a transient false Write on any other path. Its
+   detail is in Set 11's detail for 11.28.
+28. THE ISOLATE SEARCH HAS NO FILTER BEYOND THE GENE PREFIX. Under "Shipped
+   days", 2026-09-22.
+29. THE GRAPH HOLDS NO DISEASE NAMES AND NO MESH TERMS, the hand-over to the
+   data repository. Under "What is open and not on this list as its own item"
+   above.
+30. 11.30's TWO COMMAND LINE SNIPPETS, blocked rather than run because no `s3`
+   client was installed. Its detail is in Set 11's detail for 11.30.
+31. D-2, FOUR UNEXPLAINED TOTALS IN ONE ANSWER, a product decision. Under
+   "Shipped days", 2026-09-20.
+32. THE PROVENANCE NOTE, on the standing list under "What is waiting on the
+   product owner" above.
+33. THE MODE TOGGLE's PLACEMENT, on the same standing list.
+34. 2.13's FOUR TYPE VALUES, where the design card and the code disagree. The
+   product owner's decision, in 2.13's row.
+35. 2.13's STAGE 1, installing the public USWDS package, which waits for the
+   product owner's yes, in 2.13's row.
+36. THE GENE SUMMARY FIELD, a Step 6.2 reconciliation item, in 11.31's detail.
+37. THE SEVEN TEST FILES the deletion inventory set aside, awaiting the
+   product owner's ruling. Under "Loose ends, named rather than left" above.
+38. THE LIVE NCBI CALL INSIDE THE UNIT GATE. Same place.
+39. MERGING BOSSMAN MODE's TWO MODES, which waits for the next build phase.
+   Under "Session history", 2026-09-24 evening.
+40. `/phase-checkpoint`'s STALE CLAUDE.md LINE NUMBER. Under "Loose ends,
+   named rather than left" above.
+41. THE TRACKED FILE DELETED MID-SESSION, cause unknown. Same place.
 
 NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
 product owner approved the current state as is on 2026-09-21. The remaining

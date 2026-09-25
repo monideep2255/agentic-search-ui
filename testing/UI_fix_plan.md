@@ -11,12 +11,6 @@ note behind the board are in `testing/UI_fixes_done.md`.
 
 Last updated: 2026-09-24.
 
-## Table of contents
-
-- [To do](#to-do)
-- [Build in progress](#build-in-progress)
-- [Retest](#retest)
-
 ## To do
 
 In priority order.
@@ -41,8 +35,31 @@ In priority order.
 | 16 | The trust-line wording | 9.9 | Your decision |
 | 17 | Judge answer quality once answering is reliable | 10.4 | Nobody on it |
 | 18 | A lock file for the Python build | the lock file | Your decision |
-| 19 | The explanation half of 11.31 | 11.31 | Parked |
-| 20 | The byte ceiling at 50,000 | the byte ceiling | Parked |
+| 19 | The same question does not always return the same papers: six identical PubMed searches returned two different sets, and `reflux disease` found nothing on one run in six | Where we stopped, notes carried over from the old tracker | Nobody on it |
+| 20 | The trust verdict under an answer changes with nothing else changed: five runs on identical evidence gave `flag` four times and `ask` once | Where we stopped, Next, in order | Nobody on it |
+| 21 | `What genes are associated with MODY?` failed its citation check on 5 of 6 runs on 2026-09-20, and nobody owns it | Shipped days, 2026-09-20 | Nobody on it |
+| 22 | One search took 127 seconds against a median of 14, and nobody owns it | Shipped days, 2026-09-20 | Nobody on it |
+| 23 | Close the remaining path where the system writes its own graph search, or ask the reader instead; card 7 only tells them | L-01 | Nobody on it |
+| 24 | Three golden questions get nothing from the graph: G-005 and G-022 find nothing, and G-036 never searches it | Where we stopped, loose ends | Nobody on it |
+| 25 | A reworded sentence that switches papers can point at the wrong paper when the only title word it shares is a generic one, such as "patients" | 12.16 part 4 | Nobody on it |
+| 26 | A record with several sentences shows as several list rows under one heading, and no test covers it | Where we stopped, loose ends | Nobody on it |
+| 27 | The paced handoff may show a false writing step on some other path, and nobody has checked | 11.28 | Nobody on it |
+| 28 | An isolate search can filter only by gene prefix | Shipped days, 2026-09-22 | Nobody on it |
+| 29 | The graph holds no disease names and no MeSH terms, so it goes to the data repository to fix | Where we stopped, notes carried over from the old tracker | Nobody on it |
+| 30 | The two command line examples on the Integrations page have never been run as printed | 11.30 | Nobody on it |
+| 31 | One answer shows several different totals and never says which is which | D-2, Shipped days, 2026-09-20 | Your decision |
+| 32 | The provenance note under the variant-to-disease table | Where we stopped, waiting on the product owner | Your decision |
+| 33 | Where the Plain language and Researcher toggle goes | Where we stopped, waiting on the product owner | Your decision |
+| 34 | Four text sizes and spacings differ between the design system and the code: which one wins | 2.13 | Your decision |
+| 35 | Install the public USWDS package, the base of the NCBI design system: yes or no | 2.13 | Your decision |
+| 36 | NCBI's gene summary was added beyond the locked specification's Section 6.2 table and waits for the next reconciliation | 11.31 | Your decision |
+| 37 | Seven test files the deletion inventory set aside | Where we stopped, loose ends | Your decision |
+| 38 | A unit test makes a live NCBI call, so an NCBI outage can turn CI red | Where we stopped, loose ends | Nobody on it |
+| 39 | Merge bossman mode's two modes, due with the next build phase | Session history, 2026-09-24 evening | Nobody on it |
+| 40 | `/phase-checkpoint` names the wrong CLAUDE.md line for the tracked counts | Where we stopped, loose ends | Nobody on it |
+| 41 | Something deleted a tracked file from the working tree during a session, and the cause is unknown | Where we stopped, loose ends | Nobody on it |
+| 42 | The explanation half of 11.31: you approved the current state as is on 2026-09-21, and the option left, having the code place the plain source text verbatim and cited, is yours to take up or not | 11.31 | Your decision |
+| 43 | Is the byte ceiling of 50,000 still right? A product decision, deliberately not taken inside a defect fix | the byte ceiling | Your decision |
 
 Below sits the detail behind architecture cards 8 to 13 and card 14, 11.11.
 It moved here from `testing/UI_fixes_done.md` on 2026-09-24 without a word
