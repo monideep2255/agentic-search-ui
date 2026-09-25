@@ -365,6 +365,7 @@ def _assert_answered(answer: Answer) -> None:
 # ----------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_a6_pinned_ground_truth_still_matches_live_medgen() -> None:
     """A6: the four pinned titles are what MedGen says today.
 
@@ -375,6 +376,16 @@ def test_a6_pinned_ground_truth_still_matches_live_medgen() -> None:
     relax the arms that use these values to accommodate a drifted pin,
     which is the `goal-contracts` corrupt-the-subject failure seen from the
     other side.
+
+    T-8.1-08 (tracker/phase_8.1.md): this test makes a live call to NCBI
+    via `_get_json`/`_live_medgen_title` with `urllib.request.urlopen`,
+    bypassing the hermetic guard in `tests/conftest.py`. Unmarked, it was
+    collected by the unit gate (`pytest -m "not integration"`,
+    `.github/gates/gate04_unit_suite.sh`) and could turn CI red on a bare
+    NCBI HTTP error with nothing wrong in the product
+    (LEARNINGS.md, 2026-09-24). The `integration` marker moves it to gate
+    5 (`.github/gates/gate05_integration.sh`, `pytest -m integration`),
+    which is allowed to hit the network. The check itself is unchanged.
     """
     for concept_id, expected in BRCA1_DISEASE_TITLES.items():
         live = _live_medgen_title(concept_id)

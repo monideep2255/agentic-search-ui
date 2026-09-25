@@ -1339,14 +1339,81 @@ def _build_think_messages(
     ]
 
 
+#: T-8.1-01: how much of a failed Think reply is echoed back on the retry.
+#: `production-standards`'s bounded-context-items obligation: this is a
+#: hard cap enforced before the string is placed in a prompt, independent
+#: of any schema `maxLength`, since this string never passes through
+#: `_ThinkClassification` at all.
+_THINK_RETRY_ECHO_CHARS = 300
+
+
+#: T-8.1-01: live traffic showed the plan tier answering Think's call with
+#: the right shape except for one substituted key: `"why"` or `"reason"`
+#: in place of the required `"narrative"` field (measured twice in about
+#: forty live runs, `testing/Developer/reports/2026-09-23_user_feedback/
+#: q5_coffee_exercise.txt` and `.../2026-09-23_set12/breadth_runs/
+#: q5_coffee_exercise.txt`, both attempts of the existing retry). This is
+#: a deterministic KEY rename, never a content decision: the value under
+#: the alias key is carried over unchanged, nothing about which query_class
+#: or entities to report is inferred or guessed here.
+_THINK_NARRATIVE_KEY_ALIASES = ("why", "reason", "rationale", "explanation")
+
+
+def _repair_think_narrative_key(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Rename a synonym key to `narrative` when `narrative` itself is absent.
+
+    Returns `parsed` unchanged (same object) when no repair applies, so a
+    caller can tell whether anything was attempted with an `is` check.
+    Only fires when renaming would not ALSO leave an extra, still-unknown
+    key behind: `_ThinkClassification` forbids extra fields
+    (`extra="forbid"`), so a reply carrying `why` alongside some other
+    unmodeled key is left alone and still fails validation honestly rather
+    than being coerced into looking clean.
+    """
+    if "narrative" in parsed:
+        return parsed
+    known_keys = {"query_class", "narrative", "entities"}
+    for alias in _THINK_NARRATIVE_KEY_ALIASES:
+        if alias not in parsed or not isinstance(parsed[alias], str):
+            continue
+        other_keys = set(parsed) - {alias}
+        if not other_keys <= known_keys:
+            continue
+        repaired = dict(parsed)
+        repaired["narrative"] = repaired.pop(alias)
+        return repaired
+    return parsed
+
+
+def _think_validation_detail(exc: ValidationError) -> str:
+    """A bounded, actionable summary of a `_ThinkClassification` failure.
+
+    Field name and pydantic's own generic message only (e.g. "narrative:
+    Field required"), never the raw input value: pydantic's default
+    `ValidationError.__str__` embeds `input_value`, which would put an
+    unbounded slice of the model's own reply into a message that this
+    code later feeds back into a second model call and into a `step_error`
+    surfaced to the caller. Capped at the first 5 errors so a
+    maximally-malformed reply cannot inflate this past the 256-character
+    cap already applied where this message is read.
+    """
+    parts = []
+    for error in exc.errors()[:5]:
+        loc = ".".join(str(piece) for piece in error["loc"]) or "(root)"
+        parts.append(f"{loc}: {error['msg']}")
+    return "; ".join(parts)
+
+
 def _parse_think_classification(content: str) -> _ThinkClassification:
     """Deterministic accept-or-raise on the model's text.
 
     Mirrors `guardrail.classifier.parse_classification` exactly:
     `production-standards` requires a deterministic accept-or-reject rule
     for structured model output, never a lenient partial parse. Tolerates
-    exactly one cosmetic deviation, a surrounding markdown code fence,
-    because models add one routinely and it changes no field value.
+    two cosmetic deviations: a surrounding markdown code fence (changes no
+    field value), and one synonym key for `narrative`
+    (`_repair_think_narrative_key`, T-8.1-01). Neither repair ever invents
+    or reinterprets a VALUE, only where an already-present value sits.
     """
     stripped = content.strip()
     if stripped.startswith("```"):
@@ -1369,10 +1436,17 @@ def _parse_think_classification(content: str) -> _ThinkClassification:
 
     try:
         return _ThinkClassification.model_validate(parsed)
-    except ValidationError as exc:
+    except ValidationError as first_exc:
+        repaired = _repair_think_narrative_key(parsed)
+        if repaired is not parsed:
+            try:
+                return _ThinkClassification.model_validate(repaired)
+            except ValidationError:
+                pass
         raise ThinkClassificationUnavailableError(
-            "the plan tier's response did not match the think classification schema"
-        ) from exc
+            "the plan tier's response did not match the think classification "
+            f"schema ({_think_validation_detail(first_exc)})"
+        ) from first_exc
 
 
 #: The organism a gene symbol is resolved against when the query names
@@ -2245,6 +2319,15 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # fabricated or defaulted classification (T-4.7-04).
     classification: _ThinkClassification | None = None
     parse_error: ThinkClassificationUnavailableError | None = None
+    # T-8.1-01: attempt 2 no longer resends byte-identical messages. A
+    # systematic key-naming habit (measured live: the model substitutes
+    # "why" or "reason" for the required "narrative" key) reproduces
+    # identically on an unchanged retry, which is why the prior blind
+    # retry never actually recovered these two live cases. `call_messages`
+    # grows by exactly one exchange (the bad reply, echoed and bounded, plus
+    # the specific field-level error) so the model sees what was wrong,
+    # never a hint at what content to report.
+    call_messages = think_messages
     for attempt in (1, 2):
         try:
             response = await _dispatch_tier_call(
@@ -2258,7 +2341,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 "think",
                 # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after
                 # the question, never spliced into the system block.
-                think_messages,
+                call_messages,
                 budget_s=budget_for_step("think", "lookup"),
                 # No stable prefix ahead of the classification instruction
                 # (2026-09-13, UI fix set 7). Measured on develop after the
@@ -2295,6 +2378,25 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 len(content),
                 content[:200],
             )
+            if attempt == 1:
+                # Bounded echo of the bad reply (never the full thing) plus
+                # the exact schema complaint, so the second attempt corrects
+                # the actual mistake instead of repeating it. Both pieces
+                # are model output already logged above; nothing here is
+                # user-controllable beyond the query the model already saw.
+                call_messages = think_messages + [
+                    {"role": "assistant", "content": content[:_THINK_RETRY_ECHO_CHARS]},
+                    {
+                        "role": "user",
+                        "content": (
+                            "That reply did not match the required schema: "
+                            f"{exc}. Reply again with a single JSON object "
+                            'using exactly these keys: "query_class", '
+                            '"narrative", "entities". No other key name for '
+                            "the reasoning field is accepted."
+                        ),
+                    },
+                ]
 
     if classification is None:
         # The model answered twice, and both answers were unusable. A step
@@ -5327,7 +5429,17 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # is withheld for the reason `_NCBI_EFETCH_ROW_IDENTITY_FIELDS`
     # withholds `gene_id`: it identifies the record rather than saying
     # anything about it, and the question already resolved it.
-    "medgen_summary": ("title", "definition", "semantictype"),
+    #
+    # T-8.1-06b (F-8.1-04): `clinical_features` added. Builder C's
+    # `_parse_medgen_clinical_features` (`tools/ncbi_eutils_actions.py`)
+    # always sets this key for a `db="medgen"` record, a bounded list of
+    # `{"name": ..., "hpo_id": ...}` dicts, but it was never listed here,
+    # so a phenotype question's own answer was silently dropped before it
+    # reached the writing model: confirmed empirically by builder C with a
+    # live run that still answered from PubMed, ClinVar and trials with no
+    # phenotype ever cited. See `_medgen_clinical_features_text` below for
+    # the string this list becomes before synthesis ever sees it.
+    "medgen_summary": ("title", "definition", "semantictype", "clinical_features"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -5446,6 +5558,99 @@ def _unwrap_medgen_fields(fields: dict[str, Any]) -> dict[str, Any]:
     return unwrapped
 
 
+#: T-8.1-06b (F-8.1-04). What the answer says when MedGen genuinely lists
+#: no clinical features for a resolved disease concept: a plain, code-built
+#: fact, cited to that same MedGen record, never a substitute record type
+#: and never a silent drop. Composed by code from a value already fetched
+#: (the record's own `clinical_features` list is empty), not a classifier's
+#: decision: `tracker/phase_8.1.md`'s goal contract forbids a hardcoded
+#: decision ("a decision is a classifier's call, code only verifies"),
+#: and this states a fact about what a record contains, deciding nothing
+#: about what to search or how to classify the question.
+_MEDGEN_NO_CLINICAL_FEATURES_TEXT: Final[str] = (
+    "MedGen lists no clinical features for this condition"
+)
+
+
+def _medgen_clinical_features_text(features: Any) -> str:
+    """Turn a MedGen record's `clinical_features` list into one citable,
+    quotable string, the same shape `_sra_run_accessions` already gives
+    `sra_summary`'s `runs` field for the identical reason:
+    `synthesis/grounding.ground_claim` matches a clause against source TEXT
+    by containment, so a Python list can never be quoted, only a string.
+
+    `features` is `list[dict[str, str]]` in the live shape
+    (`ncbi_eutils_actions._parse_medgen_clinical_features`'s own
+    `{"name": ..., "hpo_id": ...}` items), always present as a key on a
+    `db="medgen"` record, empty when MedGen carries none for the concept.
+    Reads defensively (`isinstance` at every level, skips a malformed
+    item rather than raising) since this is untrusted parsed content one
+    hop removed from a live NCBI response, per
+    `.claude/rules/ai-security-standards.md`'s "treat AI/external output
+    as untrusted" discipline extended to any upstream parser's output.
+
+    Returns `_MEDGEN_NO_CLINICAL_FEATURES_TEXT` for anything that is not a
+    non-empty list of usable items, so "MedGen was asked and had nothing"
+    reads identically whether the list was empty, missing, or malformed,
+    never as a silently blank field.
+    """
+    if not isinstance(features, list) or not features:
+        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    parts: list[str] = []
+    for item in features:
+        if not isinstance(item, Mapping):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        hpo_id = item.get("hpo_id")
+        if isinstance(hpo_id, str) and hpo_id.strip():
+            parts.append(f"{name.strip()} ({hpo_id.strip()})")
+        else:
+            parts.append(name.strip())
+    if not parts:
+        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    return ", ".join(parts)
+
+
+def _medgen_clinical_feature_rows(title_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """T-8.1-06b (F-8.1-04): one additional citeable row per admitted
+    MedGen title row, carrying that record's own `clinical_features` text
+    as ITS OWN field, so `_pick_representative_field` never has to choose
+    between it and `title` on the same row.
+
+    Mirrors `_pubmed_abstract_rows`'s own ADDITIONAL-row pattern for the
+    identical structural reason, stated in `render_findings_block`'s own
+    docstring: a `SynthFinding` carries exactly one `field`/`field_value`
+    pair, so a fact that must reach Synth's own prose needs its own row
+    whenever the row it started on already carries a field that always
+    wins the pick. Measured live: adding `clinical_features` to
+    `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` alone did not change
+    the answer at all. `title` kept winning `_pick_representative_field`
+    (documented insertion-order behaviour), so the model was shown
+    `MedGen title: Marfan syndrome` and nothing else; a live run after
+    that fix alone still named zero phenotypes.
+
+    Matched to `title_rows` by `source_url`, the same identity
+    `_pubmed_abstract_rows` uses, so this only adds a row for a record the
+    title path already admitted, never a new record.
+    """
+    feature_rows: list[dict[str, Any]] = []
+    for row in title_rows:
+        text = row["fields"].get("clinical_features")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        feature_rows.append(
+            {
+                "curie": "",
+                "node_or_edge_type": row["node_or_edge_type"],
+                "fields": {"clinical_features": text},
+                "source_url": row["source_url"],
+            }
+        )
+    return feature_rows
+
+
 def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -> list[Any]:
     """Item 2b (2026-09-22): the OMIM summary records whose own title names
     `gene_symbol` in a symbol field, and no others.
@@ -5551,6 +5756,18 @@ def _ncbi_efetch_output_to_structured_fields(
     if purpose == _MEDGEN_SUMMARY_PURPOSE:
         for row in rows:
             row["fields"] = _unwrap_medgen_fields(row["fields"])
+            # T-8.1-06b (F-8.1-04): stringify BEFORE the row reaches
+            # synthesis, the same discipline `_SRA_SUMMARY_PURPOSE` below
+            # already applies to `runs`. Always runs when the key is
+            # present at all (it always is, on a real medgen record,
+            # per `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` above),
+            # so an empty list becomes the honest "no clinical features"
+            # sentence rather than reaching `ground_claim` as a Python
+            # list no clause could ever quote.
+            if "clinical_features" in row["fields"]:
+                row["fields"]["clinical_features"] = _medgen_clinical_features_text(
+                    row["fields"]["clinical_features"]
+                )
     if purpose in _BREADTH_FIELDS_BY_PURPOSE:
         # A breadth result is sorted by record URL, a property of the
         # record and not of the response order, then cut to the fixed cap,
@@ -5560,6 +5777,26 @@ def _ncbi_efetch_output_to_structured_fields(
         rows = rows[:_BREADTH_ROW_CAP]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
             rows = rows + _pubmed_abstract_rows(output.records, rows)
+        if purpose == _MEDGEN_SUMMARY_PURPOSE:
+            # T-8.1-06b (F-8.1-04), round 2: the allowlist addition above
+            # alone does NOT reach the model. Confirmed live: with
+            # `clinical_features` merely added to the same row as `title`,
+            # `_pick_representative_field` still picks `title` (documented
+            # insertion-order behaviour, `omim_summary`'s own comment above
+            # names the same rule), so `render_finding_body` shows only
+            # "Disease record MedGen:...` / `title: Marfan syndrome`" and
+            # the phenotype text never reaches Synth's prompt at all. A
+            # live run of the Marfan question after the allowlist-only fix
+            # still answered with 0 phenotypes named, only the record's
+            # title and a fallback listing.
+            #
+            # Same fix shape as `_PUBMED_ABSTRACTS_PURPOSE` above, for the
+            # identical structural reason: `render_finding_body` and
+            # `_pick_representative_field` show exactly one field per
+            # finding, so a fact that must reach the model's own prose
+            # needs its OWN row when the row it started on already carries
+            # a field that always wins the pick.
+            rows = rows + _medgen_clinical_feature_rows(rows)
         if purpose == _SRA_SUMMARY_PURPOSE:
             for row in rows:
                 runs = row["fields"].get("runs")
@@ -6256,7 +6493,7 @@ async def act_node(state: GraphState) -> dict[str, Any]:
 # happened.
 # ---------------------------------------------------------------------------
 
-_MAX_CITATIONS_PER_ANSWER = 20
+_MAX_CITATIONS_PER_ANSWER = 30
 
 # Answer quality fix (2026-09-20). `_MAX_CITATIONS_PER_ANSWER` above used to
 # be the ONE number doing two different jobs at once: how many findings
@@ -6267,19 +6504,30 @@ _MAX_CITATIONS_PER_ANSWER = 20
 # was incomplete, even though the table rows below the prose are built
 # entirely in code from a finding's own structured fields and never pass
 # through a model at all. `_MAX_CITATIONS_PER_ANSWER` itself is left alone,
-# unchanged, for `_citations_from_findings` below, a build-phase-2.1-era
-# function that is not on this live path (see its own docstring) and whose
-# tests assert on it directly.
+# unchanged in VALUE-SOURCE terms, for `_citations_from_findings` below, a
+# build-phase-2.1-era function that is not on this live path (see its own
+# docstring) and whose tests assert on it directly.
+#
+# T-8.1-02, DECISIONS.md 2026-09-25 ("the per-answer citation cap
+# `_MAX_CITATIONS_PER_ANSWER` rises from 20 to 30"): raised here from 20 to
+# 30. That decision's own reasoning text describes this constant as "the
+# same constant [that] bounds what the writing model sees", which was true
+# BEFORE the split above and is not true of THIS constant any more; it
+# describes `_MAX_FINDINGS_FOR_MODEL_PROMPT` below, which is raised to 30
+# in the same commit so the decision's intent (a paper question can
+# actually reach 30 citations) is honoured on the live path, not only in
+# this now-dormant constant's name.
 #
 # The hard ceiling on how many findings reach one Synth model call's own
 # prompt (`render_findings_block`/`build_synth_messages`). This is the
 # hallucination control `system-design-patterns.md` pattern 7 exists for:
 # never inline more raw facts into a model's context than it can be
 # trusted not to invent past (`synthesis/findings.py`'s own module
-# docstring makes the same point about `MAX_FINDINGS_PER_PROMPT`). The
-# VALUE is unchanged, still 20; only the name is new, so this job can never
-# again be silently re-merged with the one below.
-_MAX_FINDINGS_FOR_MODEL_PROMPT = 20
+# docstring makes the same point about `MAX_FINDINGS_PER_PROMPT`). Raised
+# from 20 to 30 by the same T-8.1-02 decision above: this is the constant
+# that decision's reasoning actually describes, so it is the one that must
+# move for a paper question to be ABLE to reach 30 cited sources.
+_MAX_FINDINGS_FOR_MODEL_PROMPT = 30
 
 # The much higher ceiling on how many already-fetched, code-built rows may
 # reach the citation list, the disclosure table and the findings tail.
@@ -8580,6 +8828,77 @@ def _apply_conflict_flags_to_claim_trusts(
     return updated
 
 
+def _full_retrieval_conflict_exists(synth_findings: list[SynthFinding]) -> bool:
+    """T-8.1-05b (F-8.1-01): whether the FULL RETRIEVAL, every finding
+    prepared for this answer, carries a genuine Layer 1/Layer 2 value
+    conflict, independent of which claims the model's own prose happened
+    to ground this particular run.
+
+    Builder B's diagnosis (`tracker/phase_8.1.md`, F-8.1-01;
+    `testing/Developer/reports/2026-09-25_phase_8.1/builder_B.md`):
+    `_apply_conflict_flags_to_claim_trusts` only ever downgrades a
+    `ClaimTrust` that already exists in `claim_trusts`, and `claim_trusts`
+    only has one entry per GROUNDED claim. Two live runs of the identical
+    question, against the identical retrieval, produced two different
+    grounded subsets, so a real conflict present in both runs' retrieval
+    only floored the answer to `flag` on the run whose model happened to
+    write about both conflicting values in the same clause. The lead's
+    decision (option 2 of builder B's three): the same evidence must give
+    the same verdict, so this check runs over `synth_findings` directly,
+    never over `grounding.claims` or the citations built from it.
+
+    Deliberately a separate, additive check rather than a rewrite of
+    `_apply_conflict_flags_to_claim_trusts`: that function's own per-CLAIM
+    downgrade is correct and untouched, since a specific claim's own
+    `ClaimTrust.outcome` is rightly a function of what it actually cites.
+    This function answers a different, answer-level question, "does a
+    conflict exist in the evidence at all", and its caller floors the
+    ANSWER-level `trust_outcome` directly, exactly the same `aggregate`
+    most-restrictive-wins mechanism every other floor in `write_node`
+    already uses. Neither `synthesis/trust.py` nor `ClaimTrust` itself
+    changes: what a `flag` OR `answer` tier MEANS is untouched, only
+    whether the answer-level aggregate sees a `flag` at all does.
+
+    Reuses `_layer1_layer2_field_pairs`, `_paired_field_values_agree` and
+    `detect_conflict` exactly as `_apply_conflict_flags_to_claim_trusts`
+    does, so a conflict is detected on exactly the same pairs and by
+    exactly the same rule; the two can never disagree about what counts
+    as a conflict, only about which findings they are allowed to look at.
+    `_layer1_layer2_field_pairs` takes its first argument for `.citation_id`
+    alone (see its own signature, `citations: list[CitationPayload]`), and
+    `SynthFinding` carries that same attribute, so `synth_findings` is
+    passed there directly rather than converted to citations first: no
+    citation exists yet for a finding the model never mentioned, and
+    building fake ones just to satisfy a type would be manufacturing data
+    this function does not need.
+    """
+    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+    pairs = _layer1_layer2_field_pairs(synth_findings, finding_by_citation_id)  # type: ignore[arg-type]
+    if not pairs:
+        return False
+    for graph_id, live_id in pairs.values():
+        graph_finding = finding_by_citation_id[graph_id]
+        live_finding = finding_by_citation_id[live_id]
+        graph_value = graph_finding.field_value.strip()
+        live_value = live_finding.field_value.strip()
+        if not graph_value or not live_value:
+            continue  # nothing to compare, mirrors the per-claim check's own guard
+        if _paired_field_values_agree(
+            graph_finding.field, live_finding.field, graph_value, live_value
+        ):
+            continue
+        result = detect_conflict(
+            field=graph_finding.field,
+            graph_value=graph_value,
+            live_value=live_value,
+            graph_source_url=graph_finding.source_url,
+            live_source_url=live_finding.source_url,
+        )
+        if result.is_conflict:
+            return True
+    return False
+
+
 # F-4.3-A-19, build phase 4.3. The answer-scope `trust_signal` this function
 # feeds used to compute its two safety-relevant fields inline, and both were
 # written as assertions rather than as derivations:
@@ -9632,7 +9951,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # UI fix 11.21 wiring: the answer-shape calls take the first ten
         # slots, then every context call shares the rest one row per
         # round, so the breadth rows never crowd the graph answer out.
-        # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20), so
+        # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30), so
         # the answer's own shape always lands inside the model's prompt
         # slice too, regardless of how large the display cap grows.
         lead_quota=_LEAD_FINDINGS_QUOTA,
@@ -10241,6 +10560,18 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             claim_trusts, citations, _finding_by_citation_id(grounding.claims)
         )
         trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
+        # T-8.1-05b (F-8.1-01): the per-claim floor immediately above only
+        # ever touches a claim already in `claim_trusts`, which is exactly
+        # the grounded, model-chosen subset that made the SAME question's
+        # trust line vary run to run. This second check runs the identical
+        # conflict rule over `synth_findings`, the full retrieval, so a
+        # genuine conflict in the evidence floors the answer at `flag`
+        # every run, whether or not the model's own prose happened to
+        # mention both sides of it this time. See
+        # `_full_retrieval_conflict_exists`'s own docstring for why this is
+        # additive rather than a rewrite of the per-claim check above.
+        if trust_outcome != "refuse" and _full_retrieval_conflict_exists(synth_findings):
+            trust_outcome = aggregate([trust_outcome, "flag"])
         if structured_fallback_used and trust_outcome != "refuse":
             trust_outcome = aggregate([trust_outcome, "ask"])
 
@@ -10352,10 +10683,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # fewer facts than exist. Its two sources are the findings cap (more
     # citable rows existed than `_MAX_FINDINGS_FOR_DISPLAY` could admit) and
     # the citation cap. Compared against `_MAX_FINDINGS_FOR_DISPLAY`
-    # (2026-09-20), not `_MAX_CITATIONS_PER_ANSWER`: the latter is now the
-    # model-prompt bound alone, and an answer routinely carries more than
-    # 20 citations once the tail lists the full display set, which is not a
-    # cut and must not be reported as one.
+    # (2026-09-20), not `_MAX_CITATIONS_PER_ANSWER`: T-8.1-02 corrected this
+    # comment, which previously named `_MAX_CITATIONS_PER_ANSWER` itself as
+    # "the model-prompt bound alone". That constant is dormant on this live
+    # path (see its own definition's comment); `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    # is the actual model-prompt bound, and an answer routinely carries more
+    # than `_MAX_FINDINGS_FOR_MODEL_PROMPT` citations once the tail lists
+    # the full display set, which is not a cut and must not be reported as
+    # one.
     citations_capped = findings_capped or len(citations) >= _MAX_FINDINGS_FOR_DISPLAY
 
     # F-2.1-10/F-2.1-11/F-2.1-C12 fix: a result the user is shown only part

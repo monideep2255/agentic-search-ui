@@ -1515,11 +1515,13 @@ def test_truncated_answer_note_is_one_sentence_opening_with_note(
 # Answer quality fix (2026-09-20): the prompt bound (how many findings a
 # Synth model call may see) and the display bound (how many code-built rows
 # the citation list, the table and the findings tail may carry) are now two
-# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20, unchanged) and
-# `_MAX_FINDINGS_FOR_DISPLAY` (100, bounded by the tool's own `row_limit`).
-# Before this split, one shared cap of 20 meant a table could never carry
-# more rows than a model prompt could safely hold, even though every row is
-# built entirely in code and a model never reads or writes it.
+# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30 as of T-8.1-02,
+# 2026-09-25; 20 at the time of this split) and `_MAX_FINDINGS_FOR_DISPLAY`
+# (100, bounded by the tool's own `row_limit`, unaffected by T-8.1-02 since
+# 100 already exceeds the new 30). Before the 2026-09-20 split, one shared
+# cap of 20 meant a table could never carry more rows than a model prompt
+# could safely hold, even though every row is built entirely in code and a
+# model never reads or writes it.
 # ---------------------------------------------------------------------------
 
 
@@ -2719,6 +2721,173 @@ async def test_step_failure_on_think_routes_to_write_as_a_refusal(
     # HarnessCallError's own internal message deliberately includes it.
     assert _GUARD_MODEL not in error_event.payload["message"]
     assert _GUARD_MODEL not in error_event.payload["source"]
+
+
+# ---------------------------------------------------------------------------
+# T-8.1-01: a Think reply that is well-formed JSON but uses a synonym key
+# for `narrative` ("why", "reason", ...) instead of failing outright, is
+# repaired deterministically, and a genuinely unusable reply still never
+# becomes a fabricated classification. Replays the exact shapes measured
+# live on develop, `testing/Developer/reports/2026-09-23_user_feedback/
+# q5_coffee_exercise.txt` and `.../2026-09-23_set12/breadth_runs/
+# q5_coffee_exercise.txt`.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "raw_reply",
+    [
+        # Measured live, attempt 1 of the coffee/exercise repro.
+        (
+            '{"query_class": "exploratory", "why": "Broad open-ended question '
+            "about a lifestyle/dietary factor's effect on exercise efficacy "
+            'with no single obvious database path; requires evidence assembly '
+            'across", "entities": []}'
+        ),
+        # Measured live, a second repro run: the same substitution wrapped
+        # in a markdown fence, both cosmetic deviations at once.
+        (
+            '```json\n{"query_class": "exploratory", "why": "Broad, open-ended '
+            "question about a lifestyle intervention across potentially many "
+            'biological mechanisms and study types with no single obvious path '
+            'or s", "entities": []}\n```'
+        ),
+        # Measured live, attempt 2 of the same repro: a different synonym.
+        (
+            '{"query_class": "exploratory", "reason": "Broad open-ended '
+            "question about lifestyle interaction (coffee + exercise "
+            'effectiveness) with no single database path; requires evidence '
+            'synthesis across multi", "entities": []}'
+        ),
+    ],
+    ids=["why-key", "why-key-fenced", "reason-key"],
+)
+def test_parse_think_classification_repairs_narrative_synonym(raw_reply: str) -> None:
+    """T-8.1-01: the exact malformed shapes seen live parse cleanly now."""
+    result = graph_module._parse_think_classification(raw_reply)
+    assert result.query_class == "exploratory"
+    assert result.narrative  # the value under the alias key was kept
+    assert result.entities == []
+
+
+def test_repair_think_narrative_key_leaves_a_genuine_extra_key_alone() -> None:
+    """A `why` key does not license coercing an UNRELATED unknown key too.
+
+    `extra="forbid"` must still fire on `bogus_field`: the repair only ever
+    renames the one key that stands in for `narrative`, never launders a
+    reply that is malformed for some other reason as well.
+    """
+    parsed = {"query_class": "lookup", "why": "some reasoning", "bogus_field": 1}
+    repaired = graph_module._repair_think_narrative_key(parsed)
+    assert repaired is parsed  # untouched: an unknown key besides the alias
+
+
+def test_repair_think_narrative_key_prefers_existing_narrative() -> None:
+    """When `narrative` is already present, no alias is ever consulted,
+    even if one also happens to be in the reply (nothing to repair)."""
+    parsed = {"query_class": "lookup", "narrative": "real", "why": "decoy"}
+    repaired = graph_module._repair_think_narrative_key(parsed)
+    assert repaired is parsed
+
+
+def test_parse_think_classification_still_raises_on_unrepairable_reply() -> None:
+    """T-4.7-04 holds under the new repair path too: a reply missing
+    `narrative` under ANY known alias, or invalid for an unrelated reason,
+    is still rejected outright, never coerced into a classification, and
+    the raised message now names which field failed and why.
+    """
+    with pytest.raises(
+        graph_module.ThinkClassificationUnavailableError
+    ) as excinfo:
+        graph_module._parse_think_classification(
+            '{"query_class": "not_a_real_shape", "narrative": "x"}'
+        )
+    assert "query_class" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_think_retry_feeds_back_the_validation_error(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """T-8.1-01: when repair alone cannot save attempt 1 (a reply missing
+    `narrative` under any alias AND carrying a genuinely unknown key), the
+    second attempt is no longer a blind resend. It must carry attempt 1's
+    bad reply and a description of what was wrong, and the loop must
+    recover to a real classification, never a step_error, when the second
+    reply is well-formed.
+    """
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+
+    think_call_count = 0
+
+    async def _dispatch(*args: object, **kwargs: object):
+        nonlocal think_call_count
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+        from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            think_call_count += 1
+            if think_call_count == 1:
+                # Unrepairable: no `narrative` under any known alias, and
+                # an unrelated unknown key that `extra="forbid"` must trip.
+                return _fake_response(
+                    '{"query_class": "exploratory", "bogus_field": 1}'
+                )
+            # Attempt 2: the loop must have appended feedback naming the
+            # exact field failure, and this reply is well-formed.
+            assert any(
+                "narrative" in (message.get("content") or "")
+                for message in messages  # type: ignore[union-attr]
+            ), "attempt 2 did not carry the validation-error feedback"
+            return _fake_response(_compliant_think_classification(messages))
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_compliant_synth_narrative(messages))
+        return _fake_response()
+
+    monkeypatch.setattr(_mock_litellm, "side_effect", _dispatch)
+
+    events = await _run_graph(_valid_query(), _valid_context())
+    types = [event.type for event in events]
+
+    assert think_call_count == 2
+    assert "error" not in types
+    assert events[-1].payload["trust_outcome"] != "refuse"
+
+
+@pytest.mark.asyncio
+async def test_think_two_unusable_replies_still_refuses_never_defaults(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """T-4.7-04, reconfirmed after T-8.1-01's retry-with-feedback change:
+    if BOTH attempts are unrepairable, the step still fails honestly as a
+    `step_error`, never a fabricated or defaulted classification.
+    """
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+
+    async def _dispatch(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            return _fake_response('{"query_class": "exploratory", "bogus_field": 1}')
+        return _fake_response()
+
+    monkeypatch.setattr(_mock_litellm, "side_effect", _dispatch)
+
+    events = await _run_graph(_valid_query(), _valid_context())
+    types = [event.type for event in events]
+
+    assert types[-2:] == ["error", "done"]
+    error_event = next(event for event in events if event.type == "error")
+    assert error_event.payload["source"] == "think"
+    assert events[-1].payload["trust_outcome"] == "refuse"
 
 
 # ---------------------------------------------------------------------------
@@ -4953,6 +5122,133 @@ def test_conflict_flags_is_a_no_op_with_only_one_layer() -> None:
     )
 
     assert result[0].outcome == "answer"
+
+
+# ---------------------------------------------------------------------------
+# T-8.1-05b (F-8.1-01): the trust line stays the same when the evidence is
+# the same. Builder B's diagnosis: `_apply_conflict_flags_to_claim_trusts`
+# only ever downgrades a `ClaimTrust` already in `claim_trusts`, the
+# GROUNDED subset, so an identical question's identical underlying
+# conflict floored the answer at `flag` on one live run and not another,
+# purely because the model chose to write about both conflicting values
+# in one run and only one of them in the other. `_full_retrieval_conflict_
+# exists` runs the same rule over `synth_findings`, the full retrieval,
+# so the answer-level floor no longer depends on what got grounded.
+# ---------------------------------------------------------------------------
+
+
+def test_full_retrieval_conflict_exists_true_on_a_genuine_disagreement() -> None:
+    synth_findings = [
+        _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    ]
+    assert graph_module._full_retrieval_conflict_exists(synth_findings) is True
+
+
+def test_full_retrieval_conflict_exists_false_with_no_conflict() -> None:
+    synth_findings = [
+        _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    ]
+    assert graph_module._full_retrieval_conflict_exists(synth_findings) is False
+
+
+def test_full_retrieval_conflict_exists_false_with_only_one_layer() -> None:
+    synth_findings = [
+        _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+    ]
+    assert graph_module._full_retrieval_conflict_exists(synth_findings) is False
+
+
+def test_same_evidence_gives_the_same_trust_outcome_regardless_of_what_was_grounded() -> None:
+    """THE ACCEPTANCE CRITERION, stated exactly: two different grounded-
+    claim subsets drawn from the SAME `synth_findings` must give the same
+    `trust_outcome`, because a real conflict lives in the retrieval, not
+    in whichever sentence the model wrote this run.
+
+    Reproduces builder B's own live shape offline: `synth_findings` is
+    fixed (one Layer 1 value, one disagreeing Layer 2 value for the same
+    field and record), the exact "byte-identical evidence" builder B's
+    diagnosis names. Two runs of the SAME question differ only in which
+    subset the model's prose happened to ground: run A grounds both
+    conflicting claims, run B grounds only one (a citation for the other
+    exists in the full answer but the model's sentence never mentioned
+    it). Before T-8.1-05b, run B's `claim_trusts` would never contain the
+    ungrounded finding, so `_apply_conflict_flags_to_claim_trusts` alone
+    would leave it at `answer` while run A floors to `flag`, the exact
+    variance builder B measured live (`testing/Developer/reports/
+    2026-09-25_phase_8.1/builder_B.md`).
+    """
+    synth_findings = [
+        _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    ]
+
+    def _trust_outcome_for_grounded_subset(grounded_citation_ids: list[str]) -> str:
+        # The per-claim path, unchanged: only the claims this "run"
+        # actually grounded get a ClaimTrust, and only they can be
+        # downgraded by the old, still-present per-claim check.
+        claim_trusts = [
+            _claim_trust(citation_id=cid, outcome="answer") for cid in grounded_citation_ids
+        ]
+        citations = [
+            _citation(
+                citation_id=cid, display_index=i + 1,
+                layer=next(f.layer for f in synth_findings if f.citation_id == cid),
+                field="symbol", claim_text="irrelevant to this check",
+                source_url=next(f.source_url for f in synth_findings if f.citation_id == cid),
+            )
+            for i, cid in enumerate(grounded_citation_ids)
+        ]
+        finding_by_citation_id = {f.citation_id: f for f in synth_findings if f.citation_id in grounded_citation_ids}
+        claim_trusts = graph_module._apply_conflict_flags_to_claim_trusts(
+            claim_trusts, citations, finding_by_citation_id
+        )
+        trust_outcome = graph_module.aggregate([trust.outcome for trust in claim_trusts])
+        # The T-8.1-05b addition: the same check `write_node` now runs,
+        # over the fixed `synth_findings`, regardless of the subset above.
+        if trust_outcome != "refuse" and graph_module._full_retrieval_conflict_exists(
+            synth_findings
+        ):
+            trust_outcome = graph_module.aggregate([trust_outcome, "flag"])
+        return trust_outcome
+
+    run_a = _trust_outcome_for_grounded_subset(["c1", "c2"])  # both grounded
+    run_b = _trust_outcome_for_grounded_subset(["c1"])  # only one grounded
+
+    assert run_a == "flag", run_a
+    # THE FIX: run B floors to `flag` too, even though its own ClaimTrust
+    # list never contained the conflicting Layer 2 claim.
+    assert run_b == "flag", run_b
+    assert run_a == run_b
 
 
 # ---------------------------------------------------------------------------
