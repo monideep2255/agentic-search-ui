@@ -142,7 +142,19 @@ MAX_FINDINGS_PER_PROMPT = 25
 # Bounds the whole rendered findings block, independent of the item count.
 # `MAX_FINDINGS_PER_PROMPT` alone does not bound bytes: 25 findings each
 # carrying a 2000-character value is 50KB of prompt.
-MAX_FINDINGS_BLOCK_CHARS = 12_000
+#
+# F-8.1-A08 (fix-and-verify round, 2026-09-25): raised from 12,000 to
+# 18,000. The product owner's decision of 2026-09-25 (DECISIONS.md, cards 6
+# and 43) raised the prompt slice `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+# (`core/graph.py`) from 20 to 30 "so your 30-source choice actually takes
+# effect", but this block stops at the first finding that would cross its
+# character cap, and at 12,000 characters a paper question with long
+# abstracts was cut at about 15 findings: the other 15 were in the prompt
+# slice and never in the text the model read. 18,000 is the lead's triage
+# figure. It still bounds the prompt (about 4,500 tokens of findings, well
+# under the Synth call's context), and it is still a cap: a block made
+# only of 2,000-character abstracts stops at 8 of them.
+MAX_FINDINGS_BLOCK_CHARS = 18_000
 
 
 @dataclass(frozen=True)

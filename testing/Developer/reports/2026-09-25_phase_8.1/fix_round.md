@@ -47,6 +47,36 @@ Proof the feedback test can fail (run 2026-09-25 in this worktree, then restored
 
 Finding: F-8.1-A08.
 
+What the person typing a question gets: on a question whose prompt carries long paper abstracts, the writing model now reads all 30 findings it is handed instead of stopping part-way down the list, so the owner's 30-source decision takes effect for the model's own prose too, not only for the code-built listing.
+
+What changed:
+
+- `synthesis/findings.py`: `MAX_FINDINGS_BLOCK_CHARS` 12,000 to 18,000, with the reason and the decision it serves in its comment.
+- `MAX_FINDINGS_PER_PROMPT = 25` in the same file was checked and left alone: it is only a default argument of `build_synth_findings`, and the live caller in `write_node` passes `_MAX_FINDINGS_FOR_DISPLAY` (100) instead, so it binds nothing on the live path.
+- Test comment in `test_pubmed_abstract_grounding.py` that named "12,000" now names the constant.
+
+Tests, `tests/system_03_search_agent/synthesis/test_pubmed_abstract_grounding.py`:
+
+- `test_a_thirty_finding_prompt_with_long_abstracts_reaches_the_model_whole`: the longest prompt the live path can build (the breadth plan fetches at most 5 papers per question, so 5 abstracts and one gene summary, each at the 2,000-character field cap, beside 24 short rows). A populate-check asserts 12,000 characters cuts this shape; the test then asserts all 30 markers appear in `build_synth_messages`'s user message.
+- `test_block_cap_is_the_fix_round_value`.
+- Mutation: the constant set back to 12,000 gives `2 failed, 7 passed`; restored, `9 passed`.
+
+Offline reconstruction, the adversary's own synthetic shape (15 paper titles and 15 abstracts, rendered by the branch's `render_findings_block`; script `<scratchpad>/probe_block_caps.py`):
+
+| Abstract length | Findings rendered at 12,000 | At 18,000 |
+|-----------------|-----------------------------|-----------|
+| 1,000 | 21 | 30 |
+| 1,200 | 18 | 27 |
+| 1,300 | 17 | 25 |
+| 1,400 | 15 | 23 |
+| 1,500 | 15 | 22 |
+| 1,800 | 13 | 19 |
+| 2,000 | 11 | 17 |
+
+Stated plainly, since this is where the acceptance is tight: at 18,000 a prompt of 15 abstracts of 1,500 characters renders 22, not more than 22; it passes 22 at 1,400 characters or shorter. That shape cannot occur on the live path today, since no question fetches more than 5 PubMed abstracts. The shape that can occur, 6 values at the 2,000-character cap among 30, renders all 30 at 18,000 and 25 at 12,000 (the unit test above).
+
+Live run 1 of 12, `What research papers discuss BRCA1?`, researcher depth, $0.0172, 31.1 s, outcome `ask`, 58 citations (log: `<scratchpad>/live1_papers.log`, script `fix_round_live_run.py` in this folder). Both Synth calls were handed 30 findings and rendered all 30, in a 1,010-character block, at 12,000 and at 18,000 alike. Every one of the 30 was a short graph `curie` row, so this question, the one builder A used as T-8.1-02's evidence, never puts an abstract in front of the model at all; its "58 sources" are the code-built listing. This confirms F-8.1-A08's point that the earlier evidence could not show the block cap either way, and it is why the proof for this item is the offline shape above rather than this run.
+
 ## Item 3: the MedGen clinical features path
 
 Findings: F-8.1-A11, A12, J09, J10, J11, J13, J14, A03, A04, A10.
