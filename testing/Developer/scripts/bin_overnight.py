@@ -91,7 +91,7 @@ def existing_paths(ref: str) -> list[str]:
 
 
 def overnight_merges() -> list[tuple[str, str]]:
-    log = git("log", "--merges", "--format=%H %s", f"{TAG}..HEAD")
+    log = git("log", "--merges", "--first-parent", "--format=%H %s", f"{TAG}..HEAD")
     return [tuple(line.split(" ", 1)) for line in log.splitlines() if line]
 
 

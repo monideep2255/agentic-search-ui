@@ -110,8 +110,7 @@ def main() -> None:
     analyzed = [analyze_row(r) for r in rows]
     out_path = OUT_DIR / "analyzed.jsonl"
     with open(out_path, "w") as f:
-        for a in analyzed:
-            f.write(json.dumps(a) + "\n")
+        f.writelines(json.dumps(a) + "\n" for a in analyzed)
     print(f"wrote {len(analyzed)} rows to {out_path}")
 
 

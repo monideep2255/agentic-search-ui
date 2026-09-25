@@ -74,6 +74,7 @@ def main() -> None:
                 cwd=str(OUT_DIR.parents[3]),
                 capture_output=True,
                 text=True,
+                check=False,
                 timeout=600,
             )
             print(proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[no stdout]")

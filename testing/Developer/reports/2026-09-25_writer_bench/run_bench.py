@@ -55,8 +55,8 @@ os.environ["SYNTH_MODEL"] = model_id
 # The main checkout's own src, since this benches develop's current code.
 sys.path.insert(0, str(MAIN_REPO / "src"))
 
-from system_03_search_agent.contracts.query import Query, RequestContext  # noqa: E402
-from system_03_search_agent.core.run import run  # noqa: E402
+from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.core.run import run
 
 query = Query(
     text=question_text,
@@ -102,7 +102,7 @@ async def main() -> None:
             result["trust_outcome"] = p.get("trust_outcome")
             result["outcome"] = "answered" if p.get("trust_outcome") == "answer" else p.get("trust_outcome")
     result["elapsed_s"] = round(time.monotonic() - started, 1)
-    with open(OUT_DIR / "results.jsonl", "a") as f:
+    with open(OUT_DIR / "results.jsonl", "a") as f:  # noqa: ASYNC230 - one small append per finished run in a bench script
         f.write(json.dumps(result, default=str) + "\n")
     print(
         f"[DONE] model={model_id} q={question_id} outcome={result['outcome']} "
