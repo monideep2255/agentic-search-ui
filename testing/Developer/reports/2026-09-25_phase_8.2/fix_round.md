@@ -91,6 +91,33 @@ Break-it check: restoring the old record (first option, Jev's bare reason) on a 
 
 Suite: 1630 passed, 56 skipped, 1 deselected.
 
+### Item 2, F-8.2-A07 and F-8.2-J01: no publication-date limit is ever read from the question's wording
+
+What the person notices: "risk of stroke in the last month of pregnancy" searches all the papers on stroke in pregnancy, not the past four weeks of them; "statin trials in 2000 patients with heart failure" is no longer limited to papers from the year 2000. A person who is asked "How far back should I search?" and clicks "the last 5 years" still gets only papers from those years, on a topic question and on a gene or disease question alike, and the plan says so.
+
+How the picked window travels, since the chip comes back only as text: the web client sends the clicked option's string and nothing else, and neither the event contract nor the client is in this fence. So the server remembers what it offered.
+
+- `core/clarify.py`: `RECENT_WINDOWS` pairs each phrase with its months (12, 60, 120). `offer_recent_windows(session_key, question)` writes the three options and records each option's exact text against its window; `picked_recent_window(session_key, text)` returns the stored window only when the new question IS one of those options (whole text, surrounding whitespace aside). Keyed by caller and session (`owner_id` plus `session_id`), at most 1024 sessions, an hour each, in process only. Nothing is parsed from the text; text nobody was offered limits nothing.
+- `core/breadth_plan.py`: `parse_publication_window` is removed. `states_publication_range(question)` only answers "does this question already name a range" (so it is not asked back again); `recent_publication_window(months, label)` builds the limit from the picked value. The range regexes now only keep a range's own words out of a topic term, which broadens a term and never adds a limit; "weeks" and "days" were added so "in the last 2 weeks" no longer makes "last" and "weeks" required words (F-8.2-J02).
+- `core/graph.py`: Think offers the windows through `offer_recent_windows`; a question that is a picked option is not asked the recent-years decision at all; Plan limits PubMed only by `_picked_publication_window`. The topic narrative reads "published in the last 5 years" (the missing "in", F-8.2-J14), and the gene and disease narrative now says "PubMed papers published in the last 5 years only" (F-8.2-J01 found it silent).
+- A question that states its own range ("since 2022") is still not asked back, and its search is not narrowed either, per the brief.
+- Limitation, stated: the offer lives in the server process. A restart, or a click landing on a second process, loses it, and the click then searches without a limit: the honest broad search, never a guessed one. The deployment runs one process (`railway.json` starts one uvicorn with no `--workers`).
+
+Tests:
+
+- `test_breadth_plan.py`: picked windows count back correctly (12, 60, 120 months), a month end is clamped, a non-recency window is refused, `states_publication_range` for eight stated forms and five non-ranges, `parse_publication_window` no longer exists, and "in the last 2 weeks" and "in the last month of pregnancy" add no date clause.
+- `test_clarify.py`: each offered option carries its own window; text nobody was offered (another session, extra words, before any offer, after a clear) picks nothing; the record is bounded and expires.
+- `test_bare_topic_clarification.py`, through the real five-node graph: the five J01 and A07 questions send no `[dp]` clause and no "published in" narrative; "since 2022" is not asked back and not limited; asking "recent papers on statins" then clicking the 5-year option sends `statins AND ("<5 years ago>"[dp] : "3000"[dp])`; asking "recent papers on BRCA1" then clicking the 5-year option sends `BRCA1[Title/Abstract] AND (...)` while ClinVar stays unlimited (F-8.2-J07); the 5-year option's words typed with no offer limit nothing.
+
+Break-it checks, graph.py copied aside and restored with `cmp`:
+
+- Deleting `window=publication_window,` from the `_build_breadth_calls` call in `plan_node` (the judge's J07 mutation): 1 failed, the gene arm. It was green on the judge's run.
+- Limiting the search whenever the words name a range: 9 failed.
+
+Suite (harness, guardrail, core, and the debugging-guide coverage test): 1654 passed, 56 skipped, 1 deselected.
+
+Follow-up outside this fence: `docs/build/Debugging_guide.md`'s `core/breadth_plan.py` row still names `parse_publication_window`; one line for whoever owns the guide.
+
 ## Findings left open, and why
 
 Filled in at the end.

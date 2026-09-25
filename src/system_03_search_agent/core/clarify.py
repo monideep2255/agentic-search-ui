@@ -30,26 +30,34 @@ module writes itself, because its values are fixed by the product owner's
 decision rather than tailored to a subject: the last 12 months, the last 5
 years, the last 10 years. It is shown when `decide(point=
 "think.recent_years")` says a question asks for recent work without saying
-how recent. The person's own words carry the subject into each choice, and
-`core.breadth_plan.parse_publication_window` reads the window back out of
-the choice they click, turning it into a publication-date limit.
+how recent. The person's own words carry the subject into each choice.
+Since the fix round (F-8.2-A07, J01) the window is never read back out of
+the clicked choice's text: `offer_recent_windows` remembers each option it
+offered against its window, and `picked_recent_window` returns that stored
+value when the next question is exactly one of those options.
+`core.breadth_plan.recent_publication_window` turns it into the limit.
 
 Depends on:
     - system_03_search_agent.harness.harness (the `Message` shape a call's
       messages list holds: `dict[str, str]`)
 
 Reads:
-    - Nothing. Pure functions of the text handed in and the model reply
-      handed to `parse_clarify_reply`.
+    - Nothing outside this module. Functions of the text handed in, the
+      model reply handed to `parse_clarify_reply`, and this module's own
+      bounded in-process record of the windows it offered.
 
 Writes:
-    - Nothing.
+    - `_OFFERED`, that in-process record: at most 1024 sessions, each for
+      an hour, never persisted.
 """
 
 from __future__ import annotations
 
 import json
 import secrets
+import time
+from collections import OrderedDict
+from dataclasses import dataclass
 from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -230,14 +238,24 @@ def parse_clarify_reply(content: str) -> ClarifyChoices:
         ) from exc
 
 
+@dataclass(frozen=True)
+class RecentWindow:
+    """One window a recent-work question is offered: the reader's words for
+    it, and the structured value the planner limits the search by."""
+
+    phrase: str
+    months: int
+
+
 #: The three windows a recent-work question is offered, in the product
-#: owner's order (DECISIONS.md 2026-09-25, card 4). Each is phrased so that
-#: `core.breadth_plan.parse_publication_window` reads it back exactly.
-RECENT_WINDOW_PHRASES: Final[tuple[str, ...]] = (
-    "the last 12 months",
-    "the last 5 years",
-    "the last 10 years",
+#: owner's order (DECISIONS.md 2026-09-25, card 4).
+RECENT_WINDOWS: Final[tuple[RecentWindow, ...]] = (
+    RecentWindow(phrase="the last 12 months", months=12),
+    RecentWindow(phrase="the last 5 years", months=60),
+    RecentWindow(phrase="the last 10 years", months=120),
 )
+
+RECENT_WINDOW_PHRASES: Final[tuple[str, ...]] = tuple(window.phrase for window in RECENT_WINDOWS)
 
 RECENT_WINDOW_QUESTION: Final[str] = "How far back should I search?"
 
@@ -262,3 +280,72 @@ def recent_window_choices(question: str) -> ClarifyChoices:
         question=RECENT_WINDOW_QUESTION,
         options=[f"{base} from {phrase}?" for phrase in RECENT_WINDOW_PHRASES],
     )
+
+
+# ---------------------------------------------------------------------------
+# The picked window, carried as a structured value (build phase 8.2 fix
+# round, F-8.2-A07 and F-8.2-J01).
+#
+# A chip the person clicks comes back as the next question's TEXT: the web
+# client sends the option string and nothing else, and neither the event
+# contract nor the client may change in this round. Re-reading a window out
+# of that text with a regex is exactly what let "in 2000 patients" limit a
+# search to the year 2000. So the server remembers what it OFFERED: when
+# Think asks "How far back should I search?", each option's exact text is
+# stored against its window's months, keyed by the caller and session; when
+# the next question in that session is exactly one of those options, the
+# window is that option's stored value. Nothing is parsed from the text, and
+# text nobody was offered, however it is worded, limits nothing.
+#
+# Bounded on both sides: at most `_MAX_OFFER_SESSIONS` sessions, oldest
+# evicted first, each kept for `_OFFER_TTL_S`. It lives in this process only
+# (the deployment runs one); a restart or a second process loses an offer,
+# and the pick then searches without a limit, the honest broad search,
+# never a guessed one.
+# ---------------------------------------------------------------------------
+
+_OFFER_TTL_S: Final[float] = 3600.0
+_MAX_OFFER_SESSIONS: Final[int] = 1024
+
+_OFFERED: OrderedDict[str, tuple[float, dict[str, RecentWindow]]] = OrderedDict()
+
+
+def offer_recent_windows(session_key: str, question: str) -> ClarifyChoices:
+    """The "How far back should I search?" choices for `question`, with each
+    option remembered against its window for this session."""
+    choices = recent_window_choices(question)
+    now = time.monotonic()
+    for key in [key for key, (expires, _) in _OFFERED.items() if expires <= now]:
+        del _OFFERED[key]
+    _OFFERED[session_key] = (
+        now + _OFFER_TTL_S,
+        {option.strip(): window for option, window in zip(choices.options, RECENT_WINDOWS, strict=True)},
+    )
+    _OFFERED.move_to_end(session_key)
+    while len(_OFFERED) > _MAX_OFFER_SESSIONS:
+        _OFFERED.popitem(last=False)
+    return choices
+
+
+def picked_recent_window(session_key: str, text: str) -> RecentWindow | None:
+    """The window of the option `text` is, if this session was offered it.
+
+    An exact match on the whole question (surrounding whitespace aside),
+    never a search inside it: a question that merely CONTAINS "the last 5
+    years" is not a pick. The offer stays until it expires or the session is
+    offered new windows, so a person can click a second option of the same
+    ask-back.
+    """
+    entry = _OFFERED.get(session_key)
+    if entry is None:
+        return None
+    expires, offers = entry
+    if expires <= time.monotonic():
+        _OFFERED.pop(session_key, None)
+        return None
+    return offers.get(text.strip())
+
+
+def clear_offered_windows() -> None:
+    """Forget every offer. For tests, which share one process."""
+    _OFFERED.clear()

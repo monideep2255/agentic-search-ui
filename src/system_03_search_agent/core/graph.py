@@ -2651,22 +2651,44 @@ _RECENT_WINDOW_NARRATIVE: Final[str] = (
 
 def _asks_for_unbounded_recent_work(record: DecisionRecord | None, text: str) -> bool:
     """Whether to ask how recent: the classifier's `recent_unbounded`,
-    verified by code against the one value code may read.
+    verified by code against the one thing code may read.
 
     A question that states its own range ("since 2022", "the last 5
-    years") is never asked again, whatever the classifier said, because
-    the range is right there to search with; `core.breadth_plan` reads it
-    into a publication-date limit. No usable pick asks nothing, the
-    fail-open rule every Think decision keeps.
+    years") is never asked again, whatever the classifier said. Its search
+    is NOT limited by that range either (fix round, F-8.2-A07, J01): only a
+    window the person picked in this ask-back limits a search. No usable
+    pick asks nothing, the fail-open rule every Think decision keeps.
     """
     if _usable_choice(record) != "recent_unbounded":
         return False
-    if breadth_plan.parse_publication_window(text) is not None:
+    if breadth_plan.states_publication_range(text):
         logger.info(
             "recent_years said unbounded but the question states a range; not asking"
         )
         return False
     return True
+
+
+def _offer_key(query: Any) -> str:
+    """Whose "How far back" choices these are: the caller and the session,
+    so one person's click can never pick up another's offered window."""
+    return f"{query.owner_id or ''}\x1f{query.session_id}"
+
+
+def _picked_publication_window(query: Any) -> breadth_plan.PublicationWindow | None:
+    """The publication-date limit for this question, or None.
+
+    Only a window the person PICKED limits a search (fix round, F-8.2-A07
+    and F-8.2-J01): this question must be exactly one of the "How far back
+    should I search?" options this session was offered, and the window is
+    that option's stored value (`core.clarify.picked_recent_window`), never
+    a range read out of the words. "Stroke in the last month of pregnancy"
+    and "statin trials in 2000 patients" are searched without a limit.
+    """
+    picked = clarify.picked_recent_window(_offer_key(query), query.text)
+    if picked is None:
+        return None
+    return breadth_plan.recent_publication_window(picked.months, picked.phrase)
 
 
 async def _run_think_classification(
@@ -2810,9 +2832,12 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
     small_talk = _is_small_talk(query.text)
+    # A question that IS a picked "How far back" option has already said
+    # how recent, so the recent-work decision is not asked for it at all.
+    recent_already_picked = _picked_publication_window(query) is not None
     recent_task: asyncio.Task[DecisionRecord | None] = asyncio.create_task(
         _no_decision()
-        if small_talk
+        if small_talk or recent_already_picked
         else _decide_point(harness, query.trace_id, _RECENT_YEARS, query.text)
     )
     decisions = _run_decisions(harness)
@@ -2958,7 +2983,9 @@ async def _think(
     )
     try:
         if _asks_for_unbounded_recent_work(await recent_task, query.text):
-            choices = clarify.recent_window_choices(query.text)
+            # Remembered against this session, so the option the person
+            # clicks carries its window as a value (F-8.2-A07, J01).
+            choices = clarify.offer_recent_windows(_offer_key(query), query.text)
             return _ask_back(
                 sink,
                 choices.question,
@@ -3942,9 +3969,10 @@ def _build_breadth_calls(
     that measured 14 to 16 of its 20 allowed Layer 2 and 3 calls reaches
     at most 18.
 
-    `window` (build phase 8.2, card 4) is the question's own stated
-    publication range, read by `breadth_plan.parse_publication_window`; it
-    limits the PubMed search to those years and nothing else.
+    `window` (build phase 8.2, card 4) is the publication range the person
+    picked in the "How far back should I search?" ask-back
+    (`_picked_publication_window`); it limits the PubMed search to those
+    years and nothing else.
     """
     title = None if gene_symbol else disease_title
     if not gene_symbol and not title:
@@ -5348,11 +5376,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     }
     unresolved_symbols: list[str] = state.get("unresolved_entity_symbols") or []
 
-    # Build phase 8.2, card 4: a publication range the question states in so
-    # many words ("from the last 5 years", "since 2022"), read as a value and
-    # applied to every PubMed search this plan makes. Typically the choice a
-    # person clicked after `think.recent_years` asked them how recent.
-    publication_window = breadth_plan.parse_publication_window(query.text)
+    # Build phase 8.2, card 4: the publication range the person PICKED after
+    # `think.recent_years` asked them how recent, applied to every PubMed
+    # search this plan makes. Never a range read from the question's words
+    # (fix round, F-8.2-A07, J01): see `_picked_publication_window`.
+    publication_window = _picked_publication_window(query)
 
     # Build phase 8.2, card 3: the literature decision Think started. Read
     # here whether or not the branch below needs it, so it is never left
@@ -5561,10 +5589,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             else "no gene, variant or disease was named, so searching the "
             "published literature"
         )
-        # A stated range is named in the reader's own words, so they can see
-        # the limit they asked for was applied (build phase 8.2, card 4).
+        # The picked range is named in the reader's own words, so they can
+        # see the limit they chose was applied (build phase 8.2, card 4).
         published = (
-            f", published {publication_window.label}" if publication_window is not None else ""
+            f", published in {publication_window.label}" if publication_window is not None else ""
         )
         plan_payload = PlanPayload(
             narrative=(
@@ -5697,6 +5725,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             # exists. The words are the MedGen record's own, so the
             # narrative cannot name a disease the question did not resolve.
             narrative = f"searching {len(by_layer)} layers for {disease_text}. " + narrative
+        if publication_window is not None and (gene_curie is not None or disease_text):
+            # The picked range limits the PubMed search on this path too, so
+            # the narrative says so (F-8.2-J01 found it silent here).
+            narrative += f"; PubMed papers published in {publication_window.label} only"
         narrative = narrative[:500]
 
         plan_payload = PlanPayload(
