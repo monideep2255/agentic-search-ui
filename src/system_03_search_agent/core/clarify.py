@@ -54,6 +54,7 @@ Writes:
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import time
 from collections import OrderedDict
@@ -260,22 +261,47 @@ RECENT_WINDOW_PHRASES: Final[tuple[str, ...]] = tuple(window.phrase for window i
 RECENT_WINDOW_QUESTION: Final[str] = "How far back should I search?"
 
 
+def _keep_the_ask(text: str, room: int) -> str:
+    """Shorten a long question to `room` characters, keeping the ASK.
+
+    Fix round, F-8.2-A14. Cutting from the end kept the background and
+    dropped the question: "My mother was diagnosed ... What do the latest
+    papers say about PARP inhibitor resistance and what happens when it
+    stops working?" became a choice that no longer mentioned resistance.
+    People put context first and the ask last, so whole trailing sentences
+    are kept, as many as fit; when even the last sentence is too long, its
+    own start is kept, cut at a word boundary.
+    """
+    sentences = [part for part in re.split(r"(?<=[.!?;])\s+", text) if part]
+    kept: list[str] = []
+    for sentence in reversed(sentences):
+        candidate = " ".join([sentence, *kept])
+        if len(candidate) > room:
+            break
+        kept.insert(0, sentence)
+    if kept:
+        return " ".join(kept)
+    last = sentences[-1] if sentences else text
+    return last[:room].rsplit(" ", 1)[0]
+
+
 def recent_window_choices(question: str) -> ClarifyChoices:
     """The question asked back when the person wants recent work but gave
     no range: their own question once per window.
 
     The subject is the person's own words, never rewritten, so clicking a
     choice asks exactly what they asked with one range added. A question too
-    long to fit the per-option bound is cut at a word boundary rather than
-    mid-word.
+    long to fit the per-option bound keeps its closing sentences, where the
+    ask usually is, and drops leading context (`_keep_the_ask`); a single
+    over-long sentence is cut at a word boundary rather than mid-word.
     """
     base = question.strip().rstrip("?.!").strip()
-    if base:
-        base = base[0].upper() + base[1:]
     longest_suffix = max(len(f" from {phrase}?") for phrase in RECENT_WINDOW_PHRASES)
     room = MAX_CLARIFY_TEXT_CHARS - longest_suffix
     if len(base) > room:
-        base = base[:room].rsplit(" ", 1)[0]
+        base = _keep_the_ask(base, room)
+    if base:
+        base = base[0].upper() + base[1:]
     return ClarifyChoices(
         question=RECENT_WINDOW_QUESTION,
         options=[f"{base} from {phrase}?" for phrase in RECENT_WINDOW_PHRASES],

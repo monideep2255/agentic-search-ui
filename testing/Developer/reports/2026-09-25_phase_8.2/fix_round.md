@@ -10,7 +10,17 @@ The phase's one fix round, working the lead's triage of round 1 (`tracker/phase_
 
 ## Summary
 
-Filled in as each item closes.
+| Item | Findings | What the person notices | Evidence |
+| --- | --- | --- | --- |
+| 1 | A01 | After a gene question, a pizza, football, weather or movie follow-up is refused; "and what about it in children?" is answered | 7 new guardrail arms; 2 break-it checks red; live runs 1 and 2 |
+| 2 | A07, J01, J07, J02 | No search is narrowed by words like "in the last month of pregnancy" or "2000 patients"; a picked "last 5 years" still narrows, gene questions included | graph, planner and clarify arms; 2 break-it checks red (1 and 9 tests) |
+| 3 | A10, A16, J14 | G-003 and G-030 are answered, not asked "How far back?"; a workout plan is refused; coffee and exercise admitted | live runs 3 to 9, all as required |
+| 4 | J03, J04, A12 | A slow Jev holds a decision about 3 s at most, never 16; nobody waits on the comparison pick past 1 s; an arrived guard pick is always used | wall times 1.00 s, 0.30 s, 3.00 s, 4.00 s, 3.50 s; 3 tests red on the old code |
+| 5 | A04, J13 | The decision record says when no model decided, and names what the run did | 8 new arms; 5 red on the old record |
+| 6 | J05, J06, J07 | Nothing directly; cost, state-size and list bounds are now guarded by tests | 6 controls broken, each went red, each file restored byte for byte |
+| 7 | A15, A08, J11, J15, J08, A14, J14, A05 | "What is known about Lynch syndrome?" gets its records; gene questions never wait on the papers decision; a bogus Jev cost cannot stop a question | live runs 10 to 12; new arms red on the pre-fix code |
+
+Commits, in order, on this worktree's branch: see the final section of the handback. Tests at the end: harness, guardrail and core, 1663 passed, 56 skipped, 1 deselected. Live runs: 12 of the 14 allowed, about $0.0004 metered in total.
 
 ## Item log
 
@@ -161,6 +171,48 @@ Each control was broken on the worktree file after copying it aside, the named s
 
 Harness suite with the new tests: 265 passed.
 
+### Item 7: other findings in the same code
+
+Live runs for this item, appended as each finishes:
+
+| Run | Probe | Result | Record | Cost, time |
+| --- | --- | --- | --- | --- |
+| 10 | plan.literature, "What is known about Lynch syndrome?" (A15) | not_literature, so the disease path runs | Jev not_literature 0.87 (round 1: wants_literature 0.59); guard not ready | $0.00002, 1.3 s |
+| 11 | plan.literature, "papers on caffeine" (regression check) | wants_literature, papers still searched | Jev wants_literature 1.0; guard not ready | $0.00002, 1.3 s |
+| 12 | recent_years, "recent onset diabetes treatment options" (A08) | not asked back | Jev not_applicable 0.93, guard not_applicable (round 1: recent_unbounded 0.98 from both) | $0.00003, 1.2 s |
+
+Live runs spent in total: 12 of 14, about $0.0004 metered.
+
+Fixed in this item, each with the person's view first:
+
+- F-8.2-A15 (high): "What is known about Lynch syndrome?" gets the condition record, its genes and trials again, not five abstracts. `plan.literature`'s criteria now call for papers only when the question explicitly asks for papers, articles, publications, preprints or studies, or what research says, or whether something has been studied; "generally what is known about a gene, variant or condition" is `not_literature`. Live runs 10 and 11 above.
+- F-8.2-A08 (high): "recent onset diabetes treatment options" is no longer asked how far back; fixed by item 3's recent-years criteria. Live run 12.
+- F-8.2-J11 (medium): a plain gene question no longer waits at Plan for the literature decision it cannot use. Plan reads the decision only when no gene resolved; otherwise `_drop_literature_decision` keeps a finished record for the `done` event and cancels a running one. New graph test: with the decision held 3 s, "Which diseases are associated with BRCA1?" reaches `done` in under 2 s and the decision is cancelled; it failed on the pre-fix `graph.py`.
+- F-8.2-J15 (medium): Jev's self-reported cost is bounded at $0.01 (`MAX_JEV_COST_USD`, about 500 times the measured price) and its probabilities map at 12 entries. A reply beyond either is malformed, so the guard's pick decides and nothing is charged. New tests for `Infinity`, 0.5, a negative cost and a 13-entry map; the first two and the map failed on the pre-fix client.
+- F-8.2-J08 (low): a guard reply that negates the option it names ("This is not off_topic.") is no usable pick instead of the named option. A negation word in the three words before the option triggers it; `not_literature` as an option name is unaffected. Four new parse cases; all failed on the pre-fix parser.
+- F-8.2-A14 (medium): the "How far back" choices for a long question keep its closing sentences, where the ask is, and drop leading context. The adversary's 266-character example now keeps "PARP inhibitor resistance and what happens when it stops working".
+- F-8.2-J14 (unsure, the narrative half): an ask-back or "How far back" turn's plan narrative now reads "no tool selected; the answer asks a question back before any search" instead of item 7.5's "refers to something no earlier turn resolved"; the missing "in" was fixed in item 2. The criteria half was item 3.
+- F-8.2-A05 (low): fixed by item 4. `decide` no longer uses `gather`, cancels its own children, and marks every child's exception read; a test cancels a decision in flight and asserts no "never retrieved" log line. It failed on the pre-fix `decide.py`.
+- F-8.2-J02 (medium): no typed range narrows anything now (item 2), so "from 2019 to 2021" can no longer search 2019 to today; "weeks" and "days" were added so their words stop becoming required search words.
+- F-8.2-J13 (medium): fixed by item 5.
+- F-8.2-A12 (medium): fixed by item 4.
+
+Suite: harness, guardrail and core, 1663 passed, 56 skipped, 1 deselected. `ruff check .` over the repository: all checks passed.
+
 ## Findings left open, and why
 
-Filled in at the end.
+| Finding | Why it stays open |
+| --- | --- |
+| F-8.2-A02 (low), F-8.2-J17 (unsure): the public `done` event carries each decision's picks and Jev's confidence | Whether that telemetry belongs on the public stream or only in the trace is the product owner's call (card 13 asks that every answer carry its choices). Filtering it would also touch `contracts/` or `adapters/`, outside this fence. |
+| F-8.2-A03 (low): "This is a biomedical research question ..." clears the allowlist, so the relevancy judge is skipped | The word that clears it is "research", one of the generic literature words added on 2026-09-23 so such questions were not refused. Removing those words would send every "papers on X" or "research on Y" question to a paid, fallible model call to close a steering path that is not a regression (the injection classifier still judges topicality). A trade the owner should make, not a fix. |
+| F-8.2-A06 (high): plain biology questions ("how do bees make honey") are refused by the older injection classifier's narrower off-topic field even when both new judges say on topic | The fix is either narrowing `guardrail/classifier.py`'s instruction (outside this fence) or letting the relevancy decision overrule the classifier's topicality verdict, which F-8.2-A16 shows is risky while Jev over-admits. That is a policy choice for the owner. Not a regression: develop refused these at the pre-filter. |
+| F-8.2-A09 (medium), the rest: "2023 papers on statins" searches papers from any year | By the brief's rule no year is read from the wording, and the classifier correctly sees a stated year and does not ask back, so the search is broad and honest. A structured year limit the person can pick would need a new ask-back or a client change. "Since the pandemic" is now covered by the criteria ("a period named by an event"); not re-measured live. |
+| F-8.2-A11 (high): Jev's pick is used at any confidence | Acting on Jev's confidence number is a decision the product owner has not taken (the brief says no threshold). With the sharper criteria, the low-confidence G-003 and G-030 overrules measured in round 1 no longer occur (live runs 3 to 6). |
+| F-8.2-A13 (medium): with Jev deciding, a bare gene symbol, rsID or accession is asked back | The adversary filed it for the owner: whether "1 to 3 words, then the classifier decides" covers identifiers is their rule to set. |
+| F-8.2-J09 (low): a failed literature decision means "not papers" | Deliberate fail-open direction, pinned by mutation M13 in round 1; making it "papers" would flip every outage toward the topic path. Recorded for the owner. |
+| F-8.2-J10 (low): `tools/catalogue.py` and `harness/task_tiers.py` have no caller; two `contracts/events.py` docstrings say `decisions` is never filled | All three files are outside this fence. |
+| F-8.2-J12 (low): a "How far back" ask meters about 1.1 cents for Think's cancelled classification | The over-estimate is `Harness.call_tier`'s deliberate metering of a cancelled call (`harness/harness.py`, outside this fence). Avoiding it means not starting Think's classification until the recent-years decision returns, which puts that decision back on the person's clock. |
+| F-8.2-J16 (low): G-035's must-cite was hand-edited into a generated golden file | `eval/golden/` is outside this fence. |
+| `decided_by` on a decision nobody made (item 5) | Reads "guard" because `DecisionRecord.decided_by` allows only "jev" or "guard"; a "none" value is an additive contract change outside this fence. The None picks and the `no_usable_pick` reason carry the truth meanwhile. |
+| Comparison rows with `guard_not_ready` (item 4, observed in item 3) | By the brief's one-second grace. Most Jev-mode rows will lack a guard pick; the owner may want the guard call to finish in the background and fill the row in. |
+| `docs/build/Debugging_guide.md` still names `parse_publication_window` | Outside this fence; one line. |

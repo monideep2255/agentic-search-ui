@@ -235,6 +235,35 @@ async def test_call_jev_sends_the_callers_description(monkeypatch: pytest.Monkey
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cost", ["Infinity", "0.5", "-0.1"])
+async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
+    monkeypatch: pytest.MonkeyPatch, cost: str
+) -> None:
+    """F-8.2-J15: Jev's cost is charged straight into every cost cap. A
+    reply claiming `Infinity` (which Python's JSON parser accepts) stopped
+    every later model call in the question; 0.5 would push each question
+    past its cap. Such a reply is malformed, so the guard's pick decides."""
+    raw = json.dumps(_success_body()).replace('"cost": 1.4784e-05', f'"cost": {cost}')
+    assert f'"cost": {cost}' in raw
+    monkeypatch.setattr(
+        jev_client_module, "_post", AsyncMock(return_value=httpx.Response(200, content=raw.encode()))
+    )
+    with pytest.raises(JevCallError) as excinfo:
+        await _call_once()
+    assert excinfo.value.reason == "malformed_reply"
+
+
+@pytest.mark.asyncio
+async def test_an_oversized_probabilities_map_is_a_malformed_reply(monkeypatch: pytest.MonkeyPatch) -> None:
+    body = _success_body()
+    body["answers"]["guardrail.relevancy"]["probabilities"] = {f"k{i}": 0.0 for i in range(13)}
+    monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=_response(body)))
+    with pytest.raises(JevCallError) as excinfo:
+        await _call_once()
+    assert excinfo.value.reason == "malformed_reply"
+
+
 async def _slow_post(*_args: Any, **_kwargs: Any) -> httpx.Response:
     await asyncio.sleep(5.0)
     return _response(_success_body())

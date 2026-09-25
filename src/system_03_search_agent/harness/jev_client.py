@@ -115,6 +115,21 @@ JEV_TOTAL_TIMEOUT_S = _TIMEOUT_S
 
 JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invalid_option"
 
+#: The most one decision may report costing, in US dollars. Measured live at
+#: $0.0000148 to $0.0000197 per call (builder D), so this is about 500 times
+#: the real price. Jev's cost is the one model cost in the loop the loop does
+#: not compute itself: it is whatever the undocumented endpoint says, and it
+#: is charged straight into the per-query, per-user and system-wide caps.
+#: A reply of `Infinity` stopped every later model call in the question and
+#: turned the done event's cost into null; a reply of 0.5 would have pushed
+#: every question past its $0.10 cap (fix round, F-8.2-J15). A reply above
+#: this is malformed, so the guard's pick decides and nothing is charged.
+MAX_JEV_COST_USD = 0.01
+
+#: At most one probability per offered option; `DecisionRecord.options`
+#: allows 12.
+_MAX_PROBABILITIES = 12
+
 
 class JevResult(BaseModel):
     """One decisions call's parsed, schema-validated result.
@@ -123,7 +138,8 @@ class JevResult(BaseModel):
     `production-standards.md`'s multi-agent pipeline gate: this is data
     read back from an external HTTPS call, and it is treated with the
     same discipline as any other untrusted response before the caller
-    acts on it.
+    acts on it. `cost_usd` is bounded above and `probabilities` in size
+    for the same reason (F-8.2-J15).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -131,10 +147,13 @@ class JevResult(BaseModel):
     resolved_model: Annotated[str, Field(max_length=200)]
     choice: Annotated[str, Field(max_length=200)]
     confidence: Annotated[float, Field(ge=0.0, le=1.0)]
-    probabilities: dict[Annotated[str, Field(max_length=200)], Annotated[float, Field(ge=0.0, le=1.0)]]
+    probabilities: Annotated[
+        dict[Annotated[str, Field(max_length=200)], Annotated[float, Field(ge=0.0, le=1.0)]],
+        Field(max_length=_MAX_PROBABILITIES),
+    ]
     input_tokens: Annotated[int, Field(ge=0)]
     output_tokens: Annotated[int, Field(ge=0)]
-    cost_usd: Annotated[float, Field(ge=0.0)]
+    cost_usd: Annotated[float, Field(ge=0.0, le=MAX_JEV_COST_USD)]
     latency_ms: Annotated[int, Field(ge=0)]
 
 

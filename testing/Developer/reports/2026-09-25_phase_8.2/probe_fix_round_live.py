@@ -6,6 +6,7 @@ Two modes, each one line of output per question:
                                   session remembers a BRCA1 question first
     recent <text>                 the real `decide()` for `think.recent_years`,
                                   then whether Think would ask "How far back?"
+    literature <text>             the real `decide()` for `plan.literature`
 
 Run from the repository root with `PYTHONPATH=src`. The environment file is
 read from `ENV_FILE` (default `.env`), and only the named keys below are
@@ -137,12 +138,35 @@ async def _recent(text: str) -> None:
     )
 
 
+async def _literature(text: str) -> None:
+    harness = hm.Harness("fix-round-literature")
+    spec = g._LITERATURE
+    started = time.monotonic()
+    record = await decide(
+        harness,
+        "fix-round-literature",
+        spec.point,
+        text,
+        spec.options,
+        instructions=spec.instructions,
+        criteria=spec.criteria,
+        default=spec.fail_open,
+    )
+    elapsed = time.monotonic() - started
+    print(
+        f"used={g._usable_choice(record)} | {_record_line(record)} | "
+        f"${harness.get_query_cost_usd('fix-round-literature'):.5f} {elapsed:.1f}s | {text}"
+    )
+
+
 def main() -> None:
     mode, text = sys.argv[1], sys.argv[2]
     if mode == "guardrail":
         asyncio.run(_guardrail(text, "--memory" in sys.argv[3:]))
     elif mode == "recent":
         asyncio.run(_recent(text))
+    elif mode == "literature":
+        asyncio.run(_literature(text))
     else:
         raise SystemExit(f"unknown mode {mode!r}")
 

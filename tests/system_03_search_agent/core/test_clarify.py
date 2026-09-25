@@ -232,6 +232,24 @@ class TestRecentWindowChoices:
             "Recent papers on statins from the last 10 years?",
         ]
 
+    def test_a_long_question_keeps_its_ask_rather_than_its_background(self) -> None:
+        """F-8.2-A14: the adversary's 266-character question lost "PARP
+        inhibitor resistance" and "stops working" when cut from the end."""
+        question = (
+            "My mother was diagnosed with stage 3 ovarian cancer and carries a BRCA2 "
+            "variant; her oncologist mentioned PARP inhibitors as maintenance therapy "
+            "after chemotherapy. What do the latest papers say about PARP inhibitor "
+            "resistance and what happens when it stops working?"
+        )
+        for option in clarify.recent_window_choices(question).options:
+            assert len(option) <= clarify.MAX_CLARIFY_TEXT_CHARS
+            assert "PARP inhibitor resistance and what happens when it stops working from" in option
+            assert option.startswith("Her oncologist mentioned"), option
+
+    def test_a_short_question_is_unchanged(self) -> None:
+        choices = clarify.recent_window_choices("what do the latest papers say about statins?")
+        assert choices.options[0] == "What do the latest papers say about statins from the last 12 months?"
+
     def test_each_offered_choice_carries_its_own_window_as_a_value(self) -> None:
         """Fix round, F-8.2-A07 and J01: the window comes from what was
         OFFERED, never from reading the clicked text."""

@@ -991,17 +991,19 @@ _LITERATURE: Final = _DecisionSpec(
         "The state is a question a person typed into a biomedical evidence search "
         "engine that holds gene, variant and disease records, clinical trial "
         "registrations and the published literature. Decide whether the person "
-        "is asking for published papers or for what the published literature "
-        "says."
+        "is asking specifically for published papers, or for what published "
+        "research says, rather than for the records the engine holds."
     ),
     criteria={
         "wants_literature": (
-            "It asks for papers, articles, publications or preprints, or for what "
-            "the published literature or research says."
+            "It explicitly asks for papers, articles, publications, preprints or "
+            "studies, or for what the published literature or research says or "
+            "shows, or whether something has been studied."
         ),
         "not_literature": (
             "It asks for a fact, a definition, a gene, variant or disease record, "
-            "or for clinical trials, rather than for published papers."
+            "or clinical trials, or generally what is known about a gene, variant "
+            "or condition, without asking for papers or research."
         ),
     },
 )
@@ -1142,6 +1144,24 @@ async def _literature_choice(
         entry.literature_record = await _decide_point(harness, trace_id, _LITERATURE, text)
         entry.literature_asked = True
     return _usable_choice(entry.literature_record)
+
+
+def _drop_literature_decision(harness: Harness) -> None:
+    """Settle `plan.literature` without waiting for it.
+
+    A decision that has finished keeps its record (`_decide_point` already
+    put it on the run's list for the `done` event); one still running is
+    cancelled, since Plan has decided it does not need it. Never awaits.
+    """
+    entry = _run_decisions(harness)
+    task, entry.literature_task = entry.literature_task, None
+    if task is None:
+        return
+    entry.literature_asked = True
+    if task.done() and not task.cancelled():
+        entry.literature_record = task.result()
+    else:
+        task.cancel()
 
 
 # ---------------------------------------------------------------------------
@@ -5305,13 +5325,19 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     if state.get("clarification_needed"):
         # Item 7.5: Think found a reference with nothing to bind to. There
         # is nothing to look up until the reader says which, so no tool and
-        # no model call; Write asks the question.
+        # no model call; Write asks the question. The same early return
+        # serves item 12.3's ask-back and the "How far back should I
+        # search?" ask, which are not about an unresolved reference, so
+        # they say what actually happened (fix round, F-8.2-J14).
+        unresolved_reference = state.get("clarification_needed") == CLARIFICATION_QUESTION
         sink.emit(
             "plan",
             PlanPayload(
                 narrative=(
                     "no tool selected; the question refers to something no "
                     "earlier turn resolved, so the answer asks which"
+                    if unresolved_reference
+                    else "no tool selected; the answer asks a question back before any search"
                 ),
                 tool_calls=[],
             ),
@@ -5392,12 +5418,12 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     publication_window = _picked_publication_window(query)
 
     # Build phase 8.2, card 3: the literature decision Think started. Read
-    # here whether or not the branch below needs it, so it is never left
-    # running past the step it was started for, and so its record reaches
-    # the `done` event. It has usually finished long before now.
-    literature_choice = await _literature_choice(
-        harness, trace_id, query.text, ask_if_missing=False
-    )
+    # below only where it can change the plan, a question with no gene
+    # resolved; otherwise `_drop_literature_decision` keeps a finished
+    # record and stops a running one. Until the fix round (F-8.2-J11) it was
+    # awaited here on every question, so a plain gene question could stall
+    # at Plan for up to the guard's budget on a decision it never used.
+    literature_choice: str | None = None
 
     # Fix-plan item 2 (2026-09-22): an accession question plans NCBI record
     # summaries and no graph call, since the graph holds no projects,
@@ -5502,6 +5528,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             )
         ):
             topic_term = None
+    # Whatever this plan did not need the literature decision for (a gene
+    # resolved, an accession, a window), it is not waited for: a decision
+    # already made is kept for the `done` event, one still running is
+    # stopped (fix round, F-8.2-J11).
+    _drop_literature_decision(harness)
 
     if isinstance(planned, _UnresolvedEntityRefusal):
         # T-3.1-13/F-2.1-B10: refuse now, before act_node ever dispatches

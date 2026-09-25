@@ -600,6 +600,11 @@ async def test_recent_work_with_no_range_asks_how_far_back(
         "Recent papers on statins from the last 10 years?",
     ]
     assert "tool_start" not in [event.type for event in events]
+    # F-8.2-J14: the plan says what happened, not item 7.5's "refers to
+    # something no earlier turn resolved".
+    plan = _payload(events, "plan")
+    assert plan is not None
+    assert plan["narrative"] == "no tool selected; the answer asks a question back before any search"
 
 
 @pytest.mark.asyncio
@@ -812,6 +817,40 @@ async def test_a_question_asked_back_cancels_the_literature_decision(
     think = _payload(events, "think")
     assert think is not None and think["clarifying_question"] == clarify.RECENT_WINDOW_QUESTION
     assert started.is_set() and cancelled.is_set(), base
+
+
+@pytest.mark.asyncio
+async def test_a_gene_question_never_waits_for_the_literature_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.2-J11, the judge's probe: with `plan.literature` held for 3
+    seconds, "Which diseases are associated with BRCA1?" took 3026 ms to
+    `done` against 197 ms without the pause, although a resolved gene means
+    the decision cannot change the plan. It is now stopped instead."""
+    cancelled = asyncio.Event()
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
+        if point == "plan.literature":
+            try:
+                await asyncio.sleep(3.0)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+        return await inner(harness, trace_id, point, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    started = time.monotonic()
+    events = await _run("Which diseases are associated with BRCA1?")
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0)
+
+    assert "done" in [event.type for event in events]
+    assert elapsed < 2.0, elapsed
+    assert cancelled.is_set()
 
 
 # ---------------------------------------------------------------------------

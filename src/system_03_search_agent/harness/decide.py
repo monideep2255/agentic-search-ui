@@ -179,6 +179,16 @@ def _build_guard_messages(
     ]
 
 
+#: Words that, just before an option in a guard reply, turn a mention of the
+#: option into its denial.
+_NEGATION_WORDS: Final[frozenset[str]] = frozenset(
+    {
+        "not", "no", "never", "neither", "nor", "cannot", "can't", "cant",
+        "isn't", "isnt", "doesn't", "doesnt", "don't", "dont", "won't", "wont",
+    }
+)
+
+
 def _parse_guard_choice(raw: str, options: Sequence[str]) -> str | None:
     """Deterministic, exact-match-or-whole-token parse. Never a fuzzy score
     (production-standards.md's AI answer grounding gate applies the same
@@ -195,14 +205,21 @@ def _parse_guard_choice(raw: str, options: Sequence[str]) -> str | None:
     for opt in options:
         if text == opt:
             return opt
-    named = {
-        opt
+    found = {
+        opt: match
         for opt in options
-        if re.search(rf"(?<![\w-]){re.escape(opt)}(?![\w-])", text) is not None
+        if (match := re.search(rf"(?<![\w-]){re.escape(opt)}(?![\w-])", text)) is not None
     }
-    if len(named) == 1:
-        return named.pop()
-    return None
+    if len(found) != 1:
+        return None
+    ((opt, match),) = found.items()
+    # "This is not off_topic." names one option and means the other (fix
+    # round, F-8.2-J08). A negation in the three words before the option
+    # makes the reply ambiguous, and an ambiguous reply is no usable pick.
+    preceding = re.findall(r"[\w']+", text[: match.start()].lower())[-3:]
+    if _NEGATION_WORDS.intersection(preceding):
+        return None
+    return opt
 
 
 async def _run_guard_pick(

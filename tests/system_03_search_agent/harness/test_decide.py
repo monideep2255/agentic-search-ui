@@ -426,12 +426,23 @@ async def test_no_description_keeps_the_original_guard_prompt(
         ('{"is_off_topic": false}', None),
         # Two options named is ambiguous, whichever is listed first.
         ("not off_topic, on_topic", None),
+        # F-8.2-J08: a negated option is a denial, not a pick.
+        ("This is not off_topic.", None),
+        ("not off_topic", None),
+        ("It isn't on_topic", None),
+        ("The question is clearly off_topic, nothing else.", "off_topic"),
         ("", None),
         ("ok", None),
     ],
 )
 def test_guard_reply_parse_is_whole_token_and_unambiguous(reply: str, expected: str | None) -> None:
     assert decide_module._parse_guard_choice(reply, ["on_topic", "off_topic"]) == expected
+
+
+def test_a_negated_literature_option_is_no_pick_but_the_option_named_not_is_one() -> None:
+    options = ["wants_literature", "not_literature"]
+    assert decide_module._parse_guard_choice("It does not wants_literature", options) is None
+    assert decide_module._parse_guard_choice("Answer: not_literature", options) == "not_literature"
 
 
 # ---------------------------------------------------------------------------
