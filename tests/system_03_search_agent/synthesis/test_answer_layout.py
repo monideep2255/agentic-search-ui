@@ -644,6 +644,42 @@ def test_12_9_a_plain_label_is_a_title_and_never_a_code() -> None:
     )
 
 
+# ---------------------------------------------------------------- card 32
+
+
+def test_the_variant_to_disease_table_names_its_two_sources() -> None:
+    """Card 32 (2026-09-25): the note is pinned, code-built and shown only
+    under the "Variant-to-disease mapping" table."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        VARIANT_TO_DISEASE_SOURCE_NOTE,
+        variant_to_disease_source_note,
+    )
+
+    assert VARIANT_TO_DISEASE_SOURCE_NOTE == (
+        "Variant-to-disease links are ClinVar assertions, each cited to its "
+        "variation record. Disease names are MedGen titles read live from NCBI."
+    )
+    assert variant_to_disease_source_note("SequenceVariant", True) == VARIANT_TO_DISEASE_SOURCE_NOTE
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "mapped"),
+    [
+        ("SequenceVariant", False),  # a variant list with no mapping table shown
+        ("Gene", True),  # the gene-to-disease table, a different pairing
+        ("Clinical trial", True),
+        ("Pathogen Detection isolate", True),
+        ("", False),
+    ],
+)
+def test_the_variant_to_disease_note_is_silent_off_its_own_table(
+    entity_type: str, mapped: bool
+) -> None:
+    from system_03_search_agent.synthesis.answer_layout import variant_to_disease_source_note
+
+    assert variant_to_disease_source_note(entity_type, mapped) is None
+
+
 # ---------------------------------------------------------------------------
 # Card 95 (2026-10-05): a token carries at most 20 marker ids, so a lead
 # sentence writing 35 markers showed 21 to 35 as raw bracketed text. Red on

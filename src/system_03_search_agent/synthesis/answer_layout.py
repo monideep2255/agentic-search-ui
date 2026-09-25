@@ -314,6 +314,38 @@ TABLE_HEADINGS: dict[str, str] = {
 }
 
 
+# Card 32 (2026-09-25, product owner): "The variant-to-disease table says
+# where it comes from." Pinned wording, exact, code-built and never
+# model-written: the reader is told which two systems produced the two
+# columns they are looking at, ClinVar for the variant-disease link and
+# MedGen for the disease's own name.
+VARIANT_TO_DISEASE_SOURCE_NOTE = (
+    "Variant-to-disease links are ClinVar assertions, each cited to its "
+    "variation record. Disease names are MedGen titles read live from NCBI."
+)
+
+
+def variant_to_disease_source_note(entity_type: str, mapped: bool) -> str | None:
+    """The provenance note under the variant-to-disease mapping table, or
+    None whenever that specific table is not the one on the page.
+
+    `entity_type` is the anchor row type the table was built for and
+    `mapped` is the same "does this group actually render as a mapping
+    table" flag the caller already computes before choosing between
+    `TABLE_HEADINGS[entity_type]` and the generic "records found" heading
+    (`core.graph`'s `mapped` local, built from `TABLE_COLUMNS` membership
+    and the second column actually carrying a value). Only
+    `entity_type == "SequenceVariant"` with `mapped` true is the
+    "Variant-to-disease mapping" table itself: the gene-to-disease table,
+    the trial table, the isolate table and a plain variant list all pass a
+    different value here and get None, so the note only ever sits under the
+    one table it describes.
+    """
+    if entity_type != "SequenceVariant" or not mapped:
+        return None
+    return VARIANT_TO_DISEASE_SOURCE_NOTE
+
+
 # ---------------------------------------------------------------------------
 # Item 12.9 (2026-09-23): what each depth's reader is shown.
 # ---------------------------------------------------------------------------
