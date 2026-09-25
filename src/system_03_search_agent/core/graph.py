@@ -454,6 +454,7 @@ import re
 import secrets
 import time
 import uuid
+import weakref
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -465,6 +466,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from system_03_search_agent.contracts.events import (
     CitationPayload,
+    DecisionRecord,
     DonePayload,
     ErrorPayload,
     Event,
@@ -499,7 +501,7 @@ from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
-from system_03_search_agent.guardrail.verdict import GuardVerdict
+from system_03_search_agent.guardrail.verdict import GuardVerdict, refused
 from system_03_search_agent.harness import call_budget, cost_control
 from system_03_search_agent.harness.cache import REGISTERED_TOOL_SCHEMAS, build_stable_prefix
 from system_03_search_agent.harness.coordinator_worker import (
@@ -507,6 +509,7 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
+from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -861,6 +864,307 @@ def _elapsed_ms(state: GraphState) -> int:
 
 
 # ---------------------------------------------------------------------------
+# The classifier seam, wired (build phase 8.2 wave 2, builder J; DECISIONS.md
+# 2026-09-25, cards 3, 4, 5, 8 and 9).
+#
+# The loop's small closed choices are made by `harness.decide`, never by a
+# word list: Jev decides when CLASSIFIER_PROVIDER=jev, the guard tier decides
+# the same question beside it and is recorded, and any Jev failure falls back
+# to the guard's pick. Code only verifies what a classifier decided.
+#
+# Each point below carries a FIXED, code-authored description of what is
+# being decided: one instruction line and one criterion per option. Both
+# models receive it; the person's words go in `state` and nowhere else.
+# Measured before the descriptions existed (builder J, F-J-03), the models
+# saw only option names and Jev admitted "what is the best pizza in Chicago"
+# as on topic. No test question and no answer text appears in any of them
+# (the product owner's standing rule), and none of them is in the Think,
+# Plan or Write stable prefix: `decide` builds its own messages.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _DecisionSpec:
+    """One decision point: its name, its closed options, its description,
+    and `fail_open`, the option the loop acts on when no model makes a pick.
+
+    `fail_open` is passed to `decide` as its `default`, so a decision nobody
+    made is recorded as what the run actually did (F-8.2-J13), never as the
+    first option. Every caller reads the pick through `_usable_choice`,
+    which still treats "no model picked" as no decision at all.
+    """
+
+    point: str
+    options: tuple[str, ...]
+    instructions: str
+    criteria: Mapping[str, str]
+    fail_open: str
+
+
+_RELEVANCY: Final = _DecisionSpec(
+    point="guardrail.relevancy",
+    options=("on_topic", "off_topic"),
+    fail_open="on_topic",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. When the question is a follow-up, the state also gives the "
+        "previous question of the same conversation, and a word such as 'it' or "
+        "'that' in the new question may refer back to it. Decide whether the NEW "
+        "question's subject is biology, medicine, health or the life sciences."
+    ),
+    criteria={
+        "on_topic": (
+            "Its subject is biology, medicine, health, genetics, living organisms "
+            "or the scientific literature, in any language, including how a food, "
+            "substance, exposure or behaviour affects the body or health (a "
+            "research question about exercise, diet or nutrition is on topic), and "
+            "including a follow-up that asks more about the previous question's "
+            "biomedical subject."
+        ),
+        "off_topic": (
+            "Its subject is not biological or medical at all, for example sport, "
+            "finance, politics, travel, weather, entertainment, shopping or general "
+            "programming. A request to make a personal plan for the asker, such as "
+            "a workout plan, a meal plan or a diet plan, is off topic: it asks for "
+            "advice, not evidence. A follow-up that asks about something unrelated "
+            "to biology or medicine is off topic even when the previous question "
+            "was biomedical."
+        ),
+    },
+)
+
+_ASK_BACK: Final = _DecisionSpec(
+    point="think.ask_back",
+    options=("ask_back", "proceed"),
+    fail_open="proceed",
+    instructions=(
+        "The state is the whole of a short opening message a person typed into a "
+        "biomedical evidence search engine. Decide whether it already says what "
+        "the person wants to know, or only names a subject."
+    ),
+    criteria={
+        "ask_back": (
+            "It only names a subject, a bare noun or short phrase with no request "
+            "in it, so a search would have to guess which of several things the "
+            "person wants."
+        ),
+        "proceed": (
+            "It asks something or names the kind of answer wanted, such as a "
+            "definition, papers, trials, variants, symptoms or a cause, including "
+            "any message phrased as a question."
+        ),
+    },
+)
+
+_RECENT_YEARS: Final = _DecisionSpec(
+    point="think.recent_years",
+    options=("recent_unbounded", "not_applicable"),
+    fail_open="not_applicable",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. Decide whether it explicitly asks for recent, new or latest "
+        "publications or research without saying how recent."
+    ),
+    criteria={
+        "recent_unbounded": (
+            "It explicitly asks for recent, new or latest publications, papers, "
+            "studies or research, and gives no year, date, period or length of "
+            "time."
+        ),
+        "not_applicable": (
+            "Anything else. It does not ask for recent publications or research; "
+            "or it already gives a year, a date, a period named by an event, or a "
+            "length of time; or a word such as 'recent', 'current' or 'latest' "
+            "describes something other than publications, such as a disease of "
+            "recent onset, something a person did or had recently, or the current "
+            "status of a disease, treatment, guideline or trial, including current "
+            "or recruiting trials."
+        ),
+    },
+)
+
+_LITERATURE: Final = _DecisionSpec(
+    point="plan.literature",
+    options=("wants_literature", "not_literature"),
+    fail_open="not_literature",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine that holds gene, variant and disease records, clinical trial "
+        "registrations and the published literature. Decide whether the person "
+        "is asking specifically for published papers, or for what published "
+        "research says, rather than for the records the engine holds."
+    ),
+    criteria={
+        "wants_literature": (
+            "It explicitly asks for papers, articles, publications, preprints or "
+            "studies, or for what the published literature or research says or "
+            "shows, or whether something has been studied."
+        ),
+        "not_literature": (
+            "It asks for a fact, a definition, a gene, variant or disease record, "
+            "or clinical trials, or generally what is known about a gene, variant "
+            "or condition, without asking for papers or research."
+        ),
+    },
+)
+
+#: `DonePayload.decisions`' own `max_length`. A run makes at most four
+#: decisions today (relevancy, ask_back, recent_years, literature).
+_MAX_DONE_DECISIONS: Final[int] = 16
+
+
+@dataclasses.dataclass
+class _RunDecisions:
+    """Every decision one run made, and the one decision still in flight.
+
+    F-J-01: `GraphState` cannot carry this, since `core/state.py` declares
+    no such field and LangGraph drops an undeclared key a node returns,
+    silently. So it rides beside the run instead, keyed by the run's own
+    `Harness` (see `_RUN_DECISIONS`).
+    """
+
+    records: list[DecisionRecord] = dataclasses.field(default_factory=list)
+    #: `plan.literature`, started at Think so it runs alongside Think's own
+    #: classification call, and awaited by Plan, which is the step that
+    #: needs it. None until Think starts it, and None again once Plan has
+    #: read it into `literature_record`.
+    literature_task: asyncio.Task[DecisionRecord | None] | None = None
+    literature_record: DecisionRecord | None = None
+    #: True once the literature decision has been asked for this run, so
+    #: Plan never asks twice.
+    literature_asked: bool = False
+
+
+#: One entry per live run, keyed by the run's `Harness`. `core/run.py`
+#: builds a fresh `Harness` for every run and every node receives that same
+#: object through `state["harness"]`, so an entry lives exactly as long as
+#: its run and a weak key means it cannot outlive it: the leak a dict keyed
+#: by trace id would have (`harness/call_budget.py`'s module docstring
+#: records why that shape was rejected there too) is not possible.
+_RUN_DECISIONS: weakref.WeakKeyDictionary[Any, _RunDecisions] = weakref.WeakKeyDictionary()
+
+
+def _run_decisions(harness: Any) -> _RunDecisions:
+    """This run's decision record, created on first use.
+
+    A stand-in harness a test builds that cannot be a weak key gets a
+    throwaway record: its decisions are simply not carried to `done`.
+    """
+    try:
+        entry = _RUN_DECISIONS.get(harness)
+        if entry is None:
+            entry = _RunDecisions()
+            _RUN_DECISIONS[harness] = entry
+        return entry
+    except TypeError:
+        return _RunDecisions()
+
+
+def _done_decisions(harness: Any) -> list[DecisionRecord] | None:
+    """What `DonePayload.decisions` carries: every decision this run made."""
+    try:
+        entry = _RUN_DECISIONS.get(harness)
+    except TypeError:
+        return None
+    if entry is None or not entry.records:
+        return None
+    return list(entry.records[:_MAX_DONE_DECISIONS])
+
+
+async def _decide_point(
+    harness: Harness, trace_id: str, spec: _DecisionSpec, text: str
+) -> DecisionRecord | None:
+    """One decision through the seam, recorded for the `done` event.
+
+    None, never an exception, when the seam itself fails: every caller
+    treats that as "no decision" and fails open exactly as it would on a
+    decision with no usable pick (`_usable_choice`). `decide` already
+    bounds `text` to its own state limit before either model reads it.
+    """
+    try:
+        record = await decide(
+            harness,
+            trace_id,
+            spec.point,
+            text,
+            spec.options,
+            instructions=spec.instructions,
+            criteria=spec.criteria,
+            default=spec.fail_open,
+        )
+    except Exception as exc:  # noqa: BLE001 - a broken seam must never break the question
+        logger.warning(
+            "decision %s unavailable (trace %s): %s", spec.point, trace_id, type(exc).__name__
+        )
+        return None
+    _run_decisions(harness).records.append(record)
+    return record
+
+
+def _usable_choice(record: DecisionRecord | None) -> str | None:
+    """The decision's pick, or None when no model actually made one.
+
+    When neither Jev nor the guard produced a usable pick, `decide` fills
+    `chosen` with the spec's `fail_open` option and marks the record
+    "no_usable_pick" (fix round, F-8.2-A04 and J13; builder J's F-J-04
+    found the older record, which filled in the FIRST option and kept only
+    Jev's reason). "Was anything decided" is still read from the two picks
+    themselves, never from `chosen` alone, so a decision nobody made is
+    never acted on as if one had been.
+    """
+    if record is None:
+        return None
+    if record.jev_choice is None and record.guard_choice is None:
+        return None
+    return record.chosen
+
+
+def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
+    """Stop a decision nobody will read, so it spends nothing more."""
+    if task is not None and not task.done():
+        task.cancel()
+
+
+async def _literature_choice(
+    harness: Harness, trace_id: str, text: str, *, ask_if_missing: bool
+) -> str | None:
+    """`plan.literature`'s usable pick for this run, or None.
+
+    Think starts the decision (`think_node`), so by the time Plan reads it,
+    it has usually long finished: reading it costs no wait. With
+    `ask_if_missing`, a run whose Think never started it (Plan called on
+    its own) asks now instead. Read once per run, never asked twice.
+    """
+    entry = _run_decisions(harness)
+    if entry.literature_task is not None:
+        task, entry.literature_task = entry.literature_task, None
+        entry.literature_record = await task
+        entry.literature_asked = True
+    if not entry.literature_asked and ask_if_missing:
+        entry.literature_record = await _decide_point(harness, trace_id, _LITERATURE, text)
+        entry.literature_asked = True
+    return _usable_choice(entry.literature_record)
+
+
+def _drop_literature_decision(harness: Harness) -> None:
+    """Settle `plan.literature` without waiting for it.
+
+    A decision that has finished keeps its record (`_decide_point` already
+    put it on the run's list for the `done` event); one still running is
+    cancelled, since Plan has decided it does not need it. Never awaits.
+    """
+    entry = _run_decisions(harness)
+    task, entry.literature_task = entry.literature_task, None
+    if task is None:
+        return
+    entry.literature_asked = True
+    if task.done() and not task.cancelled():
+        entry.literature_record = task.result()
+    else:
+        task.cancel()
+
+
+# ---------------------------------------------------------------------------
 # guardrail: the two daily caps (once, here only), then tier="guard".
 # ---------------------------------------------------------------------------
 
@@ -931,6 +1235,36 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     prefilter_verdict = prefilter.screen(query.text)
     if prefilter_verdict is not None:
         return _decline_for_guardrail(state, sink, prefilter_verdict, charged=False)
+
+    # guardrail.relevancy (build phase 8.2, cards 8 and 9). The vocabulary
+    # allowlist may only ADMIT: a question that plainly names something
+    # biomedical skips this call, so it stays fast and free. Any other
+    # question is judged by the classifier, started NOW so it runs alongside
+    # the injection classifier below rather than after it: the person waits
+    # for one model call, not two. Only its "off_topic" refuses, below.
+    relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
+    if not prefilter.clears_biomedical_allowlist(query.text):
+        relevancy_task = asyncio.create_task(
+            _decide_point(harness, trace_id, _RELEVANCY, _relevancy_state(query.text, state))
+        )
+    try:
+        return await _guardrail_after_prefilter(state, sink, relevancy_task)
+    finally:
+        # Any path that ends the node before reading the relevancy decision
+        # (a refusal, a cap hit, a step error) stops it spending more.
+        _cancel_if_pending(relevancy_task)
+
+
+async def _guardrail_after_prefilter(
+    state: GraphState,
+    sink: _EventSink,
+    relevancy_task: asyncio.Task[DecisionRecord | None] | None,
+) -> dict[str, Any]:
+    """Section 10.1 steps 3 to 6, after the pre-filter, plus the relevancy
+    decision `guardrail_node` started (None when the allowlist admitted)."""
+    harness = state["harness"]
+    query = state["query"]
+    trace_id = query.trace_id
 
     # Step 3, Section 10.4. The first and only model call this node makes.
     # Dispatched through `_dispatch_tier_call` rather than calling the
@@ -1008,6 +1342,7 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
             }
         }
 
+    classifier_off_topic_set_aside = False
     if not classifier_verdict.admitted:
         if classifier_verdict.category == "off_topic" and _is_memory_bound_follow_up(
             query.text, state
@@ -1018,13 +1353,39 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
             # is set aside and the question continues to the forbidden
             # screen and to Think, where memory binds "it". Only an
             # off-topic verdict is ever set aside; an injection verdict is
-            # final.
+            # final. Build phase 8.2 fix round (F-8.2-A01): when the
+            # allowlist missed, the set-aside now also needs the relevancy
+            # decision below, which reads the previous question, to agree.
+            classifier_off_topic_set_aside = True
             logger.info(
                 "guard off-topic verdict set aside for a memory-bound follow-up "
                 "(trace %s)",
                 trace_id,
             )
         else:
+            return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
+
+    # The relevancy decision, when one was asked for (the allowlist missed).
+    # A real "off_topic" pick refuses, on a follow-up exactly as on a first
+    # question (F-8.2-A01): a follow-up's decision is given the previous
+    # question too (`_relevancy_state`), so "and what about it in children?"
+    # after a BRCA1 question is judged with BRCA1 in view, while "is it good
+    # pizza?" is judged as the pizza question it is. Before this fix, the
+    # referring word alone set aside both judges' off-topic verdicts, and
+    # almost any English sentence carries "it", "that" or "this".
+    #
+    # No usable pick fails open when the injection classifier admitted the
+    # question, since that classifier has already judged topicality too.
+    # When the classifier's own off-topic verdict was set aside above on the
+    # referring-word rule alone, nothing that saw the conversation has said
+    # the question is on topic, so that verdict stands.
+    if relevancy_task is not None:
+        relevancy = _usable_choice(await relevancy_task)
+        if relevancy == "off_topic":
+            return _decline_for_guardrail(
+                state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
+            )
+        if relevancy is None and classifier_off_topic_set_aside:
             return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.
@@ -1083,6 +1444,7 @@ def _decline_for_guardrail(
             elapsed_ms=_elapsed_ms(state),
             trust_outcome="refuse",
             layer_calls_used=call_budget.calls_made(),
+            decisions=_done_decisions(harness),
         ),
     )
     return sink.result(guard_refused=True)
@@ -2205,37 +2567,41 @@ async def resolve_window_genes(
 #: instruction, in their words: "Please do not hardcode! Hopefully not that
 #: dumb". The STRUCTURAL trigger this rule keeps is the owner's own number,
 #: stated under item 11.38: "Jev becomes our classfier -> 1-3 words ->
-#: clarification question or move forward". Whether to ask, and what to
-#: ask, is `core.clarify`'s classifier's decision, never a word list; see
-#: that module's docstring for the full account, including where Jev's own
-#: Bool question type slots into `ask_back` once it leaves the backlog.
+#: clarification question or move forward". Whether to ask is
+#: `decide(point="think.ask_back")`'s call (build phase 8.2, builder J) and
+#: what to ask is `core.clarify`'s writer's, never a word list; see that
+#: module's docstring for the full account.
 _MAX_CLARIFY_TRIGGER_WORDS: Final[int] = 3
 
-#: The classifier's own share of `budget_for_step("think", "lookup")`,
+#: The writing call's own share of `budget_for_step("think", "lookup")`,
 #: never the whole thing. It must leave room for the REAL think classify
-#: call that still runs afterward on an `ask_back=False` verdict or ANY
-#: classifier failure, both of which fall through to the ordinary flow
-#: below this block.
+#: call that still runs afterward on a `proceed` decision or ANY failure,
+#: both of which fall through to the ordinary flow below the ask-back block.
 _CLARIFY_BUDGET_FRACTION: Final[float] = 0.2
 
-#: A short classification needs no long completion. Comfortably above the
+#: A short reply needs no long completion. Comfortably above the
 #: JSON-escaped form of a 220-character question plus four 220-character
 #: options, with room for the fixed key names.
 _CLARIFY_MAX_TOKENS: Final[int] = 300
 
 
-async def _clarify_or_proceed(
+async def _write_clarify_choices(
     harness: Harness, trace_id: str, sink: _EventSink, text: str
-) -> clarify.ClarifyDecision | None:
-    """The guard-tier ask-or-proceed call, or None on ANY failure.
+) -> clarify.ClarifyChoices | None:
+    """The guard-tier call that WRITES the question and choices, or None on
+    ANY failure.
+
+    Runs at the same moment as `decide(point="think.ask_back")`, which
+    decides whether they are shown (build phase 8.2): Jev writes no text, so
+    the words stay with this call, and running the two together means the
+    person waits for one call, not two.
 
     None is the fail-open signal. The caller, `think_node`, proceeds with
-    the search on None exactly as it would if this function had never been
-    called, per the product owner's instruction that a broken or absent
-    classifier must never block a question that could otherwise be
-    answered: an unparseable reply, a wrong shape, a timeout
-    (`HarnessCallError`), or a per-query cap hit
-    (`cost_control.QueryCapExceededError`) all fall through here rather
+    the search on None exactly as it would if no question were asked, per
+    the product owner's instruction that a broken or absent classifier must
+    never block a question that could otherwise be answered: an unparseable
+    reply, a wrong shape, a timeout (`HarnessCallError`), or a per-query cap
+    hit (`cost_control.QueryCapExceededError`) all fall through here rather
     than being enumerated separately by the caller.
 
     The `cost` event is emitted the moment the call RETURNS, before any
@@ -2263,7 +2629,7 @@ async def _clarify_or_proceed(
         )
     except (cost_control.QueryCapExceededError, HarnessCallError) as exc:
         logger.warning(
-            "clarify classifier call failed (trace %s): %s",
+            "clarify writer call failed (trace %s): %s",
             trace_id,
             type(exc).__name__,
         )
@@ -2273,97 +2639,98 @@ async def _clarify_or_proceed(
         return clarify.parse_clarify_reply(response.content)
     except clarify.ClarifyUnavailableError as exc:
         logger.warning(
-            "clarify classifier reply unusable (trace %s): %s",
+            "clarify writer reply unusable (trace %s): %s",
             trace_id,
             type(exc).__name__,
         )
         return None
 
 
-async def think_node(state: GraphState) -> dict[str, Any]:
-    harness = state["harness"]
-    query = state["query"]
-    trace_id = query.trace_id
-    sink = _EventSink(trace_id, state["seq"])
+def _ask_back(sink: _EventSink, question: str, options: list[str], narrative: str) -> dict[str, Any]:
+    """End Think with a question back instead of a search.
 
-    # Fix-plan item 12.3, REDESIGNED 2026-09-24. Checked FIRST: before the
-    # exact-ID pre-pass below, before any resolver, and before the Think
-    # classification call further down, so a question the classifier asks
-    # back never pays for either. Gated on `_session_memory(state) is
-    # None`, i.e. this question OPENS the conversation: `load_for_caller`
-    # returns None for exactly "a session that has no memory yet, which is
-    # the ordinary first turn", so a follow-up such as "and BRCA2?" never
-    # reaches the classifier at all, since memory already supplies its
-    # subject (docs/build/Search_and_conversation_behaviour.md). The word
-    # count is the product owner's own trigger from item 11.38 ("1-3
-    # words"), a plain whitespace split with no punctuation stripping and
-    # no word list: everything past the trigger is `core.clarify`'s model
-    # decision, never code.
-    if _session_memory(state) is None:
-        trigger_words = query.text.strip().split()
-        if trigger_words and len(trigger_words) <= _MAX_CLARIFY_TRIGGER_WORDS:
-            decision = await _clarify_or_proceed(harness, trace_id, sink, query.text)
-            if decision is not None and decision.ask_back:
-                think_payload = ThinkPayload(
-                    narrative=(
-                        "the clarify classifier read a one-to-three-word "
-                        "opening question and decided it names a subject "
-                        "rather than a request, so the answer asks which "
-                        "aspect is meant before any search"
-                    ),
-                    query_class="lookup",
-                    resolved_entities=[],
-                    clarifying_question=decision.question,
-                    clarifying_options=list(decision.options),
-                )
-                sink.emit("think", think_payload)
-                return sink.result(
-                    query_class="lookup",
-                    resolved_entities=[],
-                    clarification_needed=decision.question,
-                )
-
-    # T-4.7-05, Section 17's exact-ID-first order: a deterministic, LOCAL,
-    # non-async pre-pass runs FIRST, before any model call. Only text NOT
-    # resolved by this pass is ever named to the model (see
-    # `_build_think_messages`'s `already_resolved` block).
-    exact_matches = resolve_exact_identifiers(query.text)
-    # Fix-plan item 1 (2026-09-22): a chromosome window in the question is
-    # recognised by a fixed rule beside the exact-identifier pre-pass, which
-    # stays local and synchronous as its gate arm requires; the window's own
-    # live lookup is this separate awaited step. With GRCh38 named, the genes
-    # under the window become resolved entities below, so the rest of the
-    # turn treats the question as a gene question. With no assembly named,
-    # nothing is searched and the turn asks which assembly, since GRCh37 and
-    # GRCh38 put different genes under the same numbers.
-    window = coordinate_window.parse_coordinate_window(query.text)
-    window_genes: coordinate_window.WindowGenes | None = None
-    if window is not None and window.assembly == "GRCh38":
-        window_genes = await resolve_window_genes(window)
-    # Fix-plan item 2 (2026-09-22): an NCBI accession in the question (a
-    # BioProject, BioSample, SRA or assembly identifier) is recognised by a
-    # fixed rule and resolved live, with the records it links to, so Plan
-    # can plan their summaries; the graph holds no such records, so no
-    # graph call is made for it. A window wins when both appear.
-    accession_plan: _AccessionPlan | None = None
-    if window is None:
-        found_accession = accession.parse_accession(query.text)
-        if found_accession is not None:
-            accession_plan = await resolve_accession(found_accession)
-    # Golden question G-035 (2026-09-22): a Pathogen Detection isolate
-    # question names an organism and a resistance gene family, which no
-    # resolver here recognised, so it reached Plan with nothing to bind. A
-    # fixed rule recognises it, the organism resolves to its Taxonomy id
-    # from a live-verified table with no call at all, and Plan plans the
-    # isolate search and the organism's Taxonomy record, no graph call. A
-    # window or an accession wins when both appear.
-    isolate_question: isolate_search.IsolateQuestion | None = None
-    if window is None and accession_plan is None:
-        isolate_question = isolate_search.parse_isolate_question(query.text)
-    think_messages = _build_think_messages(
-        query.text, exact_matches, _memory_suffix(state, "plan")
+    Item 7.5's machinery, reused: `clarification_needed` makes Plan select
+    no tool and Write publish the question, and the options reach the
+    person as chips they can click to ask one of them.
+    """
+    sink.emit(
+        "think",
+        ThinkPayload(
+            narrative=narrative,
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question=question,
+            clarifying_options=options,
+        ),
+    )
+    return sink.result(
+        query_class="lookup",
+        resolved_entities=[],
+        clarification_needed=question,
     )
 
+
+#: What the Think event says when the person is asked how recent.
+_RECENT_WINDOW_NARRATIVE: Final[str] = (
+    "the recent-work classifier read a request for recent work that says "
+    "no year or length of time, so the answer asks how far back to search "
+    "before any search"
+)
+
+
+def _asks_for_unbounded_recent_work(record: DecisionRecord | None, text: str) -> bool:
+    """Whether to ask how recent: the classifier's `recent_unbounded`,
+    verified by code against the one thing code may read.
+
+    A question that states its own range ("since 2022", "the last 5
+    years") is never asked again, whatever the classifier said. Its search
+    is NOT limited by that range either (fix round, F-8.2-A07, J01): only a
+    window the person picked in this ask-back limits a search. No usable
+    pick asks nothing, the fail-open rule every Think decision keeps.
+    """
+    if _usable_choice(record) != "recent_unbounded":
+        return False
+    if breadth_plan.states_publication_range(text):
+        logger.info(
+            "recent_years said unbounded but the question states a range; not asking"
+        )
+        return False
+    return True
+
+
+def _offer_key(query: Any) -> str:
+    """Whose "How far back" choices these are: the caller and the session,
+    so one person's click can never pick up another's offered window."""
+    return f"{query.owner_id or ''}\x1f{query.session_id}"
+
+
+def _picked_publication_window(query: Any) -> breadth_plan.PublicationWindow | None:
+    """The publication-date limit for this question, or None.
+
+    Only a window the person PICKED limits a search (fix round, F-8.2-A07
+    and F-8.2-J01): this question must be exactly one of the "How far back
+    should I search?" options this session was offered, and the window is
+    that option's stored value (`core.clarify.picked_recent_window`), never
+    a range read out of the words. "Stroke in the last month of pregnancy"
+    and "statin trials in 2000 patients" are searched without a limit.
+    """
+    picked = clarify.picked_recent_window(_offer_key(query), query.text)
+    if picked is None:
+        return None
+    return breadth_plan.recent_publication_window(picked.months, picked.phrase)
+
+
+async def _run_think_classification(
+    harness: Harness, trace_id: str, think_messages: list[Message]
+) -> _ThinkClassification | dict[str, Any]:
+    """Think's own classification call, with its one retry.
+
+    Moved verbatim out of `think_node` (build phase 8.2, builder J) so it
+    can run as a task beside the `think.recent_years` decision: the
+    person waits for whichever is slower, not for both in turn. Returns
+    the classification, or the node's early-exit state (`cap_exceeded`
+    or `step_error`) exactly as `think_node` used to return it inline.
+    """
     # Product-owner decision, 2026-09-12: about 1 search in 7 on develop
     # ended with "the plan tier did not return valid JSON for query
     # classification", and nothing recorded what the model had sent. So an
@@ -2475,6 +2842,191 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 "retry_after_s": 0,
             }
         }
+
+    return classification
+
+
+async def think_node(state: GraphState) -> dict[str, Any]:
+    """The Think step (Section 3.2), and where its own decisions start.
+
+    Build phase 8.2: `decide(point="think.recent_years")` and
+    `decide(point="plan.literature")` both start the moment the node does,
+    so they overlap everything Think does before either is needed: the
+    person waits for one decision, not three (card 6). Recent-years is read
+    here; the literature decision is Plan's, handed over still running
+    (`_RunDecisions.literature_task`). Any path out of this node that ends
+    the search, a question asked back, a cap hit, a step error, cancels
+    whatever is still in flight rather than letting it spend on.
+    """
+    harness = state["harness"]
+    query = state["query"]
+    small_talk = _is_small_talk(query.text)
+    # A question that IS a picked "How far back" option has already said
+    # how recent, so the recent-work decision is not asked for it at all.
+    recent_already_picked = _picked_publication_window(query) is not None
+    recent_task: asyncio.Task[DecisionRecord | None] = asyncio.create_task(
+        _no_decision()
+        if small_talk or recent_already_picked
+        else _decide_point(harness, query.trace_id, _RECENT_YEARS, query.text)
+    )
+    decisions = _run_decisions(harness)
+    if not small_talk and not decisions.literature_asked:
+        decisions.literature_task = asyncio.create_task(
+            _decide_point(harness, query.trace_id, _LITERATURE, query.text)
+        )
+    result: dict[str, Any] | None = None
+    try:
+        result = await _think(state, recent_task)
+        return result
+    finally:
+        _cancel_if_pending(recent_task)
+        if result is None or not _search_goes_ahead(result):
+            _cancel_if_pending(decisions.literature_task)
+            decisions.literature_task = None
+
+
+def _search_goes_ahead(think_result: dict[str, Any]) -> bool:
+    """Whether Think handed the question on to be searched, which is the
+    only case Plan will read the literature decision."""
+    return not (
+        think_result.get("cap_exceeded")
+        or think_result.get("step_error")
+        or think_result.get("clarification_needed")
+    )
+
+
+def _is_small_talk(text: str) -> bool:
+    """A greeting or a question about the product (`_NO_TOOL_QUERY_TEXTS`),
+    which plans no search, so no decision about a search is asked for it."""
+    return text.strip().lower() in _NO_TOOL_QUERY_TEXTS
+
+
+async def _no_decision() -> DecisionRecord | None:
+    """The decision a question that plans no search never needs."""
+    return None
+
+
+async def _think(
+    state: GraphState, recent_task: asyncio.Task[DecisionRecord | None]
+) -> dict[str, Any]:
+    harness = state["harness"]
+    query = state["query"]
+    trace_id = query.trace_id
+    sink = _EventSink(trace_id, state["seq"])
+
+    # Fix-plan item 12.3, REDESIGNED 2026-09-24, and routed through the
+    # classifier seam on 2026-09-25 (build phase 8.2, card 9). Checked
+    # FIRST: before the exact-ID pre-pass below, before any resolver, and
+    # before the Think classification call further down, so a question
+    # asked back never pays for either. Gated on `_session_memory(state) is
+    # None`, i.e. this question OPENS the conversation: `load_for_caller`
+    # returns None for exactly "a session that has no memory yet, which is
+    # the ordinary first turn", so a follow-up such as "and BRCA2?" never
+    # reaches the classifier at all, since memory already supplies its
+    # subject (docs/build/Search_and_conversation_behaviour.md). The word
+    # count is the product owner's own trigger from item 11.38 ("1-3
+    # words"), a plain whitespace split with no punctuation stripping and
+    # no word list. Past the trigger, `decide(point="think.ask_back")`
+    # decides whether to ask and `core.clarify`'s writer writes what to
+    # ask, both at the same moment. Only a real `ask_back` pick WITH usable
+    # choices asks back; anything else searches, the fail-open rule.
+    if _session_memory(state) is None:
+        trigger_words = query.text.strip().split()
+        if trigger_words and len(trigger_words) <= _MAX_CLARIFY_TRIGGER_WORDS:
+            # The recent_years decision is gathered here too, so all three
+            # of Think's opening calls overlap (card 6).
+            ask_record, choices, _ = await asyncio.gather(
+                _decide_point(harness, trace_id, _ASK_BACK, query.text),
+                _write_clarify_choices(harness, trace_id, sink, query.text),
+                recent_task,
+            )
+            if _usable_choice(ask_record) == "ask_back":
+                if choices is not None:
+                    return _ask_back(
+                        sink,
+                        choices.question,
+                        list(choices.options),
+                        narrative=(
+                            "the ask-back classifier read a one-to-three-word "
+                            "opening question and decided it names a subject "
+                            "rather than a request, so the answer asks which "
+                            "aspect is meant before any search"
+                        ),
+                    )
+                logger.warning(
+                    "ask_back decided but the choices could not be written "
+                    "(trace %s); searching instead",
+                    trace_id,
+                )
+
+    # T-4.7-05, Section 17's exact-ID-first order: a deterministic, LOCAL,
+    # non-async pre-pass runs FIRST, before any model call. Only text NOT
+    # resolved by this pass is ever named to the model (see
+    # `_build_think_messages`'s `already_resolved` block).
+    exact_matches = resolve_exact_identifiers(query.text)
+    # Fix-plan item 1 (2026-09-22): a chromosome window in the question is
+    # recognised by a fixed rule beside the exact-identifier pre-pass, which
+    # stays local and synchronous as its gate arm requires; the window's own
+    # live lookup is this separate awaited step. With GRCh38 named, the genes
+    # under the window become resolved entities below, so the rest of the
+    # turn treats the question as a gene question. With no assembly named,
+    # nothing is searched and the turn asks which assembly, since GRCh37 and
+    # GRCh38 put different genes under the same numbers.
+    window = coordinate_window.parse_coordinate_window(query.text)
+    window_genes: coordinate_window.WindowGenes | None = None
+    if window is not None and window.assembly == "GRCh38":
+        window_genes = await resolve_window_genes(window)
+    # Fix-plan item 2 (2026-09-22): an NCBI accession in the question (a
+    # BioProject, BioSample, SRA or assembly identifier) is recognised by a
+    # fixed rule and resolved live, with the records it links to, so Plan
+    # can plan their summaries; the graph holds no such records, so no
+    # graph call is made for it. A window wins when both appear.
+    accession_plan: _AccessionPlan | None = None
+    if window is None:
+        found_accession = accession.parse_accession(query.text)
+        if found_accession is not None:
+            accession_plan = await resolve_accession(found_accession)
+    # Golden question G-035 (2026-09-22): a Pathogen Detection isolate
+    # question names an organism and a resistance gene family, which no
+    # resolver here recognised, so it reached Plan with nothing to bind. A
+    # fixed rule recognises it, the organism resolves to its Taxonomy id
+    # from a live-verified table with no call at all, and Plan plans the
+    # isolate search and the organism's Taxonomy record, no graph call. A
+    # window or an accession wins when both appear.
+    isolate_question: isolate_search.IsolateQuestion | None = None
+    if window is None and accession_plan is None:
+        isolate_question = isolate_search.parse_isolate_question(query.text)
+    think_messages = _build_think_messages(
+        query.text, exact_matches, _memory_suffix(state, "plan")
+    )
+
+    # think.recent_years (build phase 8.2, card 4, item 12.15). The
+    # decision started when this node did; Think's own classification
+    # starts now beside it, so a question that is answered waits for the
+    # slower of the two, never for both in turn. When the classifier says
+    # the question asks for recent work WITHOUT saying how recent, and the
+    # question states no range either, the person is asked which range,
+    # and the classification still in flight is cancelled unread.
+    classify_task = asyncio.create_task(
+        _run_think_classification(harness, trace_id, think_messages)
+    )
+    try:
+        if _asks_for_unbounded_recent_work(await recent_task, query.text):
+            # Remembered against this session, so the option the person
+            # clicks carries its window as a value (F-8.2-A07, J01).
+            choices = clarify.offer_recent_windows(_offer_key(query), query.text)
+            return _ask_back(
+                sink,
+                choices.question,
+                list(choices.options),
+                narrative=_RECENT_WINDOW_NARRATIVE,
+            )
+        outcome = await classify_task
+    finally:
+        _cancel_if_pending(classify_task)
+    if isinstance(outcome, dict):
+        return outcome
+    classification = outcome
 
     # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
     if (
@@ -3396,6 +3948,7 @@ def _build_breadth_calls(
     datasets: bool = False,
     disease_title: str | None = None,
     disease_curie: str | None = None,
+    window: breadth_plan.PublicationWindow | None = None,
 ) -> list[Any]:
     """UI fix 11.21 wiring (2026-09-20): the breadth fan-out for one gene,
     and, since fix-plan item 12.1 (2026-09-23), for one disease.
@@ -3444,12 +3997,19 @@ def _build_breadth_calls(
     calls, only on a question that asks for datasets, so a gene question
     that measured 14 to 16 of its 20 allowed Layer 2 and 3 calls reaches
     at most 18.
+
+    `window` (build phase 8.2, card 4) is the publication range the person
+    picked in the "How far back should I search?" ask-back
+    (`_picked_publication_window`); it limits the PubMed search to those
+    years and nothing else.
     """
     title = None if gene_symbol else disease_title
     if not gene_symbol and not title:
         return []
     try:
-        first_stage = breadth_plan.plan_first_stage(gene_symbol, title, datasets=datasets)
+        first_stage = breadth_plan.plan_first_stage(
+            gene_symbol, title, datasets=datasets, window=window
+        )
     except (TypeError, ValueError):
         return []
     calls: list[Any] = []
@@ -4509,6 +5069,40 @@ def _is_memory_bound_follow_up(text: str, state: GraphState) -> bool:
     return bool(tokens & _REFERRING_WORDS)
 
 
+def _relevancy_state(text: str, state: GraphState) -> str:
+    """What `guardrail.relevancy` reads: the question, and for a follow-up
+    the previous question it points back at.
+
+    Build phase 8.2 fix round, F-8.2-A01. A follow-up ("and what about it in
+    children?") names no subject of its own, so judged alone it reads as off
+    topic; the old answer was to set the verdict aside whenever the text held
+    a referring word, which also admitted "is it good pizza?". Handing the
+    decision the previous question instead lets the classifier judge the
+    follow-up the way a person would, and its "off_topic" then refuses a
+    follow-up exactly as it refuses a first question.
+
+    A first question, or one with no referring word, is judged on its own
+    text alone, byte for byte what the decision read before this fix. The
+    previous question is the person's own earlier words, already bounded to
+    200 characters by the memory contract (`MAX_OPEN_THREAD_LENGTH`), and
+    `decide` caps the whole state again; nothing retrieved and nothing
+    written by a model enters it. When the stored memory predates open
+    threads, the most recently resolved entity's mention stands in.
+    """
+    if not _is_memory_bound_follow_up(text, state):
+        return text
+    memory = _session_memory(state)
+    if memory is None:
+        return text
+    if memory.open_threads:
+        previous = memory.open_threads[-1]
+    elif memory.resolved_entities:
+        previous = memory.resolved_entities[-1].mention
+    else:
+        return text
+    return f"Previous question in this conversation: {previous}\nNew question: {text}"
+
+
 #: What the answer says when a follow-up points at nothing. Under
 #: `ThinkPayload.clarifying_question`'s 500-character bound.
 CLARIFICATION_QUESTION: Final = (
@@ -4559,8 +5153,10 @@ def _memory_suffix(state: GraphState, tier: Tier) -> str:
     call sites are Think and Plan by construction. The guardrail never
     receives this block: it reads memory only through
     `_is_memory_bound_follow_up`, a deterministic rule applied after its
-    verdict (UI fix set 7, item 7.1, 2026-09-13). It exists as the single
-    declaration those call sites are checked against.
+    verdict (UI fix set 7, item 7.1, 2026-09-13), and `_relevancy_state`,
+    which hands the relevancy decision a follow-up's previous question
+    (build phase 8.2 fix round). It exists as the single declaration those
+    call sites are checked against.
 
     ## What this block does and does not do today (F-4.5-A-09)
 
@@ -4729,13 +5325,19 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     if state.get("clarification_needed"):
         # Item 7.5: Think found a reference with nothing to bind to. There
         # is nothing to look up until the reader says which, so no tool and
-        # no model call; Write asks the question.
+        # no model call; Write asks the question. The same early return
+        # serves item 12.3's ask-back and the "How far back should I
+        # search?" ask, which are not about an unresolved reference, so
+        # they say what actually happened (fix round, F-8.2-J14).
+        unresolved_reference = state.get("clarification_needed") == CLARIFICATION_QUESTION
         sink.emit(
             "plan",
             PlanPayload(
                 narrative=(
                     "no tool selected; the question refers to something no "
                     "earlier turn resolved, so the answer asks which"
+                    if unresolved_reference
+                    else "no tool selected; the answer asks a question back before any search"
                 ),
                 tool_calls=[],
             ),
@@ -4809,6 +5411,20 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     }
     unresolved_symbols: list[str] = state.get("unresolved_entity_symbols") or []
 
+    # Build phase 8.2, card 4: the publication range the person PICKED after
+    # `think.recent_years` asked them how recent, applied to every PubMed
+    # search this plan makes. Never a range read from the question's words
+    # (fix round, F-8.2-A07, J01): see `_picked_publication_window`.
+    publication_window = _picked_publication_window(query)
+
+    # Build phase 8.2, card 3: the literature decision Think started. Read
+    # below only where it can change the plan, a question with no gene
+    # resolved; otherwise `_drop_literature_decision` keeps a finished
+    # record and stops a running one. Until the fix round (F-8.2-J11) it was
+    # awaited here on every question, so a plain gene question could stall
+    # at Plan for up to the guard's budget on a decision it never used.
+    literature_choice: str | None = None
+
     # Fix-plan item 2 (2026-09-22): an accession question plans NCBI record
     # summaries and no graph call, since the graph holds no projects,
     # samples, runs or assemblies; see the `planned is None` branch below.
@@ -4845,10 +5461,17 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # exercise got two MedGen records about caffeine intoxication.
     #
     # The cause is a model sample and cannot be made deterministic. The
-    # CONSEQUENCE can: when the question names the published literature and
-    # no gene resolved, the literature search is what runs. `breadth_plan.
-    # asks_for_published_literature` reads only the typed text, so the path
-    # is a fixed function of the question.
+    # CONSEQUENCE can: when the question asks for the published literature
+    # and no gene resolved, the literature search is what runs.
+    #
+    # WHO DECIDES "asks for the published literature" (build phase 8.2,
+    # card 3, item 12.16 part 3): `decide(point="plan.literature")`, a
+    # classifier, never the word list (`paper`, `papers`, `literature` and
+    # seven more) that decided it until 2026-09-25. A question the list did
+    # not happen to cover was treated as not wanting papers. It is asked
+    # only when it can change the plan, here, with no gene resolved; Think
+    # started it, so reading it costs no wait. No usable pick counts as
+    # not asking for papers, which is what this path did before it existed.
     #
     # `target_curies` is THINK'S OWN list, deliberately, not
     # `planned.cypher_input.target_entities`: the latter carries a
@@ -4856,8 +5479,14 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # stop a new question about papers reaching the papers.
     topic_term: str | None = None
     if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
-        asks_for_literature = breadth_plan.asks_for_published_literature(query.text)
         gene_resolved = _first_gene_curie(target_curies) is not None
+        asks_for_literature = False
+        if not gene_resolved:
+            if literature_choice is None:
+                literature_choice = await _literature_choice(
+                    harness, trace_id, query.text, ask_if_missing=True
+                )
+            asks_for_literature = literature_choice == "wants_literature"
         if not gene_resolved and (asks_for_literature or not target_curies):
             topic_term = breadth_plan.build_topic_term(query.text)
         # SESSION MEMORY BOUND AN ANTECEDENT, and which of the two wins
@@ -4899,6 +5528,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             )
         ):
             topic_term = None
+    # Whatever this plan did not need the literature decision for (a gene
+    # resolved, an accession, a window), it is not waited for: a decision
+    # already made is kept for the `done` event, one still running is
+    # stopped (fix round, F-8.2-J11).
+    _drop_literature_decision(harness)
 
     if isinstance(planned, _UnresolvedEntityRefusal):
         # T-3.1-13/F-2.1-B10: refuse now, before act_node ever dispatches
@@ -4969,7 +5603,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # `isinstance`, not by position.
         planned_tool_calls = [
             _planned_from_breadth(call)
-            for call in breadth_plan.plan_topic_search(query.text)
+            for call in breadth_plan.plan_topic_search(query.text, window=publication_window)
         ]
         # The abstract fetch and the PubTator3 annotation, keyed off the
         # `pubmed_search` purpose exactly as they are for a gene or a
@@ -4995,8 +5629,15 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             else "no gene, variant or disease was named, so searching the "
             "published literature"
         )
+        # The picked range is named in the reader's own words, so they can
+        # see the limit they chose was applied (build phase 8.2, card 4).
+        published = (
+            f", published in {publication_window.label}" if publication_window is not None else ""
+        )
         plan_payload = PlanPayload(
-            narrative=(f"{why} for: " + ", ".join(topic_term.split(" AND ")))[:500],
+            narrative=(
+                f"{why} for: " + ", ".join(topic_term.split(" AND ")) + published
+            )[:500],
             tool_calls=[p.tool_call for p in planned_tool_calls],
         )
     else:
@@ -5077,6 +5718,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
                 datasets=breadth_plan.wants_dataset_search(query.text),
                 disease_title=disease_text,
                 disease_curie=disease_curie,
+                window=publication_window,
             )
         )
 
@@ -5123,6 +5765,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             # exists. The words are the MedGen record's own, so the
             # narrative cannot name a disease the question did not resolve.
             narrative = f"searching {len(by_layer)} layers for {disease_text}. " + narrative
+        if publication_window is not None and (gene_curie is not None or disease_text):
+            # The picked range limits the PubMed search on this path too, so
+            # the narrative says so (F-8.2-J01 found it silent here).
+            narrative += f"; PubMed papers published in {publication_window.label} only"
         narrative = narrative[:500]
 
         plan_payload = PlanPayload(
@@ -9964,6 +10610,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -10002,6 +10649,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -10060,6 +10708,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -10310,6 +10959,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 elapsed_ms=elapsed_ms,
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
+                decisions=_done_decisions(harness),
             ),
         )
         return sink.result()
@@ -11206,6 +11856,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 if next_step_offer is not None
                 else None
             ),
+            decisions=_done_decisions(harness),
         ),
     )
     return sink.result()
@@ -11226,6 +11877,7 @@ def _partial_result_for_cap(
             elapsed_ms=elapsed_ms,
             trust_outcome="flag",
             layer_calls_used=call_budget.calls_made(),
+            decisions=_done_decisions(harness),
         ),
     )
     return sink.result()

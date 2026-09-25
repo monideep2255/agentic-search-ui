@@ -361,6 +361,25 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     return mock_acompletion
 
 
+#: How every `harness.decide` guard-tier call's system message begins
+#: (`harness/decide.py`'s `_build_guard_messages`). Build phase 8.2 wires
+#: decisions into the loop, and each one is a guard-tier call of its own,
+#: so this file's exact counts of the LOOP's node-level calls exclude them
+#: and `test_decision_calls_are_separate_and_carry_no_stable_prefix` pins
+#: them on their own.
+_DECISION_SYSTEM_PREFIX = "Answer with exactly one of the offered options and nothing else."
+
+
+def _is_decision_call(call: object) -> bool:
+    first = call.kwargs["messages"][0]  # type: ignore[attr-defined]
+    return str(first.get("content") or "").startswith(_DECISION_SYSTEM_PREFIX)
+
+
+def _loop_calls(mock: AsyncMock) -> list[object]:
+    """Every model call but the classifier seam's own decisions."""
+    return [call for call in mock.call_args_list if not _is_decision_call(call)]
+
+
 def _valid_query(**overrides: object) -> Query:
     """The shared query fixture. Its default text ("what can you do") is
     deliberately one of `graph_module._NO_TOOL_QUERY_TEXTS` (T-2.1-08),
@@ -747,11 +766,15 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
     await _run_graph(query, _valid_context())
 
     # 2026-09-22: three on the record-template path the fixture's exploratory
-    # class now takes; the model-path sibling below asserts five.
-    assert _mock_litellm.call_count == 3
+    # class now takes; the model-path sibling below asserts five. Counted
+    # without the classifier seam's own decision calls (build phase 8.2),
+    # which `test_decision_calls_are_separate_and_carry_no_stable_prefix`
+    # pins on their own.
+    loop_calls = _loop_calls(_mock_litellm)
+    assert len(loop_calls) == 3
     prefixed_calls = [
         call
-        for call in _mock_litellm.call_args_list
+        for call in loop_calls
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
     # One since 2026-09-14, two since 2026-09-13, four before: the guardrail
@@ -764,10 +787,10 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
         assert call.kwargs["messages"][0]["role"] == "system"
     from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
 
-    assert _mock_litellm.call_args_list[0].kwargs["messages"][0]["content"] == (
+    assert loop_calls[0].kwargs["messages"][0]["content"] == (
         GUARD_SYSTEM_INSTRUCTION
     )
-    assert _mock_litellm.call_args_list[1].kwargs["messages"][0]["content"] == (
+    assert loop_calls[1].kwargs["messages"][0]["content"] == (
         graph_module._THINK_SYSTEM_INSTRUCTION
     )
 
@@ -782,10 +805,11 @@ async def test_exactly_one_of_five_model_path_calls_carries_the_stable_prefix(
     _classify_as(monkeypatch, "aggregate")
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
-    assert _mock_litellm.call_count == 5
+    loop_calls = _loop_calls(_mock_litellm)
+    assert len(loop_calls) == 5
     prefixed_calls = [
         call
-        for call in _mock_litellm.call_args_list
+        for call in loop_calls
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
     assert len(prefixed_calls) == 1
@@ -815,10 +839,11 @@ async def test_three_model_calls_fire_when_a_tool_runs_on_the_template_path(
     class now takes, the three node-level calls (guardrail, think, write)
     are the whole run; the template makes no model call. The five-call
     shape of the generated-Cypher path is pinned by the sibling below.
+    Counted without the classifier seam's decision calls (build phase 8.2).
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
-    assert _mock_litellm.call_count == 3
+    assert len(_loop_calls(_mock_litellm)) == 3
 
 
 @pytest.mark.asyncio
@@ -832,11 +857,46 @@ async def test_five_model_calls_fire_when_a_tool_runs_on_the_model_path(
     `aggregate` classification since 2026-09-22, when the exploratory one
     moved to the record template in the morning and the two hop classes
     followed it for a gene anchor in the evening (fix-plan item 1).
+    Counted without the classifier seam's decision calls (build phase 8.2).
     """
     _classify_as(monkeypatch, "aggregate")
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
-    assert _mock_litellm.call_count == 5
+    assert len(_loop_calls(_mock_litellm)) == 5
+
+
+@pytest.mark.asyncio
+async def test_decision_calls_are_separate_and_carry_no_stable_prefix(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Build phase 8.2: the classifier seam's decisions are guard-tier
+    calls of their own, with their own messages. None of them may carry
+    the loop's stable prefix (`.claude/rules/prompt-cache-discipline.md`):
+    a decision is not a Think, Plan or Write call and must never reorder or
+    re-send the prefix those three share. And each is a DESCRIBED decision:
+    its system message carries the point's own instruction.
+
+    Populate check: a search question does make decision calls, so an
+    empty list cannot pass.
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    decision_calls = [c for c in _mock_litellm.call_args_list if _is_decision_call(c)]
+    assert decision_calls, "a search question made no decision call"
+    for call in decision_calls:
+        assert call.kwargs["model"] == f"openrouter/{_GUARD_MODEL}"
+        contents = [m.get("content") for m in call.kwargs["messages"]]
+        assert graph_module._STABLE_PREFIX not in contents
+    systems = [c.kwargs["messages"][0]["content"] for c in decision_calls]
+    assert any(graph_module._RECENT_YEARS.instructions in s for s in systems), systems
+    assert any(graph_module._LITERATURE.instructions in s for s in systems), systems
+
+
+@pytest.mark.asyncio
+async def test_small_talk_makes_no_decision_call(_mock_litellm: AsyncMock) -> None:
+    """A greeting plans no search, so it is never asked how recent."""
+    await _run_graph(_valid_query(), _valid_context())
+    assert not [c for c in _mock_litellm.call_args_list if _is_decision_call(c)]
 
 
 # ---------------------------------------------------------------------------
@@ -6568,6 +6628,53 @@ class TestThePlanEventReportsTheMention:
             "which is what session memory then records for every later turn "
             f"in the session: {resolved}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2 fix round, F-8.2-A04 and F-8.2-J13: when no model makes a
+# pick, the record carried on the `done` event names what the run actually
+# did (the spec's fail-open option) and no pick nobody made. Before the fix
+# it named the FIRST option, so a failed ask_back, recent_years and
+# literature decision each read as an ask-back, a "how far back" ask and a
+# papers question that never happened.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("spec_name", "acted_on"),
+    [
+        ("_RELEVANCY", "on_topic"),
+        ("_ASK_BACK", "proceed"),
+        ("_RECENT_YEARS", "not_applicable"),
+        ("_LITERATURE", "not_literature"),
+    ],
+)
+async def test_a_decision_nobody_made_is_recorded_as_what_the_run_did(
+    monkeypatch: pytest.MonkeyPatch, spec_name: str, acted_on: str
+) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "acompletion",
+        AsyncMock(return_value=_fake_response("I think the person wants something recent.")),
+    )
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    spec = getattr(graph_module, spec_name)
+    harness = harness_module.Harness("t-nobody-decided")
+
+    record = await graph_module._decide_point(harness, "t-nobody-decided", spec, "recent papers on statins")
+
+    assert record is not None
+    assert graph_module._usable_choice(record) is None, "no model made a pick"
+    assert record.jev_choice is None and record.guard_choice is None
+    assert record.chosen == acted_on == spec.fail_open
+    assert record.fallback_reason == "no_usable_pick"
+    assert graph_module._done_decisions(harness) == [record]
 
 
 # ---------------------------------------------------------------------------

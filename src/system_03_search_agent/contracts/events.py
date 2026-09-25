@@ -47,6 +47,41 @@ Layer = Literal["layer_1_graph", "layer_2_api", "layer_3_enrichment"]
 # its value from the same trust vocabulary.
 TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
 
+
+class DecisionRecord(BaseModel):
+    """One classifier-seam decision (build phase 8.2, DECISIONS.md 2026-09-25,
+    cards 8, 9, 10 and 13): a comparison row between Jev, the dedicated
+    classifier reached over OpenRouter's `/api/alpha/decisions` endpoint,
+    and the guard tier, which decides the same closed-option question
+    alongside it purely for this record.
+
+    Built by `harness.decide.decide`. Nothing in the agent loop constructs
+    or attaches one to a `done` event yet: wiring `DonePayload.decisions`
+    into the loop is a later build-phase 8.2 wave, not this one. This
+    model exists now so `DonePayload` can carry the additive, optional
+    field ahead of that wiring, per `system-design-patterns` pattern 10.
+
+    `extra="forbid"` and a `max_length` on every string field, per
+    `production-standards.md`'s multi-agent pipeline gate: this record
+    crosses from the harness into an event payload a client reads, so it
+    gets the same schema discipline as every other payload in this file.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # The decision point's name, e.g. "think.ask_back", "guardrail.relevancy",
+    # "plan.literature", "plan.resource", "think.recent_years".
+    name: Annotated[str, Field(..., max_length=64)]
+    options: list[Annotated[str, Field(max_length=200)]] = Field(..., max_length=12)
+    chosen: Annotated[str, Field(..., max_length=200)]
+    decided_by: Literal["jev", "guard"]
+    jev_choice: Annotated[str | None, Field(default=None, max_length=200)] = None
+    jev_confidence: Annotated[float | None, Field(default=None, ge=0.0, le=1.0)] = None
+    guard_choice: Annotated[str | None, Field(default=None, max_length=200)] = None
+    agreed: bool | None = None
+    fallback_reason: Annotated[str | None, Field(default=None, max_length=200)] = None
+    jev_latency_ms: Annotated[int | None, Field(default=None, ge=0)] = None
+
 # Host-pinned pattern for citation.source_url, per Section 9.3's per-tool
 # host table. Build phase 3.4: widened from an NCBI-only pattern (this
 # constant's name is kept, only local to this file, for minimal blast
@@ -521,6 +556,21 @@ class DonePayload(BaseModel):
 
     `max_length=2000` matches `Query.text`, because this string becomes the
     next `Query.text` unchanged.
+    """
+
+    decisions: Annotated[list[DecisionRecord] | None, Field(default=None, max_length=16)] = None
+    """The classifier-seam comparison rows for this query, or None.
+
+    Build phase 8.2, cards 8, 9, 10 and 13 (DECISIONS.md 2026-09-25).
+    ADDITIVE and OPTIONAL, per `system-design-patterns` pattern 10: an
+    older client that does not know this field ignores it and behaves
+    exactly as before. `None` until the loop actually calls
+    `harness.decide.decide` and attaches its results here, which is not
+    this wave's job (see `harness/decide.py`'s own module docstring).
+    `max_length=16` bounds it well above the five decision points named
+    in `docs/architecture/Model_architecture.md`'s planned section, since
+    a single query can revisit a decision point more than once (for
+    example two ask-back checks in one turn).
     """
 
 
