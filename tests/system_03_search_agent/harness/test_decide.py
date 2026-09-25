@@ -238,10 +238,69 @@ async def test_jev_cost_is_charged_through_track_cost(monkeypatch: pytest.Monkey
     after = harness.get_query_cost_usd("t9")
 
     # Guard's own real call_tier cost plus Jev's cost_usd both landed on
-    # the same running total; asserting the total grew by at least Jev's
-    # own cost proves Jev's spend was charged, without over-asserting the
-    # guard tier's own (separately-tested) pricing math.
+    # the same running total. On its own this arm cannot tell the two apart
+    # (F-8.2-J05: deleting Jev's charge left it green, because the guard
+    # call alone costs more than Jev); the arm below isolates Jev's charge.
     assert after - before >= jev_result.cost_usd
+
+
+@pytest.mark.asyncio
+async def test_jev_cost_reaches_the_query_total_on_its_own(monkeypatch: pytest.MonkeyPatch) -> None:
+    """F-8.2-J05: the per-query, per-user and system-wide caps all read this
+    accumulator. The guard call is priced at zero here, so the only money
+    on the trace is Jev's, and removing its `track_cost` line turns this red."""
+    _jev_mode(monkeypatch)
+    monkeypatch.setattr(litellm, "acompletion", AsyncMock(return_value=_fake_llm_response("relevant")))
+    monkeypatch.setattr(
+        litellm, "get_model_info", lambda model: {"input_cost_per_token": 0.0, "output_cost_per_token": 0.0}
+    )
+    jev_result = _jev_result().model_copy(update={"cost_usd": 0.0123})
+    monkeypatch.setattr(decide_module, "call_jev", AsyncMock(return_value=jev_result))
+
+    harness = Harness(trace_id="t9b")
+    await decide(harness, "t9b", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert harness.get_query_cost_usd("t9b") == pytest.approx(0.0123)
+
+
+@pytest.mark.asyncio
+async def test_both_models_read_at_most_the_state_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """F-8.2-J06: `_STATE_MAX_CHARS` is the bound on what reaches two
+    external models. A 5000-character state reaches each as 4000."""
+    _jev_mode(monkeypatch)
+    mock_acompletion = _patch_guard(monkeypatch, reply="relevant")
+    mock_jev = AsyncMock(return_value=_jev_result())
+    monkeypatch.setattr(decide_module, "call_jev", mock_jev)
+
+    await decide(Harness(trace_id="t9c"), "t9c", "guardrail.relevancy", "a" * 5000, _OPTIONS)
+
+    assert decide_module._STATE_MAX_CHARS == 4000
+    assert len(mock_jev.await_args.kwargs["state"]) == 4000
+    user_turn = next(m["content"] for m in mock_acompletion.call_args.kwargs["messages"] if m["role"] == "user")
+    assert len(user_turn) == 4000
+
+
+@pytest.mark.parametrize("count", [16, 17])
+def test_the_done_event_carries_at_most_sixteen_decisions(count: int) -> None:
+    """F-8.2-J07: the multi-agent pipeline gate's maxItems on
+    `DonePayload.decisions`, unguarded until now."""
+    from pydantic import ValidationError
+
+    from system_03_search_agent.contracts.events import DecisionRecord, DonePayload
+
+    record = DecisionRecord(name="p", options=["a", "b"], chosen="a", decided_by="guard", guard_choice="a")
+    fields = {
+        "total_cost_usd": 0.0,
+        "total_tool_calls": 0,
+        "elapsed_ms": 1,
+        "trust_outcome": "answer",
+        "decisions": [record] * count,
+    }
+    if count <= 16:
+        assert len(DonePayload(**fields).decisions or []) == count
+    else:
+        with pytest.raises(ValidationError):
+            DonePayload(**fields)
 
 
 @pytest.mark.asyncio

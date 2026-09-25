@@ -146,6 +146,21 @@ Observed, for the product owner (card 10): with the one-second comparison grace,
 
 Live runs spent so far: 9 of 14.
 
+### Item 6, F-8.2-J05, J06 and J07: a test that goes red for each control
+
+Each control was broken on the worktree file after copying it aside, the named suite run, and the file restored and compared byte for byte (`filecmp.cmp`, shallow off: True every time). `contracts/events.py` was only mutated in that throwaway way; it is not changed by this round.
+
+| Control | Break | Tests that went red | New or changed test |
+| --- | --- | --- | --- |
+| Jev's cost charged to the query total (J05) | delete `harness.track_cost(trace_id, "guard", result.cost_usd)` in `_run_jev_pick` | 1: `test_jev_cost_reaches_the_query_total_on_its_own` | new: the guard call is priced at zero and Jev's reply costs $0.0123, so the trace total must equal Jev's charge exactly. The old arm stays, now with a comment on why it cannot see this. |
+| The 4000-character state cap (J06) | `bounded_state = state` | 1: `test_both_models_read_at_most_the_state_cap` | new: a 5000-character state reaches Jev and the guard's user turn as 4000 characters each |
+| Jev's timeout value (J06) | `_TIMEOUT_S = 30.0` | 5: both `test_jev_client.py` total-bound arms and three of item 4's `decide` timing arms | item 4's tests |
+| Jev's total bound (J03, same family) | `await _post(...)` without `asyncio.wait_for` | 2: both `test_jev_client.py` total-bound arms | item 4's tests |
+| `DonePayload.decisions` maxItems 16 (J07) | remove `max_length=16` | 1: `test_the_done_event_carries_at_most_sixteen_decisions[17]` | new: 16 records accepted, 17 refused |
+| The picked window reaching the gene path (J07) | delete `window=publication_window,` in `plan_node` | 1: the gene arm | item 2's test |
+
+Harness suite with the new tests: 265 passed.
+
 ## Findings left open, and why
 
 Filled in at the end.
