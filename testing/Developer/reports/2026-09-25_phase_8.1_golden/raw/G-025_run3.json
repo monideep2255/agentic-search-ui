@@ -1,0 +1,1730 @@
+{
+ "record": {
+  "id": "G-025",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p81@example.com",
+  "category": "discovery",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What does the MTHFR C677T variant do, and what is the evidence quality around it?",
+  "session_id": "c103-4c64f10ce578",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T10:05:36+00:00",
+  "run_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "NCBIGene:4524"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 76 sources, not yet confirmed",
+  "citations": 76,
+  "distinct_sources": 75,
+  "citations_by_layer": {
+   "layer_1_graph": 58,
+   "layer_2_api": 13,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 13,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   13,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 564,
+  "answer_start": "Found 58 sequence variant records for MTHFR, of 990 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 9.624,
+  "seconds": 39.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 100,
+   "citation": 76,
+   "trust_signal": 77,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 0,
+   "ts": "2026-09-25T10:04:02.779131Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 2,
+   "ts": "2026-09-25T10:04:07.496327Z",
+   "payload": {
+    "narrative": "Asks about the functional effect and evidence quality of a specific variant, which can be answered by querying variant databases and possibly one additional source for evidence.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "MTHFR",
+      "curie": "NCBIGene:4524",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 4,
+   "ts": "2026-09-25T10:04:07.504655Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:4524. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-cbb459af3aaf",
+      "layer": "layer_1_graph",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e0db90c727eb",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-9badf31e42fa",
+      "layer": "layer_3_enrichment",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-6ef3c792f8d7",
+      "layer": "layer_3_enrichment",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8d66a2b2cce8",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f42a08c148ea",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-99bcc2231034",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8b516d4cdd99",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a5144bdd2474",
+      "layer": "layer_3_enrichment",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ee26c8fa1f14",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2899f20a72e4",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-564d7d300a52",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-6e2bd0cd5f6f",
+      "layer": "layer_1_graph",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "MTHFR",
+      "curie": "NCBIGene:4524",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 6,
+   "ts": "2026-09-25T10:04:07.508722Z",
+   "payload": {
+    "call_id": "cq-cbb459af3aaf",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 7,
+   "ts": "2026-09-25T10:04:07.508816Z",
+   "payload": {
+    "call_id": "ne-e0db90c727eb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 8,
+   "ts": "2026-09-25T10:04:07.508844Z",
+   "payload": {
+    "call_id": "pa-9badf31e42fa",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 9,
+   "ts": "2026-09-25T10:04:07.508875Z",
+   "payload": {
+    "call_id": "ct-6ef3c792f8d7",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 10,
+   "ts": "2026-09-25T10:04:07.509108Z",
+   "payload": {
+    "call_id": "ne-8d66a2b2cce8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 11,
+   "ts": "2026-09-25T10:04:07.509139Z",
+   "payload": {
+    "call_id": "ne-f42a08c148ea",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 12,
+   "ts": "2026-09-25T10:04:07.509164Z",
+   "payload": {
+    "call_id": "ne-99bcc2231034",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 13,
+   "ts": "2026-09-25T10:04:07.509186Z",
+   "payload": {
+    "call_id": "ne-8b516d4cdd99",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 14,
+   "ts": "2026-09-25T10:04:07.509216Z",
+   "payload": {
+    "call_id": "pa-a5144bdd2474",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 15,
+   "ts": "2026-09-25T10:04:07.509240Z",
+   "payload": {
+    "call_id": "ne-ee26c8fa1f14",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 16,
+   "ts": "2026-09-25T10:04:07.509264Z",
+   "payload": {
+    "call_id": "ne-2899f20a72e4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 17,
+   "ts": "2026-09-25T10:04:07.509286Z",
+   "payload": {
+    "call_id": "ne-564d7d300a52",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 18,
+   "ts": "2026-09-25T10:04:07.509307Z",
+   "payload": {
+    "call_id": "cq-6e2bd0cd5f6f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 19,
+   "ts": "2026-09-25T10:04:07.847323Z",
+   "payload": {
+    "call_id": "ne-f42a08c148ea",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 20,
+   "ts": "2026-09-25T10:04:07.908323Z",
+   "payload": {
+    "call_id": "ne-99bcc2231034",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 21,
+   "ts": "2026-09-25T10:04:08.005084Z",
+   "payload": {
+    "call_id": "ne-8d66a2b2cce8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 22,
+   "ts": "2026-09-25T10:04:08.021286Z",
+   "payload": {
+    "call_id": "ne-564d7d300a52",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 23,
+   "ts": "2026-09-25T10:04:08.075015Z",
+   "payload": {
+    "call_id": "ct-6ef3c792f8d7",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 24,
+   "ts": "2026-09-25T10:04:08.139031Z",
+   "payload": {
+    "call_id": "ne-e0db90c727eb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 25,
+   "ts": "2026-09-25T10:04:08.319113Z",
+   "payload": {
+    "call_id": "cq-6e2bd0cd5f6f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "13 row(s) of 13",
+    "result_count": 13,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 26,
+   "ts": "2026-09-25T10:04:08.614980Z",
+   "payload": {
+    "call_id": "pa-9badf31e42fa",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 27,
+   "ts": "2026-09-25T10:04:10.279189Z",
+   "payload": {
+    "call_id": "cq-cbb459af3aaf",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "100 row(s) of 977",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 28,
+   "ts": "2026-09-25T10:04:10.542120Z",
+   "payload": {
+    "call_id": "pa-a5144bdd2474",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 29,
+   "ts": "2026-09-25T10:04:10.595824Z",
+   "payload": {
+    "call_id": "ne-ee26c8fa1f14",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 30,
+   "ts": "2026-09-25T10:04:10.680504Z",
+   "payload": {
+    "call_id": "ne-2899f20a72e4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 31,
+   "ts": "2026-09-25T10:04:10.699895Z",
+   "payload": {
+    "call_id": "ne-8b516d4cdd99",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 32,
+   "ts": "2026-09-25T10:04:10.707606Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004148",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004148",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004806",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004806",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1622T>C (p.Val541Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011084",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011084",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.265C>G (p.Leu89Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1017181",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1017181",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.782G>T (p.Gly261Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1024006",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1024006",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1228_1242del (p.Ser410_Lys414del)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1030042",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1030042",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1621G>T (p.Val541Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1034230",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1034230",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.552del (p.Ser184fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1041980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1041980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.177G>T (p.Trp59Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1042278",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1042278",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1042820",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1042820",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.400C>T (p.Arg134Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1048667",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1048667",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.584C>T (p.Ala195Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1066378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1066378",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1750A>T (p.Lys584Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1066379",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1066379",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.474A>T (p.Gly158=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1068525",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1068525",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.202C>T (p.Arg68Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1068573",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1068573",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1114_1115del (p.Lys372fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1070453",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1070453",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.191del (p.Phe64fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1072666",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1072666",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1304_1305del (p.Phe435fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1073018",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1073018",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1063_1075del (p.Pro355fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1073673",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1073673",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1144del (p.Asp382fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1078639",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1078639",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.417G>T (p.Thr139=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079166",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079166",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1698G>A (p.Gly566=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079518",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079518",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1416G>T (p.Leu472=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079525",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079525",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1668G>A (p.Pro556=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1079684",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1079684",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1080275",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1080275",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1839C>T (p.His613=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1081151",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1081151",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.819G>A (p.Lys273=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1081419",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1081419",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.69T>C (p.Ser23=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1081582",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1081582",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1062C>T (p.His354=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087028",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087028",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1968A>G (p.Pro656=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087054",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087054",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.997C>T (p.Leu333=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087299",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087299",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.198T>A (p.Pro66=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087385",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087385",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.534G>A (p.Leu178=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1087771",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1087771",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1088221",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1088221",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1362C>G (p.Pro454=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1090921",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1090921",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.675C>T (p.Ile225=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1091668",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1091668",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1722A>T (p.Val574=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1091686",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1091686",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.681G>A (p.Thr227=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1092804",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1092804",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.906C>T (p.Ala302=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1093049",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1093049",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1674T>C (p.Ala558=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1093321",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1093321",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.345C>A (p.Thr115=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1094123",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1094123",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1356C>T (p.Cys452=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1094475",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1094475",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.345C>T (p.Thr115=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1097958",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1097958",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.157T>C (p.Leu53=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1098087",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1098087",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1098292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1098292",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1316T>C (p.Leu439Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1099292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1099292",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1155T>C (p.Pro385=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1100078",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1100078",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.57C>A (p.Ala19=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1102612",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1102612",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.843G>A (p.Lys281=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1108193",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1108193",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.18A>G (p.Arg6=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109006",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109006",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1083T>C (p.Asp361=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109214",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109214",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.9C>T (p.Asn3=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109767",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109767",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1109793",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1109793",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1248G>A (p.Glu416=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1110919",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1110919",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1734C>G (p.Val578=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1111281",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1111281",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1182C>A (p.Ser394=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1111364",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1111364",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.957C>T (p.His319=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1112859",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1112859",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1059C>T (p.Ala353=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1114195",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1114195",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005957.5(MTHFR):c.1344C>T (p.His448=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4524",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "23288205",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/23288205/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3336183",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3336183/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "607093",
+    "source_url": "https://omim.org/entry/607093",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4524",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4524",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00341120",
+    "source_url": "https://clinicaltrials.gov/study/NCT00341120",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30397195",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30397195/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3345787",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3345787/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00370058",
+    "source_url": "https://clinicaltrials.gov/study/NCT00370058",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34214447",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34214447/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3384941",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3384941/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00482456",
+    "source_url": "https://clinicaltrials.gov/study/NCT00482456",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38908773",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38908773/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3389646",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3389646/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00730574",
+    "source_url": "https://clinicaltrials.gov/study/NCT00730574",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40970430",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40970430/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3896160",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3896160/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00794885",
+    "source_url": "https://clinicaltrials.gov/study/NCT00794885",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "3ca949da-6705-45d0-9e49-a28889fcd0eb",
+   "seq": 287,
+   "ts": "2026-09-25T10:04:40.285910Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 9624,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 76 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 58 sequence variant records for MTHFR, of 990 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54][55][56][57][58]. \n\nSequence variant records found\n\nSequenceVariant record ClinVar:1004148 [1]. SequenceVariant ClinVar:1004806, name: NM_005957.5(MTHFR):c.1622T>C (p.Val541Ala) [2]. SequenceVariant ClinVar:1011084, name: NM_005957.5(MTHFR):c.265C>G (p.Leu89Val) [3]. SequenceVariant ClinVar:1017181, name: NM_005957.5(MTHFR):c.782G>T (p.Gly261Val) [4]. SequenceVariant ClinVar:1024006, name: NM_005957.5(MTHFR):c.1228_1242del (p.Ser410_Lys414del) [5]. SequenceVariant ClinVar:1030042, name: NM_005957.5(MTHFR):c.1621G>T (p.Val541Phe) [6]. SequenceVariant ClinVar:1034230, name: NM_005957.5(MTHFR):c.552del (p.Ser184fs) [7]. SequenceVariant ClinVar:1041980, name: NM_005957.5(MTHFR):c.177G>T (p.Trp59Cys) [8]. SequenceVariant record ClinVar:1042278 [9]. SequenceVariant ClinVar:1042820, name: NM_005957.5(MTHFR):c.400C>T (p.Arg134Cys) [10]. SequenceVariant ClinVar:1048667, name: NM_005957.5(MTHFR):c.584C>T (p.Ala195Val) [11]. SequenceVariant ClinVar:1066378, name: NM_005957.5(MTHFR):c.1750A>T (p.Lys584Ter) [12]. SequenceVariant ClinVar:1066379, name: NM_005957.5(MTHFR):c.474A>T (p.Gly158=) [13]. SequenceVariant ClinVar:1068525, name: NM_005957.5(MTHFR):c.202C>T (p.Arg68Ter) [14]. SequenceVariant ClinVar:1068573, name: NM_005957.5(MTHFR):c.1114_1115del (p.Lys372fs) [15]. SequenceVariant ClinVar:1070453, name: NM_005957.5(MTHFR):c.191del (p.Phe64fs) [16]. SequenceVariant ClinVar:1072666, name: NM_005957.5(MTHFR):c.1304_1305del (p.Phe435fs) [17]. SequenceVariant ClinVar:1073018, name: NM_005957.5(MTHFR):c.1063_1075del (p.Pro355fs) [18]. SequenceVariant ClinVar:1073673, name: NM_005957.5(MTHFR):c.1144del (p.Asp382fs) [19]. SequenceVariant ClinVar:1078639, name: NM_005957.5(MTHFR):c.417G>T (p.Thr139=) [20]. SequenceVariant ClinVar:1079166, name: NM_005957.5(MTHFR):c.1698G>A (p.Gly566=) [21]. SequenceVariant ClinVar:1079518, name: NM_005957.5(MTHFR):c.1416G>T (p.Leu472=) [22]. SequenceVariant ClinVar:1079525, name: NM_005957.5(MTHFR):c.1668G>A (p.Pro556=) [23]. SequenceVariant record ClinVar:1079684 [24]. SequenceVariant ClinVar:1080275, name: NM_005957.5(MTHFR):c.1839C>T (p.His613=) [25]. SequenceVariant ClinVar:1081151, name: NM_005957.5(MTHFR):c.819G>A (p.Lys273=) [26]. SequenceVariant ClinVar:1081419, name: NM_005957.5(MTHFR):c.69T>C (p.Ser23=) [27]. SequenceVariant ClinVar:1081582, name: NM_005957.5(MTHFR):c.1062C>T (p.His354=) [28]. SequenceVariant ClinVar:1087028, name: NM_005957.5(MTHFR):c.1968A>G (p.Pro656=) [29]. SequenceVariant ClinVar:1087054, name: NM_005957.5(MTHFR):c.997C>T (p.Leu333=) [30]. SequenceVariant ClinVar:1087299, name: NM_005957.5(MTHFR):c.198T>A (p.Pro66=) [31]. SequenceVariant ClinVar:1087385, name: NM_005957.5(MTHFR):c.534G>A (p.Leu178=) [32]. SequenceVariant record ClinVar:1087771 [33]. SequenceVariant ClinVar:1088221, name: NM_005957.5(MTHFR):c.1362C>G (p.Pro454=) [34]. SequenceVariant ClinVar:1090921, name: NM_005957.5(MTHFR):c.675C>T (p.Ile225=) [35]. SequenceVariant ClinVar:1091668, name: NM_005957.5(MTHFR):c.1722A>T (p.Val574=) [36]. SequenceVariant ClinVar:1091686, name: NM_005957.5(MTHFR):c.681G>A (p.Thr227=) [37]. SequenceVariant ClinVar:1092804, name: NM_005957.5(MTHFR):c.906C>T (p.Ala302=) [38]. SequenceVariant ClinVar:1093049, name: NM_005957.5(MTHFR):c.1674T>C (p.Ala558=) [39]. SequenceVariant ClinVar:1093321, name: NM_005957.5(MTHFR):c.345C>A (p.Thr115=) [40]. SequenceVariant ClinVar:1094123, name: NM_005957.5(MTHFR):c.1356C>T (p.Cys452=) [41]. SequenceVariant ClinVar:1094475, name: NM_005957.5(MTHFR):c.345C>T (p.Thr115=) [42]. SequenceVariant ClinVar:1097958, name: NM_005957.5(MTHFR):c.157T>C (p.Leu53=) [43]. SequenceVariant record ClinVar:1098087 [44]. SequenceVariant ClinVar:1098292, name: NM_005957.5(MTHFR):c.1316T>C (p.Leu439Pro) [45]. SequenceVariant ClinVar:1099292, name: NM_005957.5(MTHFR):c.1155T>C (p.Pro385=) [46]. SequenceVariant ClinVar:1100078, name: NM_005957.5(MTHFR):c.57C>A (p.Ala19=) [47]. SequenceVariant ClinVar:1102612, name: NM_005957.5(MTHFR):c.843G>A (p.Lys281=) [48]. SequenceVariant ClinVar:1108193, name: NM_005957.5(MTHFR):c.18A>G (p.Arg6=) [49]. SequenceVariant ClinVar:1109006, name: NM_005957.5(MTHFR):c.1083T>C (p.Asp361=) [50]. SequenceVariant ClinVar:1109214, name: NM_005957.5(MTHFR):c.9C>T (p.Asn3=) [51]. SequenceVariant record ClinVar:1109767 [52]. SequenceVariant ClinVar:1109793, name: NM_005957.5(MTHFR):c.1248G>A (p.Glu416=) [53]. SequenceVariant ClinVar:1110919, name: NM_005957.5(MTHFR):c.1734C>G (p.Val578=) [54]. SequenceVariant ClinVar:1111281, name: NM_005957.5(MTHFR):c.1182C>A (p.Ser394=) [55]. SequenceVariant ClinVar:1111364, name: NM_005957.5(MTHFR):c.957C>T (p.His319=) [56]. SequenceVariant ClinVar:1112859, name: NM_005957.5(MTHFR):c.1059C>T (p.Ala353=) [57]. SequenceVariant ClinVar:1114195, name: NM_005957.5(MTHFR):c.1344C>T (p.His448=) [58]. \n\nGene records found\n\nGene symbol: MTHFR [59]. Gene name: MTHFR [63]. \n\nPubmed records found\n\nPubmed title: ACMG Practice Guideline: lack of evidence for MTHFR polymorphism testing [60]. Pubmed title: Methylenetetrahydrofolate reductase and psychiatric diseases [65]. Pubmed title: Shifting landscapes of human MTHFR missense-variant effects [68]. Pubmed title: MTHFR gene polymorphisms in diabetes mellitus [71]. Pubmed title: Increased methylation levels of the MTHFR gene promoter in Down syndrome [74]. \n\nClinvar records found\n\nClinvar title: NM_005957.5(MTHFR):c.1262G>T (p.Trp421Leu) [61]. Clinvar title: NM_005957.5(MTHFR):c.512G>A (p.Gly171Asp) [66]. Clinvar title: NM_005957.5(MTHFR):c.1163G>T (p.Arg388Leu) [69]. Clinvar title: NM_005957.5(MTHFR):c.750C>T (p.Cys250=) [72]. Clinvar title: NM_005957.5(MTHFR):c.1003C>A (p.Arg335Ser) [75]. \n\nOmim records found\n\n5,10-@METHYLENETETRAHYDROFOLATE REDUCTASE [62]. MTHFR [62]. \n\nClinical trial records found\n\nClinical trial name: Genetic Causes of Male Infertility [64]. Clinical trial name: Study on the Influence of Electroconvulsive Therapy (ECT) on Homocysteine Levels [67]. Clinical trial name: Homocysteine After Nitrous Oxide Anesthesia [70]. Clinical trial name: Examining B12 Deficiency Associated With C677T Mutation on MTHFR Gene in Terms of Commonness and Endothelial Function [73]. Clinical trial name: China Stroke Primary Prevention Trial [76]. \n\nNote: this answer was truncated because only 113 of the 990 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

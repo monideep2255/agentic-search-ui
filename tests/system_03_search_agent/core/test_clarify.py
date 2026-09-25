@@ -232,17 +232,64 @@ class TestRecentWindowChoices:
             "Recent papers on statins from the last 10 years?",
         ]
 
-    def test_each_choice_reads_back_as_its_own_window(self) -> None:
-        from datetime import date
+    def test_a_long_question_keeps_its_ask_rather_than_its_background(self) -> None:
+        """F-8.2-A14: the adversary's 266-character question lost "PARP
+        inhibitor resistance" and "stops working" when cut from the end."""
+        question = (
+            "My mother was diagnosed with stage 3 ovarian cancer and carries a BRCA2 "
+            "variant; her oncologist mentioned PARP inhibitors as maintenance therapy "
+            "after chemotherapy. What do the latest papers say about PARP inhibitor "
+            "resistance and what happens when it stops working?"
+        )
+        for option in clarify.recent_window_choices(question).options:
+            assert len(option) <= clarify.MAX_CLARIFY_TEXT_CHARS
+            assert "PARP inhibitor resistance and what happens when it stops working from" in option
+            assert option.startswith("Her oncologist mentioned"), option
 
-        from system_03_search_agent.core import breadth_plan
+    def test_a_short_question_is_unchanged(self) -> None:
+        choices = clarify.recent_window_choices("what do the latest papers say about statins?")
+        assert choices.options[0] == "What do the latest papers say about statins from the last 12 months?"
 
-        today = date(2026, 9, 25)
-        labels = [
-            breadth_plan.parse_publication_window(option, today=today).label  # type: ignore[union-attr]
-            for option in clarify.recent_window_choices("recent papers on statins?").options
+    def test_each_offered_choice_carries_its_own_window_as_a_value(self) -> None:
+        """Fix round, F-8.2-A07 and J01: the window comes from what was
+        OFFERED, never from reading the clicked text."""
+        clarify.clear_offered_windows()
+        choices = clarify.offer_recent_windows("owner\x1fsession", "recent papers on statins?")
+        months = [
+            clarify.picked_recent_window("owner\x1fsession", option).months  # type: ignore[union-attr]
+            for option in choices.options
         ]
-        assert labels == ["the last 12 months", "the last 5 years", "the last 10 years"]
+        assert months == [12, 60, 120]
+        clarify.clear_offered_windows()
+
+    def test_text_nobody_was_offered_picks_nothing(self) -> None:
+        clarify.clear_offered_windows()
+        choices = clarify.offer_recent_windows("owner\x1fsession", "recent papers on statins")
+        five_years = choices.options[1]
+        # The same words in another session, or typed with more around them,
+        # or before any offer, are not a pick.
+        assert clarify.picked_recent_window("other\x1fsession", five_years) is None
+        assert clarify.picked_recent_window("owner\x1fsession", five_years + " in mice") is None
+        assert clarify.picked_recent_window("owner\x1fsession", "papers on statins in 2000 patients") is None
+        assert clarify.picked_recent_window("owner\x1fsession", f"  {five_years} ") is not None
+        clarify.clear_offered_windows()
+        assert clarify.picked_recent_window("owner\x1fsession", five_years) is None
+
+    def test_the_offer_record_is_bounded(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        clarify.clear_offered_windows()
+        monkeypatch.setattr(clarify, "_MAX_OFFER_SESSIONS", 3)
+        for index in range(5):
+            clarify.offer_recent_windows(f"s{index}", "recent papers on statins")
+        assert list(clarify._OFFERED) == ["s2", "s3", "s4"]
+        clarify.clear_offered_windows()
+
+    def test_an_expired_offer_picks_nothing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        clarify.clear_offered_windows()
+        monkeypatch.setattr(clarify, "_OFFER_TTL_S", -1.0)
+        choices = clarify.offer_recent_windows("s", "recent papers on statins")
+        assert clarify.picked_recent_window("s", choices.options[0]) is None
+        assert "s" not in clarify._OFFERED, "an expired offer is dropped when read"
+        clarify.clear_offered_windows()
 
     def test_a_long_question_is_cut_at_a_word_and_stays_in_bounds(self) -> None:
         long_question = "recent papers on " + "statin " * 60

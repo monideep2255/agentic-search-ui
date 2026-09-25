@@ -95,6 +95,15 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cost_control, "check_system_daily_cost_cap", lambda *a, **k: None)
 
 
+@pytest.fixture(autouse=True)
+def _no_offered_windows() -> Any:
+    """Every test here shares one session id, and the "How far back"
+    offers live in-process (`core.clarify`), so each test starts clean."""
+    clarify.clear_offered_windows()
+    yield
+    clarify.clear_offered_windows()
+
+
 def _install_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _resolve(symbol: str, *, taxon: str = "human") -> str | None:
         return {"BRCA1": "NCBIGene:672"}.get(symbol.strip().upper())
@@ -591,6 +600,11 @@ async def test_recent_work_with_no_range_asks_how_far_back(
         "Recent papers on statins from the last 10 years?",
     ]
     assert "tool_start" not in [event.type for event in events]
+    # F-8.2-J14: the plan says what happened, not item 7.5's "refers to
+    # something no earlier turn resolved".
+    plan = _payload(events, "plan")
+    assert plan is not None
+    assert plan["narrative"] == "no tool selected; the answer asks a question back before any search"
 
 
 @pytest.mark.asyncio
@@ -612,12 +626,14 @@ async def test_a_short_opener_can_be_asked_how_far_back_too(
 
 
 @pytest.mark.asyncio
-async def test_a_stated_range_is_never_asked_again_whatever_the_classifier_said(
+async def test_a_stated_range_is_never_asked_again_and_limits_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Code verifies the one value it may read: "since 2022" is right there
-    to search with, so a classifier that still said unbounded is overruled,
-    and the search carries the range as a publication-date limit."""
+    """Code verifies the one thing it may read: "since 2022" is a range the
+    person already gave, so a classifier that still said unbounded is
+    overruled and the question is not asked back. Since the fix round
+    (F-8.2-A07, J01) the words do not limit the search either: only a
+    picked window does."""
     _install_tools(monkeypatch)
     searches = _spy_searches(monkeypatch)
     _install_models(monkeypatch, clarify_reply=None)
@@ -627,7 +643,36 @@ async def test_a_stated_range_is_never_asked_again_whatever_the_classifier_said(
     think = _payload(events, "think")
     assert think is not None and think["clarifying_question"] is None
     pubmed = [s for s in searches if s.get("db") == "pubmed"]
-    assert pubmed and pubmed[0]["term"].endswith('AND ("2022/01/01"[dp] : "3000"[dp])'), pubmed
+    assert pubmed and all("[dp]" not in s["term"] for s in pubmed), pubmed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "question",
+    [
+        # F-8.2-J01: a patient count read as a publication year.
+        "statin trials in 2000 patients with heart failure",
+        "BRCA1 variants in 2000 patients with breast cancer",
+        # F-8.2-A07: a period of life read as a publication date.
+        "risk of stroke in the last month of pregnancy",
+        "palliative care needs in the last year of life",
+        "BRCA1 carriers diagnosed in 2010",
+    ],
+)
+async def test_no_publication_limit_is_read_from_the_question_s_wording(
+    monkeypatch: pytest.MonkeyPatch, question: str
+) -> None:
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+
+    events = await _run(question)
+    pubmed = [s for s in searches if s.get("db") == "pubmed"]
+    assert pubmed, [event.type for event in events]
+    assert all("[dp]" not in s["term"] for s in pubmed), pubmed
+    plan = _payload(events, "plan")
+    assert plan is not None and "published in" not in plan["narrative"], plan
 
 
 @pytest.mark.asyncio
@@ -652,26 +697,75 @@ async def test_the_picked_window_narrows_the_pubmed_search_to_those_years(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The choice a person clicks is asked as its own question, and its
-    range reaches ESearch as a publication-date limit: only papers from
-    those years can come back."""
-    from datetime import UTC, datetime
-
+    range, carried as the value the ask-back offered (never re-read from
+    the text), reaches ESearch as a publication-date limit: only papers
+    from those years can come back."""
     from system_03_search_agent.core import breadth_plan
 
     _install_tools(monkeypatch)
     searches = _spy_searches(monkeypatch)
     _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+
+    asked = await _run("recent papers on statins")
+    options = _payload(asked, "think")["clarifying_options"]  # type: ignore[index]
+    assert not searches, "the ask-back searched nothing"
+
     _install_decide(monkeypatch)
+    events = await _run(options[1])
 
-    picked = clarify.recent_window_choices("recent papers on statins").options[1]
-    events = await _run(picked)
-
-    expected = breadth_plan.parse_publication_window(picked, today=datetime.now(UTC).date())
-    assert expected is not None and expected.label == "the last 5 years"
+    expected = breadth_plan.recent_publication_window(60, "the last 5 years")
     pubmed = [s for s in searches if s.get("db") == "pubmed"]
     assert pubmed and pubmed[0]["term"] == f"statins AND {expected.clause()}", pubmed
     plan = _payload(events, "plan")
-    assert plan is not None and "published the last 5 years" in plan["narrative"], plan
+    assert plan is not None and "published in the last 5 years" in plan["narrative"], plan
+
+
+@pytest.mark.asyncio
+async def test_a_picked_window_reaches_a_gene_question_s_pubmed_search(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.2-J07: nothing tested that the planner hands the window to the
+    gene fan-out. "Recent papers on BRCA1 from the last 5 years?" is the
+    exact question the ask-back produces for a gene."""
+    from system_03_search_agent.core import breadth_plan
+
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+
+    asked = await _run("recent papers on BRCA1")
+    options = _payload(asked, "think")["clarifying_options"]  # type: ignore[index]
+
+    _install_decide(monkeypatch)
+    events = await _run(options[1])
+
+    expected = breadth_plan.recent_publication_window(60, "the last 5 years")
+    pubmed = [s for s in searches if s.get("db") == "pubmed"]
+    assert pubmed == [s for s in pubmed if s["term"] == f"BRCA1[Title/Abstract] AND {expected.clause()}"]
+    assert pubmed, searches
+    clinvar = [s for s in searches if s.get("db") == "clinvar"]
+    assert clinvar and all("[dp]" not in s["term"] for s in clinvar), "records are not papers"
+    plan = _payload(events, "plan")
+    assert plan is not None and "published in the last 5 years only" in plan["narrative"], plan
+
+
+@pytest.mark.asyncio
+async def test_a_choice_s_words_typed_with_no_offer_limit_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same words, typed in a session that was never offered them, are
+    an ordinary question: the window is a value the offer carries, not a
+    phrase the planner looks for."""
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+
+    await _run("Recent papers on statins from the last 5 years?")
+    pubmed = [s for s in searches if s.get("db") == "pubmed"]
+    assert pubmed and all("[dp]" not in s["term"] for s in pubmed), pubmed
 
 
 # ---------------------------------------------------------------------------
@@ -723,6 +817,40 @@ async def test_a_question_asked_back_cancels_the_literature_decision(
     think = _payload(events, "think")
     assert think is not None and think["clarifying_question"] == clarify.RECENT_WINDOW_QUESTION
     assert started.is_set() and cancelled.is_set(), base
+
+
+@pytest.mark.asyncio
+async def test_a_gene_question_never_waits_for_the_literature_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.2-J11, the judge's probe: with `plan.literature` held for 3
+    seconds, "Which diseases are associated with BRCA1?" took 3026 ms to
+    `done` against 197 ms without the pause, although a resolved gene means
+    the decision cannot change the plan. It is now stopped instead."""
+    cancelled = asyncio.Event()
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
+        if point == "plan.literature":
+            try:
+                await asyncio.sleep(3.0)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+        return await inner(harness, trace_id, point, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    started = time.monotonic()
+    events = await _run("Which diseases are associated with BRCA1?")
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0)
+
+    assert "done" in [event.type for event in events]
+    assert elapsed < 2.0, elapsed
+    assert cancelled.is_set()
 
 
 # ---------------------------------------------------------------------------

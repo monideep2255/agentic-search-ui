@@ -885,32 +885,50 @@ def _elapsed_ms(state: GraphState) -> int:
 
 @dataclass(frozen=True)
 class _DecisionSpec:
-    """One decision point: its name, its closed options and its description."""
+    """One decision point: its name, its closed options, its description,
+    and `fail_open`, the option the loop acts on when no model makes a pick.
+
+    `fail_open` is passed to `decide` as its `default`, so a decision nobody
+    made is recorded as what the run actually did (F-8.2-J13), never as the
+    first option. Every caller reads the pick through `_usable_choice`,
+    which still treats "no model picked" as no decision at all.
+    """
 
     point: str
     options: tuple[str, ...]
     instructions: str
     criteria: Mapping[str, str]
+    fail_open: str
 
 
 _RELEVANCY: Final = _DecisionSpec(
     point="guardrail.relevancy",
     options=("on_topic", "off_topic"),
+    fail_open="on_topic",
     instructions=(
         "The state is a question a person typed into a biomedical evidence search "
-        "engine. Decide whether its subject is biology, medicine, health or the "
-        "life sciences."
+        "engine. When the question is a follow-up, the state also gives the "
+        "previous question of the same conversation, and a word such as 'it' or "
+        "'that' in the new question may refer back to it. Decide whether the NEW "
+        "question's subject is biology, medicine, health or the life sciences."
     ),
     criteria={
         "on_topic": (
             "Its subject is biology, medicine, health, genetics, living organisms "
             "or the scientific literature, in any language, including how a food, "
-            "substance, exposure or behaviour affects the body or health."
+            "substance, exposure or behaviour affects the body or health (a "
+            "research question about exercise, diet or nutrition is on topic), and "
+            "including a follow-up that asks more about the previous question's "
+            "biomedical subject."
         ),
         "off_topic": (
             "Its subject is not biological or medical at all, for example sport, "
-            "finance, politics, travel, entertainment, shopping or general "
-            "programming."
+            "finance, politics, travel, weather, entertainment, shopping or general "
+            "programming. A request to make a personal plan for the asker, such as "
+            "a workout plan, a meal plan or a diet plan, is off topic: it asks for "
+            "advice, not evidence. A follow-up that asks about something unrelated "
+            "to biology or medicine is off topic even when the previous question "
+            "was biomedical."
         ),
     },
 )
@@ -918,6 +936,7 @@ _RELEVANCY: Final = _DecisionSpec(
 _ASK_BACK: Final = _DecisionSpec(
     point="think.ask_back",
     options=("ask_back", "proceed"),
+    fail_open="proceed",
     instructions=(
         "The state is the whole of a short opening message a person typed into a "
         "biomedical evidence search engine. Decide whether it already says what "
@@ -940,19 +959,26 @@ _ASK_BACK: Final = _DecisionSpec(
 _RECENT_YEARS: Final = _DecisionSpec(
     point="think.recent_years",
     options=("recent_unbounded", "not_applicable"),
+    fail_open="not_applicable",
     instructions=(
-        "The state is a question a person typed into a biomedical literature "
-        "search engine. Decide whether it asks for recent work without saying "
-        "how recent."
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. Decide whether it explicitly asks for recent, new or latest "
+        "publications or research without saying how recent."
     ),
     criteria={
         "recent_unbounded": (
-            "It asks for recent, latest, new or current work and gives no year, "
-            "date or length of time."
+            "It explicitly asks for recent, new or latest publications, papers, "
+            "studies or research, and gives no year, date, period or length of "
+            "time."
         ),
         "not_applicable": (
-            "It does not ask for recent work, or it already gives a year, a date "
-            "or a length of time such as a number of months or years."
+            "Anything else. It does not ask for recent publications or research; "
+            "or it already gives a year, a date, a period named by an event, or a "
+            "length of time; or a word such as 'recent', 'current' or 'latest' "
+            "describes something other than publications, such as a disease of "
+            "recent onset, something a person did or had recently, or the current "
+            "status of a disease, treatment, guideline or trial, including current "
+            "or recruiting trials."
         ),
     },
 )
@@ -960,21 +986,24 @@ _RECENT_YEARS: Final = _DecisionSpec(
 _LITERATURE: Final = _DecisionSpec(
     point="plan.literature",
     options=("wants_literature", "not_literature"),
+    fail_open="not_literature",
     instructions=(
         "The state is a question a person typed into a biomedical evidence search "
         "engine that holds gene, variant and disease records, clinical trial "
         "registrations and the published literature. Decide whether the person "
-        "is asking for published papers or for what the published literature "
-        "says."
+        "is asking specifically for published papers, or for what published "
+        "research says, rather than for the records the engine holds."
     ),
     criteria={
         "wants_literature": (
-            "It asks for papers, articles, publications or preprints, or for what "
-            "the published literature or research says."
+            "It explicitly asks for papers, articles, publications, preprints or "
+            "studies, or for what the published literature or research says or "
+            "shows, or whether something has been studied."
         ),
         "not_literature": (
             "It asks for a fact, a definition, a gene, variant or disease record, "
-            "or for clinical trials, rather than for published papers."
+            "or clinical trials, or generally what is known about a gene, variant "
+            "or condition, without asking for papers or research."
         ),
     },
 )
@@ -1061,6 +1090,7 @@ async def _decide_point(
             spec.options,
             instructions=spec.instructions,
             criteria=spec.criteria,
+            default=spec.fail_open,
         )
     except Exception as exc:  # noqa: BLE001 - a broken seam must never break the question
         logger.warning(
@@ -1074,12 +1104,13 @@ async def _decide_point(
 def _usable_choice(record: DecisionRecord | None) -> str | None:
     """The decision's pick, or None when no model actually made one.
 
-    `decide` fills `chosen` with the FIRST offered option when neither Jev
-    nor the guard produced a usable pick, and in the Jev-failed case it
-    records Jev's failure reason rather than "no_usable_pick" (builder J,
-    F-J-04). So "was anything decided" is read from the two picks
-    themselves, never from `chosen` alone: a caller that trusted `chosen`
-    here would ask every question back when both models were down.
+    When neither Jev nor the guard produced a usable pick, `decide` fills
+    `chosen` with the spec's `fail_open` option and marks the record
+    "no_usable_pick" (fix round, F-8.2-A04 and J13; builder J's F-J-04
+    found the older record, which filled in the FIRST option and kept only
+    Jev's reason). "Was anything decided" is still read from the two picks
+    themselves, never from `chosen` alone, so a decision nobody made is
+    never acted on as if one had been.
     """
     if record is None:
         return None
@@ -1113,6 +1144,24 @@ async def _literature_choice(
         entry.literature_record = await _decide_point(harness, trace_id, _LITERATURE, text)
         entry.literature_asked = True
     return _usable_choice(entry.literature_record)
+
+
+def _drop_literature_decision(harness: Harness) -> None:
+    """Settle `plan.literature` without waiting for it.
+
+    A decision that has finished keeps its record (`_decide_point` already
+    put it on the run's list for the `done` event); one still running is
+    cancelled, since Plan has decided it does not need it. Never awaits.
+    """
+    entry = _run_decisions(harness)
+    task, entry.literature_task = entry.literature_task, None
+    if task is None:
+        return
+    entry.literature_asked = True
+    if task.done() and not task.cancelled():
+        entry.literature_record = task.result()
+    else:
+        task.cancel()
 
 
 # ---------------------------------------------------------------------------
@@ -1196,7 +1245,7 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
     if not prefilter.clears_biomedical_allowlist(query.text):
         relevancy_task = asyncio.create_task(
-            _decide_point(harness, trace_id, _RELEVANCY, query.text)
+            _decide_point(harness, trace_id, _RELEVANCY, _relevancy_state(query.text, state))
         )
     try:
         return await _guardrail_after_prefilter(state, sink, relevancy_task)
@@ -1293,6 +1342,7 @@ async def _guardrail_after_prefilter(
             }
         }
 
+    classifier_off_topic_set_aside = False
     if not classifier_verdict.admitted:
         if classifier_verdict.category == "off_topic" and _is_memory_bound_follow_up(
             query.text, state
@@ -1303,7 +1353,10 @@ async def _guardrail_after_prefilter(
             # is set aside and the question continues to the forbidden
             # screen and to Think, where memory binds "it". Only an
             # off-topic verdict is ever set aside; an injection verdict is
-            # final.
+            # final. Build phase 8.2 fix round (F-8.2-A01): when the
+            # allowlist missed, the set-aside now also needs the relevancy
+            # decision below, which reads the previous question, to agree.
+            classifier_off_topic_set_aside = True
             logger.info(
                 "guard off-topic verdict set aside for a memory-bound follow-up "
                 "(trace %s)",
@@ -1312,17 +1365,28 @@ async def _guardrail_after_prefilter(
         else:
             return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
-    # The relevancy decision, when one was asked for. Only a real "off_topic"
-    # pick refuses: no usable pick fails open, since the injection classifier
-    # above has already judged topicality on this question too. A memory-bound
-    # follow-up keeps the same allowance the classifier's own off-topic
-    # verdict gets above: its subject is the remembered entity.
+    # The relevancy decision, when one was asked for (the allowlist missed).
+    # A real "off_topic" pick refuses, on a follow-up exactly as on a first
+    # question (F-8.2-A01): a follow-up's decision is given the previous
+    # question too (`_relevancy_state`), so "and what about it in children?"
+    # after a BRCA1 question is judged with BRCA1 in view, while "is it good
+    # pizza?" is judged as the pizza question it is. Before this fix, the
+    # referring word alone set aside both judges' off-topic verdicts, and
+    # almost any English sentence carries "it", "that" or "this".
+    #
+    # No usable pick fails open when the injection classifier admitted the
+    # question, since that classifier has already judged topicality too.
+    # When the classifier's own off-topic verdict was set aside above on the
+    # referring-word rule alone, nothing that saw the conversation has said
+    # the question is on topic, so that verdict stands.
     if relevancy_task is not None:
         relevancy = _usable_choice(await relevancy_task)
-        if relevancy == "off_topic" and not _is_memory_bound_follow_up(query.text, state):
+        if relevancy == "off_topic":
             return _decline_for_guardrail(
                 state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
             )
+        if relevancy is None and classifier_off_topic_set_aside:
+            return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.
     forbidden_verdict = forbidden.screen(query.text)
@@ -2616,22 +2680,44 @@ _RECENT_WINDOW_NARRATIVE: Final[str] = (
 
 def _asks_for_unbounded_recent_work(record: DecisionRecord | None, text: str) -> bool:
     """Whether to ask how recent: the classifier's `recent_unbounded`,
-    verified by code against the one value code may read.
+    verified by code against the one thing code may read.
 
     A question that states its own range ("since 2022", "the last 5
-    years") is never asked again, whatever the classifier said, because
-    the range is right there to search with; `core.breadth_plan` reads it
-    into a publication-date limit. No usable pick asks nothing, the
-    fail-open rule every Think decision keeps.
+    years") is never asked again, whatever the classifier said. Its search
+    is NOT limited by that range either (fix round, F-8.2-A07, J01): only a
+    window the person picked in this ask-back limits a search. No usable
+    pick asks nothing, the fail-open rule every Think decision keeps.
     """
     if _usable_choice(record) != "recent_unbounded":
         return False
-    if breadth_plan.parse_publication_window(text) is not None:
+    if breadth_plan.states_publication_range(text):
         logger.info(
             "recent_years said unbounded but the question states a range; not asking"
         )
         return False
     return True
+
+
+def _offer_key(query: Any) -> str:
+    """Whose "How far back" choices these are: the caller and the session,
+    so one person's click can never pick up another's offered window."""
+    return f"{query.owner_id or ''}\x1f{query.session_id}"
+
+
+def _picked_publication_window(query: Any) -> breadth_plan.PublicationWindow | None:
+    """The publication-date limit for this question, or None.
+
+    Only a window the person PICKED limits a search (fix round, F-8.2-A07
+    and F-8.2-J01): this question must be exactly one of the "How far back
+    should I search?" options this session was offered, and the window is
+    that option's stored value (`core.clarify.picked_recent_window`), never
+    a range read out of the words. "Stroke in the last month of pregnancy"
+    and "statin trials in 2000 patients" are searched without a limit.
+    """
+    picked = clarify.picked_recent_window(_offer_key(query), query.text)
+    if picked is None:
+        return None
+    return breadth_plan.recent_publication_window(picked.months, picked.phrase)
 
 
 async def _run_think_classification(
@@ -2775,9 +2861,12 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
     small_talk = _is_small_talk(query.text)
+    # A question that IS a picked "How far back" option has already said
+    # how recent, so the recent-work decision is not asked for it at all.
+    recent_already_picked = _picked_publication_window(query) is not None
     recent_task: asyncio.Task[DecisionRecord | None] = asyncio.create_task(
         _no_decision()
-        if small_talk
+        if small_talk or recent_already_picked
         else _decide_point(harness, query.trace_id, _RECENT_YEARS, query.text)
     )
     decisions = _run_decisions(harness)
@@ -2923,7 +3012,9 @@ async def _think(
     )
     try:
         if _asks_for_unbounded_recent_work(await recent_task, query.text):
-            choices = clarify.recent_window_choices(query.text)
+            # Remembered against this session, so the option the person
+            # clicks carries its window as a value (F-8.2-A07, J01).
+            choices = clarify.offer_recent_windows(_offer_key(query), query.text)
             return _ask_back(
                 sink,
                 choices.question,
@@ -3907,9 +3998,10 @@ def _build_breadth_calls(
     that measured 14 to 16 of its 20 allowed Layer 2 and 3 calls reaches
     at most 18.
 
-    `window` (build phase 8.2, card 4) is the question's own stated
-    publication range, read by `breadth_plan.parse_publication_window`; it
-    limits the PubMed search to those years and nothing else.
+    `window` (build phase 8.2, card 4) is the publication range the person
+    picked in the "How far back should I search?" ask-back
+    (`_picked_publication_window`); it limits the PubMed search to those
+    years and nothing else.
     """
     title = None if gene_symbol else disease_title
     if not gene_symbol and not title:
@@ -4977,6 +5069,40 @@ def _is_memory_bound_follow_up(text: str, state: GraphState) -> bool:
     return bool(tokens & _REFERRING_WORDS)
 
 
+def _relevancy_state(text: str, state: GraphState) -> str:
+    """What `guardrail.relevancy` reads: the question, and for a follow-up
+    the previous question it points back at.
+
+    Build phase 8.2 fix round, F-8.2-A01. A follow-up ("and what about it in
+    children?") names no subject of its own, so judged alone it reads as off
+    topic; the old answer was to set the verdict aside whenever the text held
+    a referring word, which also admitted "is it good pizza?". Handing the
+    decision the previous question instead lets the classifier judge the
+    follow-up the way a person would, and its "off_topic" then refuses a
+    follow-up exactly as it refuses a first question.
+
+    A first question, or one with no referring word, is judged on its own
+    text alone, byte for byte what the decision read before this fix. The
+    previous question is the person's own earlier words, already bounded to
+    200 characters by the memory contract (`MAX_OPEN_THREAD_LENGTH`), and
+    `decide` caps the whole state again; nothing retrieved and nothing
+    written by a model enters it. When the stored memory predates open
+    threads, the most recently resolved entity's mention stands in.
+    """
+    if not _is_memory_bound_follow_up(text, state):
+        return text
+    memory = _session_memory(state)
+    if memory is None:
+        return text
+    if memory.open_threads:
+        previous = memory.open_threads[-1]
+    elif memory.resolved_entities:
+        previous = memory.resolved_entities[-1].mention
+    else:
+        return text
+    return f"Previous question in this conversation: {previous}\nNew question: {text}"
+
+
 #: What the answer says when a follow-up points at nothing. Under
 #: `ThinkPayload.clarifying_question`'s 500-character bound.
 CLARIFICATION_QUESTION: Final = (
@@ -5027,8 +5153,10 @@ def _memory_suffix(state: GraphState, tier: Tier) -> str:
     call sites are Think and Plan by construction. The guardrail never
     receives this block: it reads memory only through
     `_is_memory_bound_follow_up`, a deterministic rule applied after its
-    verdict (UI fix set 7, item 7.1, 2026-09-13). It exists as the single
-    declaration those call sites are checked against.
+    verdict (UI fix set 7, item 7.1, 2026-09-13), and `_relevancy_state`,
+    which hands the relevancy decision a follow-up's previous question
+    (build phase 8.2 fix round). It exists as the single declaration those
+    call sites are checked against.
 
     ## What this block does and does not do today (F-4.5-A-09)
 
@@ -5197,13 +5325,19 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     if state.get("clarification_needed"):
         # Item 7.5: Think found a reference with nothing to bind to. There
         # is nothing to look up until the reader says which, so no tool and
-        # no model call; Write asks the question.
+        # no model call; Write asks the question. The same early return
+        # serves item 12.3's ask-back and the "How far back should I
+        # search?" ask, which are not about an unresolved reference, so
+        # they say what actually happened (fix round, F-8.2-J14).
+        unresolved_reference = state.get("clarification_needed") == CLARIFICATION_QUESTION
         sink.emit(
             "plan",
             PlanPayload(
                 narrative=(
                     "no tool selected; the question refers to something no "
                     "earlier turn resolved, so the answer asks which"
+                    if unresolved_reference
+                    else "no tool selected; the answer asks a question back before any search"
                 ),
                 tool_calls=[],
             ),
@@ -5277,19 +5411,19 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     }
     unresolved_symbols: list[str] = state.get("unresolved_entity_symbols") or []
 
-    # Build phase 8.2, card 4: a publication range the question states in so
-    # many words ("from the last 5 years", "since 2022"), read as a value and
-    # applied to every PubMed search this plan makes. Typically the choice a
-    # person clicked after `think.recent_years` asked them how recent.
-    publication_window = breadth_plan.parse_publication_window(query.text)
+    # Build phase 8.2, card 4: the publication range the person PICKED after
+    # `think.recent_years` asked them how recent, applied to every PubMed
+    # search this plan makes. Never a range read from the question's words
+    # (fix round, F-8.2-A07, J01): see `_picked_publication_window`.
+    publication_window = _picked_publication_window(query)
 
     # Build phase 8.2, card 3: the literature decision Think started. Read
-    # here whether or not the branch below needs it, so it is never left
-    # running past the step it was started for, and so its record reaches
-    # the `done` event. It has usually finished long before now.
-    literature_choice = await _literature_choice(
-        harness, trace_id, query.text, ask_if_missing=False
-    )
+    # below only where it can change the plan, a question with no gene
+    # resolved; otherwise `_drop_literature_decision` keeps a finished
+    # record and stops a running one. Until the fix round (F-8.2-J11) it was
+    # awaited here on every question, so a plain gene question could stall
+    # at Plan for up to the guard's budget on a decision it never used.
+    literature_choice: str | None = None
 
     # Fix-plan item 2 (2026-09-22): an accession question plans NCBI record
     # summaries and no graph call, since the graph holds no projects,
@@ -5394,6 +5528,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             )
         ):
             topic_term = None
+    # Whatever this plan did not need the literature decision for (a gene
+    # resolved, an accession, a window), it is not waited for: a decision
+    # already made is kept for the `done` event, one still running is
+    # stopped (fix round, F-8.2-J11).
+    _drop_literature_decision(harness)
 
     if isinstance(planned, _UnresolvedEntityRefusal):
         # T-3.1-13/F-2.1-B10: refuse now, before act_node ever dispatches
@@ -5490,10 +5629,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             else "no gene, variant or disease was named, so searching the "
             "published literature"
         )
-        # A stated range is named in the reader's own words, so they can see
-        # the limit they asked for was applied (build phase 8.2, card 4).
+        # The picked range is named in the reader's own words, so they can
+        # see the limit they chose was applied (build phase 8.2, card 4).
         published = (
-            f", published {publication_window.label}" if publication_window is not None else ""
+            f", published in {publication_window.label}" if publication_window is not None else ""
         )
         plan_payload = PlanPayload(
             narrative=(
@@ -5626,6 +5765,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             # exists. The words are the MedGen record's own, so the
             # narrative cannot name a disease the question did not resolve.
             narrative = f"searching {len(by_layer)} layers for {disease_text}. " + narrative
+        if publication_window is not None and (gene_curie is not None or disease_text):
+            # The picked range limits the PubMed search on this path too, so
+            # the narrative says so (F-8.2-J01 found it silent here).
+            narrative += f"; PubMed papers published in {publication_window.label} only"
         narrative = narrative[:500]
 
         plan_payload = PlanPayload(

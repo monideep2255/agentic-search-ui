@@ -35,12 +35,14 @@ not hold until PubMed answers:
   with ` AND `, untagged so PubMed's automatic term mapping expands them.
   It is planned with the purpose `pubmed_search`, so the abstract fetch and
   the PubTator3 annotation below follow it exactly as they follow a gene's.
-- `parse_publication_window(question)` reads a publication range the
-  question states outright ("from the last 5 years", "since 2022", "in
-  2023"), and `plan_first_stage(..., window=...)` and
-  `plan_topic_search(..., window=...)` AND it onto the PubMed term as a
-  date limit (build phase 8.2, card 4). Parsing a stated value only:
-  whether a question asks for recent work WITHOUT a range is
+- `recent_publication_window(months, label)` builds the publication-date
+  limit for the window a person picked in the "How far back should I
+  search?" ask-back, and `plan_first_stage(..., window=...)` and
+  `plan_topic_search(..., window=...)` AND it onto the PubMed term (build
+  phase 8.2, card 4). No limit is ever read from a question's wording (fix
+  round, F-8.2-A07, J01); `states_publication_range(question)` only says
+  whether a question already names a range, so it is not asked again.
+  Whether a question asks for recent work WITHOUT a range is
   `decide(point="think.recent_years")`'s call, in `core/graph.py`.
 - `plan_first_stage(..., datasets=True)` adds a GEO DataSets ESearch on the
   symbol (2026-09-22, fix-plan item 1), planned by `core/graph.py` only when
@@ -380,7 +382,7 @@ _TOPIC_META_WORDS: Final[frozenset[str]] = frozenset(
         "wonder", "wondering",
         # How RECENT the work should be describes the search's time scope,
         # not its subject (build phase 8.2, card 4): `think.recent_years`
-        # asks the person how recent and `parse_publication_window` turns
+        # asks the person how recent and `recent_publication_window` turns
         # the answer into a publication-date limit. Left in the AND chain,
         # "recent" required that exact word in every abstract.
         "latest", "newest", "recent", "recently",
@@ -429,10 +431,20 @@ _TOPIC_JUDGEMENT_WORDS: Final[frozenset[str]] = frozenset(
 #
 # WHO DECIDES WHAT. Whether a question asks for recent work without saying
 # how recent is a CLASSIFIER's decision, `decide(point="think.recent_years")`
-# in `core/graph.py`, which asks the person back with three windows. This
-# section only READS A VALUE the question states outright, "the last 5
-# years", "since 2022", which is parsing, never deciding: a question with no
-# such phrase gets no limit here, whatever words it uses.
+# in `core/graph.py`, which asks the person back with three windows.
+#
+# A LIMIT COMES ONLY FROM THE WINDOW THE PERSON PICKED (fix round,
+# F-8.2-A07 and F-8.2-J01). The first build read a range out of the
+# question's own words and applied it to every PubMed search, so "stroke in
+# the last month of pregnancy" searched the past four weeks of papers and
+# "statin trials in 2000 patients" searched the year 2000. Words cannot tell
+# a publication date from a subject, a patient count or a period of life,
+# and a silently narrowed search is worse than a broad one. So the words
+# here only do two harmless things: say whether a question already states a
+# range (`states_publication_range`, so it is never asked "How far back?"
+# again), and keep a range's own words ("last", "years") out of a topic
+# term. The limit itself is built by `recent_publication_window` from the
+# structured value the person's click carries (`core.clarify`).
 #
 # Verified live 2026-09-25 against ESearch's own `querytranslation`:
 # `statins AND ("2021/09/25"[dp] : "3000"[dp])` reads back as
@@ -447,12 +459,14 @@ _NUMBER_WORDS: Final[Mapping[str, int]] = {
 }
 
 #: "the last 5 years", "over the past 12 months", "in the last year",
-#: "the past decade". The preposition is optional and consumed with the
-#: phrase, so stripping it leaves no dangling "from" in a topic term.
+#: "the past decade", "in the last 2 weeks". The preposition is optional and
+#: consumed with the phrase, so stripping it leaves no dangling "from" in a
+#: topic term. Weeks and days since the fix round (F-8.2-J02): without them
+#: "in the last 2 weeks" made "last" and "weeks" required words.
 _RELATIVE_WINDOW: Final[re.Pattern[str]] = re.compile(
     r"\b(?:(?:in|from|over|during|within|for)\s+)?(?:the\s+)?(?:last|past)\s+"
     r"(?:(?P<count>\d{1,3}|" + "|".join(_NUMBER_WORDS) + r")\s+)?"
-    r"(?P<unit>years?|months?|decades?)\b",
+    r"(?P<unit>years?|months?|decades?|weeks?|days?)\b",
     re.IGNORECASE,
 )
 
@@ -470,10 +484,10 @@ _MAX_WINDOW_MONTHS: Final[int] = 1200
 
 @dataclass(frozen=True)
 class PublicationWindow:
-    """A publication-date range read from the question's own words.
+    """A publication-date range the person picked (`recent_publication_window`).
 
-    `end` is None for an open range ("since 2022", "the last 5 years"), and
-    `label` is the reader's words for it, for the plan narrative.
+    `end` is None for an open range ("the last 5 years"), and `label` is
+    the reader's words for it, for the plan narrative.
     """
 
     start: date
@@ -494,49 +508,57 @@ def _months_before(today: date, months: int) -> date:
     return date(year, month + 1, min(today.day, last_day))
 
 
-def parse_publication_window(
-    question: str | None, *, today: date | None = None
-) -> PublicationWindow | None:
-    """The publication-date range the question states, or None.
+def states_publication_range(question: str | None, *, today: date | None = None) -> bool:
+    """Whether the question's own words already state a time range.
 
-    `today` defaults to the current UTC date; tests pass it so a planned
-    term is a fixed function of its inputs. A relative window counts back
-    from `today`; an explicit year is a calendar boundary.
+    Used for one thing only: a question that states its own range ("since
+    2022", "the last 5 years") is never asked "How far back should I
+    search?", whatever the recent-work classifier said. It NEVER limits a
+    search (fix round, F-8.2-A07 and F-8.2-J01): the same words describe a
+    subject as often as a publication date ("in the last month of
+    pregnancy", "in 2000 patients"), so a range read from them is at best a
+    guess, and a guessed limit silently narrows the evidence.
+
+    `today` defaults to the current UTC date; a year after it is not a
+    range.
     """
     if not isinstance(question, str):
-        return None
+        return False
+    this_year = (today or datetime.now(UTC).date()).year
+    if _RELATIVE_WINDOW.search(question) is not None:
+        return True
+    for pattern in (_SINCE_YEAR, _IN_YEAR):
+        found = pattern.search(question)
+        if found is not None and int(found.group("year")) <= this_year:
+            return True
+    return False
+
+
+def recent_publication_window(
+    months: int, label: str, *, today: date | None = None
+) -> PublicationWindow:
+    """The publication-date limit for a window the person PICKED.
+
+    `months` and `label` come from the choice they clicked in the "How far
+    back should I search?" ask-back, carried as a structured value by
+    `core.clarify` rather than read back out of the choice's text. The
+    window counts back from `today` (the current UTC date by default) and is
+    open at the end.
+
+    Raises:
+        ValueError: `months` outside 1 to `_MAX_WINDOW_MONTHS`, which only a
+            programming mistake can produce.
+    """
+    if not 0 < months <= _MAX_WINDOW_MONTHS:
+        raise ValueError(f"a recent window of {months} months is not a recency limit")
     today = today or datetime.now(UTC).date()
-
-    relative = _RELATIVE_WINDOW.search(question)
-    if relative is not None:
-        raw_count = (relative.group("count") or "").lower()
-        count = int(raw_count) if raw_count.isdigit() else _NUMBER_WORDS.get(raw_count, 1)
-        unit = relative.group("unit").lower()
-        months = count * (120 if unit.startswith("decade") else 12 if unit.startswith("year") else 1)
-        if 0 < months <= _MAX_WINDOW_MONTHS:
-            noun = unit.rstrip("s") + ("s" if count != 1 else "")
-            label = f"the last {count} {noun}" if count != 1 else f"the last {noun}"
-            return PublicationWindow(start=_months_before(today, months), end=None, label=label)
-
-    since = _SINCE_YEAR.search(question)
-    if since is not None:
-        year = int(since.group("year"))
-        if year <= today.year:
-            return PublicationWindow(start=date(year, 1, 1), end=None, label=f"since {year}")
-
-    single = _IN_YEAR.search(question)
-    if single is not None:
-        year = int(single.group("year"))
-        if year <= today.year:
-            return PublicationWindow(
-                start=date(year, 1, 1), end=date(year, 12, 31), label=f"in {year}"
-            )
-    return None
+    return PublicationWindow(start=_months_before(today, months), end=None, label=label)
 
 
 def _without_publication_window(question: str) -> str:
     """The question with its stated date window removed, so the window's
-    own words ("last", "years", "since") never become search words."""
+    own words ("last", "years", "since") never become search words. This
+    only ever BROADENS a topic term; it never adds a limit."""
     for pattern in (_RELATIVE_WINDOW, _SINCE_YEAR, _IN_YEAR):
         question = pattern.sub(" ", question)
     return question
@@ -650,9 +672,9 @@ def plan_topic_search(
     topic question gets the identical two follow-ups on the identical PMIDs
     with no second wiring to keep in step with the first.
 
-    `window`, the question's own stated publication range
-    (`parse_publication_window`), is ANDed on as a date limit, so a person
-    who picked "the last 5 years" gets only papers from those years.
+    `window`, the range the person picked (`recent_publication_window`), is
+    ANDed on as a date limit, so a person who picked "the last 5 years"
+    gets only papers from those years.
     """
     term = build_topic_term(question)
     if term is None:
@@ -699,7 +721,7 @@ def plan_first_stage(
     no disease equivalent that returns the same kind of record.
 
     `window` (build phase 8.2, card 4) limits the PubMed search, and only
-    the PubMed search, to the question's stated publication range. ClinVar,
+    the PubMed search, to the publication range the person picked. ClinVar,
     OMIM and GEO records are not papers and keep no publication date to
     limit on.
     """

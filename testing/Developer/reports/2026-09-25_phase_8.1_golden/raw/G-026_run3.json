@@ -1,0 +1,1126 @@
+{
+ "record": {
+  "id": "G-026",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with cystic fibrosis?",
+  "session_id": "c103-d42ba4d585aa",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T10:10:26+00:00",
+  "run_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0010674"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 16 sources, not yet confirmed",
+  "citations": 47,
+  "distinct_sources": 16,
+  "citations_by_layer": {
+   "layer_2_api": 38,
+   "layer_3_enrichment": 6,
+   "layer_1_graph": 3
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 4,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 32,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   4
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 434,
+  "answer_start": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [11], Fc gamma receptor IIa [13] and transforming growth factor beta 1 [14], li",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 6.466,
+  "seconds": 12.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 74,
+   "citation": 47,
+   "trust_signal": 48,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 0,
+   "ts": "2026-09-25T10:08:52.837730Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 2,
+   "ts": "2026-09-25T10:08:56.846989Z",
+   "payload": {
+    "narrative": "Asks which genes are associated with a disease; a direct lookup of genes for a disease. (cystic fibrosis: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 4,
+   "ts": "2026-09-25T10:08:56.851146Z",
+   "payload": {
+    "narrative": "searching 3 layers for cystic fibrosis. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-55b30fa5404e",
+      "layer": "layer_1_graph",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e6fa8fe4ec8f",
+      "layer": "layer_3_enrichment",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-b6d536bcddd0",
+      "layer": "layer_3_enrichment",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3c4f934b01e6",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-37689d57e66e",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e1a32a549361",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-50f381c702c8",
+      "layer": "layer_3_enrichment",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3d3486c968ce",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 6,
+   "ts": "2026-09-25T10:08:56.853623Z",
+   "payload": {
+    "call_id": "cq-55b30fa5404e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 7,
+   "ts": "2026-09-25T10:08:56.853695Z",
+   "payload": {
+    "call_id": "pa-e6fa8fe4ec8f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 8,
+   "ts": "2026-09-25T10:08:56.853723Z",
+   "payload": {
+    "call_id": "ct-b6d536bcddd0",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 9,
+   "ts": "2026-09-25T10:08:56.853746Z",
+   "payload": {
+    "call_id": "ne-3c4f934b01e6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 10,
+   "ts": "2026-09-25T10:08:56.853768Z",
+   "payload": {
+    "call_id": "ne-37689d57e66e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 11,
+   "ts": "2026-09-25T10:08:56.853790Z",
+   "payload": {
+    "call_id": "ne-e1a32a549361",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 12,
+   "ts": "2026-09-25T10:08:56.853812Z",
+   "payload": {
+    "call_id": "pa-50f381c702c8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 13,
+   "ts": "2026-09-25T10:08:56.853834Z",
+   "payload": {
+    "call_id": "ne-3d3486c968ce",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 14,
+   "ts": "2026-09-25T10:08:57.043627Z",
+   "payload": {
+    "call_id": "pa-e6fa8fe4ec8f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 15,
+   "ts": "2026-09-25T10:08:57.046732Z",
+   "payload": {
+    "call_id": "ne-3c4f934b01e6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 16,
+   "ts": "2026-09-25T10:08:57.225187Z",
+   "payload": {
+    "call_id": "ct-b6d536bcddd0",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 17,
+   "ts": "2026-09-25T10:08:57.271725Z",
+   "payload": {
+    "call_id": "ne-37689d57e66e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 18,
+   "ts": "2026-09-25T10:08:57.360132Z",
+   "payload": {
+    "call_id": "cq-55b30fa5404e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "4 row(s) of 4",
+    "result_count": 4,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 19,
+   "ts": "2026-09-25T10:08:57.612584Z",
+   "payload": {
+    "call_id": "ne-3d3486c968ce",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "summary: 32 record(s)",
+    "result_count": 32,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 20,
+   "ts": "2026-09-25T10:08:57.657922Z",
+   "payload": {
+    "call_id": "pa-50f381c702c8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 21,
+   "ts": "2026-09-25T10:08:57.691002Z",
+   "payload": {
+    "call_id": "ne-e1a32a549361",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "fetch: 6 record(s)",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 22,
+   "ts": "2026-09-25T10:08:57.693995Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00391703",
+    "source_url": "https://clinicaltrials.gov/study/NCT00391703",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03290144",
+    "source_url": "https://clinicaltrials.gov/study/NCT03290144",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "CF transmembrane conductance regulator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0010674",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0010674",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2212",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "Fc gamma receptor IIa",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7040",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7040",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32800451",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32800451/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Cystic_Fibrosis",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D003550",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35240644",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35240644/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00744276",
+    "source_url": "https://clinicaltrials.gov/study/NCT00744276",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35592838",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35592838/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00967681",
+    "source_url": "https://clinicaltrials.gov/study/NCT00967681",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35853636",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35853636/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02929420",
+    "source_url": "https://clinicaltrials.gov/study/NCT02929420",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39129918",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39129918/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "f2a832dd-3992-4b17-8f72-04556d37b7ac",
+   "seq": 193,
+   "ts": "2026-09-25T10:09:03.517053Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 6466,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 16 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [11], Fc gamma receptor IIa [13] and transforming growth factor beta 1 [14], linked to 1 disease: Cystic fibrosis [12]. \n\nDisease Identity and Clinical Features\n\nMedGen lists these clinical features: Asthma [1], Bronchiectasis [2], Clubbing of fingers [3], Dehydration [4], Diarrhea [5], Hemoptysis [6], Hepatomegaly [7] and Hepatosplenomegaly [8]. \n\nTrial records returned include Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis [9] and Pregnancies and Cystic Fibrosis [10]. \n\nDisease records found\n\nDisease name: Cystic fibrosis [12]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1080, name: CF transmembrane conductance regulator [11]. Gene NCBIGene:2212, name: Fc gamma receptor IIa [13]. Gene NCBIGene:7040, name: transforming growth factor beta 1 [14]. \n\nPubmed records found\n\nPubmed title: Encephalopathy in cystic fibrosis [15]. Pubmed title: 3.22 Nutrition in Cystic Fibrosis [41]. Pubmed title: Editorial: Cystic Fibrosis in Children [43]. Pubmed title: Azithromycin and cystic fibrosis [45]. Pubmed title: Editorial: Cystic fibrosis-related diabetes [47]. \n\nMedgen records found\n\nMedgen title: Cystic fibrosis [16]. \n\nClinical features MedGen lists for Cystic fibrosis\n\nMedgen clinical_features: Asthma [1]. Medgen clinical_features: Bronchiectasis [2]. Medgen clinical_features: Clubbing of fingers [3]. Medgen clinical_features: Dehydration [4]. Medgen clinical_features: Diarrhea [5]. Medgen clinical_features: Hemoptysis [6]. Medgen clinical_features: Hepatomegaly [7]. Medgen clinical_features: Hepatosplenomegaly [8]. Medgen clinical_features: Hypercalciuria [17]. Medgen clinical_features: Male infertility [18]. Medgen clinical_features: Cirrhosis of liver [19]. Medgen clinical_features: Biliary cirrhosis [20]. Medgen clinical_features: Nasal polyposis [21]. Medgen clinical_features: Pancreatitis [22]. Medgen clinical_features: Cor pulmonale [23]. Medgen clinical_features: Rectal prolapse [24]. Medgen clinical_features: Steatorrhea [25]. Medgen clinical_features: Chronic sinusitis [26]. Medgen clinical_features: Exocrine pancreatic insufficiency [27]. Medgen clinical_features: Recurrent pneumonia [28]. Medgen clinical_features: Chronic lung disease [29]. Medgen clinical_features: Ileus [30]. Medgen clinical_features: Reduced forced vital capacity [31]. Medgen clinical_features: Elevated sweat chloride [32]. Medgen clinical_features: Recurrent bronchopulmonary infections [33]. Medgen clinical_features: Failure to thrive [34]. Medgen clinical_features: Meconium ileus [35]. Medgen clinical_features: Reduced forced expiratory volume in one second [36]. Medgen clinical_features: Decreased forced expiratory flow 25-75% [37]. Medgen clinical_features: Hyperpolarized transepithelial nasal potential difference [38]. Medgen clinical_features: Salty tasting skin [39]. \n\nLiterature entity records found\n\nLiterature entity name: Cystic Fibrosis [40]. \n\nClinical trial records found\n\nClinical trial name: Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis [9]. Clinical trial name: A Study of Topical Danazol for the Treatment of Pain Associated With Fibrocystic Breast Disease [42]. Clinical trial name: Efficacy and Safety of ONCOXIN in Patients With Breast Fibrocystic Disease [44]. Clinical trial name: A Clinical Study on the Efficacy and Safety of the Treatment of Hyperplasia of Mammary Glands With Xiaoru Sanjie Capsule [46]. Clinical trial name: Pregnancies and Cystic Fibrosis [10]. "
+}

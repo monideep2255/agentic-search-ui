@@ -386,18 +386,126 @@ async def test_an_allowlist_hit_never_asks_the_relevancy_classifier(
     assert _payload(events, "guard")["passed"] is True
 
 
+# Build phase 8.2 fix round, F-8.2-A01. A follow-up is judged for relevancy
+# like any other question: the decision is handed the previous question, and
+# its "off_topic" refuses. Before the fix the referring word alone set aside
+# both judges' off-topic verdicts, so after any answered question "Is it
+# going to rain in Boston this weekend?" ran a full search.
+
+_PIZZA_FOLLOW_UP = "What is the best pizza in Chicago and is it cheap?"
+
+
 @pytest.mark.asyncio
-async def test_a_relevancy_off_topic_on_a_pronoun_follow_up_is_set_aside(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize(
+    "text",
+    [
+        _PIZZA_FOLLOW_UP,
+        "Which one is the best football team?",
+        "Is it going to rain in Boston this weekend?",
+        "Tell me about that movie Oppenheimer",
+    ],
+)
+async def test_a_relevancy_off_topic_refuses_a_pronoun_follow_up_too(
+    monkeypatch: pytest.MonkeyPatch, text: str
 ) -> None:
-    """The same allowance the injection classifier's own off-topic verdict
-    gets: a follow-up pointing at a remembered entity is about that entity."""
+    from system_03_search_agent.guardrail import prefilter
+
     _mock_decide(
         monkeypatch,
         return_value=_relevancy_record("off_topic", jev_choice="off_topic", guard_choice="off_topic"),
     )
+    events, result = await _run_guardrail(text, session_memory=_memory_with_brca1())
+    assert _payload(events, "guard") == {
+        "passed": False,
+        "category": "off_topic",
+        "reason": prefilter.OFF_TOPIC_REASON,
+    }
+    assert result.get("guard_refused") is True
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_the_decision_calls_on_topic_is_admitted_over_the_classifier(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """The injection classifier reads the follow-up alone and calls it off
+    topic; the relevancy decision reads it with the previous question and
+    calls it on topic, so it goes ahead to Think, where memory binds "it"."""
+    _mock_litellm.return_value = _off_topic_reply()
+    _mock_decide(
+        monkeypatch,
+        return_value=_relevancy_record("on_topic", jev_choice="on_topic", guard_choice="on_topic"),
+    )
+    events, result = await _run_guardrail(
+        "and what about it in children?", session_memory=_memory_with_brca1()
+    )
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+    assert result.get("guard_refused") is not True
+
+
+@pytest.mark.asyncio
+async def test_a_follow_ups_relevancy_state_carries_the_previous_question(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    decide_mock = _mock_decide(
+        monkeypatch,
+        return_value=_relevancy_record("on_topic", jev_choice="on_topic", guard_choice="on_topic"),
+    )
+    await _run_guardrail("and what about it in children?", session_memory=_memory_with_brca1())
+    assert decide_mock.await_args.args[3] == (
+        "Previous question in this conversation: Which diseases are associated with BRCA1?\n"
+        "New question: and what about it in children?"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_question_with_no_referring_word_is_judged_on_its_own_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Memory is not handed over unless the question points back at it."""
+    decide_mock = _mock_decide(
+        monkeypatch,
+        return_value=_relevancy_record("off_topic", jev_choice="off_topic", guard_choice="off_topic"),
+    )
+    await _run_guardrail("Tell me a joke about cats", session_memory=_memory_with_brca1())
+    assert decide_mock.await_args.args[3] == "Tell me a joke about cats"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "decide_kwargs",
+    [
+        {
+            "return_value": _relevancy_record(
+                "on_topic", decided_by="guard", fallback_reason="no_usable_pick:timeout"
+            )
+        },
+        {"side_effect": RuntimeError("seam down")},
+    ],
+)
+async def test_a_set_aside_off_topic_verdict_stands_when_no_decision_saw_the_conversation(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, decide_kwargs: dict[str, Any]
+) -> None:
+    """The classifier said off topic and only the referring-word rule set that
+    aside. With no usable relevancy pick, nothing that read the previous
+    question said otherwise, so the classifier's verdict stands."""
+    _mock_litellm.return_value = _off_topic_reply()
+    _mock_decide(monkeypatch, **decide_kwargs)
+    events, result = await _run_guardrail(_PIZZA_FOLLOW_UP, session_memory=_memory_with_brca1())
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+    assert result.get("guard_refused") is True
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_the_classifier_admits_still_fails_open_with_no_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No usable pick on a question the injection classifier admitted is
+    still admitted: the fail-open rule is unchanged where that classifier
+    has judged topicality itself."""
+    _mock_decide(monkeypatch, side_effect=RuntimeError("seam down"))
     events, _ = await _run_guardrail(
-        "and what about it in mice?", session_memory=_memory_with_brca1()
+        "and what about it in children?", session_memory=_memory_with_brca1()
     )
     assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
 
