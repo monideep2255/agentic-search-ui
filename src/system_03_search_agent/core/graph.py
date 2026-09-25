@@ -545,6 +545,8 @@ from system_03_search_agent.synthesis.disease_names import (
     resolve_concept_ids,
 )
 from system_03_search_agent.synthesis.findings import (
+    CLINICAL_FEATURES_FIELD,
+    NO_CLINICAL_FEATURES_PREFIX,
     SynthFinding,
     apply_resolved_disease_names,
     build_completeness_directive,
@@ -552,6 +554,7 @@ from system_03_search_agent.synthesis.findings import (
     build_synth_findings,
     build_synth_messages,
     drop_placeholder_condition_findings,
+    reserve_prompt_slots,
     unreported_findings,
 )
 from system_03_search_agent.synthesis.freshness import (
@@ -624,6 +627,11 @@ from system_03_search_agent.tools.ncbi_dbsnp import ncbi_dbsnp
 from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput, NcbiDbsnpOutput
 from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi_efetch
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput, NcbiEfetchOutput
+from system_03_search_agent.tools.ncbi_eutils_actions import (
+    MAX_CLINICAL_FEATURES,
+    clean_clinical_feature_name,
+    is_hpo_id,
+)
 from system_03_search_agent.tools.pathogen_detection import (
     build_citation as pathogen_build_citation,
 )
@@ -5483,16 +5491,12 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # withholds `gene_id`: it identifies the record rather than saying
     # anything about it, and the question already resolved it.
     #
-    # T-8.1-06b (F-8.1-04): `clinical_features` added. Builder C's
-    # `_parse_medgen_clinical_features` (`tools/ncbi_eutils_actions.py`)
-    # always sets this key for a `db="medgen"` record, a bounded list of
-    # `{"name": ..., "hpo_id": ...}` dicts, but it was never listed here,
-    # so a phenotype question's own answer was silently dropped before it
-    # reached the writing model: confirmed empirically by builder C with a
-    # live run that still answered from PubMed, ClinVar and trials with no
-    # phenotype ever cited. See `_medgen_clinical_features_text` below for
-    # the string this list becomes before synthesis ever sees it.
-    "medgen_summary": ("title", "definition", "semantictype", "clinical_features"),
+    # The record's clinical features are NOT listed here, on purpose
+    # (F-8.1-A11, fix-and-verify round). They reach synthesis as one row per
+    # feature, built from the record by `_with_medgen_clinical_feature_rows`
+    # below, never as a field of the title row: one string joining every
+    # feature could not be quoted by a sentence naming one of them.
+    "medgen_summary": ("title", "definition", "semantictype"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -5611,97 +5615,134 @@ def _unwrap_medgen_fields(fields: dict[str, Any]) -> dict[str, Any]:
     return unwrapped
 
 
-#: T-8.1-06b (F-8.1-04). What the answer says when MedGen genuinely lists
-#: no clinical features for a resolved disease concept: a plain, code-built
-#: fact, cited to that same MedGen record, never a substitute record type
-#: and never a silent drop. Composed by code from a value already fetched
-#: (the record's own `clinical_features` list is empty), not a classifier's
-#: decision: `tracker/phase_8.1.md`'s goal contract forbids a hardcoded
-#: decision ("a decision is a classifier's call, code only verifies"),
-#: and this states a fact about what a record contains, deciding nothing
-#: about what to search or how to classify the question.
-_MEDGEN_NO_CLINICAL_FEATURES_TEXT: Final[str] = (
-    "MedGen lists no clinical features for this condition"
-)
+#: F-8.1-A11 (fix-and-verify round). The row fields a MedGen clinical
+#: feature row carries besides the feature's name, which sits first under
+#: `CLINICAL_FEATURES_FIELD` so `_pick_representative_field` (insertion
+#: order when a row has no `name` field) always cites the name itself. These
+#: three are read only by the code-built listing (`_answer_tokens`, through
+#: `_clinical_feature_row`), never shown to a model.
+_FEATURE_HPO_FIELD: Final[str] = "hpo_id"
+_FEATURE_TOTAL_FIELD: Final[str] = "clinical_features_total"
+_FEATURE_DISEASE_FIELD: Final[str] = "disease_title"
+
+#: The longest disease title a feature row, or the "lists none" sentence,
+#: carries. MedGen titles run to about 100 characters; the bound keeps one
+#: hostile title from growing every feature row of its record.
+_MAX_FEATURE_DISEASE_TITLE_CHARS: Final[int] = 200
 
 
-def _medgen_clinical_features_text(features: Any) -> str:
-    """Turn a MedGen record's `clinical_features` list into one citable,
-    quotable string, the same shape `_sra_run_accessions` already gives
-    `sra_summary`'s `runs` field for the identical reason:
-    `synthesis/grounding.ground_claim` matches a clause against source TEXT
-    by containment, so a Python list can never be quoted, only a string.
+def _medgen_no_clinical_features_text(disease_title: str) -> str:
+    """F-8.1-J11, J13, A04: the one sentence that says a record lists none.
 
-    `features` is `list[dict[str, str]]` in the live shape
-    (`ncbi_eutils_actions._parse_medgen_clinical_features`'s own
-    `{"name": ..., "hpo_id": ...}` items), always present as a key on a
-    `db="medgen"` record, empty when MedGen carries none for the concept.
-    Reads defensively (`isinstance` at every level, skips a malformed
-    item rather than raising) since this is untrusted parsed content one
-    hop removed from a live NCBI response, per
-    `.claude/rules/ai-security-standards.md`'s "treat AI/external output
-    as untrusted" discipline extended to any upstream parser's output.
-
-    Returns `_MEDGEN_NO_CLINICAL_FEATURES_TEXT` for anything that is not a
-    non-empty list of usable items, so "MedGen was asked and had nothing"
-    reads identically whether the list was empty, missing, or malformed,
-    never as a silently blank field.
+    Composed by code from a value already fetched AND read (the record's
+    `conceptmeta` parsed and carries no `ClinicalFeature`), cited to that
+    record, and naming the disease, so a listing that carries several
+    MedGen records never shows an anonymous "no clinical features" line.
+    States what a record contains and decides nothing about what to search
+    or how to classify the question. Never produced for a record whose
+    features could not be read (`_with_medgen_clinical_feature_rows`).
     """
-    if not isinstance(features, list) or not features:
-        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
-    parts: list[str] = []
-    for item in features:
-        if not isinstance(item, Mapping):
-            continue
-        name = item.get("name")
-        if not isinstance(name, str) or not name.strip():
-            continue
-        hpo_id = item.get("hpo_id")
-        if isinstance(hpo_id, str) and hpo_id.strip():
-            parts.append(f"{name.strip()} ({hpo_id.strip()})")
-        else:
-            parts.append(name.strip())
-    if not parts:
-        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
-    return ", ".join(parts)
+    return f"{NO_CLINICAL_FEATURES_PREFIX}{disease_title}"
 
 
-def _medgen_clinical_feature_rows(title_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """T-8.1-06b (F-8.1-04): one additional citeable row per admitted
-    MedGen title row, carrying that record's own `clinical_features` text
-    as ITS OWN field, so `_pick_representative_field` never has to choose
-    between it and `title` on the same row.
+def _feature_disease_title(title_row: dict[str, Any]) -> str:
+    """The record's own title as one printable line, or "" when absent."""
+    title = title_row["fields"].get("title")
+    if not isinstance(title, str):
+        return ""
+    printable = "".join(ch if ch.isprintable() else " " for ch in title)
+    return " ".join(printable.split())[:_MAX_FEATURE_DISEASE_TITLE_CHARS].rstrip()
 
-    Mirrors `_pubmed_abstract_rows`'s own ADDITIONAL-row pattern for the
-    identical structural reason, stated in `render_findings_block`'s own
-    docstring: a `SynthFinding` carries exactly one `field`/`field_value`
-    pair, so a fact that must reach Synth's own prose needs its own row
-    whenever the row it started on already carries a field that always
-    wins the pick. Measured live: adding `clinical_features` to
-    `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` alone did not change
-    the answer at all. `title` kept winning `_pick_representative_field`
-    (documented insertion-order behaviour), so the model was shown
-    `MedGen title: Marfan syndrome` and nothing else; a live run after
-    that fix alone still named zero phenotypes.
 
-    Matched to `title_rows` by `source_url`, the same identity
-    `_pubmed_abstract_rows` uses, so this only adds a row for a record the
-    title path already admitted, never a new record.
+def _with_medgen_clinical_feature_rows(
+    records: list[Any], title_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """F-8.1-A11, J09, J10, J11, J14, A03 (fix-and-verify round): each
+    admitted MedGen title row, followed by one row PER clinical feature the
+    record lists, every one carrying the record's own `source_url`.
+
+    WHY ONE ROW PER FEATURE. The first version joined every feature into one
+    string on one row. `grounding.ground_claim` accepts containment in
+    either direction and nothing else, so a sentence naming ONE feature
+    ("Marfan syndrome is associated with ectopia lentis [7]") is neither
+    contained in a 30-feature string nor contains it, and every such
+    sentence was stripped live (F-8.1-A11: the model named all 30, the gate
+    kept none). With a row, and so a finding, per feature, that sentence
+    contains its own finding's value and grounds under the unchanged gate.
+    A row still carries exactly one field a model is shown (`render_finding_
+    body`), the reason `_pubmed_abstract_rows` adds rows the same way.
+
+    What a feature row carries: the name under `CLINICAL_FEATURES_FIELD`,
+    its HPO id only when it is exactly one (`is_hpo_id`), how many features
+    the record lists in total, and the disease's own title; the last three
+    for the code-built listing. Names are cleaned again with the tool's own
+    rule (`clean_clinical_feature_name`): this is parsed NCBI text one hop
+    from the live response, and a newline in it once forged a finding line
+    in the writing model's prompt (F-8.1-J14).
+
+    Three cases, and the difference between the last two is the point
+    (F-8.1-J11):
+
+    - The record lists features: one row each, at most
+      `ncbi_eutils_actions.MAX_CLINICAL_FEATURES`.
+    - The record was read and lists none (`clinical_features == []`, total
+      0): one row saying so, naming the disease.
+    - The record could not be read (neither key present, the tool's signal
+      for an unreadable `conceptmeta`): no row at all. Nothing is said
+      about its features, because nothing is known.
+
+    Interleaved (title, its features, the next title, ...), so a record's
+    features follow its own title in every walk of the rows. Matched to the
+    admitted `title_rows` by `source_url`, like `_pubmed_abstract_rows`, so
+    this never adds a record the title cap did not admit.
     """
-    feature_rows: list[dict[str, Any]] = []
+    by_url = {record.source_url: record for record in records if record.source_url}
+    out: list[dict[str, Any]] = []
     for row in title_rows:
-        text = row["fields"].get("clinical_features")
-        if not isinstance(text, str) or not text.strip():
+        out.append(row)
+        record = by_url.get(row["source_url"])
+        if record is None:
             continue
-        feature_rows.append(
-            {
-                "curie": "",
-                "node_or_edge_type": row["node_or_edge_type"],
-                "fields": {"clinical_features": text},
-                "source_url": row["source_url"],
-            }
-        )
-    return feature_rows
+        features = record.fields.get(CLINICAL_FEATURES_FIELD)
+        total = record.fields.get(_FEATURE_TOTAL_FIELD)
+        if not isinstance(features, list) or not isinstance(total, int) or isinstance(total, bool):
+            continue
+        disease_title = _feature_disease_title(row)
+        feature_rows: list[dict[str, Any]] = []
+        for item in features[:MAX_CLINICAL_FEATURES]:
+            if not isinstance(item, Mapping):
+                continue
+            name = clean_clinical_feature_name(item.get("name"))
+            if not name:
+                continue
+            fields: dict[str, Any] = {CLINICAL_FEATURES_FIELD: name}
+            if is_hpo_id(item.get(_FEATURE_HPO_FIELD)):
+                fields[_FEATURE_HPO_FIELD] = item[_FEATURE_HPO_FIELD]
+            fields[_FEATURE_TOTAL_FIELD] = max(total, len(features))
+            fields[_FEATURE_DISEASE_FIELD] = disease_title
+            feature_rows.append(
+                {
+                    "curie": "",
+                    "node_or_edge_type": row["node_or_edge_type"],
+                    "fields": fields,
+                    "source_url": row["source_url"],
+                }
+            )
+        if not features and total == 0 and disease_title:
+            feature_rows.append(
+                {
+                    "curie": "",
+                    "node_or_edge_type": row["node_or_edge_type"],
+                    "fields": {
+                        CLINICAL_FEATURES_FIELD: _medgen_no_clinical_features_text(disease_title),
+                        _FEATURE_TOTAL_FIELD: 0,
+                        _FEATURE_DISEASE_FIELD: disease_title,
+                    },
+                    "source_url": row["source_url"],
+                }
+            )
+        out.extend(feature_rows)
+    return out
 
 
 def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -> list[Any]:
@@ -5809,18 +5850,6 @@ def _ncbi_efetch_output_to_structured_fields(
     if purpose == _MEDGEN_SUMMARY_PURPOSE:
         for row in rows:
             row["fields"] = _unwrap_medgen_fields(row["fields"])
-            # T-8.1-06b (F-8.1-04): stringify BEFORE the row reaches
-            # synthesis, the same discipline `_SRA_SUMMARY_PURPOSE` below
-            # already applies to `runs`. Always runs when the key is
-            # present at all (it always is, on a real medgen record,
-            # per `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` above),
-            # so an empty list becomes the honest "no clinical features"
-            # sentence rather than reaching `ground_claim` as a Python
-            # list no clause could ever quote.
-            if "clinical_features" in row["fields"]:
-                row["fields"]["clinical_features"] = _medgen_clinical_features_text(
-                    row["fields"]["clinical_features"]
-                )
     if purpose in _BREADTH_FIELDS_BY_PURPOSE:
         # A breadth result is sorted by record URL, a property of the
         # record and not of the response order, then cut to the fixed cap,
@@ -5831,25 +5860,11 @@ def _ncbi_efetch_output_to_structured_fields(
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
             rows = rows + _pubmed_abstract_rows(output.records, rows)
         if purpose == _MEDGEN_SUMMARY_PURPOSE:
-            # T-8.1-06b (F-8.1-04), round 2: the allowlist addition above
-            # alone does NOT reach the model. Confirmed live: with
-            # `clinical_features` merely added to the same row as `title`,
-            # `_pick_representative_field` still picks `title` (documented
-            # insertion-order behaviour, `omim_summary`'s own comment above
-            # names the same rule), so `render_finding_body` shows only
-            # "Disease record MedGen:...` / `title: Marfan syndrome`" and
-            # the phenotype text never reaches Synth's prompt at all. A
-            # live run of the Marfan question after the allowlist-only fix
-            # still answered with 0 phenotypes named, only the record's
-            # title and a fallback listing.
-            #
-            # Same fix shape as `_PUBMED_ABSTRACTS_PURPOSE` above, for the
-            # identical structural reason: `render_finding_body` and
-            # `_pick_representative_field` show exactly one field per
-            # finding, so a fact that must reach the model's own prose
-            # needs its OWN row when the row it started on already carries
-            # a field that always wins the pick.
-            rows = rows + _medgen_clinical_feature_rows(rows)
+            # T-8.1-06b, rebuilt in the fix-and-verify round (F-8.1-A11):
+            # one row per clinical feature behind its record's title row,
+            # read from the record, never from the title row's fields. See
+            # `_with_medgen_clinical_feature_rows` for why one row each.
+            rows = _with_medgen_clinical_feature_rows(output.records, rows)
         if purpose == _SRA_SUMMARY_PURPOSE:
             for row in rows:
                 runs = row["fields"].get("runs")
@@ -6594,6 +6609,54 @@ _MAX_FINDINGS_FOR_MODEL_PROMPT = 30
 # multi-agent pipeline gate still requires the bound to exist, just at a
 # value the tool's own output can actually reach.
 _MAX_FINDINGS_FOR_DISPLAY = _PLAN_TOOL_CALL_ROW_LIMIT
+
+# F-8.1-A12 (fix-and-verify round, 2026-09-25). How many of the
+# `_MAX_FINDINGS_FOR_MODEL_PROMPT` slots the question's disease keeps for
+# the clinical features on its own MedGen record (plus one for the record's
+# title, so the model reads which disease they belong to).
+#
+# Why 10. It is the same figure as `_LEAD_FINDINGS_QUOTA`, the slots the
+# question's own graph rows are guaranteed: with 11 reserved, 19 remain,
+# so those 10 still land in the prompt with room for context. It is twice
+# the five features card 1 asks an answer to name, so a few sentences the
+# gate strips cannot take the answer below five. And it is well under the
+# measured record sizes (70 for Marfan syndrome, 57 and 31 for the other
+# records round 1 read), so the prompt never becomes a feature list with
+# the graph answer squeezed out; the code-built listing carries all of them.
+_ANCHOR_FEATURE_PROMPT_SLOTS: Final[int] = 10
+
+
+def _anchor_disease_prompt_reservation(synth_findings: list[SynthFinding]) -> list[str]:
+    """The citation ids `write_node` keeps inside the model's prompt slice
+    for the question's disease: each MedGen record's title, then its
+    clinical feature findings, at most `_ANCHOR_FEATURE_PROMPT_SLOTS`
+    features in all, in MedGen's own order.
+
+    Clinical feature findings exist only on the `medgen_summary` breadth
+    call, which `breadth_plan.plan_disease_search` plans for a question
+    whose anchor resolved to a disease, by that disease's own concept id,
+    so "the question's anchor is a disease with clinical features" is read
+    off the findings themselves rather than off the question's wording: no
+    question-shape rule is involved. A record that lists none contributes
+    its one "lists none" finding, which is the honest answer to a phenotype
+    question about it. Empty when there are no such findings.
+    """
+    features = [f for f in synth_findings if f.field == CLINICAL_FEATURES_FIELD]
+    features = features[:_ANCHOR_FEATURE_PROMPT_SLOTS]
+    if not features:
+        return []
+    reserved: list[str] = []
+    for url in dict.fromkeys((f.source_url or "").strip() for f in features):
+        title = next(
+            (f for f in synth_findings if f.field == "title" and (f.source_url or "").strip() == url),
+            None,
+        )
+        if title is not None:
+            reserved.append(title.citation_id)
+        reserved.extend(
+            f.citation_id for f in features if (f.source_url or "").strip() == url
+        )
+    return reserved
 
 
 def _tool_execution_outcome(
@@ -9394,6 +9457,35 @@ def _row_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] |
     return _row_behind_synth_finding(findings, finding)
 
 
+def _clinical_feature_row(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any]:
+    """The `fields` of the one MedGen clinical feature row a feature finding
+    was built from, or {} when none matches.
+
+    Not `_row_fields_for`: every feature row shares its record's page URL
+    with the record's title row, and that lookup returns the first URL
+    match in the call, the title row, for all of them (the GO-row defect
+    `_row_for`'s docstring records, one record type over). Matched here on
+    the finding's own call, its URL and its own value under
+    `CLINICAL_FEATURES_FIELD`, so each feature reads its own HPO id.
+    """
+    url = (finding.source_url or "").strip()
+    for candidate in findings:
+        fields = candidate.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        if finding.call_id and candidate.call_id != finding.call_id:
+            continue
+        for row in fields.get("rows", []):
+            row_fields = row.get("fields")
+            if (
+                isinstance(row_fields, dict)
+                and str(row.get("source_url") or "").strip() == url
+                and row_fields.get(CLINICAL_FEATURES_FIELD) == finding.field_value
+            ):
+                return row_fields
+    return {}
+
+
 def _row_fields_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
     """The raw row's `fields` for a prepared finding, matched by source URL."""
     row = _row_for(finding, findings)
@@ -9558,6 +9650,77 @@ def _answer_tokens(
             citation.source_id if citation is not None else "",
         )
 
+    def split_feature_sentences(
+        sentences: tuple[str, ...],
+    ) -> tuple[tuple[str, ...], dict[str, list[tuple[str, SynthFinding]]]]:
+        # F-8.1-A04, J13 (fix-and-verify round): a MedGen record's clinical
+        # feature rows are listed BENEATH the record's own entry, under a
+        # heading naming the disease, never as records of their own in the
+        # record table (where "Aortic regurgitation" would sit in a column
+        # headed "Disease").
+        records: list[str] = []
+        blocks: dict[str, list[tuple[str, SynthFinding]]] = {}
+        for sentence in sentences:
+            ids = marker_ids(sentence)
+            finding = finding_by_citation_id.get(ids[0]) if ids else None
+            if finding is not None and finding.field == CLINICAL_FEATURES_FIELD:
+                blocks.setdefault((finding.source_url or "").strip(), []).append(
+                    (sentence, finding)
+                )
+            else:
+                records.append(sentence)
+        return tuple(records), blocks
+
+    def feature_block(entries: list[tuple[str, SynthFinding]]) -> None:
+        rows = [_clinical_feature_row(finding, findings) for _, finding in entries]
+        # The "lists none" sentence: its record was read and carries no
+        # features. Shown as its own line, the disease named in its text.
+        for (sentence, finding), row in zip(entries, rows, strict=True):
+            if row.get(_FEATURE_TOTAL_FIELD) == 0:
+                sentence_token(sentence, kind="list_item", cells=[finding.field_value])
+        features = [
+            (sentence, finding, row)
+            for (sentence, finding), row in zip(entries, rows, strict=True)
+            if row.get(_FEATURE_TOTAL_FIELD) != 0
+        ]
+        if not features:
+            return
+        disease = next(
+            (row[_FEATURE_DISEASE_FIELD] for _, _, row in features if row.get(_FEATURE_DISEASE_FIELD)),
+            "",
+        )
+        totals = [
+            row[_FEATURE_TOTAL_FIELD]
+            for _, _, row in features
+            if isinstance(row.get(_FEATURE_TOTAL_FIELD), int)
+        ]
+        total = max(totals) if totals else len(features)
+        title = f"Clinical features MedGen lists for {disease}" if disease else (
+            "Clinical features MedGen lists"
+        )
+        # F-8.1-J09: whenever a cap cut the list (the tool's own, the
+        # display cap or the byte ceiling), the reader is told how many of
+        # how many are shown, never handed a partial list as complete.
+        if len(features) < total:
+            title = f"{title} ({len(features)} of {total} shown)"
+        heading(title)
+        hpo_ids = [str(row.get(_FEATURE_HPO_FIELD) or "") for _, _, row in features]
+        as_table = not plain and any(hpo_ids)
+        if as_table:
+            tokens.append(
+                TokenPayload(
+                    text="",
+                    marker_ids=[],
+                    kind="table_header",
+                    cells=["Clinical feature", IDENTIFIER_COLUMN_LABEL],
+                )
+            )
+        for (sentence, finding, _), hpo_id in zip(features, hpo_ids, strict=True):
+            if as_table:
+                sentence_token(sentence, kind="table_row", cells=[finding.field_value, hpo_id])
+            else:
+                sentence_token(sentence, kind="list_item", cells=[finding.field_value])
+
     def plain_listing(sentences: tuple[str, ...]) -> None:
         # Item 12.9, rule 2: ONE list for a reader with no technical
         # background, in the order the rows were grounded, each row the
@@ -9565,6 +9728,7 @@ def _answer_tokens(
         # identifiers, no mapping cells: those are the Researcher table's.
         # Every record the Researcher tables list is listed here, because
         # both walk the same `sentences`.
+        sentences, feature_blocks = split_feature_sentences(sentences)
         heading(PLAIN_SOURCES_HEADING)
         for sentence in sentences:
             ids = marker_ids(sentence)
@@ -9576,11 +9740,16 @@ def _answer_tokens(
                 finding, _row_fields_for(finding, findings), identifier_for(finding)
             )
             sentence_token(sentence, kind="list_item", cells=[label])
+        # Beneath the one list, so the list itself stays one list: each
+        # disease's features under a heading that names the disease.
+        for entries in feature_blocks.values():
+            feature_block(entries)
 
     def listing(sentences: tuple[str, ...]) -> None:
         if plain:
             plain_listing(sentences)
             return
+        sentences, feature_blocks = split_feature_sentences(sentences)
         # Grouped by the plain NOUN of the record type, not the raw type:
         # the graph writes "Gene" and `ncbi_efetch` writes "gene", and
         # keyed on the raw type a two-gene answer showed "Gene records
@@ -9696,6 +9865,18 @@ def _answer_tokens(
                     else []
                 )
                 sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
+            # Each record in this group that has clinical features gets them
+            # directly beneath the group that names it.
+            for _, finding in entries:
+                if finding is None:
+                    continue
+                block = feature_blocks.pop((finding.source_url or "").strip(), None)
+                if block:
+                    feature_block(block)
+        # A block whose record has no entry above (its title was not
+        # admitted) still reaches the reader, last.
+        for remaining in feature_blocks.values():
+            feature_block(remaining)
 
     if summary_sentence:
         # Always emphasize the lead summary, not Researcher only: it is the
@@ -10020,6 +10201,20 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         condition_names = await resolve_concept_ids(fold_condition_ids)
     synth_findings, placeholder_findings_dropped = drop_placeholder_condition_findings(
         synth_findings
+    )
+
+    # F-8.1-A12 (fix-and-verify round): when the question's disease has
+    # clinical features on its MedGen record, up to
+    # `_ANCHOR_FEATURE_PROMPT_SLOTS` of them, with the record's own title,
+    # are moved inside the prompt slice below. Without this a graph answer
+    # of more than 30 rows pushed every feature out of the model's sight.
+    # A no-op when they already fit, and it renumbers, so it runs here,
+    # before `row_types` and the slice read the numbering.
+    synth_findings = reserve_prompt_slots(
+        synth_findings,
+        _anchor_disease_prompt_reservation(synth_findings),
+        _MAX_FINDINGS_FOR_MODEL_PROMPT,
+        lead_call_ids=answer_call_ids,
     )
 
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)

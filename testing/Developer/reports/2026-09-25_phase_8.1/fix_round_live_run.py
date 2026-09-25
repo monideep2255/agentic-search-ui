@@ -75,6 +75,32 @@ def _recording_render(synth_findings, max_chars=findings_module.MAX_FINDINGS_BLO
 
 findings_module.render_findings_block = _recording_render
 
+# The grounding pass's inputs and verdicts, so a model sentence the gate
+# stripped is visible as such. Wrapped where `write_node` looks it up, in
+# `core.graph`'s namespace; the gate itself is called unchanged.
+from system_03_search_agent.core import graph as graph_module
+
+_original_grounding = graph_module.run_grounding_pass
+_grounding_calls: list[dict] = []
+
+
+def _recording_grounding(narrative, synth_findings, *args, **kwargs):
+    result = _original_grounding(narrative, synth_findings, *args, **kwargs)
+    _grounding_calls.append(
+        {
+            "narrative": narrative,
+            "claims": len(result.claims),
+            "stripped": result.stripped_count,
+            "feature_claims": sum(
+                1 for claim in result.claims if claim.finding.field == "clinical_features"
+            ),
+        }
+    )
+    return result
+
+
+graph_module.run_grounding_pass = _recording_grounding
+
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 text = args[0] if args else "What phenotypic features are associated with Marfan syndrome?"
 depth = "researcher"
@@ -124,6 +150,12 @@ async def main() -> None:
     if _render_calls:
         first = _render_calls[0]
         print("[PROMPT_FIELDS 1]", json.dumps(list(zip(first["fields"], first["value_lengths"]))))
+    for index, call in enumerate(_grounding_calls, start=1):
+        print(
+            f"[GROUNDING {index}] claims={call['claims']} stripped={call['stripped']} "
+            f"feature_claims={call['feature_claims']}"
+        )
+        print("   in:", repr(call["narrative"][:2500]))
 
     print("[PROSE] sentences the writing model wrote that survived the gate:")
     medgen_feature_sentences = 0

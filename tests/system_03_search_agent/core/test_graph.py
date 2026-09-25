@@ -1610,6 +1610,175 @@ async def test_the_model_prompt_never_grows_past_the_prompt_bound(
     assert len(citation_events) <= graph_module._MAX_FINDINGS_FOR_DISPLAY
 
 
+_MARFAN_FEATURE_NAMES = [f"Clinical feature number {n}" for n in range(70)]
+
+
+async def _marfan_researcher_findings() -> tuple[list[object], list[object]]:
+    """Round 1's live researcher-depth shape (F-8.1-A12): a graph answer of
+    43 rows, the question's lead call, and the disease's MedGen record with
+    70 clinical features, the first five carrying HPO ids."""
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    harness = harness_module.Harness(trace_id="test-trace-marfan")
+    graph_call = ToolCall(tool="cypher_query", call_id="cy-marfan", layer="layer_1_graph")
+    graph_fields = {
+        "status": "ok",
+        "row_count": 43,
+        "total_available": 43,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(43)],
+        "error": None,
+    }
+    features = [
+        {"name": name, "hpo_id": f"HP:{n:07d}"} if n < 5 else {"name": name}
+        for n, name in enumerate(_MARFAN_FEATURE_NAMES)
+    ]
+    medgen_output = NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[
+            NcbiEfetchRecord(
+                id="44287",
+                db="medgen",
+                fields={
+                    "title": "Marfan syndrome",
+                    "clinical_features": features,
+                    "clinical_features_total": 70,
+                },
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/44287",
+            )
+        ],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+    medgen_call = ToolCall(tool="ncbi_efetch", call_id="ne-medgen", layer="layer_2_api")
+    medgen_fields = graph_module._ncbi_efetch_output_to_structured_fields(
+        medgen_output, "medgen_summary"
+    )
+    findings = await coordinator_worker_execute(
+        harness,
+        [graph_call, medgen_call],
+        [
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=graph_fields),
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=medgen_fields),
+        ],
+    )
+    planned = [
+        SimpleNamespace(tool_call=graph_call, context_only=False),
+        SimpleNamespace(tool_call=medgen_call, context_only=False),
+    ]
+    return findings, planned
+
+
+@pytest.mark.asyncio
+async def test_a_diseases_clinical_features_reach_the_prompt_behind_a_long_graph_answer(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-8.1-A12 (fix-and-verify round): at researcher depth the MedGen
+    features sat at position 50 of 63, past the 30-finding prompt slice, and
+    the model answered "no phenotypic features can be stated from these
+    findings". Now the record's title and `_ANCHOR_FEATURE_PROMPT_SLOTS` of
+    its features are inside the model's prompt, after the answer rows."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="researcher",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    await graph_module.write_node(state)
+
+    synth_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if any(
+            "You write the final answer for a biomedical search system"
+            in (message.get("content") or "")
+            for message in (call.kwargs.get("messages") or [])
+        )
+    ]
+    assert synth_calls
+    prompt = "\n".join(m.get("content") or "" for m in synth_calls[0].kwargs["messages"])
+    lines = [body for _, body in _FINDING_LINE.findall(prompt)]
+    assert len(lines) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
+    feature_lines = [line for line in lines if " clinical_features: " in line]
+    assert len(feature_lines) == graph_module._ANCHOR_FEATURE_PROMPT_SLOTS == 10
+    assert feature_lines[0].endswith(_MARFAN_FEATURE_NAMES[0])
+    assert "medgen title: Marfan syndrome" in lines
+    # The question's own answer rows still lead the prompt.
+    assert lines[0].startswith("Gene ")
+
+
+@pytest.mark.asyncio
+async def test_the_listing_names_the_disease_and_lists_its_features_beneath(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-8.1-A04, J13, J09 (fix-and-verify round): the code-built listing
+    keeps the disease's own name as its MedGen entry, lists each feature
+    beneath it under a heading that names the disease, shows HPO ids at
+    researcher depth, and says how many of how many are shown when a cap
+    cut the list."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="researcher",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    result = await graph_module.write_node(state)
+    tokens = [event.payload for event in result["events"] if event.type == "token"]
+
+    record_rows = [
+        t for t in tokens if t["kind"] in ("list_item", "table_row") and t["cells"]
+    ]
+    assert any(t["cells"][0] == "Marfan syndrome" for t in record_rows)
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    feature_heading = next(h for h in headings if h.startswith("Clinical features MedGen lists"))
+    assert feature_heading.startswith("Clinical features MedGen lists for Marfan syndrome")
+    feature_rows = [
+        t for t in record_rows if t["cells"][0] in set(_MARFAN_FEATURE_NAMES)
+    ]
+    assert len(feature_rows) >= 10
+    shown = len(feature_rows)
+    if shown < 70:
+        assert feature_heading.endswith(f"({shown} of 70 shown)"), feature_heading
+    else:
+        assert "shown)" not in feature_heading
+    # Researcher depth: a table whose second cell is the HPO id when known.
+    first = next(t for t in feature_rows if t["cells"][0] == _MARFAN_FEATURE_NAMES[0])
+    assert first["kind"] == "table_row" and first["cells"][1] == "HP:0000000"
+    # No feature ever stands in for the disease's own entry.
+    assert not any(
+        t["cells"][0].startswith("MedGen lists no clinical features") for t in record_rows
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_plain_language_listing_keeps_features_beneath_the_one_list(
+    _mock_litellm: AsyncMock,
+) -> None:
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="plain_language",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    result = await graph_module.write_node(state)
+    tokens = [event.payload for event in result["events"] if event.type == "token"]
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert headings.index("Where this answer comes from") < next(
+        i for i, h in enumerate(headings) if h.startswith("Clinical features MedGen lists for")
+    )
+    items = [t for t in tokens if t["kind"] == "list_item"]
+    assert any(t["cells"] == ["Marfan syndrome"] for t in items)
+    assert sum(1 for t in items if t["cells"][0] in set(_MARFAN_FEATURE_NAMES)) >= 10
+
+
 @pytest.mark.asyncio
 async def test_a_citation_beyond_the_prompt_bound_still_points_at_its_own_row(
     _mock_litellm: AsyncMock,
