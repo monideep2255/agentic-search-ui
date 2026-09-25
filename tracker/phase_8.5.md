@@ -212,3 +212,183 @@ Written by the lead, 2026-09-25. One fix-and-verify round.
 - F-8.5-J04: the Python test count is corrected where it is tracked, and the ledger's own wording no longer states a stale count.
 - F-8.5-J05, J10: the remaining stale "line 32" reference and the comment naming a deleted file are corrected.
 - F-8.5-J06: the type card's sample renders at the value its label states, and the migration assessment records the four values as settled on 2026-09-25.
+
+### Round 2 verification
+
+Verifier, round 2, 2026-09-25: started. Lines follow as each finding is established.
+
+### F-8.5-V01: The new "spends no synth-tier call" test detects only a call carrying the synth system instruction; a synth-tier call with any other messages passes it, though its docstring names that mutation as the one that turns it red
+
+Status: raised
+Raised by: verifier, round 2
+Severity: low
+Round: 2
+Sits inside a fix made during this phase (commit `d78a535`, the F-8.5-J07 fix).
+
+- The test `test_unresolved_gene_symbol_refusal_spends_no_synth_tier_call` (`tests/system_03_search_agent/core/test_graph.py`, appended at the end of the file) fails only if some model call's joined message content contains `SYNTH_SYSTEM_INSTRUCTION`. It never looks at the model or the tier.
+- Probe, in a scratch copy under `/private/tmp` (worktree untouched): inside `write_node`'s `if unresolved_entity_symbols:` branch, insert `await _dispatch_tier_call(harness, trace_id, "synth", "write", [{"role": "user", "content": "mutant probe"}], 5.0)`. That is exactly the judge's round 1 "Mutant A", generic form. Result: the test PASSED. A verifier probe test in the same scratch run, counting `call.kwargs["model"]`, FAILED with `synth-model call made: ['openrouter/test-provider/guard-model', 'openrouter/test-provider/guard-model', 'openrouter/test-provider/plan-model', 'openrouter/test-provider/synth-model']`. So the synth model was really called on the refusal path, and the new test stayed green.
+- With the realistic form (`build_synth_messages("mutant probe", [])`) the test FAILED as claimed.
+- The test's docstring says "MUTATION THAT TURNS THIS RED: call `_dispatch_tier_call(harness, trace_id, "synth", "write", ...)`", with the messages elided. That holds only when the elided messages carry the synth instruction. The deleted W4 had the same limit, so nothing was lost relative to W4, but round 1 established that the generic form is also a synth-tier call (J07 and its addendum), and the test name says "synth-tier call".
+- Why it matters: the property the product owner cares about is cost: the most expensive model is never called for a refusal. A regression that reaches the synth tier through any prompt other than the answer prompt costs the same and goes unseen. Checking `call.kwargs["model"]` against the synth tier's configured model (the file already sets `SYNTH_MODEL`) would pin the property the name states. That is a suggestion, not mine to choose.
+- NOT FIXED
+
+- F-8.5-J07: closed, with residual F-8.5-V01 (low). Verifier's own mutants of `write_node` in a scratch copy under `/private/tmp` (src/ and tests/ copied; worktree untouched, file restored and `cmp`-checked after each run). Unbroken copy: both new tests `2 passed`. Synth call built with `build_synth_messages` inside the unresolved branch: `test_unresolved_gene_symbol_refusal_spends_no_synth_tier_call` FAILED ("the unresolved-entity refusal path spent a synth-tier call"), the other passed. Step marker in three forms (live `emit_live` inside the branch, buffered `emit` inside the branch, live at the top of `write_node`): `test_unresolved_gene_symbol_refusal_never_announces_write_started` FAILED each time ("a refusal that never began the answer path announced that Write had started"), the other passed. Both controls are real and each test is red only for its own control. Also probed: with Think no longer extracting ZZQXWV, both new tests fail loudly rather than pass vacuously (the run takes the literature path, which spends a synth call and emits `step`). Residual: a synth-tier call whose messages lack the synth instruction passes the first test (F-8.5-V01). Today both synth-tier call sites in `core/graph.py` (lines 10284 and 10475) build their messages with `build_synth_messages`, so the gap is theoretical for current code.
+- F-8.5-J01: closed. Item one of `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` now dates the "zero syndrome" result 2026-09-23 and gives the probe (`testing/Developer/reports/2026-09-23_overnight/probe_disease_names.py`), its title and its query. Checked against the script: the title "Do ANY Disease vertices have a name that is not a source vocabulary", `MATCH (d:Disease) WHERE d.name =~ $pattern RETURN d AS result LIMIT 10` and `(?i).*syndrome.*` are lines 69 to 71 word for word. The FBN1 names ("GARD", "MONDO", "MedGen") and the three arbitrary names ("SNOMEDCT_US", "MedGen", "MeSH") match `findings.md:476` to `:477`, and the other probes are at lines 53 and 64 of the script. F-2.1-B07 is now background: raised in phase 2.1's second adversary pass, 2026-07-31 (`tracker/phase_2.1.md:785`), with BRCA1's four diseases as its example (`:1158`). Its three recorded states check out: closed at `:891`, in progress at `:1158`, still open at `soft_edges_scoping.md:801`. "Every" is softened to "sampled property bags show". The 200,845 population is the `Disease` count in `docs/data-engineering/Knowledge_graph_on_server_reference.md:87`.
+- F-8.5-J02: closed. Item three now names `probe_ontology_names.py`, 2026-09-23, both probe titles and both patterns (`.*[a-z]{4,}.*` and `(?i).*neoplasm.*`). All four are word for word at script lines 53 to 61. `findings.md:771` and `:772` read ZERO graph-wide. The five arbitrary vertices, the 26 G-019 rows, the `[MeSH] D000001` shape and the `Article` control title match `findings.md:769` to `:773`. The 2026-09-24 restatement is at `testing/UI_fixes_done.md:643`.
+- F-8.5-J03: closed, with residual F-8.5-V02 (low). The pointer is now section E (`Knowledge_graph_on_server_reference.md:97`, row `:108`). The quoted pair "Disease to PhenotypicFeature, and SequenceVariant to Disease" and HNF1A's 2,075 rows over 1,158 variants and 36 diseases match `:108`. The "all run one way" claim is withdrawn, and the item now says outright that no cited source gives a per-pair split. The residual is a new mis-pointer in the same item's query line (V02).
+
+### F-8.5-V02: Hand-over item two says the Disease-side existence check is in `probe_disease_names.py`; it is only in `probe_g022.py`
+
+Status: raised
+Raised by: verifier, round 2
+Severity: low
+Round: 2
+Sits inside a fix made during this phase (commit `33dfab4`, the F-8.5-J01 to J09 fix).
+
+- `docs/data-engineering/Graph_data_hand_over_2026-09-25.md`, item two, "By what query". It lists the two `has_phenotype` side samples, "plus a direct existence check for any `Disease` vertex with an outgoing `has_phenotype` edge, and a sample of `PhenotypicFeature` vertices ..., all in `probe_disease_names.py`".
+- `testing/Developer/reports/2026-09-23_overnight/probe_disease_names.py` has seven probes (lines 52 to 87): the FBN1 diseases, one MedGen id, three Disease vertices, syndrome, the has_phenotype FROM and TO samples, and PhenotypicFeature. None of them is `MATCH (d:Disease)-[:has_phenotype]->...`. The existence check is `probe_g022.py:82` to `:84`, `MATCH (d:Disease)-[:has_phenotype]->(p) RETURN d AS result LIMIT 5`. That is the query behind the item's headline "no `Disease` vertex ... has an outgoing `has_phenotype` edge ... with no filter applied" (`probe_disease_names.py:10` to `:11` credits that result to round one, `probe_g022.py`).
+- The item's "When" line names both files, so the file is reachable. The "all in" sentence still sends a data-engineering reader who wants to re-run the headline measurement to the one script that does not contain it. That is card 29's "query" acceptance, and the same class of error as F-8.5-J03.
+- NOT FIXED
+- F-8.5-J08: closed, with residual F-8.5-V03 (low). Item four, "the Gene vertex carries no facts", is added. Its three figures match the scoping document: seven properties (`soft_edges_scoping.md:44`, `:303` to `:315`), 17 of 20 (`:486` to `:487`), and 2,957 of 4,748 (`:344` to `:345` give 2,957, 1,173 and 618, which sum to 4,748; `:808`). "Graph plus values" is at `:417`. The residual is how the item dates and locates those figures (V03).
+- F-8.5-J09: closed. Item two no longer credits the template removal. It names what answers the Marfan question today, phase 8.1's MedGen clinical features, and `testing/Developer/reports/2026-09-25_phase_8.1/fix_round.md:80` to `:84` is that item, with live runs 2 and 3 at `:148` to `:149` giving outcome `answer`. The "an answer is never withheld" guarantee is gone. One nit, not filed: the closing paragraph says it "degrades to a live API call ... per this repository's cite-or-refuse rule". Cite-or-refuse only forbids the unsupported answer. The fallback to Layer 2 is a different gate in the same file ("Suspect graph data falls back to Layer 2"), so the file pointer is right and the gate name is loose.
+
+### F-8.5-V03: Hand-over item four, added by the fix, dates its figures by the scoping document rather than the measurements, and points at a section that holds none of them
+
+Status: raised
+Raised by: verifier, round 2
+Severity: low
+Round: 2
+Sits inside a fix made during this phase (commit `33dfab4`, the F-8.5-J08 fix).
+
+- `docs/data-engineering/Graph_data_hand_over_2026-09-25.md`, item four. "When: scoped on 2026-09-23." "By what query: this is a structural property of the `Gene` vertex schema rather than a single Cypher probe; the count and the call-budget figures are recorded in `soft_edges_scoping.md` ("count four: where answers actually fail today", the request list at the end of that document)."
+- The section pointer: "Count four" is `soft_edges_scoping.md:424` to `:466`, and it contains none of the item's three figures. Measured with `grep -n "seven properties\|17 of 20\|2,957\|4,748"`: the hits are at `:44`, `:344`, `:577`, `:757`, `:807` and `:808`, and `:486` to `:487` has "17 of" wrapped onto "20". Only the second half of the pointer, the request list at `:807` to `:808`, holds them.
+- The dates and sources: the scoping document names where each figure came from. The seven-property Gene vertex was "read off the live graph on 2026-09-14" (`:303`; the probe of that date is `testing/Developer/reports/2026-09-14_handover_inputs/breadth/graph_probe.jsonl`, which contains `NCBIGene:672`). The 17 of 20 is the call-ceiling measurement of 2026-09-22 (`:88` to `:89`, `testing/Developer/reports/2026-09-22_call_ceiling/`). The 2,957 of 4,748 comes from the 150-run consistency run of 2026-09-22 at `63ec316` (`:81`, `testing/Developer/reports/2026-09-22_10.3_consistency/`). The hand-over gives none of these three dates or folders.
+- "Not a single Cypher probe" is also not quite right for the first figure. A one-vertex read, the shape `MATCH (g:Gene {id: $gene}) RETURN g`, is what produced the property bag, and anyone can re-run it.
+- Why it matters: card 29's acceptance is "measurement, date and query" per gap. That was F-8.5-J01's defect class (the document's date given in place of the measurement's), and it reappears, milder, in the item the fix added.
+- NOT FIXED
+
+### F-8.5-V04: The drift check fails at HEAD on a structural error the F-8.5-J06 fix introduced; the fix round's "0 structural, exit 0" was measured one commit earlier
+
+Status: raised
+Raised by: verifier, round 2
+Severity: medium
+Round: 2
+Sits inside a fix made during this phase (commit `86aa63f`, the F-8.5-J06 fix).
+
+- `python3 tracker/check_doc_drift.py --check` in this worktree at `0dc51cb`, exactly as shipped: `docs/build/design/NCBI_design_system_migration_assessment.md:321: 'Last updated: 2026-09-12' predates a later date in the body (2026-09-25)` then `error: 6 facts computed (4 skipped) | 0 stale | 1 structural`, exit 1.
+- Cause: the J06 fix added "settled on 2026-09-25" text to the migration assessment's body (13 lines changed in `86aa63f`), and left its closing `Last updated: 2026-09-12` (line 321) as it was.
+- `testing/Developer/reports/2026-09-25_phase_8.5/fix_round.md`, item 3, reports "After the fix, same command: `ok: 8 facts computed (2 skipped) | 0 stale | 0 structural`, exit 0". That was true at `5e88fe7` (the J04 commit), which comes before `86aa63f`. The report's claim does not hold for the branch as it stands, and nobody re-ran the gate after the last commit.
+- Why it matters: `/ship`, `/phase-checkpoint` and `verify` all gate on this command. The first of them run on develop after merge goes red on a file this phase edited, in whatever session happens to be next. That is exactly the harm F-8.5-J04 was filed to prevent, reached by a different fact.
+- NOT FIXED
+- F-8.5-J04: closed for the count, but the gate is still red, on a different fact (F-8.5-V04). With a real interpreter (in memory, `check_doc_drift.VENV_PYTHON` pointed at `sys.executable`, which is the main checkout's `venv/bin/python3`, run against this worktree's tests, no file changed), the drift check computes "Python tests: 5531" and "Premise gate tests: 9" and reports 0 stale, then `error: 8 facts computed (2 skipped) | 0 stale | 1 structural`, exit 1. The two skipped facts are the frontend ones, since the worktree has no `node_modules`. Independent count: `python3 -m pytest --collect-only -q -p no:cacheprovider` gives `5531 tests collected`, and `CLAUDE.md:31` and `AGENTS.md:31` both said 5531 for the Python test count at that commit. That is 5529 plus the two new J07 tests. The ledger's J04 heading and bullet now read "previously 5550", and neither is flagged. The judge's secondary point, that a worktree run skipping both test-count facts still exits 0, was not in the lead's triage and is unchanged: filed as F-8.5-V05 so it is not lost.
+
+### F-8.5-V05: Carried from F-8.5-J04, not addressed: the drift check prints "ok" and exits 0 when it skipped the test-count facts
+
+Status: raised
+Raised by: verifier, round 2
+Severity: unsure
+Round: 2
+
+- The judge filed this inside F-8.5-J04 as "unsure whether it is a defect or intended". The lead's triage covered only the count, and `tracker/check_doc_drift.py` is not in `git diff dfc7eca..HEAD`.
+- Reproduced at `0dc51cb` in this worktree, which has no `venv/`: every run prints "Python tests: SKIPPED (venv/bin/python not found)" and "Premise gate tests: SKIPPED". The only reason the run exits 1 today is F-8.5-V04. Without that structural hit it would print "ok" on the same skipped facts, as it did for the judge in round 1.
+- Why it matters: this phase is the second in a row where a worktree run looked green while the fact the phase had moved went uncomputed (round 1, F-8.5-J04). Pre-existing and not this phase's code. Filed so the closer decides rather than the question lapsing.
+- NOT FIXED
+- F-8.5-J05: closed. `.claude/agents/docs-sync.md:75` now names "`CLAUDE.md`'s Current focus table's build row counts" and no longer gives a line number. `git grep -n "line 32"` over md, py, sh, ts and json finds no live reference to CLAUDE.md's counts line. The only hits are two reports quoting the old wording (`builder_E.md:38`, `fix_round.md:126`) and unrelated historical lines in `tracker/phase_3.4.md` and `tracker/phase_4.1.md`.
+- F-8.5-J06: closed for both loose ends the judge named, with residual F-8.5-V06 (low). The body1 sample in `type.html:41` now carries `line-height:1.65`, the same value as its label and as `frontend/src/theme.ts:164`. The h1 and h2 samples match `theme.ts:160` and `:161`. In the migration assessment, the old "Still open" passage (now lines 105 to 119) and the line 64 type scale are updated. Two other passages in the same assessment still report the four values as open (V06), and the edit left its "Last updated" behind (V04).
+
+### F-8.5-V06: The migration assessment now says the four type values are settled in one section, and still says they are open defects in two others
+
+Status: raised
+Raised by: verifier, round 2
+Severity: low
+Round: 2
+Sits inside a fix made during this phase (commit `86aa63f`, the F-8.5-J06 fix).
+
+- `docs/build/design/NCBI_design_system_migration_assessment.md` lines 105 to 119 (edited by the fix): "Settled on 2026-09-25 ... This is no longer an open item."
+- The same file, lines 79 to 89, is unchanged. "### Known drift, already present. Five places where `theme.ts` and the foundations cards disagree. These are defects today", followed by a table listing the same four values (h1 letter-spacing -2.8%, h1 38px, h2 26px, body1 1.6) as the card's current values.
+- The same file, line 239, is unchanged. Stage 0 row: "Four of six items are open value mismatches awaiting a product-owner decision, not implementation work".
+- The section heading at line 91 still reads "Stage 0 status, resolved and open, 2026-09-12".
+- Why it matters: `CLAUDE.md`'s reference table sends a reader to this assessment "before scoping or deciding on a migration". Someone who reads the drift table or the staged plan, and not the Stage 0 subsection, is still told that four decisions await the product owner. That is the defect F-8.5-J06 was filed about, now in two places instead of one.
+- NOT FIXED
+- Suite and lint, run by the verifier at `0dc51cb` in this worktree: `python3 -m pytest -m "not integration" -q -p no:cacheprovider tests/system_03_search_agent` gives `5221 passed, 143 skipped, 24 deselected, 1 xfailed, 7 warnings in 98.03s`. That is the judge's 5219 plus the two new tests. `ruff check .` gives "All checks passed!", exit 0. `git status --short` after the run shows only this ledger modified, plus the untracked `grading_input.txt` that was already there before this round and does not belong to this phase.
+- F-8.5-J10: closed, with residual F-8.5-V07 (low). `frontend/e2e/tool-chip.spec.ts:18` to `:33` no longer names a deleted file as the backend half. It says that the presence of both frames is guarded only incidentally by backend suites, and that the timing half is covered only by the product reviewer, which is the card 37 ruling. The verifier re-measured with its own mutants in the scratch copy (full non-integration suite, each set of failures taken against the scratch copy's unmutated baseline). The baseline has 61 environmental failures and 168 errors from files not copied, such as `alembic/`, and they are identical under both mutants. Removing act_node's `tool_start` emit adds 12 failures: `test_bare_topic_clarification.py` 7, `test_breadth_wiring.py` 2, `test_clarification.py` 2, `test_layer_handoff.py` 1. Removing `_close_tool_call`'s `tool_result` emit adds 8 failures: `test_breadth_wiring.py` 4, `test_layer_handoff.py` 2, `test_disease_breadth.py` 1, `test_graph.py` 1. Both frames are still guarded. The comment's list of suites is right for `tool_start` only (V07).
+
+### F-8.5-V07: The rewritten tool-chip.spec.ts comment names four suites as guarding both frames; two of them do not catch a missing tool_result, and two that do are not named
+
+Status: raised
+Raised by: verifier, round 2
+Severity: low
+Round: 2
+Sits inside a fix made during this phase (commit `86aa63f`, the F-8.5-J10 fix).
+
+- `frontend/e2e/tool-chip.spec.ts` comment: "`act_node` never emitting `tool_start` or `tool_result` is now caught incidentally by several backend suites that happen to assert on those event types (`test_bare_topic_clarification.py`, `test_breadth_wiring.py`, `test_clarification.py`, `test_layer_handoff.py`)".
+- Verifier's mutant, run in a scratch copy: `_close_tool_call`'s `sink.emit_live("tool_result", ...)` replaced by a no-op, then the full non-integration suite. The new failures compared with the unmutated scratch baseline are `test_breadth_wiring.py` 4, `test_layer_handoff.py` 2, `test_disease_breadth.py` 1 and `test_graph.py` 1. `test_bare_topic_clarification.py` and `test_clarification.py` fail 0 times. The list quoted is the `tool_start` mutant's list, which the judge measured and the verifier reproduced as 7, 2, 2 and 1.
+- Why it matters: the comment exists to tell the next reader where the backend half of this proof now lives. A reader pruning suites on the strength of it would believe the two clarification suites guard `tool_result`, and they do not. The broad claim, "caught incidentally", is true for both frames. Only the enumeration is wrong for one of them.
+- NOT FIXED
+
+### F-8.5-V08: W4 pinned a third non-timing property, the refusal's token, trust_signal, done shape, and nothing guards it now; a refusal can gain a second "answer" trust signal or extra text with the whole suite green
+
+Status: raised
+Raised by: verifier, round 2
+Severity: medium
+Round: 2
+Sits inside the F-8.5-J07 fix's scope. Round 1 and the fix both counted two W4 properties, and W4 asserted three.
+
+- The deleted W4 (`git show dab2757^:tests/system_03_search_agent/core/test_write_streaming_premise.py`, lines 405 to 446) ends with `assert write_types == ["token", "trust_signal", "done"], "the refusal's event shape changed"`. It also made a populate check that no tool ran. The two new tests in `test_graph.py` carry the no-step and no-synth properties and not this one. `test_unresolved_gene_symbol_refuses_before_reaching_the_graph` joins every token's text, reads only the FIRST `trust_signal` through `next(...)` and reads the `done`, so an added event does not change what it sees.
+- Probe, in a scratch copy under `/private/tmp`. Two mutants insert one extra event inside `write_node`'s `if unresolved_entity_symbols:` branch, straight after the refusal's `trust_signal`. The verifier's probe test confirms the branch is hit and prints the write-side types.
+  - Unmutated: `['token', 'trust_signal', 'done']`, trust outcomes `['refuse']`.
+  - Mutant `second_trust_answer`, a `trust_signal` with `outcome="answer"`, `risk_tier="low"`, `grounded=True`: `['token', 'trust_signal', 'trust_signal', 'done']`, outcomes `['refuse', 'answer']`. Full non-integration suite: 0 new failures against the unmutated scratch baseline.
+  - Mutant `extra_token`, a second token "Here is what is known about it anyway.": `['token', 'trust_signal', 'token', 'done']`. Full suite: 0 new failures against the baseline.
+- Caveat being closed next: the scratch copy's baseline had 61 environmental failures and 168 errors in history, migration and release suites, because top-level folders were not copied. Re-measurement in a complete copy follows as an addendum.
+- Why it matters: W4 was the only test of what a person sees when a name cannot be identified. The refusal message, then the refusal verdict, then done. A regression that adds a grounded "answer" verdict after a refusal, or extra prose after "I could not identify that gene", reaches the screen with every test green. This is not timing, so by the product owner's ruling (card 37) and the lead's triage condition for J07 ("their two non-timing controls get ordinary unit tests") it should not have been lost. The triage counted two controls, and W4 asserted three.
+- NOT FIXED
+
+Addendum to F-8.5-V08, the caveat closed. The measurement was repeated in a complete scratch copy: the whole worktree rsynced without `.git` to the session scratchpad's `v85full`. Unmutated baseline there: `5221 passed, 143 skipped, 24 deselected, 1 xfailed`, exit 0. Mutant `second_trust_answer`: `5221 passed ...`, exit 0. Mutant `extra_token`: `5221 passed ...`, exit 0. The whole non-integration suite is green with a refusal that also claims a grounded answer.
+
+Addendum to F-8.5-V01: the same generic synth-tier mutant was run against the whole non-integration suite in the complete scratch copy `v85full`: `5221 passed, 143 skipped, 24 deselected, 1 xfailed`, exit 0. Nothing else in the suite notices a synth-model call on the refusal path when its prompt is not the answer prompt. The realistic form is caught by the new test, and the generic form by nothing.
+
+Verifier, round 2, complete.
+
+Tally:
+
+- Closed: all ten round 1 findings, J01 to J10. Five of them close with a residual filed separately: J03, J06, J07, J08 and J10.
+- New: eight findings, F-8.5-V01 to V08.
+  - Medium, 2: V04 and V08.
+  - Low, 5: V01, V02, V03, V06 and V07.
+  - Unsure, 1: V05, carried from J04's secondary point.
+- Blocking: none on its own terms.
+
+Two findings need attention before merge:
+
+- F-8.5-V04: the drift check is red at `0dc51cb`, exit 1, "1 structural". The J06 edit left the migration assessment's "Last updated: 2026-09-12" behind a 2026-09-25 body date, so `/ship` and `/phase-checkpoint` fail on this branch as it stands.
+- F-8.5-V08: the deleted W4 asserted three non-timing properties, and the fix restored two. The refusal's token, trust_signal, done shape is now unguarded: a refusal followed by a grounded "answer" trust signal passes the whole suite, 5221 passed.
+
+STOP CONDITION. Seven of the eight new findings sit inside fixes made during this phase: V01 (`d78a535`), V02 and V03 (`33dfab4`), V04, V06 and V07 (`86aa63f`), and V08 (the scope of the J07 fix). This is round two, so there is no third round. Merge with these named as open, or revert the affected commits. That call is the product owner's.
+
+Verdict: FAIL against the phase's goal contract.
+
+- Card 37: the deletion still removes a non-timing refusal-path control (V08), which is the round 1 brief's check 1.
+- Card 29: passes for items one to three. Item four's date and section pointer are loose (V03).
+- Cards 34 and 40: pass, with V06 as a documentation residual.
+
+Verified by the verifier's own probes:
+
+- J07's two controls, with six targeted mutants plus the generic mutant against the full suite.
+- V08, with two shape mutants against the full suite in a complete copy.
+- J10's presence claims, with mutants removing `tool_start` and `tool_result`.
+- J04's count, by collection (5531) and by the drift check run with a real interpreter.
+- The unit suite (`5221 passed, 143 skipped, 24 deselected, 1 xfailed`), `ruff check .` (clean), `isort --check-only` on `test_graph.py` (clean) and `check_style.py` on the three edited documents.
+
+Checked only by reading:
+
+- J01, J02, J03, J08 and J09: every cited probe script, report line, section and date was opened and compared. The live graph probes themselves were not re-run.
+- J05, by `git grep`.
+- J06's values, compared by reading `type.html` against `theme.ts`. The card was not rendered in a browser.
+
+### Lead decision after round 2
+
+Written by the lead, 2026-09-25. No third round; merge with the open items named, or revert.
+
+- F-8.5-V08: the deletion of the four streaming test files is reverted (card 37 returns to To do). The fix round pinned two of W4's three non-timing controls; the third, that a refusal's trust signal never says the question was answered, has no other test. The two new tests stay.
+- F-8.5-V04: the migration assessment's "Last updated" date corrected so the drift gate passes; a date, not a review fix.
+- F-8.5-V01, V02, V03, V05, V06, V07 (low or unsure): merged open, named here for the next session.

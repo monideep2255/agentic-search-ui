@@ -112,7 +112,7 @@ and `:111` all flagged, computed count `5531` (5529 the judge measured, plus
 the two tests added in item 1) against a stated `5550`.
 
 Fixed: `CLAUDE.md` and `AGENTS.md`'s Current focus table build row now read
-`5531 Python tests`. `tracker/phase_8.5.md`'s own F-8.5-J04 heading and
+`5531` for the Python test count at that commit. `tracker/phase_8.5.md`'s own F-8.5-J04 heading and
 second bullet reworded with a hedge word ("previously said") next to the
 quoted `5550` so the ledger's own wording no longer keeps the drift check
 red, per the judge's own addendum asking for exactly that.
