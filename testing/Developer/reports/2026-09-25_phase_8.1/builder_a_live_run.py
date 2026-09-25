@@ -7,10 +7,9 @@ environment variables (never prints them) from the main repository's
 `.env`, and puts THIS WORKTREE's `src/` first on `sys.path` so the fix
 under test is the one that actually runs.
 
-Usage: python3 builder_a_live_run.py "<question text>" [--plain]
-Depth is always researcher (what the ticket asks us to prove), no session
-memory (a bare first-turn question, exactly how the two failing questions
-were run live).
+Usage: python3 builder_a_live_run.py "<question text>" [--depth=plain_language]
+Depth defaults to researcher, no session memory (a bare first-turn
+question, exactly how the failing questions were run live).
 """
 import asyncio
 import json
@@ -35,16 +34,21 @@ os.environ["TOOL_AUDIT_LOG_ENABLED"] = "false"
 # main checkout's.
 sys.path.insert(0, str(WORKTREE_SRC))
 
-from system_03_search_agent.contracts.query import Query, RequestContext  # noqa: E402
-from system_03_search_agent.core.run import run  # noqa: E402
+from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.core.run import run
 
-text = sys.argv[1] if len(sys.argv) > 1 else "What variants cause it?"
+args = [a for a in sys.argv[1:] if not a.startswith("--")]
+text = args[0] if args else "What variants cause it?"
+depth = "researcher"
+for arg in sys.argv[1:]:
+    if arg.startswith("--depth="):
+        depth = arg.split("=", 1)[1]
 query = Query(
     text=text,
     session_id="builder-a-local",
     trace_id="trace-builder-a-local",
     user_id=None,
-    audience_depth="researcher",
+    audience_depth=depth,
 )
 context = RequestContext(surface="rest_sse", session_memory=None)
 
@@ -52,11 +56,14 @@ context = RequestContext(surface="rest_sse", session_memory=None)
 async def main() -> None:
     summary = {
         "question": text,
+        "depth": depth,
         "outcome": None,
         "errors": [],
         "citation_count": 0,
+        "citation_sources": [],
         "cost_usd": None,
         "elapsed_s": None,
+        "answer_text": "",
     }
     started = time.monotonic()
     async for e in run(query, context):
@@ -65,10 +72,21 @@ async def main() -> None:
             summary["errors"].append(p.get("message"))
             print("[error]", json.dumps(p, default=str)[:500])
         elif e.type == "citation":
+            p = e.payload if isinstance(e.payload, dict) else e.payload.model_dump()
             summary["citation_count"] += 1
+            summary["citation_sources"].append(p.get("source"))
+            print(
+                "[citation]",
+                p.get("display_index"),
+                p.get("source"),
+                repr((p.get("claim_text") or "")[:200]),
+            )
         elif e.type == "cost":
             p = e.payload if isinstance(e.payload, dict) else e.payload.model_dump()
             summary["cost_usd"] = p.get("query_cost_usd")
+        elif e.type == "token":
+            p = e.payload if isinstance(e.payload, dict) else e.payload.model_dump()
+            summary["answer_text"] += p.get("text") or ""
         elif e.type == "done":
             p = e.payload if isinstance(e.payload, dict) else e.payload.model_dump()
             summary["outcome"] = p.get("trust_outcome")
