@@ -102,22 +102,6 @@ PUBMED_RESULT_CAP: Final[int] = 5
 CLINVAR_RESULT_CAP: Final[int] = 10
 OMIM_RESULT_CAP: Final[int] = 10
 GDS_RESULT_CAP: Final[int] = 5
-
-# T-8.1-07 (tracker/phase_8.1.md): the ESearch call for a PubMed literature
-# search asks for a CANDIDATE POOL, not the final five. Before this constant
-# existed, the search's own `retmax` WAS `PUBMED_RESULT_CAP`, so
-# `plan_literature_follow_up`'s `select_ids` (highest PMID first, "the
-# planner never re-sorts by relevance", see the module docstring) had
-# nothing to re-sort: it received at most five ids and could only reorder
-# them, never correct for which five NCBI's own relevance ranking put in
-# that window on a given call. Requesting a wider pool first and picking the
-# five highest PMIDs out of it, deterministically, is what the module's own
-# design intent already says should happen; this constant is what makes it
-# actually happen. `total_available` and the search step's own displayed
-# summary are unaffected (`core/graph.py` reports them from ESearch's own
-# `count` field, never from `retmax`), so widening this pool changes nothing
-# a reader sees except which five papers are consistently the ones cited.
-PUBMED_SEARCH_OVERFETCH: Final[int] = 30
 # One concept id resolves to one MedGen record, so this cap is a bound on a
 # malformed response rather than a choice about how much to show.
 MEDGEN_RESULT_CAP: Final[int] = 5
@@ -575,7 +559,7 @@ def plan_topic_search(question: str | None) -> tuple[PlannedCall, ...]:
     term = build_topic_term(question)
     if term is None:
         return ()
-    return (_search_call("pubmed_search", "pubmed", term, PUBMED_SEARCH_OVERFETCH),)
+    return (_search_call("pubmed_search", "pubmed", term, TOPIC_RESULT_CAP),)
 
 
 def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:
@@ -614,7 +598,7 @@ def plan_first_stage(
     term = build_pubmed_term(symbol, disease_title)
     calls: list[PlannedCall] = []
     if term:
-        calls.append(_search_call("pubmed_search", "pubmed", term, PUBMED_SEARCH_OVERFETCH))
+        calls.append(_search_call("pubmed_search", "pubmed", term, PUBMED_RESULT_CAP))
     if symbol:
         calls.append(
             _search_call("clinvar_search", "clinvar", f"{symbol}[gene]", CLINVAR_RESULT_CAP)
