@@ -389,11 +389,14 @@ session starts here rather than reconstructing state.
 LAST UPDATED 2026-09-24, at the close of the evening session, which rebuilt
 the harness rather than the product. THE ONE THING TO KNOW: nothing a person
 sees changed tonight. The fix plan became a board, `HANDOFF.md` replaced the
-Phase 6 continuation prompt, and bossman mode was rebuilt from its measured
-diagnosis. The product is as the session before left it: answers answer the
-question, each reworded sentence checked by a second model against the exact
-words it quotes. Everything that shipped awaits the product owner's retest,
-and nothing is being built between sessions.
+Phase 6 continuation prompt, bossman mode was rebuilt from its measured
+diagnosis, the product owner's architecture cards were restored to To do after
+a restructure had marked them parked, an audit added every piece of open work
+that had no card, and the remaining work outside the UI fix loop got its own
+file, `testing/Future.md`. The product is as the session before left it:
+answers answer the question, each reworded sentence checked by a second model
+against the exact words it quotes. Everything that shipped awaits the product
+owner's retest, and nothing is being built between sessions.
 
 What is live on develop:
 
@@ -401,13 +404,18 @@ What is live on develop:
   2.1.0 was released during the session's last build and stopped the API
   deploying the checkpoint commit `39c6e55`, so the commit after it pins
   SQLAlchemy below 2.1. Every later commit is documents, rules, skills and
-  tests; the last is pull request #104's merge, `f21f439`, deployed with
-  SUCCESS on both develop services.
+  tests: pull request #104's merge, `f21f439`, deployed with SUCCESS on both
+  develop services, then three commits pushed straight to develop with no PR
+  (the UI fix loop carve-out, since none touch `.claude/`): `e614ed0`
+  restores the architecture cards to To do, `a947754` adds cards 19 to 41
+  from an audit of open work with no card, and `03736d2` creates
+  `testing/Future.md` for the remaining work outside the UI fix loop.
 - The session before shipped 12.11, 12.12, 12.10, 12.13, 12.9, 12.3 and parts
   1, 2 and 4 of 12.16. Both sessions' tables are under "Session history".
 - Not a product change: pull requests #101 to #104 changed rules, skills and
   documents, and #104 also removed premise and mutation tests, each security
-  or cost control they pinned first re-pinned by a unit test.
+  or cost control they pinned first re-pinned by a unit test. The three
+  commits after #104 are documents only.
 - Production is unchanged on `v0.2.0`.
 
 What awaits the product owner's retest is the Retest column of
@@ -2121,7 +2129,7 @@ Evidence, with a full transcript per question and a re-runnable script:
 
 ### The 2026-09-24 evening session, in one table
 
-No product code changed. Everything merged as pull request #104, `f21f439`.
+No product code changed. Pull request #104 (`f21f439`) merged the first part of the session; the last three rows below pushed straight to develop with no PR, the UI fix loop carve-out, since none of them touch `.claude/`.
 
 | Item | What happened | Where it stands |
 |---|---|---|
@@ -2132,6 +2140,9 @@ No product code changed. Everything merged as pull request #104, `f21f439`.
 | Bossman mode | Diagnosed in `docs/build/Bossman_mode_redesign.md`, all eight decisions accepted and built | Done; merging its two modes waits for the next build phase |
 | The deletions | 50 review reports and 26 premise or mutation test files, each security or cost control re-pinned first | Done; seven files await the product owner's ruling |
 | CLAUDE.md | Narrative moved verbatim into `requirements/Plan.md`; 54 KB to 24 KB | Done |
+| The board's architecture cards (`e614ed0`) | The kanban restructure had marked the product owner's six architecture cards "Parked" and moved their detail out of view; moved back verbatim into To do, nothing parked, proven by the no-loss script | Done |
+| The board audit (`a947754`) | An audit of the done file found 23 pieces of open work with no card; each is now a To do card, 19 to 41; the board keeps exactly three sections, no table of contents, on the owner's instruction | Done |
+| `testing/Future.md` (`03736d2`) | Remaining work outside the UI fix loop, Plan.md's Phase 7 backlog and the archived continuation prompt's open items, gets its own file: 46 open cards, 41 checked and found closed; the board's 43 cards are unchanged | Done |
 
 ### The 2026-09-23 evening to 2026-09-24 session, in one table
 

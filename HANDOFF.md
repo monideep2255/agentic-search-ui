@@ -13,10 +13,10 @@ Last updated: 2026-09-24.
 
 ## What is live
 
-- Develop: product code through `9b9ff2b`, plus the SQLAlchemy pin at `cfff699`. Every later commit is documents, rules, skills and tests; the newest is `f21f439`, pull request #104, deployed with SUCCESS on both services. Both Railway services redeploy on every push to `develop`.
+- Develop: product code through `9b9ff2b`, plus the SQLAlchemy pin at `cfff699`. Every later commit is documents, rules, skills and tests; the newest are `e614ed0`, `a947754` and `03736d2`, a documents-only session with no PR (direct to develop, the UI fix loop carve-out). Both Railway services redeploy on every push to `develop`.
 - Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing from 2026-09-21 onward is on it. Settle any doubt with `git tag --sort=-creatordate | head -1` and `git log origin/production -1`.
-- Nothing is being built between sessions. The board's "Build in progress" column is the check.
-- CI on GitHub runs: all four jobs passed on pull request #104. One test inside the unit gate calls NCBI live, so an NCBI outage can turn it red; read `unit-results.xml` before blaming the code. Check `gh run list --branch develop --limit 3` before trusting this line.
+- Nothing is being built between sessions. The board's "Build in progress" column is the check; it is empty, with 43 To do cards and 24 Retest cards.
+- CI on GitHub runs: all four jobs passed on pull request #104, the last PR merged. This session's three commits pushed straight to develop with no PR, per the UI fix loop carve-out. One test inside the unit gate calls NCBI live, so an NCBI outage can turn it red; read `unit-results.xml` before blaming the code. Check `gh run list --branch develop --limit 3` before trusting this line.
 
 ## What awaits the product owner
 
