@@ -2,14 +2,22 @@
 
 Everything needed to test the product by hand or by machine, and the record of what each round of testing found and what shipped from it. Start with the one document that holds every query, then use the folders for detail.
 
+## Table of contents
+
+- [Start here](#start-here)
+- [The folders](#the-folders)
+- [Testing by hand](#testing-by-hand)
+- [What lives where, and why the top level stays as it is](#what-lives-where-and-why-the-top-level-stays-as-it-is)
+
 ## Start here
 
 | If you want to | Open |
 |---|---|
-| Test the product by hand: every query worth typing, what you should see, why it matters to the person asking, and whether it is approved or awaiting your retest | `Test_queries_and_workflows.md`, the one document, organised by feature area |
-| See what shipped on a given day and exactly what to retest from it | `Shipped_2026-09-22.md`, `Shipped_2026-09-20.md`, one file per day |
-| See where every feature stands, what is next, and where the last session stopped | `UI_fix_plan.md`, the ordered work list and the single owner of what is being built and what is next |
-| See every item that is built and live, with its test query and retest item | `UI_fixes_done.md`, split out of the plan on 2026-09-24 |
+| Test the product by hand: every feature, the queries to try, and what you should see from the chair of the person asking | `Test_queries_and_workflows.md`, the one document, organised by feature area. Its closing table, "Every feature and where to try it", gives the query for every item, board card and retest step |
+| See what awaits your retest, in order | The Retest column of `UI_fix_plan.md`. Each card's steps are its query in `Test_queries_and_workflows.md` |
+| See what shipped on a given day | `UI_fixes_done.md`: its "Session history" tables, and its "Shipped days, 2026-09-20 to 2026-09-23" section, which keeps what the daily shipped lists of those days recorded |
+| See what is to do, what is being built and what awaits your retest | `UI_fix_plan.md`, the board: To do, Build in progress, Retest, in that order |
+| See every item that is built and live, the detail behind every card on the board, and where the last session stopped | `UI_fixes_done.md`, split out of the plan on 2026-09-24 |
 
 ## The folders
 
@@ -27,4 +35,16 @@ Everything needed to test the product by hand or by machine, and the record of w
 
 ## What lives where, and why the top level stays as it is
 
-`UI_fix_plan.md`, `UI_fixes_done.md` and the `Shipped_<date>.md` files sit at the top level on purpose. The skills that close a session, `/phase-checkpoint` and `/ship`, write them by these paths, and code comments and tests point at them by these paths, so moving them buys nothing a line in this file does not. New per-feature query documents go under `Product/queries/`; a new day's shipped list is a new `Shipped_<date>.md` beside the others; a new measurement is a new dated folder under `Developer/reports/`.
+Three files sit at the top level on purpose:
+
+- `UI_fix_plan.md`
+- `UI_fixes_done.md`
+- `Test_queries_and_workflows.md`
+
+The two skills that close a session, `/phase-checkpoint` and `/ship`, write them by these paths. Code comments and tests point at them by these paths too. So moving them buys nothing a line in this file does not.
+
+Where new material goes:
+
+- A new per-feature query document goes under `Product/queries/`.
+- A new measurement is a new dated folder under `Developer/reports/`.
+- The daily `Shipped_<date>.md` lists of 2026-09-20, 2026-09-22 and 2026-09-23 were folded in on 2026-09-24: their retest steps into `Test_queries_and_workflows.md`, and everything else into `UI_fixes_done.md`.

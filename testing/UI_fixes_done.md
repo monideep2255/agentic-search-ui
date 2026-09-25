@@ -5,7 +5,9 @@ history: built and live on develop, whether the product owner has approved it
 or it still awaits their retest or decision, or answered, superseded, run or
 accepted. What is being built and what is next live in
 `testing/UI_fix_plan.md`, which is the product owner's source of truth for
-work.
+work. Since the plan became a board on 2026-09-24, with only To do,
+Build in progress and Retest, this file also holds the cutoff, "Where
+we stopped", and the detail behind every item still on the board.
 
 ## Table of contents
 
@@ -13,6 +15,8 @@ work.
 - [What is done, in summary](#what-is-done-in-summary)
 - [Progress at a glance](#progress-at-a-glance)
 - [How to read this](#how-to-read-this)
+- [Where we stopped](#where-we-stopped)
+- [Detail for items on the board](#detail-for-items-on-the-board)
 - [Set 1: let people in](#set-1-let-people-in)
 - [Set 2: a steady frame](#set-2-a-steady-frame)
 - [Set 3: refusals and Stop](#set-3-refusals-and-stop)
@@ -26,6 +30,7 @@ work.
 - [Set 11: live feedback of 2026-09-13 and 2026-09-14](#set-11-live-feedback-of-2026-09-13-and-2026-09-14)
 - [Set 12: the second tester's questions](#set-12-the-second-testers-questions)
 - [Session history](#session-history)
+- [Shipped days, 2026-09-20 to 2026-09-23](#shipped-days-2026-09-20-to-2026-09-23)
 - [History and what is live](#history-and-what-is-live)
 - [Developer detail](#developer-detail)
 
@@ -34,117 +39,118 @@ work.
 Done here means closed: built and live on develop, or answered, superseded,
 run or accepted, as the Status column says. For an item that is built and
 live, the Status column also says whether the product owner has approved it
-or it still awaits their retest or decision. Those actions are tracked in
-section 2 of `testing/UI_fix_plan.md`.
+or it still awaits their retest or decision. Those actions are tracked on
+the board in `testing/UI_fix_plan.md`: retests in its Retest column,
+decisions in its To do column.
 
-| Item | What you see | Status | Test query, `Test_queries_and_workflows.md` | Retest item, `Shipped_2026-09-2x.md` |
-|---|---|---|---|---|
-| 1.1 | Remove the five-search guest limit | Approved |  |  |
-| 1.2 | Remove the free-search and moved-into-an-account walls | Approved |  |  |
-| 1.3 | Remove the ten-attempt guest limit | Approved |  |  |
-| 1.4 | Keep the cost caps, raise the anonymous daily cap to 1,000 | Approved |  |  |
-| 1.5 | One Log in button | Approved |  |  |
-| 1.6 | Log out returns to the home page | Approved |  |  |
-| 1.7 | The daily cap message reaches the screen | Approved |  |  |
-| 1.8 | Update the test checklist for the new sign-in flow | Approved |  |  |
-| 2.1 | Centre the sign-in box | Approved |  |  |
-| 2.2 | One box width from progress to answer | Approved |  |  |
-| 2.3 | Fix the header and footer in place | Approved |  |  |
-| 2.4 | Smooth transitions between screens | Approved |  |  |
-| 2.5 | Header and footer in the same blue | Approved |  |  |
-| 2.6 | New search as a distinct blue button | Approved |  |  |
-| 2.7 | Add the three missing logo colours to the theme | Approved |  |  |
-| 2.8 | A light home page | Approved |  |  |
-| 2.9 | Screens centred between header and footer | Approved |  |  |
-| 2.10 | No idle wait after pressing Search | Approved |  |  |
-| 2.11 | Searches that fail at the Think step | Approved |  |  |
-| 2.12 | A bigger search box on the home page | Approved |  |  |
-| 2.13 | NCBI design system: the changes possible today | Approved |  |  |
-| 2.14 | A favicon | Approved |  |  |
-| 3.1 | Remove the red refusal pills | Approved |  |  |
-| 3.2 | Make the NCBI search address a clickable link | Approved |  |  |
-| 3.3 | A grey label matched to the refusal reason | Approved |  |  |
-| 3.4 | "Search stopped" with Run again and New search | Approved |  |  |
-| 4.1 | Stay signed in on reload, and history on phones | Approved |  |  |
-| 5.1 | Rebuild the Integrations page from the reference layout | Approved |  |  |
-| 5.2 | Correct the GraphQL example | Approved |  |  |
-| 5.3 | Fix the MCP server rejecting every request | Approved |  |  |
-| 5.4 | Fold Docs into Integrations | Approved |  |  |
-| 5.5 | Rebuild the disclaimer at the reference size | Approved |  |  |
-| 5.6 | Four Integrations cards with real summary chips | Approved |  |  |
-| 5.7 | Disclaimer wording from the reference structure | Approved |  |  |
-| 6.1 | Let the automated test harness see a real knowledge-graph answer | Live |  |  |
-| 7.1 | Follow-ups keep the earlier context | Approved |  |  |
-| 7.2 | "Yes, go deeper" continues the same search | Approved |  |  |
-| 7.3 | A follow-up stays on the same screen | Approved |  |  |
-| 7.4 | A folded turn keeps the whole earlier answer, with room between turns | Approved |  |  |
-| 7.5 | A follow-up that refers to nothing asks for the missing detail | Approved |  |  |
-| 8.1 | Search all three layers at the same time | Approved |  |  |
-| 8.2 | A lead scientist hands off to three named scientists | Approved |  |  |
-| 8.3 | Progress steps named for the scientist | Approved |  |  |
-| 8.4 | Scientists stay random on every visit | Awaits one look | 9 |  |
-| 9.1 | Two answer modes, Plain language and Researcher | Approved |  |  |
-| 9.2 | An info button explaining the two modes | Approved |  |  |
-| 9.3 | Plain language: about 250 words in three paragraphs | Superseded |  |  |
-| 9.4 | Researcher: a full page organised by topic | Superseded |  |  |
-| 9.5 | Short paragraphs of prose with citations inline | Approved |  |  |
-| 9.6 | The answer streams in sentence by sentence | Approved |  |  |
-| 9.7 | Fix answers that open broken or garbled | Approved |  |  |
-| 9.8 | Fix the uncited note and awkward disease names | Approved for the disease names; superseded for the further-records note |  |  |
-| 9.9 | Trust signals become one plain line | Approved for the one-line shape; wording is your decision |  |  |
-| 9.10 | Researcher headings, Plain language without them | Superseded |  |  |
-| 9.11 | A small medical-advice line on Plain language answers | Your decision, not an approval |  |  |
-| 9.12 | The depth cannot change mid-search | Awaits one look | 4 |  |
-| 10.1 | Stop the flagship questions from refusing | Live |  |  |
-| 10.2 | History shows the saved answer instantly | Built and awaiting retest | 67 | Shipped_2026-09-23 item 2 |
-| 10.3 | The consistency run, three tries per golden question | Run 2026-09-22 |  |  |
-| 11.1 | Researcher answers should follow your reference screenshot | Superseded by 11.12 |  |  |
-| 11.2 | Delete the reference screenshot and the sets 8 and 9 session prompt when done | Done |  |  |
-| 11.3 | Stop after sets 8 and 9, do not touch set 10 | Done |  |  |
-| 11.4 | Does the research layer make people wait 45 seconds? | Answered |  |  |
-| 11.5 | Citations are too big and overwhelm the answer | Live, approved | 1 |  |
-| 11.6 | The answers lack the level of detail of your reference prototype | Live, approved |  |  |
-| 11.7 | Switch the answer-writing model's reasoning setting to none | Live, approved |  |  |
-| 11.8 | Make the process quicker | Live, approved |  |  |
-| 11.9 | Show "[scientist] is writing the answer…" while it loads | Live, approved |  |  |
-| 11.10 | Use parallel sub-agents, each on a model matched to the task | Done |  |  |
-| 11.12 | The answer reads as one block; break it into readable paragraphs, headings and tables | Live, approved |  |  |
-| 11.13 | The same readable format in both Plain language and Researcher | Superseded by 11.31 |  |  |
-| 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live, awaits one look | 6 |  |
-| 11.15 | The answer does not stream | Superseded by 11.16 |  |  |
-| 11.16 | Signal the write step as it starts, reveal sentences at reading pace | Live, approved |  |  |
-| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? | Live, approved |  |  |
-| 11.18 | Search everything in all three layers, sources exact | Answered |  |  |
-| 11.19 | "Variants in GCK causing MODY" should answer every time | Live, approved |  |  |
-| 11.20 | "What genes are associated with MODY?" should answer | Live, approved |  |  |
-| 11.21 | Search the right resource for each question, not only PubMed | Live, approved, both decisions done | 19 | Shipped_2026-09-20 item 6 |
-| 11.22 | PubMed and PMC should provide context for the answers | Live, verified | 13 |  |
-| 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered |  |  |
-| 11.24 | How do I test what is built so far? | Answered |  |  |
-| 11.25 | What from Set 11 is on develop? | Answered |  |  |
-| 11.26 | The answers do not look like the approved mockup | Live, approved | 17 | Shipped_2026-09-20 item 3 |
-| 11.27 | Too much bold: only the title or main point should be bold | Live, approved |  |  |
-| 11.28 | The move from searching to the streamed answer is too quick | Live, approved | 18 | Shipped_2026-09-20 item 5 |
-| 11.30 | Make sure every integration on the Integrations page actually works, end to end | Fix B fixed and live-verified, awaiting your retest | 60 | Shipped_2026-09-23 item 1 |
-| 11.31 | The two answer modes look the same, and they should not | Live, approved as is | 14 |  |
-| 11.33 | PubMed abstracts reach the answer page cut off mid-word | Approved |  | Shipped_2026-09-22 item 6 |
-| 11.34 | A multi-sentence abstract loses its citation entirely in the code-built tail | Fixed and live | 13 |  |
-| 11.35 | "The Notes section is super confusing. remove it" | Live, approved | 7 |  |
-| 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | Live, awaits one look | 3 |  |
-| 11.37 | Layer 1 knowledge-graph sources are invisible in the source list | Accepted, not a defect to fix |  |  |
-| 12.1 | A disease question searches one place and refuses | Live, awaiting retest | 68 | Shipped_2026-09-23 item 8 |
-| 12.2 | A literature question is refused as "Outside biomedical research" | Live, awaiting retest | 70 | Shipped_2026-09-23 item 9 |
-| 12.3 | Do we ask a clarifying question when a query is one to three words? | Live, awaiting your retest | 76 | Shipped_2026-09-23 item 17 |
-| 12.4 | "If it didn't have an answer, why would I 'continue the conversation'?" | Live, awaiting retest | 71 | Shipped_2026-09-23 item 10 |
-| 12.5 | Can these questions be answered at all, and how? | Answered |  |  |
-| 12.6 | The product already writes a good clarifying question and throws it away | Already built, closed by measurement |  |  |
-| 12.7 | A question naming no gene and no disease finds nothing at all | Live, awaiting retest | 69 | Shipped_2026-09-23 item 11 |
-| 12.8 | The trust line under an answer undercounts its sources | Fixed, awaiting retest | 74, shared with 12.11 | Shipped_2026-09-23 item 12, shared with 12.11 |
-| 12.9 | Plain language and researcher return the SAME text | Live, awaiting your retest | 72 | Shipped_2026-09-23 item 16 |
-| 12.10 | The answers list what was found instead of answering | Live, awaiting your retest | 73 | Shipped_2026-09-23 item 14 |
-| 12.11 | The sources chip and the trust line disagree | Live, awaiting your retest | 74 | Shipped_2026-09-23 item 12 |
-| 12.12 | Broken sentences and repeated records | Live, awaiting your retest | 75 | Shipped_2026-09-23 item 13 |
-| 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer | Live, awaiting your retest | 67 | Shipped_2026-09-23 item 15 |
+| Item | What you see | Status | Test query, `Test_queries_and_workflows.md` |
+|---|---|---|---|
+| 1.1 | Remove the five-search guest limit | Approved | 1, 53 |
+| 1.2 | Remove the free-search and moved-into-an-account walls | Approved | 1 |
+| 1.3 | Remove the ten-attempt guest limit | Approved | 45, 55 |
+| 1.4 | Keep the cost caps, raise the anonymous daily cap to 1,000 | Approved | 52 |
+| 1.5 | One Log in button | Approved | 49, 50 |
+| 1.6 | Log out returns to the home page | Approved | 49 |
+| 1.7 | The daily cap message reaches the screen | Approved |  |
+| 1.8 | Update the test checklist for the new sign-in flow | Approved |  |
+| 2.1 | Centre the sign-in box | Approved | 49 |
+| 2.2 | One box width from progress to answer | Approved | 1 |
+| 2.3 | Fix the header and footer in place | Approved | 59 |
+| 2.4 | Smooth transitions between screens | Approved | 59 |
+| 2.5 | Header and footer in the same blue | Approved | 59 |
+| 2.6 | New search as a distinct blue button | Approved | 56 |
+| 2.7 | Add the three missing logo colours to the theme | Approved |  |
+| 2.8 | A light home page | Approved | 59 |
+| 2.9 | Screens centred between header and footer | Approved | 59 |
+| 2.10 | No idle wait after pressing Search | Approved | 1 |
+| 2.11 | Searches that fail at the Think step | Approved |  |
+| 2.12 | A bigger search box on the home page | Approved | 59 |
+| 2.13 | NCBI design system: the changes possible today | Approved |  |
+| 2.14 | A favicon | Approved | 59 |
+| 3.1 | Remove the red refusal pills | Approved | 45, 46 |
+| 3.2 | Make the NCBI search address a clickable link | Approved | 46 |
+| 3.3 | A grey label matched to the refusal reason | Approved | 45, 46 |
+| 3.4 | "Search stopped" with Run again and New search | Approved | 56 |
+| 4.1 | Stay signed in on reload, and history on phones | Approved | 49, 51, 59 |
+| 5.1 | Rebuild the Integrations page from the reference layout | Approved | 59 |
+| 5.2 | Correct the GraphQL example | Approved | 59 |
+| 5.3 | Fix the MCP server rejecting every request | Approved | 60 |
+| 5.4 | Fold Docs into Integrations | Approved | 59 |
+| 5.5 | Rebuild the disclaimer at the reference size | Approved | 61 |
+| 5.6 | Four Integrations cards with real summary chips | Approved | 59 |
+| 5.7 | Disclaimer wording from the reference structure | Approved | 61 |
+| 6.1 | Let the automated test harness see a real knowledge-graph answer | Live |  |
+| 7.1 | Follow-ups keep the earlier context | Approved | 20 |
+| 7.2 | "Yes, go deeper" continues the same search | Approved | 7, 20 |
+| 7.3 | A follow-up stays on the same screen | Approved | 20 |
+| 7.4 | A folded turn keeps the whole earlier answer, with room between turns | Approved | 20 |
+| 7.5 | A follow-up that refers to nothing asks for the missing detail | Approved | 20 |
+| 8.1 | Search all three layers at the same time | Approved | 5 |
+| 8.2 | A lead scientist hands off to three named scientists | Approved | 1, 8 |
+| 8.3 | Progress steps named for the scientist | Approved | 1, 8 |
+| 8.4 | Scientists stay random on every visit | Awaits one look | 9 |
+| 9.1 | Two answer modes, Plain language and Researcher | Approved | 2 |
+| 9.2 | An info button explaining the two modes | Approved | 3 |
+| 9.3 | Plain language: about 250 words in three paragraphs | Superseded |  |
+| 9.4 | Researcher: a full page organised by topic | Superseded |  |
+| 9.5 | Short paragraphs of prose with citations inline | Approved | 1, 5 |
+| 9.6 | The answer streams in sentence by sentence | Approved | 1 |
+| 9.7 | Fix answers that open broken or garbled | Approved | 1 |
+| 9.8 | Fix the uncited note and awkward disease names | Approved for the disease names; superseded for the further-records note | 1 |
+| 9.9 | Trust signals become one plain line | Approved for the one-line shape; wording is your decision | 5 |
+| 9.10 | Researcher headings, Plain language without them | Superseded |  |
+| 9.11 | A small medical-advice line on Plain language answers | Your decision, not an approval | 2 |
+| 9.12 | The depth cannot change mid-search | Awaits one look | 4 |
+| 10.1 | Stop the flagship questions from refusing | Live | 1, 7 |
+| 10.2 | History shows the saved answer instantly | Built and awaiting retest | 67 |
+| 10.3 | The consistency run, three tries per golden question | Run 2026-09-22 |  |
+| 11.1 | Researcher answers should follow your reference screenshot | Superseded by 11.12 |  |
+| 11.2 | Delete the reference screenshot and the sets 8 and 9 session prompt when done | Done |  |
+| 11.3 | Stop after sets 8 and 9, do not touch set 10 | Done |  |
+| 11.4 | Does the research layer make people wait 45 seconds? | Answered |  |
+| 11.5 | Citations are too big and overwhelm the answer | Live, approved | 1, 5 |
+| 11.6 | The answers lack the level of detail of your reference prototype | Live, approved | 79 |
+| 11.7 | Switch the answer-writing model's reasoning setting to none | Live, approved |  |
+| 11.8 | Make the process quicker | Live, approved | 1 |
+| 11.9 | Show "[scientist] is writing the answer…" while it loads | Live, approved | 5 |
+| 11.10 | Use parallel sub-agents, each on a model matched to the task | Done |  |
+| 11.12 | The answer reads as one block; break it into readable paragraphs, headings and tables | Live, approved | 2, 5 |
+| 11.13 | The same readable format in both Plain language and Researcher | Superseded by 11.31 |  |
+| 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live, awaits one look | 6 |
+| 11.15 | The answer does not stream | Superseded by 11.16 |  |
+| 11.16 | Signal the write step as it starts, reveal sentences at reading pace | Live, approved | 1, 5 |
+| 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? | Live, approved | 5, 19 |
+| 11.18 | Search everything in all three layers, sources exact | Answered |  |
+| 11.19 | "Variants in GCK causing MODY" should answer every time | Live, approved | 7 |
+| 11.20 | "What genes are associated with MODY?" should answer | Live, approved | 78 |
+| 11.21 | Search the right resource for each question, not only PubMed | Live, approved, both decisions done | 19 |
+| 11.22 | PubMed and PMC should provide context for the answers | Live, verified | 13 |
+| 11.23 | Check whether the NCBI API key allows 100 requests per second | Answered |  |
+| 11.24 | How do I test what is built so far? | Answered |  |
+| 11.25 | What from Set 11 is on develop? | Answered |  |
+| 11.26 | The answers do not look like the approved mockup | Live, approved | 17 |
+| 11.27 | Too much bold: only the title or main point should be bold | Live, approved | 77 |
+| 11.28 | The move from searching to the streamed answer is too quick | Live, approved | 18 |
+| 11.30 | Make sure every integration on the Integrations page actually works, end to end | Fix B fixed and live-verified, awaiting your retest | 60 |
+| 11.31 | The two answer modes look the same, and they should not | Live, approved as is | 14, 2 |
+| 11.33 | PubMed abstracts reach the answer page cut off mid-word | Approved | 11 |
+| 11.34 | A multi-sentence abstract loses its citation entirely in the code-built tail | Fixed and live | 13 |
+| 11.35 | "The Notes section is super confusing. remove it" | Live, approved | 7 |
+| 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | Live, awaits one look | 3 |
+| 11.37 | Layer 1 knowledge-graph sources are invisible in the source list | Accepted, not a defect to fix |  |
+| 12.1 | A disease question searches one place and refuses | Live, awaiting retest | 68 |
+| 12.2 | A literature question is refused as "Outside biomedical research" | Live, awaiting retest | 70 |
+| 12.3 | Do we ask a clarifying question when a query is one to three words? | Live, awaiting your retest | 76 |
+| 12.4 | "If it didn't have an answer, why would I 'continue the conversation'?" | Live, awaiting retest | 71 |
+| 12.5 | Can these questions be answered at all, and how? | Answered | 68, 69, 73 |
+| 12.6 | The product already writes a good clarifying question and throws it away | Already built, closed by measurement | 48 |
+| 12.7 | A question naming no gene and no disease finds nothing at all | Live, awaiting retest | 69 |
+| 12.8 | The trust line under an answer undercounts its sources | Fixed, awaiting retest | 74, shared with 12.11 |
+| 12.9 | Plain language and researcher return the SAME text | Live, awaiting your retest | 72 |
+| 12.10 | The answers list what was found instead of answering | Live, awaiting your retest | 73 |
+| 12.11 | The sources chip and the trust line disagree | Live, awaiting your retest | 74 |
+| 12.12 | Broken sentences and repeated records | Live, awaiting your retest | 75 |
+| 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer | Live, awaiting your retest | 67 |
 
 ## What is done, in summary
 
@@ -181,13 +187,15 @@ Set 11:
 - L-01 cause found and no longer reproducible, in "Additional notes" below
 - The rest answered, done, superseded, accepted or listed above
 
-Set 12, your skip manager's feedback, raised and built 2026-09-23: 12.1, 12.2,
-12.4 and 12.7 are live and awaiting your retest; 12.3 and 12.5 are answered;
-12.6 was found already built; 12.8 is fixed; 12.9 to 12.12 are in progress on the product owner's direction of 2026-09-23.
+Set 12, your skip manager's feedback, raised and built 2026-09-23:
+
+- 12.1, 12.2, 12.4 and 12.7 are live and awaiting your retest
+- 12.3 and 12.5 are answered, 12.6 was found already built, and 12.8 is fixed
+- 12.9 to 12.12 are in progress on the product owner's direction of 2026-09-23
 
 CORRECTED 2026-09-24, since the sentence above describes the evening of
 2026-09-23: 12.3 and 12.9 to 12.13 are now LIVE on develop and awaiting your
-retest, the rows in section 2 of `testing/UI_fix_plan.md`. 12.14 to 12.17 are recorded and not
+retest, the cards in the Retest column of `testing/UI_fix_plan.md`. 12.14 to 12.17 are recorded and not
 started, and 12.16 is live apart from its part 3.
 
 
@@ -196,7 +204,8 @@ started, and 12.16 is live apart from its part 3.
 - The isolate shape (G-035) is BUILT, VERIFIED LIVE and AWAITING RETEST. Its
   queries and retest workflow are
   `testing/Product/queries/Isolate_search_queries_and_workflow.md`; retest
-  items 17 to 22 in `testing/Shipped_2026-09-22.md`
+  items 17 to 22 of the 2026-09-22 shipped list, now queries 33 to 44 in
+  `testing/Test_queries_and_workflows.md`
 - L-01, a whole graph result vanishing on some runs: CAUSE FOUND and no longer
   reproducible on develop (12 live runs, 2026-09-23). The model drafting its
   own Cypher when no template matches is the mechanism; two commits narrowed
@@ -224,20 +233,20 @@ started, and 12.16 is live apart from its part 3.
 | 9. Answers worth reading | Two modes, Plain language and Researcher, with an info button. Answers stream in and never open broken. Researcher answers follow your reference screenshot | ✅ | 🚀 | 👍 (2026-09-22; 9.3, 9.4 and 9.10 superseded, 9.11 and 9.9's wording still your decision, 9.12 awaits one look) | Tests 1, 7, 12 |
 | 10. Reliable flagship answers, and saved history (10.1 first; 10.2 to 10.4 after the release, product-owner order of 2026-09-13) | BRCA1 and GCK answer every time. A history item shows its saved answer at once | ✅ 10.1; 10.3 run 2026-09-22 | 🚀 10.1 | | Tests 1, 6, 13 |
 | 11. Live feedback, 2026-09-13 onward | Quieter citations, faster answers, readable answer layout, visible writing and streaming, deeper answers from every source. Item by item below. NEW on 2026-09-21: a quote from a paper that runs to more than one sentence is no longer thrown away and now keeps its source link (11.34), NCBI's own plain-English gene description is retrieved and shown as a source (11.31), the confusing Notes block is gone (11.35), and the answer-modes info button no longer promises a word count (11.36) | Partly | Mostly | 👍 for everything live (2026-09-22); 11.14 and 11.36 await one look | Tests 1, 7, 12 |
-| 2026-09-22, outside the numbered sets | The work of that day, evening and night, listed item by item in the session tables under "Session history" below | ✅ | 🚀 | 👍 for the day's five (2026-09-22); the evening's and the night's items await retest | Items 7 to 16 in `testing/Shipped_2026-09-22.md` |
+| 2026-09-22, outside the numbered sets | The work of that day, evening and night, listed item by item in the session tables under "Session history" below | ✅ | 🚀 | 👍 for the day's five (2026-09-22); the evening's and the night's items await retest | Items 7 to 16 of the 2026-09-22 shipped list, now queries 23 to 25 and 27 to 32 in `testing/Test_queries_and_workflows.md` |
 
 
 ## How to read this
 
-Start with [Where we stopped](UI_fix_plan.md#where-we-stopped). That section is the cutoff:
+Start with [Where we stopped](#where-we-stopped). That section is the cutoff:
 
 - What is live
 - What is waiting on the product owner
 - And what the next session does first
 
-Everything above it is the record of how each item got to its current state.
-Since the 2026-09-24 split, that record is this file, and "What is live on
-develop" is under "History and what is live" below.
+Everything above it in the old plan was the record of how each item got to
+its current state. Since the 2026-09-24 split, that record is this file, and
+"What is live on develop" is under "History and what is live" below.
 
 Marks used in the set tables:
 
@@ -262,6 +271,750 @@ Nothing was reworded when that split was made. It was verified by checking all
 720 substantive fragments of the previous version against the new one, with zero
 missing.
 
+### The board's waiting on column
+
+What the Waiting on column means:
+
+- Your decision: waiting on you: decisions. Each is written so the answer is:
+  yes, no, or pick one. None blocks work in flight
+- Nobody on it: still to build, nobody on it
+- Your retest: waiting on you: retests. Each of these is built, live on
+  develop, and needs your eyes before it counts as done. Nothing is blocked
+  on them
+- Parked: parked, and discussions that precede a build
+
+### How the board came to be
+
+Everything below in this subsection is quoted from `testing/UI_fix_plan.md`
+as it stood at the 2026-09-24 checkpoint, the last before the board replaced
+it. In it, "this file", "this document" and "at the top" mean that plan,
+not this file. Its tracker's legend and additional notes moved to their own
+subsections, and its one-line Done section was dropped, since this file is
+that section. Its statuses are not kept current; the board is. Its
+pointers to `testing/Shipped_2026-09-22.md` and `testing/Shipped_2026-09-23.md`
+are kept as quoted. Those lists were folded in on 2026-09-24. The closing
+table of `testing/Test_queries_and_workflows.md` maps each of their retest
+items to its query.
+
+The ordered work list for fixing the product after the first testing round on 2026-09-12. Each set says:
+
+- What you will see
+- What was noted
+- And what to expect
+
+So you can check progress without reading the code.
+
+Since 2026-09-24 the work is kept in two files:
+
+- This file: what is being built and what is next.
+- `testing/UI_fixes_done.md`: every closed item, with its detail and history. That is an item built and live, approved or still awaiting your retest or decision, or one answered, superseded, run or accepted.
+
+The high-level tracker, kept at the top so nobody has to read the sets to
+answer "what is done and what is left". REORGANISED 2026-09-23 on the product
+owner's instruction, into what needs them first, then what is moving, then
+what is finished. Every status word here is copied from the item's own row
+further down; the detail stays with the item. Since the 2026-09-24 split, the
+row of an item that is built and live sits in `testing/UI_fixes_done.md`.
+
+THIS DOCUMENT IS THE SOURCE OF TRUTH for what gets worked on. An item is
+written here BEFORE it is built. Other folders are evidence referenced from
+here, never a work queue of their own: `testing/User-feedback/` holds a second
+tester's screenshots and is referenced by set 12.
+
+REORGANISED AGAIN the same evening, on the product owner's instruction, into
+their three sections:
+
+1. Features being built right now, in priority order
+2. Features to do, in priority order
+3. Done
+
+The tracker as it stood at that checkpoint:
+
+#### 1. Being built right now, in priority order
+
+Nothing is being built between sessions. 11.11, listed here until
+2026-09-24, had nobody on it and moved to section 2; 12.9 and 12.3 went live
+and moved to your retests there.
+
+
+#### 2. To do, in priority order
+
+Your retests come first, since they are your next action. The rest follow
+"Next, in order" in "Where we stopped", items 1 to 10. Rows that list does not
+rank keep the order the tracker already listed them in.
+
+| Priority | Feature, in plain words | Item | Waiting on | Where it stands, what it affects, or where the steps are |
+|---|---|---|---|---|
+| 1 | The seven questions your skip manager asked, all of which now answer | 12.1, 12.2, 12.4, 12.7 | Your retest | `testing/Shipped_2026-09-23.md`, retest items 8 to 11 |
+| 2 | The overnight batch: saved answers, MeSH terms, the record count, the MCP address | 10.2, 11.30 and four others | Your retest | `testing/Shipped_2026-09-23.md`, retest items 1 to 7 |
+| 3 | The night of 2026-09-22: the two lost searches, the coordinate range, the accessions, the isolate set | various | Your retest | `testing/Shipped_2026-09-22.md`, retest items 7 to 22 |
+| 4 | Four one-look checks, under a minute each | 11.14, 11.36, 9.12, 8.4 | Your retest | their rows in `testing/UI_fixes_done.md` |
+| 5 | The answer answers the question instead of listing what was found | 12.10 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 14. LIVE on develop at `5d53f78` 2026-09-23, awaiting your retest. A second, cheap model checks each reworded sentence against the exact record words it quotes; code first checks the quote is in the record character for character, the numbers, the negation, and that the sentence does not open on a yes or no verdict. Measured live: every plain-language answer of the seven answered in sentences; two of six guarded reruns fell back to a list, one on a failed model call, which is the check failing closed |
+| 6 | The sources chip and the trust line agree with each other | 12.11 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 12. LIVE on develop at `6f8902e` 2026-09-23, awaiting your retest. It now counts distinct pages, the same key the source list merges on. A regression from 12.8 the same day: the line counts citations and the list counts distinct pages |
+| 7 | Broken sentences and repeated records in the answer | 12.12 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 13. LIVE on develop at `6f8902e` 2026-09-23, awaiting your retest. An orphan fragment starting lowercase with a stray quote mark, a paragraph opening "Another is titled" with no first, and the same records shown up to three times |
+| 8 | A search clicked in the history rail re-runs instead of showing its saved answer | 12.13 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 15. LIVE on develop at `5d53f78` 2026-09-23, awaiting your retest. A search asked in this tab now opens its saved answer |
+| 9 | Plain language and researcher differ on every question | 12.9 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 16. LIVE on develop 2026-09-24. Measured live on all 12 full questions from both feedback folders: every one differs in its opening sentence and its list (a list in plain language, a table with identifiers in researcher), and both depths list the same records |
+| 10 | A one-to-three-word question is asked back, such as `reflux disease` | 12.3 | Your retest | `testing/Shipped_2026-09-23.md`, retest item 17. LIVE on develop 2026-09-24, decided by a classifier model, not a word list. Measured live three times each: `reflux disease`, `GERD`, `BRCA1` and `Marfan` asked back 3 of 3 with choices written for the subject; `MeSH` 2 of 3; `papers on caffeine` searched |
+| 11 | A question about phenotypic features names none | 12.14 | Nobody on it | RAISED 2026-09-23 from the fix-2 screenshots. NOT STARTED, nobody on it |
+| 12 | A good question sometimes fails at the think step and shows a refusal | 12.17 | Nobody on it | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it |
+| 13 | No hardcoded decisions: prompts, routing and the clarify decision stop relying on word lists and test-question examples | 12.16 | Part 3 not started | RAISED 2026-09-24 by the product owner. Parts 1, 2 and 4 LIVE 2026-09-24; part 3, the literature-request routing word list, not started. Audit in 12.16's row |
+| 14 | A question asking for recent papers asks what recent means | 12.15 | Nobody on it | RAISED 2026-09-23 from the fix-2 screenshots. NOT STARTED, nobody on it |
+| 15 | Four golden test rows disagree with what the product does, row by row | the golden rows | Your decision | The test set only, nothing a user sees |
+| 16 | Is twenty sources the right ceiling? | the ceiling, measured and unchanged | Your decision | Every answer hits it and then tells the reader it was cut short, which is a large part of why a good answer reads as a thin one |
+| 17 | Tell the reader when the system wrote its own search rather than using a checked one | "Next, in order" item 7 | Nobody on it | Not started. The data exists: `CypherQueryOutput.template` is None exactly then. THE TRAP: the degradation is `ok` to `ok`, never `empty` |
+| 18 | Hard and soft edges over a fuller graph, "connecting the dots" | 11.29 | Parked | A discussion that precedes a build. Its scoping document now exists and is measured: `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md` |
+| 19 | A bounded trial of the probability model | 11.38 | Parked | Backlog only, nothing designed and nothing promised |
+| 20 | Answers modelled on the reference prototype's depth, formatting and structure | 11.11 | Nobody on it | Queued, tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. The answer-writing model is unchanged; switching models is a separate decision. 12.9 and 12.10 answered part of its ask |
+| 21 | Does the Plain language answer keep its small grey medical-advice line? | 9.11 | Your decision | One line under every plain-language answer |
+| 22 | The trust-line wording | 9.9 | Your decision | One line under every answer |
+| 23 | Judge answer quality once answering is reliable | 10.4 | Nobody on it | Not built. After the release, once 10.3's consistency run shows reliable answering |
+| 24 | The load-dependent frontend tests | D4, under "Developer follow-through" | Nobody on it | Journey 7 FIXED 2026-09-23. The load-dependent suite is diagnosed and was still being worked at the close of that session |
+| 25 | Internal MCP servers around the Layer 2 and Layer 3 calls | 11.32 | Parked | A discussion that precedes a build under `/bossman-mode`, reclassified 2026-09-22 |
+| 26 | The explanation half of 11.31 | 11.31 | Parked | Parked. You approved the current state as is on 2026-09-21 |
+| 27 | The byte ceiling at 50,000 | see its row | Parked | Parked |
+
+D4, row 24 of the snapshot, did not move to the board: the 2026-09-23
+overnight session table under "Session history" records both halves of D4
+fixed.
+
+## Where we stopped
+
+The cutoff. It is updated at the end of every working session, so the next
+session starts here rather than reconstructing state.
+
+LAST UPDATED 2026-09-24, at the close of the session that ran from the evening
+of 2026-09-23. THE ONE THING TO KNOW: answers now answer the question. The
+answer model writes plain sentences from the papers, code checks every quote,
+number and negation, and a second, cheap model checks that each reworded
+sentence says no more than its quote. Everything that shipped awaits the
+product owner's retest, and nothing is being built between sessions.
+
+What is live on develop:
+
+- Product code through `9b9ff2b`, plus one dependency pin, D5. SQLAlchemy
+  2.1.0 was released during the session's last build and stopped the API
+  deploying the checkpoint commit `39c6e55`, so the commit after it pins
+  SQLAlchemy below 2.1. Every other later commit is documents and rules.
+- The session shipped 12.11, 12.12, 12.10, 12.13, 12.9, 12.3 and parts 1, 2
+  and 4 of 12.16. Its session table is under "Session history" in
+  `testing/UI_fixes_done.md`.
+- Not a product change: this plan was split in two on 2026-09-24, and pull
+  requests #101, #102 and #103 changed one rule and the two session-closing
+  skills.
+- Production is unchanged on `v0.2.0`.
+
+What awaits the product owner's retest is the Retest column of
+`testing/UI_fix_plan.md`; the closing table of
+`testing/Test_queries_and_workflows.md` gives each retest item's query. In
+this order, as the daily shipped lists numbered them:
+
+- Items 12 to 17 of the 2026-09-23 list, the newest work.
+- Items 1 to 11 of the same list.
+- Items 7 to 22 of the 2026-09-22 list.
+
+This section is also the shared plan. What we agreed, what is done and what is
+next all live here rather than in a session that disappears, so the product
+owner and whoever picks this up read the same record. Since the 2026-09-24
+split, what is done lives in `testing/UI_fixes_done.md`.
+
+### The result that should shape what happens next
+
+SUPERSEDED IN PART on 2026-09-24, and kept as the record of why: the product
+owner approved a second, cheap model that checks each reworded sentence
+against the exact record words it quotes, after code has checked the quote,
+the numbers and the negation (items 12.9 and 12.10). A faithful explanation
+in the model's own words now survives. What follows is why that check was
+needed.
+
+THE GROUNDING GATE PERMITS QUOTING AND FORBIDS EXPLAINING, and this is the
+session's most transferable finding. `ground_claim` accepts a claim against a
+finding only on contiguous containment. For a short record that is healthy: a
+sentence wraps the value verbatim. For a long free-text value, such as an
+abstract or a gene summary, only a verbatim excerpt survives, because a
+sentence cannot contain a 400-word abstract.
+
+Explaining means using different words. So every explanatory sentence the
+model writes is deleted silently, and the answer arrives looking thin rather
+than censored. Measured: 19 candidate sentences across 8 shapes returned 3
+survivors, all literal excerpts.
+
+FIVE VERSIONS OF THE DEPTH DIRECTIVE HAVE NOW FAILED, two of them written this
+session, each by instructing the model about form:
+
+| Version | Instructed | Result |
+|---|---|---|
+| 1 | Do not print identifiers | The depth refused outright |
+| 2 | Keep background to a minimum | Reported three of four findings, looking confident |
+| 3 | State identifiers exactly, say less | Refused with an empty narrative |
+| 4 | Give each finding its own sentence | 206 words of enumeration, explaining nothing |
+| 5 | Explain, quote exactly, no length rule | 58 words, still explaining nothing |
+
+A sixth version is not the fix. The lever that remains, recorded and NOT
+built because it changes what an answer is composed of rather than how a model
+is instructed: have the CODE place the plain source text verbatim and cited,
+the way the record tables under every answer are already built, where no model
+touches the text so it can neither hallucinate nor be stripped. The product
+owner reviewed this and approved the current state as is, so it is a standing
+option rather than a queued task.
+
+### What is parked, and why
+
+- THE OMIM DISPATCH IS NO LONGER PARKED. It was enabled and reverted on
+  2026-09-21 because `breadth_plan.filter_omim_titles` existed and nothing
+  called it. On 2026-09-22 the filter was wired into the act result path and
+  the dispatch went live. What stays true, and is why the line is kept rather
+  than deleted: the dispatch and the filter ship together, and re-enabling one
+  without the other cites a different gene than the question asked about.
+- THE EXPLANATION HALF OF 11.31, above.
+- THE BYTE CEILING. `_MAX_FINDING_TOTAL_BYTES` stays at 50,000 after the 11.33
+  fix. Measured: a fetch of 20 PubMed records with 2000-character abstracts is
+  45,841 bytes and all 20 rows survive; the ceiling fires at 22 rows. Whether
+  50,000 is still right is a product decision, deliberately not taken inside a
+  defect fix.
+
+### What is waiting on the product owner
+
+Rewritten 2026-09-24 at the session checkpoint. None of it blocks work:
+
+- Retests, newest first: items 12 to 17 of the 2026-09-23 shipped list,
+  then its items 1 to 11, then items 7 to 22 of the 2026-09-22 list. The
+  board's Retest column holds them, and each has its query in
+  `testing/Test_queries_and_workflows.md`.
+- Two decisions added since 2026-09-22: the four golden test rows, and
+  whether twenty sources is the right ceiling.
+
+- Four checks of under a minute each, the only rows still not approved:
+  - Copy an answer and paste it somewhere (11.14)
+  - Open the answer-modes info button (11.36)
+  - Change the mode while a search is running (9.12)
+  - Open the app twice to see different scientists with the same answer (8.4)
+- Two decisions, both already on the standing list below: whether Plain
+  language answers keep the small medical-advice line (9.11), and the
+  trust-line wording (9.9).
+
+The longer standing list is unchanged:
+
+- the three `theme.ts` logo tokens
+- the six undesigned surfaces
+- whether answers carry a medical-advice notice
+- the 720px nav
+- the 20-source citation cap
+- the provenance note
+- the mode toggle's placement
+- and the trust-line wording.
+
+### Loose ends, named rather than left
+
+- L-01 is MEASURED, its two causes are READ, and the reader is now TOLD:
+  a lost search is disclosed under the answer and a question the product
+  could not read is answered with a request for a name (`10f6a46`). What
+  is NOT fixed is the cause itself: the deterministic half is a Think gap
+  and the variance half is the act budget, both below.
+- THE DETERMINISTIC HALF OF L-01 was a Think gap. For these questions Think
+  resolved no entity and the plan still dispatched `cypher_query`, which
+  refuses to run with nothing to bind:
+  - a GRCh38 coordinate range (G-001)
+  - a Pathogen Detection isolate (G-035)
+  - a BioProject accession (G-007)
+  - and on some passes Lynch syndrome (G-003)
+
+  THE COORDINATE RANGE IS FIXED (`66b3811`, the same night); the isolate and
+  the accession are item 2 of the next list. G-005 and G-022 resolve an
+  entity and find nothing; G-036 never calls Layer 1.
+- THE VARIANCE HALF OF L-01 was NOT the act budget and NOT a follow-up: the
+  graph server's own log shows the question's OWN search, taking the model
+  path on an exploratory no-shape question, killed by the graph's 30-second
+  statement timeout after 85 seconds because the planner mis-estimates an
+  id match by four orders of magnitude. Fixed for the exploratory class
+  (`2bc8ec0`). G-037 and G-033 were a different fault: generation or
+  validation failing before the transport ("Generated Cypher references
+  vertex label", "appears to bind a literal value"). FIXED the same evening
+  as fix-plan item 1:
+  - No template matched, so both took the model path
+  - Both take a template now (`27d68ae`)
+  - And G-037 also searches GEO (`b6cd025`)
+  - See the 2026-09-22 session table in `testing/UI_fixes_done.md`
+- THE TRUST TIER `ask` AND THE PARKED GRADER'S `ask` ARE TWO MEANINGS OF ONE
+  WORD. Widening the golden rows to accept the trust tiers was built, found to
+  erase the parked grader's answer-versus-clarification distinction (two of
+  its tests go red for a real reason), and discarded. The 77 percent
+  answer-or-refuse figure is the one to read; the 14 percent is vocabulary.
+  Recorded in `DECISIONS.md` for whoever un-parks the grader.
+- DEVELOP TRACES NOTHING TO LANGSMITH, BY DESIGN: tracing runs on production
+  only, product-owner confirmation of 2026-09-22. So a cause behind a develop
+  measurement is read by local reproduction, as L-01's was, never from a
+  trace. Any future "read the trace" step written against develop is wrong
+  on its face.
+- `testing/Shipped_2026-09-20.md` was found deleted from the working tree
+  mid-session by something outside this session's tool calls, and restored
+  from HEAD unchanged. Cause unknown.
+- The 2026-09-20 L-01 instrument filtered on `layer_1` while the API emits
+  `layer_1_graph`, so its own anomaly field read zero on every run. Any
+  instrument that reports "no anomalies" deserves a populate-check.
+- A multi-sentence record can now render as several list rows under one record
+  heading, a consequence of 11.34's fix. Not a grounding or citation defect,
+  and no test covers it.
+
+- ADDED 2026-09-24, from the session's live runs:
+  - The rule for a reworded sentence that switches papers is satisfied by any
+    shared title word, and a generic one ("patients") is a weak anchor.
+    Recorded in 12.16's row; not fixed.
+  - The ask-back classifier is a judgement: `MeSH` was asked back 2 times in 3
+    after tuning.
+  - Some dense paragraphs in older sections, carried over by the plan's split,
+    were left as written: cosmetic, and three cannot pass the no-loss check.
+  - One agent worktree, fully merged, stays locked by the running editor
+    session and clears when it ends.
+- A lock file for the Python build. `requirements.txt` gives ranges rather
+  than versions, so every Railway build resolves afresh, and D5 showed a
+  release can reach develop thirteen minutes after it is published. Not
+  started, and it is the product owner's call.
+
+### Notes carried over from the old tracker
+
+Carried over from the plan's own "Additional notes" when it became a
+board on 2026-09-24.
+
+- THE GRAPH HOLDS NO DISEASE NAMES AND NO MESH TERMS, measured graph-wide on
+  2026-09-23. Every `Disease` vertex carries its source vocabulary in `name`
+  and zero contain the word "syndrome". Known since build phase 2.1 as
+  F-2.1-B07. Writing the graph is Systems 1 and 2 work in the other
+  repository, so this is a hand-over rather than a task, and it BOUNDS what
+  any answer-path work here can achieve.
+- ITEM 11.21's PROMISE IS NOT BEING KEPT, measured for the first time on
+  2026-09-23 and on wiring nobody changed. Six identical PubMed searches
+  returned two distinct result sets, and the GERD questions moved 20 citations
+  to 19 with one paper swapped. Separately, which path a question takes is a
+  model call, so it is a sample: `reflux disease` resolved nothing on one run
+  in six. Nobody had looked. Not yet its own item.
+- OMIM is live WITH `filter_omim_titles`; the two ship together and neither is
+  enabled or removed without the other
+- The cutoff and the ordered next actions are in "Where we stopped"
+
+### Next, in order
+
+REWRITTEN 2026-09-24 at the session checkpoint.
+
+- The old items 1 and 2 are done and live: Set 12's questions, and 12.3.
+  Their records are in `testing/UI_fixes_done.md`.
+- Nothing below is a retest. Every item is engineering or a decision, ordered
+  by what the person typing the question feels first.
+- The To do column of `testing/UI_fix_plan.md` follows the same order.
+
+What is open and not on this list as its own item:
+
+- The graph holds no disease names and no MeSH terms. Every `Disease` vertex
+  is named after its source vocabulary and every `OntologyClass` after its own
+  identifier, measured graph-wide. Known since build phase 2.1 as F-2.1-B07.
+  Writing the graph is Systems 1 and 2 work in the other repository, so this
+  is a hand-over rather than a task. It BOUNDS item 1: a disease question can
+  be answered from the live records and the literature, and never from the
+  graph's disease names.
+- The model's written prose still fails the grounding gate on several question
+  shapes, so the code-built table carries the answer. SUPERSEDED 2026-09-24:
+  the model check (12.10) lets a faithful reworded sentence through; two of six
+  guarded live reruns still fell back to a list, once because the checking
+  model's call failed.
+- `trust_outcome` is unstable: five runs with byte-identical evidence returned
+  `flag` four times and `ask` once.
+
+1. 12.14, A QUESTION ABOUT PHENOTYPIC FEATURES NAMES NONE. `What phenotypic
+   features are associated with Marfan syndrome?` answers with variant and gene
+   records at both depths, a confident answer of the wrong kind. The dead
+   template was removed on 2026-09-23 and nothing that CAN answer took its
+   place. Its row is under "Detail for items on the board".
+2. 12.17, A GOOD QUESTION SOMETIMES REFUSES AT THE THINK STEP. Twice in about
+   forty live runs the plan tier's reply did not match the think
+   classification schema, and the reader saw a refusal for a question the
+   product answers on every other run.
+3. 12.16 PART 3, WHICH QUESTIONS COUNT AS A REQUEST FOR PAPERS BECOMES A
+   CLASSIFIER'S DECISION, on the product owner's instruction that decisions are
+   not hardcoded; today it is a word list. It is also where their architecture
+   direction under 11.38 points: "We use Jev as a classifier where ever we are
+   making those decisions".
+4. 12.15, "RECENT PAPERS" ASKS WHAT RECENT MEANS, the product owner's remark on
+   `recent papers on statins`.
+5. THREE GOLDEN ROWS DISAGREE WITH THE GUARDRAIL, product owner's call, row by
+   row:
+   - "334" expects a clarifying ask and is refused as off-topic
+   - "tell me about the tree of life" expects an answer
+   - the pathogenicity classification request expects a flag rather than a
+     medical-advice refusal
+
+   Nothing blocks on it. A fourth row joins them: G-035's Taxonomy must-cite
+   URL. ITEM 12.2 MAY CLOSE SOME OF THESE ON ITS OWN, since they are the same
+   check.
+6. THE TWENTY-SOURCE CEILING, still waiting on the product owner.
+7. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
+   established that when no code template matches, the plan-tier model writes
+   the Cypher fresh, and two drafts are not equivalent. The data already
+   exists: `CypherQueryOutput.template` is None exactly in that case, and
+   `_cypher_output_to_structured_fields` currently drops it. THE TRAP, and the
+   reason this is not the obvious one-liner: the degradation is `ok` to `ok`, a
+   hundred rows then one count, NEVER an `empty`, so any rule keyed on
+   empty-or-failed misses the case that actually costs the reader their
+   evidence. Key it on the query having been drafted. The stronger version of
+   this item is to close the remaining model path entirely, the way `27d68ae`
+   closed it for gene questions.
+8. 11.29's BUILD, now that its scoping document exists and is measured. Read
+   `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md`
+   first: it counts how many golden questions need multi-hop (five, all walking
+   one already-built shape), how many need data the graph does not hold
+   (twelve), and says plainly that vector embeddings and a RAG pipeline have a
+   motivating count of zero here. Its own first recommendation is that the
+   grounding gate, which accepts a verbatim excerpt and rejects a faithful
+   paraphrase, is what actually stands between the product and being worth
+   reading instead of a general chatbot.
+9. 11.38, a bounded trial of the probability model, if the product owner wants
+   it. The cheap first step is a SHADOW RUN on the guardrail: it decides in
+   parallel, its answer is only recorded and never acted on, which produces
+   calibration data from this product's own questions rather than a vendor
+   benchmark. Output tokens are free, which is what makes that affordable.
+   Acting on a confidence number is a separate and much larger decision.
+
+   The three discussion items this list carried are all closed: 11.30 was
+   built, 11.32 was answered with measurement, and 11.29's discussion produced
+   the document named in item 8. 11.22's live check was already done.
+10. 11.11, ANSWERS MODELLED ON THE REFERENCE PROTOTYPE'S DEPTH, FORMATTING AND
+   STRUCTURE. Listed as being built until 2026-09-24, with nobody on it; 12.9
+   and 12.10 answered part of its ask.
+
+NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
+product owner approved the current state as is on 2026-09-21. The remaining
+lever is recorded in "The result that should shape what happens next" above as
+a standing option, not as queued work.
+
+### How to start the next session
+
+1. Read "Where we stopped" above, then the session tables under "Session
+   history" in `testing/UI_fixes_done.md`, newest first.
+2. Run `git status` and `git worktree list`. Both should be clean, with local
+   carrying only `develop`.
+3. Read "What is parked, and why" before picking anything up. OMIM is live
+   WITH its title filter; the two ship together and neither is re-enabled or
+   removed without the other.
+4. Pick up the board, `testing/UI_fix_plan.md`: the product owner's retests
+   in its Retest column first, then its To do column at item 1, 12.14. Awaiting
+   their retest: items 1 to 17 of the 2026-09-23 shipped list and items 7
+   to 22 of the 2026-09-22 list, each a query in
+   `testing/Test_queries_and_workflows.md`. The call ceiling is measured and
+   stays at twenty.
+
+## Detail for items on the board
+
+Items raised in Sets 10 to 12 that are still open, each a card in the To do column of `testing/UI_fix_plan.md`. The rest of those sets is closed, recorded in the set sections below.
+
+### 10.4 Judge answer quality once answering is reliable (R39)
+
+Built: · Live: · Approved:
+
+- Feature being tested: answer quality is judged only once the product answers consistently.
+- What you noted: "Only once questions answer reliably, judge answer quality: the grader, or a domain expert reading the answers."
+- What's expected: a quality pass with the grader or a domain expert, once R38's consistency run shows reliable answering. This is a developer check, not a hand test.
+
+### Set 11, still open
+
+Set 11's intro below defines most of the status words these rows use.
+
+| # | Your feedback | Status | Where it stands |
+|---|---|---|---|
+| 11.11 | Use your reference prototype for answer depth, formatting and structure; it writes with a different model family | Queued | Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision |
+| 11.29 | Think big about connecting the dots: if everything were in the knowledge graph, from PubMed literature to sequence, clinical and PubChem data, how do we find hard edges (direct relationships) and soft edges (indirect, through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid knowledge-graph model? | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](#detail-1129) |
+| 11.32 | Wrap the Layer 2 and Layer 3 API calls in internal MCP servers. "Why dont we wrap our layer 2 and layer 3, the api calls in internal mcps ... can understand from the API keys on how to setup things for each database. Maybe just add to the list for now" | Discussion, precursor to a build | Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132) |
+| 11.38 | Try the new model on OpenRouter that returns probabilities with its output, and decide where calibrated confidence belongs in the architecture: the guardrail, the choice of which resource to pull, and the cite-or-refuse gate | Discussion, precursor to a build | Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](#detail-1138) |
+
+#### Detail 11.29
+
+The ask: Think big about connecting the dots: if everything were in the
+knowledge graph, from PubMed literature to sequence, clinical and PubChem data,
+how do we find hard edges (direct relationships) and soft edges (indirect,
+through multi-hop)? Do we need RAG pipelines, vector embeddings, a hybrid
+knowledge-graph model?
+
+Status: Discussion, not started
+
+Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it
+needs its own session rather than a slot in the fix loop. Three things are worth
+settling before it opens. FIRST, most of the premise is not this repository's to
+decide: "everything is in the graph" is Systems 1 and 2, which live in a
+separate repository, and `.claude/rules/file-protection.md` forbids this
+repository writing into the graph at all, by direction of data flow.
+
+System 3 can only read. SECOND, vector embeddings, RAG pipelines and
+knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in
+`.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named
+trigger at all, so it stops and asks by rule. Discussing is free, building is
+not. THIRD, the multi-hop half is already real and measured rather than
+hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
+SyntaxError, so the broad search traverses `participates_in` alone and GO
+molecular activities and cellular components are not reached
+(`2026-09-19_breadth_wiring/build.md`).
+
+That is a soft-edge limitation sitting in the product today, and it costs one
+graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
+when asked whether the product fails because the data is absent or because we
+cannot find the path between things that are present: BOTH, and the headline
+verdict is blunter than either: "the answers all look surface level and most
+chatbots like ChatGPT, Claude, Gemini can answer better".
+
+That is a judgement on the ANSWER PATH, not on presentation, and it is the bar
+11.29 has to clear: not "does it cite" but "is it worth reading instead of a
+general chatbot". Every presentation-side fix in Set 11 leaves that bar
+untouched
+
+#### Detail 11.32
+
+The ask, in the product owner's own words: "Why dont we wrap our layer 2 and
+layer 3, the api calls in internal mcps ... can understand from the API keys on
+how to setup things for each database. Maybe just add to the list for now."
+
+Status: Not started. Raised 2026-09-20, backlog only.
+
+THE SOURCE MATERIAL THEY NAMED, both verified to exist on 2026-09-20: <!-- local-refs: allow -->
+
+| What | Where |
+|---|---|
+| The connection maps and per-database deep dives | `reference/personal-os-work/NIH/NCBI Technical-development-workflow/Architecture-and-databases` <!-- local-refs: allow --> |
+| The databases paper | the `NCBI-databases-paper-09-2025` folder inside it |
+| Open this first | `NCBI_database_connection_map.md`, then `NCBI_databases_deep_dive.md` and `NCBI_enterprise_infrastructure_deep_dive.md` |
+
+NOTHING IS DESIGNED AND NOTHING IS PROMISED. This crosses the tool-integration
+boundary the locked technical specification's Section 6 defines, which names
+seven tools and their transports, so under `.claude/rules/v1-scope-boundary.md`
+it is scoped against that section and signed off before any work starts, never
+the other way round.
+
+Two questions to settle when it is scoped, neither decided here. Whether an
+internal MCP server is a TRANSPORT SWAP underneath the existing seven tools,
+which would leave every tool schema and call site unchanged the way build phase
+4.11's HTTPS graph service did, or a RE-CUT of what the tools are, which is a
+contract-version event under `system-design-patterns` pattern 10. And what it
+buys over the direct calls the tools make today, since
+`.claude/rules/supply-chain-security.md` treats every MCP server as an execution
+surface running with the app's own credentials, so the answer has to be worth
+that.
+
+ANSWERED 2026-09-22, when the product owner asked directly whether wrapping
+Layer 2 and Layer 3 in MCP would be faster and more reliable. The honest answer
+splits their question in two, because the valuable half is not the MCP half.
+
+On speed, no, and this is measured rather than argued. MCP is a protocol for one
+process to offer tools to another. It does not change what NCBI returns or how
+fast NCBI returns it, so wrapping our own calls in it adds a hop rather than
+removing one. Item 11.4 measured where the wait actually is: the searches take
+about a second, and the wait was the writing step. Item 11.8 then cut the median
+answer from 26.5 to 19.7 seconds by working on that step, not on the transport.
+Under `.claude/rules/attack-the-constraint.md`, the transport is not the
+constraint, so optimising it buys nothing a person would feel.
+
+On reliability, yes, and the product owner's instinct is right, but the thing
+that buys it is the half of their sentence that does not mention MCP:
+
+- "reverse engineer the NCBI API, see what data exists, and build functions around them".
+
+- That is a measured, typed function surface
+- and it removes a real class of wrong answer, namely the agent choosing an
+  endpoint or a parameter that does not mean what it assumed.
+
+It is also the exact method that closed G-035 on the night of 2026-09-22:
+
+- the FTP tree was measured live first (521 MB, 584,433 rows, a 17.7 second full scan)
+- a wire contract was pinned from those numbers
+- and the shape went from never answering to 5 of 5.
+
+That method is available today, one tool at a time, with no protocol change and
+no new execution surface.
+
+So the two halves separate cleanly, and only one of them is blocked:
+
+- The typed, measured function surface per database: valuable, in scope as
+  ordinary work on the existing seven tools, and provably effective here.
+- The MCP envelope around it: a transport change that earns its keep only if
+  these tools must be callable by agents outside this product. That is a
+  distribution argument, not a speed or reliability one, and it stays a
+  scoping discussion against Section 6 as this detail already says.
+
+Worth stating plainly, because the naming invites the confusion:
+
+- This product already HAS an MCP surface, at `/mcp`, and it points the other way.
+- It exists so other agents can call this product.
+- Item 11.32 would point MCP inward, at our own calls, which is the direction
+  that adds the hop.
+
+#### Detail 11.38
+
+The ask, raised 2026-09-22: try the new model on OpenRouter that returns
+probabilities with its output, because it could help the guardrail and the step
+where the agent chooses which resource to pull.
+
+Status: Not started. Backlog only, nothing designed and nothing promised.
+
+WHAT IT IS, established 2026-09-23 from the two sources the product owner
+supplied, `https://typesafe.ai/` and
+`https://openrouter.ai/docs/guides/community/jev`. Read as vendor claims, which
+is what they are; nothing below has been measured against this product's own
+questions yet.
+
+| Fact | Value |
+|---|---|
+| Model id | `typesafe/jev-1.13`, alias `~typesafe/jev-latest` |
+| Maker | TypeSafe, who call it a "System One Model" |
+| Endpoint | `POST https://openrouter.ai/api/alpha/decisions`, NOT chat completions |
+| Question types | Choice: the selected option, a probability for every option, and a confidence. Bool: the probability of yes. Score: a probability-weighted position, a probability per level, and a confidence |
+| Context | 32,000 tokens, state plus questions |
+| Price | Input tokens billable, OUTPUT TOKENS FREE. Vendor claims $42 per billion input tokens |
+| Vendor speed and cost claim | 193.6x faster and 244.6x cheaper on their own "System One" tasks: 0.114s and $0.000081 against 8.566s and $0.013880 |
+
+THE LIMITATION THAT DECIDES WHERE IT CAN GO, in the vendor's own words:
+
+- "Jev does not produce reasoning traces, explanations, or free-form text"
+- and "It is not a drop-in replacement for a chat model."
+
+That single sentence sorts the whole question. The product owner named three
+places. Two of them are decisions, and Jev is built for exactly that shape. The
+third is writing, and Jev cannot do it at all.
+
+| Where | Shape today | Does Jev fit |
+|---|---|---|
+| Guardrail | A Guard-tier chat model classifies the input, and the answer is taken as certain | YES. This is a Choice with a confidence, which is what the step actually needs. A borderline question could be asked about rather than guessed at |
+| Which resource to pull | Think and Plan pick from a fixed plan per question shape | YES, and it is the better of the two. The option set is closed and known, which is the condition a typed decision needs |
+| Writing the answer | The Synth tier writes prose with inline citations | NO. It emits no free-form text. Not a candidate, at any price |
+
+ON "ZERO HALLUCINATIONS", which is on the vendor's front page and should be read
+carefully rather than quoted. The honest version of that claim is structural: a
+decision constrained to a fixed option set cannot return an option outside the
+set. That is real and it is worth something here, since this product's failures
+include the model reading MODY as an organism (item 11.19). It is NOT a claim
+that the chosen option is correct, and it must never be repeated to a user as
+though it were.
+
+WHY THE INSTINCT IS SOUND, independently of which model it turns out to be. The
+loop currently makes three decisions that are taken as if certain and are not:
+
+| Decision | Where | What is lost today |
+|---|---|---|
+| Is this input safe and on topic | Guardrail | A borderline question is admitted or refused outright, with no middle path such as asking the person what they meant |
+| Which resource answers this | Think and Plan | A wrong pick is invisible: the answer comes back confidently sourced from the wrong place |
+| Is this claim supported | Write, the cite-or-refuse gate | The gate is deterministic by design, which is correct; a calibrated confidence would inform what the answer SAYS about its own certainty, never whether the gate passes |
+
+A calibrated confidence turns each of those from a silent guess into a number
+that can be acted on, and the third one is the trust moat: a product that can
+say "I am not sure" honestly is worth more than one that is fluent and wrong.
+
+WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated. A CORRECTION
+FIRST, recorded rather than quietly fixed: on the night of 2026-09-22 the
+assistant said trying this model would be a config change under
+`system-design-patterns` pattern 11, reversible in one edit. That was said
+before the model was identified and it is WRONG for this model. Jev answers on
+its own `/api/alpha/decisions` endpoint, not on chat completions, so
+`resolve_model()` pointing a tier at it does nothing. A trial needs a new client
+path in the harness, which is a small build rather than a config edit. The cost
+estimate moves with it.
+
+What remains cheap: the trial is still bounded and reversible, because the two
+candidate call sites are decisions with closed option sets, and either can fall
+back to today's path on any error. Output tokens being free makes a
+side-by-side shadow run, where Jev decides in parallel and its answer is only
+recorded rather than acted on, unusually affordable. That shadow run is the
+right first step, because it produces this product's own calibration data
+instead of a vendor benchmark.
+
+What is NOT cheap: ACTING on a confidence number. A threshold anywhere in the
+loop is a new control with its own failure modes, it must be calibrated against
+this product's own questions, and under `.claude/rules/goal-contracts.md` a
+threshold is a verify surface that must not be quietly lowered later to make
+results look better.
+
+TWO CONSTRAINTS THAT BIND ANY TRIAL, both from rules already in force:
+
+- The cite-or-refuse gate stays DETERMINISTIC. `.claude/rules/production-standards.md`
+  requires accept or reject by exact or substring match and says outright that
+  fuzzy scoring may rank repair suggestions but never gates acceptance. So a
+  confidence number may inform what an answer SAYS about its own certainty, and
+  may never decide whether a citation passes. This is the place a probability
+  model is most tempting and most dangerous.
+- `/api/alpha/decisions` is an ALPHA endpoint, and the guardrail is on the path
+  of every single query. A dependency that can change under us does not belong
+  in front of everything until it has a fallback that is proven by execution
+  rather than asserted.
+
+### The product owner's direction on the model architecture, 2026-09-23
+
+Added on the product owner's instruction, IN THEIR OWN WORDS, unedited. Quoted
+rather than paraphrased because they asked that the wording not be changed.
+
+> 1. Do we need to rethink the model use architecture, this ties into use of Jev from TypeSafe that we need to discuss.
+>
+> a) Jev becomes our classfier -> 1-3 words -> clarification question or move forward -> guardrails on the terms of relevancy or any place where a choice needs to be made.
+> b) Here is where I do think converting our NCBI APIs and enrichment calls into functions MCP style do make sense. This way easy for Jev to help with the classifer
+> c) We use Jev as a classifier where ever we are making those decisions
+> d) Ideally we need opensource model but if frontier are needed then so be it.
+>
+> For instance, example, how models should be chosen, using frontier models as example, if equivalent opensource is available then amazing
+>
+> OpenAI/Claude example:
+>
+> Luna/Haiku/Sonnet for query classification, metadata cleanup, simple extraction, routing, or highvolume answer drafts.
+> Sol/Opus 5.5 for multi-step retrieval planning, evidence synthesis, code generation, complex user
+> questions, and tool-using workflows.
+> Astra/Fable 5.1 for difficult scientific reasoning, ambiguous tasks, high-risk decisions, or final
+> escalation when lower-cost models cannot reach a quality threshold.
+>
+> Then another thing you added was the model check.
+
+Added later the same evening, again in the product owner's own words, unedited:
+
+> What we need to be able to do in here. We are a agentic search:
+> A conventional chatbot produces text in response to a question.
+> An agent works through a sequence: 1.
+> It interprets an objective.
+> 2.
+> It makes a plan.
+> 3.
+> It uses tools, such as a terminal, browser, spreadsheet, or internal system.
+> 4.
+> It checks intermediate results.
+> 5.
+> It adjusts when something fails.
+> 6.
+> It produces or applies a final result.
+> For example, “modernize this legacy service” is not one answer.
+> It may require locating dependencies, changing thousands of lines, running tests, investigating failures, revising code, documenting changes, and opening a review.
+> The modelʼs value depends on completing the entire loop, not simply generating a plausible code snippet.
+
+Where this connects to items already in this plan, stated by the assistant and
+kept separate from the quote above:
+
+- Point a), the 1-3 word clarification question: item 12.3, the product
+  owner's open decision, with the fix-2 evidence (`BRCA1`, `MeSH`, `Marfan`
+  and `recent papers on statins` all answered without asking).
+- Point b), NCBI APIs and enrichment calls as MCP-style functions: item 11.32,
+  parked as a discussion that precedes a build.
+- THE MODEL CHECK: a decision point added on 2026-09-23 under items 12.9 and
+  12.10, approved by the product owner the same evening. A guard-tier model
+  decides whether a sentence the answer model REWORDED says anything more than
+  the exact record words it quotes, after code has verified the quote is in
+  the record character for character, the numbers are in the quote and the
+  negation matches. It fails closed. It is exactly the kind of yes-or-no
+  decision point point c) names, and a candidate for Jev's Bool question type
+  once a shadow run has calibrated it. It amends the first constraint above
+  (the cite-or-refuse gate stays deterministic) for that one bounded case: the
+  rule text changes in pull request #101, and the reasoning is in DECISIONS.md
+  on 2026-09-23.
+
+ONE STANDING RULE TO HOLD AGAINST IT, `system-design-patterns` pattern 11 again:
+on a recurring failure, iterate the harness first and swap the model second. So
+a probability-emitting model is worth a bounded trial on its own merits, never
+as the answer to a failure the harness has not been worked on yet.
+
+### Set 12, still open
+
+| # | The feedback | Status | Where it stands |
+|---|---|---|---|
+| 12.14 | `What phenotypic features are associated with Marfan syndrome?` names no phenotypic feature at either depth | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. NOT STARTED | Plain language answered "Found 1 disease record, 37 sequence variant records and 3 gene records for Marfan syndrome" and researcher "Found 1 disease record for Marfan syndrome: Marfan syndrome." The question asks for features and the answer substitutes an adjacent record type. This is the honest gap the 2026-09-23 shipped list's retest item 5 named, now query 66: removing the dead template stopped a search that could never work, and nothing that CAN answer it runs instead. Evidence: `testing/Developer/reports/2026-09-23_fix2/findings.md` |
+| 12.15 | A question asking for RECENT papers should ask what recent means: "recent paper on statin, should have asked a clarification of year range" | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. NOT STARTED, nobody on it | The product owner's comment is the screenshot's filename. `recent papers on statins` is four words and names what it wants, so 12.3's rule rightly does not ask it back; this is a different clarification, about a time window rather than a subject. Recorded so it is not lost; not being built. Evidence: `testing/Developer/reports/2026-09-23_fix2/findings.md` |
+| 12.16 | No hardcoded decisions: "Please do not hardcode! Hopefully not that dumb" | RAISED 2026-09-24 by the product owner. Parts 1, 2 and 4 LIVE on develop 2026-09-24; part 3 NOT STARTED | AUDITED THE SAME NIGHT. No product code special-cases a test question by its text: every mention of the feedback questions in `src/` is a comment recording a measurement. WHAT IS HARDCODED, and what happens to each: (1) three model prompts use examples LIFTED FROM THE TEST QUESTIONS, the answer writer's "Caffeine improves endurance performance", the guardrail's "does coffee help exercise performance", and the sentence checker's "kidney" for "renal" and "mouth" for "oral cavity" from the GERD answer; that is teaching to the test, and they are replaced with neutral examples outside the test set, IN PROGRESS; (2) 12.3's clarify-or-proceed decided by word lists, REDESIGNED as a classifier decision, IN PROGRESS; (3) item 12.7's literature-request routing, decided by a word list (paper, publication, article and kin), to become a classifier decision, NOT STARTED; (4) the grounding gate's phrase lists added on 2026-09-23 for broken sentences and references ("however", "Another", "This ...", a "Yes," opener), which sit beside the exact checks the product owner asked to stay deterministic (quote in the record, numbers, negation), DECIDED 2026-09-24 BY THE PRODUCT OWNER: "Structure, not words", chosen over keeping them as exact backstops and over handing them to the model check. THE REPLACEMENTS, IN PROGRESS: a sentence copied from the middle of a record's sentence and starting in lowercase is that sentence's back half and is dropped, decided from where the words sit in the record, not from a list of connectives; any other lowercase start is capitalised; a reworded sentence that switches to a record the sentence before it did not cite must name something from its own record's title, decided from the records' own titles, not from a list of pointing words; the "Another ..." list is removed, since the restatement rule already drops a sentence that only repeats a row the list shows; the "Yes," or "No," opener stays, stated as the one exception because yes and no are the whole class of English answer words rather than a sample of phrasings. Measured before shipping. The distinction that governs all four: code VERIFIES exactly; a DECISION goes to a classifier. WHAT SHIPPED 2026-09-24: part 1, the three prompt examples replaced with neutral ones, and the guardrail re-measured live, 68 checks and 0 wrong, the coffee question admitted 10 of 10 without its own example; part 2, 12.3 as a classifier decision; part 4, the phrase lists replaced by `_starts_inside_record_sentence` and `_names_its_record`, replayed over three live replies with nothing a reader needed dropped. A RESIDUAL OF PART 4, found in the live run and stated rather than hidden: the switch rule is satisfied by any shared title word, and a generic one is a weak anchor. After a Tay-Sachs sentence, "No patient carried more than one of these mutations" cited a BRCA paper whose title says "patients", so "these mutations" reads as Tay-Sachs while the paper means BRCA founder mutations. The phrase list it replaced would have missed it too, since "these" is not the first word. Not fixed |
+| 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Set 1: let people in
 
@@ -1035,7 +1788,7 @@ Batch: answers. Your feedback given in conversation while testing, one row each,
 | 11.26 | The answers do not look like the approved mockup | Live, approved 2026-09-22 | Commit `28aa805`. Checked live at 1280 and 390 against the mockup's structure |
 | 11.27 | Too much bold: only the title or main point should be bold | Live, approved 2026-09-22 | LANDED ALONE 2026-09-20 as `aedf53d`, both develop services SUCCESS. Full detail: [11.27](#detail-1127) |
 | 11.28 | The move from searching to the streamed answer is too quick; stagger it so people can watch the lead start, hand off to the helpers, and then write | Live, approved 2026-09-22 | Built and passing 474 of 474 locally, then merged and REVERTED the same night: CI failed on build phase 4.9's premise test with the reasoning log showing Guard and Think but never Plan, ten... Full detail: [11.28](#detail-1128) |
-| 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one half a discussion precursor to a build; fix B FIXED and live-verified 2026-09-23, awaiting your retest (`testing/Shipped_2026-09-23.md` item 1) | Reclassified 2026-09-22 by the product owner: fix B's deployment setting is settled by a scoping discussion that precedes the build, not by a decision taken cold. Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
+| 11.30 | Make sure every integration on the Integrations page actually works, end to end | VERIFIED, one half a discussion precursor to a build; fix B FIXED and live-verified 2026-09-23, awaiting your retest (the 2026-09-23 shipped list's item 1, now query 60) | Reclassified 2026-09-22 by the product owner: fix B's deployment setting is settled by a scoping discussion that precedes the build, not by a decision taken cold. Raised 2026-09-20 by the product owner, who called it important. Full detail: [11.30](#detail-1130) |
 | 11.31 | The two answer modes look the same, and they should not: "Plain language is for the common man. Research is for researchers". Plain language should carry MORE text, explain the concept or question in simple terms, give an easy-to-understand example and link the sources. Researcher means tables, specifics and depth | LIVE 2026-09-21, approved as is by the product owner the same day | Raised 2026-09-20. Both open questions answered by the product owner on 2026-09-21, and the cause turned out to be upstream of the directive the item names. Full detail: [11.31](#detail-1131) |
 | 11.33 | PubMed abstracts reach the answer page cut off MID-WORD, for example "...inherited breast and/or ovarian c [29]" and "...has been uncle [33]" | APPROVED 2026-09-22 by the product owner's retest on develop | CAUSE FOUND 2026-09-22 and it was NEVER live-only: `_cap_scalar_string` in `harness/coordinator_worker.py` cut every string leaf at 500 characters, because its documented 2000-character top-level tier could never fire (the function receives the dict itself at depth 0, so no string is ever at depth 0). Every structured tool result passed through it before any renderer. The 2026-09-21 local trace went tool, shaper, `SynthFinding` and SKIPPED that stage, which is why it read as live-only. Found by a fresh-context agent that established server-side versus client-side first from a full event capture, then drove the real `_cap_structured_fields` over the real shaped efetch output and reproduced the fragment character for character; verified by execution in the main session before the fix was commissioned. THE FIX: one cap at every depth, 2000 characters, the bound `SynthFinding.field_value` already enforces, cut on a word boundary with an ellipsis, the dead tier deleted; `_MAX_FINDING_TOTAL_BYTES` measured (20 PubMed rows with 2000-character abstracts fit, the ceiling fires at 22) and deliberately unchanged. Seven arms added, six proven red against the pre-fix code and the seventh saying in its docstring that it cannot be. Evidence: `testing/Developer/reports/2026-09-22_11.33_live_path/findings.md`. RETEST: open a BRCA1 answer at researcher depth; the gene summary in the record tail should run past "and through the C-terminal d". WHAT WAS KNOWN BEFORE, kept as the record of a wrong conclusion: found 2026-09-21 on develop at `46fff40`. Every character cap in the codebase was ruled out BY EXECUTION, including `_cap_text`, which appends a literal " [truncated]" that appears nowhere in the capture. The sentence splitter cannot cut mid-word either. The remaining hypothesis, that the model itself emitted the fragment while attempting a long verbatim quote, could NOT be reproduced, because `claim_introduces_no_new_content` rejects the reconstruction. NOT SOLVED. A fix was written, verified live and DID NOT CLOSE IT, and that is recorded rather than claimed. `clip_to_word` now cuts at a word boundary at all five slices in `answer_layout.py` and is a real improvement on those paths, but a live run at `d4578d8` still shows every known fragment and ZERO ellipses, which proves the cut is on a path that helper does not touch. WHAT IS NOW KNOWN, and it is more than before: the cut is at EXACTLY 500 characters of the source value, established by fetching the real NCBI gene summary and finding the offset of the rendered fragment's end inside it. The value is NOT short at the tool: traced locally, the gene summary is 1253 characters at `ncbi_eutils_actions.summary`, still 1253 after `_ncbi_efetch_output_to_structured_fields`, and still 1253 on the `SynthFinding` built from it. So the truncation happens between the tool result and the tail render ON THE LIVE PATH ONLY, and a local reconstruction of that path does not reproduce it. Every 500-char slice in `core/graph.py` was read and none applies: they are think narratives, a plan narrative and a refusal message. Item 11.34's fix made this MORE visible rather than causing it, since a multi-sentence value used to be stripped whole. NEXT STEP, and it is now a small one: instrument the live path to print `len(finding.field_value)` at the point the tail narrative is built, which distinguishes a truncation upstream of the render from one inside it. The earlier diagnosis is kept at `testing/Developer/reports/2026-09-21_11.31_divergence/truncation/findings.md` |
 | 11.34 | A multi-sentence abstract LOSES ITS CITATION entirely in the code-built tail and fallback listing: both fragments are stripped and the marker is orphaned on an empty trailing "[27]." | FIXED and live 2026-09-21 | Found 2026-09-21 while diagnosing 11.33, and unrelated to it. This is a cite-or-refuse defect rather than a presentation one, so it ranks above the cosmetic items: a record that was retrieved and shown loses the link that makes it verifiable. Reproduced by driving `run_grounding_pass` over constructed multi-sentence abstract findings |
@@ -1526,16 +2279,16 @@ Evidence, with a full transcript per question and a re-runnable script:
 |---|---|---|---|
 | 12.1 | "am I asking the wrong kind of question?" A disease question searches one place and refuses. `reflux disease`, `GERD`, `Any trials for GERD?` | LIVE on develop 2026-09-23, `02130d7`, awaiting the product owner's retest | CAUSE FOUND 2026-09-23, and the code says it in its own words. `_build_layer_tool_calls` in `core/graph.py` opens with `if gene_symbol:` and its docstring closes: "A question that resolves no gene and names no rs id plans nothing here, so a disease named only as a typed `MedGen:` CURIE keeps its single graph call." So item 11.21's breadth wiring, live NCBI records plus the literature plus the trials registry, fires on a GENE. Anchor a question on a disease and it gets ONE Cypher query. Question 3 is the sharpest case because every step before the last one worked: Think resolved GERD to `MedGen:C5563728` at confidence 1.0 and its own narrative reads "open-ended exploration across trial registries and literature", then Plan chose `cypher_query` alone and ran `MATCH (a:Disease {id: $e_MedGen_C5563728}) RETURN a LIMIT 100`, which returned 0 rows. `clinicaltrials_search` is built, tested, wired, and was never called; the registry holds thousands of GERD trials. THE SHARPEST EVIDENCE IS A PAIR OF SYNONYMS, and neither half was designed: `reflux disease` resolves to eight MedGen concepts that ALL exist as `Disease` vertices, so its single graph call returns 8 rows and the question ANSWERS; `GERD` resolves to one concept, `MedGen:C5563728`, which the graph does not hold, so the identical single call returns zero and the question refuses. The same condition under two names answers or refuses depending on which concept id the name lands on, because nothing else is searched. That is a single point of failure, not a ranking problem. THE FIX IS ROUTING, NOT CAPABILITY: give a disease anchor the same breadth a gene anchor has. It compounds with the 2026-09-23 graph finding, since a `Disease` row that did come back carries its source vocabulary in `name` rather than a usable name |
 | 12.2 | "unexpected": `papers on the effects of caffeine on exercise performance` is refused as "Outside biomedical research" | LIVE on develop 2026-09-23, `f63b272`, awaiting the product owner's retest | The guardrail allowlist in `guardrail/prefilter.py` carries NO literature vocabulary. Absent as single terms, all measured: `paper`, `papers`, `publication`, `article`, `literature`, `study`, `studies`, `trial`, `trials`, `research`. Only the two-word `clinical trials` is present. THE REFUSAL TEXT ITSELF says "I can help with a gene, variant, pathogen, or paper question", and `paper` is not in the allowlist, so the refusal invites a question the same check then refuses. WORSE, AND MEASURED: `Any trials for GERD?` clears only because `GERD` is uppercase and matches the deliberately over-broad symbol regex `\b[A-Z]{2,}[A-Z0-9-]*\b`. `any trials for gerd?` is REFUSED. Capitalisation decides whether a question is medical. Also refused today: `recent papers on statins`, `find me studies about vitamin d`, `what does the literature say about metformin`, `show me publications about aspirin`, `latest research on long covid`, `is there a trial recruiting for melanoma`. This has never surfaced in our own testing because every question we type names a gene in capitals, which clears by the same accident |
-| 12.3 | The product owner's question: do we ask a clarifying question when a query is one to three words, such as `Reflux disease`, which could mean many things? | ANSWERED, and the answer is no. LATER APPROVED by the product owner 2026-09-23 and LIVE on develop 2026-09-24, awaiting your retest (`testing/Shipped_2026-09-23.md` item 17) | Measured 2026-09-23. There are exactly FOUR clarifying paths today and none covers a short or broad question. `_needs_clarification` in `core/graph.py` fires only when a question contains a referring word ("it", "those") AND resolves no entity AND has no remembered antecedent, so a bare topic, which contains no referring word, never reaches it. The other three are `coordinate_window.ASSEMBLY_QUESTION` (a chromosome window with no assembly named), `isolate_search`'s two clarifications (an isolate question missing its organism or its gene), and an accession the product cannot place. NOTHING is keyed on the question being short, broad, or having several readings: a two-word disease name is treated as a fully specified request, one reading is picked silently, and then it refuses. Whether to build this is the product owner's call, and it should be decided AFTER 12.1, because a question that can be answered should be answered rather than queried back. MORE EVIDENCE 2026-09-23 from `testing/User-feedback/fix-2/`: `BRCA1`, `MeSH` and `Marfan` were each answered with a record listing and no clarifying question, and `recent papers on statins` did not ask for a year range, which the product owner says it should have. The decision itself is still theirs. DECIDED 2026-09-23 BY THE PRODUCT OWNER, in their words: "If clarify needed -> yes approved". THE DESIGN: a question of one to three words, with no question mark and no question word, that opens a conversation (a follow-up inside a conversation is never asked back, since memory already supplies its subject) gets a clarifying question instead of a silent guess: what would you like to know about it, with a short set of full questions to pick from, for example its symptoms and treatment, clinical trials, genes linked to it, or recent research. Decided in code, before any search, so it costs nothing and the answer is instant. `recent papers on statins`, four words, asked for a year range in the fix-2 screenshots; that is a different clarification and is NOT part of this item. REFINED 2026-09-24 before merging, from the user's chair, after the first build was tested against it. TWO DEFECTS IN THE FIRST VERSION: `papers on caffeine`, three words, was asked back although it already says what it wants (an existing test caught it, and the test was right); and the four choices assumed a disease, so `BRCA1` offered "What is BRCA1 and what are its symptoms?" and `MeSH` offered symptoms too. THE REFINEMENT: a short question that names what it wants (papers, trials, variants, genes, symptoms, treatment, research and their kin) is searched, not asked back; and the four choices are worded to fit any subject: what it is, what recent research says, whether there are clinical trials, and which genes or diseases are linked to it. Greetings are never asked back. `test_the_bare_disease_name_answers_rather_than_refusing` pinned bare `GERD` answering, which the product owner reversed by approving this item; its real property from 12.1, that a disease question gets the full breadth and GERD is never told there is no evidence, stays checked with a question that is not asked back. REDESIGNED 2026-09-24 ON THE PRODUCT OWNER'S INSTRUCTION, in their words: "Please do not hardcode! Hopefully not that dumb". The first build and the refinement above both decided from fixed word lists (question words, request words) and offered four fixed template questions; they are WITHDRAWN before merging. THE DESIGN NOW: whether to ask back or move forward, and the choices offered, come from a classifier model reading the question, today the guard tier and later Jev at the same point, as the product owner directed under 11.38 ("Jev becomes our classfier -> 1-3 words -> clarification question or move forward"). Code keeps only what is structural: the owner's own 1-to-3-word trigger, never asking back a follow-up inside a conversation, bounds on what the model returns, and going ahead with the search when the classifier fails, which is today's behaviour. LIVE on develop 2026-09-24 (merge `84c2971`), `core/clarify.py`. MEASURED LIVE, three runs each after one tuning: `reflux disease`, `GERD`, `BRCA1` and `Marfan` asked back 3 of 3, each time with choices the model wrote for that subject (BRCA1 gets gene questions, Marfan condition questions, reflux disease symptoms and treatments); `papers on caffeine` was searched and answered. THE TUNING, measured first: `MeSH`, a vocabulary rather than a gene or a disease, was searched 2 of 2 and the search found nothing, so the reader got a refusal. Two general principles were added to the classifier's instruction, no word list: a bare name of a database, vocabulary, method or tool is still only a subject; and when unsure, ask back, since a wrong guess costs a whole search and a question one click. `MeSH` then asked back 2 of 3. THE HONEST COST of a model deciding rather than a list: it is a judgement, so the same short question can go either way on a run; `hello` was asked back 1 of 3 and answered as a greeting otherwise. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/` |
+| 12.3 | The product owner's question: do we ask a clarifying question when a query is one to three words, such as `Reflux disease`, which could mean many things? | ANSWERED, and the answer is no. LATER APPROVED by the product owner 2026-09-23 and LIVE on develop 2026-09-24, awaiting your retest (the 2026-09-23 shipped list's item 17, now query 76) | Measured 2026-09-23. There are exactly FOUR clarifying paths today and none covers a short or broad question. `_needs_clarification` in `core/graph.py` fires only when a question contains a referring word ("it", "those") AND resolves no entity AND has no remembered antecedent, so a bare topic, which contains no referring word, never reaches it. The other three are `coordinate_window.ASSEMBLY_QUESTION` (a chromosome window with no assembly named), `isolate_search`'s two clarifications (an isolate question missing its organism or its gene), and an accession the product cannot place. NOTHING is keyed on the question being short, broad, or having several readings: a two-word disease name is treated as a fully specified request, one reading is picked silently, and then it refuses. Whether to build this is the product owner's call, and it should be decided AFTER 12.1, because a question that can be answered should be answered rather than queried back. MORE EVIDENCE 2026-09-23 from `testing/User-feedback/fix-2/`: `BRCA1`, `MeSH` and `Marfan` were each answered with a record listing and no clarifying question, and `recent papers on statins` did not ask for a year range, which the product owner says it should have. The decision itself is still theirs. DECIDED 2026-09-23 BY THE PRODUCT OWNER, in their words: "If clarify needed -> yes approved". THE DESIGN: a question of one to three words, with no question mark and no question word, that opens a conversation (a follow-up inside a conversation is never asked back, since memory already supplies its subject) gets a clarifying question instead of a silent guess: what would you like to know about it, with a short set of full questions to pick from, for example its symptoms and treatment, clinical trials, genes linked to it, or recent research. Decided in code, before any search, so it costs nothing and the answer is instant. `recent papers on statins`, four words, asked for a year range in the fix-2 screenshots; that is a different clarification and is NOT part of this item. REFINED 2026-09-24 before merging, from the user's chair, after the first build was tested against it. TWO DEFECTS IN THE FIRST VERSION: `papers on caffeine`, three words, was asked back although it already says what it wants (an existing test caught it, and the test was right); and the four choices assumed a disease, so `BRCA1` offered "What is BRCA1 and what are its symptoms?" and `MeSH` offered symptoms too. THE REFINEMENT: a short question that names what it wants (papers, trials, variants, genes, symptoms, treatment, research and their kin) is searched, not asked back; and the four choices are worded to fit any subject: what it is, what recent research says, whether there are clinical trials, and which genes or diseases are linked to it. Greetings are never asked back. `test_the_bare_disease_name_answers_rather_than_refusing` pinned bare `GERD` answering, which the product owner reversed by approving this item; its real property from 12.1, that a disease question gets the full breadth and GERD is never told there is no evidence, stays checked with a question that is not asked back. REDESIGNED 2026-09-24 ON THE PRODUCT OWNER'S INSTRUCTION, in their words: "Please do not hardcode! Hopefully not that dumb". The first build and the refinement above both decided from fixed word lists (question words, request words) and offered four fixed template questions; they are WITHDRAWN before merging. THE DESIGN NOW: whether to ask back or move forward, and the choices offered, come from a classifier model reading the question, today the guard tier and later Jev at the same point, as the product owner directed under 11.38 ("Jev becomes our classfier -> 1-3 words -> clarification question or move forward"). Code keeps only what is structural: the owner's own 1-to-3-word trigger, never asking back a follow-up inside a conversation, bounds on what the model returns, and going ahead with the search when the classifier fails, which is today's behaviour. LIVE on develop 2026-09-24 (merge `84c2971`), `core/clarify.py`. MEASURED LIVE, three runs each after one tuning: `reflux disease`, `GERD`, `BRCA1` and `Marfan` asked back 3 of 3, each time with choices the model wrote for that subject (BRCA1 gets gene questions, Marfan condition questions, reflux disease symptoms and treatments); `papers on caffeine` was searched and answered. THE TUNING, measured first: `MeSH`, a vocabulary rather than a gene or a disease, was searched 2 of 2 and the search found nothing, so the reader got a refusal. Two general principles were added to the classifier's instruction, no word list: a bare name of a database, vocabulary, method or tool is still only a subject; and when unsure, ask back, since a wrong guess costs a whole search and a question one click. `MeSH` then asked back 2 of 3. THE HONEST COST of a model deciding rather than a list: it is a judgement, so the same short question can go either way on a run; `hello` was asked back 1 of 3 and answered as a greeting otherwise. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/` |
 | 12.4 | "If it didn't have an answer, why would I 'continue the conversation'? Maybe 'ask another question?'" | LIVE on develop 2026-09-23, `955c4ac`, awaiting the product owner's retest | `FollowUp.tsx` renders unconditionally under every result, including a refusal. So a person just told "No answer found in NCBI records" is offered the heading "Continue this conversation" and three chips: "What variants cause it?", "Which trials are recruiting?", "What does the literature add?". There is no "it". Pressing the first chip sends a question whose only referring word has no antecedent, which is the one case `_needs_clarification` DOES catch, so the product would then ask which gene they meant. Two changes: the heading reads "Ask another question" when the result carried no answer, and the three chips are suppressed or replaced with something the person could actually ask next |
 | 12.6 | The product already writes a good clarifying question and throws it away | ALREADY BUILT, closed by measurement, no work needed | CORRECTED 2026-09-23, hours after this row first claimed the opposite, and the correction is kept because it was wrong in the direction that suited the story being told. The claim came from reading the graph tool's own error text ("no entity could be identified in this query ... Name the gene, variant, disease or organism") and ASSUMING the generic refusal reached the screen. It does not. `synthesis/refuse.py` already carries `NO_ENTITY_REASON_MARKER` and `UNRESOLVED_QUESTION_MESSAGE`, decided from the user's chair on 2026-09-22, and a live run of the ashkenazi question on 2026-09-23 returns: "I could not tell which gene, variant, disease or organism you mean. Name one and I will search. Or try NCBI's cross-database search: ...". The tester's screenshots are from the 2026-09-14 build, which predates that fix. SO THE ONLY REMAINING GAP IN THIS FAMILY IS 12.4, the follow-up block that still invites a conversation UNDER that clarification |
 | 12.7 | A question naming no gene and no disease finds nothing at all: `papers on the effects of caffeine on exercise performance`, `Does coffee help make exercise more effective?`, the Mediterranean and Ashkenazi questions | LIVE on develop 2026-09-23, `7c1ebc4` and `29c8687`, awaiting the product owner's retest | RAISED AND BUILT 2026-09-23 after 12.1 and 12.2 landed and four questions still returned nothing. Think resolves genes and diseases, and these name a chemical or a population, so the graph was asked a question with nothing to bind and the reader was told to name a gene. THE FIX IS NOT A CHEMICAL RESOLVER, and then a population resolver, and then a diet resolver: A LITERATURE QUESTION NEEDS NO ENTITY. When a question names the published literature and no gene resolved, the question's own typed words become a PubMed term, which stays deterministic because the user's words do not vary between runs. Terms were MEASURED LIVE, not guessed, and three shapes rejected with their hit counts: the question verbatim returns ZERO for the Mediterranean question, because "papers" maps to PubMed's subject heading for the physical material. A SECOND ROUND was needed after the lead read the answers instead of counting them: five papers rendered as ninety-one rows, the same title fifteen times, 932 words. The cause was one row per SENTENCE OF THE ABSTRACT, not per field. Now 101 words, five rows. Full account: `testing/Developer/reports/2026-09-23_set12/worker_topic.md` |
 | 12.8 | The trust line under an answer undercounts its sources: "Based on 1 source" beneath five cited papers | FIXED 2026-09-23, awaiting the product owner's retest | MEASURED across fourteen runs on 2026-09-23 and PRE-EXISTING, not caused by today's work, though 12.7's deduplication made it more visible. What the reader sees against what the line claims: 20 cited sources reads "Based on 4 sources"; 12 reads "Based on 3 sources"; 5 reads "Based on 2 sources", and after 12.7's dedup the same answer reads "Based on 1 source" over five clickable papers. So the line has never counted what the reader can see. From the user's chair this is a plain falsehood on screen under every answer, and it undersells the work: a reader told an answer rests on one source discounts it. Evidence: `testing/Developer/reports/2026-09-23_set12/both_depths/` |
-| 12.9 | Plain language and researcher return the SAME text, which is the defect 11.31 was raised for and marked fixed on 2026-09-21 | DIAGNOSED 2026-09-23, NOT BUILT, and it is the product owner's decision. LIVE on develop 2026-09-24, awaiting your retest (`testing/Shipped_2026-09-23.md` item 16) | MEASURED 2026-09-23 by asking all seven questions at both depths: identical word counts to the digit on four of the seven, `reflux disease` 213 and 213, `GERD` 185 and 185, the coffee question 932 and 932, the Mediterranean question 639 and 639. Three did differ, so it is not universal, which is why it needs a diagnosis rather than a patch. 11.31 was approved on 2026-09-21 on the understanding that the two modes had been separated; either these paths never read `audience_depth`, or something downstream drops it. THE ANSWER, established by execution on 2026-09-23 and it is not what the item assumed: 11.31 IS NOT BROKEN, IT IS BYPASSED. The depth DOES reach the model, which DOES write different prose: the plain-language prompt is 2651 characters against researcher's 2537, different digests, each opening with its own `AUDIENCE DEPTH:` line, and the model returns 1507 characters against 1657. THEN THE GROUNDING GATE DELETES ALL OF IT: researcher lost 21 of 21 sentences on the first pass and 11 of 11 on the repair. THE SMOKING GUN is that the final grounding call receives the SAME input digest at both depths and returns the same 20 claims, while every earlier stage differs. That input is `build_structured_fallback_narrative`, and the three producers of the shipped answer take no depth argument DELIBERATELY: the fallback narrative, `answer_summary_sentence`, and `tail_is_listing` being unconditionally true by product-owner direction of 2026-09-14. Correlation is exact across all fourteen runs: every question where both depths fell back to the code-built narrative returned the same answer, and no question where neither fell back was identical. A SECOND MECHANISM POINTS THE WRONG WAY: `drop_record_restatements` runs at RESEARCHER DEPTH ONLY, and six of seven researcher answers contain NO model prose at all, so a researcher currently gets strictly LESS than a plain-language reader. THE THREE OPTIONS, laid out as options rather than a recommendation, all of them the product owner's call: let the code-built half read the depth, which Section 14.1's firewall forbids today; change what the grounding gate accepts, whose obvious version 11.31 already measured and rejected; or keep changing the INPUT the way version 5 did with NCBI's gene summary, noting that six of the seven questions resolve to PubMed records with no equivalent plain-English field. Evidence: `testing/Developer/reports/2026-09-23_set12/worker_depth.md`, `both_depths_rerun/` and `probe_depth_stages/`. REOPENED 2026-09-23 on the product owner's direction, in their words: "The plain vs researcher should vary duh for all questions. Not just a few. Think hard on what rules to set". WHY THEY DO NOT VARY TODAY, measured in code: only the model's prose varies by depth (headings and emphasis are researcher only). The code-built opening sentence and the record list are built identically at both depths, and they are most of the page, so when the prose does not survive the two answers are the same text. THE RULES: (1) the opening sentence speaks to its reader, plain "I found 5 published papers on caffeine and exercise", researcher "Found 5 PubMed records: ..."; (2) the record list, plain one list headed "Where this answer comes from" with titles only and no codes, researcher grouped by record type as a table with an identifier column (PMID, NCT number, gene id) and status or year where the record carries one; (3) the prose, plain no headings, everyday words, terms explained, the answer first, researcher headings, numbers, cohort sizes and study design; (4) rules 1 and 2 make the two depths differ on every question even when the model's prose does not survive; (5) THE LINE NOT CROSSED, Section 14.1's firewall: both depths cite exactly the same records, every one listed and clickable, and depth changes wording, layout and columns, never which evidence is shown; (6) done when every question in `testing/User-feedback/fix-1` and `fix-2`, asked at both depths, differs in its opening sentence and its list shape, checked by a script. LIVE on develop 2026-09-24 (merge `5a25f72`). MEASURED LIVE, rule 6: all 12 full questions from `fix-1` and `fix-2`, at both depths, differ in their opening sentence ("I found 5 clinical trials related to GERD" against "Found 5 clinical trial records for GERD: Famotidine in ...") and their list (plain language a list of titles under "Where this answer comes from", researcher a table with an identifier column). Rule 5 held: where the counts differed by one or two, both depths listed the same records and the prose of one cited a paper's abstract as well as its title, which counts as a second citation. THE SHORT QUESTIONS in the two folders (`reflux disease`, `GERD`) are now asked back by 12.3, so they have no answer to differ. ONE RUN IN 24 REFUSED at the think step, see 12.17 |
-| 12.10 | "Did it provide the information, and did it answer the question?" The answers list what was found instead of answering | RAISED 2026-09-23 by the product owner after retesting all seven on develop. DECIDED THE SAME DAY: option B, change what the gate accepts. IN PROGRESS. THE DESIGN, so the loosening is deterministic and inspectable rather than a similarity score: the model may write a sentence in its own words when it attaches the EXACT words from the cited record that support it, as `[N: "exact words"]`. Code then checks four things, every one exact: the quoted words are really in record N; every content word of the sentence comes from those quoted words or the question, allowing only word endings to differ (enhances, enhancing, enhanced) and a short closed list of reporting words (study, review, found, suggests, according); every number is in the quote; and a quote that says no or not cannot be restated as a yes. A sentence with no quote is judged exactly as before. WHAT IS STILL FORBIDDEN: any word the record does not contain, any number it does not contain, and turning a negative finding positive. THE RESIDUAL RISK, stated so it is chosen rather than discovered: the same words from one short quote can be reordered to change who does what to whom. It is bounded by the quote being short, and the quote travels with the citation so it can be shown. THE DESIGN CHANGED BEFORE IT WENT LIVE: the word rule above passed 0 of 53 faithful sentences across six live replies, so the product owner approved a second, cheap model on 2026-09-23. Code still checks the quote, the numbers, the negation and a yes or no opener exactly, and the model then judges whether each reworded sentence says more than its quote, failing closed. LIVE on develop at `5d53f78`, awaiting your retest (`testing/Shipped_2026-09-23.md` item 14) | JUDGED 2026-09-23 against the product owner's own two criteria, from their seven screenshots in `testing/User-feedback/fix-1/`. INFORMATION PROVIDED: six of seven. QUESTION ANSWERED: ONE of seven. The product owner's own words for the target: asked what the weather is, the answer is not "I found raining throughout the week in Bethesda", it is "today is sunny but sources say rain over the weekend". THE ONE THAT WORKS PROVES THE MACHINERY CAN: `GERD` returns real prose, "The typical symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx. GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus ... most effectively treated with proton-pump inhibitors", every sentence cited. THE OTHERS DUMP RECORDS. "Does coffee help make exercise more effective?" answers "Found 5 pubmed records:" and five titles, and never says whether coffee helps, though the papers it found include the sports nutrition position stand that answers it. The ashkenazi question returns papers naming BRCA1, BRCA2 and APC I1307K, which IS the answer, and never states it. THE MECHANISM, and it is the same grounding gate 12.9 named: a sentence that QUOTES a record passes the gate, a sentence that SYNTHESISES across records fails it, so what survives is restatement. That is why three of the seven carry a paragraph reading "One trial is named X. Another is named Y. A third is named Z", which is the degenerate prose the gate rewards. It also produces broken output: the caffeine answer's third paragraph is an orphan fragment starting lowercase, `however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue".`, and the ashkenazi answer's second paragraph opens "Another is titled" with no first. AND THE SAME RECORDS APPEAR UP TO THREE TIMES: once in the opening sentence, once in the restatement paragraph, once in the table. THIS IS THE SAME ROOT CAUSE AS 12.9 and the two should be decided together. MEASURED THE SAME DAY, AND IT DOES NOT WORK AS BUILT. With the new instruction the model wrote exactly the conversational answer asked for, for example "GERD stands for gastroesophageal reflux disease ... The most common symptoms are heartburn and regurgitation" and "Caffeine at doses of 3 to 6 mg per kilogram consistently improves exercise performance", each sentence faithful to its paper. It attached the quotes on most runs and none on one. THEN THE CODE CHECK DELETED ALL OF IT: 0 of 53 sentences survived across six live replies (GERD, coffee and ashkenazi, twice each), because the model paraphrases, "kidney" for "renal", "mouth" for "oral cavity", "change" for "mutation", and a fixed rule cannot tell a synonym from an invention. Four rounds of tightening the rule (sentences resting on several quotes, word endings, the paper's own title, grammatical glue words) and an instruction to keep the paper's own terms moved it from 0 to 0. Replayed offline over the captured replies: `testing/Developer/reports/2026-09-23_synthesis/replay_gate.py`. WORSE, THE NEW INSTRUCTION ALONE IS A REGRESSION: it makes the model paraphrase, so GERD, which answered on 2026-09-23 by quoting its abstract, dropped to a bare list. The instruction was therefore REVERTED and does not ship; the gate's quote support stays, since it only ever accepts more. THE DECISION THIS NEEDS, the product owner's alone because it changes a written rule (`production-standards`: acceptance is decided by a deterministic rule, never by a model): may a second, cheap model check each sentence against the exact record words it quotes, with the quote itself still verified by code character for character? Evidence: `testing/Developer/reports/2026-09-23_synthesis/`. DECIDED 2026-09-23 BY THE PRODUCT OWNER: YES to a model check. THE DESIGN: every check that CAN be exact stays exact and runs first, the quote is in the record character for character, every number is in the quote, and the sentence negates exactly when its quote does. Only the question code cannot answer, whether a reworded sentence says what its quote says, goes to the guard-tier model, all sentences of one answer in ONE call. It fails closed: an unreadable reply, a timeout or a spent budget accepts nothing, so the answer falls back to what code alone accepts today. This AMENDS `production-standards`' rule that acceptance is never a model's judgement, recorded in DECISIONS.md, and the rule's text changes on its own branch and pull request because it sits under `.claude/` |
-| 12.11 | The sources chip and the trust line disagree: "SOURCES 12" beside "Based on 14 sources" | RAISED 2026-09-23 from the same screenshots. BUILT the same day on the product owner's direction, not yet on develop. The fix-2 screenshots found it again on `recent papers on statins`, 6 against SOURCES 5. LATER LIVE on develop at `6f8902e`, awaiting your retest (`testing/Shipped_2026-09-23.md` item 12) | INTRODUCED BY 12.8 EARLIER THE SAME DAY, so this is a regression and is recorded as one. 12.8 was asked to make the line count "the distinct sources the reader can actually see and click"; it counts distinct CITATION IDS instead, and the source list below deduplicates by URL, so an answer with 14 citations over 12 distinct pages reads "Based on 14 sources" above a list headed 12. Measured on two of the seven screenshots: `GERD` shows SOURCES 12 with "Based on 14 sources", and the caffeine question shows SOURCES 5 with "Based on 6 sources". Before 12.8 the two numbers were obviously different things, 4 against 12; now they are close enough to read as a defect. THE FIX is to count distinct `source_url`, the same identity the list uses, so the two can never disagree |
-| 12.12 | Broken sentences and repeated records: the caffeine answer's third paragraph is `however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue".`, the ashkenazi answer opens a paragraph "Another is titled" with no first, and the same records appear up to three times | RAISED 2026-09-23 from the same screenshots, directed by the product owner the same day. BUILT 2026-09-23, not yet on develop. The fix-2 screenshots found the same defect on `recent papers on statins`: "so that clinical judgment remains necessary in making the decision to use them", which the connective rule now drops. LATER LIVE on develop at `6f8902e`, awaiting your retest (`testing/Shipped_2026-09-23.md` item 13) | THREE DETERMINISTIC RULES in the grounding pass, all stricter: a sentence whose first word is an ordinary lowercase word, or whose quotation marks do not pair, is a fragment and is dropped whole; a sentence opening "Another", "A second", "A third" or "The other" is dropped when the sentence before it did not survive, the same rule 9.7 applies to "They" and "It"; and a model sentence that only restates a record's title, which the listing below already shows, is dropped at both depths rather than researcher only. The listing keeps every record, so no source is lost with a dropped sentence |
-| 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer: "why clicking on the saved answer re runs the search, shouldnt it just show what was searched" | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. DIAGNOSED; the product owner said YES to the fix on 2026-09-23 and it is IN PROGRESS. LIVE on develop at `5d53f78`, awaiting your retest (`testing/Shipped_2026-09-23.md` item 15) | A GAP IN 10.2, NOT A MISSED DEPLOY: both 10.2 commits are on develop. `hasSavedAnswer` is set in exactly one place, `mergeServerHistory` (`frontend/src/App.tsx:316`), which runs once per sign-in. A question asked since the page loaded is added to the rail without it, so `onOpen` (`App.tsx:1947-1973`) falls through to `ask()` and searches again. A row restored at sign-in opens its saved answer correctly. THE SCREENSHOT PROVES A SECOND SEARCH RAN: 22 sources against the original 23, and a VARIANT RECORDS paragraph the first answer did not have. THE FIX, one change: mark the row as saved once a signed-in run lands, or refresh the history list after each run. Evidence: `testing/Developer/reports/2026-09-23_fix2/history_rerun.md` |
+| 12.9 | Plain language and researcher return the SAME text, which is the defect 11.31 was raised for and marked fixed on 2026-09-21 | DIAGNOSED 2026-09-23, NOT BUILT, and it is the product owner's decision. LIVE on develop 2026-09-24, awaiting your retest (the 2026-09-23 shipped list's item 16, now query 72) | MEASURED 2026-09-23 by asking all seven questions at both depths: identical word counts to the digit on four of the seven, `reflux disease` 213 and 213, `GERD` 185 and 185, the coffee question 932 and 932, the Mediterranean question 639 and 639. Three did differ, so it is not universal, which is why it needs a diagnosis rather than a patch. 11.31 was approved on 2026-09-21 on the understanding that the two modes had been separated; either these paths never read `audience_depth`, or something downstream drops it. THE ANSWER, established by execution on 2026-09-23 and it is not what the item assumed: 11.31 IS NOT BROKEN, IT IS BYPASSED. The depth DOES reach the model, which DOES write different prose: the plain-language prompt is 2651 characters against researcher's 2537, different digests, each opening with its own `AUDIENCE DEPTH:` line, and the model returns 1507 characters against 1657. THEN THE GROUNDING GATE DELETES ALL OF IT: researcher lost 21 of 21 sentences on the first pass and 11 of 11 on the repair. THE SMOKING GUN is that the final grounding call receives the SAME input digest at both depths and returns the same 20 claims, while every earlier stage differs. That input is `build_structured_fallback_narrative`, and the three producers of the shipped answer take no depth argument DELIBERATELY: the fallback narrative, `answer_summary_sentence`, and `tail_is_listing` being unconditionally true by product-owner direction of 2026-09-14. Correlation is exact across all fourteen runs: every question where both depths fell back to the code-built narrative returned the same answer, and no question where neither fell back was identical. A SECOND MECHANISM POINTS THE WRONG WAY: `drop_record_restatements` runs at RESEARCHER DEPTH ONLY, and six of seven researcher answers contain NO model prose at all, so a researcher currently gets strictly LESS than a plain-language reader. THE THREE OPTIONS, laid out as options rather than a recommendation, all of them the product owner's call: let the code-built half read the depth, which Section 14.1's firewall forbids today; change what the grounding gate accepts, whose obvious version 11.31 already measured and rejected; or keep changing the INPUT the way version 5 did with NCBI's gene summary, noting that six of the seven questions resolve to PubMed records with no equivalent plain-English field. Evidence: `testing/Developer/reports/2026-09-23_set12/worker_depth.md`, `both_depths_rerun/` and `probe_depth_stages/`. REOPENED 2026-09-23 on the product owner's direction, in their words: "The plain vs researcher should vary duh for all questions. Not just a few. Think hard on what rules to set". WHY THEY DO NOT VARY TODAY, measured in code: only the model's prose varies by depth (headings and emphasis are researcher only). The code-built opening sentence and the record list are built identically at both depths, and they are most of the page, so when the prose does not survive the two answers are the same text. THE RULES: (1) the opening sentence speaks to its reader, plain "I found 5 published papers on caffeine and exercise", researcher "Found 5 PubMed records: ..."; (2) the record list, plain one list headed "Where this answer comes from" with titles only and no codes, researcher grouped by record type as a table with an identifier column (PMID, NCT number, gene id) and status or year where the record carries one; (3) the prose, plain no headings, everyday words, terms explained, the answer first, researcher headings, numbers, cohort sizes and study design; (4) rules 1 and 2 make the two depths differ on every question even when the model's prose does not survive; (5) THE LINE NOT CROSSED, Section 14.1's firewall: both depths cite exactly the same records, every one listed and clickable, and depth changes wording, layout and columns, never which evidence is shown; (6) done when every question in `testing/User-feedback/fix-1` and `fix-2`, asked at both depths, differs in its opening sentence and its list shape, checked by a script. LIVE on develop 2026-09-24 (merge `5a25f72`). MEASURED LIVE, rule 6: all 12 full questions from `fix-1` and `fix-2`, at both depths, differ in their opening sentence ("I found 5 clinical trials related to GERD" against "Found 5 clinical trial records for GERD: Famotidine in ...") and their list (plain language a list of titles under "Where this answer comes from", researcher a table with an identifier column). Rule 5 held: where the counts differed by one or two, both depths listed the same records and the prose of one cited a paper's abstract as well as its title, which counts as a second citation. THE SHORT QUESTIONS in the two folders (`reflux disease`, `GERD`) are now asked back by 12.3, so they have no answer to differ. ONE RUN IN 24 REFUSED at the think step, see 12.17 |
+| 12.10 | "Did it provide the information, and did it answer the question?" The answers list what was found instead of answering | RAISED 2026-09-23 by the product owner after retesting all seven on develop. DECIDED THE SAME DAY: option B, change what the gate accepts. IN PROGRESS. THE DESIGN, so the loosening is deterministic and inspectable rather than a similarity score: the model may write a sentence in its own words when it attaches the EXACT words from the cited record that support it, as `[N: "exact words"]`. Code then checks four things, every one exact: the quoted words are really in record N; every content word of the sentence comes from those quoted words or the question, allowing only word endings to differ (enhances, enhancing, enhanced) and a short closed list of reporting words (study, review, found, suggests, according); every number is in the quote; and a quote that says no or not cannot be restated as a yes. A sentence with no quote is judged exactly as before. WHAT IS STILL FORBIDDEN: any word the record does not contain, any number it does not contain, and turning a negative finding positive. THE RESIDUAL RISK, stated so it is chosen rather than discovered: the same words from one short quote can be reordered to change who does what to whom. It is bounded by the quote being short, and the quote travels with the citation so it can be shown. THE DESIGN CHANGED BEFORE IT WENT LIVE: the word rule above passed 0 of 53 faithful sentences across six live replies, so the product owner approved a second, cheap model on 2026-09-23. Code still checks the quote, the numbers, the negation and a yes or no opener exactly, and the model then judges whether each reworded sentence says more than its quote, failing closed. LIVE on develop at `5d53f78`, awaiting your retest (the 2026-09-23 shipped list's item 14, now query 73) | JUDGED 2026-09-23 against the product owner's own two criteria, from their seven screenshots in `testing/User-feedback/fix-1/`. INFORMATION PROVIDED: six of seven. QUESTION ANSWERED: ONE of seven. The product owner's own words for the target: asked what the weather is, the answer is not "I found raining throughout the week in Bethesda", it is "today is sunny but sources say rain over the weekend". THE ONE THAT WORKS PROVES THE MACHINERY CAN: `GERD` returns real prose, "The typical symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx. GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus ... most effectively treated with proton-pump inhibitors", every sentence cited. THE OTHERS DUMP RECORDS. "Does coffee help make exercise more effective?" answers "Found 5 pubmed records:" and five titles, and never says whether coffee helps, though the papers it found include the sports nutrition position stand that answers it. The ashkenazi question returns papers naming BRCA1, BRCA2 and APC I1307K, which IS the answer, and never states it. THE MECHANISM, and it is the same grounding gate 12.9 named: a sentence that QUOTES a record passes the gate, a sentence that SYNTHESISES across records fails it, so what survives is restatement. That is why three of the seven carry a paragraph reading "One trial is named X. Another is named Y. A third is named Z", which is the degenerate prose the gate rewards. It also produces broken output: the caffeine answer's third paragraph is an orphan fragment starting lowercase, `however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue".`, and the ashkenazi answer's second paragraph opens "Another is titled" with no first. AND THE SAME RECORDS APPEAR UP TO THREE TIMES: once in the opening sentence, once in the restatement paragraph, once in the table. THIS IS THE SAME ROOT CAUSE AS 12.9 and the two should be decided together. MEASURED THE SAME DAY, AND IT DOES NOT WORK AS BUILT. With the new instruction the model wrote exactly the conversational answer asked for, for example "GERD stands for gastroesophageal reflux disease ... The most common symptoms are heartburn and regurgitation" and "Caffeine at doses of 3 to 6 mg per kilogram consistently improves exercise performance", each sentence faithful to its paper. It attached the quotes on most runs and none on one. THEN THE CODE CHECK DELETED ALL OF IT: 0 of 53 sentences survived across six live replies (GERD, coffee and ashkenazi, twice each), because the model paraphrases, "kidney" for "renal", "mouth" for "oral cavity", "change" for "mutation", and a fixed rule cannot tell a synonym from an invention. Four rounds of tightening the rule (sentences resting on several quotes, word endings, the paper's own title, grammatical glue words) and an instruction to keep the paper's own terms moved it from 0 to 0. Replayed offline over the captured replies: `testing/Developer/reports/2026-09-23_synthesis/replay_gate.py`. WORSE, THE NEW INSTRUCTION ALONE IS A REGRESSION: it makes the model paraphrase, so GERD, which answered on 2026-09-23 by quoting its abstract, dropped to a bare list. The instruction was therefore REVERTED and does not ship; the gate's quote support stays, since it only ever accepts more. THE DECISION THIS NEEDS, the product owner's alone because it changes a written rule (`production-standards`: acceptance is decided by a deterministic rule, never by a model): may a second, cheap model check each sentence against the exact record words it quotes, with the quote itself still verified by code character for character? Evidence: `testing/Developer/reports/2026-09-23_synthesis/`. DECIDED 2026-09-23 BY THE PRODUCT OWNER: YES to a model check. THE DESIGN: every check that CAN be exact stays exact and runs first, the quote is in the record character for character, every number is in the quote, and the sentence negates exactly when its quote does. Only the question code cannot answer, whether a reworded sentence says what its quote says, goes to the guard-tier model, all sentences of one answer in ONE call. It fails closed: an unreadable reply, a timeout or a spent budget accepts nothing, so the answer falls back to what code alone accepts today. This AMENDS `production-standards`' rule that acceptance is never a model's judgement, recorded in DECISIONS.md, and the rule's text changes on its own branch and pull request because it sits under `.claude/` |
+| 12.11 | The sources chip and the trust line disagree: "SOURCES 12" beside "Based on 14 sources" | RAISED 2026-09-23 from the same screenshots. BUILT the same day on the product owner's direction, not yet on develop. The fix-2 screenshots found it again on `recent papers on statins`, 6 against SOURCES 5. LATER LIVE on develop at `6f8902e`, awaiting your retest (the 2026-09-23 shipped list's item 12, now query 74) | INTRODUCED BY 12.8 EARLIER THE SAME DAY, so this is a regression and is recorded as one. 12.8 was asked to make the line count "the distinct sources the reader can actually see and click"; it counts distinct CITATION IDS instead, and the source list below deduplicates by URL, so an answer with 14 citations over 12 distinct pages reads "Based on 14 sources" above a list headed 12. Measured on two of the seven screenshots: `GERD` shows SOURCES 12 with "Based on 14 sources", and the caffeine question shows SOURCES 5 with "Based on 6 sources". Before 12.8 the two numbers were obviously different things, 4 against 12; now they are close enough to read as a defect. THE FIX is to count distinct `source_url`, the same identity the list uses, so the two can never disagree |
+| 12.12 | Broken sentences and repeated records: the caffeine answer's third paragraph is `however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue".`, the ashkenazi answer opens a paragraph "Another is titled" with no first, and the same records appear up to three times | RAISED 2026-09-23 from the same screenshots, directed by the product owner the same day. BUILT 2026-09-23, not yet on develop. The fix-2 screenshots found the same defect on `recent papers on statins`: "so that clinical judgment remains necessary in making the decision to use them", which the connective rule now drops. LATER LIVE on develop at `6f8902e`, awaiting your retest (the 2026-09-23 shipped list's item 13, now query 75) | THREE DETERMINISTIC RULES in the grounding pass, all stricter: a sentence whose first word is an ordinary lowercase word, or whose quotation marks do not pair, is a fragment and is dropped whole; a sentence opening "Another", "A second", "A third" or "The other" is dropped when the sentence before it did not survive, the same rule 9.7 applies to "They" and "It"; and a model sentence that only restates a record's title, which the listing below already shows, is dropped at both depths rather than researcher only. The listing keeps every record, so no source is lost with a dropped sentence |
+| 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer: "why clicking on the saved answer re runs the search, shouldnt it just show what was searched" | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. DIAGNOSED; the product owner said YES to the fix on 2026-09-23 and it is IN PROGRESS. LIVE on develop at `5d53f78`, awaiting your retest (the 2026-09-23 shipped list's item 15, now query 67) | A GAP IN 10.2, NOT A MISSED DEPLOY: both 10.2 commits are on develop. `hasSavedAnswer` is set in exactly one place, `mergeServerHistory` (`frontend/src/App.tsx:316`), which runs once per sign-in. A question asked since the page loaded is added to the rail without it, so `onOpen` (`App.tsx:1947-1973`) falls through to `ask()` and searches again. A row restored at sign-in opens its saved answer correctly. THE SCREENSHOT PROVES A SECOND SEARCH RAN: 22 sources against the original 23, and a VARIANT RECORDS paragraph the first answer did not have. THE FIX, one change: mark the row as saved once a signed-in run lands, or refresh the history list after each run. Evidence: `testing/Developer/reports/2026-09-23_fix2/history_rerun.md` |
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 ## Session history
@@ -1544,12 +2297,12 @@ Evidence, with a full transcript per question and a re-runnable script:
 
 | Item | What happened | Commit | Where it stands |
 |---|---|---|---|
-| 12.11 | The trust line counts pages, the key the source list merges on | `d355cd9` | Live, awaiting retest, `testing/Shipped_2026-09-23.md` item 12 |
-| 12.12 | Broken sentences and restatement paragraphs leave the answer | `d355cd9`, `a565fd7` | Live, awaiting retest, item 13 |
-| 12.10 | Answers answer: code checks quotes, numbers, negation and verdict openers, then a model checks each reworded sentence against its quote | `5d53f78` | Live, awaiting retest, item 14 |
-| 12.13 | The history rail opens a saved answer asked in the same tab | `5d53f78` | Live, awaiting retest, item 15 |
-| 12.9 | The two depths differ in the code-built opening sentence and list on every question | `5a25f72` | Live, awaiting retest, item 16 |
-| 12.3 | A one-to-three-word opening question is asked back, decided by a classifier | `84c2971`, `9b9ff2b` | Live, awaiting retest, item 17 |
+| 12.11 | The trust line counts pages, the key the source list merges on | `d355cd9` | Live, awaiting retest, the 2026-09-23 shipped list's item 12, now query 74 |
+| 12.12 | Broken sentences and restatement paragraphs leave the answer | `d355cd9`, `a565fd7` | Live, awaiting retest, item 13, now query 75 |
+| 12.10 | Answers answer: code checks quotes, numbers, negation and verdict openers, then a model checks each reworded sentence against its quote | `5d53f78` | Live, awaiting retest, item 14, now query 73 |
+| 12.13 | The history rail opens a saved answer asked in the same tab | `5d53f78` | Live, awaiting retest, item 15, now query 67 |
+| 12.9 | The two depths differ in the code-built opening sentence and list on every question | `5a25f72` | Live, awaiting retest, item 16, now query 72 |
+| 12.3 | A one-to-three-word opening question is asked back, decided by a classifier | `84c2971`, `9b9ff2b` | Live, awaiting retest, item 17, now query 76 |
 | 12.16 | No hardcoded decisions: neutral prompt examples, 12.3 as a classifier, structural checker rules | `1cd5968`, `84c2971`, `a565fd7` | Parts 1, 2 and 4 live; part 3 not started |
 | 12.14, 12.15, 12.17 | Recorded from the fix-2 screenshots and the live runs | none | Not started |
 | The fix-2 screenshots | Judged on the product owner's two criteria: information 12 of 13, answered 3 of 13 | `6f8902e` | Evidence in `testing/Developer/reports/2026-09-23_fix2/` |
@@ -1619,7 +2372,7 @@ What it did:
 | Item 1 of the next list, the two questions that lost their own graph search | BUILT, VERIFIED LIVE, AWAITING RETEST | "Compare what is known about MLH1 and MSH2 in colorectal cancer risk" (G-033) and "Find GEO expression datasets studying TP53" (G-037) lost their own graph search on every pass to a generated query the validator rejected. Both take a fixed template now: each gene's disease edges side by side for the comparison, the gene record for the shapeless gene question, and GEO is searched when a question asks for datasets. Live on develop at `b6cd025`: G-033 3 of 3 answered with its own graph call returning rows in 18 to 30 seconds, G-037 3 of 3 in 13 to 22 seconds with five GEO series cited each time, G-011 3 of 3, zero errored graph calls across those nine runs (the control, G-012, a disease anchor with no shape left on the model path by decision, lost one call to the per-step timeout on its third pass, as it did in the morning). A latent 30-second timeout on any question naming two genes went with it, and the 11.22 check passed on the same runs. Evidence: `testing/Developer/reports/2026-09-22_item1_lost_search/findings.md` |
 | The coordinate range, the next list's item 1 as it then stood | BUILT, VERIFIED LIVE, AWAITING RETEST | "What is under chr17:43,044,295-43,125,364 on GRCh38" used to be answered with a request to name a gene. A window is now recognised by a fixed rule, the genes under it are resolved live from NCBI Gene by position and filtered by each record's own placement, the question proceeds as a gene question, and the dbVar and ClinVar records that genuinely overlap the window are planned right after the graph call. A window with no assembly named is asked which. Live on develop: the golden coordinate question G-001 6 of 8 answered across three deploys, 3 of 3 on the final one answered with BRCA1 resolved from the coordinates alone, in 19 to 23 seconds; a CFTR-locus window on chromosome 7 6 of 6; the no-assembly question answered with the assembly question 6 of 6. The live runs found two follow-up fixes the live runs found (`e477077`, named genes before unnamed loci, because the first resolved gene is the one the fan-out follows; `c72b8a7`, the model's spans are not confirmed on a window question, so its call count is fixed at fifteen and never reaches the ceiling of twenty). Planned by the reasoning model and built by two workers in parallel (the live probes and the pure module), the wiring by the planner. Evidence: `testing/Developer/reports/2026-09-22_coordinate_range/findings.md` |
 | The call ceiling, the next list's item 1 as it then stood | MEASURED, and the ceiling stays at twenty | 24 runs on develop over eight question shapes, three passes each, with the count carried on the done event (`df657ad`): all answered, none refused by the ceiling, the worst pass 17 of 20 (the GRCh38 window every pass, the GEO question on one), the three-rs question 6. Neither the ceiling nor the fan-out moves. What varies is the model's spans the FIRST time a process sees them (three in-process caches), so the first pass after a deploy is the honest count. Evidence: `testing/Developer/reports/2026-09-22_call_ceiling/findings.md` |
-| The question's own words, never a disease | SHIPPED (`d8619bc`), AWAITING RETEST | Found by the ceiling measurement: "condition" and "tumour" were sent to MedGen's name index as disease names, bound eight arbitrary records each, and the answer told the person it "does not address the following entities named in the question" and listed them. A mention made only of generic disease vocabulary now binds nothing; a named disease with a generic word in it ("Lynch syndrome") is searched as before. Retest items 12 and 13 in `testing/Shipped_2026-09-22.md` |
+| The question's own words, never a disease | SHIPPED (`d8619bc`), AWAITING RETEST | Found by the ceiling measurement: "condition" and "tumour" were sent to MedGen's name index as disease names, bound eight arbitrary records each, and the answer told the person it "does not address the following entities named in the question" and listed them. A mention made only of generic disease vocabulary now binds nothing; a named disease with a generic word in it ("Lynch syndrome") is searched as before. Retest items 12 and 13 of the 2026-09-22 shipped list, now queries 23 and 25 in `testing/Test_queries_and_workflows.md` |
 | The BioProject accession, the next list's item 2 as it then stood | BUILT, VERIFIED LIVE, AWAITING RETEST | "For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies" used to be answered with a request to name a gene. An accession (BioProject, BioSample, SRA, assembly) is now recognised by a fixed rule, resolved live (one search, one link per linked database), and its record plus the samples, runs and assemblies it links to are planned as NCBI summaries with no graph call, each cited to its NCBI page; an accession NCBI does not have is answered "was not found in NCBI, check the accession and ask again". Live on develop at `693c020`: G-007 3 of 3 answered in 15 to 27 seconds with a fixed eight calls, the unknown accession 2 of 2. The live runs found two follow-up fixes (`d882856`, an SRA run shown as its accession rather than NCBI's markup; `649750c`, a resolved accession counts as the question's subject, so "which runs come from it?" no longer asks which gene). The isolate shape that shared this item remains and needs a new tool mode. Evidence: `testing/Developer/reports/2026-09-22_bioproject_accession/findings.md` |
 | The isolate search, the next list's item 1 as it then stood (G-035) | BUILT, VERIFIED LIVE, AWAITING RETEST | "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?" used to be answered with a request to name a gene. The shape is now recognised by a fixed rule (an isolate word, an organism from a live-verified table of twenty, a gene family word or a gene), the organism resolves to its Taxonomy id with no call, and a third pathogen tool mode, `isolate_search`, scans the whole metadata file of the taxon, counts every isolate carrying the prefix and keeps the first 20. The answer is a table of isolates with their AMR genes, each cited to its Pathogen Detection page, the organism cited to NCBI Taxonomy, and the sentence "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown". "ESBL" searches blaCTX-M only and the answer says blaTEM and blaSHV were left out and why. Measured before design: the 521 MB, 584,433-row file streams in 17.7 seconds, so the count is exact. Live on develop: G-035 5 of 5 answered in 19 to 28 seconds across three deploys (`24305f0`, then `286bb49` and `f96c780` from its live runs: the genes shown beside each isolate as a table, the citation identity the BioSample accession, and an organism the product cannot search asked "which organism"); Salmonella ESBL, blaCTX-M-15 alone, Klebsiella carbapenemase, a true zero for Listeria blaKPC, the two clarifications and the shortest phrasing 2 of 2 each. Evidence: `testing/Developer/reports/2026-09-22_isolate_search/findings.md` |
 | This plan, and the two skills that keep it current | DONE, live on develop | "Where every feature stands" is now the first section (`7801a19`), refreshed by `/phase-checkpoint` for every item that changes state; `/ship` runs the CI gates locally before it pushes (PR #100). Evidence: `tracker/doc_readability_runs.md`, the 2026-09-22 row |
@@ -1640,6 +2393,344 @@ What it did:
 | 11.37, missing Layer 1 sources | ACCEPTED, not a defect to fix | The graph IS cited, 40 of 67. Dedup by URL absorbs all of them into a Live NCBI row |
 
 
+## Shipped days, 2026-09-20 to 2026-09-23
+
+Until 2026-09-24 each day of the UI fix loop that shipped work had its own
+list: `testing/Shipped_2026-09-20.md`, `testing/Shipped_2026-09-22.md` and
+`testing/Shipped_2026-09-23.md`. Each was written for the product owner and
+for whoever opened the next session, and every row in it is a commit on
+`develop`. They were folded in on 2026-09-24:
+
+- Each day's "What to retest" is now a set of queries in
+  `testing/Test_queries_and_workflows.md`, whose closing table maps every
+  retest item to its query.
+- What the lists carried that lived nowhere else is below, moved verbatim, one
+  subsection per day. Inside the moved text, "this document" and "this file"
+  mean that day's list, and "below" means the text that follows it here.
+- What already lived elsewhere is named at the end of each day, rather than
+  copied twice.
+
+### 2026-09-20
+
+#### The short version
+
+Twelve features and fixes landed, one measurement run corrected a hypothesis
+that was steering the work, and one defect class turned up four separate times
+in this session's own instruments rather than in the product.
+
+The redirect that mattered most: every defect the product owner reported was a
+REPORTING defect rather than a retrieval defect. Retrieval was already
+succeeding, with 124 rows available where 44 used to be. What was wrong was the
+product's account of itself.
+
+#### What shipped, in order
+
+| Item | Commit | What a person notices |
+|---|---|---|
+| 11.17, 11.21, the broad search | `2bb1925` | Every question searches the resources that fit it, rather than a fixed plan of one graph query plus four calls. The same question returns the same set of findings each time. |
+| 11.27, the bold fix | `aedf53d`, `b1c7334` | Only the lead claim's main point is bold. Table cells and list items are plain. It over-corrected first, so plain language had no bold at all, and that was repaired the same day. |
+| 11.28, the paced handoff | `50ed55b`, `1d6293b` | The scientist names during the wait are readable. The reveal window now scales with how many scientists a run actually shows, rather than using a single fixed constant. |
+| Literature relevance | `70a6c4e` | PubMed searches are relevance sorted. The missing `sort` parameter is why a mulberry-leaf question returned papers about something else. |
+| 11.26, pagination | `7f62099`, `9cc5d63` | Answer tables page at ten rows instead of showing a cut list. Every retrieved row is reachable; only what the model reads is bounded. |
+| Source grouping | `9d20438`, `0f3f201` | The source list is grouped into the three data layers and collapsed, so a reader sees three rows before 78. Each record is listed once. |
+| Note coherence | `e581a05`, `0a13588` | The notes beneath an answer no longer contradict each other, and four separate ways an answer described its own findings wrongly are fixed. |
+| 11.30, the MCP config | `dca58e5`, `c35b545` | The MCP configuration printed on the Integrations page works pasted verbatim. It named a URL with no trailing slash, which redirected, and the redirect downgraded the scheme. |
+| 11.22, abstracts as evidence | `9cf8572` | An answer can quote what a paper actually found, not just name the paper. The whole retrieved abstract becomes citeable, and nothing picks a sentence out of it. |
+
+#### What was measured rather than built
+
+A 30-run live measurement (`testing/Developer/reports/2026-09-20_verification_
+rate/findings.md`) was run to explain the "answers look surface level" verdict,
+and it killed the hypothesis that prompted it. The theory was that synthesis
+was being discarded and a code-built record list shipped instead. That note
+fires on 7 of 30 runs, and five of those seven are one question. Two of the
+five questions never triggered it at all.
+
+What the data says instead: the universal symptom is answers that keep their
+prose and then immediately disclose that the result was capped. The truncation
+note fired on 24 of 30 runs and the partial-answer note on 22 of 30. The source
+count across all 30 runs ranged from 13 to 20 with a mean of 15.8, and 20 is
+exactly the citation cap, so answers are routinely hitting the ceiling.
+
+#### What is still open, as recorded on 2026-09-20
+
+| Item | State |
+|---|---|
+| 11.31, the two answer modes diverging | Decided, not built. The design constraints are recorded in `testing/UI_fixes_done.md` item 11.31, moved there from the fix plan on 2026-09-24. |
+| The MCP redirect's scheme downgrade | Open, and it is a deployment decision rather than a code change. Reproduced in `tests/system_03_search_agent/adapters/web_sse/test_mcp_mount_redirect_scheme.py`. |
+| D-2, four unexplained totals in one answer | Needs a product decision, not a patch. |
+| 10.2, opening a past answer from history | Needs new persistence. No answer text is stored anywhere today. |
+| Wrapping Layer 2 and Layer 3 API calls in internal MCP servers | Raised 2026-09-20. Backlog only, nothing designed. Tracked as item 11.32 in `testing/UI_fix_plan.md`, which owns it |
+| A 127.1 second run, against a median of 13.6 | Nothing owns it. |
+| The MODY-genes grounding failure, 5 of 6 runs | Unowned. |
+
+#### The three things the day taught
+
+Each of these cost real time, so they are written down rather than remembered.
+
+One feature per push. The overnight revert happened because two fixes shared a
+merge: CI failed on one and forced out the other, and the innocent fix sat
+unavailable for a week.
+
+Mutation testing, not revert testing. Reverting a change and watching a test go
+red proves the code exists, not that the test measures the property it claims.
+Three separate times today a test passed under a mutation that should have
+turned it red. The worst was in 11.22: a word-overlap fallback spliced into the
+deterministic grounding check left all 308 synthesis tests green, because the
+fabrication those tests exist to catch is stripped by a different gate.
+
+Read the header, not the status code. The MCP endpoint returned 307, which was
+read as the documented redirect and called correct. It redirects to `http://`.
+The status code was right and the judgement was wrong.
+
+#### Where the rest of 2026-09-20 lives
+
+- What to retest, items 1 to 6: queries 15, 16, 17, 60, 18 and 19 in
+  `testing/Test_queries_and_workflows.md`.
+
+### 2026-09-22
+
+#### The short version
+
+The day opened with a measurement that had never been taken and closed with
+eight features built from what it found, each decided from the chair of the
+person typing the question, which the product owner made a standing rule
+before the day was out.
+
+The consistency run answered the question the previous two days had been
+guessing at: how often does the product answer at all. Half the golden
+questions answer every time, where one did on 12 September, and none got
+worse. Everything after that was aimed at what the run showed a person would
+feel: a search that quietly did not finish, a refusal that read as "there is
+nothing on this", a question shape that took a hundred seconds, a whole source
+switched off, and two requests the product should have turned away.
+
+#### What shipped, in order
+
+| Item | Commit | What a person notices |
+|---|---|---|
+| 11.33, the mid-word cut | `23de84e` | A record's text is no longer cut at 500 characters mid-word. The BRCA1 gene summary runs to its end. The cause was a safety trim in the coordinator worker whose own comment claimed 2000; it was never live-only, the previous day's local trace had skipped that stage. |
+| 10.3, the consistency run | `a558e0a` | Not a feature, the measurement everything below rests on: 150 signed-in searches, three per golden question, with outcome, time, sources and layers for each, and a comparison against the 12 September baseline. |
+| L-01's reason on the stream | `7f0aa7b` | An errored graph search now says why in its own record instead of "0 row(s) of 0". Two causes read the same day: a question naming nothing resolvable, and a generated query the graph's own timeout killed. |
+| Compute requests refused | `cd26a7a` | "BLAST this sequence" and "here is my VCF file" are turned away with a message saying the capability does not exist and where to run a sequence search, under a new guard category, `compute_request`. Before, both were answered from disease terms found inside the wording. |
+| Lost searches disclosed | `10f6a46` | An answer that lost a background search ends with one line saying so and inviting a retry, and reads "not yet confirmed". A question the product could not read is answered with "name the gene, variant, disease or organism you mean" instead of a dead end. |
+| The hundred-second question | `2bc8ec0` | "Explain in plain terms what the BRCA1 gene does" answers in about 12 seconds instead of about 100, with both graph searches returning rows. An exploratory question with no recognisable shape takes the record template instead of a generated query the graph could not plan. |
+| OMIM switched on, safely | `1c245a3` | A gene question shows OMIM's gene-to-disease entry, cited, and never another gene's: the title filter runs before any row exists. For GCK, nine wrong-gene records are dropped and glucokinase 138079 is kept. |
+| The two lost searches, and GEO | `27d68ae`, `b6cd025` | "Compare what is known about MLH1 and MSH2 in colorectal cancer risk" and "Find GEO expression datasets studying TP53" no longer end with a line saying a search did not finish. The first shows each gene's disease records side by side from a fixed graph template; the second shows the TP53 record and five GEO series cited to NCBI's own pages, because GEO is searched when a question asks for datasets. Live: 3 of 3 and 3 of 3, zero errored graph calls on those six runs. A latent 30-second timeout on any question naming two genes went with it. Shipped in the evening, after the retest of the rest; awaits retest. |
+| The coordinate range | `66b3811` | "What is under chr17:43,044,295-43,125,364 on GRCh38" is answered with the genes under the window, BRCA1 first, resolved from the coordinates alone, and the dbVar and ClinVar records that genuinely overlap it, each cited to its NCBI page. A window with no assembly named is asked which, since GRCh38 and GRCh37 put different genes under the same numbers. Live: G-001 6 of 8 answered across three deploys, 3 of 3 on the final one, a CFTR-locus window 6 of 6, the assembly question 6 of 6. Shipped last, after the two lost searches; awaits retest. |
+| The question's own words are never a disease | `d8619bc` | "What is rs334 and what condition is it associated with?" no longer ends with a note that the answer "does not address the following entities named in the question: Patient condition unchanged, Condition of fetal membrane" and six more, and the GEO question no longer ends with eight mouse tumour records the same way. The person had typed "condition" and "tumour samples"; each word had been sent to MedGen's name index as if it were a disease name and eight arbitrary records bound. A mention made only of generic disease vocabulary now binds nothing; "breast cancer" and "Lynch syndrome" are searched as before. Found by the call-ceiling measurement, shipped at night; awaits retest. |
+| The BioProject accession | `a64c44e`, then `d882856` and `649750c` from its live runs | "For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each" is answered with the project record (the Human Genome Project), its BioSample, its SRA run SRR9496657 and its GRCh38.p14 assembly, each cited to the NCBI page it can be fetched from, instead of a request to name a gene. A BioSample, SRA or assembly accession works the same way, and an accession NCBI does not have is told so: "PRJNA999999999 was not found in NCBI. Check the accession and ask again." Live: 3 of 3 in 15 to 27 seconds with a fixed eight calls, the unknown accession 2 of 2. Shipped last, at night; awaits retest. |
+| The isolate search | `24305f0`, then `286bb49` and `f96c780` from its live runs | "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?" is answered with a table of the first 20 isolates and their AMR genes, each linked to its Pathogen Detection page, E. coli cited to its NCBI Taxonomy record, and the sentence "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown", instead of a request to name a gene. The count is exact because the tool reads the whole 521 MB snapshot file, in about 18 seconds. "ESBL" searches the blaCTX-M family only and the answer says blaTEM and blaSHV were left out and why: 279,100 E. coli isolates carry a blaTEM allele, nearly all the narrow-spectrum blaTEM-1. Salmonella, Klebsiella, Listeria and sixteen other organisms work the same way; a named allele such as blaCTX-M-15 matches that allele only; an organism with no gene is asked which gene, an organism the product cannot search is asked which organism. Live: G-035 5 of 5 in 19 to 28 seconds across three deploys, the seven extra questions 2 of 2 each. Shipped last, after the discussion; awaits retest. |
+| The fix plan's top tracker | `7801a19` | Not a product change: `testing/UI_fix_plan.md` now opens with "Where every feature stands", so what is done and what is left is the first thing on the page. The two skills that close a session, `/phase-checkpoint` and `/ship`, were rewritten the same night (PR #100). Nothing to retest in the product. |
+
+Two rules and one correction also landed. `.claude/rules/decide-from-the-users-chair.md` is the standing rule the product owner asked for. Tracing is production-only by design, so a "set the develop tracing key" next step written in the morning was withdrawn in the afternoon and recorded as a decision instead.
+
+#### What is still open, as recorded on 2026-09-22
+
+Two of the day's five open points, recorded nowhere else. The other three are named under the next heading.
+
+- A count question with no recognisable shape, and a question anchored on a disease or a paper with no shape, still take a generated graph query, each for a measured reason recorded in the code; nothing in the golden set loses a search that way today.
+- Every golden question shape now answers on at least one pass: the coordinate range, the project accession and the isolate description were all built and verified live during the day and the night. What the isolate search leaves open: the model's written summary fails grounding on most passes so the code-built table carries the answer; the golden row's Taxonomy must-cite URL is the older browser address while the product cites NCBI's record page; and no filter beyond the gene prefix exists.
+
+#### What the day taught
+
+Moved verbatim from the day's shipped list.
+
+- A measuring tool that reads elapsed time from its own clock cannot tell a
+  slow server from a sleeping laptop. Four runs read as the app hanging for
+  six minutes, were reported to the product owner as a defect, and were the
+  machine asleep on battery, twice; the tell was two independent streams
+  ending at the same second.
+- Before looking for a cause in a trace or a log, check whether the component
+  that saw the failure already wrote the reason down and where the pipeline
+  drops it. L-01's reason had been one line above the event all along, and
+  the 11.33 cut sat in a stage a careful local trace had stepped over.
+- Emission order is not plan order when calls run concurrently, and when one
+  call on the same entity is fast and another slow, the difference is the
+  query's shape. The lost call was the question's own search arriving second,
+  and the planner's row estimate, not any budget, was the cause.
+- On this graph only the inline property match uses the id index. A WHERE
+  on a gene id, in any form, walks the whole label and times out, while the
+  same form on the small Disease label is fast, so a template shape must be
+  timed on the largest label it can bind before it ships.
+- A reason recorded in a code comment for keeping a path was wrong, because
+  it credited a golden question's good passes to the model when they had
+  come from a template. Replaying every recorded Think output through the
+  chooser, per run rather than per question, is what showed it.
+- Two NCBI databases can report the same concept in different conventions:
+  Gene gives a minus-strand placement in transcription order, start greater
+  than stop, where dbVar and ClinVar give genome order. A predicate proved
+  right for one is not proved for the other; the live probe run beside the
+  build, not after it, is what caught it before it shipped.
+- A count that differs between identical passes has a cache behind it before
+  it has a model behind it. The call ceiling's variable part read as the
+  model's guesses until the same question spent 9, then 3, then 3: three
+  in-process caches remember every confirmed span for the life of the
+  process, so the first pass after a deploy is the honest count, and a
+  measurement must say which state it was taken in.
+- A name index matches any word, including the question's own. "Condition"
+  and "tumour" bound eight arbitrary records each and the answer then told
+  the person those were entities they had named. Found by reading the answer
+  text of a cold run, not from any count or outcome, since both runs were
+  answered.
+- A documented field can be the wrong scope for a valid value. The
+  accession field returns nothing for a project that exists, while the plain
+  term finds it at once; a lookup that read the field's empty result as
+  "not found" would have told the person their accession does not exist.
+- A document's own editing rule and its own preservation gate can disagree:
+  the fix plan says a long table cell moves into a detail section, and the
+  gate that proves no fact was lost cannot anchor a cell moved into prose.
+  The cell stayed, and the disagreement is recorded rather than forced.
+
+#### Where the rest of 2026-09-22 lives
+
+- What to retest, items 1 to 22: queries in
+  `testing/Test_queries_and_workflows.md`, mapped item by item in its closing
+  table. Items 1 to 6 were retested and approved on 22 September, recorded in
+  the 2026-09-22 session table under "Session history" above.
+- What was measured rather than built: each measurement in the report the day's
+  list named for it.
+  - `testing/Developer/reports/2026-09-22_10.3_consistency/findings.md`, the consistency run
+  - `testing/Developer/reports/2026-09-22_L01_cause/findings.md`, L-01 as a rate
+  - `testing/Developer/reports/2026-09-22_slow_second_search/findings.md`, the slow search
+  - `testing/Developer/reports/2026-09-22_OMIM_live/findings.md`, OMIM live
+  - `testing/Developer/reports/2026-09-22_item1_lost_search/findings.md`, the replay through the template chooser and the check of 11.22
+  - `testing/Developer/reports/2026-09-22_coordinate_range/`, the coordinate range's design requests and live runs
+  - `testing/Developer/reports/2026-09-22_call_ceiling/findings.md`, the call ceiling
+  - `testing/Developer/reports/2026-09-22_bioproject_accession/`, the accession's design requests and live runs
+  - `testing/Developer/reports/2026-09-22_isolate_search/probes.md`, the Pathogen Detection metadata file
+  - The golden rows' `acceptable_outcomes` widening: "Loose ends, named rather than left" above, and its row in `DECISIONS.md`.
+- The other three open points, a gene question spending 14 to 16 of its 20
+  calls, the three golden rows and the parked explanation half of 11.31: "Where
+  we stopped" above.
+- What the day taught: above, verbatim; the related failures are `LEARNINGS.md`'s rows dated 2026-09-22.
+
+### 2026-09-23
+
+#### How the session ran
+
+The overnight session. The product owner approved a named list before sleeping,
+then authorised picking up further work from `testing/UI_fix_plan.md` that could
+run unsupervised. Everything below landed on develop in the UI fix loop. The
+session ran past midnight and into 2026-09-24, and that later work is recorded
+in this same file rather than a new one.
+
+Eight agents ran, tiered by task: Opus for the trust-critical and multi-file
+judgement, Sonnet for bounded builds and checks.
+
+THREE PARTS TO THIS DAY. The overnight session ran unsupervised and shipped
+items 1 to 7. Then the product owner brought a second tester's feedback in the
+morning, and items 8 to 11 answer it. Items 12 to 22 shipped from that evening
+into 2026-09-24, after the second tester's fix-2 screenshots; items 18 to 22
+have nothing to retest by hand. Everything below is on develop.
+
+ON DEVELOP at `3b228d6` for the overnight half, both Railway services SUCCESS. The start command runs
+`alembic upgrade head` before uvicorn, so a SUCCESS deploy is also proof that
+migration 0010 applied to the live develop database.
+
+#### What shipped, in order
+
+| # | Item | Commit | What a person notices |
+|---|---|---|---|
+| 1 | 11.30 fix B, the MCP address no longer downgrades to plaintext | `1fd16e2` | The printed MCP config works as pasted, and an HTTPS request is never redirected to `http://` |
+| 2 | 10.2, history shows the saved answer instantly, with Run again | `1fd16e2`, `a98a019` | Clicking a past search shows the answer you already got, at once, with no second search charged to you |
+| 3 | MeSH identifiers resolve to real terms | `79c05d3` | "What MeSH terms are assigned to PMID 11237011?" answers with 26 real terms instead of codes |
+| 4 | The opening sentence counts what the answer shows | `79c05d3` | An answer no longer says "Found 20 records" above a list of 26 |
+| 5 | The leaked-vocabulary filter catches the `[MeSH] D000818` form | `79c05d3` | An identifier is never again presented as though it were a real term at full confidence |
+| 6 | A dead graph search removed | `79c05d3` | A phenotype question stops running a search that could never return a row |
+| 7 | D4, both developer test defects | `df66ec2` | The quick check before a push can be trusted, and the suite runs in 85 seconds instead of 128 to 163 |
+| 8 | 12.4, a refusal stops inviting you to continue | `955c4ac` | A screen with no answer says "Ask another question" and drops the three suggestions that referred to nothing |
+| 9 | 12.2, the guardrail stops refusing literature questions | `f63b272` | "recent papers on statins" and "any trials for gerd?" are no longer called outside biomedical research |
+| 10 | 12.1, a disease question searches every layer | `02130d7` | "Any trials for GERD?" returns real trials instead of nothing |
+| 11 | 12.7, a question naming no gene and no disease finds the papers | `7c1ebc4`, `29c8687` | A question about caffeine, or about a population, returns cited papers instead of being told to name a gene |
+| 12 | 12.11, the trust line counts pages | `d355cd9` (deployed with `6f8902e`) | "Based on N sources" equals the SOURCES count on the page; before, GERD read 14 against a list of 12 |
+| 13 | 12.12, no broken sentences and no restatement paragraph | `d355cd9` | No paragraph starts mid-sentence ("however, ...", "so that ...") or carries a stray quote mark; the "One is titled X. Another is titled Y" paragraph is gone, so a paper appears at most twice (opening sentence and list), not three times; researcher answers keep prose drawn from abstracts again |
+| 14 | 12.10, answers answer the question | `5d53f78` | The answer model writes plain sentences drawn from the papers; code checks each quote is really in its record, the numbers and any "not" match, and no sentence opens on a "Yes," or "No," verdict; then a second, cheap model checks the sentence says no more than its quote. Live runs: every plain-language answer of the seven answered in sentences; two of six guarded reruns fell back to a list, once because the checking model's call failed |
+| 15 | 12.13, the history rail opens the saved answer | `5d53f78` | A search asked in the same tab, clicked in the history rail, shows the saved answer instead of searching again |
+| 16 | 12.9, plain language and researcher differ on every question | merge `5a25f72` | Plain opens "I found 5 clinical trials related to GERD" with a titles-only list under "Where this answer comes from"; researcher opens "Found 5 clinical trial records for GERD: ..." with a table that has an identifier column. Measured on all 12 full feedback questions: every one differs; both depths list the same records |
+| 17 | 12.3, a very short question is asked back | merge `84c2971`, tuning `9b9ff2b` | `reflux disease`, `GERD`, `BRCA1`, `Marfan` are asked back with choices written for that subject by a classifier model (3 of 3 runs each); `MeSH` 2 of 3; `papers on caffeine` is answered |
+| 18 | 12.16 part 4, the answer checker's phrase lists become structural rules | `a565fd7` | Invisible to a reader except fewer wrong sentences: a fragment is recognised by where its words sit in the record; a sentence that switches papers must name something from that paper's title (after "This condition ..." once pointed at the wrong disease) |
+| 19 | 12.16 part 1, no tester's question is a prompt's example | `1cd5968` | Invisible; the guardrail re-measured 68 checks, 0 wrong |
+| 20 | The fix plan split in two | `164aa1d`, `bea80d1`, `7c2d447` | Not a product change: `testing/UI_fix_plan.md` keeps what is being built and what is next (766 lines, was 2,572); `testing/UI_fixes_done.md` holds every closed item with an index of status, test query and retest item |
+| 21 | Rules and skills, via pull requests #101, #102, #103 | merges `08e5e86`, `058f3d8`, `90f12f3` | Not a product change: the written rule now allows the one bounded model check; the session-closing skills know the done file, the test queries and safer worktree cleanup |
+| 22 | D5, the API deploys again | the commit after `39c6e55` | Nothing a reader sees: SQLAlchemy 2.1.0, published minutes before the checkpoint's build, stopped the API deploying, and develop kept its previous build. SQLAlchemy is now capped below 2.1, on the product owner's call |
+
+#### Verified live on develop after the deploy
+
+Item 1 is proven end to end rather than by its tests alone:
+
+    POST /mcp   ->  HTTP/2 307, location: https://...../mcp/
+    POST /mcp/  ->  200, a valid MCP initialize response
+
+Before tonight that `location` read `http://`, and a client following it
+literally sent its next request, bearer token included, over plaintext. The
+second line matters as much as the first: it proves the mount still works
+rather than that the redirect merely changed.
+
+Surfaces after the deploy: `/health` 200, `/openapi.json` 200, `/docs` 200,
+`/graphql` 401 and `/v1/history` 401, the last two being protected routes
+correctly refusing an unauthenticated caller.
+
+ITEMS 2 TO 6 ARE NOT LIVE-VERIFIED HERE, and that is stated rather than implied:
+each needs a signed-in session, which is the product owner's retest below. Their
+evidence is the arms and the workers' own live runs recorded in
+`testing/Developer/reports/2026-09-23_overnight/findings.md`.
+
+#### What was measured rather than built, recorded nowhere else
+
+- L-01's CAUSE FOUND, and the defect is NO LONGER REPRODUCIBLE on develop. When no code template matches a question, the plan-tier model drafts the Cypher fresh every run, and two drafts are not equivalent: five runs of one BRCA1 question returned 100 rows, then 1, then an error, then 2, then 2. Twelve live runs on 2026-09-23 found no variance at all, where 2026-09-21 saw 100, then 12, then 0. Two commits nobody re-measured closed it, `27d68ae` and `2bc8ec0`.
+- The graph's `Disease` and `OntologyClass` labels hold source vocabularies and identifiers in their `name` field, everywhere. `Gene` and `Article` are correct.
+
+#### What the day taught, recorded nowhere else
+
+The night's most useful result was not a feature. Three separate tests passed
+for months by agreeing with a constant that was wrong, and the constant also
+built the schema prompt handed to the plan-tier model, so the model was being
+told the same false thing. None of the three was a vacuous arm; each had real
+assertions that would have caught a genuinely broken implementation. They were
+rigor pointed at a premise nobody had checked.
+
+The second lesson came from a worker retracting its own conclusion. A fix that
+improved five measurements made one file worse, and the confirmation run caught
+it failing. Cutting the fix's own cost from 400 steps to 73 turned a 77 percent
+margin into 16 percent and made the whole suite faster than it had been all
+night. The first version would have shipped as an improvement.
+
+A third lesson closed out the night. A fixed rule can prove that words
+were copied, but it cannot prove they were paraphrased faithfully. The
+honest split is code for everything exact and a model for the one
+judgement code cannot make. A sentence the model does not clear is dropped
+rather than trusted, and so is one it cannot check. The product owner also ruled
+out hardcoding, so a decision point goes to a classifier and a tester's own
+question never becomes a prompt's example. The fix plan's own file taught the identical
+lesson from the other direction: a 2,572-line document broke on every
+edit, and splitting it by job fixed the cause where three rounds of
+tidying had only treated the symptom.
+
+#### Where the rest of 2026-09-23 lives
+
+- What to retest, items 1 to 22, with no item 7: queries in
+  `testing/Test_queries_and_workflows.md`, mapped item by item in its closing
+  table. Its advice to start with the second tester's seven questions, in a
+  fresh session, is that document's "Before you start" and its section 10.
+  Evidence for retest items 12 to 17:
+  `testing/Developer/reports/2026-09-23_synthesis/findings.md`.
+- Not shipped, 12.14, 12.17 and 12.16 part 3: the board's To do column and
+  "Detail for items on the board" above.
+- The rest of what was measured: the 2026-09-23 overnight session table under
+  "Session history" above, for the corrected L-01 report, the eleven templates
+  and the dead one; "Notes carried over from the old tracker" above, for the
+  graph's labels; Set 12's rows 12.10 and 12.16, for the 0 of 53, the reverted
+  instruction and the 68 checks; `testing/Developer/reports/2026-09-23_overnight/findings.md`,
+  for the MeSH resolution's cost; `LEARNINGS.md`'s rows dated 2026-09-24, for
+  the model check's two wrong passes.
+- What is NOT fixed: "Next, in order" and "Notes carried over from the old
+  tracker" above, and 12.14's row under "Detail for items on the board". The
+  census of all 200,845 Disease rows, taken on 2026-07-31 for F-2.1-B07, is in
+  `testing/Developer/reports/2026-09-23_overnight/findings.md`.
+- What the day taught: above, verbatim; the related failures are `LEARNINGS.md`'s
+  rows dated 2026-09-23.
+
 ## History and what is live
 
 ### What is live on develop
@@ -1654,8 +2745,8 @@ What it did:
   gene asks which gene; one naming a resistance gene and an organism the
   product cannot search asks which organism. Pushed 2026-09-22 (night) as
   `24305f0` with two follow-ups from its live runs (`286bb49`, `f96c780`),
-  verified live 5 of 5 on G-035. Retest: items 17 to 22 in
-  `testing/Shipped_2026-09-22.md`, and the full set in
+  verified live 5 of 5 on G-035. Retest: items 17 to 22 of the 2026-09-22 shipped list, now
+  queries 33 to 44 in `testing/Test_queries_and_workflows.md`, and the full set in
   `testing/Product/queries/Isolate_search_queries_and_workflow.md`. AWAITING RETEST.
 - A chromosome window with its assembly named ("chr17:43,044,295-43,125,364
   on GRCh38") is answered with the genes under it, resolved from the
@@ -2041,3 +3132,12 @@ every time.
 
 No Layer 3 call was seen. Next: rerun the 65 across fresh test accounts,
 recording each error's message.
+
+### Developer follow-through
+
+Done alongside the sets in this file, not as sets of their own:
+
+- D4: fix the load-dependent frontend tests and journey 7's navigation before relying on them in quick checks. Best done during set 2.
+- R37: update `Product/Product_workflows.md` in the same push as each set that changes a test.
+- Any file added, renamed or repurposed under `src/` updates `docs/build/Debugging_guide.md` in the same commit, which CI enforces.
+- Each set updates section 11 of the report and the progress table in `testing/UI_fixes_done.md`.
