@@ -69,7 +69,7 @@ Acceptance:
 
 ### T-8.1-04: `What genes are associated with MODY?` passes its citation check
 
-Status: todo
+Status: in-review, builder B, commit `49edfd0`: stacked citations checked against the union of the findings they cite, still exact; 5 of 6 live runs answer
 Card: 21
 Builder: B
 Files: `src/system_03_search_agent/synthesis/grounding.py` and its tests
@@ -81,7 +81,7 @@ Acceptance:
 
 ### T-8.1-05: The trust line stays the same when the evidence is the same
 
-Status: todo
+Status: blocked on T-8.1-05b in `core/graph.py` (F-8.1-01); builder B's determinism test, commit `2a32799`
 Card: 20
 Builder: B
 Files: `src/system_03_search_agent/synthesis/trust.py` and its tests
@@ -135,6 +135,26 @@ Acceptance:
 ## Findings
 
 Written the moment a finding is established. Each: ID, status, raised by, severity, round.
+
+### F-8.1-01: The trust verdict varies because it is computed over whichever sentences the model's prose grounded that run
+
+Status: confirmed; fix decided by the lead, routed to builder A (T-8.1-05b)
+Raised by: builder B, T-8.1-05
+Severity: high: an identical question shows a different trust line
+Round: 0 (build)
+
+`synthesis/trust.py` is deterministic, proven by `tests/system_03_search_agent/synthesis/test_trust_outcome_determinism.py` (five computations from one fixture, byte-identical). The variance is upstream in `core/graph.py`: the claims handed to `trust_for_claims` are the ones the model's prose grounded that run, and `_apply_conflict_flags_to_claim_trusts` floors a claim to `flag` from whichever Layer 1 and Layer 2 pairs land in that subset. Two live runs of one question gave different claim sets. Evidence: `testing/Developer/reports/2026-09-25_phase_8.1/builder_B.md`.
+
+Decision, the lead's, from the reader's chair: builder B's option 2. The downstream floors (the conflict flag and the completeness and cap floors) are computed over `synth_findings`, the full retrieval, not over `grounding.claims`. The same evidence then gives the same trust line, and a real conflict in the evidence is flagged every time rather than on some runs. Option 1 (trust over every prepared finding) was rejected because the verdict would rest on records the answer does not state; option 3 (accept the variance) because an inconsistent trust badge on an identical question is what a reader would feel deceived by.
+
+### F-8.1-02: A clause that abbreviates a disease name is rejected by the exact-match gate
+
+Status: open, not fixed in this phase
+Raised by: builder B, T-8.1-04, live run 4 of 7
+Severity: low: the gate is right to reject it; the answer falls back to the code-built list for that clause
+
+The writing model abbreviated a disease name in one MODY run, and the exact-match gate correctly rejected the clause. The fix is in the writing instruction, outside builder B's fence, and is not taken tonight.
+
 
 ## History
 
