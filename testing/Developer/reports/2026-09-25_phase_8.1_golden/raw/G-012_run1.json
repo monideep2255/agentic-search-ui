@@ -1,0 +1,830 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-44ae1aa8c5cb",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T09:49:14+00:00",
+  "run_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C0206693",
+   "MedGen:C1335487",
+   "MedGen:C1412014",
+   "MedGen:C1709664",
+   "MedGen:C5419191",
+   "MedGen:C5419192",
+   "MedGen:C5419517",
+   "MedGen:C5556661"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 15 sources",
+  "citations": 16,
+  "distinct_sources": 16,
+  "citations_by_layer": {
+   "layer_2_api": 11,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "clinicaltrials_search",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   8
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 246,
+  "answer_start": "Found 5 clinical trial records and 8 disease records for carcinoma not otherwise specified [2][3][4][5][6][7][8][9][10][11][12][13][14]. \n\nSurvival Context\n\nMed",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 11.253,
+  "seconds": 19.9,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 32,
+   "citation": 16,
+   "trust_signal": 17,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 0,
+   "ts": "2026-09-25T09:47:46.192792Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 2,
+   "ts": "2026-09-25T09:47:48.302560Z",
+   "payload": {
+    "narrative": "Broad clinical trial search for a specific but rare carcinoma type (carcinoma not otherwise specified: 8 of 15 MedGen records matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 4,
+   "ts": "2026-09-25T09:47:48.664067Z",
+   "payload": {
+    "narrative": "searching 3 layers for medullary carcinoma, not otherwise specified. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-71fe07f58ff5",
+      "layer": "layer_1_graph",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-4fa79895dbb8",
+      "layer": "layer_3_enrichment",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-96f6a793f55c",
+      "layer": "layer_3_enrichment",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9001e883eb89",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3bf9dc908bf7",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e22cdd622bbc",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-6e903a27d66e",
+      "layer": "layer_3_enrichment",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-716b1188d460",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 6,
+   "ts": "2026-09-25T09:47:48.673487Z",
+   "payload": {
+    "call_id": "cq-71fe07f58ff5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 7,
+   "ts": "2026-09-25T09:47:48.673586Z",
+   "payload": {
+    "call_id": "pa-4fa79895dbb8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 8,
+   "ts": "2026-09-25T09:47:48.673612Z",
+   "payload": {
+    "call_id": "ct-96f6a793f55c",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 9,
+   "ts": "2026-09-25T09:47:48.673633Z",
+   "payload": {
+    "call_id": "ne-9001e883eb89",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 10,
+   "ts": "2026-09-25T09:47:48.673658Z",
+   "payload": {
+    "call_id": "ne-3bf9dc908bf7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 11,
+   "ts": "2026-09-25T09:47:48.673679Z",
+   "payload": {
+    "call_id": "ne-e22cdd622bbc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 12,
+   "ts": "2026-09-25T09:47:48.673702Z",
+   "payload": {
+    "call_id": "pa-6e903a27d66e",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 13,
+   "ts": "2026-09-25T09:47:48.673724Z",
+   "payload": {
+    "call_id": "ne-716b1188d460",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 14,
+   "ts": "2026-09-25T09:47:48.910890Z",
+   "payload": {
+    "call_id": "pa-4fa79895dbb8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 15,
+   "ts": "2026-09-25T09:47:48.919606Z",
+   "payload": {
+    "call_id": "ne-9001e883eb89",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 16,
+   "ts": "2026-09-25T09:47:49.076158Z",
+   "payload": {
+    "call_id": "ne-3bf9dc908bf7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 17,
+   "ts": "2026-09-25T09:47:49.286749Z",
+   "payload": {
+    "call_id": "cq-71fe07f58ff5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "8 row(s) of 8",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 18,
+   "ts": "2026-09-25T09:47:49.352741Z",
+   "payload": {
+    "call_id": "ct-96f6a793f55c",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 19,
+   "ts": "2026-09-25T09:47:49.566039Z",
+   "payload": {
+    "call_id": "pa-6e903a27d66e",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 20,
+   "ts": "2026-09-25T09:47:49.666374Z",
+   "payload": {
+    "call_id": "ne-716b1188d460",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 21,
+   "ts": "2026-09-25T09:47:49.990348Z",
+   "payload": {
+    "call_id": "ne-e22cdd622bbc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "fetch: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 22,
+   "ts": "2026-09-25T09:47:49.997101Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/104918",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00004048",
+    "source_url": "https://clinicaltrials.gov/study/NCT00004048",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00026533",
+    "source_url": "https://clinicaltrials.gov/study/NCT00026533",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00100828",
+    "source_url": "https://clinicaltrials.gov/study/NCT00100828",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00118248",
+    "source_url": "https://clinicaltrials.gov/study/NCT00118248",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00134043",
+    "source_url": "https://clinicaltrials.gov/study/NCT00134043",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0206693",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0206693",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1335487",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1335487",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1412014",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1412014",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1709664",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1709664",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5419191",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5419191",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5419192",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5419192",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5419517",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5419517",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5556661",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5556661",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "15365566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/15365566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "104918",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/104918",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "c710a666-431b-4eab-a1c1-d0ca5a2dcd8b",
+   "seq": 89,
+   "ts": "2026-09-25T09:47:58.080303Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 11253,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 15 sources",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records and 8 disease records for carcinoma not otherwise specified [2][3][4][5][6][7][8][9][10][11][12][13][14]. \n\nSurvival Context\n\nMedGen lists no clinical features for Medullary Carcinoma, Not Otherwise Specified [1]. \n\nClinical trial records found\n\nClinical trial name: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [2]. Clinical trial name: Thalidomide in Treating Patients With Thyroid Cancer [3]. Clinical trial name: Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [4]. Clinical trial name: Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [5]. Clinical trial name: Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [6]. \n\nDisease records found\n\nDisease name: Medullary Carcinoma, Not Otherwise Specified [7]. Disease name: Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Cyst [8]. Disease name: Infiltrating duct carcinoma of breast [9]. Disease name: Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Keratocyst [10]. Disease name: Advanced Renal Cell Carcinoma, Not Otherwise Specified [11]. Disease name: Metastatic Renal Cell Carcinoma, Not Otherwise Specified [12]. Disease name: Locally Advanced Renal Cell Carcinoma, Not Otherwise Specified [13]. Disease name: Cervical Squamous Cell Carcinoma, Not Otherwise Specified [14]. \n\nPubmed records found\n\nPubmed title: Prognostic value of morphology and hormone receptor status in breast cancer - a population-based study [15]. \n\nMedgen records found\n\nMedgen title: Medullary Carcinoma, Not Otherwise Specified [16]. Medgen clinical_features: MedGen lists no clinical features for Medullary Carcinoma, Not Otherwise Specified [1]. "
+}
