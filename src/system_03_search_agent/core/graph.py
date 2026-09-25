@@ -5429,7 +5429,17 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # is withheld for the reason `_NCBI_EFETCH_ROW_IDENTITY_FIELDS`
     # withholds `gene_id`: it identifies the record rather than saying
     # anything about it, and the question already resolved it.
-    "medgen_summary": ("title", "definition", "semantictype"),
+    #
+    # T-8.1-06b (F-8.1-04): `clinical_features` added. Builder C's
+    # `_parse_medgen_clinical_features` (`tools/ncbi_eutils_actions.py`)
+    # always sets this key for a `db="medgen"` record, a bounded list of
+    # `{"name": ..., "hpo_id": ...}` dicts, but it was never listed here,
+    # so a phenotype question's own answer was silently dropped before it
+    # reached the writing model: confirmed empirically by builder C with a
+    # live run that still answered from PubMed, ClinVar and trials with no
+    # phenotype ever cited. See `_medgen_clinical_features_text` below for
+    # the string this list becomes before synthesis ever sees it.
+    "medgen_summary": ("title", "definition", "semantictype", "clinical_features"),
 }
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
@@ -5548,6 +5558,99 @@ def _unwrap_medgen_fields(fields: dict[str, Any]) -> dict[str, Any]:
     return unwrapped
 
 
+#: T-8.1-06b (F-8.1-04). What the answer says when MedGen genuinely lists
+#: no clinical features for a resolved disease concept: a plain, code-built
+#: fact, cited to that same MedGen record, never a substitute record type
+#: and never a silent drop. Composed by code from a value already fetched
+#: (the record's own `clinical_features` list is empty), not a classifier's
+#: decision: `tracker/phase_8.1.md`'s goal contract forbids a hardcoded
+#: decision ("a decision is a classifier's call, code only verifies"),
+#: and this states a fact about what a record contains, deciding nothing
+#: about what to search or how to classify the question.
+_MEDGEN_NO_CLINICAL_FEATURES_TEXT: Final[str] = (
+    "MedGen lists no clinical features for this condition"
+)
+
+
+def _medgen_clinical_features_text(features: Any) -> str:
+    """Turn a MedGen record's `clinical_features` list into one citable,
+    quotable string, the same shape `_sra_run_accessions` already gives
+    `sra_summary`'s `runs` field for the identical reason:
+    `synthesis/grounding.ground_claim` matches a clause against source TEXT
+    by containment, so a Python list can never be quoted, only a string.
+
+    `features` is `list[dict[str, str]]` in the live shape
+    (`ncbi_eutils_actions._parse_medgen_clinical_features`'s own
+    `{"name": ..., "hpo_id": ...}` items), always present as a key on a
+    `db="medgen"` record, empty when MedGen carries none for the concept.
+    Reads defensively (`isinstance` at every level, skips a malformed
+    item rather than raising) since this is untrusted parsed content one
+    hop removed from a live NCBI response, per
+    `.claude/rules/ai-security-standards.md`'s "treat AI/external output
+    as untrusted" discipline extended to any upstream parser's output.
+
+    Returns `_MEDGEN_NO_CLINICAL_FEATURES_TEXT` for anything that is not a
+    non-empty list of usable items, so "MedGen was asked and had nothing"
+    reads identically whether the list was empty, missing, or malformed,
+    never as a silently blank field.
+    """
+    if not isinstance(features, list) or not features:
+        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    parts: list[str] = []
+    for item in features:
+        if not isinstance(item, Mapping):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        hpo_id = item.get("hpo_id")
+        if isinstance(hpo_id, str) and hpo_id.strip():
+            parts.append(f"{name.strip()} ({hpo_id.strip()})")
+        else:
+            parts.append(name.strip())
+    if not parts:
+        return _MEDGEN_NO_CLINICAL_FEATURES_TEXT
+    return ", ".join(parts)
+
+
+def _medgen_clinical_feature_rows(title_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """T-8.1-06b (F-8.1-04): one additional citeable row per admitted
+    MedGen title row, carrying that record's own `clinical_features` text
+    as ITS OWN field, so `_pick_representative_field` never has to choose
+    between it and `title` on the same row.
+
+    Mirrors `_pubmed_abstract_rows`'s own ADDITIONAL-row pattern for the
+    identical structural reason, stated in `render_findings_block`'s own
+    docstring: a `SynthFinding` carries exactly one `field`/`field_value`
+    pair, so a fact that must reach Synth's own prose needs its own row
+    whenever the row it started on already carries a field that always
+    wins the pick. Measured live: adding `clinical_features` to
+    `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` alone did not change
+    the answer at all. `title` kept winning `_pick_representative_field`
+    (documented insertion-order behaviour), so the model was shown
+    `MedGen title: Marfan syndrome` and nothing else; a live run after
+    that fix alone still named zero phenotypes.
+
+    Matched to `title_rows` by `source_url`, the same identity
+    `_pubmed_abstract_rows` uses, so this only adds a row for a record the
+    title path already admitted, never a new record.
+    """
+    feature_rows: list[dict[str, Any]] = []
+    for row in title_rows:
+        text = row["fields"].get("clinical_features")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        feature_rows.append(
+            {
+                "curie": "",
+                "node_or_edge_type": row["node_or_edge_type"],
+                "fields": {"clinical_features": text},
+                "source_url": row["source_url"],
+            }
+        )
+    return feature_rows
+
+
 def _omim_records_naming_the_gene(records: list[Any], gene_symbol: str | None) -> list[Any]:
     """Item 2b (2026-09-22): the OMIM summary records whose own title names
     `gene_symbol` in a symbol field, and no others.
@@ -5653,6 +5756,18 @@ def _ncbi_efetch_output_to_structured_fields(
     if purpose == _MEDGEN_SUMMARY_PURPOSE:
         for row in rows:
             row["fields"] = _unwrap_medgen_fields(row["fields"])
+            # T-8.1-06b (F-8.1-04): stringify BEFORE the row reaches
+            # synthesis, the same discipline `_SRA_SUMMARY_PURPOSE` below
+            # already applies to `runs`. Always runs when the key is
+            # present at all (it always is, on a real medgen record,
+            # per `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` above),
+            # so an empty list becomes the honest "no clinical features"
+            # sentence rather than reaching `ground_claim` as a Python
+            # list no clause could ever quote.
+            if "clinical_features" in row["fields"]:
+                row["fields"]["clinical_features"] = _medgen_clinical_features_text(
+                    row["fields"]["clinical_features"]
+                )
     if purpose in _BREADTH_FIELDS_BY_PURPOSE:
         # A breadth result is sorted by record URL, a property of the
         # record and not of the response order, then cut to the fixed cap,
@@ -5662,6 +5777,26 @@ def _ncbi_efetch_output_to_structured_fields(
         rows = rows[:_BREADTH_ROW_CAP]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
             rows = rows + _pubmed_abstract_rows(output.records, rows)
+        if purpose == _MEDGEN_SUMMARY_PURPOSE:
+            # T-8.1-06b (F-8.1-04), round 2: the allowlist addition above
+            # alone does NOT reach the model. Confirmed live: with
+            # `clinical_features` merely added to the same row as `title`,
+            # `_pick_representative_field` still picks `title` (documented
+            # insertion-order behaviour, `omim_summary`'s own comment above
+            # names the same rule), so `render_finding_body` shows only
+            # "Disease record MedGen:...` / `title: Marfan syndrome`" and
+            # the phenotype text never reaches Synth's prompt at all. A
+            # live run of the Marfan question after the allowlist-only fix
+            # still answered with 0 phenotypes named, only the record's
+            # title and a fallback listing.
+            #
+            # Same fix shape as `_PUBMED_ABSTRACTS_PURPOSE` above, for the
+            # identical structural reason: `render_finding_body` and
+            # `_pick_representative_field` show exactly one field per
+            # finding, so a fact that must reach the model's own prose
+            # needs its OWN row when the row it started on already carries
+            # a field that always wins the pick.
+            rows = rows + _medgen_clinical_feature_rows(rows)
         if purpose == _SRA_SUMMARY_PURPOSE:
             for row in rows:
                 runs = row["fields"].get("runs")
@@ -8693,6 +8828,77 @@ def _apply_conflict_flags_to_claim_trusts(
     return updated
 
 
+def _full_retrieval_conflict_exists(synth_findings: list[SynthFinding]) -> bool:
+    """T-8.1-05b (F-8.1-01): whether the FULL RETRIEVAL, every finding
+    prepared for this answer, carries a genuine Layer 1/Layer 2 value
+    conflict, independent of which claims the model's own prose happened
+    to ground this particular run.
+
+    Builder B's diagnosis (`tracker/phase_8.1.md`, F-8.1-01;
+    `testing/Developer/reports/2026-09-25_phase_8.1/builder_B.md`):
+    `_apply_conflict_flags_to_claim_trusts` only ever downgrades a
+    `ClaimTrust` that already exists in `claim_trusts`, and `claim_trusts`
+    only has one entry per GROUNDED claim. Two live runs of the identical
+    question, against the identical retrieval, produced two different
+    grounded subsets, so a real conflict present in both runs' retrieval
+    only floored the answer to `flag` on the run whose model happened to
+    write about both conflicting values in the same clause. The lead's
+    decision (option 2 of builder B's three): the same evidence must give
+    the same verdict, so this check runs over `synth_findings` directly,
+    never over `grounding.claims` or the citations built from it.
+
+    Deliberately a separate, additive check rather than a rewrite of
+    `_apply_conflict_flags_to_claim_trusts`: that function's own per-CLAIM
+    downgrade is correct and untouched, since a specific claim's own
+    `ClaimTrust.outcome` is rightly a function of what it actually cites.
+    This function answers a different, answer-level question, "does a
+    conflict exist in the evidence at all", and its caller floors the
+    ANSWER-level `trust_outcome` directly, exactly the same `aggregate`
+    most-restrictive-wins mechanism every other floor in `write_node`
+    already uses. Neither `synthesis/trust.py` nor `ClaimTrust` itself
+    changes: what a `flag` OR `answer` tier MEANS is untouched, only
+    whether the answer-level aggregate sees a `flag` at all does.
+
+    Reuses `_layer1_layer2_field_pairs`, `_paired_field_values_agree` and
+    `detect_conflict` exactly as `_apply_conflict_flags_to_claim_trusts`
+    does, so a conflict is detected on exactly the same pairs and by
+    exactly the same rule; the two can never disagree about what counts
+    as a conflict, only about which findings they are allowed to look at.
+    `_layer1_layer2_field_pairs` takes its first argument for `.citation_id`
+    alone (see its own signature, `citations: list[CitationPayload]`), and
+    `SynthFinding` carries that same attribute, so `synth_findings` is
+    passed there directly rather than converted to citations first: no
+    citation exists yet for a finding the model never mentioned, and
+    building fake ones just to satisfy a type would be manufacturing data
+    this function does not need.
+    """
+    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+    pairs = _layer1_layer2_field_pairs(synth_findings, finding_by_citation_id)  # type: ignore[arg-type]
+    if not pairs:
+        return False
+    for graph_id, live_id in pairs.values():
+        graph_finding = finding_by_citation_id[graph_id]
+        live_finding = finding_by_citation_id[live_id]
+        graph_value = graph_finding.field_value.strip()
+        live_value = live_finding.field_value.strip()
+        if not graph_value or not live_value:
+            continue  # nothing to compare, mirrors the per-claim check's own guard
+        if _paired_field_values_agree(
+            graph_finding.field, live_finding.field, graph_value, live_value
+        ):
+            continue
+        result = detect_conflict(
+            field=graph_finding.field,
+            graph_value=graph_value,
+            live_value=live_value,
+            graph_source_url=graph_finding.source_url,
+            live_source_url=live_finding.source_url,
+        )
+        if result.is_conflict:
+            return True
+    return False
+
+
 # F-4.3-A-19, build phase 4.3. The answer-scope `trust_signal` this function
 # feeds used to compute its two safety-relevant fields inline, and both were
 # written as assertions rather than as derivations:
@@ -10354,6 +10560,18 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             claim_trusts, citations, _finding_by_citation_id(grounding.claims)
         )
         trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
+        # T-8.1-05b (F-8.1-01): the per-claim floor immediately above only
+        # ever touches a claim already in `claim_trusts`, which is exactly
+        # the grounded, model-chosen subset that made the SAME question's
+        # trust line vary run to run. This second check runs the identical
+        # conflict rule over `synth_findings`, the full retrieval, so a
+        # genuine conflict in the evidence floors the answer at `flag`
+        # every run, whether or not the model's own prose happened to
+        # mention both sides of it this time. See
+        # `_full_retrieval_conflict_exists`'s own docstring for why this is
+        # additive rather than a rewrite of the per-claim check above.
+        if trust_outcome != "refuse" and _full_retrieval_conflict_exists(synth_findings):
+            trust_outcome = aggregate([trust_outcome, "flag"])
         if structured_fallback_used and trust_outcome != "refuse":
             trust_outcome = aggregate([trust_outcome, "ask"])
 

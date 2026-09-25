@@ -134,6 +134,66 @@ def test_a_record_whose_only_value_is_multi_sentence_is_never_dropped() -> None:
     assert [f.field for f in one_finding_per_record(with_title)] == ["title"]
 
 
+# ---------------------------------------------------------------------------
+# T-8.1-06c (F-8.1-04, card 1): the one narrow, named preference. A MedGen
+# record's `clinical_features` finding must survive the collapse over its
+# own `title` finding, since a disease's clinical features are strictly
+# more informative than its bare title in this listing. Every OTHER field
+# pairing, including the paper shape above, is unchanged.
+# ---------------------------------------------------------------------------
+
+
+def test_clinical_features_survives_the_collapse_over_the_records_title() -> None:
+    """THE FIX ITSELF. Before T-8.1-06c, `_listing_rank`'s general rule
+    (lowest `ref_index` wins) always picked `title` here, since
+    `core/graph.py`'s `_medgen_clinical_feature_rows` always appends the
+    feature row with a HIGHER `ref_index` than the title row it copies.
+    Live-confirmed the fix closes: `testing/Developer/reports/
+    2026-09-25_phase_8.1/builder_A.md`'s T-8.1-06b blocked-stop names this
+    exact collapse as the second of two reasons Marfan syndrome's
+    phenotypes never reached the reader.
+    """
+    url = "https://www.ncbi.nlm.nih.gov/medgen/44287"
+    title = _finding(2, "title", "Marfan syndrome", url)
+    features = _finding(
+        7, "clinical_features",
+        "Aortic regurgitation (HP:0001659), Arachnodactyly (HP:0001166)",
+        url,
+    )
+    kept = one_finding_per_record([title, features])
+    assert len(kept) == 1
+    assert kept[0].field == "clinical_features", kept[0].field
+    # Cited to the same MedGen record, unchanged by which field won.
+    assert kept[0].source_url == url
+
+
+def test_a_record_with_only_a_title_is_unchanged() -> None:
+    """A record with no `clinical_features` finding at all must still be
+    represented by its title, exactly as before this ticket. The
+    preference only ever picks AMONG what is present; it invents nothing.
+    """
+    url = "https://www.ncbi.nlm.nih.gov/medgen/1795938"
+    title = _finding(1, "title", "Gastroesophageal reflux (GERD)", url)
+    kept = one_finding_per_record([title])
+    assert len(kept) == 1
+    assert kept[0].field == "title"
+
+
+def test_a_paper_record_with_title_and_abstract_is_unchanged() -> None:
+    """`_PREFERRED_LISTING_FIELDS` names `clinical_features` alone.
+    `abstract` is not in it, so a paper's title still beats its abstract,
+    the exact property `test_the_row_that_survives_is_the_title_not_the_
+    abstract` above already pins; this arm proves it survives the SAME
+    code path the MedGen preference was added to, not a separate one.
+    """
+    url = _url(1)
+    title = _finding(1, "title", "Paper about caffeine", url)
+    abstract = _finding(2, "abstract", "One sentence. Two sentences.", url)
+    kept = one_finding_per_record([title, abstract])
+    assert len(kept) == 1
+    assert kept[0].field == "title"
+
+
 def test_a_blank_source_url_is_never_treated_as_an_identity() -> None:
     """An empty string is not a record. Grouping on it would collapse
     unrelated findings into one row and silently delete evidence."""

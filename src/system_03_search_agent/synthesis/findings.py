@@ -1192,6 +1192,26 @@ def one_finding_per_record(synth_findings: list[SynthFinding]) -> list[SynthFind
     fragments and cannot see a refutation in the next sentence. The
     listing was emitting one quoted abstract sentence per row, which is
     exactly what that decision forbade.
+
+    T-8.1-06c (F-8.1-04, card 1): one narrow, NAMED exception to "lowest
+    ref_index wins" among the field names in `_PREFERRED_LISTING_FIELDS`.
+    A MedGen record's `clinical_features` finding shares its `source_url`
+    with the SAME record's `title` finding, so this function's own
+    multi-view collapse picked `title` every time (the lower `ref_index`,
+    since `_medgen_clinical_feature_rows`, `core/graph.py`, always
+    appends the feature row after the title row it copies). A phenotype
+    question's whole answer rode on this one tie-break: the clinical
+    features reached this function's input every time, and this
+    function's own collapse is what discarded them from the code-built
+    listing every time, live-confirmed (`testing/Developer/reports/
+    2026-09-25_phase_8.1/builder_A.md`, T-8.1-06b's blocked-stop). A
+    disease's clinical features are strictly more informative than its
+    bare title in this listing, so `_PREFERRED_LISTING_FIELDS` names that
+    one field and nothing else: no other field name gets a new
+    preference, and `_listing_rank`'s own general rule (single-sentence
+    values first, then lowest `ref_index`) is UNCHANGED for every group
+    this preference does not match, including every existing paper
+    group (`title`, `abstract`, `pmid`).
     """
     groups: dict[str, list[SynthFinding]] = {}
     for finding in synth_findings:
@@ -1205,7 +1225,9 @@ def one_finding_per_record(synth_findings: list[SynthFinding]) -> list[SynthFind
     for key, group in groups.items():
         if len({finding.field for finding in group}) <= 1:
             continue
-        keep[key] = min(group, key=_listing_rank).citation_id
+        preferred = [finding for finding in group if finding.field in _PREFERRED_LISTING_FIELDS]
+        ranked_pool = preferred if preferred else group
+        keep[key] = min(ranked_pool, key=_listing_rank).citation_id
     kept: list[SynthFinding] = []
     for finding in synth_findings:
         key = (finding.source_url or "").strip()
@@ -1215,10 +1237,29 @@ def one_finding_per_record(synth_findings: list[SynthFinding]) -> list[SynthFind
     return kept
 
 
+#: T-8.1-06c: the one field name `one_finding_per_record` prefers over
+#: every other view of the same record, `title` included. A disease's
+#: clinical features are strictly more informative than its bare title in
+#: a code-built listing, for ANY disease question, not only a
+#: phenotype-shaped one, so there is no narrower or question-shaped
+#: condition to attach this to. Deliberately a `frozenset` of exactly one
+#: name rather than a boolean flag or a reordering of `_listing_rank`'s
+#: own general fields: adding a second preferred field later is a one-line
+#: change to this set, never a rewrite of the collapse rule itself.
+_PREFERRED_LISTING_FIELDS: frozenset[str] = frozenset({"clinical_features"})
+
+
 def _listing_rank(finding: SynthFinding) -> tuple[int, int]:
     """Sort key for `one_finding_per_record`: single-sentence values first,
     then the `build_synth_findings` order. Pure, so the choice is a fixed
-    function of the finding set."""
+    function of the finding set.
+
+    Still the tie-break of last resort even inside a preferred-field pool
+    (`_PREFERRED_LISTING_FIELDS`): if more than one finding for one record
+    happened to share a preferred field name, this still picks among them
+    exactly as it always has. It is UNCHANGED by T-8.1-06c: that fix
+    narrows which POOL this function ranks over, never how it ranks.
+    """
     from system_03_search_agent.synthesis.grounding import split_into_sentences
 
     multi_sentence = 1 if len(split_into_sentences(finding.field_value)) > 1 else 0

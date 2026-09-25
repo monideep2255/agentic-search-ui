@@ -1,5 +1,307 @@
 # Builder A report, phase 8.1
 
+## Follow-up tickets (second dispatch)
+
+Merged `phase/8.1-good-questions-answer` into this worktree (fast-forward,
+`eb943c3..5aa0c3e`, brings builder B's grounding fix, builder C's MedGen
+parser, `tracker/phase_8.1.md`, and builder_B.md/builder_C.md). No files
+outside my fence touched.
+
+## T-8.1-06b: a phenotype question names phenotypes
+
+Read `tracker/phase_8.1.md` (F-8.1-04) and `testing/Developer/reports/
+2026-09-25_phase_8.1/builder_C.md` in full. Builder C's parser
+(`tools/ncbi_eutils_actions.py`, commit `888016d`) always sets
+`record.fields["clinical_features"]` on a `db="medgen"` record: a bounded
+list of `{"name": ..., "hpo_id": ...}` items, `[]` when MedGen has none.
+Confirmed by builder C live: 30 features for Marfan syndrome (the cap).
+
+Cause confirmed by reading `core/graph.py`: `_BREADTH_FIELDS_BY_PURPOSE
+["medgen_summary"]` (was `("title", "definition", "semantictype")`) is
+the allowlist `_ncbi_efetch_output_to_structured_fields` filters every
+medgen row's `fields` through; `clinical_features` was absent, so it was
+dropped at that filter, before any row, finding or citation existed.
+Builder C independently confirmed this live (a real run that answered
+with no phenotype ever cited).
+
+Fix, `core/graph.py` only:
+1. Added `"clinical_features"` to the `medgen_summary` allowlist tuple.
+2. New `_medgen_clinical_features_text(features)`: turns the list into a
+   single citable string, `"Name (HP:xxxx), Name2 (HP:yyyy), ..."`, the
+   same discipline `_sra_run_accessions` already applies to SRA's `runs`
+   field, because `synthesis/grounding.ground_claim` matches a clause
+   against source TEXT by containment and can never quote a Python list.
+   Reads defensively (`isinstance` at every level, skips a malformed item,
+   never raises): this is parsed content one hop from a live NCBI
+   response, still untrusted.
+3. When the list is empty, missing, or entirely malformed, returns the
+   fixed sentence `_MEDGEN_NO_CLINICAL_FEATURES_TEXT` ("MedGen lists no
+   clinical features for this condition") instead of an empty string or a
+   dropped key. This is code composing a verifiable fact from a value
+   already fetched (the record's own empty list), never a hardcoded
+   decision about what to search or classify: the row it rides on keeps
+   its own `source_url`, so the sentence is cited to that MedGen record
+   like any other fact.
+4. Wired both into the same `if purpose == _MEDGEN_SUMMARY_PURPOSE:`
+   block that already unwraps `definition`/`semantictype`, ahead of the
+   row cap and sort, matching where `_sra_run_accessions` runs for its
+   own purpose.
+
+Unit tests added, `tests/system_03_search_agent/core/test_disease_breadth.py`
+(the file that already owns every other MedGen-shape test in this repo):
+`test_clinical_features_reach_the_row_as_a_quotable_string` (the populated
+case, red against the pre-fix allowlist by construction: the old filter
+drops the key entirely, so the assertion would `KeyError`, not fail),
+`test_no_clinical_features_states_the_honest_sentence_not_a_drop` (the
+empty case, and that the row's own `source_url` is unchanged), and
+`test_medgen_clinical_features_text_direct_unit_cases` (the helper in
+isolation: empty list, `None`, a non-list, an all-malformed list, one
+real item, and a mixed usable/malformed list). Full
+`tests/system_03_search_agent/core` suite: 1096 passed, 56 skipped, no
+regressions (up from 1093 before this ticket's 3 new tests plus builder
+B's and C's own additions already in the merge).
+
+ROUND 2, found from a live run: the round-1 fix (allowlist alone) reached
+the tool's structured output but changed nothing a reader saw. Live proof
+of that: a researcher-depth run after the allowlist fix still answered
+with zero phenotypes named, only the record's title and a code-built
+listing. Root cause: `render_finding_body`/`_pick_representative_field`
+show exactly ONE field per finding, and `title` always wins over
+`clinical_features` on the same row (documented insertion-order
+preference). Fixed by adding `_medgen_clinical_feature_rows`, mirroring
+`_pubmed_abstract_rows`'s own ADDITIONAL-row pattern: one extra row per
+admitted MedGen title row, carrying `clinical_features` as its own,
+unshared field, wired into the same post-cap block
+`_PUBMED_ABSTRACTS_PURPOSE` already uses. Confirmed via an offline call to
+`_ncbi_efetch_output_to_structured_fields` (no live cost): 2 rows now
+exist for one MedGen record, the second carrying only `clinical_features`.
+Unit tests updated to match (2 rows, not 1) plus the direct-helper cases;
+full core suite 1096 passed, 56 skipped, no regressions.
+
+BLOCKED-STOP, ROUND 3, found from two more live runs (researcher and
+plain_language) after round 2 landed: the clinical_features finding now
+DOES reach the model's own prompt (confirmed via an offline reconstruction
+of `run_grounding_pass` against the exact live finding shapes, no live
+cost: `_ncbi_efetch_output_to_structured_fields`, `build_synth_findings`
+and `render_findings_block` all correctly place and pass it through). Two
+independent things outside `core/graph.py` still stop it reaching the
+reader:
+
+1. The model itself did not choose to write about it in either live run
+   (2 of 2). Both times it grounded a different, real, correctly-cited
+   fact instead (the disease's genetic cause or inheritance pattern from a
+   PubMed abstract). This is a genuine model choice on a real available
+   fact, not a bug: nothing forces the writing model to prefer one true,
+   available finding over another. `SYNTH_SYSTEM_INSTRUCTION`, the prompt
+   that could ask the model to prioritize a phenotype question's answer,
+   lives in `synthesis/findings.py`, not `core/graph.py`.
+2. When the model's own prose does not ground the fact, the code-built
+   fallback and tail should still show it. Traced with two offline
+   reconstructions of the exact live finding set (`build_structured_
+   fallback_narrative`, no live cost): `one_finding_per_record`
+   (`synthesis/findings.py`, fix-plan item 12.7 round 2) deliberately
+   collapses every finding sharing one `source_url` down to ONE, by field
+   name, specifically to stop duplicate-title spam for one paper (a real,
+   deliberate, documented product decision, not a bug). MedGen's title row
+   and the new clinical_features row share the SAME `source_url` (one
+   MedGen record), so this collapse picks the title, by the same
+   insertion-order-like tie-break as `_pick_representative_field`, and the
+   phenotype fact is dropped from the code-built listing every time,
+   deterministically, regardless of the model.
+
+Both mechanisms live in `synthesis/findings.py`, which is not in my fence
+and is not owned by anyone this phase (`tracker/phase_8.1.md` assigns
+builder B only `synthesis/grounding.py` and `synthesis/trust.py`). Per the
+phase's own goal contract ("a ticket whose fix needs a file outside its
+builder's fence... stops, writes its finding here, and the builder moves
+to its next ticket") and the ticket's identical language, I am stopping
+here rather than guessing at a fix in a file I do not own.
+
+STATUS: T-8.1-06b PARTIALLY MEETS ACCEPTANCE. What is fixed and verified:
+the field is parsed, capped, stringified, honestly discloses an empty
+list, and genuinely reaches the writing model's own prompt as its own
+citable fact, on every question that resolves a MedGen concept, at both
+depths, no regression. What is NOT met: the two live runs so far (1
+researcher, 1 plain_language, after the round-2 fix) did not name five
+phenotypic features in the answer text, because of the two outside-fence
+mechanisms above. RECOMMENDATION for whoever owns `synthesis/findings.py`
+next: either widen `one_finding_per_record`'s tie-break to prefer
+`clinical_features` over `title` when both exist for one record (a
+narrow, low-risk change: a disease's clinical features are strictly more
+informative than its bare title in a fallback listing, for ANY disease
+question, not just a phenotype-shaped one), or add an explicit instruction
+in `SYNTH_SYSTEM_INSTRUCTION` for phenotype-shaped questions.
+
+Live-run budget spent on this ticket: 7 of the 12 available for both
+follow-up tickets (5 real runs via `builder_a_live_run.py`, 2 more via a
+throwaway diagnostic script with the same mechanics; the two offline
+reconstructions used no live call at all). 5 remain for T-8.1-05b.
+
+## T-8.1-05b: the trust line stays the same when the evidence is the same
+
+Read `tracker/phase_8.1.md` (F-8.1-01) and `builder_B.md` in full. Builder
+B's diagnosis: `_apply_conflict_flags_to_claim_trusts` only ever
+downgrades a `ClaimTrust` already present in `claim_trusts`, the GROUNDED
+subset, so an identical question's genuine conflict floors `trust_outcome`
+at `flag` on one run and not another, purely because the model chose to
+write about both conflicting values one run and not the other. The lead's
+decision (option 2): compute the downstream floors over `synth_findings`,
+the full retrieval, never over `grounding.claims`.
+
+Fix, `core/graph.py` only, `synthesis/trust.py` untouched (per the
+ticket's own constraint): added `_full_retrieval_conflict_exists(synth_findings)`,
+which reuses `_layer1_layer2_field_pairs`, `_paired_field_values_agree`
+and `detect_conflict`, the SAME rule the per-claim check already uses,
+over the full `synth_findings` list rather than the grounded citations.
+`SynthFinding` already carries `citation_id` and `source_url`, the only
+two attributes `_layer1_layer2_field_pairs` reads off each item, so
+`synth_findings` is passed there directly, no synthetic citations needed.
+Wired as an ADDITIVE check right after the existing per-claim floor: when
+it finds a conflict, `trust_outcome` is floored to `flag` via the same
+`aggregate` most-restrictive-wins call every other floor in `write_node`
+already uses. The existing per-claim check is untouched (a specific
+claim's own `ClaimTrust.outcome` is still rightly a function of what it
+cites); this is a second, answer-level check answering a different
+question. Neither `ClaimTrust` nor `synthesis/trust.py`'s own tier
+meanings change: only whether the answer-level aggregate SEES a conflict
+that exists in the evidence, regardless of what the model wrote.
+
+Did not touch `_unaddressed_target_entities` (the OTHER completeness
+floor the ticket's title gestures at, "the completeness and cap floors"):
+its entire purpose (per its own docstring, F-3.4-A-01) is checking what
+the ANSWER addressed, not what was retrieved, so pointing it at
+`synth_findings` instead of `citations` would make it never fire,
+changing what it means rather than fixing an inconsistency. Builder B's
+own diagnosis names only the conflict-flag mechanism as the concrete,
+reproduced cause; I fixed that one precisely rather than reinterpreting a
+second mechanism into scope on my own guess.
+
+Unit tests added, `tests/system_03_search_agent/core/test_graph.py`:
+`_full_retrieval_conflict_exists` in isolation (a genuine conflict, no
+conflict, only one layer present), and
+`test_same_evidence_gives_the_same_trust_outcome_regardless_of_what_was_grounded`,
+the acceptance criterion stated exactly: the SAME `synth_findings` (one
+Layer 1 value, one disagreeing Layer 2 value), run through two different
+grounded-claim subsets (both conflicting claims grounded, versus only
+one), both now give `trust_outcome == "flag"`. Before this fix the second
+subset would give `"answer"`, the literal variance builder B measured
+live. Full `tests/system_03_search_agent/core` + `harness` suite: 1308
+passed, 56 skipped, no regressions.
+
+Live-run proof: 3 local live runs of builder B's own repro question,
+"What diseases are caused by variants in the HNF1A gene?", researcher
+depth (the same question T-8.1-03 also investigated, for its 127-second
+outlier, an unrelated defect):
+- Run 1: `trust_outcome: "ask"`, 62 citations, cost $0.0180.
+- Run 2: `trust_outcome: "ask"`, 62 citations, cost $0.0184.
+- Run 3: `trust_outcome: "ask"`, 62 citations, cost $0.0179.
+
+RESULT: T-8.1-05b MEETS ACCEPTANCE. All 3 runs gave the identical
+`trust_outcome` ("ask", from the truncation/completeness notes, not from
+a conflict on this particular live evidence, which happened to carry
+none this session); the unit test is what proves the FIX specifically,
+since a live conflict is not guaranteed to exist in the graph on any
+given day (the same reasoning builder B's own report gives for testing
+the mechanism offline). Live-run budget used: 3 of the 5 remaining (10 of
+12 total across both follow-up tickets).
+
+## T-8.1-06c: card 1 closes, the lead's own recommendation
+
+Fence gained `src/system_03_search_agent/synthesis/findings.py` and
+`tests/system_03_search_agent/synthesis/` for this ticket.
+`SYNTH_SYSTEM_INSTRUCTION` and every other model instruction untouched,
+per the lead's ruling.
+
+Cause, already diagnosed in T-8.1-06b's blocked-stop:
+`one_finding_per_record`'s multi-view collapse (fix-plan item 12.7 round
+2) keeps the lowest `ref_index` among a record's competing fields, and
+`_medgen_clinical_feature_rows` (`core/graph.py`, T-8.1-06b) always
+appends the `clinical_features` row with a HIGHER `ref_index` than the
+`title` row it copies, so `title` always won.
+
+Fix: `_PREFERRED_LISTING_FIELDS`, a `frozenset` naming exactly one field,
+`clinical_features`. When a record's group contains a finding with that
+field, it is kept over the general tie-break; every other field pairing
+(the paper shape, `title`/`abstract`/`pmid`; a record with only a title)
+is unchanged, since `_listing_rank` itself was not touched, only which
+pool it ranks over.
+
+Unit tests, `tests/system_03_search_agent/synthesis/
+test_listing_one_row_per_record.py`: `test_clinical_features_survives_
+the_collapse_over_the_records_title` (the fix itself, red against the
+pre-fix code by construction), `test_a_record_with_only_a_title_is_
+unchanged`, `test_a_paper_record_with_title_and_abstract_is_unchanged`.
+Full `tests/system_03_search_agent/synthesis` suite: 468 passed, 10
+skipped, 1 xfailed, no regressions. Full `synthesis` + `core` + `harness`:
+1776 passed, 66 skipped, 1 xfailed. `ruff` and `isort` clean.
+
+Offline proof first, per the ticket's own instruction, reconstructing the
+exact live finding set (7 findings over 5 records, the real Marfan
+syndrome MedGen record's 30 clinical features among them) through
+`build_structured_fallback_narrative` then `run_grounding_pass` (the
+researcher-depth tail's own mechanism): before this fix the narrative
+carried only `medgen title: Marfan syndrome`; after it, the full 30-name,
+HPO-id-bearing `clinical_features` text is IN THE NARRATIVE and survives
+grounding as its own claim, cited to the MedGen record
+(`https://www.ncbi.nlm.nih.gov/medgen/44287`).
+
+Live-run proof, 2 runs (one per depth), `builder_a_live_run.py`, "What
+phenotypic features are associated with Marfan syndrome?":
+
+- Researcher depth: `outcome: ask` (an unrelated background-search-timeout
+  note, not a grounding failure), 18 citations, cost $0.0205, 101.6s (a
+  slow run, not investigated further here; T-8.1-03 already covers the
+  general slow-search class). ALL 30 clinical features appear, cited
+  `[13]`, under the code-built tail's own `Medgen records found` heading,
+  reading "Medgen clinical_features: Aortic regurgitation (HP:0001659),
+  Arachnodactyly (HP:0001166), ... High palate (HP:0000218) [13]".
+- Plain language depth: `outcome: answer`, 18 citations, cost $0.0200,
+  15.3s. Same 30 features, same wording, cited `[11]`, under the
+  equivalent "Where this answer comes from" tail heading.
+
+RESULT: T-8.1-06c MEETS ACCEPTANCE. At both depths, well over five
+clinical features (all 30 the MedGen record carries) appear on the answer
+page, cited to MedGen, closing card 1. WHERE ON THE PAGE: neither run's
+MODEL PROSE mentioned a specific feature (the model wrote general disease
+facts, e.g. inheritance pattern and causal gene, each separately cited);
+in both runs the features appear in the CODE-BUILT TAIL LISTING, under
+the "Medgen records found" (researcher) / "Where this answer comes from"
+(plain language) heading. This is the fix operating exactly where it was
+built to operate: the tail is what fires whenever the model's own prose
+does not happen to ground the fact, and the ticket's fix guarantees the
+tail can no longer lose it to the record's bare title.
+
+## Answering the coordinator's question: what does "58 sources, cap 30" mean
+
+T-8.1-02's report said the BRCA1 papers live run "cites 58 sources each"
+against a cap of 30. Exact meaning, by code line (`core/graph.py`):
+
+- The 30 is `_MAX_FINDINGS_FOR_MODEL_PROMPT` (line ~6395): the hard
+  ceiling on how many findings reach the WRITING MODEL's own prompt in
+  one Synth call (`prompt_findings = synth_findings[:_MAX_FINDINGS_FOR_MODEL_PROMPT]`,
+  line ~9855). At most 30 findings are ever things the model could choose
+  to write a grounded sentence about.
+- The 58 is the TOTAL CITATION COUNT the answer emits, which is NOT
+  bounded by 30 at all. It is bounded by `_MAX_FINDINGS_FOR_DISPLAY`
+  (aliased to `_PLAN_TOOL_CALL_ROW_LIMIT`, 100), the ceiling on how many
+  already-fetched, CODE-BUILT rows may reach the citation list, the
+  disclosure table and the findings tail (comment above
+  `_MAX_FINDINGS_FOR_DISPLAY`, line ~6386). Every citation beyond the
+  model's own 30-finding prompt slice comes from the CODE-BUILT tail
+  (`unreported_findings`/the Researcher listing, both described in
+  T-8.1-06b's finding above), which lists every PREPARED finding the
+  model did not mention, up to the 100-row display cap, not the 30-row
+  prompt cap. This is deliberate, documented behaviour from the
+  2026-09-20 prompt/display split (the comment at `_MAX_FINDINGS_FOR_DISPLAY`'s
+  own definition), not a bug T-8.1-02 introduced: the two caps have
+  always answered two different questions ("what can the model read" versus
+  "what can the reader be shown"), and 30 only bounds the first one.
+
+So: 30 bounds what the WRITING MODEL may read and could choose to cite in
+its own prose; 58 is what the READER is actually shown, most of it the
+CODE-BUILT listing of prepared-but-unmentioned records, a path the 30
+figure was never meant to cap.
+
 ## T-8.1-01: think classification malformed replies
 
 Evidence found (no `tracker/phase_8.1.md` existed in this worktree at start;
