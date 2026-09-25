@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-24.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE NEXT ACTION is item 1 of the To do column on the board, `testing/UI_fix_plan.md`; the cutoff is "Where we stopped" in `testing/UI_fixes_done.md`. Authoritative build state: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 645 (DECISIONS.md).
+Decisions logged: 652 (DECISIONS.md).
 
 Deliverables produced:
 
