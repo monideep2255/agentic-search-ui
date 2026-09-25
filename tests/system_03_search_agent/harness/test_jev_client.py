@@ -185,3 +185,41 @@ async def test_call_jev_never_retries(monkeypatch: pytest.MonkeyPatch) -> None:
             api_key="test-key",
         )
     assert mock_post.call_count == 1
+
+
+# Builder J, F-J-03: the decision's description rides in the endpoint's own
+# `instructions` and `criteria` fields; `state` carries the person's text only.
+
+
+def test_build_body_defaults_are_unchanged() -> None:
+    body = jev_client_module._build_body(
+        model="m", question_key="k", state="s", options=["a", "b"]
+    )
+    question = body["questions"]["k"]
+    assert question["instructions"] == (
+        "Read the state and answer with exactly one of the offered options."
+    )
+    assert question["criteria"] == {
+        "a": "Choose 'a' when it is the best answer for this decision.",
+        "b": "Choose 'b' when it is the best answer for this decision.",
+    }
+
+
+@pytest.mark.asyncio
+async def test_call_jev_sends_the_callers_description(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_post = AsyncMock(return_value=_response(_success_body()))
+    monkeypatch.setattr(jev_client_module, "_post", mock_post)
+    await call_jev(
+        model="typesafe/jev-1.13",
+        question_key="guardrail.relevancy",
+        state="the person's own words",
+        options=["relevant", "not_relevant"],
+        api_key="test-key",
+        instructions="Decide whether it is biomedical.",
+        criteria={"relevant": "It is.", "not_relevant": "It is not."},
+    )
+    body = mock_post.await_args.args[1]
+    question = body["questions"]["guardrail.relevancy"]
+    assert body["state"] == "the person's own words"
+    assert question["instructions"] == "Decide whether it is biomedical."
+    assert question["criteria"] == {"relevant": "It is.", "not_relevant": "It is not."}

@@ -89,7 +89,7 @@ pipeline gate.
 from __future__ import annotations
 
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Annotated, Any
 
 import httpx
@@ -139,8 +139,32 @@ class JevCallError(RuntimeError):
         self.reason = reason
 
 
-def _build_body(*, model: str, question_key: str, state: str, options: Sequence[str]) -> dict[str, Any]:
-    criteria = {opt: f"Choose {opt!r} when it is the best answer for this decision." for opt in options}
+_GENERIC_INSTRUCTIONS = "Read the state and answer with exactly one of the offered options."
+
+
+def _build_body(
+    *,
+    model: str,
+    question_key: str,
+    state: str,
+    options: Sequence[str],
+    instructions: str | None = None,
+    criteria: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """The request body.
+
+    `instructions` and `criteria` are where the caller says WHAT is being
+    decided (build phase 8.2 wave 2, builder J). Both are code-authored,
+    fixed text, never user content: the person's words go in `state` and
+    nowhere else, so an instruction and the data it judges never share a
+    field. Omitted, both fall back to the generic text builder D shipped,
+    byte for byte. Measured on 2026-09-25 with that generic text, Jev
+    admitted "what is the best pizza in Chicago" as on topic at 0.44 and
+    asked "Any trials for GERD?" back; with each decision described it
+    answered 21 of 21 probes correctly (report: builder_J.md, F-J-03).
+    """
+    if criteria is None:
+        criteria = {opt: f"Choose {opt!r} when it is the best answer for this decision." for opt in options}
     return {
         "model": model,
         "state": state,
@@ -148,10 +172,8 @@ def _build_body(*, model: str, question_key: str, state: str, options: Sequence[
             question_key: {
                 "type": "choice",
                 "options": list(options),
-                "instructions": (
-                    "Read the state and answer with exactly one of the offered options."
-                ),
-                "criteria": criteria,
+                "instructions": instructions if instructions is not None else _GENERIC_INSTRUCTIONS,
+                "criteria": dict(criteria),
             }
         },
     }
@@ -175,6 +197,8 @@ async def call_jev(
     state: str,
     options: Sequence[str],
     api_key: str,
+    instructions: str | None = None,
+    criteria: Mapping[str, str] | None = None,
 ) -> JevResult:
     """Ask Jev to pick one of `options` for the decision keyed by `question_key`.
 
@@ -182,6 +206,8 @@ async def call_jev(
     owns bounding its length before this function is called
     (ai-security-standards: only bounded state and the closed option set
     ever reach an external model, never raw user content unbounded).
+    `instructions` and `criteria` describe the decision itself and go in
+    the endpoint's own fields for them; see `_build_body`.
 
     Raises:
         JevCallError: reason="timeout" on a request that does not complete
@@ -198,7 +224,14 @@ async def call_jev(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    body = _build_body(model=model, question_key=question_key, state=state, options=options)
+    body = _build_body(
+        model=model,
+        question_key=question_key,
+        state=state,
+        options=options,
+        instructions=instructions,
+        criteria=criteria,
+    )
 
     start = time.monotonic()
     try:

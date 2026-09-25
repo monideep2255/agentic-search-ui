@@ -50,7 +50,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from system_03_search_agent.contracts.events import DecisionRecord
 from system_03_search_agent.harness import cost_control
@@ -78,21 +78,69 @@ _GUARD_BUDGET_S = 15.0
 _DECIDE_BUDGET_S = _GUARD_BUDGET_S
 
 
-def _build_guard_messages(state: str, options: Sequence[str]) -> list[Message]:
+#: A ceiling on the caller's description of a decision. The text is
+#: code-authored and fixed per decision point, never user content, so this
+#: is a bound on a programming mistake rather than on an attacker.
+_DESCRIPTION_MAX_CHARS = 1000
+
+
+def _check_description(
+    point: str,
+    options: Sequence[str],
+    instructions: str | None,
+    criteria: Mapping[str, str] | None,
+) -> None:
+    """Reject a description that does not fit the decision it describes.
+
+    A criterion for an option that is not offered, or an offered option
+    with no criterion, would tell the two models different things about
+    the same choice, so both are programming errors, raised rather than
+    sent.
+    """
+    if instructions is not None and len(instructions) > _DESCRIPTION_MAX_CHARS:
+        raise ValueError(f"decide() for {point!r}: instructions exceed {_DESCRIPTION_MAX_CHARS} characters")
+    if criteria is None:
+        return
+    if set(criteria) != set(options):
+        raise ValueError(
+            f"decide() for {point!r}: criteria must name exactly the offered options "
+            f"{list(options)!r}, got {sorted(criteria)!r}"
+        )
+    for option, text in criteria.items():
+        if len(text) > _DESCRIPTION_MAX_CHARS:
+            raise ValueError(f"decide() for {point!r}: the criterion for {option!r} is too long")
+
+
+def _build_guard_messages(
+    state: str,
+    options: Sequence[str],
+    instructions: str | None = None,
+    criteria: Mapping[str, str] | None = None,
+) -> list[Message]:
     """One narrow classification prompt: no stable prefix (this is
     classification-shaped work, the same reason `_dispatch_tier_call`
     skips the prefix for the guardrail's own attack classifier and
     Think's classification call; see `core/graph.py`'s module docstring).
+
+    The decision's own description, when the caller gives one, goes in the
+    SYSTEM message and the person's text alone in the user message, so the
+    instruction and the data it judges never share a turn. Without the
+    description the guard saw only option names (builder J, F-J-03): its
+    reply to "What is GERD?" for `think.ask_back` was unparseable.
     """
     options_line = ", ".join(repr(opt) for opt in options)
+    content = (
+        "Answer with exactly one of the offered options and nothing else. "
+        f"Options: {options_line}"
+    )
+    if instructions:
+        content += f"\n\nThe decision: {instructions}"
+    if criteria:
+        content += "\n\nWhen to choose each option:\n" + "\n".join(
+            f"- {opt!r}: {criteria[opt]}" for opt in options
+        )
     return [
-        {
-            "role": "system",
-            "content": (
-                "Answer with exactly one of the offered options and nothing else. "
-                f"Options: {options_line}"
-            ),
-        },
+        {"role": "system", "content": content},
         {"role": "user", "content": state},
     ]
 
@@ -113,7 +161,12 @@ def _parse_guard_choice(raw: str, options: Sequence[str]) -> str | None:
 
 
 async def _run_guard_pick(
-    harness: Harness, trace_id: str, state: str, options: Sequence[str]
+    harness: Harness,
+    trace_id: str,
+    state: str,
+    options: Sequence[str],
+    instructions: str | None = None,
+    criteria: Mapping[str, str] | None = None,
 ) -> str | None:
     """The guard tier's own pick for the same closed-option question.
 
@@ -129,7 +182,7 @@ async def _run_guard_pick(
         cost_control.check_per_query_cap(harness, trace_id, "guard")
     except QueryCapExceededError:
         return None
-    messages = _build_guard_messages(state, options)
+    messages = _build_guard_messages(state, options, instructions, criteria)
     try:
         response = await harness.enforce_timeout(
             "guardrail", harness.call_tier("guard", messages), _GUARD_BUDGET_S
@@ -147,6 +200,8 @@ async def _run_jev_pick(
     options: Sequence[str],
     model: str,
     api_key: str,
+    instructions: str | None = None,
+    criteria: Mapping[str, str] | None = None,
 ) -> JevResult:
     """Jev's pick, cap-checked first exactly like the guard call above.
 
@@ -164,7 +219,13 @@ async def _run_jev_pick(
     # would have refused.
     cost_control.check_per_query_cap(harness, trace_id, "guard")
     result = await call_jev(
-        model=model, question_key=point, state=state, options=options, api_key=api_key
+        model=model,
+        question_key=point,
+        state=state,
+        options=options,
+        api_key=api_key,
+        instructions=instructions,
+        criteria=criteria,
     )
     # Charged under the "guard" tier bucket for the same reason the cap
     # check above reuses it: `Harness.track_cost`'s accumulator is not
@@ -180,8 +241,20 @@ async def decide(
     point: str,
     state: str,
     options: Sequence[str],
+    *,
+    instructions: str | None = None,
+    criteria: Mapping[str, str] | None = None,
 ) -> DecisionRecord:
     """Decide one closed-option question, `point`, over the bounded `state`.
+
+    `instructions` (one line saying what is being decided) and `criteria`
+    (one line per option saying when to choose it) are the caller's fixed,
+    code-authored description of the decision. Both models receive the
+    same description: the guard tier in its system message, Jev in the
+    endpoint's own `instructions` and `criteria` fields. `state` stays the
+    person's bounded text only. Every wired decision point passes both;
+    without them the models see only option names, which measured wrong on
+    three of the five decision shapes (builder J, F-J-03).
 
     With `CLASSIFIER_PROVIDER` unset or anything other than `"jev"` (the
     code default, `"guard"`): Jev is never called. The guard tier decides
@@ -199,17 +272,21 @@ async def decide(
     falls back to `options[0]`).
 
     Raises:
-        ValueError: if `options` is empty. There is nothing to decide
-            between.
+        ValueError: if `options` is empty (there is nothing to decide
+            between), or the description does not fit the options (see
+            `_check_description`).
     """
     if not options:
         raise ValueError(f"decide() for {point!r} was given an empty options list")
+    _check_description(point, options, instructions, criteria)
 
     bounded_state = state[:_STATE_MAX_CHARS]
     provider = os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower()
 
     if provider != "jev":
-        guard_choice = await _run_guard_pick(harness, trace_id, bounded_state, options)
+        guard_choice = await _run_guard_pick(
+            harness, trace_id, bounded_state, options, instructions, criteria
+        )
         chosen = guard_choice if guard_choice is not None else options[0]
         return DecisionRecord(
             name=point,
@@ -223,8 +300,10 @@ async def decide(
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     model = resolve_jev_model()
 
-    guard_coro = _run_guard_pick(harness, trace_id, bounded_state, options)
-    jev_coro = _run_jev_pick(harness, trace_id, point, bounded_state, options, model, api_key)
+    guard_coro = _run_guard_pick(harness, trace_id, bounded_state, options, instructions, criteria)
+    jev_coro = _run_jev_pick(
+        harness, trace_id, point, bounded_state, options, model, api_key, instructions, criteria
+    )
 
     try:
         guard_outcome, jev_outcome = await asyncio.wait_for(

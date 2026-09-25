@@ -245,3 +245,104 @@ async def test_decide_rejects_empty_options() -> None:
     harness = Harness(trace_id="t10")
     with pytest.raises(ValueError, match="empty options"):
         await decide(harness, "t10", "guardrail.relevancy", "x", [])
+
+
+# ---------------------------------------------------------------------------
+# Builder J, F-J-03: both models are told what is being decided. Without a
+# description the guard saw only option names and Jev a generic line, and
+# live probes picked wrongly on three of five decision shapes.
+# ---------------------------------------------------------------------------
+
+_INSTRUCTIONS = "Decide whether the question is about biology or medicine."
+_CRITERIA = {
+    "relevant": "Its subject is biological or medical.",
+    "not_relevant": "Its subject is something else entirely.",
+}
+
+
+@pytest.mark.asyncio
+async def test_guard_gets_the_description_in_its_system_message_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    _patch_cap(monkeypatch)
+    mock_acompletion = _patch_guard(monkeypatch, reply="relevant")
+
+    harness = Harness(trace_id="t11")
+    await decide(
+        harness,
+        "t11",
+        "guardrail.relevancy",
+        "the person's own words",
+        _OPTIONS,
+        instructions=_INSTRUCTIONS,
+        criteria=_CRITERIA,
+    )
+
+    messages = mock_acompletion.call_args.kwargs["messages"]
+    system = next(m["content"] for m in messages if m["role"] == "system")
+    user_turns = [m["content"] for m in messages if m["role"] == "user"]
+    assert _INSTRUCTIONS in system
+    for text in _CRITERIA.values():
+        assert text in system
+    # The person's text is the user turn, alone: no instruction rides with it.
+    assert user_turns == ["the person's own words"]
+
+
+@pytest.mark.asyncio
+async def test_jev_gets_the_same_description(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    _patch_cap(monkeypatch)
+    _patch_guard(monkeypatch, reply="relevant")
+    mock_jev = AsyncMock(return_value=_jev_result(choice="relevant"))
+    monkeypatch.setattr(decide_module, "call_jev", mock_jev)
+
+    harness = Harness(trace_id="t12")
+    await decide(
+        harness,
+        "t12",
+        "guardrail.relevancy",
+        "the person's own words",
+        _OPTIONS,
+        instructions=_INSTRUCTIONS,
+        criteria=_CRITERIA,
+    )
+
+    kwargs = mock_jev.await_args.kwargs
+    assert kwargs["state"] == "the person's own words"
+    assert kwargs["instructions"] == _INSTRUCTIONS
+    assert dict(kwargs["criteria"]) == _CRITERIA
+
+
+@pytest.mark.asyncio
+async def test_criteria_that_do_not_name_the_options_are_refused() -> None:
+    harness = Harness(trace_id="t13")
+    with pytest.raises(ValueError, match="criteria must name exactly"):
+        await decide(
+            harness,
+            "t13",
+            "guardrail.relevancy",
+            "x",
+            _OPTIONS,
+            criteria={"relevant": "only one of the two"},
+        )
+
+
+@pytest.mark.asyncio
+async def test_no_description_keeps_the_original_guard_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    _patch_cap(monkeypatch)
+    mock_acompletion = _patch_guard(monkeypatch, reply="relevant")
+
+    await decide(Harness(trace_id="t14"), "t14", "guardrail.relevancy", "x", _OPTIONS)
+
+    system = next(
+        m["content"] for m in mock_acompletion.call_args.kwargs["messages"] if m["role"] == "system"
+    )
+    assert system == (
+        "Answer with exactly one of the offered options and nothing else. "
+        "Options: 'relevant', 'not_relevant'"
+    )
