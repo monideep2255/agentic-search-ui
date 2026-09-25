@@ -348,7 +348,7 @@ _MANY_DISEASE_ROWS = [
         "graph_snapshot_version": "v1",
         "vocabulary_artifact_fields": [],
     }
-    for index in range(1, 27)
+    for index in range(1, 37)
 ]
 
 
@@ -371,10 +371,13 @@ async def test_the_opening_count_matches_the_list_beneath_it(monkeypatch) -> Non
     display list for that one caller.
 
     RED AGAINST THE OLD CODE by construction: with 26 display rows and a prompt
-    slice of 20, the pre-fix build opened "Found 20 disease records".
+    slice of 20, the pre-fix build opened "Found 20 disease records". (T-8.1-02
+    raised the prompt slice to 30; the fixture below was widened to 36 rows,
+    from its original 26, so this arm keeps distinguishing the two scopes
+    rather than passing vacuously against the larger cap.)
 
-    POPULATE CHECK: the row count here (26) must exceed
-    `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20) or the two scopes coincide and this
+    POPULATE CHECK: the row count here (36) must exceed
+    `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30) or the two scopes coincide and this
     arm proves nothing, so it asserts that relationship rather than trusting
     the literal.
     """

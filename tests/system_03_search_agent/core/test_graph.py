@@ -1515,11 +1515,13 @@ def test_truncated_answer_note_is_one_sentence_opening_with_note(
 # Answer quality fix (2026-09-20): the prompt bound (how many findings a
 # Synth model call may see) and the display bound (how many code-built rows
 # the citation list, the table and the findings tail may carry) are now two
-# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20, unchanged) and
-# `_MAX_FINDINGS_FOR_DISPLAY` (100, bounded by the tool's own `row_limit`).
-# Before this split, one shared cap of 20 meant a table could never carry
-# more rows than a model prompt could safely hold, even though every row is
-# built entirely in code and a model never reads or writes it.
+# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30 as of T-8.1-02,
+# 2026-09-25; 20 at the time of this split) and `_MAX_FINDINGS_FOR_DISPLAY`
+# (100, bounded by the tool's own `row_limit`, unaffected by T-8.1-02 since
+# 100 already exceeds the new 30). Before the 2026-09-20 split, one shared
+# cap of 20 meant a table could never carry more rows than a model prompt
+# could safely hold, even though every row is built entirely in code and a
+# model never reads or writes it.
 # ---------------------------------------------------------------------------
 
 

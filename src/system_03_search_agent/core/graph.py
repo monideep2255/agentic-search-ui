@@ -6358,7 +6358,7 @@ async def act_node(state: GraphState) -> dict[str, Any]:
 # happened.
 # ---------------------------------------------------------------------------
 
-_MAX_CITATIONS_PER_ANSWER = 20
+_MAX_CITATIONS_PER_ANSWER = 30
 
 # Answer quality fix (2026-09-20). `_MAX_CITATIONS_PER_ANSWER` above used to
 # be the ONE number doing two different jobs at once: how many findings
@@ -6369,19 +6369,30 @@ _MAX_CITATIONS_PER_ANSWER = 20
 # was incomplete, even though the table rows below the prose are built
 # entirely in code from a finding's own structured fields and never pass
 # through a model at all. `_MAX_CITATIONS_PER_ANSWER` itself is left alone,
-# unchanged, for `_citations_from_findings` below, a build-phase-2.1-era
-# function that is not on this live path (see its own docstring) and whose
-# tests assert on it directly.
+# unchanged in VALUE-SOURCE terms, for `_citations_from_findings` below, a
+# build-phase-2.1-era function that is not on this live path (see its own
+# docstring) and whose tests assert on it directly.
+#
+# T-8.1-02, DECISIONS.md 2026-09-25 ("the per-answer citation cap
+# `_MAX_CITATIONS_PER_ANSWER` rises from 20 to 30"): raised here from 20 to
+# 30. That decision's own reasoning text describes this constant as "the
+# same constant [that] bounds what the writing model sees", which was true
+# BEFORE the split above and is not true of THIS constant any more; it
+# describes `_MAX_FINDINGS_FOR_MODEL_PROMPT` below, which is raised to 30
+# in the same commit so the decision's intent (a paper question can
+# actually reach 30 citations) is honoured on the live path, not only in
+# this now-dormant constant's name.
 #
 # The hard ceiling on how many findings reach one Synth model call's own
 # prompt (`render_findings_block`/`build_synth_messages`). This is the
 # hallucination control `system-design-patterns.md` pattern 7 exists for:
 # never inline more raw facts into a model's context than it can be
 # trusted not to invent past (`synthesis/findings.py`'s own module
-# docstring makes the same point about `MAX_FINDINGS_PER_PROMPT`). The
-# VALUE is unchanged, still 20; only the name is new, so this job can never
-# again be silently re-merged with the one below.
-_MAX_FINDINGS_FOR_MODEL_PROMPT = 20
+# docstring makes the same point about `MAX_FINDINGS_PER_PROMPT`). Raised
+# from 20 to 30 by the same T-8.1-02 decision above: this is the constant
+# that decision's reasoning actually describes, so it is the one that must
+# move for a paper question to be ABLE to reach 30 cited sources.
+_MAX_FINDINGS_FOR_MODEL_PROMPT = 30
 
 # The much higher ceiling on how many already-fetched, code-built rows may
 # reach the citation list, the disclosure table and the findings tail.
@@ -9734,7 +9745,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # UI fix 11.21 wiring: the answer-shape calls take the first ten
         # slots, then every context call shares the rest one row per
         # round, so the breadth rows never crowd the graph answer out.
-        # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20), so
+        # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30), so
         # the answer's own shape always lands inside the model's prompt
         # slice too, regardless of how large the display cap grows.
         lead_quota=_LEAD_FINDINGS_QUOTA,
@@ -10454,10 +10465,14 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # fewer facts than exist. Its two sources are the findings cap (more
     # citable rows existed than `_MAX_FINDINGS_FOR_DISPLAY` could admit) and
     # the citation cap. Compared against `_MAX_FINDINGS_FOR_DISPLAY`
-    # (2026-09-20), not `_MAX_CITATIONS_PER_ANSWER`: the latter is now the
-    # model-prompt bound alone, and an answer routinely carries more than
-    # 20 citations once the tail lists the full display set, which is not a
-    # cut and must not be reported as one.
+    # (2026-09-20), not `_MAX_CITATIONS_PER_ANSWER`: T-8.1-02 corrected this
+    # comment, which previously named `_MAX_CITATIONS_PER_ANSWER` itself as
+    # "the model-prompt bound alone". That constant is dormant on this live
+    # path (see its own definition's comment); `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    # is the actual model-prompt bound, and an answer routinely carries more
+    # than `_MAX_FINDINGS_FOR_MODEL_PROMPT` citations once the tail lists
+    # the full display set, which is not a cut and must not be reported as
+    # one.
     citations_capped = findings_capped or len(citations) >= _MAX_FINDINGS_FOR_DISPLAY
 
     # F-2.1-10/F-2.1-11/F-2.1-C12 fix: a result the user is shown only part

@@ -520,7 +520,7 @@ async def test_real_production_shape_rows_and_fields_is_bounded_and_signalled() 
 
     after = _json_bytes(finding.structured_fields)
     assert before > 15_000_000  # sanity: the hostile input really is huge
-    assert after <= 50_000  # _MAX_FINDING_TOTAL_BYTES
+    assert after <= coordinator_worker_module._MAX_FINDING_TOTAL_BYTES
     assert finding.truncated is True
     # the nested hostile description string is gone from the output at
     # anything like its original size, wherever it survived at all
@@ -666,7 +666,7 @@ async def test_total_size_ceiling_shrinks_composed_rows_past_per_field_caps() ->
     finding = await _pass_through_one(structured_fields)
 
     after = _json_bytes(finding.structured_fields)
-    assert after <= 50_000  # _MAX_FINDING_TOTAL_BYTES
+    assert after <= coordinator_worker_module._MAX_FINDING_TOTAL_BYTES
     assert finding.truncated is True
     # some rows survive; the ceiling shrinks the list, it does not empty it
     assert len(finding.structured_fields["rows"]) >= 1
