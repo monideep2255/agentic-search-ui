@@ -61,7 +61,7 @@ Source of truth, in the order the repository's own `design-consistency` rule giv
 |---|---|---|
 | Colour | 24 tokens | Grounds `#f0f0f0` and `#fff`, ink `#1b1b1b` and `#565c65`, navy `#112f4e`, blue `#205493`, three layer colours with washes, risk `#981b1e`, warn `#7a5900`, ok `#276e34` |
 | Type family | 2 stacks | Public Sans with system fallbacks, and a `ui-monospace` stack |
-| Type scale | 6 steps | 38px/800, 26px/800, 16px/400, 13.5px/400, 11px/700 uppercase, 14px mono |
+| Type scale | 6 steps | `clamp(32px,4.8vw,52px)`/800, `clamp(24px,3.1vw,33px)`/800, 16px/400, 13.5px/400, 11px/700 uppercase, 14px mono |
 | Spacing | 8 steps | 4, 8, 12, 16, 24, 32, 48, 76, all px |
 | Radius | 3 values | 8px surfaces, 4px controls, 999px pills |
 | Shadow | 1 value | Modal only, by deliberate decision |
@@ -102,16 +102,21 @@ Resolved by adding a card entry, since the code's value was correct and only the
 - The three logo rung tokens, `logoRungOnBlue1` (`#CFE1F5`), `logoRungOnBlue2` (`#9FD3A8`), `logoRungOnBlue3` (`#C3B2E6`), added to `theme.ts` on 2026-09-12 for the logo mark on the blue app bar and footer, had no card entry at all. Added as three swatches.
 - Two product-owner decisions from 2026-09-12 that the colour card stated the opposite of: the footer is now the same blue as the app bar (`AppShell.tsx`, "Set 2, R9 and R11"), not navy, and the home page sits on the canvas ground (`HomeScreen.tsx`), not a navy hero. `foundations/colors.html`'s card note and the Navy and Canvas use notes were updated to match what ships.
 
-Still open, reported rather than fixed, because both sides are a genuine value and only the product owner can pick one:
+Settled on 2026-09-25, build phase 8.5 card 34: the product owner ruled that
+the shipped `theme.ts` values win, so `foundations/type.html` was edited to
+match code rather than the other way round. The four values that used to
+disagree:
 
-| Property | Foundations card | theme.ts | File and line |
+| Property | Foundations card, before | theme.ts | File and line |
 |---|---|---|---|
 | h1 letter-spacing | -2.8% | -0.034em (-3.4%) | `docs/build/design/design-system/foundations/type.html:39`, `frontend/src/theme.ts:160` |
 | h1 size | 38px fixed | `clamp(32px, 4.8vw, 52px)` | `type.html:39`, `theme.ts:160` |
 | h2 size | 26px fixed | `clamp(24px, 3.1vw, 33px)` | `type.html:40`, `theme.ts:161` |
 | body1 line-height | 1.6 | 1.65 | `type.html:41`, `theme.ts:164` |
 
-Neither card nor code was edited for these four. Each pair is a real, working value on its own side, so changing either one is a decision, not a typo fix.
+`type.html` now carries theme.ts's h1 and h2 values verbatim, and its body1
+sample renders at 1.65 rather than inheriting the card's page-wide 1.6.
+`frontend/src/theme.ts` was not touched. This is no longer an open item.
 
 ### Coverage, and one asset worth protecting
 

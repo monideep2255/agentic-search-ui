@@ -15,12 +15,22 @@
  *
  * WHAT THIS PROVES, AND WHAT IT DOES NOT. It drives a SCRIPTED stream, so
  * it proves the renderer turns tool frames into chips and into a truthful
- * meta line. It does NOT prove the backend emits those frames. That half is
- * `tests/system_03_search_agent/core/test_phase_4_16_premise.py`, which
- * drives the real loop, plus its mutation harness. The two halves are
- * deliberately in different languages against different surfaces, and
- * NEITHER alone would have caught the shipped defect: the producer gate
- * cannot see the chip, and this cannot see a silent producer.
+ * meta line. It does NOT prove the backend emits those frames. Build phase
+ * 8.5 deleted the dedicated premise/mutation pair that used to own that
+ * half (`test_phase_4_16_premise.py` and `test_phase_4_16_mutation.py`,
+ * card 37); `act_node` never emitting `tool_start` or `tool_result` is now
+ * caught incidentally by several backend suites that happen to assert on
+ * those event types (`test_bare_topic_clarification.py`,
+ * `test_breadth_wiring.py`, `test_clarification.py`,
+ * `test_layer_handoff.py`), not by a dedicated gate. Whether the two
+ * frames arrive LIVE rather than buffered at Act's return (the build
+ * phase 4.16 timing regression) is covered only by the product reviewer's
+ * time-to-answer measure, per the phase 8.5 product-owner ruling
+ * (DECISIONS.md, 2026-09-25, card 37), not by any test. The two halves
+ * that remain are deliberately in different languages against different
+ * surfaces, and NEITHER alone would have caught the shipped defect: the
+ * producer side cannot see the chip, and this cannot see a silent
+ * producer.
  *
  * WHY NOT DRIVE THE REAL BACKEND HERE, which was tried first and abandoned
  * with the reason recorded rather than the attempt hidden. The e2e mock
