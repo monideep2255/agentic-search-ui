@@ -140,38 +140,6 @@ def ground_claim(claim_text: str, field_value: str) -> bool:
     return a == b or a in b or b in a
 
 
-def ground_claim_multi(claim_text: str, field_values: list[str]) -> bool:
-    """`ground_claim`, applied once per fact when a clause names more than one.
-
-    T-8.1-04 (2026-09-25). Measured live: "What genes are associated with
-    MODY?" wrote clauses of the shape "GENE_NAME ... DISEASE_NAME [5][6]",
-    one marker per fact stacked at the clause's end rather than one marker
-    immediately after each fact. `ground_claim` compares the WHOLE clause
-    against ONE finding's value by containment in either direction; a
-    clause naming two facts is neither a superstring nor a substring of
-    either fact alone, so the single-finding check fails on every such
-    clause regardless of how faithfully the model transcribed each fact.
-
-    This is not a looser match. It is the SAME containment rule Section
-    8.2 step 5 already states, run once per stacked finding, in the one
-    safe direction: the finding's own value must appear literally,
-    character for character after normalization, somewhere in the clause.
-    The symmetric `claim in value` direction from `ground_claim` is
-    dropped here on purpose, since a clause naming two or more facts can
-    never be a substring of any single one of them; a caller with exactly
-    one finding keeps the original two-directional `ground_claim` and
-    never reaches this function.
-    """
-    claim = normalize(claim_text)
-    if not claim:
-        return False
-    for value in field_values:
-        v = normalize(value)
-        if not v or v not in claim:
-            return False
-    return True
-
-
 # Standalone integer tokens. `\b` on both sides is what keeps this from
 # firing on the digits inside an identifier: "BRCA1" and "MedGen:C0346153"
 # have no word boundary before their digits, so neither yields a token,
@@ -1287,62 +1255,25 @@ def run_grounding_pass(
             # code-built from the graph schema, never model or user
             # supplied, so widening what it licenses carries none of the
             # risk a widening on `question` or on model output would.
-            # T-8.1-04 (2026-09-25). STACKED MARKERS ON ONE CLAUSE. Measured
-            # live: "What genes are associated with MODY?" wrote clauses
-            # shaped "gene name ... disease name [5][6]", one marker per
-            # fact but both stacked at the clause's end rather than each
-            # immediately after its own fact. `_asserts_something` already
-            # drops the trailing marker's own segment as empty, so a
-            # single-finding check can only ever license HALF of a two-fact
-            # clause and this shape failed on every run of that question.
-            # `stack_findings` is every finding whose marker follows this
-            # one with nothing asserted in between: the same adjacency
-            # `pairs` below already uses for a QUOTED trailing marker,
-            # widened here to a bare one too. A clause naming N facts is
-            # then checked against the UNION of the N findings it actually
-            # cites, never against a finding the model did not mark.
-            stack_findings: list[SynthFinding] = [finding]
-            for later_text, later_marker, _later_key in segments[segment_index + 1 :]:
-                if later_marker is None or _asserts_something(_clean_claim(later_text)):
-                    break
-                later_finding = by_ref.get(later_marker)
-                if later_finding is None:
-                    continue
-                stack_findings.append(later_finding)
-
-            supporting_text = " ".join(
-                f"{f.field_value} {f.field} {f.field.replace('_', ' ')} "
-                f"{f.curie} {f.entity_type}"
-                for f in stack_findings
-            ) + f" {licensed_question}"
-            combined_values = " ".join(f.field_value for f in stack_findings)
-            combined_context = " ".join(
-                f"{f.curie} {f.entity_type}" for f in stack_findings
+            supporting_text = (
+                f"{finding.field_value} {finding.field} "
+                f"{finding.field.replace('_', ' ')} {finding.curie} "
+                f"{finding.entity_type} {licensed_question}"
             )
             quote = (
                 evidence_quotes[quote_key]
                 if quote_key is not None and 0 <= quote_key < len(evidence_quotes)
                 else None
             )
-            # Section 8.2 step 5, as the spec writes it, when the clause
-            # names exactly one fact (the ordinary case, unchanged). The
-            # per-finding form (`ground_claim_multi`) applies only when this
-            # clause's own markers named more than one.
-            claim_grounds = (
-                ground_claim(claim_text, finding.field_value)
-                if len(stack_findings) == 1
-                else ground_claim_multi(
-                    claim_text, [f.field_value for f in stack_findings]
-                )
-            )
             strict_ok = not (
-                not claim_grounds
+                # Section 8.2 step 5, as the spec writes it.
+                not ground_claim(claim_text, finding.field_value)
                 # F-2.2-02: invented NUMBERS.
                 or not numbers_are_supported(
                     claim_text,
-                    combined_values,
+                    finding.field_value,
                     licensed_question,
-                    record_context=combined_context,
+                    record_context=f"{finding.curie} {finding.entity_type}",
                 )
                 # F-2.2-A-01/03/04: invented WORDS, including the negations
                 # and reversals that made a finding support its own denial.
@@ -1438,25 +1369,6 @@ def run_grounding_pass(
                             claim_text=claim_text,
                             finding=extra_finding,
                             evidence_quote=extra_quote,
-                        )
-                    )
-                    segment_kept.append(True)
-            elif len(stack_findings) > 1:
-                # T-8.1-04: the strict multi-marker path above. Every
-                # stacked finding the clause was actually checked against
-                # stays cited, the same treatment `synthesized` already
-                # gives a quote carried by a later marker.
-                shown_refs = {finding.ref_index}
-                for extra_finding in stack_findings[1:]:
-                    if extra_finding.ref_index in shown_refs:
-                        continue
-                    shown_refs.add(extra_finding.ref_index)
-                    kept_parts.append(("", extra_finding.ref_index))
-                    pending_claims.append(
-                        GroundedClaim(
-                            claim_text=claim_text,
-                            finding=extra_finding,
-                            evidence_quote=None,
                         )
                     )
                     segment_kept.append(True)

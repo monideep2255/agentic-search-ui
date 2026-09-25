@@ -205,6 +205,72 @@ given day (the same reasoning builder B's own report gives for testing
 the mechanism offline). Live-run budget used: 3 of the 5 remaining (10 of
 12 total across both follow-up tickets).
 
+## T-8.1-06c: card 1 closes, the lead's own recommendation
+
+Fence gained `src/system_03_search_agent/synthesis/findings.py` and
+`tests/system_03_search_agent/synthesis/` for this ticket.
+`SYNTH_SYSTEM_INSTRUCTION` and every other model instruction untouched,
+per the lead's ruling.
+
+Cause, already diagnosed in T-8.1-06b's blocked-stop:
+`one_finding_per_record`'s multi-view collapse (fix-plan item 12.7 round
+2) keeps the lowest `ref_index` among a record's competing fields, and
+`_medgen_clinical_feature_rows` (`core/graph.py`, T-8.1-06b) always
+appends the `clinical_features` row with a HIGHER `ref_index` than the
+`title` row it copies, so `title` always won.
+
+Fix: `_PREFERRED_LISTING_FIELDS`, a `frozenset` naming exactly one field,
+`clinical_features`. When a record's group contains a finding with that
+field, it is kept over the general tie-break; every other field pairing
+(the paper shape, `title`/`abstract`/`pmid`; a record with only a title)
+is unchanged, since `_listing_rank` itself was not touched, only which
+pool it ranks over.
+
+Unit tests, `tests/system_03_search_agent/synthesis/
+test_listing_one_row_per_record.py`: `test_clinical_features_survives_
+the_collapse_over_the_records_title` (the fix itself, red against the
+pre-fix code by construction), `test_a_record_with_only_a_title_is_
+unchanged`, `test_a_paper_record_with_title_and_abstract_is_unchanged`.
+Full `tests/system_03_search_agent/synthesis` suite: 468 passed, 10
+skipped, 1 xfailed, no regressions. Full `synthesis` + `core` + `harness`:
+1776 passed, 66 skipped, 1 xfailed. `ruff` and `isort` clean.
+
+Offline proof first, per the ticket's own instruction, reconstructing the
+exact live finding set (7 findings over 5 records, the real Marfan
+syndrome MedGen record's 30 clinical features among them) through
+`build_structured_fallback_narrative` then `run_grounding_pass` (the
+researcher-depth tail's own mechanism): before this fix the narrative
+carried only `medgen title: Marfan syndrome`; after it, the full 30-name,
+HPO-id-bearing `clinical_features` text is IN THE NARRATIVE and survives
+grounding as its own claim, cited to the MedGen record
+(`https://www.ncbi.nlm.nih.gov/medgen/44287`).
+
+Live-run proof, 2 runs (one per depth), `builder_a_live_run.py`, "What
+phenotypic features are associated with Marfan syndrome?":
+
+- Researcher depth: `outcome: ask` (an unrelated background-search-timeout
+  note, not a grounding failure), 18 citations, cost $0.0205, 101.6s (a
+  slow run, not investigated further here; T-8.1-03 already covers the
+  general slow-search class). ALL 30 clinical features appear, cited
+  `[13]`, under the code-built tail's own `Medgen records found` heading,
+  reading "Medgen clinical_features: Aortic regurgitation (HP:0001659),
+  Arachnodactyly (HP:0001166), ... High palate (HP:0000218) [13]".
+- Plain language depth: `outcome: answer`, 18 citations, cost $0.0200,
+  15.3s. Same 30 features, same wording, cited `[11]`, under the
+  equivalent "Where this answer comes from" tail heading.
+
+RESULT: T-8.1-06c MEETS ACCEPTANCE. At both depths, well over five
+clinical features (all 30 the MedGen record carries) appear on the answer
+page, cited to MedGen, closing card 1. WHERE ON THE PAGE: neither run's
+MODEL PROSE mentioned a specific feature (the model wrote general disease
+facts, e.g. inheritance pattern and causal gene, each separately cited);
+in both runs the features appear in the CODE-BUILT TAIL LISTING, under
+the "Medgen records found" (researcher) / "Where this answer comes from"
+(plain language) heading. This is the fix operating exactly where it was
+built to operate: the tail is what fires whenever the model's own prose
+does not happen to ground the fact, and the ticket's fix guarantees the
+tail can no longer lose it to the record's bare title.
+
 ## Answering the coordinator's question: what does "58 sources, cap 30" mean
 
 T-8.1-02's report said the BRCA1 papers live run "cites 58 sources each"

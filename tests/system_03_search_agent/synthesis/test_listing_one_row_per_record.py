@@ -134,6 +134,257 @@ def test_a_record_whose_only_value_is_multi_sentence_is_never_dropped() -> None:
     assert [f.field for f in one_finding_per_record(with_title)] == ["title"]
 
 
+# ---------------------------------------------------------------------------
+# F-8.1-A04, J13 (fix-and-verify round): a MedGen record's entry is its own
+# name, and its clinical features, one finding each, are listed beneath it.
+# They are the record's details, never a competing view of it.
+# ---------------------------------------------------------------------------
+
+_MEDGEN_URL = "https://www.ncbi.nlm.nih.gov/medgen/44287"
+
+
+def _marfan_listing_findings() -> list[SynthFinding]:
+    return [
+        _finding(1, "title", "Paper about Marfan syndrome", _url(1)),
+        _finding(2, "title", "Marfan syndrome", _MEDGEN_URL),
+        _finding(3, "clinical_features", "Aortic regurgitation", _MEDGEN_URL),
+        _finding(4, "abstract", "One sentence. Two sentences.", _url(1)),
+        _finding(5, "clinical_features", "Ectopia lentis", _MEDGEN_URL),
+    ]
+
+
+def test_a_medgen_record_is_listed_by_its_own_name_not_by_a_feature() -> None:
+    """The record's one entry is the disease's title, whatever the ref order."""
+    kept = one_finding_per_record(_marfan_listing_findings())
+    assert [(f.field, f.field_value) for f in kept] == [
+        ("title", "Paper about Marfan syndrome"),
+        ("title", "Marfan syndrome"),
+    ]
+    # Even when a feature was numbered ahead of the title.
+    reordered = [
+        _finding(1, "clinical_features", "Aortic regurgitation", _MEDGEN_URL),
+        _finding(2, "title", "Marfan syndrome", _MEDGEN_URL),
+    ]
+    assert [f.field for f in one_finding_per_record(reordered)] == ["title"]
+
+
+def test_the_lists_none_sentence_never_replaces_the_disease_name() -> None:
+    """F-8.1-A04, J13: round 1 showed "MedGen lists no clinical features for
+    this condition" in place of the disease on every MedGen record."""
+    url = "https://www.ncbi.nlm.nih.gov/medgen/87433"
+    findings = [
+        _finding(1, "title", "Maturity-onset diabetes of the young", url),
+        _finding(
+            2, "clinical_features",
+            "MedGen lists no clinical features for Maturity-onset diabetes of the young", url,
+        ),
+    ]
+    kept = one_finding_per_record(findings)
+    assert [(f.field, f.field_value) for f in kept] == [
+        ("title", "Maturity-onset diabetes of the young")
+    ]
+
+
+def test_the_listing_narrative_puts_each_feature_beneath_its_record() -> None:
+    """`build_structured_fallback_narrative` lists the record's name, then
+    every one of its features, each with its own marker, then the next
+    record; nothing admitted is left unlisted."""
+    narrative = build_structured_fallback_narrative(_marfan_listing_findings())
+    markers = [int(m.strip("[]")) for m in _MARKER.findall(narrative)]
+    assert markers == [1, 2, 3, 5]
+    assert "Aortic regurgitation [3]." in narrative
+    assert "Ectopia lentis [5]." in narrative
+    assert narrative.index("Marfan syndrome [2]") < narrative.index("Aortic regurgitation [3]")
+
+
+def test_features_whose_record_has_no_entry_are_still_listed() -> None:
+    features_only = [
+        _finding(1, "clinical_features", "Aortic regurgitation", _MEDGEN_URL),
+        _finding(2, "clinical_features", "Ectopia lentis", _MEDGEN_URL),
+    ]
+    narrative = build_structured_fallback_narrative(features_only)
+    assert [int(m.strip("[]")) for m in _MARKER.findall(narrative)] == [1, 2]
+
+
+# ---------------------------------------------------------------------------
+# F-8.1-A12 (fix-and-verify round): `reserve_prompt_slots` keeps named
+# findings inside the model's prompt slice.
+# ---------------------------------------------------------------------------
+
+
+def _call_finding(ref: int, call_id: str, field: str, value: str, url: str) -> SynthFinding:
+    return SynthFinding(
+        ref_index=ref,
+        citation_id=f"{call_id}-{ref}",
+        layer="layer_1_graph" if call_id == "cy" else "layer_2_api",
+        tool="cypher_query" if call_id == "cy" else "ncbi_efetch",
+        field=field,
+        field_value=value,
+        source_url=url,
+        call_id=call_id,
+    )
+
+
+def _researcher_marfan_shape() -> list[SynthFinding]:
+    """Round 1's live shape: 43 graph rows lead, the MedGen features behind."""
+    findings = [
+        _call_finding(n, "cy", "name", f"Variant {n}", f"https://www.ncbi.nlm.nih.gov/clinvar/{n}")
+        for n in range(1, 44)
+    ]
+    findings.append(_call_finding(44, "pm", "title", "A paper", _url(1)))
+    findings.append(_call_finding(45, "mg", "title", "Marfan syndrome", _MEDGEN_URL))
+    for n in range(46, 64):
+        findings.append(_call_finding(n, "mg", "clinical_features", f"Feature {n}", _MEDGEN_URL))
+    return findings
+
+
+def test_reserved_findings_move_inside_the_prompt_window_after_the_answer_rows() -> None:
+    from system_03_search_agent.synthesis.findings import reserve_prompt_slots
+
+    findings = _researcher_marfan_shape()
+    reserved = ["mg-45"] + [f"mg-{n}" for n in range(46, 56)]
+    out = reserve_prompt_slots(findings, reserved, 30, lead_call_ids=frozenset({"cy"}))
+    window = out[:30]
+    assert [f.field_value for f in window[19:30]] == ["Marfan syndrome"] + [
+        f"Feature {n}" for n in range(46, 56)
+    ]
+    assert all(f.call_id == "cy" for f in window[:19])
+    # Dense renumbering, ref_index and the citation_id suffix together.
+    assert [f.ref_index for f in out] == list(range(1, len(findings) + 1))
+    assert all(f.citation_id == f"{f.call_id}-{f.ref_index}" for f in out)
+    # Nothing lost, nothing duplicated.
+    assert sorted(f.field_value for f in out) == sorted(f.field_value for f in findings)
+
+
+def test_reserved_findings_go_ahead_of_long_context_values() -> None:
+    """Inside the window they sit right after the leading answer rows, ahead
+    of other context such as an abstract, which the character-capped block
+    would cut first."""
+    from system_03_search_agent.synthesis.findings import reserve_prompt_slots
+
+    findings = [
+        _call_finding(1, "cy", "name", "Gene A", "https://www.ncbi.nlm.nih.gov/gene/1"),
+        _call_finding(2, "pm", "abstract", "Long abstract. " * 100, _url(1)),
+    ] + [
+        _call_finding(n, "pm", "title", f"Paper {n}", _url(n)) for n in range(3, 31)
+    ] + [
+        _call_finding(31, "mg", "clinical_features", "Tall stature", _MEDGEN_URL),
+    ]
+    out = reserve_prompt_slots(findings, ["mg-31"], 30, lead_call_ids=frozenset({"cy"}))
+    assert [f.field_value for f in out[:3]] == ["Gene A", "Tall stature", "Long abstract. " * 100]
+
+
+def test_reserve_prompt_slots_is_a_no_op_when_everything_already_fits() -> None:
+    from system_03_search_agent.synthesis.findings import reserve_prompt_slots
+
+    findings = _researcher_marfan_shape()[40:50]
+    renumbered = [
+        SynthFinding(**{**f.__dict__, "ref_index": i, "citation_id": f"{f.call_id}-{i}"})
+        for i, f in enumerate(findings, start=1)
+    ]
+    ids = [f.citation_id for f in renumbered if f.call_id == "mg"]
+    assert reserve_prompt_slots(renumbered, ids, 30) is renumbered
+    assert reserve_prompt_slots(renumbered, [], 30) is renumbered
+
+
+# ---------------------------------------------------------------------------
+# F-8.1-A11 (fix-and-verify round): the clinical features directive names
+# the feature findings and the one sentence shape the exact gate accepts.
+# ---------------------------------------------------------------------------
+
+
+def _feature_prompt() -> list[SynthFinding]:
+    """As the live pipeline builds them: a MedGen row's `node_or_edge_type`
+    is the record's db, "medgen" (`core/graph.py`), and it becomes each
+    finding's `entity_type`, which is what licenses the word "MedGen"."""
+    from dataclasses import replace
+
+    return [
+        replace(_finding(ref, field, value, _MEDGEN_URL), entity_type="medgen")
+        for ref, field, value in (
+            (1, "title", "Marfan syndrome"),
+            (2, "clinical_features", "Aortic regurgitation"),
+            (3, "clinical_features", "Arachnodactyly"),
+            (4, "clinical_features", "Ectopia lentis"),
+        )
+    ]
+
+
+def test_the_features_directive_names_the_feature_markers_and_the_passing_shape() -> None:
+    from system_03_search_agent.synthesis.findings import build_clinical_features_directive
+
+    directive = build_clinical_features_directive(_feature_prompt())
+    assert directive.startswith("CLINICAL FEATURES: [2] to [4] are clinical features")
+    assert "MedGen lists these clinical features: first name [2], second name [3] and third name [4]." in directive
+    user = build_synth_messages(
+        "What phenotypic features are associated with Marfan syndrome?", _feature_prompt()
+    )[-1]["content"]
+    assert directive in user
+
+
+def test_the_shape_the_directive_asks_for_passes_the_unchanged_gate() -> None:
+    """The directive is only worth sending if its own shape grounds: every
+    feature named as written with its own marker, no words of the model's
+    own. Checked against `run_grounding_pass` itself, not assumed."""
+    from system_03_search_agent.synthesis.grounding import run_grounding_pass
+
+    sentence = (
+        "MedGen lists these clinical features: Aortic regurgitation [2], "
+        "Arachnodactyly [3] and Ectopia lentis [4]."
+    )
+    for question in (
+        "What phenotypic features are associated with Marfan syndrome?",
+        "What are the symptoms of MFS?",
+    ):
+        result = run_grounding_pass(sentence, _feature_prompt(), question=question)
+        assert [claim.finding.ref_index for claim in result.claims] == [2, 3, 4], question
+        assert result.stripped_count == 0
+
+
+def test_no_features_directive_without_feature_findings() -> None:
+    from system_03_search_agent.synthesis.findings import build_clinical_features_directive
+
+    titles_only = [_finding(1, "title", "Paper", _url(1))]
+    assert build_clinical_features_directive(titles_only) == ""
+    none_only = [
+        _finding(1, "title", "Condition A", _MEDGEN_URL),
+        _finding(2, "clinical_features", "MedGen lists no clinical features for Condition A", _MEDGEN_URL),
+    ]
+    assert build_clinical_features_directive(none_only) == ""
+    assert "CLINICAL FEATURES" not in build_synth_messages("Which genes?", titles_only)[-1]["content"]
+
+
+def test_the_features_directive_never_enters_the_system_block() -> None:
+    """`prompt-cache-discipline`: per-query text rides the dynamic suffix."""
+    messages = build_synth_messages("What features?", _feature_prompt())
+    assert "CLINICAL FEATURES" not in messages[0]["content"]
+
+
+def test_a_record_with_only_a_title_is_unchanged() -> None:
+    """A record with no `clinical_features` finding at all must still be
+    represented by its title, exactly as before this ticket.
+    """
+    url = "https://www.ncbi.nlm.nih.gov/medgen/1795938"
+    title = _finding(1, "title", "Gastroesophageal reflux (GERD)", url)
+    kept = one_finding_per_record([title])
+    assert len(kept) == 1
+    assert kept[0].field == "title"
+
+
+def test_a_paper_record_with_title_and_abstract_is_unchanged() -> None:
+    """Only `clinical_features` is set aside from the collapse; a paper's
+    title still beats its abstract, the exact property `test_the_row_that_
+    survives_is_the_title_not_the_abstract` above already pins, through the
+    same code path the feature exclusion was added to.
+    """
+    url = _url(1)
+    title = _finding(1, "title", "Paper about caffeine", url)
+    abstract = _finding(2, "abstract", "One sentence. Two sentences.", url)
+    kept = one_finding_per_record([title, abstract])
+    assert len(kept) == 1
+    assert kept[0].field == "title"
+
+
 def test_a_blank_source_url_is_never_treated_as_an_identity() -> None:
     """An empty string is not a record. Grouping on it would collapse
     unrelated findings into one row and silently delete evidence."""

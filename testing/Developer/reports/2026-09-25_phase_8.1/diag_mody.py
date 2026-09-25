@@ -32,10 +32,10 @@ os.environ["TOOL_AUDIT_LOG_ENABLED"] = "false"
 # main checkout's copy.
 sys.path.insert(0, str(MY_WORKTREE / "src"))
 
-from system_03_search_agent.contracts.query import Query, RequestContext  # noqa: E402
-from system_03_search_agent.core.run import run  # noqa: E402
-import system_03_search_agent.core.graph as _g  # noqa: E402
-from system_03_search_agent.synthesis.grounding import (  # noqa: E402
+import system_03_search_agent.core.graph as _g
+from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.core.run import run
+from system_03_search_agent.synthesis.grounding import (
     split_into_sentences,
 )
 
