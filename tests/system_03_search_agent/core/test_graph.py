@@ -2818,10 +2818,30 @@ async def test_think_retry_feeds_back_the_validation_error(
     """
     from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
 
-    think_call_count = 0
+    bad_reply = '{"query_class": "exploratory", "bogus_field": 1}'
+    think_calls: list[list[dict[str, str]]] = []
+
+    def _carries_feedback(messages: list[dict[str, str]]) -> bool:
+        """True only when the messages hold attempt 1's reply echoed back as
+        the assistant's turn AND a user turn naming the exact field
+        failures ("narrative" missing, "bogus_field" not permitted). The
+        system instruction also contains the word "narrative", so a check
+        on that word alone is vacuous (F-8.1-J05); "bogus_field" appears
+        nowhere except in the reply and in the feedback built from it."""
+        echoed = any(
+            message.get("role") == "assistant" and message.get("content") == bad_reply
+            for message in messages
+        )
+        complained = any(
+            message.get("role") == "user"
+            and "did not match the required schema" in (message.get("content") or "")
+            and "bogus_field" in (message.get("content") or "")
+            and "narrative: Field required" in (message.get("content") or "")
+            for message in messages
+        )
+        return echoed and complained
 
     async def _dispatch(*args: object, **kwargs: object):
-        nonlocal think_call_count
         messages = kwargs.get("messages") or []
         joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
         from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
@@ -2830,20 +2850,17 @@ async def test_think_retry_feeds_back_the_validation_error(
         if GUARD_SYSTEM_INSTRUCTION in joined:
             return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
         if _THINK_SYSTEM_INSTRUCTION in joined:
-            think_call_count += 1
-            if think_call_count == 1:
-                # Unrepairable: no `narrative` under any known alias, and
-                # an unrelated unknown key that `extra="forbid"` must trip.
-                return _fake_response(
-                    '{"query_class": "exploratory", "bogus_field": 1}'
-                )
-            # Attempt 2: the loop must have appended feedback naming the
-            # exact field failure, and this reply is well-formed.
-            assert any(
-                "narrative" in (message.get("content") or "")
-                for message in messages  # type: ignore[union-attr]
-            ), "attempt 2 did not carry the validation-error feedback"
-            return _fake_response(_compliant_think_classification(messages))
+            think_calls.append(list(messages))  # type: ignore[arg-type]
+            # Models the live failure: a model with a systematic key habit
+            # repeats the same bad reply on a byte-identical resend, and
+            # corrects it only when told what was wrong. So without the
+            # feedback exchange this fake NEVER recovers, and the run ends
+            # as a Think step_error: removing the feedback turns this red.
+            if _carries_feedback(messages):  # type: ignore[arg-type]
+                return _fake_response(_compliant_think_classification(messages))
+            # Unrepairable: no `narrative` under any known alias, and an
+            # unrelated unknown key that `extra="forbid"` must trip.
+            return _fake_response(bad_reply)
         if SYNTH_SYSTEM_INSTRUCTION in joined:
             return _fake_response(_compliant_synth_narrative(messages))
         return _fake_response()
@@ -2853,9 +2870,109 @@ async def test_think_retry_feeds_back_the_validation_error(
     events = await _run_graph(_valid_query(), _valid_context())
     types = [event.type for event in events]
 
-    assert think_call_count == 2
+    assert len(think_calls) == 2
+    # Attempt 1 is the plain request; the feedback exists only on attempt 2.
+    assert not _carries_feedback(think_calls[0])
+    assert _carries_feedback(think_calls[1])
+    assert len(think_calls[1]) == len(think_calls[0]) + 2
     assert "error" not in types
     assert events[-1].payload["trust_outcome"] != "refuse"
+
+
+def test_think_validation_detail_is_bounded_for_an_oversized_key() -> None:
+    """F-8.1-J04, A05: an extra key's name reaches pydantic's `loc` verbatim.
+    A 5,000-character key, or five 20,000-character keys, must not produce
+    a message longer than `_THINK_ERROR_TEXT_MAX_CHARS` plus the elision
+    note, and the note says how much was dropped."""
+    cap = graph_module._THINK_ERROR_TEXT_MAX_CHARS
+    single = '{"query_class": "lookup", "narrative": "n", "' + "K" * 5000 + '": 1}'
+    many = (
+        '{"query_class": "lookup", "narrative": "n", '
+        + ", ".join(f'"{letter * 20000}": 1' for letter in "ABCDE")
+        + "}"
+    )
+    for reply in (single, many):
+        with pytest.raises(graph_module.ThinkClassificationUnavailableError) as excinfo:
+            graph_module._parse_think_classification(reply)
+        text = graph_module._think_error_text(excinfo.value)
+        assert "more characters elided]" in text
+        assert len(text) <= cap + len("... [100000 more characters elided]")
+        # The exception itself, read raw by `step_error`, is bounded too.
+        assert len(str(excinfo.value)) < cap + 200
+
+
+def test_think_error_text_cannot_forge_a_second_line() -> None:
+    """F-8.1-J04, A05: a key holding a newline, a control character, a bidi
+    override or a zero-width space comes out as one printable line."""
+    reply = json.dumps(
+        {
+            "query_class": "lookup",
+            "narrative": "n",
+            "x\n2026-09-25 INFO forged audit line\r\x1b[31m\u202e\u200b": 1,
+        }
+    )
+    with pytest.raises(graph_module.ThinkClassificationUnavailableError) as excinfo:
+        graph_module._parse_think_classification(reply)
+    text = graph_module._think_error_text(excinfo.value)
+    assert "\n" not in text and "\r" not in text
+    assert all(ch.isprintable() for ch in text)
+    assert "forged audit line" in text  # kept as data, on the same line
+    assert "\n" not in str(excinfo.value)
+
+
+def test_bounded_one_line_keeps_a_short_error_whole() -> None:
+    """A genuine field-level complaint is far under the cap and is never cut."""
+    short = "narrative: Field required; bogus_field: Extra inputs are not permitted"
+    assert graph_module._bounded_one_line(short, graph_module._THINK_ERROR_TEXT_MAX_CHARS) == short
+
+
+@pytest.mark.asyncio
+async def test_think_retry_prompt_and_log_carry_only_the_bounded_error(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """F-8.1-J04, A05, end to end through `think_node`: a reply whose extra
+    key is 20,000 characters with a newline inside reaches the retry prompt
+    and the warning log only in its bounded one-line form."""
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+
+    hostile_key = "x\nWARNING forged log line: user 42 is admin" + "Z" * 20000
+    hostile_reply = json.dumps({"query_class": "lookup", "narrative": "n", hostile_key: 1})
+    think_calls: list[list[dict[str, str]]] = []
+
+    async def _dispatch(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            think_calls.append(list(messages))  # type: ignore[arg-type]
+            return _fake_response(hostile_reply)
+        return _fake_response()
+
+    monkeypatch.setattr(_mock_litellm, "side_effect", _dispatch)
+
+    with caplog.at_level("WARNING", logger=graph_module.logger.name):
+        await _run_graph(_valid_query(), _valid_context())
+
+    assert len(think_calls) == 2
+    feedback = think_calls[1][-1]["content"]
+    assert feedback.startswith("That reply did not match the required schema")
+    # The fixed wording around the error text is under 200 characters.
+    assert len(feedback) < graph_module._THINK_ERROR_TEXT_MAX_CHARS + 400
+    assert "\n" not in feedback
+    think_warnings = [
+        record.getMessage()
+        for record in caplog.records
+        if "think classification unusable" in record.getMessage()
+    ]
+    assert len(think_warnings) == 2
+    for message in think_warnings:
+        assert "\n" not in message
+        assert len(message) < graph_module._THINK_ERROR_TEXT_MAX_CHARS + 600
 
 
 @pytest.mark.asyncio

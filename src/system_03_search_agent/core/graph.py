@@ -1385,6 +1385,39 @@ def _repair_think_narrative_key(parsed: dict[str, Any]) -> dict[str, Any]:
     return parsed
 
 
+#: F-8.1-J04, J05, A05 (fix-and-verify round): the hard character cap on
+#: any Think validation-error text before it is placed in the retry prompt
+#: or written to the log. `production-standards`'s bounded-context-items
+#: obligation: the cap is enforced before injection, not trusted to a
+#: later reader. Needed because pydantic's `loc` for an extra key IS the
+#: key name the model wrote, verbatim and unbounded (measured in round 1:
+#: one 5,000-character key gave a 5,105-character message, five
+#: 20,000-character keys gave 100,246). 300 characters holds the five
+#: field-level complaints a real malformed reply produces ("narrative:
+#: Field required; bogus_field: Extra inputs are not permitted" is 60),
+#: so a genuine error is never cut; only a reply whose KEY NAMES are
+#: themselves oversized is elided.
+_THINK_ERROR_TEXT_MAX_CHARS: Final[int] = 300
+
+
+def _bounded_one_line(text: str, max_chars: int) -> str:
+    """`text` as one printable line, at most `max_chars` characters plus a
+    short elision note naming how many characters were dropped.
+
+    Every non-printable character (newline, tab, any control character, a
+    bidi override such as U+202E, a zero-width space) becomes a space, then
+    runs of whitespace collapse to one. So a model-written key such as
+    `"x\\nWARNING forged log line"` can neither start a second log line nor
+    a second line in a prompt. Pure and deterministic.
+    """
+    printable = "".join(ch if ch.isprintable() else " " for ch in text)
+    collapsed = " ".join(printable.split())
+    if len(collapsed) <= max_chars:
+        return collapsed
+    elided = len(collapsed) - max_chars
+    return f"{collapsed[:max_chars]}... [{elided} more characters elided]"
+
+
 def _think_validation_detail(exc: ValidationError) -> str:
     """A bounded, actionable summary of a `_ThinkClassification` failure.
 
@@ -1393,15 +1426,30 @@ def _think_validation_detail(exc: ValidationError) -> str:
     `ValidationError.__str__` embeds `input_value`, which would put an
     unbounded slice of the model's own reply into a message that this
     code later feeds back into a second model call and into a `step_error`
-    surfaced to the caller. Capped at the first 5 errors so a
-    maximally-malformed reply cannot inflate this past the 256-character
-    cap already applied where this message is read.
+    surfaced to the caller.
+
+    The first 5 errors only, and the whole summary goes through
+    `_bounded_one_line` at `_THINK_ERROR_TEXT_MAX_CHARS`: the 5-error cap
+    alone bounds the COUNT, not the length, since an extra key's `loc` is
+    the model's own key name at whatever length it wrote (F-8.1-J04).
     """
     parts = []
     for error in exc.errors()[:5]:
         loc = ".".join(str(piece) for piece in error["loc"]) or "(root)"
         parts.append(f"{loc}: {error['msg']}")
-    return "; ".join(parts)
+    return _bounded_one_line("; ".join(parts), _THINK_ERROR_TEXT_MAX_CHARS)
+
+
+def _think_error_text(exc: BaseException) -> str:
+    """The one form of a Think parse failure that leaves this module: the
+    retry prompt and the warning log both read this, never `str(exc)` raw.
+
+    Bounded again here, not only inside `_think_validation_detail`, so the
+    guarantee holds for every `ThinkClassificationUnavailableError` message
+    whatever builds it, and so a reader of `think_node` can see the bound
+    at the point of injection rather than trusting a helper two calls away.
+    """
+    return _bounded_one_line(str(exc), _THINK_ERROR_TEXT_MAX_CHARS)
 
 
 def _parse_think_classification(content: str) -> _ThinkClassification:
@@ -2365,16 +2413,21 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         except ThinkClassificationUnavailableError as exc:
             parse_error = exc
             content = response.content if isinstance(response.content, str) else ""
-            # Bounded and escaped: the length, and the first 200 characters
-            # as a repr, so a newline or control character in the reply
-            # cannot forge a second log line. Model output only, never a
-            # credential or an account field.
+            # F-8.1-J04, A05: the error text is model-steerable (an extra
+            # key's name reaches it verbatim), so it is bounded and made one
+            # line ONCE, here, and both readers below take this form only.
+            error_text = _think_error_text(exc)
+            # Bounded and escaped: the error text through `_think_error_text`
+            # (one printable line, capped), the reply's length, and its first
+            # 200 characters as a repr, so a newline or control character in
+            # the reply or in a key name cannot forge a second log line.
+            # Model output only, never a credential or an account field.
             logger.warning(
                 "think classification unusable (attempt %d of 2, trace %s): "
                 "%s; reply length %d, starts %r",
                 attempt,
                 trace_id,
-                exc,
+                error_text,
                 len(content),
                 content[:200],
             )
@@ -2382,15 +2435,15 @@ async def think_node(state: GraphState) -> dict[str, Any]:
                 # Bounded echo of the bad reply (never the full thing) plus
                 # the exact schema complaint, so the second attempt corrects
                 # the actual mistake instead of repeating it. Both pieces
-                # are model output already logged above; nothing here is
-                # user-controllable beyond the query the model already saw.
+                # are bounded model output; nothing here is user-controllable
+                # beyond the query the model already saw.
                 call_messages = think_messages + [
                     {"role": "assistant", "content": content[:_THINK_RETRY_ECHO_CHARS]},
                     {
                         "role": "user",
                         "content": (
                             "That reply did not match the required schema: "
-                            f"{exc}. Reply again with a single JSON object "
+                            f"{error_text}. Reply again with a single JSON object "
                             'using exactly these keys: "query_class", '
                             '"narrative", "entities". No other key name for '
                             "the reasoning field is accepted."
