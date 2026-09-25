@@ -17,6 +17,7 @@ The plan for one night. Every card in the To do column of `testing/UI_fix_plan.m
 - [How the night runs](#how-the-night-runs)
 - [What needs a yes before the run starts](#what-needs-a-yes-before-the-run-starts)
 - [What will not happen tonight](#what-will-not-happen-tonight)
+- [The product owner's answers](#the-product-owners-answers)
 - [Night log](#night-log)
 
 ## The short version
@@ -272,8 +273,15 @@ The rules require an explicit, itemized grant for each of these. They are asked 
 - No vector embeddings, RAG pipeline, sub-query decomposition or frontier escalation, unless a named trigger is confirmed.
 - No production release: `v0.2.0` stays on production.
 
+## The product owner's answers
+
+One line per answer, in the order asked. Each has its row in `DECISIONS.md` under 2026-09-25.
+
+- Card 8: Jev decides the loop's small choices on develop (relevancy, the ask-back, literature routing, the recent-years ask, which resource to pull). DeepSeek, the guard tier, decides the same inputs beside it and is only recorded, for a morning comparison table. Any Jev error or timeout falls back to DeepSeek's pick. The safety checks stay as they are. This replaces the plan's option A for card 8.
+
 ## Night log
 
 Appended during the run, newest last.
 
 - 2026-09-25: plan written and committed; questions to the product owner begin.
+- 2026-09-25: moved from `docs/build/` to `testing/` on the product owner's instruction.

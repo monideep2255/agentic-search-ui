@@ -17,7 +17,6 @@ How a build phase actually runs: the loop, the roles, the model tiering, and wha
 |------|-----------|-----------|
 | `Build_workflow_cadence.md` | The twelve stages, who acts at each, the model tier and effort per stage, and where every file gets written. Also the provider mapping table, the single place a provider name appears | Before opening any build phase, and any time the model tiering is in question |
 | `Phase_6_execution_flow.html` | The same cadence as a visual page, openable in a browser. Also published as an artifact | When explaining the loop to someone, or checking the flow at a glance |
-| `Overnight_build_plan_2026-09-25.md` | The board's 43 To do cards sorted into buildable, decision and discussion groups, the options for the six architecture cards, and phases 8.1 to 8.5 in the order a person notices them, with the night's log | Before the overnight run of 2026-09-25, and when reading its morning report |
 
 These two are one thing in two forms. If they ever disagree, the markdown is the source and the page is regenerated from it.
 
