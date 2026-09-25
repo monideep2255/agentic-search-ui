@@ -42,11 +42,11 @@ These docs are owned elsewhere. This agent's job for every row is: verify it is 
 | File | Purpose | Owner | Sync rule |
 | --- | --- | --- | --- |
 | `requirements/Plan.md` | Revision history and phase status | /phase-checkpoint | Verify it is current; never edit it here |
-| `requirements/phase_6/Continuation_prompt.md` | What to read and do next in the current phase | /phase-checkpoint | Verify it is current; never edit it here |
+| `HANDOFF.md` | What a fresh session needs: what is live, what awaits the product owner, the one next action, pointers | /phase-checkpoint | Verify it is current; never edit it here |
+| `tracker/Living_documents.md` | The registry of every living document, its owner and its current shape | /phase-checkpoint Step 0, the decision guard | Verify it is current; never edit it here. When a Tier 2 row here disagrees with the registry, the registry wins |
 | `PROGRESS.md` | Plain-language project state | /phase-checkpoint | Verify it is current; never edit it here |
-| `testing/UI_fix_plan.md` | What is being built, what is next, and the cutoff | /phase-checkpoint | Verify it is current; never edit it here |
-| `testing/UI_fixes_done.md` | Every finished UI fix, its detail and the history | /phase-checkpoint | Verify it is current; never edit it here |
-| `testing/Shipped_<YYYY-MM-DD>.md` | The day's shipped list and retest items | /phase-checkpoint | Verify it is current; never edit it here |
+| `testing/UI_fix_plan.md` | The board: to do, build in progress, retest | /phase-checkpoint | Verify it is current; never edit it here |
+| `testing/UI_fixes_done.md` | Every closed item, the cutoff, the detail behind every card, and each day's shipped list as a session table | /phase-checkpoint | Verify it is current; never edit it here |
 | `LEARNINGS.md` | Append-only build-failure log | the learnings skill | Verify it is current; never edit it here |
 | `tracker/BOARD.md` | The build board, build phases only | the task-tracker skill | Verify it is current; never edit it here |
 | `docs/build/Debugging_guide.md` | Symptom-to-file index for `src/` | whoever adds, renames or deletes a file under `src/` | Verify it is current; never edit it here. Enforced by `tests/system_03_search_agent/test_debugging_guide_coverage.py` |
@@ -71,7 +71,7 @@ Map each category of change to the docs that need checking.
 | `requirements.txt` / `pyproject.toml` | No doc update unless a CLI entry point was added/removed (then `CLAUDE.md` Skills or scripts table) |
 | `README.md` itself | Check for stale doc links (paths that no longer exist in `docs/`) |
 | `src/` file added, renamed, or deleted | `docs/build/Debugging_guide.md` needs a row change in the same commit. Remind the caller; enforced by `tests/system_03_search_agent/test_debugging_guide_coverage.py` |
-| `testing/`, `tracker/`, `requirements/`, `PROGRESS.md`, or `LEARNINGS.md` changed | Owned by /phase-checkpoint or the learnings skill. Verify only, do not edit here |
+| `testing/`, `tracker/`, `requirements/`, `HANDOFF.md`, `PROGRESS.md`, or `LEARNINGS.md` changed | Owned by /phase-checkpoint or the learnings skill. Verify only, do not edit here |
 | `CLAUDE.md` line 32 counts (tests, decisions, learnings) | Owned by /phase-checkpoint Step 5d via `tracker/check_doc_drift.py`. Do not hand-edit here; only confirm `python tracker/check_doc_drift.py --check` exits 0 |
 | `.github/workflows/` or `.github/gates/` changed | `CLAUDE.md` Build phase history only if a gate was added or removed |
 

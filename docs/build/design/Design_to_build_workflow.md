@@ -60,7 +60,7 @@ The design system's structure, as of 2026-08-12:
 
 This is the part worth understanding, because it is what stops a builder from styling things however it feels like.
 
-Every build phase here has a blocking premise gate at stage 5: write the test, watch it fail, then build. For a visual phase the obvious problem is that you cannot unit-test "looks good." The resolution is that the design system files become the thing the gate asserts against.
+Until 2026-09-24 every build phase here had a blocking premise gate at stage 5: write the test, watch it fail, then build. Since then premise gates are kept only for answer behaviour (DECISIONS.md, 2026-09-24), and a visual phase is checked at stage 10 by the product reviewer, which captures every changed screen at 1280 and 390 beside the design prototype. You cannot unit-test "looks good", so the design system files stay the thing the check compares against, and the four assertions below are what it looks for.
 
 Four assertions, in descending order of how load-bearing they are:
 
@@ -249,4 +249,4 @@ The test is not "is this biomedical" but "would someone copy or compare this cha
 
 With these settled, the design review is complete and the phase can open on `phase/4.8-web-ui-visual-design`.
 
-Last updated: 2026-08-14
+Last updated: 2026-09-24

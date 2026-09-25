@@ -84,7 +84,7 @@ One writer per state. This is the rule that keeps parallel agents from corruptin
 | `blocked` | Cannot proceed, reason required | The builder that hit the block |
 | `in-review` | Builder done, awaiting judge | The builder that finished |
 | `rejected` | Judge or adversary found a defect, reason required | Judge only |
-| `done` | Judge passed with evidence | Judge only, never the builder |
+| `done` | The judge passed with evidence, then the product owner's retest on develop approved it (cadence stage 11) | The lead records the owner's verdict; never the builder, and never on a judge pass alone |
 
 The builder that did the work never marks it done. That is the maker-cannot-sign-off split from `self-eval-loop.md`, applied to the board.
 

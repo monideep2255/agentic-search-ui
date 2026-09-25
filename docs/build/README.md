@@ -20,7 +20,7 @@ How a build phase actually runs: the loop, the roles, the model tiering, and wha
 
 These two are one thing in two forms. If they ever disagree, the markdown is the source and the page is regenerated from it.
 
-Stage 5, the premise gate, is mandatory and blocking for any phase whose deliverable is model-generated. That is the stage this repo added after build phase 2.1, and it is the one most likely to feel skippable and least safe to skip.
+Premise gates were retired on 2026-09-24 for everything except answer behaviour (DECISIONS.md): the golden consistency run now blocks any answer-path change at stage 10, and it is the check most likely to feel skippable and least safe to skip.
 
 ### Debugging the product
 
@@ -91,4 +91,4 @@ The reference-edit argument above did not block the split, it shaped it. Measure
 
 What remains at this level is four cadence documents plus this README, which is comfortably back under the trigger. Revisit again if that grows past roughly ten.
 
-Last updated: 2026-08-12
+Last updated: 2026-09-24

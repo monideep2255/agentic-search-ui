@@ -15,7 +15,7 @@ This is the maker/checker split: the model that produced the output must never b
 1. First agent produces the output (doc, analysis, multi-file change)
 2. Second agent with fresh context receives only the output and the pass/fail criteria
 3. Second agent grades each criterion as pass or fail with a one-line justification
-4. If any criterion fails, iterate: fix the issue, then re-grade
+4. If any criterion fails, iterate: fix the issue, then re-grade. At most two rounds. If a criterion still fails after the second, stop: ship with the failing criterion named as open, or revert. There is no third round
 
 ### When to apply
 
@@ -53,7 +53,7 @@ When each applies:
 
 Adversary findings land in a shared-ledger file, not scattered across agent outputs. Each state has a single writer, judgment states carry a reason, and every transition appends a history line, so the finder-is-not-closer rule holds by construction.
 
-A finding is written the moment it is established, before the finder does anything else with it. Not after the round finishes, not while composing a report, not after one more check to be sure. An agent's context is not storage: it ends without warning, and on 2026-08-27 four agents in one session ended to sleep interruptions and a watchdog stall, one of them mid-sentence holding the phase's blocking regression. It was recovered only because a human noticed the agent's last line and resumed it with an instruction to write before doing anything else, which is a rescue rather than a mechanism. The cheapest possible durability, an append to a markdown file, is available at the moment of discovery and costs nothing. The full convention is the "Shared-ledger coordination" subsection in `.claude/skills/bossman-mode/SKILL.md`. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
+A finding is written the moment it is established, before the finder does anything else with it. Not after the round finishes, not while composing a report, not after one more check to be sure. An agent's context is not storage: it ends without warning, and on 2026-08-27 four agents in one session ended to sleep interruptions and a watchdog stall, one of them mid-sentence holding the phase's blocking regression. It was recovered only because a human noticed the agent's last line and resumed it with an instruction to write before doing anything else, which is a rescue rather than a mechanism. The cheapest possible durability, an append to a markdown file, is available at the moment of discovery and costs nothing. The full convention is the "Shared-ledger coordination" subsection in `.claude/skills/bossman-mode/reference/Review_rounds.md`. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
 
 ### Review a fix harder than new code
 
@@ -91,15 +91,24 @@ This rule is the verify surface `goal-contracts.md` points to whenever the check
 
 Allow:
 - Dispatch a grading agent for any substantial output without asking
-- Iterate on failed criteria without asking
+- Iterate on failed criteria without asking, up to two rounds
 
 Ask:
-- Before running a third iteration (if two rounds of fixes have not resolved a failing criterion, the criterion itself may be wrong)
+- When a criterion still fails after the second round: name it and ask whether to ship with it named as open or revert. Those are the only two options
 
 Deny:
+- Never run a third iteration, even with the owner's authorisation. After two rounds, ship with the failing criterion named as open, or revert
 - Never skip the grading step for substantial output in bossman mode
 - Never pass conversation history to the grading agent
 - Never hold an established finding in context while doing something else first. Write it, then continue. A finding that exists only in a running process is one interruption away from never having been found
+
+Why the third iteration moved from Ask to Deny, on 2026-09-24:
+
+- The two-round cap added on 2026-08-18 held in only 4 of the 13 build phases reviewed after it, because an Ask let each extra round be authorised.
+- 17 extra rounds followed. Build phase 5.0 ran seven on one control.
+- The product owner accepted "No third review round, even with the product owner's authorisation" (DECISIONS.md, 2026-09-24).
+
+If two rounds have not resolved a criterion, the criterion itself may be wrong. A third round was never the way to find that out.
 
 The test: did my substantial output get graded by a fresh-context agent, or did I only self-review in the same context?
 

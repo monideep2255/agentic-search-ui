@@ -2,6 +2,17 @@
 
 When work fans out to parallel agents, split the roles by model tier. The strongest reasoning model (Opus) owns the plan: it scouts the terrain, decomposes the work into tightly scoped, self-contained, non-overlapping tasks, and writes each task a contract. Cheaper, faster models (Sonnet 5 for substantive extraction and analysis, Haiku 4.5 for mechanical lookup and formatting) own execution: each runs one bounded task in parallel. The expensive reasoning is spent once, on the decomposition and the final synthesis. The repetitive execution is spent cheaply, in parallel.
 
+### Only the lead fans out
+
+This rule is addressed to the session that owns the task, the lead. A dispatched worker never applies it to its own slice: a worker does its one bounded task and never dispatches an agent, however parallel its slice looks. If a worker's task is too big for one agent, it stops and reports that to the lead, who re-splits.
+
+Measured 2026-09-24, and the reason this section exists: the diagnosis behind `docs/build/Bossman_mode_redesign.md` dispatched 7 read-only workers, two of them read "check for parallelism first" as addressed to them and dispatched 4 and 9 workers of their own, one of those handed back empty, an eighth dispatch hit the harness's concurrent limit of 20, and the lead counted about 17 agents running at once, past this rule's own ask-first line of 8. Nothing stopped a worker from fanning out, because the rule read the same to a worker as to the lead. Product-owner decision, 2026-09-24: workers never dispatch.
+
+Two ways to make that hold, strongest first:
+
+- Remove the ability: dispatch reviewers and read-only workers as agent types with no Agent tool, such as `phase-reviewer` and `product-reviewer` (`system-design-patterns` pattern 8).
+- Say it: every worker brief carries "Do not dispatch agents", including briefs for agent types that could.
+
 ### Check for parallelism first
 
 Before starting any task with 2 or more parts, ask: can these run in parallel? The check takes 5 seconds:
@@ -47,6 +58,7 @@ Worker models (Sonnet 5, or Haiku 4.5 for purely mechanical work):
 - Scout before you decompose. The planner reads enough of the terrain to carve non-overlapping slices.
 - Each worker task is self-contained: it names the files or scope, the output path, and the done-when. A worker should never need to coordinate with a sibling mid-run.
 - Keep the worker's output off the planner's context: workers write to files, return a short summary, and the planner reads the files when assembling.
+- Count dispatches. A bossman build phase gets 8 agent dispatches in total, reviewers included, and the ninth needs the product owner (DECISIONS.md, 2026-09-24). Outside a build phase, roughly 8 concurrent is the ask-first line below.
 
 ### When to apply
 
@@ -73,10 +85,12 @@ Allow:
 
 Ask:
 - Before fanning out a large worker fleet (roughly 8 or more concurrent) that will consume significant budget, confirm scope first.
+- Before a ninth agent dispatch in one bossman build phase, reviewers and the product reviewer included.
 
 Deny:
 - Never dispatch parallel workers without first scouting and decomposing. No blind fan-out.
 - Never hand mechanical execution to the top reasoning model when a cheaper worker with a clear contract will do.
 - Never let two workers write the same output target. Partition first.
+- Never let a worker dispatch an agent. Only the lead fans out.
 
-The test: before fanning out, did the reasoning model scout the terrain and write each worker a self-contained, non-overlapping task contract, and are the workers running on the cheapest model that fits the task?
+The test: before fanning out, did the reasoning model scout the terrain and write each worker a self-contained task contract that no sibling's overlaps? Does each contract forbid the worker to dispatch? Are the workers running on the cheapest model that fits the task?

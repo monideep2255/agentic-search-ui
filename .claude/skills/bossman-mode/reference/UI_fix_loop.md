@@ -20,7 +20,7 @@ Use it when all of these hold:
 
 - The defect was found by the product owner testing the deployed develop app, or derives directly from that testing.
 - The fix is scoped to an existing surface rather than delivering a numbered build phase from technical specification Section 25.
-- There is a row for it in `testing/UI_fix_plan.md`, or one is about to be added.
+- There is a card for it in the To do column of `testing/UI_fix_plan.md`, or one is about to be added.
 
 Use the build-phase cadence instead when the work delivers a Section 25 phase, changes the agent loop's contract, adds a tool, or touches auth, the graph credential, or the event schema. A defect the product owner hit is not automatically small: row 10.2 looked like a frontend change and turned out to need a schema migration and a data-retention decision, so it was escalated rather than fixed.
 
@@ -29,11 +29,11 @@ Use the build-phase cadence instead when the work delivers a Section 25 phase, c
 There is no branch, no pull request, no judge round and no adversary round. The product owner's live retest is the verification step.
 
 1. The product owner tests on develop and drops feedback.
-2. The feedback becomes numbered rows in `testing/UI_fix_plan.md`, one row per item, each with its own status.
+2. The feedback becomes numbered cards in the To do column of `testing/UI_fix_plan.md`, one card per item, each with its detail in `testing/UI_fixes_done.md`'s "Detail for items on the board" section.
 3. Fixes land directly on `develop`. No phase branch, no pull request.
 4. Run the quick checks that fit the change, then push. One item per push.
-5. Confirm it live: the deployment reports SUCCESS, the served app carries the change, and a browser check at 1280px and 390px.
-6. The product owner retests and gives a verdict. That verdict, not an agent's grade, moves the row to done. Once an item is live its row and detail already sit in `testing/UI_fixes_done.md`; the verdict closes the one "Your retest" row the plan keeps for it.
+5. Confirm it live: the deployment reports SUCCESS, the served app carries the change, and a browser check at 1280px and 390px. The product reviewer (`.claude/agents/product-reviewer.md`) is that check's agent form: it pre-screens the change on develop and files what the owner should look at first, and closes nothing.
+6. The product owner retests and gives a verdict. That verdict, not an agent's grade, moves the card off the board. Once an item is live its card sits in the Retest column and its detail already sits in `testing/UI_fixes_done.md`; the verdict removes the card from Retest and sets the done file's status to Approved.
 
 Tickets reach `in-review` on merge and reach `done` only on the product owner's verdict. This is the same rule build phase 6.2 adopted when it dropped its judge round: the person testing on develop is the verification step, so nothing an agent runs can close a row on its own.
 
@@ -65,8 +65,11 @@ Dropping the judge round does not drop the standard of evidence. Three things ca
 
 | What | Where |
 |------|-------|
-| The item list, one row per fix, with status | `testing/UI_fix_plan.md` while being built or to do; `testing/UI_fixes_done.md` once live |
-| The running cutoff and the shared plan | `testing/UI_fix_plan.md`, the "Where we stopped" section, updated at the end of every session |
+| Where a fresh session starts | `HANDOFF.md` at the repository root |
+| Which documents the session-closing skills keep current, and their current shape | `tracker/Living_documents.md` |
+| The board, one card per fix, in its column | `testing/UI_fix_plan.md`: To do, Build in progress, Retest |
+| The detail behind every card, and every closed item | `testing/UI_fixes_done.md` |
+| The running cutoff and the shared plan | `testing/UI_fixes_done.md`, the "Where we stopped" section, updated at the end of every session |
 | Evidence for a defect or an investigation | `testing/Developer/reports/<date>_<topic>/findings.md` |
 | A choice between alternatives | `DECISIONS.md` |
 | What broke and what fixed it | `LEARNINGS.md` |
