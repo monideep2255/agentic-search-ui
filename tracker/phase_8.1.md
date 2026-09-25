@@ -81,7 +81,7 @@ Acceptance:
 
 ### T-8.1-05: The trust line stays the same when the evidence is the same
 
-Status: blocked on T-8.1-05b in `core/graph.py` (F-8.1-01); builder B's determinism test, commit `2a32799`
+Status: in-review, builder A, `a61d894`: the conflict flag is computed over the full retrieval, not the grounded subset; 3 live runs gave one verdict; builder B's determinism test `2a32799`
 Card: 20
 Builder: B
 Files: `src/system_03_search_agent/synthesis/trust.py` and its tests
@@ -92,7 +92,7 @@ Acceptance:
 
 ### T-8.1-06: A phenotype question names phenotypes
 
-Status: in-progress: parser merged (builder C, `888016d`); the `core/graph.py` half is T-8.1-06b for builder A (F-8.1-04)
+Status: in-review: builder C's parser `888016d`, builder A's wiring `a41c20b` and listing preference `e4a8b85`; all 30 of Marfan syndrome's clinical features show in the code-built listing, cited to MedGen, at both depths (2 live runs); the model's own prose does not name them (F-8.1-06)
 Card: 1, item 12.14
 Builder: C
 Files: `src/system_03_search_agent/tools/ncbi_eutils_actions.py`, `src/system_03_search_agent/tools/ncbi_efetch.py`, `src/system_03_search_agent/tools/ncbi_efetch_schemas.py`, and their tests
@@ -153,6 +153,14 @@ Severity: high: without it card 1 is not fixed
 
 `_parse_medgen_clinical_features` (commit `888016d`) returns 30 capped features for Marfan syndrome, but `core/graph.py`'s `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` (about line 5330) does not list `clinical_features`, so the field never reaches the writing model. The exact change is in `testing/Developer/reports/2026-09-25_phase_8.1/builder_C.md`.
 
+### F-8.1-06: The writing model does not name the clinical features in its own prose
+
+Status: open, for the product review's rubric line 1
+Raised by: builder A, T-8.1-06b
+Severity: medium: the features are on the page, in the code-built listing, but the answer's first sentences talk about something else
+
+In 2 of 2 live runs the writing model grounded a different true fact (the genetic cause or the inheritance pattern) instead of the features. The lead ruled out changing `SYNTH_SYSTEM_INSTRUCTION` tonight: five earlier depth directives failed, and one instruction change touches every answer. The code-built listing now prefers a record's clinical features over its bare title (`e4a8b85`), so the reader sees them at both depths.
+
 ### F-8.1-05: The 127-second run outlived two 30-second timeouts
 
 Status: open, card 22 stays in To do
@@ -184,4 +192,5 @@ The writing model abbreviated a disease name in one MODY run, and the exact-matc
 ## History
 
 - 2026-09-25 05:05 UTC: phase opened by the lead; eight tickets written; builders A, B and C dispatched in parallel, each in its own worktree.
+- 2026-09-25 07:20 UTC: builder A's follow-ups merged (T-8.1-05b, 06b, 06c); gates run for the pull request.
 - 2026-09-25: builders B, C and A merged in that order; T-8.1-07's fix reverted (F-8.1-03); builder A resumed for T-8.1-05b and T-8.1-06b in `core/graph.py`.
