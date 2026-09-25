@@ -916,16 +916,19 @@ _RELEVANCY: Final = _DecisionSpec(
         "on_topic": (
             "Its subject is biology, medicine, health, genetics, living organisms "
             "or the scientific literature, in any language, including how a food, "
-            "substance, exposure or behaviour affects the body or health, and "
+            "substance, exposure or behaviour affects the body or health (a "
+            "research question about exercise, diet or nutrition is on topic), and "
             "including a follow-up that asks more about the previous question's "
             "biomedical subject."
         ),
         "off_topic": (
             "Its subject is not biological or medical at all, for example sport, "
             "finance, politics, travel, weather, entertainment, shopping or general "
-            "programming. A follow-up that asks about something unrelated to "
-            "biology or medicine is off topic even when the previous question was "
-            "biomedical."
+            "programming. A request to make a personal plan for the asker, such as "
+            "a workout plan, a meal plan or a diet plan, is off topic: it asks for "
+            "advice, not evidence. A follow-up that asks about something unrelated "
+            "to biology or medicine is off topic even when the previous question "
+            "was biomedical."
         ),
     },
 )
@@ -958,18 +961,24 @@ _RECENT_YEARS: Final = _DecisionSpec(
     options=("recent_unbounded", "not_applicable"),
     fail_open="not_applicable",
     instructions=(
-        "The state is a question a person typed into a biomedical literature "
-        "search engine. Decide whether it asks for recent work without saying "
-        "how recent."
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. Decide whether it explicitly asks for recent, new or latest "
+        "publications or research without saying how recent."
     ),
     criteria={
         "recent_unbounded": (
-            "It asks for recent, latest, new or current work and gives no year, "
-            "date or length of time."
+            "It explicitly asks for recent, new or latest publications, papers, "
+            "studies or research, and gives no year, date, period or length of "
+            "time."
         ),
         "not_applicable": (
-            "It does not ask for recent work, or it already gives a year, a date "
-            "or a length of time such as a number of months or years."
+            "Anything else. It does not ask for recent publications or research; "
+            "or it already gives a year, a date, a period named by an event, or a "
+            "length of time; or a word such as 'recent', 'current' or 'latest' "
+            "describes something other than publications, such as a disease of "
+            "recent onset, something a person did or had recently, or the current "
+            "status of a disease, treatment, guideline or trial, including current "
+            "or recruiting trials."
         ),
     },
 )

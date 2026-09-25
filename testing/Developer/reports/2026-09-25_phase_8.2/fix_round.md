@@ -118,6 +118,34 @@ Suite (harness, guardrail, core, and the debugging-guide coverage test): 1654 pa
 
 Follow-up outside this fence: `docs/build/Debugging_guide.md`'s `core/breadth_plan.py` row still names `parse_publication_window`; one line for whoever owns the guide.
 
+### Item 3, F-8.2-A10, A16 and J14: sharper criteria for recent_years and relevancy
+
+Live runs, `CLASSIFIER_PROVIDER=jev`, appended as each finishes:
+
+| Run | Probe | Result | Record | Cost, time |
+| --- | --- | --- | --- | --- |
+| 3 | recent_years, G-003 (Lynch syndrome ... current trials?) | not asked back | Jev not_applicable 0.98; guard not ready within 1 s | $0.00002, 1.4 s |
+| 4 | recent_years, G-003 again | not asked back | Jev not_applicable 0.98, guard not_applicable, agreed | $0.00003, 1.2 s |
+| 5 | recent_years, G-030 (EGFR ... what trials are recruiting?) | not asked back | Jev not_applicable 0.96; guard not ready within 1 s | $0.00002, 1.4 s |
+| 6 | recent_years, G-030 again | not asked back | Jev not_applicable 0.96; guard not ready within 1 s | $0.00002, 1.3 s |
+| 7 | recent_years, "recent papers on statins" | asked "How far back?" | Jev recent_unbounded 1.0; guard not ready within 1 s | $0.00002, 1.2 s |
+| 8 | guardrail, "make me a weekly workout plan" (no memory) | refused, off_topic | Jev off_topic 0.89, guard off_topic | $0.00008, 2.7 s |
+| 9 | guardrail, "does coffee help exercise performance" (no memory) | admitted, ok | Jev on_topic 1.0, guard on_topic | $0.00008, 1.7 s |
+
+Acceptance met: G-003 and G-030 not asked back, 2 of 2 each (Jev not_applicable at 0.96 to 0.98, where round 1 measured recent_unbounded at 0.32 to 0.86 on every pass); "recent papers on statins" still asked; the workout plan refused; the coffee question admitted.
+
+What changed, `core/graph.py` only, the descriptions both models receive:
+
+- `think.recent_years`: `recent_unbounded` only when the question EXPLICITLY asks for recent, new or latest publications, papers, studies or research and gives no year, date, period or length of time. `not_applicable` spells out the rest: a period named by an event, a disease of recent onset, something a person did or had recently, the current status of a disease, treatment, guideline or trial, and current or recruiting trials.
+- `guardrail.relevancy`: a request to make a personal plan for the asker (a workout, meal or diet plan) is off topic, because it asks for advice, not evidence; a research question about exercise, diet or nutrition is on topic.
+- No confidence threshold was added: acting on Jev's confidence number is a decision the product owner has not taken.
+- Examples in the criteria are categories, not the round's probe questions (the owner's rule against lifting test questions into prompts); "recent onset" and the workout and meal plans are the brief's own words.
+- The descriptions stay under `decide`'s 1000-character bound; the item 5 test in `test_graph.py` runs every spec through the real `decide`, which raises on an over-long description.
+
+Observed, for the product owner (card 10): with the one-second comparison grace, the guard's pick was not ready in 4 of the 5 recent_years probes (Jev answers in about 0.3 s, the guard in 1 to 2 s), so those rows carry `guard_not_ready` rather than a guard pick. The person waits less; the comparison table gets fewer guard rows. Keeping the guard call running past the grace and filling the row in later would restore them, at the cost of background calls that outlive the decision.
+
+Live runs spent so far: 9 of 14.
+
 ## Findings left open, and why
 
 Filled in at the end.
