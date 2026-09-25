@@ -35,6 +35,13 @@ not hold until PubMed answers:
   with ` AND `, untagged so PubMed's automatic term mapping expands them.
   It is planned with the purpose `pubmed_search`, so the abstract fetch and
   the PubTator3 annotation below follow it exactly as they follow a gene's.
+- `parse_publication_window(question)` reads a publication range the
+  question states outright ("from the last 5 years", "since 2022", "in
+  2023"), and `plan_first_stage(..., window=...)` and
+  `plan_topic_search(..., window=...)` AND it onto the PubMed term as a
+  date limit (build phase 8.2, card 4). Parsing a stated value only:
+  whether a question asks for recent work WITHOUT a range is
+  `decide(point="think.recent_years")`'s call, in `core/graph.py`.
 - `plan_first_stage(..., datasets=True)` adds a GEO DataSets ESearch on the
   symbol (2026-09-22, fix-plan item 1), planned by `core/graph.py` only when
   `wants_dataset_search(question)` says the question asks for datasets, and
@@ -86,9 +93,11 @@ Depended by:
 
 from __future__ import annotations
 
+import calendar
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from typing import Any, Final
 
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
@@ -369,6 +378,12 @@ _TOPIC_META_WORDS: Final[frozenset[str]] = frozenset(
         "say", "says", "search", "show", "studies", "study", "summarise",
         "summarize", "summary", "tell", "think", "thinks", "thought", "understand",
         "wonder", "wondering",
+        # How RECENT the work should be describes the search's time scope,
+        # not its subject (build phase 8.2, card 4): `think.recent_years`
+        # asks the person how recent and `parse_publication_window` turns
+        # the answer into a publication-date limit. Left in the AND chain,
+        # "recent" required that exact word in every abstract.
+        "latest", "newest", "recent", "recently",
     )
 )
 
@@ -408,6 +423,124 @@ _TOPIC_JUDGEMENT_WORDS: Final[frozenset[str]] = frozenset(
         "unsafe", "useful", "useless", "worse", "worst",
     )
 )
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2, card 4 (fix-plan item 12.15): the publication-date limit.
+#
+# WHO DECIDES WHAT. Whether a question asks for recent work without saying
+# how recent is a CLASSIFIER's decision, `decide(point="think.recent_years")`
+# in `core/graph.py`, which asks the person back with three windows. This
+# section only READS A VALUE the question states outright, "the last 5
+# years", "since 2022", which is parsing, never deciding: a question with no
+# such phrase gets no limit here, whatever words it uses.
+#
+# Verified live 2026-09-25 against ESearch's own `querytranslation`:
+# `statins AND ("2021/09/25"[dp] : "3000"[dp])` reads back as
+# `... AND 2021/09/25:3000/12/31[Date - Publication]`, 15,282 hits against
+# 76,272 unlimited.
+# ---------------------------------------------------------------------------
+
+_NUMBER_WORDS: Final[Mapping[str, int]] = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+    "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15,
+    "twenty": 20,
+}
+
+#: "the last 5 years", "over the past 12 months", "in the last year",
+#: "the past decade". The preposition is optional and consumed with the
+#: phrase, so stripping it leaves no dangling "from" in a topic term.
+_RELATIVE_WINDOW: Final[re.Pattern[str]] = re.compile(
+    r"\b(?:(?:in|from|over|during|within|for)\s+)?(?:the\s+)?(?:last|past)\s+"
+    r"(?:(?P<count>\d{1,3}|" + "|".join(_NUMBER_WORDS) + r")\s+)?"
+    r"(?P<unit>years?|months?|decades?)\b",
+    re.IGNORECASE,
+)
+
+#: "since 2022", "from 2019", and a single year, "in 2023".
+_SINCE_YEAR: Final[re.Pattern[str]] = re.compile(
+    r"\b(?:since|from)\s+(?P<year>(?:19|20)\d{2})\b", re.IGNORECASE
+)
+_IN_YEAR: Final[re.Pattern[str]] = re.compile(
+    r"\b(?:in|during)\s+(?P<year>(?:19|20)\d{2})\b", re.IGNORECASE
+)
+
+#: A window longer than this is not a recency limit, it is the whole record.
+_MAX_WINDOW_MONTHS: Final[int] = 1200
+
+
+@dataclass(frozen=True)
+class PublicationWindow:
+    """A publication-date range read from the question's own words.
+
+    `end` is None for an open range ("since 2022", "the last 5 years"), and
+    `label` is the reader's words for it, for the plan narrative.
+    """
+
+    start: date
+    end: date | None
+    label: str
+
+    def clause(self) -> str:
+        """The ESearch limit, ANDed onto a PubMed term by the planner."""
+        end = self.end.strftime("%Y/%m/%d") if self.end is not None else "3000"
+        return f'("{self.start.strftime("%Y/%m/%d")}"[dp] : "{end}"[dp])'
+
+
+def _months_before(today: date, months: int) -> date:
+    """The same day `months` calendar months earlier, clamped to month end."""
+    index = today.year * 12 + (today.month - 1) - months
+    year, month = divmod(index, 12)
+    last_day = calendar.monthrange(year, month + 1)[1]
+    return date(year, month + 1, min(today.day, last_day))
+
+
+def parse_publication_window(
+    question: str | None, *, today: date | None = None
+) -> PublicationWindow | None:
+    """The publication-date range the question states, or None.
+
+    `today` defaults to the current UTC date; tests pass it so a planned
+    term is a fixed function of its inputs. A relative window counts back
+    from `today`; an explicit year is a calendar boundary.
+    """
+    if not isinstance(question, str):
+        return None
+    today = today or datetime.now(UTC).date()
+
+    relative = _RELATIVE_WINDOW.search(question)
+    if relative is not None:
+        raw_count = (relative.group("count") or "").lower()
+        count = int(raw_count) if raw_count.isdigit() else _NUMBER_WORDS.get(raw_count, 1)
+        unit = relative.group("unit").lower()
+        months = count * (120 if unit.startswith("decade") else 12 if unit.startswith("year") else 1)
+        if 0 < months <= _MAX_WINDOW_MONTHS:
+            noun = unit.rstrip("s") + ("s" if count != 1 else "")
+            label = f"the last {count} {noun}" if count != 1 else f"the last {noun}"
+            return PublicationWindow(start=_months_before(today, months), end=None, label=label)
+
+    since = _SINCE_YEAR.search(question)
+    if since is not None:
+        year = int(since.group("year"))
+        if year <= today.year:
+            return PublicationWindow(start=date(year, 1, 1), end=None, label=f"since {year}")
+
+    single = _IN_YEAR.search(question)
+    if single is not None:
+        year = int(single.group("year"))
+        if year <= today.year:
+            return PublicationWindow(
+                start=date(year, 1, 1), end=date(year, 12, 31), label=f"in {year}"
+            )
+    return None
+
+
+def _without_publication_window(question: str) -> str:
+    """The question with its stated date window removed, so the window's
+    own words ("last", "years", "since") never become search words."""
+    for pattern in (_RELATIVE_WINDOW, _SINCE_YEAR, _IN_YEAR):
+        question = pattern.sub(" ", question)
+    return question
+
 
 #: A word a topic term may be built from: a letter first, then letters,
 #: digits, apostrophes or hyphens. Everything else in the question, every
@@ -485,14 +618,16 @@ def asks_for_published_literature(question: str | None) -> bool:
 def topic_search_words(question: str | None) -> list[str]:
     """The content words of `question`, in question order, deduplicated.
 
-    Lowercased, with the four dropped categories above removed. A pure
+    Lowercased, with the four dropped categories above removed, and with a
+    stated publication window ("from the last 5 years") removed first, since
+    `plan_topic_search` expresses it as a date limit instead. A pure
     function of the string: no model call, no network call, no randomness,
     so the same question yields the same words on every run.
     """
     if not isinstance(question, str):
         return []
     words: list[str] = []
-    for match in _TOPIC_WORD.finditer(question.lower()):
+    for match in _TOPIC_WORD.finditer(_without_publication_window(question).lower()):
         word = match.group(0).strip("'-")
         if not word:
             continue
@@ -547,7 +682,9 @@ def build_topic_term(question: str | None) -> str | None:
     return " AND ".join(words)
 
 
-def plan_topic_search(question: str | None) -> tuple[PlannedCall, ...]:
+def plan_topic_search(
+    question: str | None, *, window: PublicationWindow | None = None
+) -> tuple[PlannedCall, ...]:
     """The single PubMed search a topic question earns, or an empty tuple.
 
     Its purpose is `pubmed_search`, the SAME purpose the gene and disease
@@ -555,10 +692,16 @@ def plan_topic_search(question: str | None) -> tuple[PlannedCall, ...]:
     the abstract fetch and the PubTator3 annotation on that purpose, so a
     topic question gets the identical two follow-ups on the identical PMIDs
     with no second wiring to keep in step with the first.
+
+    `window`, the question's own stated publication range
+    (`parse_publication_window`), is ANDed on as a date limit, so a person
+    who picked "the last 5 years" gets only papers from those years.
     """
     term = build_topic_term(question)
     if term is None:
         return ()
+    if window is not None:
+        term = f"{term} AND {window.clause()}"
     return (_search_call("pubmed_search", "pubmed", term, TOPIC_RESULT_CAP),)
 
 
@@ -575,7 +718,11 @@ def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:
 
 
 def plan_first_stage(
-    gene_symbol: str | None, disease_title: str | None, *, datasets: bool = False
+    gene_symbol: str | None,
+    disease_title: str | None,
+    *,
+    datasets: bool = False,
+    window: PublicationWindow | None = None,
 ) -> tuple[PlannedCall, ...]:
     """The calls that need only the symbol or the title, in fixed order.
 
@@ -593,11 +740,18 @@ def plan_first_stage(
     ClinVar, OMIM and GEO stay gene-only, because each of those three
     terms is a gene field (`SYMBOL[gene]`) or a gene symbol, and there is
     no disease equivalent that returns the same kind of record.
+
+    `window` (build phase 8.2, card 4) limits the PubMed search, and only
+    the PubMed search, to the question's stated publication range. ClinVar,
+    OMIM and GEO records are not papers and keep no publication date to
+    limit on.
     """
     symbol = _normalise_symbol(gene_symbol)
     term = build_pubmed_term(symbol, disease_title)
     calls: list[PlannedCall] = []
     if term:
+        if window is not None:
+            term = f"{term} AND {window.clause()}"
         calls.append(_search_call("pubmed_search", "pubmed", term, PUBMED_RESULT_CAP))
     if symbol:
         calls.append(

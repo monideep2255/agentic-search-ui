@@ -217,3 +217,37 @@ class TestBuildClarifyMessages:
         # corrupt exactly the identifiers this system exists to look up.
         messages = clarify.build_clarify_messages("c.123A>G")
         assert "c.123A>G" in messages[1]["content"]
+
+
+class TestRecentWindowChoices:
+    """Build phase 8.2, card 4: the three windows, in the person's words,
+    each readable back by the planner as exactly the window it names."""
+
+    def test_three_windows_in_the_product_owners_order(self) -> None:
+        choices = clarify.recent_window_choices("recent papers on statins")
+        assert choices.question == clarify.RECENT_WINDOW_QUESTION
+        assert choices.options == [
+            "Recent papers on statins from the last 12 months?",
+            "Recent papers on statins from the last 5 years?",
+            "Recent papers on statins from the last 10 years?",
+        ]
+
+    def test_each_choice_reads_back_as_its_own_window(self) -> None:
+        from datetime import date
+
+        from system_03_search_agent.core import breadth_plan
+
+        today = date(2026, 9, 25)
+        labels = [
+            breadth_plan.parse_publication_window(option, today=today).label  # type: ignore[union-attr]
+            for option in clarify.recent_window_choices("recent papers on statins?").options
+        ]
+        assert labels == ["the last 12 months", "the last 5 years", "the last 10 years"]
+
+    def test_a_long_question_is_cut_at_a_word_and_stays_in_bounds(self) -> None:
+        long_question = "recent papers on " + "statin " * 60
+        choices = clarify.recent_window_choices(long_question)
+        for option in choices.options:
+            assert len(option) <= clarify.MAX_CLARIFY_TEXT_CHARS
+            assert option.endswith("?")
+            assert " stati from" not in option

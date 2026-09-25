@@ -25,6 +25,15 @@ reply may contain (`ClarifyChoices`' own field limits), and the fail-open
 rule that ANY failure of the writing call, a bad reply, a timeout, a cap
 hit, means the search goes ahead exactly as it would have with no question.
 
+`recent_window_choices` (card 4, item 12.15) is the one set of choices this
+module writes itself, because its values are fixed by the product owner's
+decision rather than tailored to a subject: the last 12 months, the last 5
+years, the last 10 years. It is shown when `decide(point=
+"think.recent_years")` says a question asks for recent work without saying
+how recent. The person's own words carry the subject into each choice, and
+`core.breadth_plan.parse_publication_window` reads the window back out of
+the choice they click, turning it into a publication-date limit.
+
 Depends on:
     - system_03_search_agent.harness.harness (the `Message` shape a call's
       messages list holds: `dict[str, str]`)
@@ -219,3 +228,37 @@ def parse_clarify_reply(content: str) -> ClarifyChoices:
         raise ClarifyUnavailableError(
             "the clarify writer's response did not match the choices schema"
         ) from exc
+
+
+#: The three windows a recent-work question is offered, in the product
+#: owner's order (DECISIONS.md 2026-09-25, card 4). Each is phrased so that
+#: `core.breadth_plan.parse_publication_window` reads it back exactly.
+RECENT_WINDOW_PHRASES: Final[tuple[str, ...]] = (
+    "the last 12 months",
+    "the last 5 years",
+    "the last 10 years",
+)
+
+RECENT_WINDOW_QUESTION: Final[str] = "How far back should I search?"
+
+
+def recent_window_choices(question: str) -> ClarifyChoices:
+    """The question asked back when the person wants recent work but gave
+    no range: their own question once per window.
+
+    The subject is the person's own words, never rewritten, so clicking a
+    choice asks exactly what they asked with one range added. A question too
+    long to fit the per-option bound is cut at a word boundary rather than
+    mid-word.
+    """
+    base = question.strip().rstrip("?.!").strip()
+    if base:
+        base = base[0].upper() + base[1:]
+    longest_suffix = max(len(f" from {phrase}?") for phrase in RECENT_WINDOW_PHRASES)
+    room = MAX_CLARIFY_TEXT_CHARS - longest_suffix
+    if len(base) > room:
+        base = base[:room].rsplit(" ", 1)[0]
+    return ClarifyChoices(
+        question=RECENT_WINDOW_QUESTION,
+        options=[f"{base} from {phrase}?" for phrase in RECENT_WINDOW_PHRASES],
+    )

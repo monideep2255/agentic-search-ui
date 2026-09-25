@@ -539,3 +539,136 @@ async def test_a_short_follow_up_with_an_earlier_turn_never_reaches_ask_back(
     assert think["clarifying_question"] is None
     assert "tool_start" in [event.type for event in events]
     assert think["resolved_entities"], "BRCA1 resolves as a real entity once asked"
+
+
+# ---------------------------------------------------------------------------
+# think.recent_years (build phase 8.2, card 4, item 12.15): the same ask-back
+# mechanism, asked when the classifier says a question wants recent work
+# without saying how recent. `decide()` is stubbed per point as above.
+# ---------------------------------------------------------------------------
+
+
+def _spy_searches(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+    """Record every ESearch the plan makes, answering each as empty."""
+    searches: list[dict[str, Any]] = []
+
+    async def _efetch(tool_input: Any, **kwargs: object) -> NcbiEfetchOutput:
+        dumped = tool_input.model_dump()
+        if dumped.get("action") == "search":
+            searches.append(dumped)
+        return NcbiEfetchOutput(
+            status="empty",
+            action=dumped.get("action", "search"),
+            records=[],
+            record_count=0,
+            total_available=None,
+            truncated=False,
+            error=None,
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _efetch)
+    return searches
+
+
+@pytest.mark.asyncio
+async def test_recent_work_with_no_range_asks_how_far_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MUTATION PROOF: making `_asks_for_unbounded_recent_work` return False
+    turns every arm here red: the question is searched instead of asked."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+
+    events = await _run("recent papers on statins")
+    assert "think.recent_years" in asked, asked
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == clarify.RECENT_WINDOW_QUESTION
+    assert think["clarifying_options"] == [
+        "Recent papers on statins from the last 12 months?",
+        "Recent papers on statins from the last 5 years?",
+        "Recent papers on statins from the last 10 years?",
+    ]
+    assert "tool_start" not in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+async def test_a_short_opener_can_be_asked_how_far_back_too(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Three words: ask_back said proceed, recent_years said unbounded, and
+    the recent_years decision was gathered with the other two."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=_clarify_reply("statins"))
+    asked = _install_decide(
+        monkeypatch, {"think.ask_back": "proceed", "think.recent_years": "recent_unbounded"}
+    )
+
+    events = await _run("recent statin papers")
+    assert {"think.ask_back", "think.recent_years"} <= set(asked), asked
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] == clarify.RECENT_WINDOW_QUESTION
+
+
+@pytest.mark.asyncio
+async def test_a_stated_range_is_never_asked_again_whatever_the_classifier_said(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Code verifies the one value it may read: "since 2022" is right there
+    to search with, so a classifier that still said unbounded is overruled,
+    and the search carries the range as a publication-date limit."""
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+
+    events = await _run("papers on statins since 2022")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    pubmed = [s for s in searches if s.get("db") == "pubmed"]
+    assert pubmed and pubmed[0]["term"].endswith('AND ("2022/01/01"[dp] : "3000"[dp])'), pubmed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("recent_pick", ["not_applicable", None, RuntimeError("seam down")])
+async def test_anything_but_recent_unbounded_searches(
+    monkeypatch: pytest.MonkeyPatch, recent_pick: Any
+) -> None:
+    """`not_applicable`, no usable pick (both models down), and a failed
+    seam all search: the fail-open rule."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.recent_years": recent_pick})
+
+    events = await _run("recent papers on statins")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert "tool_start" in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+async def test_the_picked_window_narrows_the_pubmed_search_to_those_years(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The choice a person clicks is asked as its own question, and its
+    range reaches ESearch as a publication-date limit: only papers from
+    those years can come back."""
+    from datetime import UTC, datetime
+
+    from system_03_search_agent.core import breadth_plan
+
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+
+    picked = clarify.recent_window_choices("recent papers on statins").options[1]
+    events = await _run(picked)
+
+    expected = breadth_plan.parse_publication_window(picked, today=datetime.now(UTC).date())
+    assert expected is not None and expected.label == "the last 5 years"
+    pubmed = [s for s in searches if s.get("db") == "pubmed"]
+    assert pubmed and pubmed[0]["term"] == f"statins AND {expected.clause()}", pubmed
+    plan = _payload(events, "plan")
+    assert plan is not None and "published the last 5 years" in plan["narrative"], plan

@@ -18,6 +18,8 @@ Depends on:
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from system_03_search_agent.core import breadth_plan as bp
@@ -387,3 +389,94 @@ def test_the_geo_pair_keeps_a_dataset_question_under_the_call_ceiling() -> None:
     two, only on a question that asks for datasets, so the worst such
     question reaches 18 and never the ceiling."""
     assert len(bp.plan_first_stage("TP53", None, datasets=True)) == 4
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2, card 4: the publication-date limit. `parse_publication_
+# window` only READS a range the question states; whether a question asks
+# for recent work without one is `decide(point="think.recent_years")`'s
+# call and is exercised in `test_bare_topic_clarification.py`. The clause
+# shape was verified live against ESearch's `querytranslation` on
+# 2026-09-25 (builder J's report); these arms pin the planner's side.
+# ---------------------------------------------------------------------------
+
+_TODAY = date(2026, 9, 25)
+
+
+@pytest.mark.parametrize(
+    ("question", "start", "end", "label"),
+    [
+        ("Recent papers on statins from the last 5 years?", date(2021, 9, 25), None, "the last 5 years"),
+        ("Recent papers on statins from the last 12 months?", date(2025, 9, 25), None, "the last 12 months"),
+        ("Recent papers on statins from the last 10 years?", date(2016, 9, 25), None, "the last 10 years"),
+        ("papers on statins over the past five years", date(2021, 9, 25), None, "the last 5 years"),
+        ("statin trials in the last year", date(2025, 9, 25), None, "the last year"),
+        ("what was published in the past decade on statins", date(2016, 9, 25), None, "the last decade"),
+        ("papers on statins since 2022", date(2022, 1, 1), None, "since 2022"),
+        ("papers on statins in 2023", date(2023, 1, 1), date(2023, 12, 31), "in 2023"),
+    ],
+)
+def test_a_stated_range_is_read_as_a_value(
+    question: str, start: date, end: date | None, label: str
+) -> None:
+    window = bp.parse_publication_window(question, today=_TODAY)
+    assert window == bp.PublicationWindow(start=start, end=end, label=label)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "recent papers on statins",
+        "What is GERD?",
+        "papers on statins since 2099",
+        "the last 2000 years of medicine",
+        "",
+        None,
+    ],
+)
+def test_no_stated_range_reads_as_none(question: str | None) -> None:
+    """"recent" alone is not a range: whether it asks for one is the
+    classifier's call, never this parser's."""
+    assert bp.parse_publication_window(question, today=_TODAY) is None
+
+
+def test_a_month_end_is_clamped_rather_than_invalid() -> None:
+    window = bp.parse_publication_window("the last 12 months", today=date(2024, 2, 29))
+    assert window is not None and window.start == date(2023, 2, 28)
+
+
+def test_the_clause_is_the_shape_esearch_was_verified_with() -> None:
+    open_range = bp.PublicationWindow(start=date(2021, 9, 25), end=None, label="the last 5 years")
+    closed = bp.PublicationWindow(start=date(2023, 1, 1), end=date(2023, 12, 31), label="in 2023")
+    assert open_range.clause() == '("2021/09/25"[dp] : "3000"[dp])'
+    assert closed.clause() == '("2023/01/01"[dp] : "2023/12/31"[dp])'
+
+
+def test_the_range_and_the_word_recent_never_become_search_words() -> None:
+    """Left in the AND chain, "last" and "years" and "recent" would each be
+    REQUIRED in every abstract."""
+    assert bp.topic_search_words("Recent papers on statins from the last 5 years?") == ["statins"]
+    assert bp.topic_search_words("papers on statins since 2022") == ["statins"]
+    assert bp.build_topic_term("latest research on long covid") == "long AND covid"
+
+
+def test_a_topic_search_with_a_window_carries_the_date_limit() -> None:
+    window = bp.parse_publication_window("papers on statins from the last 5 years", today=_TODAY)
+    (call,) = bp.plan_topic_search("papers on statins from the last 5 years", window=window)
+    term = call.tool_input.model_dump()["term"]
+    assert term == 'statins AND ("2021/09/25"[dp] : "3000"[dp])'
+
+
+def test_a_topic_search_with_no_window_is_unchanged() -> None:
+    (call,) = bp.plan_topic_search("papers on statins")
+    assert call.tool_input.model_dump()["term"] == "statins"
+
+
+def test_a_window_limits_the_gene_pubmed_search_and_nothing_else() -> None:
+    """ClinVar and OMIM records are not papers; only PubMed is limited."""
+    window = bp.PublicationWindow(start=date(2021, 9, 25), end=None, label="the last 5 years")
+    calls = bp.plan_first_stage("BRCA1", None, window=window)
+    terms = {call.purpose: call.tool_input.model_dump()["term"] for call in calls}
+    assert terms["pubmed_search"] == 'BRCA1[Title/Abstract] AND ("2021/09/25"[dp] : "3000"[dp])'
+    assert terms["clinvar_search"] == "BRCA1[gene]"
+    assert terms["omim_search"] == "BRCA1"
