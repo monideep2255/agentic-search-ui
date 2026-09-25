@@ -6675,3 +6675,93 @@ async def test_a_decision_nobody_made_is_recorded_as_what_the_run_did(
     assert record.chosen == acted_on == spec.fail_open
     assert record.fallback_reason == "no_usable_pick"
     assert graph_module._done_decisions(harness) == [record]
+
+
+# ---------------------------------------------------------------------------
+# F-8.5-J07: the two non-timing controls the deleted
+# test_write_streaming_premise.py's W4 pinned. W4 was removed with the rest
+# of that file (build phase 8.5, card 37, the streaming-timing test set),
+# but it was the only test proving the unresolved-entity refusal (T-3.1-13,
+# see test_unresolved_gene_symbol_refuses_before_reaching_the_graph above)
+# spends no synth-tier call and never announces that Write has started.
+# Those two properties are cost and refusal-path behaviour, not timing, so
+# they are pinned here as ordinary unit tests rather than lost with the
+# timing arms. Both were proven red against an in-memory mutant of
+# write_node and green against the unmutated source (phase 8.5 fix round
+# report, testing/Developer/reports/2026-09-25_phase_8.5/fix_round.md).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_unresolved_gene_symbol_refusal_spends_no_synth_tier_call(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """F-8.5-J07, property one. The unresolved-entity refusal returns from
+    `write_node` before its normal answer path begins, so it must spend no
+    synth-tier call: there is nothing for Synth to honestly write about a
+    query that was never sent to the graph.
+
+    MUTATION THAT TURNS THIS RED: call `_dispatch_tier_call(harness,
+    trace_id, "synth", "write", ...)` inside `write_node`'s
+    `if unresolved_entity_symbols:` branch, before the refusal is emitted.
+    """
+    from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+    async def _always_unresolved(symbol: str, **kwargs: object) -> str | None:
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _always_unresolved)
+
+    query = _valid_query(text="What is ZZQXWV?")
+    events = await _run_graph(query, _valid_context())
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "refuse", (
+        "populate-check failed: the run did not refuse, so it never took "
+        "the branch this test pins"
+    )
+
+    for call in _mock_litellm.call_args_list:
+        messages = call.kwargs.get("messages") or []
+        joined = "\n".join(
+            message.get("content") or "" for message in messages  # type: ignore[union-attr]
+        )
+        assert SYNTH_SYSTEM_INSTRUCTION not in joined, (
+            "the unresolved-entity refusal path spent a synth-tier call, "
+            "the exact regression the deleted W4 test existed to catch"
+        )
+
+
+@pytest.mark.asyncio
+async def test_unresolved_gene_symbol_refusal_never_announces_write_started(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.5-J07, property two. A refusal decided before Write's normal
+    answer path begins must never emit the `step` event
+    (`StepPayload(step="write", status="started")`) that announces Write
+    has started: that event tells the reader "writing your answer" ahead
+    of a refusal that never reaches synthesis.
+
+    MUTATION THAT TURNS THIS RED: emit the `step` / write-started marker
+    unconditionally at the top of `write_node`, live, before checking
+    `unresolved_entity_symbols`.
+    """
+
+    async def _always_unresolved(symbol: str, **kwargs: object) -> str | None:
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _always_unresolved)
+
+    query = _valid_query(text="What is ZZQXWV?")
+    events = await _run_graph(query, _valid_context())
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "refuse", (
+        "populate-check failed: the run did not refuse, so it never took "
+        "the branch this test pins"
+    )
+
+    assert not any(event.type == "step" for event in events), (
+        "a refusal that never began the answer path announced that Write "
+        "had started"
+    )

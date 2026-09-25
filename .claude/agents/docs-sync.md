@@ -72,7 +72,7 @@ Map each category of change to the docs that need checking.
 | `README.md` itself | Check for stale doc links (paths that no longer exist in `docs/`) |
 | `src/` file added, renamed, or deleted | `docs/build/Debugging_guide.md` needs a row change in the same commit. Remind the caller; enforced by `tests/system_03_search_agent/test_debugging_guide_coverage.py` |
 | `testing/`, `tracker/`, `requirements/`, `HANDOFF.md`, `PROGRESS.md`, or `LEARNINGS.md` changed | Owned by /phase-checkpoint or the learnings skill. Verify only, do not edit here |
-| `CLAUDE.md` line 32 counts (tests, decisions, learnings) | Owned by /phase-checkpoint Step 5d via `tracker/check_doc_drift.py`. Do not hand-edit here; only confirm `python tracker/check_doc_drift.py --check` exits 0 |
+| `CLAUDE.md`'s Current focus table's build row counts (tests, decisions, learnings) | Owned by /phase-checkpoint Step 5d via `tracker/check_doc_drift.py`. Do not hand-edit here; only confirm `python tracker/check_doc_drift.py --check` exits 0 |
 | `.github/workflows/` or `.github/gates/` changed | `CLAUDE.md` Build phase history only if a gate was added or removed |
 
 ## Order of operations
