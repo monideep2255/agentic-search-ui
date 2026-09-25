@@ -82,7 +82,7 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | Failures and their fixes | `LEARNINGS.md` | A pointer; Step 1b checks the session's failures are logged |
 | Choices between alternatives | `DECISIONS.md` | A pointer |
 | Build order | `requirements/Technical_specification.md` Section 25 | A pointer |
-| Counts (tests, decisions, entries, flags) | Computed by `tracker/check_doc_drift.py` | Only CLAUDE.md line 32, AGENTS.md line 32 and Plan.md's decisions line state them. `HANDOFF.md` never does |
+| Counts (tests, decisions, entries, flags) | Computed by `tracker/check_doc_drift.py` | Only the Current focus table's build row in CLAUDE.md, the same row in AGENTS.md, and Plan.md's decisions line state them. `HANDOFF.md` never does |
 | The plain-language state of the project, for a non-technical reader | `PROGRESS.md` | Nowhere else. It is the only document written for someone outside the build |
 
 `PROGRESS.md` is the one deliberate exception to the pointer rule, and it is worth saying why. Every other row above avoids restating a fact because a second copy drifts. `PROGRESS.md` restates many of them on purpose, in different words, because its reader cannot follow a pointer into `tracker/phase_N.M.md` and get anything useful out of it. The protection against drift is that it is refreshed at Step 5b of every checkpoint, from the same sources, rather than edited ad hoc.
@@ -227,7 +227,7 @@ There is no per-query status line to keep in step: the card's column is the stat
 ### Step 5d: the tracked counts (all modes)
 
 - Run `python tracker/check_doc_drift.py --check`. It takes about two minutes, since it collects the whole test suite.
-- For every "says X (computed: Y)" line it reports, update that document to Y: `CLAUDE.md` and `AGENTS.md` line 32 for tests, decisions, and learnings, and `requirements/Plan.md`'s decisions line for decisions.
+- For every "says X (computed: Y)" line it reports, update that document to Y: the Current focus table's build row in `CLAUDE.md` and `AGENTS.md` for tests, decisions, and learnings, and `requirements/Plan.md`'s decisions line for decisions.
 - Set `CLAUDE.md`'s and `AGENTS.md`'s "Last updated" line to today.
 - Never edit the checker to make it pass, per `.claude/rules/goal-contracts.md`.
 
@@ -278,7 +278,7 @@ Before declaring the checkpoint done, verify:
 - [ ] No wall of text: every enumerated passage in a touched doc is a list or a table, not a run-on paragraph (writing-style.md).
 - [ ] Every touched doc's table of contents, status, counts, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no stale count, no title or filename naming fewer steps than the file covers.
 - [ ] All modes: every failure the session hit is a row in LEARNINGS.md.
-- [ ] All modes: the counts on CLAUDE.md and AGENTS.md line 32 and Plan.md's decisions line equal the drift check's computed values.
+- [ ] All modes: the counts on the Current focus table's build row in CLAUDE.md and AGENTS.md, and Plan.md's decisions line, equal the drift check's computed values.
 - [ ] `python tracker/check_doc_drift.py --check` exits 0.
 - [ ] `python3 tracker/check_living_docs.py` exits 0 on both `--shape` and `--fresh`, or the only red line is a shape the registry marks `unpinned` and the report says so.
 
