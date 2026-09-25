@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Builder D's acceptance probe: three real decisions through decide()
 with CLASSIFIER_PROVIDER=jev, against the real OpenRouter decisions
 endpoint. Loads OPENROUTER_API_KEY from the main repo's .env, never
@@ -35,21 +34,27 @@ async def main() -> None:
     cases = [
         (
             "guardrail.relevancy",
-            "Question: 'what genes are associated with cystic fibrosis?' "
-            "Is this relevant to biomedical genetics research?",
+            (
+                "Question: 'what genes are associated with cystic fibrosis?' "
+                "Is this relevant to biomedical genetics research?"
+            ),
             ["relevant", "not_relevant"],
         ),
         (
             "think.ask_back",
-            "The user asked: 'tell me about the gene'. No gene was named. "
-            "Should a short clarifying question be asked, or should the "
-            "system proceed anyway?",
+            (
+                "The user asked: 'tell me about the gene'. No gene was named. "
+                "Should a short clarifying question be asked, or should the "
+                "system proceed anyway?"
+            ),
             ["ask", "proceed"],
         ),
         (
             "plan.resource",
-            "Question: 'which gene is associated with cystic fibrosis?' "
-            "Decide which resource best answers it.",
+            (
+                "Question: 'which gene is associated with cystic fibrosis?' "
+                "Decide which resource best answers it."
+            ),
             [
                 "cypher_query",
                 "ncbi_efetch",

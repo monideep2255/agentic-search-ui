@@ -7,7 +7,7 @@ Scope: `harness/decide.py`, `harness/jev_client.py`, `harness/task_tiers.py`, `t
 - [The Jev decisions endpoint, pinned live](#the-jev-decisions-endpoint-pinned-live)
 - [decide(): the seam itself](#decide-the-seam-itself)
 - [The tool catalogue](#the-tool-catalogue)
-- [task_tiers.py](#task_tiersp)
+- [task_tiers.py](#task_tierspy)
 - [DonePayload.decisions and the frontend](#donepayloaddecisions-and-the-frontend)
 - [Live probe result](#live-probe-result)
 - [Tests and gates](#tests-and-gates)
