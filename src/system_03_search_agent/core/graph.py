@@ -885,17 +885,26 @@ def _elapsed_ms(state: GraphState) -> int:
 
 @dataclass(frozen=True)
 class _DecisionSpec:
-    """One decision point: its name, its closed options and its description."""
+    """One decision point: its name, its closed options, its description,
+    and `fail_open`, the option the loop acts on when no model makes a pick.
+
+    `fail_open` is passed to `decide` as its `default`, so a decision nobody
+    made is recorded as what the run actually did (F-8.2-J13), never as the
+    first option. Every caller reads the pick through `_usable_choice`,
+    which still treats "no model picked" as no decision at all.
+    """
 
     point: str
     options: tuple[str, ...]
     instructions: str
     criteria: Mapping[str, str]
+    fail_open: str
 
 
 _RELEVANCY: Final = _DecisionSpec(
     point="guardrail.relevancy",
     options=("on_topic", "off_topic"),
+    fail_open="on_topic",
     instructions=(
         "The state is a question a person typed into a biomedical evidence search "
         "engine. When the question is a follow-up, the state also gives the "
@@ -924,6 +933,7 @@ _RELEVANCY: Final = _DecisionSpec(
 _ASK_BACK: Final = _DecisionSpec(
     point="think.ask_back",
     options=("ask_back", "proceed"),
+    fail_open="proceed",
     instructions=(
         "The state is the whole of a short opening message a person typed into a "
         "biomedical evidence search engine. Decide whether it already says what "
@@ -946,6 +956,7 @@ _ASK_BACK: Final = _DecisionSpec(
 _RECENT_YEARS: Final = _DecisionSpec(
     point="think.recent_years",
     options=("recent_unbounded", "not_applicable"),
+    fail_open="not_applicable",
     instructions=(
         "The state is a question a person typed into a biomedical literature "
         "search engine. Decide whether it asks for recent work without saying "
@@ -966,6 +977,7 @@ _RECENT_YEARS: Final = _DecisionSpec(
 _LITERATURE: Final = _DecisionSpec(
     point="plan.literature",
     options=("wants_literature", "not_literature"),
+    fail_open="not_literature",
     instructions=(
         "The state is a question a person typed into a biomedical evidence search "
         "engine that holds gene, variant and disease records, clinical trial "
@@ -1067,6 +1079,7 @@ async def _decide_point(
             spec.options,
             instructions=spec.instructions,
             criteria=spec.criteria,
+            default=spec.fail_open,
         )
     except Exception as exc:  # noqa: BLE001 - a broken seam must never break the question
         logger.warning(
@@ -1080,12 +1093,13 @@ async def _decide_point(
 def _usable_choice(record: DecisionRecord | None) -> str | None:
     """The decision's pick, or None when no model actually made one.
 
-    `decide` fills `chosen` with the FIRST offered option when neither Jev
-    nor the guard produced a usable pick, and in the Jev-failed case it
-    records Jev's failure reason rather than "no_usable_pick" (builder J,
-    F-J-04). So "was anything decided" is read from the two picks
-    themselves, never from `chosen` alone: a caller that trusted `chosen`
-    here would ask every question back when both models were down.
+    When neither Jev nor the guard produced a usable pick, `decide` fills
+    `chosen` with the spec's `fail_open` option and marks the record
+    "no_usable_pick" (fix round, F-8.2-A04 and J13; builder J's F-J-04
+    found the older record, which filled in the FIRST option and kept only
+    Jev's reason). "Was anything decided" is still read from the two picks
+    themselves, never from `chosen` alone, so a decision nobody made is
+    never acted on as if one had been.
     """
     if record is None:
         return None

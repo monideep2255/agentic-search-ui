@@ -106,6 +106,11 @@ GUARD_COMPARISON_GRACE_S: Final[float] = 1.0
 #: made in time, not because the guard failed to make one.
 GUARD_NOT_READY: Final[str] = "guard_not_ready"
 
+#: How `DecisionRecord.fallback_reason` starts when NEITHER model made a
+#: usable pick (fix round, F-8.2-A04). In Jev mode it is followed by a colon
+#: and Jev's own failure reason, e.g. "no_usable_pick:timeout".
+NO_USABLE_PICK: Final[str] = "no_usable_pick"
+
 
 #: A ceiling on the caller's description of a decision. The text is
 #: code-authored and fixed per decision point, never user content, so this
@@ -214,9 +219,8 @@ async def _run_guard_pick(
     `core/graph.py`'s `_dispatch_tier_call` does for every other guard-tier
     call in the loop. Returns None (never raises) when the cap is
     exceeded, the call times out, or the call fails: this seam's `decide()`
-    caller treats a None guard pick the same way it treats a fallback with
-    no usable answer, by picking the first offered option rather than
-    leaving the decision unresolved.
+    caller records a None guard pick as no pick, and when Jev made none
+    either, fills `chosen` with the caller's fail-open default.
     """
     try:
         cost_control.check_per_query_cap(harness, trace_id, "guard")
@@ -327,6 +331,7 @@ async def decide(
     *,
     instructions: str | None = None,
     criteria: Mapping[str, str] | None = None,
+    default: str | None = None,
 ) -> DecisionRecord:
     """Decide one closed-option question, `point`, over the bounded `state`.
 
@@ -357,17 +362,30 @@ async def decide(
       failure (`JevCallError.reason`, `"cost_cap"`, `"unexpected_error"`).
       A guard pick that has arrived is always read, never discarded by an
       outer limit.
-    - When neither side produced a valid answer, `fallback_reason` is
-      `"no_usable_pick"` and `chosen` falls back to `options[0]`.
+    - When neither side produced a valid answer (either provider),
+      `jev_choice` and `guard_choice` are both None, `fallback_reason`
+      starts with `"no_usable_pick"` (in Jev mode followed by a colon and
+      Jev's own failure, e.g. `"no_usable_pick:timeout"`), and `chosen` is
+      `default`, the caller's fail-open option, so the record states what
+      the loop actually did rather than a pick no model made (F-8.2-A04,
+      F-8.2-J13). `decided_by` still reads `"guard"` there, because the
+      contract's field allows only "jev" or "guard"; the None picks and the
+      reason are what say that nobody decided. Without a `default`,
+      `chosen` is `options[0]`.
 
     Raises:
         ValueError: if `options` is empty (there is nothing to decide
-            between), or the description does not fit the options (see
-            `_check_description`).
+            between), the description does not fit the options (see
+            `_check_description`), or `default` is not an offered option.
     """
     if not options:
         raise ValueError(f"decide() for {point!r} was given an empty options list")
     _check_description(point, options, instructions, criteria)
+    if default is not None and default not in options:
+        raise ValueError(
+            f"decide() for {point!r}: default {default!r} is not one of the offered options"
+        )
+    fallback_default = default if default is not None else options[0]
 
     bounded_state = state[:_STATE_MAX_CHARS]
     provider = os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower()
@@ -376,14 +394,13 @@ async def decide(
         guard_choice = await _run_guard_pick(
             harness, trace_id, bounded_state, options, instructions, criteria
         )
-        chosen = guard_choice if guard_choice is not None else options[0]
         return DecisionRecord(
             name=point,
             options=list(options),
-            chosen=chosen,
+            chosen=guard_choice if guard_choice is not None else fallback_default,
             decided_by="guard",
             guard_choice=guard_choice,
-            fallback_reason=None if guard_choice is not None else "no_usable_pick",
+            fallback_reason=None if guard_choice is not None else NO_USABLE_PICK,
         )
 
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
@@ -450,11 +467,22 @@ async def decide(
         decided_by: str = "jev"
         if not guard_ready:
             fallback_reason = GUARD_NOT_READY
-    else:
-        chosen = guard_choice if guard_choice is not None else options[0]
+    elif guard_choice is not None:
+        chosen = guard_choice
         decided_by = "guard"
         if fallback_reason is None:
-            fallback_reason = "no_usable_pick" if guard_choice is None else "jev_unavailable"
+            fallback_reason = "jev_unavailable"
+    else:
+        # Neither model made a pick (F-8.2-A04, F-8.2-J13). The record says
+        # so, and names no pick nobody made: both picks stay None, the
+        # reason starts with "no_usable_pick" and keeps Jev's own failure
+        # after the colon, and `chosen` is the caller's fail-open default,
+        # which is what the loop actually does.
+        chosen = fallback_default
+        decided_by = "guard"
+        fallback_reason = (
+            f"{NO_USABLE_PICK}:{fallback_reason}" if fallback_reason else NO_USABLE_PICK
+        )
 
     agreed: bool | None = None
     if jev_result is not None and guard_choice is not None:

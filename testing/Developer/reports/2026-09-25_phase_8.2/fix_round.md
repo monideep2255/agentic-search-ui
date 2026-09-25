@@ -75,6 +75,22 @@ Checked against the pre-fix `decide.py` (the committed file swapped in, then res
 
 Suite: 1620 passed, 56 skipped, 1 deselected. The new timing tests add about 21 seconds to the run.
 
+### Item 5, F-8.2-A04 (and F-8.2-J13): a decision nobody made is recorded as nobody made it
+
+What the person notices: nothing on screen. What the product owner notices: the `done` event's decision rows and the Jev-against-guard comparison built from them no longer count a model outage as "the guard chose on_topic, ask_back, recent_unbounded or wants_literature".
+
+What changed:
+
+- `decide()` takes `default`, the option the caller acts on when no model makes a pick. When neither model picks, the record has `jev_choice` and `guard_choice` None, `fallback_reason` starting `no_usable_pick` (in Jev mode followed by Jev's own reason, e.g. `no_usable_pick:timeout`, `no_usable_pick:cost_cap`), and `chosen` equal to `default`. A default outside the options raises.
+- `core/graph.py`: every `_DecisionSpec` names its `fail_open` option (relevancy `on_topic`, ask_back `proceed`, recent_years `not_applicable`, literature `not_literature`), and `_decide_point` passes it. So `chosen` in the record is what the run actually did. `_usable_choice` still reads "was anything decided" from the two picks, so nothing is acted on as a pick.
+- Left as is, and why: `decided_by` still reads `"guard"` in that case, because `DecisionRecord.decided_by` is `Literal["jev", "guard"]` in `contracts/events.py`, outside this fence, and a new value is not a missing bound. The None picks and the `no_usable_pick` reason are what say nobody decided. A `"none"` value is a one-line additive contract change for whoever owns the contract.
+
+Tests: four Jev failure types with a guard that gives no pick (all record no pick, the default and `no_usable_pick:<reason>`); a guard-only failure; a default outside the options; and, through the real `decide` and `core/graph.py`'s `_decide_point`, each of the four wired decisions records its fail-open option when the guard's reply names no option. The cost-cap arm's old assertion (`fallback_reason == "cost_cap"`, `chosen == options[0]` read as a guard pick) was updated because it pinned the defect.
+
+Break-it check: restoring the old record (first option, Jev's bare reason) on a copy-aside of `decide.py`: 5 failed; restored and `cmp`-verified.
+
+Suite: 1630 passed, 56 skipped, 1 deselected.
+
 ## Findings left open, and why
 
 Filled in at the end.

@@ -6628,3 +6628,50 @@ class TestThePlanEventReportsTheMention:
             "which is what session memory then records for every later turn "
             f"in the session: {resolved}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2 fix round, F-8.2-A04 and F-8.2-J13: when no model makes a
+# pick, the record carried on the `done` event names what the run actually
+# did (the spec's fail-open option) and no pick nobody made. Before the fix
+# it named the FIRST option, so a failed ask_back, recent_years and
+# literature decision each read as an ask-back, a "how far back" ask and a
+# papers question that never happened.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("spec_name", "acted_on"),
+    [
+        ("_RELEVANCY", "on_topic"),
+        ("_ASK_BACK", "proceed"),
+        ("_RECENT_YEARS", "not_applicable"),
+        ("_LITERATURE", "not_literature"),
+    ],
+)
+async def test_a_decision_nobody_made_is_recorded_as_what_the_run_did(
+    monkeypatch: pytest.MonkeyPatch, spec_name: str, acted_on: str
+) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "acompletion",
+        AsyncMock(return_value=_fake_response("I think the person wants something recent.")),
+    )
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    spec = getattr(graph_module, spec_name)
+    harness = harness_module.Harness("t-nobody-decided")
+
+    record = await graph_module._decide_point(harness, "t-nobody-decided", spec, "recent papers on statins")
+
+    assert record is not None
+    assert graph_module._usable_choice(record) is None, "no model made a pick"
+    assert record.jev_choice is None and record.guard_choice is None
+    assert record.chosen == acted_on == spec.fail_open
+    assert record.fallback_reason == "no_usable_pick"
+    assert graph_module._done_decisions(harness) == [record]

@@ -217,9 +217,10 @@ async def test_cost_cap_exceeded_skips_both_calls_and_falls_back(monkeypatch: py
 
     mock_acompletion.assert_not_called()
     mock_jev.assert_not_called()
-    assert record.decided_by == "guard"
-    assert record.chosen == _OPTIONS[0]
-    assert record.fallback_reason == "cost_cap"
+    # Neither model made a pick: the record says so (F-8.2-A04).
+    assert record.jev_choice is None and record.guard_choice is None
+    assert record.chosen == _OPTIONS[0], "no default given, so the first option"
+    assert record.fallback_reason == "no_usable_pick:cost_cap"
 
 
 @pytest.mark.asyncio
@@ -422,6 +423,63 @@ def _jev_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     _patch_cap(monkeypatch)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "jev_failure",
+    [
+        JevCallError("slow", reason="timeout"),
+        JevCallError("500", reason="http_error"),
+        JevCallError("bad shape", reason="malformed_reply"),
+        JevCallError("maybe", reason="invalid_option"),
+    ],
+)
+async def test_both_models_failing_names_no_pick_and_says_so(
+    monkeypatch: pytest.MonkeyPatch, jev_failure: JevCallError
+) -> None:
+    """F-8.2-A04: the adversary's 16 both-failed cells each read "the guard
+    chose <first option>". Now both picks are None, the reason says no pick
+    was made and keeps Jev's own failure, and `chosen` is the caller's
+    fail-open default."""
+    _jev_mode(monkeypatch)
+    _patch_guard(monkeypatch, reply="I cannot tell.")
+    monkeypatch.setattr(decide_module, "call_jev", AsyncMock(side_effect=jev_failure))
+
+    record = await decide(
+        Harness(trace_id="b1"), "b1", "think.ask_back", "x", ["ask_back", "proceed"], default="proceed"
+    )
+
+    assert record.jev_choice is None and record.guard_choice is None
+    assert record.agreed is None
+    assert record.chosen == "proceed", "the fail-open default, not the first option"
+    assert record.fallback_reason == f"no_usable_pick:{jev_failure.reason}"
+
+
+@pytest.mark.asyncio
+async def test_a_failed_guard_only_decision_records_the_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    _patch_cap(monkeypatch)
+    _patch_guard(monkeypatch, reply="")
+
+    record = await decide(
+        Harness(trace_id="b2"),
+        "b2",
+        "think.recent_years",
+        "x",
+        ["recent_unbounded", "not_applicable"],
+        default="not_applicable",
+    )
+
+    assert record.guard_choice is None
+    assert record.chosen == "not_applicable"
+    assert record.fallback_reason == "no_usable_pick"
+
+
+@pytest.mark.asyncio
+async def test_a_default_outside_the_options_is_refused() -> None:
+    with pytest.raises(ValueError, match="default"):
+        await decide(Harness(trace_id="b3"), "b3", "p", "x", _OPTIONS, default="maybe")
 
 
 def test_the_comparison_grace_is_at_most_one_second() -> None:
