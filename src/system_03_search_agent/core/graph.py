@@ -454,6 +454,7 @@ import re
 import secrets
 import time
 import uuid
+import weakref
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -465,6 +466,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from system_03_search_agent.contracts.events import (
     CitationPayload,
+    DecisionRecord,
     DonePayload,
     ErrorPayload,
     Event,
@@ -499,7 +501,7 @@ from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
-from system_03_search_agent.guardrail.verdict import GuardVerdict
+from system_03_search_agent.guardrail.verdict import GuardVerdict, refused
 from system_03_search_agent.harness import call_budget, cost_control
 from system_03_search_agent.harness.cache import REGISTERED_TOOL_SCHEMAS, build_stable_prefix
 from system_03_search_agent.harness.coordinator_worker import (
@@ -507,6 +509,7 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
+from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -854,6 +857,232 @@ def _elapsed_ms(state: GraphState) -> int:
 
 
 # ---------------------------------------------------------------------------
+# The classifier seam, wired (build phase 8.2 wave 2, builder J; DECISIONS.md
+# 2026-09-25, cards 3, 4, 5, 8 and 9).
+#
+# The loop's small closed choices are made by `harness.decide`, never by a
+# word list: Jev decides when CLASSIFIER_PROVIDER=jev, the guard tier decides
+# the same question beside it and is recorded, and any Jev failure falls back
+# to the guard's pick. Code only verifies what a classifier decided.
+#
+# Each point below carries a FIXED, code-authored description of what is
+# being decided: one instruction line and one criterion per option. Both
+# models receive it; the person's words go in `state` and nowhere else.
+# Measured before the descriptions existed (builder J, F-J-03), the models
+# saw only option names and Jev admitted "what is the best pizza in Chicago"
+# as on topic. No test question and no answer text appears in any of them
+# (the product owner's standing rule), and none of them is in the Think,
+# Plan or Write stable prefix: `decide` builds its own messages.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _DecisionSpec:
+    """One decision point: its name, its closed options and its description."""
+
+    point: str
+    options: tuple[str, ...]
+    instructions: str
+    criteria: Mapping[str, str]
+
+
+_RELEVANCY: Final = _DecisionSpec(
+    point="guardrail.relevancy",
+    options=("on_topic", "off_topic"),
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. Decide whether its subject is biology, medicine, health or the "
+        "life sciences."
+    ),
+    criteria={
+        "on_topic": (
+            "Its subject is biology, medicine, health, genetics, living organisms "
+            "or the scientific literature, in any language, including how a food, "
+            "substance, exposure or behaviour affects the body or health."
+        ),
+        "off_topic": (
+            "Its subject is not biological or medical at all, for example sport, "
+            "finance, politics, travel, entertainment, shopping or general "
+            "programming."
+        ),
+    },
+)
+
+_ASK_BACK: Final = _DecisionSpec(
+    point="think.ask_back",
+    options=("ask_back", "proceed"),
+    instructions=(
+        "The state is the whole of a short opening message a person typed into a "
+        "biomedical evidence search engine. Decide whether it already says what "
+        "the person wants to know, or only names a subject."
+    ),
+    criteria={
+        "ask_back": (
+            "It only names a subject, a bare noun or short phrase with no request "
+            "in it, so a search would have to guess which of several things the "
+            "person wants."
+        ),
+        "proceed": (
+            "It asks something or names the kind of answer wanted, such as a "
+            "definition, papers, trials, variants, symptoms or a cause, including "
+            "any message phrased as a question."
+        ),
+    },
+)
+
+_RECENT_YEARS: Final = _DecisionSpec(
+    point="think.recent_years",
+    options=("recent_unbounded", "not_applicable"),
+    instructions=(
+        "The state is a question a person typed into a biomedical literature "
+        "search engine. Decide whether it asks for recent work without saying "
+        "how recent."
+    ),
+    criteria={
+        "recent_unbounded": (
+            "It asks for recent, latest, new or current work and gives no year, "
+            "date or length of time."
+        ),
+        "not_applicable": (
+            "It does not ask for recent work, or it already gives a year, a date "
+            "or a length of time such as a number of months or years."
+        ),
+    },
+)
+
+_LITERATURE: Final = _DecisionSpec(
+    point="plan.literature",
+    options=("wants_literature", "not_literature"),
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine that holds gene, variant and disease records, clinical trial "
+        "registrations and the published literature. Decide whether the person "
+        "is asking for published papers or for what the published literature "
+        "says."
+    ),
+    criteria={
+        "wants_literature": (
+            "It asks for papers, articles, publications or preprints, or for what "
+            "the published literature or research says."
+        ),
+        "not_literature": (
+            "It asks for a fact, a definition, a gene, variant or disease record, "
+            "or for clinical trials, rather than for published papers."
+        ),
+    },
+)
+
+#: `DonePayload.decisions`' own `max_length`. A run makes at most four
+#: decisions today (relevancy, ask_back, recent_years, literature).
+_MAX_DONE_DECISIONS: Final[int] = 16
+
+
+@dataclasses.dataclass
+class _RunDecisions:
+    """Every decision one run made, and the one decision still in flight.
+
+    F-J-01: `GraphState` cannot carry this, since `core/state.py` declares
+    no such field and LangGraph drops an undeclared key a node returns,
+    silently. So it rides beside the run instead, keyed by the run's own
+    `Harness` (see `_RUN_DECISIONS`).
+    """
+
+    records: list[DecisionRecord] = dataclasses.field(default_factory=list)
+    #: `plan.literature`, started at Think so it runs alongside Think's own
+    #: classification call, and awaited by Plan, which is the step that
+    #: needs it. None until Think starts it.
+    literature_task: asyncio.Task[DecisionRecord | None] | None = None
+
+
+#: One entry per live run, keyed by the run's `Harness`. `core/run.py`
+#: builds a fresh `Harness` for every run and every node receives that same
+#: object through `state["harness"]`, so an entry lives exactly as long as
+#: its run and a weak key means it cannot outlive it: the leak a dict keyed
+#: by trace id would have (`harness/call_budget.py`'s module docstring
+#: records why that shape was rejected there too) is not possible.
+_RUN_DECISIONS: weakref.WeakKeyDictionary[Any, _RunDecisions] = weakref.WeakKeyDictionary()
+
+
+def _run_decisions(harness: Any) -> _RunDecisions:
+    """This run's decision record, created on first use.
+
+    A stand-in harness a test builds that cannot be a weak key gets a
+    throwaway record: its decisions are simply not carried to `done`.
+    """
+    try:
+        entry = _RUN_DECISIONS.get(harness)
+        if entry is None:
+            entry = _RunDecisions()
+            _RUN_DECISIONS[harness] = entry
+        return entry
+    except TypeError:
+        return _RunDecisions()
+
+
+def _done_decisions(harness: Any) -> list[DecisionRecord] | None:
+    """What `DonePayload.decisions` carries: every decision this run made."""
+    try:
+        entry = _RUN_DECISIONS.get(harness)
+    except TypeError:
+        return None
+    if entry is None or not entry.records:
+        return None
+    return list(entry.records[:_MAX_DONE_DECISIONS])
+
+
+async def _decide_point(
+    harness: Harness, trace_id: str, spec: _DecisionSpec, text: str
+) -> DecisionRecord | None:
+    """One decision through the seam, recorded for the `done` event.
+
+    None, never an exception, when the seam itself fails: every caller
+    treats that as "no decision" and fails open exactly as it would on a
+    decision with no usable pick (`_usable_choice`). `decide` already
+    bounds `text` to its own state limit before either model reads it.
+    """
+    try:
+        record = await decide(
+            harness,
+            trace_id,
+            spec.point,
+            text,
+            spec.options,
+            instructions=spec.instructions,
+            criteria=spec.criteria,
+        )
+    except Exception as exc:  # noqa: BLE001 - a broken seam must never break the question
+        logger.warning(
+            "decision %s unavailable (trace %s): %s", spec.point, trace_id, type(exc).__name__
+        )
+        return None
+    _run_decisions(harness).records.append(record)
+    return record
+
+
+def _usable_choice(record: DecisionRecord | None) -> str | None:
+    """The decision's pick, or None when no model actually made one.
+
+    `decide` fills `chosen` with the FIRST offered option when neither Jev
+    nor the guard produced a usable pick, and in the Jev-failed case it
+    records Jev's failure reason rather than "no_usable_pick" (builder J,
+    F-J-04). So "was anything decided" is read from the two picks
+    themselves, never from `chosen` alone: a caller that trusted `chosen`
+    here would ask every question back when both models were down.
+    """
+    if record is None:
+        return None
+    if record.jev_choice is None and record.guard_choice is None:
+        return None
+    return record.chosen
+
+
+def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
+    """Stop a decision nobody will read, so it spends nothing more."""
+    if task is not None and not task.done():
+        task.cancel()
+
+
+# ---------------------------------------------------------------------------
 # guardrail: the two daily caps (once, here only), then tier="guard".
 # ---------------------------------------------------------------------------
 
@@ -924,6 +1153,36 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     prefilter_verdict = prefilter.screen(query.text)
     if prefilter_verdict is not None:
         return _decline_for_guardrail(state, sink, prefilter_verdict, charged=False)
+
+    # guardrail.relevancy (build phase 8.2, cards 8 and 9). The vocabulary
+    # allowlist may only ADMIT: a question that plainly names something
+    # biomedical skips this call, so it stays fast and free. Any other
+    # question is judged by the classifier, started NOW so it runs alongside
+    # the injection classifier below rather than after it: the person waits
+    # for one model call, not two. Only its "off_topic" refuses, below.
+    relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
+    if not prefilter.clears_biomedical_allowlist(query.text):
+        relevancy_task = asyncio.create_task(
+            _decide_point(harness, trace_id, _RELEVANCY, query.text)
+        )
+    try:
+        return await _guardrail_after_prefilter(state, sink, relevancy_task)
+    finally:
+        # Any path that ends the node before reading the relevancy decision
+        # (a refusal, a cap hit, a step error) stops it spending more.
+        _cancel_if_pending(relevancy_task)
+
+
+async def _guardrail_after_prefilter(
+    state: GraphState,
+    sink: _EventSink,
+    relevancy_task: asyncio.Task[DecisionRecord | None] | None,
+) -> dict[str, Any]:
+    """Section 10.1 steps 3 to 6, after the pre-filter, plus the relevancy
+    decision `guardrail_node` started (None when the allowlist admitted)."""
+    harness = state["harness"]
+    query = state["query"]
+    trace_id = query.trace_id
 
     # Step 3, Section 10.4. The first and only model call this node makes.
     # Dispatched through `_dispatch_tier_call` rather than calling the
@@ -1020,6 +1279,18 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
         else:
             return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
+    # The relevancy decision, when one was asked for. Only a real "off_topic"
+    # pick refuses: no usable pick fails open, since the injection classifier
+    # above has already judged topicality on this question too. A memory-bound
+    # follow-up keeps the same allowance the classifier's own off-topic
+    # verdict gets above: its subject is the remembered entity.
+    if relevancy_task is not None:
+        relevancy = _usable_choice(await relevancy_task)
+        if relevancy == "off_topic" and not _is_memory_bound_follow_up(query.text, state):
+            return _decline_for_guardrail(
+                state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
+            )
+
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.
     forbidden_verdict = forbidden.screen(query.text)
     if forbidden_verdict is not None:
@@ -1076,6 +1347,7 @@ def _decline_for_guardrail(
             elapsed_ms=_elapsed_ms(state),
             trust_outcome="refuse",
             layer_calls_used=call_budget.calls_made(),
+            decisions=_done_decisions(harness),
         ),
     )
     return sink.result(guard_refused=True)

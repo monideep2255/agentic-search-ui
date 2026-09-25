@@ -24,10 +24,9 @@ Writes:
       `Harness.track_cost` inside this module, the same accumulator every
       other model call in the loop uses.
 
-NOTHING IN THE AGENT LOOP CALLS `decide()` YET. This is build phase 8.2's
-first wave: the seam is built, tested, and live-probed, but wiring it into
-`core/graph.py`'s guardrail, think, or plan nodes is a later wave, after
-the builders who own those files finish their own work this same night.
+WIRED INTO THE LOOP in build phase 8.2's second wave (builder J): every
+caller lives in `core/graph.py`, whose "classifier seam, wired" section
+holds each decision point's fixed description and the list of points.
 
 What this decides, and what it never decides: `decide()` answers exactly
 one closed-option question at a time (`point`, e.g. "think.ask_back",
@@ -50,6 +49,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 from collections.abc import Mapping, Sequence
 
 from system_03_search_agent.contracts.events import DecisionRecord
@@ -146,17 +146,28 @@ def _build_guard_messages(
 
 
 def _parse_guard_choice(raw: str, options: Sequence[str]) -> str | None:
-    """Deterministic, exact-match-or-substring parse. Never a fuzzy score
+    """Deterministic, exact-match-or-whole-token parse. Never a fuzzy score
     (production-standards.md's AI answer grounding gate applies the same
     exact-match discipline to this closed-option decision).
+
+    The fallback matches an option only as a WHOLE token, and only when
+    exactly one offered option appears. It was a bare substring test, which
+    read "off_topic" out of `"is_off_topic": false` (builder J, F-J-06) and,
+    for a reply naming two options ("not off_topic, on_topic"), returned
+    whichever option happened to be listed first. Two options named, or
+    none, is no usable pick, and the caller falls back or fails open.
     """
     text = raw.strip()
     for opt in options:
         if text == opt:
             return opt
-    for opt in options:
-        if opt in text:
-            return opt
+    named = {
+        opt
+        for opt in options
+        if re.search(rf"(?<![\w-]){re.escape(opt)}(?![\w-])", text) is not None
+    }
+    if len(named) == 1:
+        return named.pop()
     return None
 
 

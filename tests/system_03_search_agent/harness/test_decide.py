@@ -346,3 +346,26 @@ async def test_no_description_keeps_the_original_guard_prompt(
         "Answer with exactly one of the offered options and nothing else. "
         "Options: 'relevant', 'not_relevant'"
     )
+
+
+# Builder J, F-J-06: the guard reply's fallback parse matches whole tokens
+# only, and only when exactly one offered option is named.
+
+
+@pytest.mark.parametrize(
+    ("reply", "expected"),
+    [
+        ("off_topic", "off_topic"),
+        ("  on_topic\n", "on_topic"),
+        ("'off_topic'", "off_topic"),
+        ("The answer is on_topic.", "on_topic"),
+        # A JSON reply naming a field that CONTAINS an option is not a pick.
+        ('{"is_off_topic": false}', None),
+        # Two options named is ambiguous, whichever is listed first.
+        ("not off_topic, on_topic", None),
+        ("", None),
+        ("ok", None),
+    ],
+)
+def test_guard_reply_parse_is_whole_token_and_unambiguous(reply: str, expected: str | None) -> None:
+    assert decide_module._parse_guard_choice(reply, ["on_topic", "off_topic"]) == expected

@@ -252,7 +252,10 @@ async def test_ask_back_true_shows_the_models_question_and_runs_no_tool(
     events = await _run("insulin")
     types = [event.type for event in events]
     assert "done" in types, types
-    assert dispatched == ["guard", "clarify"], dispatched
+    # "other" is the guardrail.relevancy classifier (build phase 8.2):
+    # "insulin" is not on the vocabulary allowlist, so a classifier judges
+    # its topic. Nothing past the clarify call runs: no Think, no tool.
+    assert [d for d in dispatched if d != "other"] == ["guard", "clarify"], dispatched
 
     think = _payload(events, "think")
     assert think is not None
