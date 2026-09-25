@@ -2422,37 +2422,41 @@ async def resolve_window_genes(
 #: instruction, in their words: "Please do not hardcode! Hopefully not that
 #: dumb". The STRUCTURAL trigger this rule keeps is the owner's own number,
 #: stated under item 11.38: "Jev becomes our classfier -> 1-3 words ->
-#: clarification question or move forward". Whether to ask, and what to
-#: ask, is `core.clarify`'s classifier's decision, never a word list; see
-#: that module's docstring for the full account, including where Jev's own
-#: Bool question type slots into `ask_back` once it leaves the backlog.
+#: clarification question or move forward". Whether to ask is
+#: `decide(point="think.ask_back")`'s call (build phase 8.2, builder J) and
+#: what to ask is `core.clarify`'s writer's, never a word list; see that
+#: module's docstring for the full account.
 _MAX_CLARIFY_TRIGGER_WORDS: Final[int] = 3
 
-#: The classifier's own share of `budget_for_step("think", "lookup")`,
+#: The writing call's own share of `budget_for_step("think", "lookup")`,
 #: never the whole thing. It must leave room for the REAL think classify
-#: call that still runs afterward on an `ask_back=False` verdict or ANY
-#: classifier failure, both of which fall through to the ordinary flow
-#: below this block.
+#: call that still runs afterward on a `proceed` decision or ANY failure,
+#: both of which fall through to the ordinary flow below the ask-back block.
 _CLARIFY_BUDGET_FRACTION: Final[float] = 0.2
 
-#: A short classification needs no long completion. Comfortably above the
+#: A short reply needs no long completion. Comfortably above the
 #: JSON-escaped form of a 220-character question plus four 220-character
 #: options, with room for the fixed key names.
 _CLARIFY_MAX_TOKENS: Final[int] = 300
 
 
-async def _clarify_or_proceed(
+async def _write_clarify_choices(
     harness: Harness, trace_id: str, sink: _EventSink, text: str
-) -> clarify.ClarifyDecision | None:
-    """The guard-tier ask-or-proceed call, or None on ANY failure.
+) -> clarify.ClarifyChoices | None:
+    """The guard-tier call that WRITES the question and choices, or None on
+    ANY failure.
+
+    Runs at the same moment as `decide(point="think.ask_back")`, which
+    decides whether they are shown (build phase 8.2): Jev writes no text, so
+    the words stay with this call, and running the two together means the
+    person waits for one call, not two.
 
     None is the fail-open signal. The caller, `think_node`, proceeds with
-    the search on None exactly as it would if this function had never been
-    called, per the product owner's instruction that a broken or absent
-    classifier must never block a question that could otherwise be
-    answered: an unparseable reply, a wrong shape, a timeout
-    (`HarnessCallError`), or a per-query cap hit
-    (`cost_control.QueryCapExceededError`) all fall through here rather
+    the search on None exactly as it would if no question were asked, per
+    the product owner's instruction that a broken or absent classifier must
+    never block a question that could otherwise be answered: an unparseable
+    reply, a wrong shape, a timeout (`HarnessCallError`), or a per-query cap
+    hit (`cost_control.QueryCapExceededError`) all fall through here rather
     than being enumerated separately by the caller.
 
     The `cost` event is emitted the moment the call RETURNS, before any
@@ -2480,7 +2484,7 @@ async def _clarify_or_proceed(
         )
     except (cost_control.QueryCapExceededError, HarnessCallError) as exc:
         logger.warning(
-            "clarify classifier call failed (trace %s): %s",
+            "clarify writer call failed (trace %s): %s",
             trace_id,
             type(exc).__name__,
         )
@@ -2490,11 +2494,35 @@ async def _clarify_or_proceed(
         return clarify.parse_clarify_reply(response.content)
     except clarify.ClarifyUnavailableError as exc:
         logger.warning(
-            "clarify classifier reply unusable (trace %s): %s",
+            "clarify writer reply unusable (trace %s): %s",
             trace_id,
             type(exc).__name__,
         )
         return None
+
+
+def _ask_back(sink: _EventSink, question: str, options: list[str], narrative: str) -> dict[str, Any]:
+    """End Think with a question back instead of a search.
+
+    Item 7.5's machinery, reused: `clarification_needed` makes Plan select
+    no tool and Write publish the question, and the options reach the
+    person as chips they can click to ask one of them.
+    """
+    sink.emit(
+        "think",
+        ThinkPayload(
+            narrative=narrative,
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question=question,
+            clarifying_options=options,
+        ),
+    )
+    return sink.result(
+        query_class="lookup",
+        resolved_entities=[],
+        clarification_needed=question,
+    )
 
 
 async def think_node(state: GraphState) -> dict[str, Any]:
@@ -2503,10 +2531,11 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
 
-    # Fix-plan item 12.3, REDESIGNED 2026-09-24. Checked FIRST: before the
-    # exact-ID pre-pass below, before any resolver, and before the Think
-    # classification call further down, so a question the classifier asks
-    # back never pays for either. Gated on `_session_memory(state) is
+    # Fix-plan item 12.3, REDESIGNED 2026-09-24, and routed through the
+    # classifier seam on 2026-09-25 (build phase 8.2, card 9). Checked
+    # FIRST: before the exact-ID pre-pass below, before any resolver, and
+    # before the Think classification call further down, so a question
+    # asked back never pays for either. Gated on `_session_memory(state) is
     # None`, i.e. this question OPENS the conversation: `load_for_caller`
     # returns None for exactly "a session that has no memory yet, which is
     # the ordinary first turn", so a follow-up such as "and BRCA2?" never
@@ -2514,30 +2543,34 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # subject (docs/build/Search_and_conversation_behaviour.md). The word
     # count is the product owner's own trigger from item 11.38 ("1-3
     # words"), a plain whitespace split with no punctuation stripping and
-    # no word list: everything past the trigger is `core.clarify`'s model
-    # decision, never code.
+    # no word list. Past the trigger, `decide(point="think.ask_back")`
+    # decides whether to ask and `core.clarify`'s writer writes what to
+    # ask, both at the same moment. Only a real `ask_back` pick WITH usable
+    # choices asks back; anything else searches, the fail-open rule.
     if _session_memory(state) is None:
         trigger_words = query.text.strip().split()
         if trigger_words and len(trigger_words) <= _MAX_CLARIFY_TRIGGER_WORDS:
-            decision = await _clarify_or_proceed(harness, trace_id, sink, query.text)
-            if decision is not None and decision.ask_back:
-                think_payload = ThinkPayload(
-                    narrative=(
-                        "the clarify classifier read a one-to-three-word "
-                        "opening question and decided it names a subject "
-                        "rather than a request, so the answer asks which "
-                        "aspect is meant before any search"
-                    ),
-                    query_class="lookup",
-                    resolved_entities=[],
-                    clarifying_question=decision.question,
-                    clarifying_options=list(decision.options),
-                )
-                sink.emit("think", think_payload)
-                return sink.result(
-                    query_class="lookup",
-                    resolved_entities=[],
-                    clarification_needed=decision.question,
+            ask_record, choices = await asyncio.gather(
+                _decide_point(harness, trace_id, _ASK_BACK, query.text),
+                _write_clarify_choices(harness, trace_id, sink, query.text),
+            )
+            if _usable_choice(ask_record) == "ask_back":
+                if choices is not None:
+                    return _ask_back(
+                        sink,
+                        choices.question,
+                        list(choices.options),
+                        narrative=(
+                            "the ask-back classifier read a one-to-three-word "
+                            "opening question and decided it names a subject "
+                            "rather than a request, so the answer asks which "
+                            "aspect is meant before any search"
+                        ),
+                    )
+                logger.warning(
+                    "ask_back decided but the choices could not be written "
+                    "(trace %s); searching instead",
+                    trace_id,
                 )
 
     # T-4.7-05, Section 17's exact-ID-first order: a deterministic, LOCAL,
