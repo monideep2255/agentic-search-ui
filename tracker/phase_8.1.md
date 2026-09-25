@@ -92,7 +92,7 @@ Acceptance:
 
 ### T-8.1-06: A phenotype question names phenotypes
 
-Status: todo
+Status: in-progress: parser merged (builder C, `888016d`); the `core/graph.py` half is T-8.1-06b for builder A (F-8.1-04)
 Card: 1, item 12.14
 Builder: C
 Files: `src/system_03_search_agent/tools/ncbi_eutils_actions.py`, `src/system_03_search_agent/tools/ncbi_efetch.py`, `src/system_03_search_agent/tools/ncbi_efetch_schemas.py`, and their tests
@@ -105,7 +105,7 @@ Acceptance:
 
 ### T-8.1-07: The same question returns the same papers each time
 
-Status: todo
+Status: deferred: not reproducible tonight, fix reverted (F-8.1-03); card 19 stays in To do
 Card: 19
 Builder: C
 Files: `src/system_03_search_agent/core/breadth_plan.py` and its tests
@@ -117,7 +117,7 @@ Acceptance:
 
 ### T-8.1-08: An NCBI outage no longer turns the build red
 
-Status: todo
+Status: in-review, builder C, `55c389a`: the unit gate deselects the live test, the integration gate selects it
 Card: 38
 Builder: C
 Files: `tests/system_03_search_agent/core/test_answer_readability_premise.py`
@@ -135,6 +135,23 @@ Acceptance:
 ## Findings
 
 Written the moment a finding is established. Each: ID, status, raised by, severity, round.
+
+### F-8.1-03: The same-papers fix changed which papers are shown, and the variance did not reproduce
+
+Status: closed by the lead: fix reverted (`e911956`), card 19 stays open
+Raised by: the lead, reviewing builder C's T-8.1-07
+Severity: medium: an unasked change to which papers every literature answer cites
+Round: 0 (build)
+
+Builder C's fix (`2f0c4e0`) fetched 30 PubMed ids and kept the 5 highest PMIDs, where before the 5 shown were the 5 most relevant. Its own evidence showed no variance to remove: 6 full-pipeline runs before the fix and 18 direct ESearch probes (immediate, 72 seconds apart, unauthenticated) each returned one set. Reverted, since relevance should not be traded for a stability nobody could show was missing. What builder C established stands: the PubMed term is a pure function of the resolved entity and ESearch sorts by relevance, so the 2026-09-23 variance, if it recurs, sits in NCBI's ranking boundary or in entity resolution (the `reflux disease` half is a Think-step model call). Card 19 stays in To do with this diagnosis.
+
+### F-8.1-04: MedGen's clinical features are parsed but dropped before the writing model
+
+Status: routed to builder A as T-8.1-06b
+Raised by: builder C, T-8.1-06, confirmed with a live end-to-end run
+Severity: high: without it card 1 is not fixed
+
+`_parse_medgen_clinical_features` (commit `888016d`) returns 30 capped features for Marfan syndrome, but `core/graph.py`'s `_BREADTH_FIELDS_BY_PURPOSE["medgen_summary"]` (about line 5330) does not list `clinical_features`, so the field never reaches the writing model. The exact change is in `testing/Developer/reports/2026-09-25_phase_8.1/builder_C.md`.
 
 ### F-8.1-01: The trust verdict varies because it is computed over whichever sentences the model's prose grounded that run
 
