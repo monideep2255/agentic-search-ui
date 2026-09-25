@@ -7,7 +7,7 @@ Every piece of remaining work that is not on the board. The board, `testing/UI_f
 
 Each row of both sources was checked against the code, the tracker and the done file before it was listed. A row the evidence showed closed is under "Checked and closed" with that evidence. A row that could not be settled is listed as open with "Check first" in its card. The detail stays in the source each card names; this file only points to it. Code paths are under `src/system_03_search_agent/` and test paths under `tests/system_03_search_agent/` unless written in full.
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-25.
 
 ## Table of contents
 
