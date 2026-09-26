@@ -264,7 +264,10 @@ async def _run_jev_pick(
 ) -> JevResult:
     """Jev's pick, cap-checked first exactly like the guard call above.
 
-    Raises JevCallError (from `jev_client.call_jev`) or
+    Charges Jev's reported cost whether or not the reply is usable: a
+    reply that came back unusable carries its cost on
+    `JevCallError.billed_cost_usd` (fix round, F-8.6-J10). Raises
+    JevCallError (from `jev_client.call_jev`) or
     `cost_control.QueryCapExceededError` on any failure; `_jev_attempt`
     catches both.
     """
@@ -277,15 +280,24 @@ async def _run_jev_pick(
     # so this check never lets a call through that a Jev-specific estimate
     # would have refused.
     cost_control.check_per_query_cap(harness, trace_id, "guard")
-    result = await call_jev(
-        model=model,
-        question_key=point,
-        state=state,
-        options=options,
-        api_key=api_key,
-        instructions=instructions,
-        criteria=criteria,
-    )
+    try:
+        result = await call_jev(
+            model=model,
+            question_key=point,
+            state=state,
+            options=options,
+            api_key=api_key,
+            instructions=instructions,
+            criteria=criteria,
+        )
+    except JevCallError as exc:
+        # A reply that came back but could not be used (malformed, an option
+        # outside the set, a cost above the ceiling) was still billed: its
+        # reported cost is charged, never zero, and the cost cap then applies
+        # to the guard fallback as to any call (fix round, F-8.6-J10).
+        if exc.billed_cost_usd:
+            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
+        raise
     # Charged under the "guard" tier bucket for the same reason the cap
     # check above reuses it: `Harness.track_cost`'s accumulator is not
     # broken down per tier (its own docstring says so), it only sums onto

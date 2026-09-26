@@ -15,8 +15,10 @@ Reads:
 
 Writes:
     - Nothing. Jev's own `usage.cost` is returned on `JevResult` for the
-      caller to charge through `Harness.track_cost`; this module never
-      touches a `Harness` instance.
+      caller to charge through `Harness.track_cost`, and, for a reply that
+      came back but could not be used, on `JevCallError.billed_cost_usd`
+      (build phase 8.6 fix round, F-8.6-J10); this module never touches a
+      `Harness` instance.
 
 THE ENDPOINT'S SHAPE IS NOT PUBLICLY DOCUMENTED. Everything below was
 pinned live on 2026-09-25 against the real endpoint, `POST
@@ -101,6 +103,8 @@ pipeline gate.
 from __future__ import annotations
 
 import asyncio
+import logging
+import math
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -108,6 +112,8 @@ from typing import Annotated, Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+logger = logging.getLogger(__name__)
 
 JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
 
@@ -132,10 +138,18 @@ JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invali
 #: the real price. Jev's cost is the one model cost in the loop the loop does
 #: not compute itself: it is whatever the undocumented endpoint says, and it
 #: is charged straight into the per-query, per-user and system-wide caps.
-#: A reply of `Infinity` stopped every later model call in the question and
-#: turned the done event's cost into null; a reply of 0.5 would have pushed
-#: every question past its $0.10 cap (fix round, F-8.2-J15). A reply above
-#: this is malformed, so the guard's pick decides and nothing is charged.
+#:
+#: A reply reporting more than this is not used: it is malformed, so the
+#: guard's pick decides or, for the sentence check, nothing is approved. Its
+#: reported cost IS charged, in full, whether or not the reply is otherwise
+#: usable (build phase 8.6 fix round, F-8.6-J10): the money was spent either
+#: way, and a reply the caps never see is exactly the expensive one. The
+#: cost cap then applies to the rest of the question as to any charge.
+#:
+#: A figure that is not an amount is never charged (`_reported_cost_usd`):
+#: `Infinity` stopped every later model call in the question and turned the
+#: done event's cost into null (F-8.2-J15), and `NaN` would switch the
+#: per-query cap off, since no comparison with it is ever true.
 MAX_JEV_COST_USD = 0.01
 
 #: At most one probability per offered option; `DecisionRecord.options`
@@ -178,11 +192,72 @@ class JevCallError(RuntimeError):
     catches this and falls back to the guard tier's own pick, recording
     `reason` on the `DecisionRecord.fallback_reason` field; no retry
     happens inside this module.
+
+    `billed_cost_usd` is what a reply that came back but could not be used
+    says the call cost, in US dollars, for the caller to charge to the
+    question (fix round, F-8.6-J10): a malformed reply, an option outside
+    the set and a cost above `MAX_JEV_COST_USD` were all billed. 0.0 when
+    no reply came back, or when it named no amount (`_reported_cost_usd`).
     """
 
-    def __init__(self, message: str, *, reason: str) -> None:
+    def __init__(self, message: str, *, reason: str, billed_cost_usd: float = 0.0) -> None:
         super().__init__(message)
         self.reason = reason
+        self.billed_cost_usd = billed_cost_usd
+
+
+def _reported_cost_usd(payload: object, subject: str) -> float:
+    """What a 200 reply says the call cost, in US dollars, for the caller
+    to charge; 0.0, logged, when the reply states no amount.
+
+    A real amount only: a finite number, zero or more, read the way a
+    usable reply's `usage.cost` is read. A reply that states no cost, or a
+    cost that is not a number, is negative, or is not finite (`Infinity`
+    and `NaN` both parse from JSON) charges nothing, because no amount was
+    stated that could be charged: charging infinity stops every later
+    model call in the question (F-8.2-J15), charging NaN switches the
+    per-query cap off, and a negative charge would give money back to the
+    caps. The warning says so, so the zero is never silent.
+    """
+    try:
+        raw = payload["usage"]["cost"]  # type: ignore[index]
+    except (KeyError, TypeError, IndexError):
+        logger.warning("Jev's reply for %s states no cost, so nothing is charged for it", subject)
+        return 0.0
+    try:
+        cost = None if isinstance(raw, bool) else float(raw)
+    except (TypeError, ValueError):
+        cost = None
+    if cost is None or not math.isfinite(cost) or cost < 0:
+        logger.warning(
+            "Jev's reply for %s states a cost that is not an amount of money (%s), "
+            "so nothing is charged for it",
+            subject,
+            repr(raw)[:40],
+        )
+        return 0.0
+    return cost
+
+
+def _cost_ceiling_error(
+    subject: str, cost_usd: float, next_step: str
+) -> JevCallError:
+    """The error for a reply that reports more than any one call should
+    cost: not used, and charged in full (F-8.6-J10)."""
+    logger.warning(
+        "Jev's reply for %s reported a cost of $%.6f, above the $%.2f ceiling; "
+        "the reply is not used and its cost is charged to the question",
+        subject,
+        cost_usd,
+        MAX_JEV_COST_USD,
+    )
+    return JevCallError(
+        f"Jev's reply for {subject} reported a cost of ${cost_usd:.6f}, above the "
+        f"${MAX_JEV_COST_USD:.2f} any one call should cost, so it is not used and its cost is "
+        f"charged to the question; {next_step}",
+        reason="malformed_reply",
+        billed_cost_usd=cost_usd,
+    )
 
 
 _GENERIC_INSTRUCTIONS = "Read the state and answer with exactly one of the offered options."
@@ -330,16 +405,22 @@ async def call_jev(
         instructions=instructions,
         criteria=criteria,
     )
+    subject = f"decision {question_key!r}"
+    next_step = "fall back to the guard tier's pick for this decision"
     response, latency_ms = await _send(
         body,
         api_key=api_key,
-        subject=f"decision {question_key!r}",
-        next_step="fall back to the guard tier's pick for this decision",
+        subject=subject,
+        next_step=next_step,
         timeout_s=_TIMEOUT_S,
     )
 
+    billed_usd = 0.0
     try:
         payload = response.json()
+        billed_usd = _reported_cost_usd(payload, subject)
+        if billed_usd > MAX_JEV_COST_USD:
+            raise _cost_ceiling_error(subject, billed_usd, next_step)
         answer = payload["answers"][question_key]
         usage = payload["usage"]
         parsed = JevResult(
@@ -357,6 +438,7 @@ async def call_jev(
             f"Jev's reply for decision {question_key!r} did not match the confirmed response "
             f"shape ({type(exc).__name__}: {exc}); fall back to the guard tier's pick for this decision",
             reason="malformed_reply",
+            billed_cost_usd=billed_usd,
         ) from exc
 
     if parsed.choice not in options:
@@ -364,6 +446,7 @@ async def call_jev(
             f"Jev chose {parsed.choice!r} for decision {question_key!r}, which is not one of "
             f"the offered options {list(options)!r}; fall back to the guard tier's pick for this decision",
             reason="invalid_option",
+            billed_cost_usd=parsed.cost_usd,
         )
 
     return parsed
@@ -414,9 +497,10 @@ class JevBatchResult(BaseModel):
     question asked, keyed as asked, and the call's usage.
 
     The same discipline as `JevResult` (`extra="forbid"`, every string and
-    map bounded, the reported cost capped at `MAX_JEV_COST_USD` for the
-    whole call, which is about 30 times the $0.00033 measured for thirty
-    questions).
+    map bounded, and a reply reporting more than `MAX_JEV_COST_USD` for the
+    whole call, about 30 times the $0.00033 measured for thirty questions,
+    not used, though its reported cost is still charged; see
+    `MAX_JEV_COST_USD`).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -497,8 +581,12 @@ async def call_jev_batch(
         body, api_key=api_key, subject=subject, next_step=next_step, timeout_s=bound_s
     )
 
+    billed_usd = 0.0
     try:
         payload = response.json()
+        billed_usd = _reported_cost_usd(payload, subject)
+        if billed_usd > MAX_JEV_COST_USD:
+            raise _cost_ceiling_error(subject, billed_usd, next_step)
         raw_answers = payload["answers"]
         if not isinstance(raw_answers, dict) or set(raw_answers) != set(questions):
             raise KeyError("the reply's answers do not match the questions asked, key for key")
@@ -523,6 +611,7 @@ async def call_jev_batch(
             f"Jev's reply for {subject} did not match the confirmed response shape "
             f"({type(exc).__name__}); {next_step}",
             reason="malformed_reply",
+            billed_cost_usd=billed_usd,
         ) from exc
 
     for key, answer in parsed.answers.items():
@@ -531,5 +620,6 @@ async def call_jev_batch(
                 f"Jev chose {answer.choice!r} for question {key!r}, which is not one of its "
                 f"offered options; {next_step}",
                 reason="invalid_option",
+                billed_cost_usd=parsed.cost_usd,
             )
     return parsed

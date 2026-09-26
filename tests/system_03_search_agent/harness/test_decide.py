@@ -28,6 +28,7 @@ offline comparison script measures that
 from __future__ import annotations
 
 import asyncio
+import math
 import time
 from types import SimpleNamespace
 from typing import Any
@@ -751,6 +752,100 @@ async def test_a_bad_reply_through_the_real_client_falls_back(
     assert mock_guard.call_count == 1
     assert record.decided_by == "guard" and record.chosen == "relevant"
     assert record.fallback_reason == reason
+
+
+# Fix round (F-8.6-J10): a Jev reply that came back unusable was billed all
+# the same. Its reported cost is charged to the question, never at zero,
+# and the cost cap then applies to the guard fallback as to any call. A
+# figure that is not an amount of money charges nothing (F-8.2-J15).
+
+
+def _real_jev_reply(monkeypatch: pytest.MonkeyPatch, *, cost: str, choice: str = "relevant") -> None:
+    """A reply through the REAL `call_jev`, whose `usage.cost` is `cost`
+    written into the JSON exactly as given."""
+    import json
+
+    import httpx
+
+    body = {
+        "model": "typesafe/jev-1.13-20260917",
+        "answers": {
+            "guardrail.relevancy": {
+                "type": "choice",
+                "choice": choice,
+                "probabilities": {"relevant": 0.9, "not_relevant": 0.1},
+                "confidence": 0.8,
+            }
+        },
+        "usage": {"input_tokens": 1, "output_tokens": 1, "cost": 0.0},
+    }
+    raw = json.dumps(body).replace('"cost": 0.0', f'"cost": {cost}')
+    monkeypatch.setattr(
+        jev_client_module, "_post", AsyncMock(return_value=httpx.Response(200, content=raw.encode()))
+    )
+
+
+def _free_guard(monkeypatch: pytest.MonkeyPatch, *, reply: str = "relevant") -> AsyncMock:
+    """A guard tier priced at zero, so the only money on the trace is Jev's."""
+    mock_acompletion = AsyncMock(return_value=_fake_llm_response(reply))
+    monkeypatch.setattr(litellm, "acompletion", mock_acompletion)
+    monkeypatch.setattr(
+        litellm, "get_model_info", lambda model: {"input_cost_per_token": 0.0, "output_cost_per_token": 0.0}
+    )
+    return mock_acompletion
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("cost", "choice", "reason", "charged"),
+    [
+        ("0.02", "relevant", "malformed_reply", 0.02),
+        ("0.004", "maybe", "invalid_option", 0.004),
+        ("Infinity", "relevant", "malformed_reply", 0.0),
+        ("NaN", "relevant", "malformed_reply", 0.0),
+        ("-0.1", "relevant", "malformed_reply", 0.0),
+    ],
+    ids=[
+        "above the ceiling, charged in full",
+        "an option outside the set, charged",
+        "infinite, not an amount",
+        "not a number, not an amount",
+        "negative, not an amount",
+    ],
+)
+async def test_an_unusable_jev_reply_is_charged_at_its_reported_cost(
+    monkeypatch: pytest.MonkeyPatch, cost: str, choice: str, reason: str, charged: float
+) -> None:
+    _jev_mode(monkeypatch)
+    mock_guard = _free_guard(monkeypatch)
+    _real_jev_reply(monkeypatch, cost=cost, choice=choice)
+    harness = Harness(trace_id="j10-1")
+
+    record = await decide(harness, "j10-1", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert record.decided_by == "guard" and record.fallback_reason == reason
+    assert mock_guard.call_count == 1
+    total = harness.get_query_cost_usd("j10-1")
+    assert math.isfinite(total), "a figure that is not an amount never reaches the caps"
+    assert total == pytest.approx(charged)
+
+
+@pytest.mark.asyncio
+async def test_the_cost_cap_still_applies_after_an_over_ceiling_charge(monkeypatch: pytest.MonkeyPatch) -> None:
+    """$0.02 charged against a $0.015 cap: the guard fallback is refused by
+    the cap before it is sent, and the fail-open default is recorded."""
+    _jev_mode(monkeypatch)
+    _patch_cap(monkeypatch, cap_usd="0.015")
+    mock_guard = _free_guard(monkeypatch)
+    _real_jev_reply(monkeypatch, cost="0.02")
+    harness = Harness(trace_id="j10-2")
+
+    record = await decide(harness, "j10-2", "guardrail.relevancy", "x", _OPTIONS, default="relevant")
+
+    mock_guard.assert_not_called()
+    assert record.fallback_reason == "no_usable_pick:malformed_reply"
+    assert record.chosen == "relevant"
+    assert harness.get_query_cost_usd("j10-2") == pytest.approx(0.02)
 
 
 def test_nothing_waits_on_a_comparison_pick_any_more() -> None:

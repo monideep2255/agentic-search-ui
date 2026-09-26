@@ -915,6 +915,33 @@ async def test_the_adversarys_a01_replies_now_approve_nothing(monkeypatch, first
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("answers", "cost", "charged"),
+    [
+        ({"item_1": _jev_answer("no")}, 0.02, 0.02),
+        ({"item_1": _jev_answer("maybe")}, 0.004, 0.004),
+        ({"item_1": _jev_answer("no")}, float("inf"), 0.0),
+    ],
+    ids=["above the ceiling, charged in full", "an option outside the set, charged", "infinite, not an amount"],
+)
+async def test_an_unusable_jev_reply_approves_nothing_and_is_charged_its_reported_cost(
+    monkeypatch, answers, cost, charged
+) -> None:
+    """F-8.6-J10's own probe shape: a reply reporting $0.02 approved
+    nothing after a guard fallback and charged $0.0000. Now it approves
+    nothing, asks no other model, and is charged what it reported."""
+    _jev_replies_with(monkeypatch, answers, cost=cost)
+    harness = Harness(trace_id="j10-s")
+    guard = _FakeGuard('{"supported": [1]}')
+
+    with pytest.raises(SentenceCheckUnreadable):
+        await _check(_made_up_candidates(1), guard=guard, trace_id="j10-s", harness=harness)
+
+    assert guard.calls == []
+    assert harness.get_query_cost_usd("j10-s") == pytest.approx(charged)
+
+
+@pytest.mark.asyncio
 async def test_one_undecided_sentence_leaves_the_others_approved(monkeypatch) -> None:
     """Even odds withholds that one sentence, not the whole answer."""
     _jev_replies_with(

@@ -349,20 +349,28 @@ async def _ask_jev(
 
     Cap-checked first and charged after, exactly like `harness.decide`'s
     Jev pick: Jev has no tier of its own, so the guard tier's conservative
-    estimate and cost bucket stand in. Raises `QueryCapExceededError`,
-    `JevCallError` or `SentenceCheckUnreadable`.
+    estimate and cost bucket stand in. A reply that came back unusable is
+    charged its reported cost too (`JevCallError.billed_cost_usd`). Raises
+    `QueryCapExceededError`, `JevCallError` or `SentenceCheckUnreadable`.
     """
     state, sent = build_jev_state(candidates)
     if not sent:
         raise SentenceCheckUnreadable("no item fits in one Jev call")
     cost_control.check_per_query_cap(harness, trace_id, "guard")
-    result = await call_jev_batch(
-        model=resolve_jev_model(),
-        state=state,
-        questions=build_jev_questions(len(sent)),
-        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-        timeout_s=timeout_s,
-    )
+    try:
+        result = await call_jev_batch(
+            model=resolve_jev_model(),
+            state=state,
+            questions=build_jev_questions(len(sent)),
+            api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            timeout_s=timeout_s,
+        )
+    except JevCallError as exc:
+        # An unusable reply was still billed: its reported cost is charged,
+        # never zero, even though it approves nothing (fix round, F-8.6-J10).
+        if exc.billed_cost_usd:
+            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
+        raise
     harness.track_cost(trace_id, "guard", result.cost_usd)  # type: ignore[arg-type]
     return approved_keys_from_jev(result, sent)
 
