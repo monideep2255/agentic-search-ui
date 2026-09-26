@@ -1,4 +1,7 @@
-"""The CLI entry point: `s3 ask`, `s3 stop`, and `s3 login`.
+"""The CLI entry point: `s3 ask`, `s3 stop`, `s3 login` and `s3 mcp`.
+
+`s3 mcp` was added at build phase 8.10 (T-8.10-04): it hands the process's
+stdin and stdout to `mcp_bridge.py`, imported lazily like the siblings below.
 
 Build phase 4.2, ticket T-4.2-05 (`tracker/phase_4.2.md`). A thin
 orchestrator over three sibling modules this phase builds in parallel
@@ -704,6 +707,22 @@ def _parse_stop_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argpar
     return parser.parse_args(list(argv))
 
 
+def _parse_mcp_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argparse.Namespace:
+    parser = _CliArgumentParser(
+        prog="s3 mcp",
+        out=out,
+        err=err,
+        description=(
+            "Run a local MCP server over stdin and stdout, for an AI agent that "
+            "starts MCP servers as commands. It offers every tool System 3's "
+            "remote MCP server offers, using the sign-in 's3 login' stored, and "
+            "renews that sign-in itself. Sign in first with: s3 login. Point the "
+            "agent at the command: s3 mcp"
+        ),
+    )
+    return parser.parse_args(list(argv))
+
+
 def _parse_login_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argparse.Namespace:
     parser = _CliArgumentParser(prog="s3 login", out=out, err=err)
     # Optional since build phase 8.10 (T-8.10-03): left off, it is asked for.
@@ -890,6 +909,53 @@ async def _run_stop(
 
     stdout.write("run stopped\n" if stopped else "run was already finished\n")
     return 0
+
+
+async def _run_mcp(
+    *,
+    stdin: TextIO,
+    stdout: TextIO,
+    stderr: TextIO,
+    http_client: httpx.AsyncClient,
+) -> int:
+    """`s3 mcp`: the local MCP server over stdio (build phase 8.10, T-8.10-04).
+
+    Loads the stored sign-in first and stops with the usual "run s3 login"
+    message when there is none, before reading a single line, so an agent's
+    host shows a clear reason the server did not start. From then on stdout
+    carries JSON-RPC and nothing else; see `mcp_bridge.py`.
+
+    Bytes, not text: the MCP stdio transport is UTF-8 whatever the locale, so
+    the binary buffer under each stream is used when there is one. A text
+    stream with no buffer (a test's `StringIO`) is adapted line by line.
+    """
+    from system_03_search_agent.adapters.cli import mcp_bridge
+
+    creds = _load_credentials_or_report(stderr)
+    if creds is None:
+        return 1
+
+    in_buffer = getattr(stdin, "buffer", None)
+    if in_buffer is not None:
+        read_line = in_buffer.readline
+    else:
+
+        def read_line(limit: int) -> bytes:
+            return stdin.readline(limit).encode("utf-8")
+
+    out_buffer = getattr(stdout, "buffer", None)
+
+    def write_line(data: bytes) -> None:
+        if out_buffer is not None:
+            out_buffer.write(data)
+            out_buffer.flush()
+        else:
+            stdout.write(data.decode("ascii"))
+            stdout.flush()
+
+    return await mcp_bridge.serve(
+        http_client, creds, read_line=read_line, write_line=write_line, stderr=stderr
+    )
 
 
 async def _run_ask(
@@ -1316,6 +1382,11 @@ async def async_main(
             return await _run_login(
                 args, stdin=stdin, stdout=stdout, stderr=stderr, http_client=http_client
             )
+        if command == "mcp":
+            _parse_mcp_args(rest, out=stdout, err=stderr)
+            return await _run_mcp(
+                stdin=stdin, stdout=stdout, stderr=stderr, http_client=http_client
+            )
     except _ArgparseExit as exc:
         return exc.code
     except _CommandError as exc:
@@ -1342,7 +1413,10 @@ async def async_main(
         stderr.write(f"s3: unexpected error ({type(exc).__name__})\n")
         return 1
 
-    stderr.write(f"s3: unknown command {command!r}; expected ask, stop, or login\n")
+    stderr.write(
+        f"s3: unknown command {command!r}; expected ask, stop, login or mcp. "
+        "Run 's3 --help' to see what each does.\n"
+    )
     return 2
 
 
