@@ -190,7 +190,7 @@ Additional context to pass to git-sync:
 - The commit subject follows Conventional Commits per `.claude/rules/git-workflow.md`: `<type>[optional scope]: <description>` in sentence case, one logical change per commit, the body saying why.
 - NEVER add `Co-Authored-By` lines or any co-author trailer (project rule).
 - Push target by mode: in the UI fix loop, `develop` directly, which is one of the two named carve-outs in `.claude/rules/bossman-mode.md`; in build-phase mode, the `phase/N.M-...` branch with `-u`, then offer the pull request; anything under `.claude/`, hooks or settings goes on a `chore/` or `fix/` branch with a pull request regardless of mode.
-- Prove the push: compare `git rev-parse HEAD` with `git rev-parse origin/<branch>` and require equality; never a verbose curl trace (`.claude/rules/sandbox-diagnosis.md`).
+- Prove the push: compare `git rev-parse HEAD` with `git rev-parse origin/<branch>` and require equality; never a verbose curl trace (`docs/rules/Sandbox_diagnosis.md`).
 - After a push to develop, confirm the Railway deploy for that commit reached SUCCESS (the `develop` project's API service; a deploy takes two to three minutes) before telling the product owner anything is live; a push is not a deploy.
 
 ## Step 3: leftover worktree cleanup

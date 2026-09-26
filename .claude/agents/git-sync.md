@@ -78,7 +78,7 @@ Bad commit messages:
 
 ## Prove the push
 
-After pushing, compare `git rev-parse HEAD` and `git rev-parse origin/<branch>`. Equal hashes are the proof the push authenticated and reached the remote. Never capture a verbose curl trace to prove auth, per `.claude/rules/sandbox-diagnosis.md`: `GIT_TRACE_REDACT` does not cover the HTTP/2 frame trace, so a token can leak in cleartext.
+After pushing, compare `git rev-parse HEAD` and `git rev-parse origin/<branch>`. Equal hashes are the proof the push authenticated and reached the remote. Never capture a verbose curl trace to prove auth, per `docs/rules/Sandbox_diagnosis.md`: `GIT_TRACE_REDACT` does not cover the HTTP/2 frame trace, so a token can leak in cleartext.
 
 ## Important notes
 

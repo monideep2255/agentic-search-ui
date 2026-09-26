@@ -1,9 +1,9 @@
 ---
 description: "For skills or agent runs producing substantial output, grade with a second agent that has fresh context against pass/fail criteria. The agent that produced the output never signs off on it."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
 ---
-
 ## Self-eval loop
 
 For skills producing substantial output, use a two-agent pattern. A second agent with fresh context grades the output against pass/fail criteria. This is more reliable than single-shot self-review because fresh context removes the "I wrote it so it must be good" bias.

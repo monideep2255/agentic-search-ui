@@ -235,7 +235,7 @@ agentic-search-ui/
     e2e/                        # Playwright specs, including the live diagnostics gated behind RUN_LIVE_DIAGNOSTICS
   tests/                        # pytest suite, including the per-phase premise gates and mutation harnesses
   testing/                      # UI testing entry point: manual workflows, the ranked spec, evidence and feedback capture (see testing/Developer/Developer_workflows.md)
-  docs/                         # Architecture, NCBI, build cadence, and the design system
+  docs/                         # Architecture, NCBI, build cadence, the design system, and rules/ for the one rule read on demand
   reference/                    # Symlink to agentic-search-data-engineering (System 1 and 2)
   requirements/                 # Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
   tracker/                      # The build board: BOARD.md, phase tickets, render_board.py, check_doc_drift.py
@@ -283,6 +283,7 @@ agentic-search-ui/
 | [Tool implementation mechanics](docs/ncbi/Tool_implementation_mechanics.md) | Per-tool API traps from tech spec section 6: edge-label enforcement, ELink target db, the `global_mafs` array, sequential dbSNP calls, snapshot pinning |
 | [Build workflow cadence](docs/build/Build_workflow_cadence.md) | The quick reference for how a build phase runs: the twelve stages, who acts at each, the model and effort per stage. Stage 5, the premise gate, is mandatory and blocking for a model-generating phase |
 | [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build cadence as a visual page, also published as a Claude artifact |
+| [Sandbox diagnosis](docs/rules/Sandbox_diagnosis.md) | The rule read on demand: how to classify a command the sandbox blocked before ever disabling it |
 | [CI gate scripts](.github/gates/README.md) | Why the CI workflow contains no inline shell: one script per Section 24 gate, and the premise-gate defeats that forced the design |
 | [Debugging guide](docs/build/Debugging_guide.md) | Which file to open when something is wrong: a symptom index, then what every source file does |
 | [NCBI design system migration assessment](docs/build/design/NCBI_design_system_migration_assessment.md) | Assessment, not a decision, answering four questions: this app's current design system, what the NCBI design system is, which parts could migrate, and whether the work can be done off the NCBI network |
@@ -351,4 +352,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-09-25
+Last updated: 2026-09-26

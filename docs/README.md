@@ -4,7 +4,7 @@ Reference material for System 3. Start here to find the right document without o
 
 Planning documents live in `requirements/`, not here. This folder holds reference and how-to material. The distinction that matters: `requirements/` says what we are building and why, `docs/` says how things actually work.
 
-Last updated: 2026-08-18.
+Last updated: 2026-09-26.
 
 ## Table of contents
 
@@ -27,6 +27,7 @@ Last updated: 2026-08-18.
 | Find an NCBI endpoint, rate limit, or record count | `ncbi/NCBI_databases_and_APIs_reference.md` |
 | Decide whether to build or reuse something NCBI published | `ncbi/NCBI_repos_deep_dive.md` |
 | Run a build phase | `build/Build_workflow_cadence.md`, or `build/Phase_6_execution_flow.html` for the visual |
+| Unblock a command the sandbox refused | `rules/Sandbox_diagnosis.md`, before ever disabling the sandbox |
 | Watch parallel builders in live panes | `build/Agent_teams_tmux_quickstart.md` |
 | Run the security scan before a pull request | `Claude_security_plugin_usage.md` |
 | Design anything that runs more than one agent against a shared resource | `architecture/Multi_agent_system_design_explained.md` |
@@ -65,6 +66,12 @@ Last updated: 2026-08-18.
 |-----|-----------|
 | `Knowledge_graph_on_server_reference.md` | Operating the live graph: SSH access, Cypher examples, indexes, node and edge counts, cost |
 | `Project_overview_A_to_Z.md` | The navigation hub with pointers into every doc across the whole project, including the data engineering repo |
+
+### `rules/` a rule read on demand
+
+| Doc | What it is |
+|-----|-----------|
+| `Sandbox_diagnosis.md` | How to classify a command the sandbox blocked (filesystem deny, a blocked HTTPS host, a failed SSH connection) and the durable fix for each, before ever disabling the sandbox. Moved out of `.claude/rules/` on 2026-09-26 so it no longer loads into every session and agent; `CLAUDE.md` names when to read it |
 
 ### At the root
 
@@ -105,3 +112,4 @@ Files were regrouped into folders on 2026-07-26. Every reference in an editable 
 | `docs/NCBI_databases_and_APIs_reference.md` | `docs/ncbi/NCBI_databases_and_APIs_reference.md` |
 | `docs/NCBI_repos_deep_dive.md` | `docs/ncbi/NCBI_repos_deep_dive.md` |
 | `docs/Tool_implementation_mechanics.md` | `docs/ncbi/Tool_implementation_mechanics.md` |
+| `.claude/rules/sandbox-diagnosis.md`, moved 2026-09-26 and still cited at that path by `LEARNINGS.md` and two records under `tracker/` | `docs/rules/Sandbox_diagnosis.md` |

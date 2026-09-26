@@ -1,3 +1,6 @@
+---
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
+---
 ## Plan then fan out (reasoning model decomposes, cheaper models execute)
 
 When work fans out to parallel agents, split the roles by model tier. The strongest reasoning model (Opus) owns the plan: it scouts the terrain, decomposes the work into tightly scoped, self-contained, non-overlapping tasks, and writes each task a contract. Cheaper, faster models (Sonnet 5 for substantive extraction and analysis, Haiku 4.5 for mechanical lookup and formatting) own execution: each runs one bounded task in parallel. The expensive reasoning is spent once, on the decomposition and the final synthesis. The repetitive execution is spent cheaply, in parallel.

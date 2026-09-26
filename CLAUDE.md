@@ -197,7 +197,16 @@ The invocation is always the skill's exact name. A shortened alias does not reso
 
 Auto-read skills (loaded by other skills or before specific tasks): best-practices, release-workflow, dev-standards.
 
-All rules are in `.claude/rules/` and loaded automatically. No need to duplicate here.
+Rules live in `.claude/rules/`, and since 2026-09-26 each loads where it is needed (the product owner's item-by-item approval of 2026-09-25, DECISIONS.md). Their content is not duplicated here.
+
+- Always loaded, into every session and every agent: writing-style, production-standards, git-workflow, design-consistency, anti-rationalization, public-repository-privacy, decide-from-the-users-chair, file-protection, communication-style, ai-security-standards, supply-chain-security.
+- Loaded when a matching file is read, by the globs in each rule's `paths:` frontmatter:
+  - tool-call-budgets: the tool modules, `harness/call_budget.py`, the graph query service, their tests and the integration gate.
+  - prompt-cache-discipline: `harness/`, the few-shot pool and every module that builds a model prompt.
+  - dependency-tracking: `.claude/hooks/`, `.claude/settings.json` and the Python modules under `src/system_03_search_agent/`.
+  - production-examples: product code under `src/`, `frontend/src/` and `services/`, plus `.claude/settings.json` and the delete guard hook.
+- The lead's nine orchestration rules (goal-contracts, self-eval-loop, bossman-mode, plan-then-fan-out, v1-scope-boundary, system-design-patterns, attack-the-constraint, preserve-your-thinking, decision-logging) load when the handoff, the board, a ledger or the decisions are read: `HANDOFF.md`, `DECISIONS.md`, `LEARNINGS.md`, `testing/UI_fix_plan.md`, `testing/UI_fixes_done.md`, `tracker/`, `requirements/`, the top level of `docs/build/` and the bossman-mode skill. A lead session reads `HANDOFF.md` first.
+- Read on demand, never loaded: `docs/rules/Sandbox_diagnosis.md`. Read it when a command is blocked with "operation not permitted", a host is blocked or an SSH push fails, and always before disabling the sandbox.
 
 ---
 
@@ -219,7 +228,7 @@ Portable content, Claude-Code-coupled invocation:
 
 - Skills under `.claude/skills/`. The bodies are plain markdown instructions any agent can follow. What does not port is the frontmatter routing and slash-command invocation. Another agent invokes a skill by reading its `SKILL.md` at its file path, not by typing its name.
 - Sub-agents under `.claude/agents/`. Same split: the prompts port, the dispatch mechanism does not.
-- Rules under `.claude/rules/`. They auto-load in Claude Code. Another agent must be pointed at the directory explicitly, and `AGENTS.md` should say so.
+- Rules under `.claude/rules/`, and the one under `docs/rules/`. In Claude Code a rule with no `paths:` frontmatter loads in every session and agent, a rule with `paths:` loads when a matching file is read, and `docs/rules/` loads only when read. Another agent must be pointed at both directories explicitly and reads every rule whatever its `paths:`, and `AGENTS.md` should say so.
 
 Does not port, and this is the blocker:
 

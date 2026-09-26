@@ -20,7 +20,7 @@ Reference for anyone about to write, review, or debug a tool in `system_03_searc
 
 This document holds API facts, not policy. That distinction matters for where a builder looks for what:
 
-- Rules in `.claude/rules/` are always-on policy that apply to every tool regardless of which API it calls: schema validation, secrets handling, least privilege, citation provenance. They load automatically every session.
+- Rules in `.claude/rules/` are always-on policy that apply to every tool regardless of which API it calls: schema validation, secrets handling, least privilege, citation provenance. The rules that carry that policy, `production-standards` and `ai-security-standards`, load automatically every session. `tool-call-budgets`, which owns every tool's timeout and rate-limit pool, loads since 2026-09-26 when a tool module, a tool test, or this document is read.
 - This document is API-specific fact: what a particular endpoint actually returns, how it signals an error, which field is real and which one silently reads null. It applies only when writing or reviewing the one tool a section concerns, and a builder has to open it deliberately.
 - Timeouts and rate-limit pools for every tool are owned by `.claude/rules/tool-call-budgets.md`. This document does not restate them; each tool section below links to that rule instead.
 - The multi-agent pipeline gate (`maxLength` on every string, `maxItems` on every array, a host-pinned `source_url` regex, no `additionalProperties`) is policy owned by `.claude/rules/production-standards.md`. It applies to every schema in Section 6 and is not restated per tool below.

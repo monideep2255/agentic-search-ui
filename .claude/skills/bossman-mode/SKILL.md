@@ -274,7 +274,7 @@ Answer behaviour is the one place a premise check survives. For an answer-path c
 
 ## Behaviour at every position
 
-The `bossman-mode` rule states which rules this mode suspends and which it preserves. It is in context for the lead's session, so it is not restated here. Six things are worth repeating because they are the ones most often relaxed under time pressure:
+The `bossman-mode` rule states which rules this mode suspends and which it preserves. It is in context for the lead's session, so it is not restated here: since 2026-09-26 its `paths:` frontmatter loads it, with the lead's other orchestration rules, when the lead reads `HANDOFF.md` at stage 1 or any file of this skill. Six things are worth repeating because they are the ones most often relaxed under time pressure:
 
 - Every other rule still binds. `v1-scope-boundary` binds hardest here, not least, because autonomy is exactly when scope creep happens. `production-standards` gates hold on a one-line fix as they hold on a phase.
 - Write a finding the moment it is established, before doing anything else with it. An agent's context is not storage.
