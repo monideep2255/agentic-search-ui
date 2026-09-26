@@ -202,14 +202,14 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
-| builder A, R-01 to R-03 | Opus 5.5 | default | 18:52 | (resumed for the R-01 fix) | |
+| builder A, R-01 to R-03 | Opus 5.5 | default | 18:52 | 19:46 | 514,140 |
 | builder B, R-04 | Sonnet 5 | default | 18:52 | 19:35 | 341,979 |
 
 ### Re-land tickets
 
 #### R-01: A slow or failing model call in the first step no longer ends the question (G-005)
 
-- Builder: A. Answer path: yes. Status: todo.
+- Builder: A. Answer path: yes. Status: in-review.
 - Acceptance: a question never fails because one model call in the first step ran slowly or hit a brief error. A question no judge has cleared is still never answered.
 - Diagnosis first. The cause is not yet shown.
   - G-005 pass 3 ended at 15.5 seconds with a fatal step error from the guardrail, `error_class` "transient". The guardrail's budget is 15 seconds.
@@ -220,7 +220,7 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 
 #### R-02: Asking to change the graph gets the read-only reply again (G-043)
 
-- Builder: A. Answer path: yes. Status: todo.
+- Builder: A. Answer path: yes. Status: in-review.
 - Acceptance: "Delete the BRCA1 node from the knowledge graph" gets the read-only reply that says what the person can do instead, as before the phase. A question disguised as a forged chat transcript is still refused.
 - Diagnosis, the lead's (F-8.6-G01):
   - `classifier.verdict_for_decision` returns the injection refusal whenever Jev picks injection.
@@ -235,7 +235,7 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 
 #### R-03: A question Jev judges on topic is not turned away by the guard model alone (G-038)
 
-- Builder: A. Answer path: yes. Status: todo.
+- Builder: A. Answer path: yes. Status: in-review.
 - Acceptance: "Tell me about the tree of life." is not refused as off topic when Jev judges it on topic. Every other refusal stands.
 - Diagnosis, the lead's:
   - On a first question the guard classifier's `off_topic` refusal returns before the `guardrail.relevancy` pick is read (`guardrail_node`, the `if not classifier_verdict.admitted` block). Jev's relevancy pick can only ever add an off-topic refusal.
@@ -256,7 +256,7 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 
 #### R-04: A Jev charge stays inside its ceiling, and two of the phase's fixes get the tests they lack
 
-- Builder: B. Answer path: yes, since a charge counts against the cost caps. Status: todo.
+- Builder: B. Answer path: yes, since a charge counts against the cost caps. Status: in-review.
 - Source: F-8.6-V01, V03, V05, V06 and V07. This is the whole of phase 8.9's T-8.9-07, which the re-land now carries; 8.9 drops that ticket.
 - Acceptance: on a day Jev's alpha endpoint misreports its cost, one question no longer pauses every person's questions for the rest of the day. The phase's late-read grace and its repair call-site each have a test that fails when broken.
 - The work: exactly as T-8.9-07's acceptance 1 to 5 in `tracker/phase_8.9.md`.
@@ -282,6 +282,7 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
   - The lead approves R-01's fix within the unchanged 15 s step budget. The first classifier attempt is capped at about half the budget, and a timeout or transient failure gets one fresh attempt with the remaining time. No verdict still means no answer. The budget value itself is the owner's to change and is not changed.
   - A note for the owner, not blocking: the live R-03 answer to "Tell me about the tree of life." is about tree lifespans and forest soil, not phylogeny, the same as phase 8.2's answer.
 - 2026-09-26 19:35: builder B finished R-04 (c335b07, 0dbf51b, 0f5368b, 863e476, report bca1abe). One file outside its fence: `tests/system_03_search_agent/synthesis/test_sentence_check.py`, a constant in one assertion that pinned a charge above the ceiling, forced by R-04's own clamp. No product file outside the fence changed. Accepted by the lead.
+- 2026-09-26 19:46: builder A finished R-01 (70bc517, report 9c8c8c4, 5d924ae): a guard classifier call that hangs or hits a transient error gets one fresh attempt inside the unchanged 15 s budget, the first attempt capped at two thirds of the remaining budget. Trade-off named by the builder: a classifier slower than 10 s on every request now fails where it was admitted at up to 15 s. Both builders merged into the branch (e29c645, 0dea119); R-01 to R-04 set to in-review.
 
 ## Findings
 
