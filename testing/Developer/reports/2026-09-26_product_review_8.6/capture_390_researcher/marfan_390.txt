@@ -1,0 +1,147 @@
+What are the clinical features of Marfan syndrome?
+New search
+
+✓ Answered12.8s · 8 tools · 93 sources from 3 layers
+
+Show work ▾
+
+Found 21 sequence variant records, 1 disease record, 3 gene records and 21 derived records for Marfan syndrome[57][58][59][60][61][62][63][64][65][66][67][68][69][70][71][72][73][74][75][76][77][78][79][80][81][82].⁠11 +19
+
+CLINICAL FEATURES FROM MEDGEN
+
+MedGen lists these clinical features: Aortic regurgitation, Arachnodactyly, Astigmatism, Ectopia lentis, Esotropia, Exotropia, Pes planus, Glaucoma, Congestive heart failure and Hypertropia.⁠1–10
+
+SEQUENCE VARIANT RECORDS FOUND
+NM_003242.6(TGFBR2):c.944C>T (p.Thr315Met)⁠11
+ClinVar:12502
+NM_004612.4(TGFBR1):c.722C>T (p.Ser241Leu)⁠15
+ClinVar:12524
+NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser)⁠18
+ClinVar:16422
+NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter)⁠21
+ClinVar:16424
+NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser)⁠23
+ClinVar:16425
+NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg)⁠25
+ClinVar:16426
+NM_000138.5(FBN1):c.6662G>C (p.Cys2221Ser)⁠27
+ClinVar:16427
+NM_000138.5(FBN1):c.3350G>A (p.Cys1117Tyr)⁠29
+ClinVar:16428
+NM_000138.5(FBN1):c.3725G>A (p.Cys1242Tyr)⁠57
+ClinVar:16429
+NM_000138.5(FBN1):c.6339T>G (p.Tyr2113Ter)⁠59
+ClinVar:16430
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+DISEASE RECORDS FOUND
+Marfan syndrome⁠12
+MedGen:C0024796
+GENE RECORDS FOUND
+transforming growth factor beta receptor 2⁠13
+NCBIGene:7048
+transforming growth factor beta receptor 1⁠16
+NCBIGene:7046
+fibrillin 1⁠19
+NCBIGene:2200
+DERIVED RECORDS FOUND
+ClinVar:12502⁠14
+ClinVar:12502
+ClinVar:12524⁠17
+ClinVar:12524
+ClinVar:16422⁠20
+ClinVar:16422
+ClinVar:16424⁠22
+ClinVar:16424
+ClinVar:16425⁠24
+ClinVar:16425
+ClinVar:16426⁠26
+ClinVar:16426
+ClinVar:16427⁠28
+ClinVar:16427
+ClinVar:16428⁠56
+ClinVar:16428
+ClinVar:16429⁠58
+ClinVar:16429
+ClinVar:16430⁠60
+ClinVar:16430
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+MEDGEN RECORDS FOUND
+Marfan syndrome⁠30
+medgen 44287
+CLINICAL FEATURES MEDGEN LISTS FOR MARFAN SYNDROME (35 OF 70 SHOWN)
+Aortic regurgitation⁠1
+HP:0001659
+Arachnodactyly⁠2
+HP:0001166
+Astigmatism⁠3
+HP:0000483
+Ectopia lentis⁠4
+HP:0001083
+Esotropia⁠5
+HP:0000565
+Exotropia⁠6
+HP:0000577
+Pes planus⁠7
+HP:0001763
+Glaucoma⁠8
+HP:0000501
+Congestive heart failure⁠9
+HP:0001635
+Hypertropia⁠10
+HP:0025586
+Showing 1–10 of 35
+‹ Previous
+Page 1 of 4
+Next ›
+PUBMED RECORDS FOUND
+Marfan syndrome.⁠83
+PMID:2402263
+[Latest advances in the diagnosis and treatment of Marfan syndrome].⁠86
+PMID:35894201
+What Is Marfan Syndrome?⁠88
+PMID:37058316
+Marfan syndrome.⁠90
+PMID:38517496
+Marfan syndrome.⁠92
+PMID:8733052
+LITERATURE ENTITY RECORDS FOUND
+Marfan Syndrome⁠84
+@DISEASE_Marfan_Syndrome
+CLINICAL TRIAL RECORDS FOUND
+Studies of Heritable Disorders of Connective Tissue⁠85
+NCT00270686
+COMPLETED
+Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome⁠87
+NCT00429364
+COMPLETED
+Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome⁠89
+NCT00485368
+COMPLETED
+Losartan Versus Atenolol for the Treatment of Marfan Syndrome⁠91
+NCT00593710
+COMPLETED
+A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome⁠93
+NCT00651235
+UNKNOWN
+NOTES
+Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query
+▶
+SOURCES
+58
+Based on 58 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
