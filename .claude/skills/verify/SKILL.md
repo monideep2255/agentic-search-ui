@@ -197,28 +197,44 @@ The check is `.claude/skills/verify/scripts/check_facts.py`, and its module comm
 - Its one source: a constant or type in the backend, a data file, or the graph owner's reference.
 - Every screen and document that states it.
 
-Before the merge, from the checkout under test:
+Before the merge, from the checkout under test, with the repository's virtual environment:
 
 ```bash
-python3 .claude/skills/verify/scripts/check_facts.py
+venv/bin/python .claude/skills/verify/scripts/check_facts.py
 ```
 
-- It reads the code and never runs it, so the stack need not be up. It needs Python 3.11 or later, no network and no secret.
-- In an agent worktree the `reference/` link does not resolve. The script falls back to the main checkout's copy, or takes `--reference <dir>`.
-- Exit 0: every place matches its source. Exit 1: at least one FAIL. Exit 2: an ERROR, where the registry no longer matches the code; update the registry in the same change.
-- Copy every FAIL, GAP and ERROR line into the report unchanged. A FAIL fails `/verify` like any other check, whether the stale place is a screen, a document or a copy in code. A GAP is a fact the script could not read here, named and never counted as a pass.
+- It needs Python 3.11 or later, which the venv has. A system `python3` may be 3.9, and the script refuses it with exit code 2 and a message naming the venv.
+- It reads the code and never imports or runs it, so the stack need not be up. It needs no network and no secret. The one process it starts is `git rev-parse`.
+- In an agent worktree the `reference/` link does not resolve. The script falls back to the main checkout's copy, or takes `--reference <dir>`. A `--reference` that names no directory is refused, never ignored.
+- Only PASS passes. Exit 0 means every place matches its source, and any other exit fails `/verify`:
+  - Exit 1: at least one FAIL, a stale screen, document or copy in code.
+  - Exit 2: at least one ERROR. The registry no longer matches the code, or a place reads as nothing; update the registry in the same change.
+  - Exit 3: at least one GAP and nothing worse. A source could not be read here, so those places were never judged. Rerun with the reference present.
+- Copy every FAIL, GAP and ERROR line into the report unchanged, with the summary line. The summary ends PASS or NOT PASSED, the same verdict as the exit code.
 - For each backend file in the diff, `--map --from <file>` names every screen and document that restates a fact computed from it, so one round updates them all.
-- A change that puts a new number, name, limit or capability on a screen adds it to the registry, then runs `--self-test`. The self-test fails unless every place can both pass and fail.
+- A change that puts a new number, name, limit or capability on a screen adds it to the registry, then runs `--self-test` with the reference present. The self-test fails unless every place can both pass and fail and every reader follows a changed source.
 
-After the merge, on deployed develop, confirm that develop serves the commit whose facts were checked.
+After the merge, check the merged develop commit itself, then confirm develop serves it. The branch-head run above proved the branch, not what landed.
 
-- `/health` cannot say: it reports `status` and `app_env` only. The 8.6 product review captured `{"status":"ok","app_env":"develop"}`, and the web bundle carries no commit either.
-- Until it does, use the deploy record `/ship` already reads: the develop API and web services' latest deployments must each show SUCCESS and the commit `git rev-parse origin/develop` names. Write that commit, and where it was read, in the report's target line.
-- If the deploy record cannot be read, write a GAP line, "deployed commit unknown, /health reports none". The facts are then proven for the code, not for what develop serves.
+1. Fetch and export the merged commit, then rerun the check on it:
 
-### Integrations smoke, not yet written
+```bash
+git fetch origin develop
+mkdir -p <scratch>/develop_$(git rev-parse --short origin/develop)
+git archive origin/develop | tar -x -C <scratch>/develop_$(git rev-parse --short origin/develop)
+venv/bin/python .claude/skills/verify/scripts/check_facts.py \
+  --root <scratch>/develop_<commit> --reference <repo-root>/reference/agentic-search-data-engineering
+```
 
-Reserved for the lead. Once the Integrations audit lands, a smoke script is added here that runs each command the Integrations page prints against the target, one line per command. Until then the registry checks those commands' names against the code and runs none of them.
+2. Confirm the deployed version is that commit. `/health` cannot say: its response model, `HealthResponse` in `adapters/web_sse/app.py`, carries `status` and `app_env` only, and the web bundle carries no commit either.
+   - The API service: read its latest deployment the way `/ship` does, which must show SUCCESS and the commit `git rev-parse origin/develop` names.
+   - The web service: `/ship` does not read it. Read its latest deployment the same way from the deployment platform, or write a GAP line for it.
+   - Write each commit, and where it was read, in the report's target line.
+3. If a deploy record cannot be read, write a GAP line, "deployed commit unknown for <service>, /health reports none". The facts are then proven for the merged code, not for what develop serves.
+
+### Integrations smoke, not yet wired in
+
+The Integrations audit is on develop, and its smoke script is `testing/Developer/reports/2026-09-26_integrations_audit/integrations_smoke.py`. It runs each command the Integrations page prints against the target, one line per command. It is not part of `/verify` yet: phase 8.10 makes it pass first, and the lead wires it in here after that. Until then the registry checks those commands' names and flags against the code and runs none of them.
 
 ## Step 7: the loop
 
@@ -239,7 +255,7 @@ Reserved for the lead. Once the Integrations audit lands, a smoke script is adde
 The report is `report.md` in the same folder. An agent that may not write files returns it as text, and the lead saves it there. It is short, in this order:
 
 1. The target: the web and API URLs, `app_env`, the local checkout's commit and the deployed commit where known, and the round.
-2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, and no others:
+2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, plus ERROR on a facts line from Step 6, and no others. Only PASS passes:
 
 ```text
 - FAIL | answer at 390 | horizontal overflow | 14 px | testing/Developer/reports/<folder>/results.json
@@ -251,7 +267,7 @@ The report is `report.md` in the same folder. An agent that may not write files 
 4. The facts lines from Step 6, fails first, and the deployed commit or its GAP line.
 5. What was not captured and why, stated rather than implied.
 6. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. The line itself stays FAIL until the owner says otherwise.
-7. The verdict: PASS at both widths with no stale fact, or FAIL with the lines still failing.
+7. The verdict: PASS when every line is PASS, at both widths for a change with screens, or on the facts check alone for a backend-only change. Otherwise FAIL, with the lines that are not PASS.
 
 Before committing the folder, prove it holds no local path, secret or personal data. `grep -rlF "$HOME" <folder>` must print nothing, and read the `.txt` files. The capture runs as a guest, so no account appears on screen.
 
@@ -272,6 +288,7 @@ Before committing the folder, prove it holds no local path, secret or personal d
 - [ ] Every scripted line was copied unchanged, with its file
 - [ ] Every screenshot pair has a judgement line naming both files, or a gap line
 - [ ] An answer-path change names the golden run and the rubric, run or still to run
-- [ ] The facts check ran, every FAIL, GAP and ERROR line was copied, and after the merge the deployed commit was confirmed or named as a GAP
+- [ ] The facts check ran with the venv and exited 0, or every FAIL, GAP and ERROR line was copied and the run is FAIL
+- [ ] After the merge, the facts check reran on the merged develop commit, and each service's deployed commit was confirmed or named as a GAP
 - [ ] At most two rounds, and anything still failing is named as open
 - [ ] The report folder holds no local path, secret or personal data
