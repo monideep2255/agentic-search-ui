@@ -49,9 +49,22 @@ Builder L. `core/graph.py` think step. Acceptance: the query class comes from de
 
 Builder L. `core/graph.py`, `synthesis/findings.py`. Acceptance: a new decision, "think.asks_features", decides whether the question asks about a condition's features or symptoms. Only then is "MedGen lists no clinical features for <disease>" ever stated, and only then are prompt slots reserved for the features (the withdrawn F-8.1-V01 follow-up). `How many genes are associated with breast cancer?` never carries the sentence; `What phenotypic features are associated with Marfan syndrome?` names features in the prose at both depths.
 
+### T-8.6-07: The second writing call fires only when it can change the answer
+
+Builder L, after its own tickets. `core/graph.py`: `_code_built_lines_will_cite` compares record views by citation id while the listing it probes keeps one view per record, so the completeness-repair call to the writing model fires on nearly every question and its reply reached nothing in 4 of 5 traced questions (`testing/Developer/reports/2026-09-25_harness_review/product_harness.md`, W1 and C1). Also `write_node`'s `elapsed_ms` is read before the writing step and so leaves it out of the done event (W3). Acceptance: a three-view paper whose records the listing shows skips the repair; the repair still runs when the model grounded nothing, when a tool failed, or when a code-built sentence fails the pass; the five traced questions make one writing call each on G-012, G-013, G-021 and G-024; `done.elapsed_ms` covers the writing step.
+
+### T-8.6-08: The writer request works for models that need reasoning, a model is priced before it is called, and every call's time is recorded
+
+Builder K, after its own tickets. `harness/harness.py`, `contracts/events.py` (one additive field on the operator-only cost event). Acceptance: a request refused because reasoning cannot be turned off is retried once without the reasoning block and the fallback is logged (C4, W6: "Reasoning is mandatory for this endpoint and cannot be disabled"); a model with no known price fails before the call is sent, with the same actionable message (C6, W7); each model call's elapsed time is carried beside its cost (C5).
+
+### T-8.6-09: The golden run records when the first word arrived and when it started
+
+Builder K. `testing/Developer/reports/2026-09-22_10.3_consistency/run_consistency.py` and `summarize.py`. Acceptance: each saved run keeps its first token's time, which the saved files drop today; the summary adds the median time to the first word and the run's UTC start time; nothing it already reports changes.
+
 ## History
 
 - 2026-09-25: phase opened by the lead on the product owner's yes ("Yes, same rules"); builders K and L dispatched in parallel.
+- 2026-09-25: T-8.6-07 to T-8.6-09 added by the lead from the product harness review, under the product owner's delegation of the same day ("you take charge and implement the improvement"), handed to builders L and K after their own tickets rather than to new dispatches, so the phase keeps its dispatch budget and needs one golden run. Rationale: the repair call is the largest share of the wait the golden run's median measures.
 
 ## Findings
 

@@ -1406,6 +1406,19 @@ What you should see:
 - `What is GERD?` answers about the condition, not only with papers.
 - Why it matters: a fixed list of words such as "paper" and "article" decided this before; your rule is that decisions are not hardcoded.
 
+### 86. The Answer modes card says what each mode gives, one block each (13.2)
+
+Where to try it: the search page, the circled "i" beside Plain language and Researcher. No question needed.
+
+What you should see:
+
+- The card titled "Answer modes" shows "Plain language:" set apart, then "the answer in simple terms, easy to understand."
+- Below it, "Researcher:" set apart, then "the answer in technical terms, with the specifics and the records listed or in tables."
+- Last, on its own line: "Both modes cite every claim. A change applies to your next question."
+- Nothing in the card describes who the reader is.
+- On a phone, 390 pixels wide, the card opens fully on screen; before this fix it ran off the right edge.
+- The onboarding tour's step about the two modes says the same in one sentence.
+
 ## Workflow for the product owner
 
 1. Open the develop app: <https://search-agent-web-develop-2aeb.up.railway.app>
@@ -1586,6 +1599,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| 13.2 | The Answer modes card says what each mode gives, one block per mode | Query 86 |
 | 12.14 | A question about a disease's features names them | Query 81 |
 | 12.17 | A good question is not refused at the think step | Query 80 |
 | 12.16 part 3 | Which questions count as a request for papers becomes a classifier's decision | Nothing to try by hand: not built, and a routing change a person cannot see |
