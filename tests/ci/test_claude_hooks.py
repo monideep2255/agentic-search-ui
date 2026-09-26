@@ -42,6 +42,13 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  separator inside a search's quoted pattern makes the rest of
                  the pattern read as a command, and a field-shaped literal
                  there is blocked. That is pinned as failing closed.
+    Covered      The secret scan's token prefix for a key with a hyphen or
+                 underscore in the part after sk-: the product's own
+                 model-provider key (sk-or-v1- then 64 hex), sk-ant- and
+                 sk-proj- keys, on every command, a search included. It
+                 starts at a word boundary, so a name such as
+                 "task-tracker-some-long-branch-name" stays allowed, and that
+                 is pinned too.
 
     NOT covered  The hooks' no-Python fallback in `lib/_json.sh`. Every case
                  here runs with a working Python on PATH, as it does on the
@@ -61,6 +68,9 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  search; the token-prefix check still reads it.
     NOT covered  Whether the permission rules in `.claude/settings.json` also
                  deny a command. This file tests the hooks alone.
+    NOT covered  `scan-write-secrets.sh`, the secret hook on Edit and Write.
+                 This file does not run it, and its own token prefix still
+                 misses a key with a hyphen or underscore after sk-.
 
 Secret-shaped values are assembled from fragments at run time, so no literal
 the scanners look for ever sits in this file.
@@ -366,10 +376,21 @@ _API_KEY = "API" + "_KEY"
 _API_KEY_LOWER = "api" + "_key"
 _ROUTER_KEY = "OPENROUTER_" + "API" + "_KEY"
 _HEX_36 = "0123456789abcdef" * 2 + "0123"
-# The router key's shape starts with "sk-or-", which the token-prefix check does
-# not match, so the field check is its only guard: the chain case below that
-# carries it is the one a skipped field check would let through unseen.
+# The router key's shape starts with "sk-or-". Until 2026-09-26 the token-prefix
+# check did not match it, so the chain case below that carries it was the one a
+# skipped field check would let through unseen. The token-prefix check matches
+# it now too. The other chain cases carry no token shape, so each of them still
+# passes only if the field check is skipped.
 _ROUTER_VALUE = "sk" + "-or-v1-" + _HEX_36
+
+# Keys with a hyphen or underscore in the part after sk-, assembled the same
+# way: the product's own model-provider key (sk-or-v1- then 64 hex), and the
+# sk-ant- and sk-proj- shapes. The token-prefix check caught none of them
+# before 2026-09-26.
+_HEX_64 = "0123456789abcdef" * 4
+_ROUTER_KEY_FULL = "sk" + "-or-v1-" + _HEX_64
+_ANT_KEY = "sk" + "-ant-api03-" + "Ab1_Cd2-Ef3" * 4
+_PROJ_KEY = "sk" + "-proj-" + "Ab1Cd2Ef3Gh4" * 3
 
 SECRET_SCAN_BLOCKS = [
     # A literal value set on a command that is not a search: blocked, as today.
@@ -384,6 +405,18 @@ SECRET_SCAN_BLOCKS = [
     pytest.param(f'rg "{_AKIA_KEY}" .', id="token-inside-rg"),
     pytest.param(f'git grep "{_XOXB_TOKEN}"', id="token-inside-git-grep"),
     pytest.param(f'grep -rn "{_KEY_HEADER}" .', id="key-header-inside-grep"),
+    # A key with a hyphen or underscore in the part after sk-. The token-prefix
+    # check catches it on every command, a search included, and none of these
+    # carries a field-shaped assignment, so that check is their only guard.
+    pytest.param(f"echo {_ROUTER_KEY_FULL}", id="router-key-in-echo"),
+    pytest.param(f'grep -rn "{_ANT_KEY}" src/', id="hyphenated-key-inside-grep"),
+    pytest.param(f'rg "{_ROUTER_KEY_FULL}" .', id="router-key-inside-rg"),
+    pytest.param(
+        f'curl -H "Authorization: Bearer {_PROJ_KEY}" https://example.invalid',
+        id="hyphenated-key-in-header",
+    ),
+    pytest.param(f"python3 run.py --key={_ANT_KEY}", id="hyphenated-key-after-equals"),
+    pytest.param(f"echo x\n{_PROJ_KEY}", id="hyphenated-key-at-line-start"),
 ]
 
 # The exemption covers only the searches a command starts with. Each of these
@@ -454,6 +487,19 @@ SECRET_SCAN_ALLOWS = [
     pytest.param("export OPENROUTER_API_KEY=$OPENROUTER_API_KEY", id="export-reference"),
     pytest.param('echo "the AUTH_SECRET variable must be set"', id="prose-mentions-field"),
     pytest.param("python3 scripts/sign_in.py --accounts accounts.json", id="sign-in-script"),
+    # The hyphenated-key check starts at a word boundary, so a name that holds
+    # sk- inside a word is not a key, however long it runs. A short sk- name is
+    # not a key either.
+    pytest.param(
+        "git checkout -b chore/task-tracker-some-long-branch-name", id="branch-name-with-task"
+    ),
+    pytest.param(
+        "git push -u origin chore/task-tracker-some-long-branch-name", id="push-branch-with-task"
+    ),
+    pytest.param("echo ask-before-merging-the-long-running-branch", id="word-ending-in-ask"),
+    pytest.param("ls risk-register_for-the-next-quarter/", id="word-ending-in-risk"),
+    pytest.param('grep -rn "sk-" src/', id="bare-sk-prefix"),
+    pytest.param("echo sk-short-name", id="short-sk-name"),
 ]
 
 

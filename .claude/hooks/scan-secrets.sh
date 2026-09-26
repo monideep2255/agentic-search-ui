@@ -20,6 +20,13 @@
 # more, never less. The token-prefix check still runs on the whole command, a
 # search included. Approved item by item by the product owner on 2026-09-25
 # (DECISIONS.md, "Four security-layer changes approved item by item", item 2).
+#
+# The token-prefix check also catches a key with a hyphen or underscore in the
+# part after sk-, the shape of the product's own model-provider key (sk-or-v1- then
+# 64 hex) and of sk-ant- and sk-proj- keys: sk- then 20 or more letters, digits,
+# hyphens or underscores, starting at a word boundary so a name such as
+# "task-tracker-some-long-branch-name" is not a key. Approved item by item by
+# the product owner on 2026-09-26 ("Also close the hook gaps").
 # tests/ci/test_claude_hooks.py pins it.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,7 +37,11 @@ INPUT=$(cat)
 COMMAND=$(json_field "$INPUT" tool_input.command)
 [ -z "$COMMAND" ] && COMMAND="$INPUT"
 
-PREFIX='(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36,}|AKIA[A-Z0-9]{16}|xox[bpras]-[a-zA-Z0-9-]+|PRIVATE KEY)'
+# The second alternative is a key with a hyphen or underscore in the part after
+# sk-, such as sk-or-v1-, sk-ant- and sk-proj- keys. It starts at a word boundary
+# (the start of a line, or a character that is not a letter, digit or _), so
+# "task-tracker-some-long-branch-name" never reads as a key.
+PREFIX='(sk-[a-zA-Z0-9]{20,}|(^|[^[:alnum:]_])sk-[A-Za-z0-9_-]{20,}|ghp_[a-zA-Z0-9]{36,}|AKIA[A-Z0-9]{16}|xox[bpras]-[a-zA-Z0-9-]+|PRIVATE KEY)'
 # A secret-named var assigned a literal value (export X=..., X=...). A value
 # beginning with $ or { or ( or a quote-then-$ is a reference and is allowed.
 FIELD='(TOKEN|APIKEY|API_KEY|SECRET|PASSWORD|CREDENTIAL|_KEY)"?[[:space:]]*=[[:space:]]*"?[^$"{()[:space:]][^"[:space:]]{7,}'
