@@ -236,14 +236,21 @@ async def test_call_jev_sends_the_callers_description(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("cost", ["Infinity", "0.5", "-0.1"])
+@pytest.mark.parametrize(
+    ("cost", "billed"),
+    [("Infinity", 0.0), ("NaN", 0.0), ("-0.1", 0.0), ("0.5", 0.5), ("0.02", 0.02), ("true", 0.0)],
+)
 async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
-    monkeypatch: pytest.MonkeyPatch, cost: str
+    monkeypatch: pytest.MonkeyPatch, cost: str, billed: float
 ) -> None:
     """F-8.2-J15: Jev's cost is charged straight into every cost cap. A
     reply claiming `Infinity` (which Python's JSON parser accepts) stopped
-    every later model call in the question; 0.5 would push each question
-    past its cap. Such a reply is malformed, so the guard's pick decides."""
+    every later model call in the question. Such a reply is malformed, so
+    the guard's pick decides.
+
+    Fix round, F-8.6-J10: a real amount above the ceiling was still billed,
+    so the error carries it for the caller to charge; a figure that is not
+    an amount (infinite, not a number, negative, a boolean) carries 0.0."""
     raw = json.dumps(_success_body()).replace('"cost": 1.4784e-05', f'"cost": {cost}')
     assert f'"cost": {cost}' in raw
     monkeypatch.setattr(
@@ -252,6 +259,45 @@ async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
     with pytest.raises(JevCallError) as excinfo:
         await _call_once()
     assert excinfo.value.reason == "malformed_reply"
+    assert excinfo.value.billed_cost_usd == pytest.approx(billed)
+    assert "fall back to the guard tier's pick" in str(excinfo.value)
+
+
+def _with_cost(body: dict[str, Any], cost: float) -> dict[str, Any]:
+    body["usage"]["cost"] = cost
+    return body
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("reply", "reason", "billed"),
+    [
+        (
+            _response(_with_cost(_success_body(choice="maybe"), 0.004)),
+            "invalid_option",
+            0.004,
+        ),
+        (
+            _response(_with_cost(_success_body(question_key="another.decision"), 0.004)),
+            "malformed_reply",
+            0.004,
+        ),
+        (httpx.Response(200, content=b"not json at all"), "malformed_reply", 0.0),
+        (_response({"model": "m", "answers": {}, "usage": {"input_tokens": 1}}), "malformed_reply", 0.0),
+        (httpx.Response(503, content=b"unavailable"), "http_error", 0.0),
+    ],
+    ids=["an option outside the set", "the wrong question key", "not JSON", "no cost stated", "HTTP 503"],
+)
+async def test_an_unusable_reply_still_reports_what_it_cost(
+    monkeypatch: pytest.MonkeyPatch, reply: httpx.Response, reason: str, billed: float
+) -> None:
+    """Fix round, F-8.6-J10: a reply that came back but cannot be used was
+    billed all the same, so its reported cost rides on the error."""
+    monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=reply))
+    with pytest.raises(JevCallError) as excinfo:
+        await _call_once()
+    assert excinfo.value.reason == reason
+    assert excinfo.value.billed_cost_usd == pytest.approx(billed)
 
 
 @pytest.mark.asyncio
@@ -425,14 +471,43 @@ async def test_a_batch_answer_outside_its_options_is_an_invalid_option(monkeypat
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("cost", ["Infinity", "0.5"])
-async def test_a_batch_cost_no_call_could_have_is_malformed(monkeypatch: pytest.MonkeyPatch, cost: str) -> None:
+@pytest.mark.parametrize(
+    ("cost", "billed"),
+    [("Infinity", 0.0), ("NaN", 0.0), ("-0.1", 0.0), ("0.5", 0.5), ("0.02", 0.02)],
+)
+async def test_a_batch_cost_no_call_could_have_is_malformed(
+    monkeypatch: pytest.MonkeyPatch, cost: str, billed: float
+) -> None:
+    """Malformed, so nothing in the reply is used; a real amount above the
+    ceiling still rides on the error to be charged (F-8.6-J10)."""
     raw = json.dumps(_batch_body({"item_1": "no", "item_2": "no"})).replace('"cost": 5.3e-05', f'"cost": {cost}')
     assert f'"cost": {cost}' in raw
     monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=httpx.Response(200, content=raw.encode())))
     with pytest.raises(JevCallError) as excinfo:
         await _batch_once()
     assert excinfo.value.reason == "malformed_reply"
+    assert excinfo.value.billed_cost_usd == pytest.approx(billed)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("choices", "reason"),
+    [
+        ({"item_1": "no", "item_2": "maybe"}, "invalid_option"),
+        ({"item_1": "no"}, "malformed_reply"),
+    ],
+    ids=["an answer outside its options", "an item missing"],
+)
+async def test_an_unusable_batch_reply_still_reports_what_it_cost(
+    monkeypatch: pytest.MonkeyPatch, choices: dict[str, str], reason: str
+) -> None:
+    monkeypatch.setattr(
+        jev_client_module, "_post", AsyncMock(return_value=_response(_batch_body(choices, cost=0.004)))
+    )
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_once()
+    assert excinfo.value.reason == reason
+    assert excinfo.value.billed_cost_usd == pytest.approx(0.004)
 
 
 @pytest.mark.asyncio

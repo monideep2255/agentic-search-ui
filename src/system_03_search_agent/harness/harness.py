@@ -184,20 +184,40 @@ def _classify_exception(exc: BaseException) -> ErrorClass:
     return "unexpected"
 
 
+#: The provider's own words when a model cannot turn reasoning off (product
+#: harness review W6 and C4; builder K's report, K-13), lower-cased. Matched
+#: as this whole phrase, never on the word "reasoning" alone.
+_MANDATORY_REASONING_REFUSAL = "reasoning is mandatory for this endpoint and cannot be disabled"
+
+
 def _refuses_reasoning_block(exc: BaseException) -> bool:
-    """Whether the provider refused the request because of its `reasoning`
-    block (build phase 8.6, T-8.6-08; product harness review W6 and C4).
+    """Whether the provider refused the request because reasoning cannot be
+    turned off for this model (build phase 8.6, T-8.6-08; product harness
+    review W6 and C4).
 
     Measured for the review: some models, one frontier writer among them,
     cannot turn reasoning off, and OpenRouter answers the product's request
     shape (`reasoning: {"effort": "none"}`) with HTTP 400, "Reasoning is
     mandatory for this endpoint and cannot be disabled." litellm raises
     that as a `BadRequestError` whose text carries the provider's words.
-    A 400 whose text names reasoning is taken as the block's fault: the
-    cost of being wrong is one extra request bounded by `max_tokens`, the
-    cost of missing it is a model that can never answer.
+
+    True only for a `BadRequestError` whose text, lower-cased with runs of
+    whitespace collapsed, carries that whole phrase
+    (`_MANDATORY_REASONING_REFUSAL`). A context-window or content-policy
+    error never qualifies, whatever its text: litellm makes both subclasses
+    of `BadRequestError`, they mean something else, and their text can echo
+    the person's own words. Keyed before the fix round on the word
+    "reasoning" anywhere in any 400, so a context-window 400, a
+    content-policy 400 or a 400 echoing "the reasoning behind BRCA1
+    testing" was retried once without the block, and that retry drops the
+    `effort: none` dial whose absence measured 20 to 45 seconds on the
+    synth tier (F-8.6-J05, A02).
     """
-    return isinstance(exc, litellm.BadRequestError) and "reasoning" in str(exc).lower()
+    if not isinstance(exc, litellm.BadRequestError):
+        return False
+    if isinstance(exc, (litellm.ContextWindowExceededError, litellm.ContentPolicyViolationError)):
+        return False
+    return _MANDATORY_REASONING_REFUSAL in " ".join(str(exc).lower().split())
 
 
 # Fallback OpenRouter per-model pricing, (input_price_per_token,
@@ -575,13 +595,15 @@ class Harness:
         retries exist, each at most once per call:
 
         - A transient failure is retried once, the same request again.
-        - A refusal of the `reasoning` block (a `BadRequestError` whose
-          text names reasoning, such as "Reasoning is mandatory for this
-          endpoint and cannot be disabled"; W6 and C4) is retried once
-          WITHOUT the block, and the fallback is logged. The model then
-          reasons at its own default, still bounded by `max_tokens`. This
-          is per call, never remembered: one stray 400 must not take the
-          reasoning dial away from every later call in the process.
+        - A refusal of the `reasoning` block, recognised only by the
+          provider's own phrase "Reasoning is mandatory for this endpoint
+          and cannot be disabled" (W6 and C4; see
+          `_refuses_reasoning_block`), is retried once WITHOUT the block,
+          and the fallback is logged. The model then reasons at its own
+          default, still bounded by `max_tokens`. This is per call, never
+          remembered: one stray 400 must not take the reasoning dial away
+          from every later call in the process. Any other 400, one that
+          merely mentions reasoning included, is not retried.
 
         Any other recoverable or unexpected failure raises immediately. A
         retried call is a genuinely new attempt against the same target,
@@ -707,10 +729,17 @@ class Harness:
         """Seconds the latest completed `call_tier` call on `tier` took for
         `trace_id`, or None when none has completed (C5).
 
-        Read by `cost_control.build_cost_event_payload` for the operator-only
-        `cost` event, which the loop emits straight after each metered call,
-        so it is that call's time. Two calls on the same tier running at
-        once for one query can both complete before the event is built; the
+        It measures one call: the most recent one on that tier to complete
+        for this question, whichever step made it. Read by
+        `cost_control.build_cost_event_payload` for the operator-only
+        `cost` event, so an event emitted straight after a call carries that
+        call's time. An event emitted by a step that made no call on the
+        tier repeats an earlier call's time instead: Plan emits its `plan`
+        cost event even when it used a template, so it then carries Think's
+        classification call, which runs on the plan tier too (fix round,
+        F-8.6-J11). Summing it over a question's cost events can therefore
+        count a call twice. Two calls on the same tier running at once for
+        one question can both complete before the event is built; the
         event then carries whichever finished last.
         """
         with self._cost_lock:

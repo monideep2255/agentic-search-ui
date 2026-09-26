@@ -23,15 +23,30 @@ to what code alone accepts.
 
 WHICH MODEL DECIDES, since build phase 8.6 (T-8.6-02; DECISIONS.md
 2026-09-25, "Jev is the classifier for every classification decision"):
-`check_reworded_sentences` below is the one entry point. With the code
-default `CLASSIFIER_PROVIDER=guard` it makes today's single guard-tier call,
-the same messages, the same budget and the same strict parser. With
-`CLASSIFIER_PROVIDER=jev` it asks Jev instead: one call for the whole answer,
-one yes-or-no question per sentence ("does this sentence say anything its
-quoted record words do not?"), and only a "no" approves a sentence. The guard
-tier is asked only when Jev fails and enough of the budget is left. Only the
-deciding model changed; the product owner's exception of 2026-09-23 keeps
-exactly its scope, and every fail-closed rule above holds for both models.
+`check_reworded_sentences` below is the one entry point, and exactly one model
+judges each answer.
+
+- With the code default `CLASSIFIER_PROVIDER=guard`: today's single
+  guard-tier call, the same messages, the same budget and the same strict
+  parser.
+- With `CLASSIFIER_PROVIDER=jev`: Jev alone, one call for the whole answer,
+  one yes-or-no question per sentence ("does this sentence say anything its
+  quoted record words do not?"). A sentence is approved only when Jev picks
+  "no" AND Jev's own probability for "no" is strictly higher than for "yes"
+  (F-8.6-A01). A pick at exactly even odds, or one its own probabilities
+  contradict, approves nothing. `confidence` is never read, since it is the
+  margin between the two options, not the probability of the pick
+  (F-8.6-A16).
+- In Jev mode a failed, late, malformed or cost-capped Jev call approves
+  nothing, and the guard tier is NOT asked as a second chance (F-8.6-A01,
+  J14). Measured in this phase's probes (builder K's report, K-03, K-04 and
+  K-06), the guard tier approved 15 of 45 unfaithful sentences where Jev
+  approved 7 of 113, so a second chance from the weaker judge would let
+  through what the stronger one was never asked to pass.
+
+Only the deciding model changed: the product owner's exception of 2026-09-23
+keeps exactly its scope, and every fail-closed rule above holds for both
+models.
 
 Depends on:
     - system_03_search_agent.synthesis.grounding (SynthesisCandidate)
@@ -45,9 +60,9 @@ Reads:
       OPENROUTER_API_KEY and JEV_MODEL, the same two `harness.decide` reads.
 
 Writes:
-    - Nothing. The guard-tier call is made by `core.graph` through the
-      `ask_guard` callable it passes in; Jev's call is made here and its
-      cost is charged through `Harness.track_cost`.
+    - Nothing. The guard-tier call, made only in guard mode, is made by
+      `core.graph` through the `ask_guard` callable it passes in; Jev's call
+      is made here and its cost is charged through `Harness.track_cost`.
 """
 
 from __future__ import annotations
@@ -56,7 +71,6 @@ import json
 import logging
 import os
 import re
-import time
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Final
 
@@ -65,6 +79,7 @@ from system_03_search_agent.harness.cost_control import QueryCapExceededError
 from system_03_search_agent.harness.decide import jev_decides
 from system_03_search_agent.harness.jev_client import (
     JEV_TOTAL_TIMEOUT_S,
+    JevAnswer,
     JevBatchResult,
     JevCallError,
     JevChoiceQuestion,
@@ -114,7 +129,8 @@ _JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
 
 
 class SentenceCheckUnreadable(ValueError):
-    """The model's reply could not be read as a verdict. Approve nothing."""
+    """No verdict could be read: an unreadable reply, or, in Jev mode, a
+    Jev call that failed, came late or was malformed. Approve nothing."""
 
 
 def build_sentence_check_messages(
@@ -226,15 +242,10 @@ JEV_CRITERIA: Final[dict[str, str]] = {
 #: made 4610 characters. The guard path keeps today's message unchanged.
 JEV_STATE_MAX_CHARS: Final[int] = 30_000
 
-#: The least time left worth asking the guard tier after Jev failed. Below
-#: it the check approves nothing: a guard call measured at 1 to 2 seconds
-#: would likely time out, and skipping is free while timing out is not
-#: (the same asymmetry `core/graph.py` states for its repair floor).
-GUARD_FALLBACK_MIN_S: Final[float] = 2.0
-
 #: What `core.graph` passes in to make today's guard-tier call: the messages
 #: and the seconds it may take, returning the reply text. It raises the cost
 #: cap's and the harness's own errors, which the caller already catches.
+#: Called only in guard mode; in Jev mode no guard-tier call is made.
 AskGuardTier = Callable[[list[dict[str, str]], float], Awaitable[str]]
 
 
@@ -276,25 +287,53 @@ def build_jev_questions(count: int) -> dict[str, JevChoiceQuestion]:
     }
 
 
+def _jev_approves(answer: JevAnswer) -> bool:
+    """Whether one of Jev's answers approves its sentence (F-8.6-A01).
+
+    Both must hold, each read from Jev's own reply:
+
+    - Jev picked "no, it says nothing more" (`JEV_SAYS_NOTHING_MORE`).
+    - Jev's own probability for that option is strictly higher than for
+      the other. A pick at exactly even odds, a pick its own probabilities
+      contradict, and an answer that leaves either probability out all
+      approve nothing.
+
+    `confidence` is never read: it is the margin between the two options,
+    not the probability of the pick (F-8.6-A16), so nothing may be read
+    from it as a probability. No cut-off is chosen here either: the only
+    comparison is between Jev's own two probabilities.
+    """
+    if answer.choice != JEV_SAYS_NOTHING_MORE:
+        return False
+    says_nothing_more = answer.probabilities.get(JEV_SAYS_NOTHING_MORE)
+    says_more = answer.probabilities.get(JEV_SAYS_MORE)
+    if says_nothing_more is None or says_more is None:
+        return False
+    return says_nothing_more > says_more
+
+
 def approved_keys_from_jev(
     result: JevBatchResult, sent: list[SynthesisCandidate]
 ) -> frozenset[tuple[str, tuple[str, ...]]]:
-    """The keys of the items Jev answered "no, it says nothing more" about.
+    """The keys of the items Jev approved: a "no, it says nothing more" pick
+    that Jev's own probabilities back (`_jev_approves`).
 
     Strict, like `approved_keys`: every item sent must be answered under its
     own key, no other key may appear, and every answer must be one of
     `JEV_OPTIONS`. Anything else raises `SentenceCheckUnreadable`, and the
-    whole reply approves nothing.
+    whole reply approves nothing. An answer that is readable but not an
+    approval (a "yes", even odds, a pick its probabilities contradict)
+    leaves only its own sentence unapproved.
     """
     expected = {_question_key(number) for number in range(1, len(sent) + 1)}
     if set(result.answers) != expected:
         raise SentenceCheckUnreadable("Jev's answers do not match the items sent, key for key")
     keys: set[tuple[str, tuple[str, ...]]] = set()
     for number, candidate in enumerate(sent, start=1):
-        choice = result.answers[_question_key(number)].choice
-        if choice not in JEV_OPTIONS:
+        answer = result.answers[_question_key(number)]
+        if answer.choice not in JEV_OPTIONS:
             raise SentenceCheckUnreadable("a Jev answer is not one of the two options")
-        if choice == JEV_SAYS_NOTHING_MORE:
+        if _jev_approves(answer):
             keys.add(candidate.key)
     return frozenset(keys)
 
@@ -310,20 +349,28 @@ async def _ask_jev(
 
     Cap-checked first and charged after, exactly like `harness.decide`'s
     Jev pick: Jev has no tier of its own, so the guard tier's conservative
-    estimate and cost bucket stand in. Raises `QueryCapExceededError`,
-    `JevCallError` or `SentenceCheckUnreadable`.
+    estimate and cost bucket stand in. A reply that came back unusable is
+    charged its reported cost too (`JevCallError.billed_cost_usd`). Raises
+    `QueryCapExceededError`, `JevCallError` or `SentenceCheckUnreadable`.
     """
     state, sent = build_jev_state(candidates)
     if not sent:
         raise SentenceCheckUnreadable("no item fits in one Jev call")
     cost_control.check_per_query_cap(harness, trace_id, "guard")
-    result = await call_jev_batch(
-        model=resolve_jev_model(),
-        state=state,
-        questions=build_jev_questions(len(sent)),
-        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-        timeout_s=timeout_s,
-    )
+    try:
+        result = await call_jev_batch(
+            model=resolve_jev_model(),
+            state=state,
+            questions=build_jev_questions(len(sent)),
+            api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            timeout_s=timeout_s,
+        )
+    except JevCallError as exc:
+        # An unusable reply was still billed: its reported cost is charged,
+        # never zero, even though it approves nothing (fix round, F-8.6-J10).
+        if exc.billed_cost_usd:
+            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
+        raise
     harness.track_cost(trace_id, "guard", result.cost_usd)  # type: ignore[arg-type]
     return approved_keys_from_jev(result, sent)
 
@@ -340,26 +387,25 @@ async def check_reworded_sentences(
 
     `candidates` are the sentences that already passed every exact check
     (`grounding.exact_synthesis_checks_pass`); nothing else may be passed.
-    `budget_s` is all the time the check may take.
+    `budget_s` is all the time the check may take. Exactly one model judges.
 
     - `CLASSIFIER_PROVIDER` other than "jev", the code default: exactly the
       check before build phase 8.6. One `ask_guard` call with
       `build_sentence_check_messages(candidates)` and the whole budget,
       parsed by `approved_keys`.
     - `CLASSIFIER_PROVIDER=jev`: one Jev call, one yes-or-no question per
-      sentence, within `min(budget_s, 3 s)`. Only a "no" approves. When Jev
+      sentence, within `min(budget_s, 3 s)`. A sentence is approved only
+      when Jev picks "no" with a strictly higher probability for "no" than
+      for "yes" (`_jev_approves`). `ask_guard` is never called: when Jev
       fails (a timeout, an HTTP error, a malformed or unreadable reply, an
-      answer outside the two options, anything unexpected) and at least
-      `GUARD_FALLBACK_MIN_S` of the budget is left, the guard tier is asked
-      exactly as above with what is left.
+      answer outside the two options, the cost cap, anything unexpected)
+      nothing is approved and no other model is asked (F-8.6-A01, J14).
 
     Fails closed. Raises, and so approves nothing, on: the cost cap
-    (`QueryCapExceededError`; after a Jev cap refusal the guard is not
-    asked, since it would meet the same cap), a failed guard call
-    (`HarnessCallError`, from `ask_guard`), an unreadable reply, or too
-    little time left for the guard after Jev failed
-    (`SentenceCheckUnreadable`). The caller catches exactly those three,
-    as it did before this function existed.
+    (`QueryCapExceededError`), a failed guard call in guard mode
+    (`HarnessCallError`, from `ask_guard`), an unreadable reply, or any Jev
+    failure in Jev mode (`SentenceCheckUnreadable`). The caller catches
+    exactly those three, as it did before this function existed.
     """
     if not candidates:
         # Nothing to judge, so nothing to ask either model. `core.graph`
@@ -369,7 +415,6 @@ async def check_reworded_sentences(
         reply = await ask_guard(build_sentence_check_messages(candidates), budget_s)
         return approved_keys(reply, candidates)
 
-    started = time.monotonic()
     try:
         return await _ask_jev(
             candidates,
@@ -378,24 +423,22 @@ async def check_reworded_sentences(
             timeout_s=min(JEV_TOTAL_TIMEOUT_S, budget_s),
         )
     except QueryCapExceededError:
+        _log_no_verdict(trace_id, "cost_cap")
+        raise
+    except SentenceCheckUnreadable:
+        _log_no_verdict(trace_id, "unreadable_reply")
         raise
     except JevCallError as exc:
-        reason = exc.reason
-    except SentenceCheckUnreadable:
-        reason = "unreadable_reply"
-    except Exception:  # noqa: BLE001 - a broken Jev call falls back, it never approves
-        reason = "unexpected_error"
+        _log_no_verdict(trace_id, exc.reason)
+        raise SentenceCheckUnreadable(f"Jev made no verdict ({exc.reason}); approve nothing") from exc
+    except Exception as exc:  # a broken Jev call approves nothing, never by accident
+        _log_no_verdict(trace_id, "unexpected_error")
+        raise SentenceCheckUnreadable("Jev made no verdict (unexpected_error); approve nothing") from exc
 
-    remaining_s = budget_s - (time.monotonic() - started)
-    if remaining_s < GUARD_FALLBACK_MIN_S:
-        raise SentenceCheckUnreadable(
-            f"Jev made no verdict ({reason}) and {remaining_s:.1f}s is too little to ask "
-            "the guard tier; approve nothing"
-        )
+
+def _log_no_verdict(trace_id: str, reason: str) -> None:
     logger.warning(
-        "sentence check: Jev made no verdict (trace %s, %s); asking the guard tier",
+        "sentence check: Jev made no verdict (trace %s, %s); approving nothing, no other model is asked",
         trace_id,
         reason,
     )
-    reply = await ask_guard(build_sentence_check_messages(candidates), remaining_s)
-    return approved_keys(reply, candidates)

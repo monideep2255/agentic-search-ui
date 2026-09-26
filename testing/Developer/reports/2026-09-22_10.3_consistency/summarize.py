@@ -22,7 +22,8 @@ with .get(...) and an explicit default, never a bare key lookup.
 Build phase 8.6, T-8.6-09: the summary also reports the run's UTC start
 time and the time to the first word, read from each record's
 `first_word_s` (client clock, from submitting the question to the first
-answer word arriving; see run_consistency.py). Both are additions: every
+text a person sees arriving, an answer, a refusal or a question asked back
+alike; see run_consistency.py and F-8.6-J07). Both are additions: every
 line the summary wrote before is written exactly as before, and a
 runs.jsonl recorded before the field existed reports it as not recorded.
 """
@@ -151,7 +152,10 @@ def fmt_seconds(values: list[float]) -> str:
 def first_word_seconds(runs: list[dict]) -> list[float]:
     """Every recorded time to the first word, in seconds (T-8.6-09).
 
-    A run with no first word (a refusal, an error, a timeout) or recorded
+    The first word is the first text a person sees, so a refusal the Write
+    step writes and a question asked back have one, like an answer, and the
+    median mixes all three (F-8.6-J07). A run where no text arrived (a
+    guardrail refusal, a cap decline, an error, a timeout) or recorded
     before the field existed has none, and is left out rather than counted
     as zero.
     """
@@ -494,7 +498,7 @@ def section7_latency(runs: list[dict]) -> str:
     first_words = first_word_seconds(runs)
     first_word_line = (
         "Time to the first word, on the client's clock from submitting the question to the "
-        "first answer word arriving: "
+        "first text a person sees arriving, answer, refusal or question alike: "
         + (
             f"{fmt_seconds(first_words)}, over {len(first_words)} of {len(runs)} runs."
             if first_words

@@ -41,6 +41,11 @@ Design, each line a measured constraint rather than a preference:
   token event is kept in the saved raw events, so its own server `ts` is kept
   too, as `first_token_ts` on the record; the other token events are still
   dropped, since `answer_text` already holds their text.
+  It is the time until the first text a person sees, an answer, a refusal or
+  a question asked back alike (fix round, F-8.6-J07): the Write step sends a
+  refusal it writes, and Think a question it asks back, as `token` events
+  too. It is None only when no text arrived at all: a guardrail refusal,
+  which sends none, a cap decline, an error, or a timeout before any text.
 
 Outcome labels keep the 2026-09-12 baseline's meanings so the two can be set
 side by side: `answered` is at least one citation with a non-refuse trust
@@ -289,8 +294,10 @@ def run_once(base, account, row, pass_index, worker, commit):
         server_elapsed_s=None if done is None else round((done.get("elapsed_ms") or 0) / 1000, 3),
         seconds=seconds,
         event_types=dict(Counter(e.get("type") for e in events)),
-        # T-8.6-09: client clock only, submit to the first token's arrival;
-        # None when no answer word arrived (a refusal, an error, a timeout).
+        # T-8.6-09: client clock only, submit to the first token's arrival,
+        # the first text a person sees: answer, refusal or question alike
+        # (F-8.6-J07). None when no text arrived (a guardrail refusal, an
+        # error, a timeout).
         first_word_s=None if first_token_at is None else round(first_token_at - submitted_at, 3),
         first_token_ts=None if first_token is None else first_token.get("ts"),
     )
