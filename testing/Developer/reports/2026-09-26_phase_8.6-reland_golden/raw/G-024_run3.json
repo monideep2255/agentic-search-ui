@@ -1,0 +1,469 @@
+{
+ "record": {
+  "id": "G-024",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86c@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "What is rs334 and what condition is it associated with?",
+  "session_id": "c103-98e3dab5fda5",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:55:35+00:00",
+  "run_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "dbSNP:rs334"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "citations": 6,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_3_enrichment": 5,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 1,
+  "tools": [
+   "litvar2_lookup",
+   "ncbi_dbsnp",
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 66,
+  "answer_start": "Found 5 literature variant records for rs334: c.20A>T [1], rs334348 [3], rs334353 [4], c.-50T>C [5] and rs334773 [6]. \n\nRetrieved Variant Records\n\nA literature ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 3,
+  "server_elapsed_s": 13.723,
+  "seconds": 14.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 15,
+   "citation": 6,
+   "trust_signal": 7,
+   "done": 1
+  },
+  "first_word_s": 13.932,
+  "first_token_ts": "2026-09-26T20:54:10.132110Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 0,
+   "ts": "2026-09-26T20:53:57.927248Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 2,
+   "ts": "2026-09-26T20:53:59.441216Z",
+   "payload": {
+    "narrative": "One or two direct API calls resolve the variant and its associated condition.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 4,
+   "ts": "2026-09-26T20:53:59.443744Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-3bf2e437f554",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_dbsnp",
+      "call_id": "db-768e02996de5",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "litvar2_lookup",
+      "call_id": "lv-dc6351831230",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 6,
+   "ts": "2026-09-26T20:53:59.444970Z",
+   "payload": {
+    "call_id": "cq-3bf2e437f554",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 7,
+   "ts": "2026-09-26T20:53:59.445011Z",
+   "payload": {
+    "call_id": "db-768e02996de5",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 8,
+   "ts": "2026-09-26T20:53:59.445025Z",
+   "payload": {
+    "call_id": "lv-dc6351831230",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 9,
+   "ts": "2026-09-26T20:53:59.607044Z",
+   "payload": {
+    "call_id": "lv-dc6351831230",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 10,
+   "ts": "2026-09-26T20:54:00.097966Z",
+   "payload": {
+    "call_id": "db-768e02996de5",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 11,
+   "ts": "2026-09-26T20:54:04.084274Z",
+   "payload": {
+    "call_id": "cq-3bf2e437f554",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 12,
+   "ts": "2026-09-26T20:54:04.085644Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 13,
+   "ts": "2026-09-26T20:54:10.132110Z",
+   "payload": {
+    "text": "Found 5 literature variant records for rs334: c.20A>T [1], rs334348 [3], rs334353 [4], c.-50T>C [5] and rs334773 [6]. ",
+    "marker_ids": [
+     "lv-dc6351831230-2",
+     "lv-dc6351831230-3",
+     "lv-dc6351831230-4",
+     "lv-dc6351831230-5",
+     "lv-dc6351831230-6"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "rs334348",
+     "rs334353",
+     "c.-50T>C",
+     "rs334773",
+     "c.20A>T",
+     "rs334"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_2_api",
+    "source": "dbsnp",
+    "field": "clinical_significance",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334348",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334353",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334353",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334558",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334558",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334773",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334773",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "56b99548-6fd5-4443-9257-f8e29acc567d",
+   "seq": 42,
+   "ts": "2026-09-26T20:54:10.132620Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 3,
+    "elapsed_ms": 13723,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 5 sources, not yet confirmed",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 147
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 109
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 127
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 133
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 literature variant records for rs334: c.20A>T [1], rs334348 [3], rs334353 [4], c.-50T>C [5] and rs334773 [6]. \n\nRetrieved Variant Records\n\nA literature variant name c.20A>T was returned [1]. \n\nVariant record records found\n\nVariant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [2]. \n\nLiterature variant records found\n\nLiterature variant name: rs334348 [3]. Literature variant name: rs334353 [4]. Literature variant name: c.-50T>C [5]. Literature variant name: rs334773 [6]. "
+}

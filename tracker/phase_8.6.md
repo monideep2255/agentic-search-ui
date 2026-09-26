@@ -308,6 +308,11 @@ For the owner's eye, not a code flag:
 - 2026-09-26 19:35: builder B finished R-04 (c335b07, 0dbf51b, 0f5368b, 863e476, report bca1abe). One file outside its fence: `tests/system_03_search_agent/synthesis/test_sentence_check.py`, a constant in one assertion that pinned a charge above the ceiling, forced by R-04's own clamp. No product file outside the fence changed. Accepted by the lead.
 - 2026-09-26 19:46: builder A finished R-01 (70bc517, report 9c8c8c4, 5d924ae): a guard classifier call that hangs or hits a transient error gets one fresh attempt inside the unchanged 15 s budget, the first attempt capped at two thirds of the remaining budget. Trade-off named by the builder: a classifier slower than 10 s on every request now fails where it was admitted at up to 15 s. Both builders merged into the branch (e29c645, 0dea119); R-01 to R-04 set to in-review.
 - 2026-09-26 20:32: the judge (RJ01 to RJ10) and the adversary (RA01 to RA05) both returned PASS, nothing blocking. Review_rounds Rule 4 fires: RJ01, RJ02, RJ03, RJ08 and RJ09 and RA02 sit inside the re-land's own fixes R-01, R-02 and R-03, each making a degraded-provider path worse (a rate-limited or slow guard model, a failing Jev), and RA01/RJ04 leave R-04's clamp incomplete. Escalated to the product owner with Rule 3's two options, merge with the items named or revert and re-split, before any fix round.
+- 2026-09-26 20:59: the re-land's golden run on develop at c0bf50b answered 102 of 150, the floor exactly, with 0 rate-limit signals and 0 error outcomes (`testing/Developer/reports/2026-09-26_phase_8.6-reland_golden/summary.md`).
+  - Against phase 8.2's run: G-038 "Tell me about the tree of life." went from 2 of 3 to 3 of 3, and G-043 got the read-only reply again.
+  - G-005 dropped from 3 of 3 to 2 of 3. Its miss was one pass where Think matched no record for "SARS", in code the re-land did not change.
+  - The median time to the first word was 15.3 s.
+  - The phase holds its floor and stays on develop.
 
 ## Findings
 

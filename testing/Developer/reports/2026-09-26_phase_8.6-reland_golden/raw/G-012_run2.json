@@ -1,0 +1,449 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86c@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-bfb6a3200702",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:46:00+00:00",
+  "run_id": "8666258e-101b-441b-b02a-94e414af25aa",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "citations": 6,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 6
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 252,
+  "answer_start": "Found 5 pubmed records: International association for the study of lung cancer/american thoracic society/european respiratory society international multidiscipl",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 22.225,
+  "seconds": 23.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 12,
+   "citation": 6,
+   "trust_signal": 7,
+   "done": 1
+  },
+  "first_word_s": 22.658,
+  "first_token_ts": "2026-09-26T20:44:44.030198Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 0,
+   "ts": "2026-09-26T20:44:24.312515Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 2,
+   "ts": "2026-09-26T20:44:27.814797Z",
+   "payload": {
+    "narrative": "The query asks for clinical trials for a specific carcinoma type, which requires traversing multiple resources to find relevant trials, making it exploratory rather than a simple lookup.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 4,
+   "ts": "2026-09-26T20:44:27.816772Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: clinical, trials, carcinoma, otherwise, specified",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-771574510063",
+      "layer": "layer_2_api",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ab014298d04d",
+      "layer": "layer_2_api",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a778762c6d1d",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 6,
+   "ts": "2026-09-26T20:44:27.818062Z",
+   "payload": {
+    "call_id": "ne-771574510063",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 7,
+   "ts": "2026-09-26T20:44:27.818094Z",
+   "payload": {
+    "call_id": "ne-ab014298d04d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 8,
+   "ts": "2026-09-26T20:44:27.818105Z",
+   "payload": {
+    "call_id": "pa-a778762c6d1d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 9,
+   "ts": "2026-09-26T20:44:28.051163Z",
+   "payload": {
+    "call_id": "ne-771574510063",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 10,
+   "ts": "2026-09-26T20:44:28.348053Z",
+   "payload": {
+    "call_id": "pa-a778762c6d1d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 11,
+   "ts": "2026-09-26T20:44:28.389471Z",
+   "payload": {
+    "call_id": "ne-ab014298d04d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 12,
+   "ts": "2026-09-26T20:44:28.390984Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 13,
+   "ts": "2026-09-26T20:44:44.030198Z",
+   "payload": {
+    "text": "Found 5 pubmed records: International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma. [2], Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery. [3], Neoadjuvant Sintilimab and Chemotherapy for Resectable Stage IIIA Non-Small Cell Lung Cancer. [4], Sintilimab plus chemotherapy for patients with EGFR-mutated non-squamous non-small-cell lung cancer with disease progression after EGFR tyrosine-kinase inhibitor therapy (ORIENT-31): second interim analysis from a double-blind, randomised, placebo-controlled, phase 3 trial. [5] and Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial. [6]. ",
+    "marker_ids": [
+     "ne-ab014298d04d-1",
+     "ne-ab014298d04d-2",
+     "ne-ab014298d04d-3",
+     "ne-ab014298d04d-4",
+     "ne-ab014298d04d-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery.",
+     "International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma.",
+     "Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial.",
+     "Neoadjuvant Sintilimab and Chemotherapy for Resectable Stage IIIA Non-Small Cell Lung Cancer."
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39699905",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39699905/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "21252716",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/21252716/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34529930",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34529930/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35176262",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35176262/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37156249",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37156249/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39699905",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39699905/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "8666258e-101b-441b-b02a-94e414af25aa",
+   "seq": 39,
+   "ts": "2026-09-26T20:44:44.030578Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 22225,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 180
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 113
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 167
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 220
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma. [2], Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery. [3], Neoadjuvant Sintilimab and Chemotherapy for Resectable Stage IIIA Non-Small Cell Lung Cancer. [4], Sintilimab plus chemotherapy for patients with EGFR-mutated non-squamous non-small-cell lung cancer with disease progression after EGFR tyrosine-kinase inhibitor therapy (ORIENT-31): second interim analysis from a double-blind, randomised, placebo-controlled, phase 3 trial. [5] and Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial. [6]. \n\nSBRT in Hepatocellular Carcinoma\n\nGrade 3 or higher adverse events occurred in 42% versus 47% of patients [1]. \n\nPubmed records found\n\nPubmed title: International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma [2]. Pubmed title: Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery [3]. Pubmed title: Neoadjuvant Sintilimab and Chemotherapy for Resectable Stage IIIA Non-Small Cell Lung Cancer [4]. Pubmed title: Sintilimab plus chemotherapy for patients with EGFR-mutated non-squamous non-small-cell lung cancer with disease progression after EGFR tyrosine-kinase inhibitor therapy (ORIENT-31): second interim analysis from a double-blind, randomised, placebo-controlled, phase 3 trial [5]. Pubmed title: Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial [6]. "
+}
