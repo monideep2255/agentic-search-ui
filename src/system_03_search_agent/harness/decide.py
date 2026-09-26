@@ -292,6 +292,19 @@ async def _run_jev_pick(
 
 
 
+def jev_decides() -> bool:
+    """Whether Jev is the classifier: `CLASSIFIER_PROVIDER=jev`, read on
+    every call so a deployment's setting is the only switch.
+
+    Anything else, unset included, means the guard tier decides alone, the
+    code default that keeps production untouched until the product owner
+    flips the switch. `decide()` and the reworded-sentence check
+    (`synthesis/sentence_check.py`) both read it here, so the two can never
+    disagree about who decides.
+    """
+    return os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower() == "jev"
+
+
 async def _jev_attempt(
     harness: Harness,
     trace_id: str,
@@ -419,9 +432,8 @@ async def decide(
     fallback_default = default if default is not None else options[0]
 
     bounded_state = state[:_STATE_MAX_CHARS]
-    provider = os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower()
 
-    if provider != "jev":
+    if not jev_decides():
         guard_choice = await _run_guard_pick(
             harness, trace_id, bounded_state, options, instructions, criteria
         )

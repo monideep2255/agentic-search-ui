@@ -325,3 +325,177 @@ async def test_a_body_that_trickles_in_cannot_outlast_the_total_bound(
     elapsed = time.monotonic() - started
     assert excinfo.value.reason == "timeout"
     assert elapsed < 3.5, elapsed
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6, T-8.6-02: several questions in one call. The shape was
+# pinned live on 2026-09-26 (builder K's report, findings K-02 to K-04).
+# ---------------------------------------------------------------------------
+
+_YES_NO = jev_client_module.JevChoiceQuestion(
+    options=("yes", "no"),
+    instructions="Judge ITEM 1 only.",
+    criteria={"yes": "It adds something.", "no": "It adds nothing."},
+)
+
+
+def _batch_questions(count: int = 2) -> dict[str, jev_client_module.JevChoiceQuestion]:
+    return {f"item_{n}": _YES_NO for n in range(1, count + 1)}
+
+
+def _batch_body(choices: dict[str, str], *, cost: float = 5.3e-05) -> dict[str, Any]:
+    return {
+        "model": "typesafe/jev-1.13-20260917",
+        "answers": {
+            key: {
+                "type": "choice",
+                "choice": choice,
+                "probabilities": {"yes": 0.1, "no": 0.9} if choice == "no" else {"yes": 1, "no": 0},
+                "confidence": 0.8,
+            }
+            for key, choice in choices.items()
+        },
+        "usage": {"input_tokens": 1267, "output_tokens": 123, "cost": cost},
+        "id": "gen-dec-test",
+        "provider": "TypeSafe",
+    }
+
+
+async def _batch_once(**overrides: Any) -> jev_client_module.JevBatchResult:
+    kwargs: dict[str, Any] = {
+        "model": "typesafe/jev-1.13",
+        "state": "ITEM 1 ... ITEM 2 ...",
+        "questions": _batch_questions(),
+        "api_key": "test-key",
+    }
+    kwargs.update(overrides)
+    return await jev_client_module.call_jev_batch(**kwargs)
+
+
+@pytest.mark.asyncio
+async def test_a_batch_is_one_call_with_every_question_over_one_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_post = AsyncMock(return_value=_response(_batch_body({"item_1": "no", "item_2": "yes"})))
+    monkeypatch.setattr(jev_client_module, "_post", mock_post)
+
+    result = await _batch_once()
+
+    assert mock_post.await_count == 1, "one call for every question, never one per question"
+    body = mock_post.await_args.args[1]
+    assert body["state"] == "ITEM 1 ... ITEM 2 ..."
+    assert set(body["questions"]) == {"item_1", "item_2"}
+    for question in body["questions"].values():
+        assert question == {
+            "type": "choice",
+            "options": ["yes", "no"],
+            "instructions": "Judge ITEM 1 only.",
+            "criteria": {"yes": "It adds something.", "no": "It adds nothing."},
+        }
+    assert result.answers["item_1"].choice == "no" and result.answers["item_2"].choice == "yes"
+    assert result.cost_usd == pytest.approx(5.3e-05)
+    assert result.input_tokens == 1267
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "choices",
+    [
+        {"item_1": "no"},
+        {"item_1": "no", "item_2": "no", "item_3": "no"},
+        {"item_1": "no", "other": "no"},
+    ],
+    ids=["an item missing", "an item never asked", "a key never asked"],
+)
+async def test_a_batch_reply_that_does_not_match_the_questions_is_malformed(
+    monkeypatch: pytest.MonkeyPatch, choices: dict[str, str]
+) -> None:
+    monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=_response(_batch_body(choices))))
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_once()
+    assert excinfo.value.reason == "malformed_reply"
+    assert "fall back to the guard tier" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_a_batch_answer_outside_its_options_is_an_invalid_option(monkeypatch: pytest.MonkeyPatch) -> None:
+    body = _batch_body({"item_1": "no", "item_2": "maybe"})
+    monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=_response(body)))
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_once()
+    assert excinfo.value.reason == "invalid_option"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cost", ["Infinity", "0.5"])
+async def test_a_batch_cost_no_call_could_have_is_malformed(monkeypatch: pytest.MonkeyPatch, cost: str) -> None:
+    raw = json.dumps(_batch_body({"item_1": "no", "item_2": "no"})).replace('"cost": 5.3e-05', f'"cost": {cost}')
+    assert f'"cost": {cost}' in raw
+    monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=httpx.Response(200, content=raw.encode())))
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_once()
+    assert excinfo.value.reason == "malformed_reply"
+
+
+@pytest.mark.asyncio
+async def test_a_batch_is_cut_at_the_callers_shorter_bound(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(jev_client_module, "_post", _slow_post)
+    started = time.monotonic()
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_once(timeout_s=0.3)
+    elapsed = time.monotonic() - started
+    assert excinfo.value.reason == "timeout"
+    assert 0.25 <= elapsed < 0.6, elapsed
+
+
+@pytest.mark.asyncio
+async def test_a_batch_bound_can_shorten_but_never_lengthen_the_total_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A caller passing more time than Jev's total bound still gets the
+    bound: here the bound is patched to 0.2 s and the caller asks for 10."""
+    monkeypatch.setattr(jev_client_module, "_TIMEOUT_S", 0.2)
+    monkeypatch.setattr(jev_client_module, "_post", _slow_post)
+    started = time.monotonic()
+    with pytest.raises(JevCallError):
+        await _batch_once(timeout_s=10.0)
+    assert time.monotonic() - started < 0.5
+
+
+@pytest.mark.asyncio
+async def test_a_batch_with_no_time_left_is_never_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_post = AsyncMock(return_value=_response(_batch_body({"item_1": "no", "item_2": "no"})))
+    monkeypatch.setattr(jev_client_module, "_post", mock_post)
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_once(timeout_s=0.0)
+    assert excinfo.value.reason == "timeout"
+    mock_post.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_a_batch_is_never_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+    monkeypatch.setattr(jev_client_module, "_post", mock_post)
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_once()
+    assert excinfo.value.reason == "http_error"
+    assert mock_post.call_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "questions",
+    [
+        {},
+        {f"item_{n}": _YES_NO for n in range(1, jev_client_module.MAX_BATCH_QUESTIONS + 2)},
+        {"item_1": jev_client_module.JevChoiceQuestion(options=("yes", "no"), instructions="x", criteria={"yes": "y"})},
+        {"item_1": jev_client_module.JevChoiceQuestion(options=("yes", "no"), instructions="x" * 1001, criteria={"yes": "y", "no": "n"})},
+    ],
+    ids=["no questions", "too many", "a criterion missing", "instructions too long"],
+)
+async def test_a_batch_that_should_never_be_sent_is_refused_in_code(
+    monkeypatch: pytest.MonkeyPatch, questions: dict[str, Any]
+) -> None:
+    mock_post = AsyncMock()
+    monkeypatch.setattr(jev_client_module, "_post", mock_post)
+    with pytest.raises(ValueError):
+        await _batch_once(questions=questions)
+    mock_post.assert_not_called()

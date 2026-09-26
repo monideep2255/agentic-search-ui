@@ -42,6 +42,13 @@ Tickets T-8.6-01, T-8.6-02 and T-8.6-03 (`tracker/phase_8.6.md`). Each finding i
   - Jev's slips sit near even odds. The sentence check follows the product owner's rule of 2026-09-25, no confidence threshold on Jev's decisions, so Jev's pick decides. Whether an approval should need more than even odds is the owner's call, and these numbers are the evidence for it.
   - A fifth, first run of the Jev probe had 2 wrong of 30 with the direction not printed.
 
+- K-06 (live, 2026-09-26, the final T-8.6-02 code): `check_reworded_sentences` with `CLASSIFIER_PROVIDER=jev`, the real endpoint and a guard stand-in that fails the run if it is ever asked, so every verdict below is Jev's:
+
+  | Answer size | Runs | Wall time | Unfaithful sentences approved | Faithful sentences refused | Cost per answer |
+  | --- | --- | --- | --- | --- | --- |
+  | 4 sentences (2 faithful, 2 not) | 3 | 444 to 976 ms | 0 of 6 | 0 of 6 | $0.000061 |
+  | 30 sentences (15 faithful, 15 not) | 3 | 365 to 574 ms | 2 of 45 | 0 of 45 | $0.00039 |
+
 - K-05 (fence, established running `tests/system_03_search_agent/test_debugging_guide_coverage.py`): the coverage test goes red on this branch, `test_no_repurposed_file_keeps_a_stale_row`, naming `harness/decide.py`. It is right to: `decide.py`'s docstring summary changed because the file's job changed, and `docs/build/Debugging_guide.md`'s row still says `decide()` "asks Jev and the guard tier the same closed-option question concurrently". The guide and `tests/system_03_search_agent/fixtures/debugging_guide_manifest.json` are outside this builder's fence, and builder L's docstring changes will need the same two files, so the lead should apply the rows below once both branches are merged, then regenerate the manifest once with `python tests/system_03_search_agent/test_debugging_guide_coverage.py`. Keeping the old summary line to turn the test green would have hidden a stale row, so it was not done. The replacement rows are in [Debugging guide rows for the lead](#debugging-guide-rows-for-the-lead).
 
 ## T-8.6-01
@@ -84,6 +91,58 @@ Regression: `tests/system_03_search_agent/core` and `tests/system_03_search_agen
 
 ## T-8.6-02
 
+What the person reading an answer notices, once the wiring below lands: a plain-language sentence written from a paper or record is judged by Jev, in one call for the whole answer that took 365 to 976 ms live, instead of a guard-tier call. In the probes Jev let fewer invented details through than the guard tier and never refused a faithful sentence (K-04, K-06). When Jev fails, today's guard check runs instead if at least 2 seconds are left, so a Jev outage costs nothing but time. Nothing that code decides changed.
+
+What changed:
+
+- `harness/jev_client.py`: `call_jev_batch` sends several `choice` questions over one shared `state` in one call and returns a `JevBatchResult`, one validated `JevAnswer` per question. It is strict: every question asked must be answered under its own key, no other key may appear, and an answer outside its question's options fails the whole reply. It keeps `call_jev`'s 3-second total bound, which a caller may shorten but never lengthen; a bound of zero is refused before any request. At most 30 questions, the reported cost capped at $0.01 per call, every question's text at 1000 characters, no retries. `call_jev` now shares one transport helper, `_send`, with the same error messages as before.
+- `harness/decide.py`: `jev_decides()`, the one reading of `CLASSIFIER_PROVIDER`, used by `decide()` and the sentence check so the two can never disagree.
+- `synthesis/sentence_check.py`: `check_reworded_sentences(candidates, *, harness, trace_id, budget_s, ask_guard)`, the one entry point.
+  - Guard mode, the code default: one `ask_guard` call with `build_sentence_check_messages(candidates)` and the whole budget, parsed by `approved_keys`. The messages are byte-identical to the committed version (three cases compared by SHA-256, including 40 over-long items and a hostile sentence).
+  - Jev mode: one `call_jev_batch` call. The state is the same numbered items the guard reads, whole items only, at most 30 and at most 30,000 characters. One question per item, `item_1` to `item_n`, options "yes" and "no", asking "does its SENTENCE say anything its QUOTES do not?" with `SENTENCE_CHECK_INSTRUCTION`'s rules. Only "no" approves. Cap-checked before the call, and Jev's cost charged after, like `decide()`.
+  - After a Jev failure (timeout, HTTP error, malformed or unreadable reply, an answer outside the two options, anything unexpected), the guard is asked exactly as in guard mode with what is left of the budget, only when at least `GUARD_FALLBACK_MIN_S` (2 s) is left.
+  - It raises only what `core/graph.py` already catches: the cost cap (no guard call after a Jev cap refusal), `HarnessCallError`, `SentenceCheckUnreadable`. Each approves nothing.
+- Not changed: `SENTENCE_CHECK_INSTRUCTION`, `approved_keys`, the exact checks in `grounding.py`, `MAX_CANDIDATES`.
+
+The wiring, blocked by the fence (K-01): `core/graph.py::_ground_with_sentence_check` must call `check_reworded_sentences`, passing a closure that makes today's `_dispatch_tier_call(..., "guard", "write", messages, budget_s=..., max_tokens=256, cache_prefix=None)` call. The exact hunk, plus three graph-level tests that need it, is in `sentence_check_wiring.patch` in this folder. It applies cleanly to this branch (`git apply --check`), and results from running it in a scratch copy are below. Until it is applied, the loop makes today's guard call and nothing the person sees changes.
+
+Tests, `tests/system_03_search_agent/synthesis/test_sentence_check.py` (62, 33 of them new) and `tests/system_03_search_agent/harness/test_jev_client.py` (32, 15 of them new):
+
+- Guard mode: one call with today's messages byte for byte and the whole budget, parsed by today's parser, Jev never called, for the provider unset, `guard`, `GUARD` with a trailing space, and any other value; it raises only what the caller already catches; no candidates asks nobody.
+- Jev mode: one call, one yes-or-no question per sentence with its item number, Jev's own 3-second bound or less when less is left, only "no" approves, the cost is capped first and charged after, an unanswered, unasked or out-of-option verdict is unreadable.
+- Fails closed: the cost cap asks nobody; a failed Jev then a failed or unreadable guard approves nothing; too little time after a Jev failure skips the guard; a zero budget sends nothing at all, through the real client.
+- Falls back: each Jev failure (timeout, HTTP error, malformed reply, invalid option, an unexpected error, an unreadable verdict) with time left asks today's guard check with what is left.
+- The exact checks stay in front: a sentence with a quote not in the record, a number in no quote, or a flipped negation never reaches Jev; a faithful rewording does, and Jev's "no" lets the second grounding pass accept it.
+- Bounds: past 30 items nothing is sent or approved; whole items only up to the state cap; a hostile sentence travels as a JSON string in the state and never in a question.
+- The batch call: one request for every question, strict key matching, options per question, an impossible cost, a shorter caller bound, a bound that cannot be lengthened, a zero bound never sent, no retries, and bad batches refused in code.
+
+Break-it checks, each on a scratch copy under `/private/tmp`, restored and compared byte for byte (`filecmp`, shallow off) after every run; baseline 62 passed:
+
+| Guarantee broken | Tests that went red |
+| --- | --- |
+| The exact checks stop running in front (`exact_synthesis_checks_pass` always true) | 7, including every "never reaches Jev" arm |
+| Guard mode asks Jev instead | 4, every guard-mode arm |
+| The guard is also asked after Jev answers | 12 |
+| A "yes" approves too, which would widen what it accepts | 2 |
+| An unmatched set of answers is read anyway | 2 |
+| An answer outside "yes" and "no" is read anyway | 1 |
+| The cost cap falls back to the guard instead of approving nothing | 1 |
+| Too little time still asks the guard | 3 |
+| A failed guard after a failed Jev approves everything | 1 |
+| No fallback to the guard after a Jev failure | 7 |
+| Sentences past the 30-item cap are sent | 1 |
+| The sentence travels as bare text instead of a JSON string | 2 |
+| Jev's cost is not charged | 1 |
+| Batch call: a reply with the wrong keys is read anyway | 3 |
+| Batch call: an answer outside its options is read anyway | 1 |
+| Batch call: a caller can lengthen Jev's total bound | 1 |
+
+The wiring patch, applied to a scratch copy:
+
+- `test_sentence_check.py` with the three graph-level tests: 65 passed.
+- `tests/system_03_search_agent/core`, `guardrail` and `synthesis` together: 1897 passed, 66 skipped, 1 deselected, 1 xfailed.
+- The three graph-level tests against today's unwired `core/graph.py`: the two Jev-mode arms go red; the fallback arm passes, since the guard call it checks has the same shape before and after the wiring.
+
 ## T-8.6-03
 
 ## Tests and gates
@@ -96,4 +155,16 @@ Replacements for the rows in `docs/build/Debugging_guide.md`, outside this build
 
 ```text
 | `src/system_03_search_agent/harness/decide.py` | The classifier seam: `decide()` answers one closed-option question and returns a `DecisionRecord`. With `CLASSIFIER_PROVIDER=jev` Jev is asked alone and the guard tier only when Jev fails (timeout, HTTP error, malformed reply, an option outside the set, the cost cap), with Jev's reason in `fallback_reason` (build phase 8.6); with the code default `guard` the guard tier decides alone. Each caller passes a fixed description of the decision (`instructions`, `criteria`) that either model receives. Wired in `core/graph.py`'s "classifier seam, wired" section, which lists every decision point. | A decision point's chosen option looks wrong (check that its description in `core/graph.py` says what is being decided), a fallback fired when it should not have (read `fallback_reason` on the `done` event's `decisions`), or the cost cap did not stop a decision call |
+```
+
+`harness/jev_client.py`, whose summary line did not change, so the coverage test does not flag it; the row no longer mentions the batch call:
+
+```text
+| `src/system_03_search_agent/harness/jev_client.py` | The HTTP calls to OpenRouter's alpha decisions endpoint (Jev): `call_jev` asks one question, `call_jev_batch` asks up to 30 over one shared state in one call (build phase 8.6). Request and response shapes pinned live on 2026-09-25 and 2026-09-26, a 3-second total timeout a caller may shorten but never lengthen, no retries, strict validation of every answer. The caller's description of a decision rides in the endpoint's own `instructions` and `criteria` fields, never in `state`. | A Jev call raises, times out, or a response fails schema validation |
+```
+
+`synthesis/sentence_check.py`, whose summary line did not change either; the row calls the check guard-tier only:
+
+```text
+| `src/system_03_search_agent/synthesis/sentence_check.py` | 2026-09-23, items 12.9 and 12.10: the model check on REWORDED answer sentences, the one bounded exception to deterministic acceptance, approved by the product owner. `check_reworded_sentences` is the entry point: the guard tier by default, and with `CLASSIFIER_PROVIDER=jev` one Jev call per answer with a yes-or-no question per sentence, falling back to the guard tier only when Jev fails and 2 seconds remain (build phase 8.6). Open it when a reworded sentence ships that says more than its quote (the prompt, or Jev's question text), or when prose that should survive is stripped (look for `sentence check approved nothing` in the logs: an unreadable reply, a failed call, the cost cap or too little budget all fail closed). The exact checks in front of it are `grounding.exact_synthesis_checks_pass`; the two-pass wiring is `core/graph.py`'s `_ground_with_sentence_check` |
 ```
