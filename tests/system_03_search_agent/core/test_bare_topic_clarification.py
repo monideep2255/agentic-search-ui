@@ -244,6 +244,9 @@ _SAFE_PICKS: dict[str, str] = {
     "think.recent_years": "not_applicable",
     "plan.literature": "not_literature",
     "think.asks_features": "not_applicable",
+    # The class `model_stub.compliant_think_classification` gives, so the
+    # decision agrees with the plan tier and no test's plan moves.
+    "think.query_class": "exploratory",
 }
 
 
@@ -907,6 +910,147 @@ async def test_small_talk_is_never_asked_whether_it_is_about_features(
 
     await _run("what can you do")
     assert "think.asks_features" not in asked, asked
+
+
+@pytest.mark.asyncio
+async def test_the_question_class_is_the_classifiers_pick(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Build phase 8.6, T-8.6-05: the plan tier says "exploratory" and still
+    extracts the entities; `think.query_class` picks "aggregate", and that is
+    the class the run uses. The decision is asked with the question as its
+    state, the five existing classes as its options and its description."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    captured: dict[str, Any] = {}
+    asked = _install_decide(monkeypatch, {"think.query_class": "aggregate"})
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any) -> Any:
+        if point == "think.query_class":
+            captured.update(state=state, options=list(options), **kwargs)
+        return await inner(harness, trace_id, point, state, options, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    events = await _run("which papers discuss statin side effects")
+
+    assert "think.query_class" in asked, asked
+    think = _payload(events, "think")
+    assert think is not None and think["query_class"] == "aggregate"
+    assert captured["state"] == "which papers discuss statin side effects"
+    assert captured["options"] == ["lookup", "single_hop", "multi_hop", "aggregate", "exploratory"]
+    assert set(captured["criteria"]) == set(captured["options"]) and captured["instructions"]
+    done = _payload(events, "done")
+    record = next(d for d in done["decisions"] if d["name"] == "think.query_class")
+    assert record["chosen"] == "aggregate"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", [None, RuntimeError("seam down"), "on_topic"])
+async def test_no_usable_class_pick_keeps_the_plan_tiers_class(
+    monkeypatch: pytest.MonkeyPatch, pick: Any
+) -> None:
+    """Neither model picked, the seam raised, or the pick is not a class:
+    today's classification from the plan tier's reply stands. A decision
+    nobody made is recorded as the class the run actually used, both picks
+    empty."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.query_class": pick})
+
+    events = await _run("which papers discuss statin side effects")
+    think = _payload(events, "think")
+    assert think is not None and think["query_class"] == "exploratory"
+    done = _payload(events, "done")
+    records = [d for d in done["decisions"] if d["name"] == "think.query_class"]
+    if isinstance(pick, BaseException):
+        assert records == []
+    elif pick is None:
+        (record,) = records
+        # `_record` fills `chosen` with the first option ("lookup"); the run
+        # used the plan tier's class, and the record now says so.
+        assert record["chosen"] == "exploratory"
+        assert record["jev_choice"] is None and record["guard_choice"] is None
+
+
+@pytest.mark.asyncio
+async def test_the_class_decision_overlaps_thinks_own_classification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Think's classification call will not answer until the class decision
+    has been asked, and the decision will not answer until that call has
+    started. Run one after the other, one of them times out; run side by
+    side, both answer and the decision's class is used."""
+    think_started = asyncio.Event()
+    decision_asked = asyncio.Event()
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    real_dispatch = harness_module.litellm.acompletion
+
+    async def _dispatch(*args: Any, **kwargs: Any) -> Any:
+        joined = "\n".join(str(m.get("content") or "") for m in kwargs.get("messages") or [])
+        if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
+            think_started.set()
+            await asyncio.wait_for(decision_asked.wait(), timeout=1.0)
+        return await real_dispatch(*args, **kwargs)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
+    _install_decide(monkeypatch, {"think.query_class": "single_hop"})
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
+        if point == "think.query_class":
+            decision_asked.set()
+            await asyncio.wait_for(think_started.wait(), timeout=1.0)
+        return await inner(harness, trace_id, point, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    events = await _run("which papers discuss statin side effects")
+    think = _payload(events, "think")
+    assert think is not None and think["query_class"] == "single_hop"
+
+
+@pytest.mark.asyncio
+async def test_a_slow_class_decision_never_holds_up_think(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A class decision still running when Think's own call returns (Jev
+    failing over to the guard tier) is waited for only the short grace, then
+    stopped, and the plan tier's class is used."""
+    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.05)
+    cancelled = asyncio.Event()
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
+        if point == "think.query_class":
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+        return await inner(harness, trace_id, point, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    started = time.monotonic()
+    events = await _run("which papers discuss statin side effects")
+    assert time.monotonic() - started < 5.0
+    think = _payload(events, "think")
+    assert think is not None and think["query_class"] == "exploratory"
+    assert cancelled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_small_talk_is_never_asked_its_class(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch)
+    await _run("what can you do")
+    assert "think.query_class" not in asked, asked
 
 
 @pytest.mark.asyncio
