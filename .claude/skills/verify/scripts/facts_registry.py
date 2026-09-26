@@ -353,29 +353,57 @@ def pipeline_steps(repo: Repo) -> Truth:
     )
 
 
+LAYER_VALUE = re.compile(r"layer_(\d)_\w+")
+
+
+def _layer_keywords(tree: ast.AST, tool: str | None) -> list[ast.Constant]:
+    """Every `layer="layer_N_..."` keyword argument the code passes, as its
+    value node. A docstring or a comment is not a keyword argument, so text
+    that only mentions a layer never counts (PR118-V07). With `tool`, only a
+    call that also passes `tool=<tool>` counts."""
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        keywords = {k.arg: k.value for k in node.keywords if k.arg}
+        value = keywords.get("layer")
+        if not (
+            isinstance(value, ast.Constant)
+            and isinstance(value.value, str)
+            and LAYER_VALUE.fullmatch(value.value)
+        ):
+            continue
+        named = keywords.get("tool")
+        if tool is None or (isinstance(named, ast.Constant) and named.value == tool):
+            found.append(value)
+    return found
+
+
+def declared_layer(repo: Repo, tool: str) -> tuple[int, str, ast.Constant]:
+    """The layer a tool's code declares, the file it is declared in, and the
+    value's node. Each tool's module passes its own `layer=` keyword; a tool
+    whose module passes none, `cypher_query`, is declared where Plan builds
+    its call, in core/graph.py, by a call that also passes `tool=<tool>`.
+    Every such keyword in the file must agree."""
+    for path, only in ((f"{PKG}/tools/{tool}.py", None), (GRAPH_PY, tool)):
+        nodes = _layer_keywords(parse_python(repo, path), only)
+        if nodes:
+            layers = {int(LAYER_VALUE.fullmatch(n.value).group(1)) for n in nodes}
+            if len(layers) > 1:
+                raise RegistryError(
+                    f"{path}: {tool} declares more than one layer, {sorted(layers)}"
+                )
+            return layers.pop(), path, nodes[0]
+    raise RegistryError(f"{tool}: no layer= keyword in its module or in {GRAPH_PY}")
+
+
 def tool_layers(repo: Repo) -> Truth:
-    """layer number -> the tools that declare it. Each tool's module declares
-    its own `layer="..."`; `cypher_query` is declared where Plan builds its
-    call, in core/graph.py."""
-    tools = PyLiteral(EVENTS_PY, "ToolName").read(repo).value
+    """layer number -> the tools whose code declares it (`declared_layer`)."""
+    tools = PyLiteral(EVENTS_PY, "ToolName").read(repo)
     layers: dict[int, set[str]] = {}
-    for tool in tools:
-        text = repo.text(f"{PKG}/tools/{tool}.py")
-        m = re.search(r'\blayer="layer_(\d)_\w+"', text)
-        if m is None:
-            m = re.search(
-                rf'tool="{tool}".{{0,200}}?layer="layer_(\d)_\w+"',
-                repo.text(f"{PKG}/core/graph.py"),
-                S,
-            )
-        if m is None:
-            raise RegistryError(f"{tool}: no layer declaration found")
-        layers.setdefault(int(m.group(1)), set()).add(tool)
-    return Truth(
-        {k: frozenset(v) for k, v in layers.items()},
-        EVENTS_PY,
-        PyLiteral(EVENTS_PY, "ToolName").read(repo).line,
-    )
+    for tool in tools.value:
+        layers.setdefault(declared_layer(repo, tool)[0], set()).add(tool)
+    return Truth({k: frozenset(v) for k, v in layers.items()}, EVENTS_PY, tools.line)
 
 
 def tools_in_layer(layer: int):
@@ -397,11 +425,9 @@ def api_families(layer: int):
         if "PATHOGEN_FTP_BASE" in repo.text(PATHOGEN_FTP):
             # Read from pathogen_detection's own declaration, not through the
             # whole tool-layer map, so an unrelated tool rename cannot turn
-            # this fact into an ERROR and hide its FAIL lines (PR118-02).
-            declared = re.search(r'\blayer="layer_(\d)_\w+"', repo.text(PATHOGEN))
-            if declared is None:
-                raise RegistryError(f"{PATHOGEN}: no layer declaration")
-            families["pathogen_ftp"] = int(declared.group(1))
+            # this fact into an ERROR and hide its FAIL lines (PR118-02). The
+            # code's keyword, never the docstring above it (PR118-V07).
+            families["pathogen_ftp"] = declared_layer(repo, "pathogen_detection")[0]
         unnamed = set(families) - set(FAMILY_NAMES)
         if unnamed:
             raise RegistryError(
@@ -721,9 +747,27 @@ def snapshot_date(raw: str):
 # its target is listed by the self-test, never silently dropped.
 GENE_ROW = swap(KG_REF, r"(\| Gene \| )[\d,]+", r"\g<1>1")
 DISEASE_ROW = swap(KG_REF, r"(\| Disease \| )[\d,]+", r"\g<1>small")
-PUBTATOR_LAYER = swap(
-    f"{PKG}/tools/pubtator_annotate.py", r'layer="layer_3_enrichment"', 'layer="layer_2_api"'
-)
+
+
+def move_tool_layer(tool: str, new: str):
+    """Move a tool's code declaration to another layer, and put a decoy
+    comment carrying the OLD declaration on the file's first line. A reader
+    that took the first `layer="..."` text in the file, a comment's or a
+    docstring's, would read the decoy and miss the move, so the self-test
+    fails it; the AST reader sees only the code's keyword (PR118-V07)."""
+
+    def mutate(repo: Repo) -> dict[str, str]:
+        _, path, node = declared_layer(repo, tool)
+        text = repo.text(path)
+        start, end = offsets(text, node)
+        moved = text[:start] + f'"{new}"' + text[end:]
+        return {path: f"# decoy for the self-test: layer={text[start:end]}\n{moved}"}
+
+    return mutate
+
+
+PATHOGEN_LAYER = move_tool_layer("pathogen_detection", "layer_3_enrichment")
+PUBTATOR_LAYER = move_tool_layer("pubtator_annotate", "layer_2_api")
 PUBCHEM_LAYER = swap(TRANSPORT, r'"pubchem": 2,', '"pubchem": 3,')
 NO_GRAPHQL = swap(QUERY_PY, r', "graphql"\]', "]")
 
@@ -960,7 +1004,7 @@ FACTS: tuple[Fact, ...] = (
     Fact(
         "tools.layers",
         "which tools read which data layer",
-        Computed(EVENTS_PY, tool_layers, PUBTATOR_LAYER),
+        Computed(EVENTS_PY, tool_layers, PATHOGEN_LAYER),
         stated=(
             w(
                 ABOUT,
@@ -1008,7 +1052,7 @@ FACTS: tuple[Fact, ...] = (
     Fact(
         "layers.l2_tools",
         "how many tools reach the live NCBI APIs",
-        Computed(EVENTS_PY, tools_in_layer(2), PUBTATOR_LAYER),
+        Computed(EVENTS_PY, tools_in_layer(2), PATHOGEN_LAYER),
         stated=(w(ARCH, ARCH_TSX, r"(Three) tools cover that", COUNT),),
     ),
     Fact(
@@ -1042,7 +1086,7 @@ FACTS: tuple[Fact, ...] = (
     Fact(
         "layers.l3_apis",
         "which enrichment APIs layer 3 calls",
-        Computed(TRANSPORT, api_families(3), PUBCHEM_LAYER),
+        Computed(TRANSPORT, api_families(3), PATHOGEN_LAYER),
         stated=(
             w(ABOUT, INFO, r'colour: designTokens\.layer3,\s*body: "([^"]+)"', SET, named_families),
             w(
