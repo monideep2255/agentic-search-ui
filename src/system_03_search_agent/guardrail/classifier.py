@@ -424,21 +424,24 @@ def verdict_for(classification: InjectionClassification) -> GuardVerdict:
 
 
 # ---------------------------------------------------------------------------
-# Build phase 8.6, T-8.6-04: the injection verdict as a classifier-seam
-# decision (DECISIONS.md 2026-09-25: Jev is the classifier for every
-# classification decision, the guard tier its fallback only).
+# Build phase 8.6, T-8.6-04, rewired in the fix round (F-8.6-A05, A06, A10,
+# J04, A12): Jev as a SECOND judge of injection (DECISIONS.md 2026-09-25:
+# Jev is the classifier for every classification decision).
 #
-# With `CLASSIFIER_PROVIDER=jev`, `core.graph`'s guardrail asks
-# `decide(point="guardrail.injection")` and its pick, not this module's
-# `is_injection` field, is the injection verdict. The call above still runs
-# beside it for its `is_off_topic` field, and it still runs after the
-# unchanged deterministic pre-filter. With the provider left at its code
-# default, the call above stays the verdict, byte for byte as before.
+# With `CLASSIFIER_PROVIDER=jev`, `core.graph`'s guardrail asks Jev
+# `guardrail.injection` beside the call above, after the unchanged
+# deterministic pre-filter, and refuses when this module's `is_injection`
+# OR Jev's pick says injection. Jev can add a refusal, never remove one:
+# the adversary measured Jev admitting forged chat transcripts that the
+# call above refused every time. When Jev fails, the call above is the
+# verdict, and the guard tier's generic closed-choice prompt is never
+# asked. With the provider left at its code default, the call above stays
+# the verdict, byte for byte as before.
 #
 # The description below is fixed and code-authored, carries no test
-# question and no example query, and reaches both models only through
-# `harness.decide`, which builds its own messages: it is not part of any
-# stable prompt prefix. It restates, in words for a closed choice, the
+# question and no example query, and reaches Jev only in the decisions
+# endpoint's own `instructions` and `criteria` fields: it is not part of
+# any stable prompt prefix. It restates, in words for a closed choice, the
 # boundary `GUARD_SYSTEM_INSTRUCTION` draws, including the two measured
 # edges: framing that tells the system how to process a question is
 # injection (F-4.7-A-01), and a request to change data is not (it is
@@ -475,19 +478,23 @@ INJECTION_DECISION_CRITERIA: Final[dict[str, str]] = {
 
 
 def verdict_for_decision(
-    is_injection: bool, classification: InjectionClassification
+    jev_says_injection: bool, classification: InjectionClassification
 ) -> GuardVerdict:
-    """The admission verdict when the classifier seam decided injection.
+    """The admission verdict with Jev as a second judge of injection.
 
-    `is_injection` is the `guardrail.injection` decision's pick and replaces
-    `classification.is_injection`; the classification's `is_off_topic`
-    still judges topicality exactly as `verdict_for` does. Injection still
-    outranks off-topic. The refusal names no model reason: the seam
-    returns a choice, never free text.
+    Refused as injection when `classification.is_injection` OR
+    `jev_says_injection` is true; Jev can add a refusal, never remove one.
+    `jev_says_injection` is False when Jev picked `not_injection` and when
+    Jev made no pick at all, and in both cases the classification's own
+    verdict stands, byte for byte what `verdict_for` gives. So does its
+    refusal reason whenever the classification itself said injection.
+    Only a refusal Jev alone adds carries the fixed reason with no model
+    text, since Jev returns a choice, never free text. Injection still
+    outranks off-topic.
     """
-    if is_injection:
+    if jev_says_injection and not classification.is_injection:
         return refused("injection", _INJECTION_REFUSAL_REASON)
-    return verdict_for(classification.model_copy(update={"is_injection": False}))
+    return verdict_for(classification)
 
 
 # There is deliberately NO `classify(harness, text)` convenience wrapper here,

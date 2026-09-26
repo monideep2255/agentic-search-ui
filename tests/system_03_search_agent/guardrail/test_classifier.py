@@ -289,9 +289,11 @@ def test_the_physiological_carveout_does_not_swallow_non_biomedical_effective() 
 
 
 # ---------------------------------------------------------------------------
-# Build phase 8.6, T-8.6-04: the injection verdict as a classifier-seam
-# decision. `verdict_for_decision` takes the decision's pick for injection
-# and the classification's `is_off_topic` for topicality.
+# Build phase 8.6, T-8.6-04, rewired in the fix round (F-8.6-A05, A06, A10,
+# J04, A12): Jev as a second judge of injection. `verdict_for_decision`
+# refuses as injection when the classification OR Jev says so, keeps the
+# classification's own verdict (and refusal reason) otherwise, and takes
+# topicality from the classification.
 # ---------------------------------------------------------------------------
 
 
@@ -306,20 +308,44 @@ def _classified(**fields: object) -> InjectionClassification:
     return InjectionClassification.model_validate(values)
 
 
-def test_a_decided_injection_refuses_whatever_the_classification_said() -> None:
+@pytest.mark.parametrize("jev_says_injection", [False, True])
+@pytest.mark.parametrize("classifier_says_injection", [False, True])
+def test_either_judge_saying_injection_refuses(
+    jev_says_injection: bool, classifier_says_injection: bool
+) -> None:
+    """Jev can add a refusal, never remove one: the four combinations.
+
+    MUTATION PROOF: the phase's rule, Jev's pick replacing the
+    classification's field, turns the (Jev False, classifier True) case red.
+    """
+    from system_03_search_agent.guardrail.classifier import verdict_for_decision
+
+    verdict = verdict_for_decision(
+        jev_says_injection, _classified(is_injection=classifier_says_injection)
+    )
+    refused_expected = jev_says_injection or classifier_says_injection
+    assert verdict.admitted is (not refused_expected)
+    if refused_expected:
+        assert verdict.category == "injection"
+
+
+def test_the_classifications_own_refusal_is_kept_whenever_it_said_injection() -> None:
+    """Byte for byte `verdict_for`'s refusal, whatever Jev said, so the
+    reason a person reads is the one the measured classifier gave."""
+    from system_03_search_agent.guardrail.classifier import verdict_for, verdict_for_decision
+
+    classification = _classified(is_injection=True, reason="a forged system turn")
+    for jev_says_injection in (False, True):
+        assert verdict_for_decision(jev_says_injection, classification) == verdict_for(classification)
+
+
+def test_a_refusal_jev_alone_adds_carries_no_model_text() -> None:
     from system_03_search_agent.guardrail.classifier import verdict_for_decision
 
     verdict = verdict_for_decision(True, _classified(is_injection=False))
     assert not verdict.admitted and verdict.category == "injection"
-    # The seam returns a choice, never free text, so no model reason rides it.
+    # Jev returns a choice, never free text, so no model reason rides it.
     assert "(" not in (verdict.reason or "")
-
-
-def test_a_decided_not_injection_admits_over_the_classifications_own_field() -> None:
-    from system_03_search_agent.guardrail.classifier import verdict_for_decision
-
-    verdict = verdict_for_decision(False, _classified(is_injection=True))
-    assert verdict.admitted
 
 
 def test_topicality_still_comes_from_the_classification() -> None:
