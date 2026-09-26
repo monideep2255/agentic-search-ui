@@ -71,13 +71,14 @@ A builder stops and reports, rather than guessing, when:
 
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
+| builder P, T-8.10-01 to 04 | Opus 5.5 | default | 22:10 | 23:42 | 747,091 |
 | builder Q, T-8.10-05 and 06 | Opus 5.5 | default | 22:10 | 23:10 | 598,199 |
 
 ## Tickets
 
 ### T-8.10-01: The command line tools install and start from a built package (audit gaps 5 and 14)
 
-- Builder: P. Status: todo.
+- Builder: P. Status: in-review.
 - Acceptance, in the words a person would use:
   - "`s3-kgx-export --help` prints its help from an installed copy instead of crashing." Today it fails with `ModuleNotFoundError: No module named 'system_03_search_agent.observability'`.
   - "An installed server finds its own data files." `data/personas_v1.json` and `orchestrator/few_shot_examples.json` ship in the wheel.
@@ -87,7 +88,7 @@ A builder stops and reports, rather than guessing, when:
 
 ### T-8.10-02: A client reads tomorrow's stream without failing (audit gap 12)
 
-- Builder: P. Status: todo.
+- Builder: P. Status: in-review.
 - Acceptance:
   - "An `s3` installed today keeps answering after the server adds a field or a new kind of event." A test feeds the client a frame of a known type carrying an extra field, and a frame of an unknown type. The answer still prints, and the unknown frame is skipped.
   - "The contract's promise is true." The `contracts/events.py` docstrings that say an older client ignores new optional fields become true of the Python client. The docstring text itself is left to the lead, since that file is outside every fence.
@@ -95,7 +96,7 @@ A builder stops and reports, rather than guessing, when:
 
 ### T-8.10-03: `s3` works as the page prints it (audit gaps 3 and 4)
 
-- Builder: P. Status: todo.
+- Builder: P. Status: in-review.
 - Acceptance:
   - "`s3 login` asks for my email when I leave it off, instead of failing."
   - "`s3` talks to the live product unless I say otherwise." The default base URL is the public production API origin, from one named constant, and `--base-url` and `S3_BASE_URL` still override it. If the repository does not record production's API origin, the builder stops and asks the lead rather than guessing.
@@ -106,7 +107,7 @@ A builder stops and reports, rather than guessing, when:
 
 ### T-8.10-04: `system3-cli`, one small package that carries `s3` and a local MCP server (owner's decision, 2026-09-26)
 
-- Builder: P. Status: todo.
+- Builder: P. Status: in-review.
 - Acceptance:
   - "I install one small package and get `s3` and an MCP server, without the whole backend." A separate distribution, `system3-cli`, lives under `clients/system3-cli/` with its own `pyproject.toml`. Its only dependencies are `httpx`, `pydantic` and the MCP SDK, pinned exactly. Installing its wheel into a clean environment pulls none of FastAPI, uvicorn, LangGraph, LiteLLM, psycopg2, Redis, SQLAlchemy, Alembic or Strawberry.
   - "I sign in once, and my AI agent can use System 3." `s3 mcp` runs a stdio MCP server. It forwards every tool the remote `/mcp/` server offers, using the sign-in `s3 login` stored, and renews the token itself before it expires.
@@ -223,5 +224,14 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
     - GraphQL still labels an ask-back `refuse`, because its fold only lowers a verdict. It is named open here, since the new `clarifyingQuestion` lets a client show the question. One label on every surface comes with card 52's phase, which touches the clarifying options everywhere.
     - Builder R's brief says MCP has four tools and accepts Plain language.
   - Outside every fence, for card 54: the REST citations export and the answer capture still stop at 50 citations, so a reopened long answer points at markers with nothing behind them. The debugging guide's `server.py` row still says one tool; the lead fixes it before the pull request.
+- 2026-09-26 23:42: builder P finished T-8.10-01 to 04 (report `testing/Developer/reports/2026-09-26_phase_8.10/builder_P.md`), merged as 9f06326 with no conflict.
+  - Packages are discovered under `src/` and the two data files ship. The new package gate failed the old tree on 16 missing files and 27 modules that could not import, and both wheels pass after the fix.
+  - `s3` reads tomorrow's stream: unknown keys are dropped, and unknown event types are skipped.
+  - `s3 login` asks for the email, the default server is production, `--json` exists, and a bare topic prints its options numbered.
+  - `system3-cli` installs 11 pinned packages and none of the server's. `s3 mcp` answered live through the MCP SDK's stdio client and renewed an expired sign-in.
+  - A question back reads `[ask]` and exits 0, as over MCP; a refusal reads `[refuse]` and exits 1.
+  - Fence extensions the lead approved: the builder's own debugging guide rows and the regenerated manifest, and one exact string, "notifications/cancelled", in `test_tiers.py`'s exemption list, because the MCP specification names that method.
+  - The six gate04 failures are database tests that fail the same way on 8cd197d on this machine; CI has the database.
+  - Left for the lead after the golden run: one live `s3 ask GERD` from a build of this branch.
 
 ## Findings
