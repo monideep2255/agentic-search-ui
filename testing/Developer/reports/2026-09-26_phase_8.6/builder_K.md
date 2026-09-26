@@ -8,6 +8,8 @@ Tickets T-8.6-01, T-8.6-02 and T-8.6-03 (`tracker/phase_8.6.md`). Each finding i
 - [T-8.6-01](#t-86-01)
 - [T-8.6-02](#t-86-02)
 - [T-8.6-03](#t-86-03)
+- [T-8.6-08](#t-86-08)
+- [T-8.6-09](#t-86-09)
 - [Tests and gates](#tests-and-gates)
 - [Follow-ups for the lead](#follow-ups-for-the-lead)
 - [Debugging guide rows for the lead](#debugging-guide-rows-for-the-lead)
@@ -188,6 +190,46 @@ Added by the lead from the product harness review (`testing/Developer/reports/20
 
 - K-12 (on reading the code): the operator-only `cost` event is not built in `harness/harness.py`. `harness/cost_control.py::build_cost_event_payload(harness, trace_id, tier)` builds it, and `core/graph.py` calls it after each metered model call. A new optional field on `CostPayload` would stay empty unless that builder fills it, so T-8.6-08 adds two lines there that read the new timing from the harness. `cost_control.py` is outside the lead's file list for this ticket but inside no other builder's fence; `core/graph.py` is not touched.
 - K-13 (litellm as installed): the 400 in W6 reaches `call_tier` as `litellm.BadRequestError`, and `str(exc)` carries the provider's own words: `litellm.BadRequestError: OpenrouterException - {"error":{"message":"Reasoning is mandatory for this endpoint and cannot be disabled.","code":400}}`. `ContextWindowExceededError`, `ContentPolicyViolationError` and `UnsupportedParamsError` are subclasses of it, so the fallback is keyed on the text naming reasoning, not on the class alone.
+
+What the product owner and the person asking notice:
+
+- A writer model that cannot turn reasoning off now answers instead of failing every question with "A step in this query could not complete as requested". The frontier-writer bench can measure answer quality rather than a request-shape clash (W6). Develop's models accept `effort: none`, so nothing changes there.
+- A model deployed with no known price fails before the provider is asked, so nobody pays for a reply that is then thrown away, and the error says where to add the price (W7).
+- Each model call's time sits beside its cost: on `LLMResponse.elapsed_s`, and as `call_elapsed_s` on the operator-only `cost` event. The next speed decision (W9) can be read from the event stream.
+
+What changed:
+
+- `harness/harness.py`, `call_tier`:
+  - The price is looked up before anything is sent; the success path and the cancelled-call metering reuse it.
+  - A `BadRequestError` whose text names reasoning is retried once, the same request with the `reasoning` block removed, logged by model and tier. A second refusal raises as before, classed `recoverable`.
+  - The fallback and the transient retry are separate, each at most once, in either order, so one call sends at most three requests.
+  - The fallback is per call and never remembered. One stray 400 must not take the reasoning dial away from every later call in the process; the measured cost of reasoning on this product's synth tier was 20 to 45 seconds and timeouts (`_TIER_REASONING`'s own comment). Reading `supported_parameters` once per process, the review's other option, stays open.
+  - `elapsed_s` covers the whole call, retries included, since the person waited for them. It is kept per trace and tier for `last_call_elapsed_s`, and not recorded for a call that failed or was cancelled.
+- `contracts/events.py`: `CostPayload.call_elapsed_s: float | None`, default None, at least 0. Additive within v1; every existing payload still validates.
+- `harness/cost_control.py`, outside the lead's file list (K-12): `build_cost_event_payload` fills `call_elapsed_s` from `harness.last_call_elapsed_s(trace_id, tier)`, read defensively so a stand-in harness leaves it None. The end-user filter is untouched and still drops every `cost` event.
+- Not changed: `_TIER_REASONING`, `_TIER_MAX_TOKENS`, the budgets, `_price_per_token` and its message, `core/graph.py`.
+
+Tests, all passing: `test_harness.py` (49, 12 new), `test_cost_control.py` and `contracts/test_events.py` (247 together, 7 new).
+
+- C4: the W6 text replayed through `litellm.BadRequestError` is retried once without the block and logged, with the same messages and `max_tokens`, and only the answer is metered. A second refusal is not retried and keeps the provider's words. A 400 that does not name reasoning is not retried. The fallback and the transient retry are separate, in both orders. The next call sends the block again.
+- C6: an unpriced model raises `unexpected` from `harness.harness._price_per_token`, with the same message, before `acompletion` is called, and nothing is metered. A priced model is priced, then called.
+- C5: `elapsed_s` matches a 0.2-second fake call, is kept per tier and per query, includes a retry, and is not recorded for a failed call. The cost event carries it, is None for a tier with no completed call, still builds from a harness that has no timing, and is still dropped by the end-user filter. The contract accepts the field, defaults it, rejects a negative value and still forbids unknown fields.
+
+Break-it checks, each on a scratch copy under `/private/tmp`, restored byte for byte after every run. The copy lacks the repository's alembic migrations and a shipped-defaults file, so 3 `test_cost_control.py` tests fail and 6 error in every row including the baseline; the counts below are the tests that went red beyond those:
+
+| Guarantee broken | New red tests |
+| --- | --- |
+| No fallback on a reasoning refusal | 5 |
+| The fallback repeats without limit | 1 |
+| The retry keeps the reasoning block | 3 |
+| The fallback uses up the transient retry | 1 |
+| Any bad request counts as a reasoning refusal | 2, including the pre-existing recoverable-without-retry test |
+| The price is looked up after the call again | 2 |
+| The call's time is not kept for the cost event | 1 |
+| The response carries no time | 2 |
+| The time starts after a retry | 1 |
+| The cost event drops the time | 2 |
+| The contract accepts a negative time | 1 |
 
 ## T-8.6-09
 
