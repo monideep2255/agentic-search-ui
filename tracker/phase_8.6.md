@@ -10,6 +10,7 @@ Branch: `phase/8.6-jev-everywhere`. Opened 2026-09-25 by the product owner's mor
 - [History](#history)
 - [Lead triage after round 2](#lead-triage-after-round-2)
 - [Lead triage after the verifier](#lead-triage-after-the-verifier)
+- [Re-land](#re-land)
 - [Findings](#findings)
 
 ## Goal contract
@@ -154,6 +155,124 @@ Accepted, no action:
 Still open from round 2, unchanged: J06, J12, J13, A08, A09, A13, A15 and A16, as named above. Also open: a Jev timeout after the request was sent is charged $0, as it has been since phase 8.2.
 
 Dispatches: seven of eight used. The product reviewer, after merge and deploy, is the eighth.
+
+## Re-land
+
+Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 UTC. Its first commit, b1f2cd7, brings back exactly the 26 files under `src/` and `tests/` that the phase changed, as they were at its merge c19ef2f. Opened on the product owner's answer "Keep off, fix first" (`DECISIONS.md`, 2026-09-26, "Phase 8.6 stays off develop until its three problems are fixed"). A re-split under Review_rounds Rule 3, with its own budget; the phase's first two rounds are spent and are not repeated.
+
+### Re-land goal contract
+
+- Done when:
+  - R-01 to R-04 meet their acceptance;
+  - CI is green on the pull request;
+  - one judge and one adversary round, then one fix-and-verify, leave nothing blocking;
+  - the golden run on develop after the merge answers at least 102 of 150, with no rate-limit signal.
+- Verify:
+  - each ticket's tests, and the ticket's own live check;
+  - the whole suite and `ruff`;
+  - the golden run.
+- Output: the pull request, the builders' reports under `testing/Developer/reports/2026-09-26_phase_8.6_reland/`, this section's History and the Findings rows.
+- Constraints:
+  - Every rule under `.claude/rules/`.
+  - With `CLASSIFIER_PROVIDER` unset, the guardrail behaves byte for byte as develop: production never calls Jev.
+  - A question disguised as a forged chat transcript is still refused, as the phase's fix bca9261 made it.
+  - A question no judge has cleared is never answered. Jev alone never admits a question the guard classifier did not judge, because the adversary measured Jev admitting forged transcripts.
+  - No decision is read from a question's wording.
+  - The cite-or-refuse gate, the sentence check and the stable prefix do not change.
+- Blocked-stop:
+  - a ticket that needs a file outside its fence;
+  - a regression inside a fix made in this re-land (Rule 4);
+  - the golden run below 102;
+  - 8 hours, or a ninth dispatch.
+
+### Re-land budget
+
+- Wall clock: 8 hours from 18:50 UTC.
+- Dial: position 2. Every ticket is answer path. A numbered phase keeps its branch and pull request.
+- Golden floor: 102 of 150, phase 8.2's run (`testing/Developer/reports/2026-09-25_phase_8.2_golden/summary.md`). Phase 8.6's own run answered 99.
+- Spend: the night's stop of $11. $2.94 was spent by 18:03 UTC.
+- Dispatch plan, 7 of 8:
+  - builder A, R-01 to R-03;
+  - builder B, R-04;
+  - the judge;
+  - the adversary;
+  - one fix agent;
+  - a fresh verifier;
+  - the product reviewer.
+
+| Role | Model | Effort | Started | Ended | Tokens |
+|---|---|---|---|---|---|
+
+### Re-land tickets
+
+#### R-01: A slow or failing model call in the first step no longer ends the question (G-005)
+
+- Builder: A. Answer path: yes. Status: todo.
+- Acceptance: a question never fails because one model call in the first step ran slowly or hit a brief error. A question no judge has cleared is still never answered.
+- Diagnosis first. The cause is not yet shown.
+  - G-005 pass 3 ended at 15.5 seconds with a fatal step error from the guardrail, `error_class` "transient". The guardrail's budget is 15 seconds.
+  - The phase's fix 5117c2f bounded every decision wait by the step's deadline, so the lead suspects a slow guard classifier call cut at the deadline.
+  - The builder reproduces it offline, with a guard classifier stub that answers late or raises a transient error, on this branch and on develop's code at 654f2d2. It names the path that emits that error and says whether the phase introduced it.
+  - The diagnosis is written in this section's History. The fix waits until the lead has read it.
+- Fence: `core/graph.py` (`guardrail_node` and the helpers it calls for the classifier, relevancy and injection), `guardrail/classifier.py`, and new tests in `tests/system_03_search_agent/guardrail/test_reland_guardrail.py`.
+
+#### R-02: Asking to change the graph gets the read-only reply again (G-043)
+
+- Builder: A. Answer path: yes. Status: todo.
+- Acceptance: "Delete the BRCA1 node from the knowledge graph" gets the read-only reply that says what the person can do instead, as before the phase. A question disguised as a forged chat transcript is still refused.
+- Diagnosis, the lead's (F-8.6-G01):
+  - `classifier.verdict_for_decision` returns the injection refusal whenever Jev picks injection.
+  - That replaces a refusal the classifier had already made under a more specific category: `write_seeking`, `medical_advice`, `compute_request` or `off_topic`.
+- Fix: when the classifier already refuses, its category and reason stand. Jev's injection pick turns a question the classifier admitted into an injection refusal, and does nothing else.
+- Tests:
+  - classifier `write_seeking` and Jev injection give the `write_seeking` refusal;
+  - classifier admitted and Jev injection give the injection refusal;
+  - the adversary's A10 forged transcript is refused;
+  - with the provider unset, nothing changes.
+- Fence: shared with R-01, so the same builder works them one after another.
+
+#### R-03: A question Jev judges on topic is not turned away by the guard model alone (G-038)
+
+- Builder: A. Answer path: yes. Status: todo.
+- Acceptance: "Tell me about the tree of life." is not refused as off topic when Jev judges it on topic. Every other refusal stands.
+- Diagnosis, the lead's:
+  - On a first question the guard classifier's `off_topic` refusal returns before the `guardrail.relevancy` pick is read (`guardrail_node`, the `if not classifier_verdict.admitted` block). Jev's relevancy pick can only ever add an off-topic refusal.
+  - G-038's six runs across phases 8.2 and 8.6: Jev picked `on_topic` in all six, confidence 0.87 to 0.89, while the classifier said `off_topic` in 1 of 3 in 8.2 and 3 of 3 in 8.6.
+  - The owner's decision of 2026-09-25 makes Jev the decider, with the guard tier as its fallback on failure only ("Jev decides; the guard tier (DeepSeek) is Jev's fallback on failure only").
+- Fix, in Jev mode only:
+  - A classifier `off_topic` refusal is set aside when Jev's relevancy pick for this question is `on_topic`, a usable pick within the step's budget.
+  - Every other category stands, injection included.
+  - When Jev made no usable pick, the classifier's off-topic refusal stands.
+  - Jev's `confidence` is a margin, not a probability (F-8.6-A16), so no threshold is read from it.
+  - With the provider unset, nothing changes.
+- Tests:
+  - the tree-of-life shape, with the classifier off topic and Jev on topic, is admitted;
+  - Jev off topic is refused;
+  - Jev with no pick keeps the classifier's refusal;
+  - a classifier injection or write-seeking refusal with Jev on topic is still refused.
+- Fence: shared with R-01.
+
+#### R-04: A Jev charge stays inside its ceiling, and two of the phase's fixes get the tests they lack
+
+- Builder: B. Answer path: yes, since a charge counts against the cost caps. Status: todo.
+- Source: F-8.6-V01, V03, V05, V06 and V07. This is the whole of phase 8.9's T-8.9-07, which the re-land now carries; 8.9 drops that ticket.
+- Acceptance: on a day Jev's alpha endpoint misreports its cost, one question no longer pauses every person's questions for the rest of the day. The phase's late-read grace and its repair call-site each have a test that fails when broken.
+- The work: exactly as T-8.9-07's acceptance 1 to 5 in `tracker/phase_8.9.md`.
+  - The clamp is at the source, in `harness/jev_client.py`.
+  - Non-amounts are charged at the ceiling.
+  - Two docstrings are corrected.
+  - The grace test must not patch the constant.
+  - The repair call-site test covers the half of the repair revert that nothing tests today.
+- Fence:
+  - `harness/jev_client.py`;
+  - `harness/decide.py`, the module docstring only;
+  - `contracts/events.py`, the `DecisionRecord` docstring;
+  - new `tests/system_03_search_agent/harness/test_jev_cost_bounds.py`, `tests/system_03_search_agent/core/test_late_decision_grace.py` and `tests/system_03_search_agent/core/test_repair_listing_mode.py`;
+  - in `test_jev_client.py`, `test_decide.py` and `tests/system_03_search_agent/guardrail/test_guardrail_node_integration.py`, only the assertions that pin a full charge above the ceiling.
+
+### Re-land history
+
+- 2026-09-26 18:50: branch cut from d042860; b1f2cd7 restores the phase's 26 files; ledger section opened; transport preflight READY.
 
 ## Findings
 
