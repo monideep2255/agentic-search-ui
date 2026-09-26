@@ -17,6 +17,7 @@ The building agent returned this report as text, because its harness has sub-age
 - [Where the brief and the code disagreed](#where-the-brief-and-the-code-disagreed)
 - [Noticed in passing](#noticed-in-passing)
 - [What cost time](#what-cost-time)
+- [Fix round](#fix-round)
 
 ## Summary
 
@@ -35,7 +36,7 @@ Why the registry is Python: a fact's truth is rarely a plain lookup. For example
 - "115M" is a rounding of 115,406,761.
 - "Which steps ask a model" is a walk of the call graph.
 
-The registry only declares facts. Every computation lives in the checker, so editing the registry cannot change how a check decides.
+The checker holds the engine: the readers, the comparisons, the call graph, the verdicts and the self-test. The registry holds the fact declarations and, beside them, the small functions that compute a particular fact's truth or parse what a particular place says. So an edit to the registry can change how that fact is decided. It gets the same review as an edit to the checker, and `--self-test` must pass after it. (Corrected in the fix round, PR118-06; the first version of this line said the registry only declared.)
 
 ## Stale facts in plain words
 
@@ -253,6 +254,15 @@ Also worth doing:
 - F-8.6-P12 is the tree-of-life layout finding at 390 pixels. The evidence that `/health` carries no commit is `health.json` in the same review folder, `{"status":"ok","app_env":"develop"}`.
 - The worktree's `reference/` symlink is relative and does not resolve in an agent worktree. The checker falls back to the main checkout's copy through the git common directory, or takes `--reference`.
 - Develop moved from `0b75aa7` to `e43c769` during the work, with documentation changes only. The run above is against `e43c769`.
+- The `health.json` in the bullet above exists only on the unmerged `phase/8.6-followup` (`111028e3`); develop has only 8.1's copy (PR118-09). The skill no longer cites it: it cites `HealthResponse` in `adapters/web_sse/app.py`, which carries `status` and `app_env` only.
+
+The review of pull request 118 left five notes that stay notes, fixed where the fix was one line:
+
+- PR118-09: the evidence not on develop, above. Fixed in the skill, one line.
+- PR118-12: a pattern that names a number word, such as "(Seven)", "(One)" or "(Four)", turns a correct edit of the page into an ERROR instead of a PASS. The ERROR still fails `/verify` and names the registry, so nothing passes wrongly, but it costs a registry edit. Left: loosening each such pattern to any word is a registry change, not one line. `NUMBER_WORDS` now reaches nineteen, plus thirty, forty and fifty, in one line.
+- PR118-14: the registry sits under `.claude/`, so a copy card that adds a fact becomes a branch-and-pull-request change under the git-workflow rule's `.claude/` row. Left: where the registry lives is the owner's call.
+- PR118-17: a backend-only run of Step 6. The verdict line and the exit checklist now cover it. Left: the flowchart still has no facts node.
+- PR118-18: the docstring said nothing runs, but the script starts `git rev-parse`. Fixed in the docstring, one line: no code under check runs, and `git rev-parse` is the one process started.
 
 ## Noticed in passing
 
@@ -266,3 +276,39 @@ Nothing failed for more than five minutes. The self-test caught three weak check
 - A text mutation that left "4.x" unchanged.
 - A pattern that matched a type alias before the default it targeted.
 - A REST guest marker that matched any route.
+
+## Fix round
+
+The one fix round for pull request 118, on `chore/verify-facts` after `f75d6df`. Commits: `7b42026` (engine), `f210aa9` and `6b63663` (registry), `98e3241` (skill), and this report. Each probe ran the checker from before the round and the checker after it, against a `git archive` export of develop with the reference present unless stated.
+
+| Finding | Result | Probe, before then after |
+|---------|--------|--------------------------|
+| PR118-01 | Fixed | `--from` the graph reference with no reference repository: exit 0, "places: PASS 0, FAIL 0, GAP 33, ERROR 0"; now exit 3, "not fully checked 12 ... GAP 33 ... NOT PASSED". The skill lists exit 0 PASS, 1 FAIL, 2 ERROR, 3 GAP, and any non-zero fails `/verify` |
+| PR118-02 | Fixed | A tool renamed in `ToolName` only: exit 2, "14 stale ... PASS 141, FAIL 23, GAP 0, ERROR 5", with the layer 2 and 3 API facts hidden behind ERROR; now exit 2, "stale 16 ... not fully checked 3 ... PASS 143, FAIL 31, GAP 0, ERROR 5", with their FAIL lines kept and one ERROR line per unjudged place. ERROR is a verdict word in the skill and fails `/verify` |
+| PR118-03 | Fixed | The citation sentence rewritten to "with the reviewer who approved it, its DOI and the abstract it was quoted from": PASS, exit 0; now ERROR, exit 2. "its licence" changed to "its DOI": FAIL on the tool only; now ERROR naming 'its DOI'. An empty reading is an ERROR everywhere, never compared |
+| PR118-04 | Fixed | Seeds "Songs about BRCA1", "Movies about rs334" and two more: PASS, exit 0; now FAIL, exit 1. The fact now asks for the seed's words, in order, inside a golden question, and says so in its description. On develop the seeds read 0 of 4 word for word, where the first version counted 2 of 4 by identifier; the note names the golden question sharing each seed's identifiers as a lead only |
+| PR118-05 | Fixed | `MAX_LAYER_2_3_CALLS_PER_QUERY` made `int(os.environ.get(...))`: a `ValueError` traceback and no summary; now four ERROR lines, "... is not a literal, so it cannot be read without running the code (ValueError) ...", and the run goes on to "facts: 64 / stale 15 / not fully checked 1 / places: PASS 147, FAIL 28, GAP 0, ERROR 4 / NOT PASSED", exit 2. Messages are scrubbed of local paths |
+| PR118-06 | Fixed | Both docstrings and this report's line now say the registry holds per-fact functions, so a registry edit can change a verdict |
+| PR118-07 | Fixed | The after-merge step reruns the check on a `git archive` export of the merged develop commit. The API deploy is read as `/ship` reads it; the web deploy, which `/ship` does not read, is read the same way or named as a GAP |
+| PR118-08 | Fixed | The placeholder points at `testing/Developer/reports/2026-09-26_integrations_audit/integrations_smoke.py` on develop, and says phase 8.10 makes it pass before the lead wires it in. Not wired in |
+| PR118-09 | Fixed, one line | See the notes above |
+| PR118-10 | Fixed | `--reference /nonexistent/typo`: exit 1 with a full run on the fallback reference; now exit 2, "check_facts: --reference names no directory; nothing was checked" |
+| PR118-11 | Fixed | Self-test with no reference: exit 0, "179 comparisons proven ... 50 of 64 readers ... 0 failures"; now exit 1, "179 of 179 comparisons ... 50 of 64 readers ... 14 failures", one per unproven reader. The comparison count now counts only comparisons that passed both arms |
+| PR118-12 | Left in part | See the notes above |
+| PR118-13 | Fixed | `--map --from README_nope.md`: exit 2; now exit 0, "check_facts: no fact is computed from README_nope.md, so nothing restates it" |
+| PR118-14 | Left | See the notes above |
+| PR118-15 | Fixed | New place: `frontend/src/lib/events.ts` `KNOWN_EVENT_TYPES`, with `cost` counted as the omission its docstring declares. It fails: "not named: step". Places on develop go from 28 FAIL to 29 FAIL; stale facts stay 15, since `events.types` was already stale |
+| PR118-16 | Fixed | `/usr/bin/python3`, which is 3.9: exit 1, "ModuleNotFoundError: No module named 'tomllib'"; now exit 2, "check_facts: needs Python 3.11 or later; run it with the repository's venv/bin/python (this is 3.9)". The skill runs `venv/bin/python` |
+| PR118-17 | Left in part | See the notes above |
+| PR118-18 | Fixed, one line | See the notes above |
+
+The checks run before reporting, each line pasted from its output:
+
+- `--self-test`, exit 0: "self-test: 180 of 180 comparisons proven to pass and to fail; 64 of 64 readers proven to follow a changed source; 10 parser cases; 0 failures"
+- The full check against a fresh `git archive` export of develop `bc64e028` with `--reference`, exit 1: "facts: 64 | stale 15 | not fully checked 0 | places: PASS 151, FAIL 29, GAP 0, ERROR 0 | NOT PASSED"
+- `ruff check` from the worktree, as gate 03 runs it, exit 0: "All checks passed!"
+- `isort --check-only --diff src tests services tracker alembic .claude .github` from the worktree, as gate 02 runs it, exit 0: "Skipped 2 files"
+- `tracker/check_doc_drift.py --check`: "ok: 2 facts computed | 0 could not be computed | 0 stale | 0 structural"
+
+Noticed in this round: the shared repository holds a ref named `refs/remotes/origin/develop 2`, a duplicate-copy artifact that makes `git fetch` print "bad object". It is outside this branch's scope and was left alone.
+
