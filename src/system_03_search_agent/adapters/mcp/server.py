@@ -5,14 +5,25 @@ server, outbound-only), Section 9.1 (`CitationPayload`, referenced not
 restated), Decision 24 and the 2026-07-22 Step 2.3-to-Phase-4 decision
 (direct Python tools, no inbound MCP; MCP is outbound delivery only).
 
-Exposes exactly one MCP tool, `ask_biomedical_question`, wrapping the SAME
-core agent loop `adapters/web_sse/app.py` already drives (via
-`RunRegistry.create_run`/`RunRegistry.subscribe`), never the seven internal
-tools directly. Request/response, not streaming: this module subscribes to
-a run's event stream, waits for the terminal `done` (or a fatal `error`),
-and folds everything into one JSON result matching Section 13.2's locked
-schema. No `think`, `plan`, or `tool_start` event ever reaches an MCP
-caller, and `operator_mode` is hard-pinned `False` here regardless of the
+Exposes four MCP tools since build phase 8.10 (T-8.10-05), on the product
+owner's decision of 2026-09-26 in `DECISIONS.md` ("The MCP server gets full
+parity with the web app"), which overrules Section 13.2's one advertised
+tool for MCP while the specification itself stays locked:
+
+- `ask_biomedical_question`: wraps the SAME core agent loop
+  `adapters/web_sse/app.py` already drives (via `RunRegistry.create_run`/
+  `RunRegistry.subscribe`), never the seven internal tools directly.
+- `list_past_searches`, `reopen_past_answer`, `send_answer_feedback`: the
+  MCP faces of `GET /v1/history`, `GET /v1/history/{trace_id}/answer` and
+  `POST /v1/query/{run_id}/feedback`, calling the same service functions
+  under the same ownership checks.
+
+Request/response, not streaming: the ask tool subscribes to a run's event
+stream, waits for the terminal `done` (or a fatal `error`), and folds
+everything into one JSON result that extends Section 13.2's schema with
+optional fields only. No `plan` or `tool_start` event ever reaches an MCP
+caller, and of `think` only the clarifying question and its options do.
+`operator_mode` is hard-pinned `False` here regardless of the
 authenticated account's `OPERATOR_USER_IDS` allowlist status, so no MCP
 response can ever carry a cost field, a stricter rule than every other
 adapter's role-derived filtering (Section 13.2's own "Cost visibility"
@@ -36,17 +47,28 @@ Depends on:
       decode-then-lookup logic `get_current_user` uses, extracted so this
       non-FastAPI caller can reuse it without duplicating it.
     - system_03_search_agent.contracts.events (CitationPayload,
-      DonePayload, ErrorPayload, GuardPayload, TokenPayload,
+      DonePayload, ErrorPayload, GuardPayload, ThinkPayload, TokenPayload,
       TrustSignalPayload): the Section 2.3 payload models this module
       folds events against. `CitationPayload` is reused verbatim as
       Section 13.2's `CitationV1`, never redefined.
     - system_03_search_agent.contracts.query (Query, RequestContext): the
       one request shape every surface builds before calling into the core.
-    - system_03_search_agent.core.run_registry (default_registry): the
-      SAME registry instance `adapters/web_sse/app.py` already uses. This
-      module never builds a second registry.
+    - system_03_search_agent.core.run_registry (default_registry,
+      RunNotFoundError, RunNotOwnedError): the SAME registry instance
+      `adapters/web_sse/app.py` already uses, and its one ownership rule
+      (`resolve_owned_run`). This module never builds a second registry.
     - system_03_search_agent.data.session (session_scope): one DB session
       per tool call, to resolve the caller's bearer token to a `User` row.
+    - system_03_search_agent.feedback (record_feedback,
+      FeedbackOwnershipError, InteractionNotFound) and
+      system_03_search_agent.feedback.contracts (FeedbackCitationFlag):
+      the feedback write `POST /v1/query/{run_id}/feedback` calls.
+    - system_03_search_agent.feedback.history (list_history,
+      get_saved_answer, DEFAULT_LIMIT, MAX_LIMIT): the owner-scoped reads
+      `GET /v1/history` and `GET /v1/history/{trace_id}/answer` call.
+    - system_03_search_agent.observability.analytics (capture_event,
+      AnalyticsEvent): the same best-effort feedback-submitted count the
+      REST feedback route fires.
     - system_03_search_agent.synthesis.trust (aggregate): Section 8.3.4's
       most-restrictive-claim-wins rule, reused verbatim (F-4.1-A-01,
       F-4.1-A-02, fix round 2) rather than a second implementation of the
@@ -65,7 +87,9 @@ Reads:
 Writes:
     - Nothing directly. `RunRegistry.create_run` starts the same
       background task every surface starts; this module only reads its
-      event stream back.
+      event stream back. `send_answer_feedback` writes the caller's own
+      `interactions.user_feedback` through `record_feedback`, the same
+      function and the same row-level ownership check the REST route uses.
 
 A design note on "Pydantic input/output models" (tracker/phase_4.1.md's own
 phrasing for this ticket): the SDK derives a tool's advertised
@@ -92,13 +116,14 @@ import os
 import re
 import uuid
 from collections.abc import Callable
+from datetime import datetime
 from typing import Annotated, Literal
 
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.shared.exceptions import MCPError
-from mcp_types import INVALID_PARAMS, INVALID_REQUEST, REQUEST_TIMEOUT
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from mcp_types import INVALID_PARAMS, INVALID_REQUEST, REQUEST_TIMEOUT, ToolAnnotations
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError
 
 from system_03_search_agent.auth.dependencies import (
     InvalidBearerTokenError,
@@ -110,6 +135,7 @@ from system_03_search_agent.contracts.events import (
     DonePayload,
     ErrorPayload,
     GuardPayload,
+    ThinkPayload,
     TokenPayload,
     TrustSignalPayload,
 )
@@ -117,10 +143,25 @@ from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
+    RunNotFoundError,
+    RunNotOwnedError,
     default_registry,
 )
 from system_03_search_agent.data.models import User
 from system_03_search_agent.data.session import session_scope
+from system_03_search_agent.feedback import (
+    FeedbackOwnershipError,
+    InteractionNotFound,
+    record_feedback,
+)
+from system_03_search_agent.feedback.contracts import FeedbackCitationFlag
+from system_03_search_agent.feedback.history import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    get_saved_answer,
+    list_history,
+)
+from system_03_search_agent.observability.analytics import AnalyticsEvent, capture_event
 from system_03_search_agent.synthesis.trust import aggregate
 
 logger = logging.getLogger(__name__)
@@ -131,7 +172,27 @@ logger = logging.getLogger(__name__)
 # non-conforming response) and once defensively while folding (see
 # `_fold_run_to_response`), the same belt-and-suspenders pattern
 # `adapters/web_sse/app.py`'s `_MAX_CITATIONS_PER_RUN` already uses.
-_MAX_CITATIONS = 50
+#
+# T-8.10-05 raised the citation cap from 50 to 100, under the product
+# owner's parity decision of 2026-09-26 (`DECISIONS.md`). What a person saw
+# before: a long answer such as Marfan syndrome's cited 85 records on this
+# surface and 93 on the web, this one returned the first 50, and the answer
+# text still pointed at markers such as [77] that resolved to nothing.
+#
+# WHY 100 AND NOT ANOTHER NUMBER. The event contract puts no count on one
+# answer's citations: every citation is its own `citation` event, and
+# `contracts/events.py` bounds each event's fields, never how many there
+# are. The run does bound them. `write_node` builds one citation per
+# display slot, and the slots come from `build_synth_findings`, capped at
+# `core/graph.py`'s `_MAX_FINDINGS_FOR_DISPLAY`, which is the planned graph
+# call's own `_PLAN_TOOL_CALL_ROW_LIMIT`, 100. So 100 is the most one
+# answer can carry, and this cap keeps every one of them while still being
+# a bound, as `production-standards.md`'s multi-agent pipeline gate
+# requires. Held as a literal here rather than imported, so the published
+# output schema moves only by a deliberate edit, and pinned to the run's
+# own bound by `test_the_citation_cap_is_the_runs_own_bound`, which fails
+# the day the run's bound rises past this one.
+_MAX_CITATIONS = 100
 _MAX_ANSWER_LENGTH = 8000
 
 _AUTH_FAILURE_MESSAGE = "missing, malformed, or invalid bearer token"
@@ -246,6 +307,42 @@ def _fatal_error_disclosure(error_payload: ErrorPayload) -> str:
 # keep `_reject_unknown_arguments` a small, obviously-correct check.
 _ALLOWED_TOOL_ARGUMENT_NAMES = frozenset({"query", "audience_depth", "session_id"})
 
+# The same check's declared names for the three tools T-8.10-05 added, one
+# set per tool, so an argument one tool takes is never silently accepted by
+# another.
+_LIST_PAST_SEARCHES_ARGUMENT_NAMES = frozenset({"limit"})
+_REOPEN_PAST_ANSWER_ARGUMENT_NAMES = frozenset({"trace_id"})
+_SEND_ANSWER_FEEDBACK_ARGUMENT_NAMES = frozenset(
+    {"run_id", "rating", "comment", "flagged_reason", "citation_flags"}
+)
+
+# T-8.10-05: every depth the web offers. `plain_language` is the web's own
+# default; this surface's default stays `researcher`, so an existing client
+# that names no depth gets exactly the answers it got before (the ledger's
+# "Decisions this plan takes"). Listed in the same order as
+# `contracts.query.Query.audience_depth`'s own Literal.
+AudienceDepth = Literal["plain_language", "researcher", "clinical_brief", "deep_technical"]
+_DEFAULT_AUDIENCE_DEPTH: AudienceDepth = "researcher"
+
+# The fixed, caller-safe messages the three new tools raise, never built
+# from an exception or a stored value. Each says what the REST route it
+# stands in for says. The not-found one adds what to do next, because REST's
+# bare "no such run" leaves an agent that took a trace_id from
+# `list_past_searches` with nothing to act on: the registry holds a finished
+# run only for its retention window, and REST's own feedback route records
+# that gap as known rather than routing around it.
+_NO_SUCH_RUN_MESSAGE = (
+    "no such run: feedback can be sent for a run_id that ask_biomedical_question "
+    "returned to this account while that run is still held on the server"
+)
+_NOT_YOUR_RUN_MESSAGE = "you do not own this run"
+_FEEDBACK_NOT_YET_CAPTURED_MESSAGE = (
+    "this run's interaction row has not been captured yet; capture runs as a "
+    "background task right after the answer finishes, so retry this exact "
+    "request in a few seconds"
+)
+_NO_SAVED_ANSWER_MESSAGE = "no saved answer for this search; ask it again to get a fresh one"
+
 # F-4.1-A-16 (adversary round 1, fix round 2): C0 control bytes and DEL,
 # including the ESC (\x1b) that opens an ANSI escape sequence and the NUL
 # (\x00) an adversary used to build a length-legal but hostile `query`.
@@ -296,15 +393,134 @@ class AskBiomedicalQuestionOutput(BaseModel):
     # from a checked-in file of deceased scientists, carrying no user data,
     # no cost data and no identifier.
     persona_name: str | None = Field(default=None, max_length=64)
+    # T-8.10-05, four more optional fields, under the same two constraints
+    # as `persona_name` above: optional, so Section 13.2's four required
+    # fields stay exactly as they were, and each one added to the pinned
+    # `_ALLOWED_RESPONSE_KEYS` in `tests/.../adapters/mcp/
+    # test_no_cost_and_auth.py` under the product owner's parity decision
+    # of 2026-09-26, which named what these carry. None of them is a cost,
+    # a credential or another account's data: each is either the caller's
+    # own conversation id or text the web app already shows that caller.
+    session_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "The conversation this answer belongs to. Pass it back as session_id "
+            "on the next ask_biomedical_question call to ask a follow-up, so "
+            "'it' or 'that gene' refers to what was just discussed."
+        ),
+    )
+    # `DonePayload.trust_line`, the one plain sentence the web shows under
+    # an answer ("Based on 3 sources, not yet confirmed"), same bound.
+    trust_line: str | None = Field(
+        default=None,
+        max_length=200,
+        description="The one plain sentence about how far this answer can be trusted, as the web app shows it.",
+    )
+    # `ThinkPayload.clarifying_question` and `.clarifying_options`, same
+    # bounds, set only when this answer is a question back to the caller
+    # (see `_fold_run_to_response`). The question also arrives as `answer`,
+    # and is carried here too because `trust_signal.outcome == "ask"` alone
+    # is ambiguous: the trust table uses `ask` for a hedged answer as well
+    # (`synthesis.trust.DECISION_TABLE`), and the web keeps the two apart by
+    # the same field (`useRunView.ts`, `clarification`).
+    clarifying_question: str | None = Field(
+        default=None,
+        max_length=500,
+        description=(
+            "Set when the answer is a question back to you rather than an answer. "
+            "Reply with one of clarifying_options, or your own words, as the next "
+            "query with the same session_id."
+        ),
+    )
+    clarifying_options: list[Annotated[str, Field(max_length=220)]] | None = Field(
+        default=None,
+        max_length=4,
+        description="Ready-made questions to send next when clarifying_question is set, or null.",
+    )
+
+
+class PastSearch(BaseModel):
+    """One of the caller's own past searches: `GET /v1/history`'s
+    `HistoryItem`, field for field and bound for bound, restated here
+    rather than imported because `adapters/web_sse/app.py` imports this
+    module, so the reverse import would be circular."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    trace_id: str = Field(..., max_length=64)
+    question: str = Field(..., max_length=2000)
+    asked_at: datetime
+    trust_signal: str = Field(..., max_length=20)
+    citation_count: int = Field(..., ge=0)
+    has_saved_answer: bool = False
+
+
+class PastSearchesOutput(BaseModel):
+    """`GET /v1/history`'s `HistoryResponse`, field for field: `count` is
+    the size of this page, never a total, and `omitted_count` is how many
+    of the caller's own rows were withheld because they could not be shown
+    honestly (the REST route's own reasons, applied by the same guard)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[PastSearch] = Field(default_factory=list, max_length=MAX_LIMIT)
+    count: int = Field(..., ge=0)
+    omitted_count: int = Field(0, ge=0)
+
+
+class ReopenedAnswerOutput(BaseModel):
+    """One past answer, as `GET /v1/history/{trace_id}/answer` returns it.
+
+    Two deliberate differences from the REST shape, both in the caller's
+    favour and neither a new fact:
+
+    - `audience_depth` reports the stored depth as one of the four values
+      `ask_biomedical_question` takes, so an agent can ask again at the same
+      depth. REST folds three of them onto `researcher` only because its
+      pinned wire contract declares two values.
+    - `citations` are validated one by one as `CitationPayload`, and any
+      stored entry that no longer validates is left out and counted in
+      `citations_omitted`, never published half-formed and never allowed
+      to fail the whole answer (REST drops a non-dict entry the same way).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    trace_id: str = Field(..., max_length=64)
+    question: str = Field(..., max_length=2000)
+    asked_at: datetime
+    audience_depth: AudienceDepth
+    answer_markdown: str = Field(..., max_length=32000)
+    citations: list[CitationPayload] = Field(default_factory=list, max_length=_MAX_CITATIONS)
+    citations_omitted: int = Field(0, ge=0)
+    trust_signal: str = Field(..., max_length=20)
+    trust_line: str | None = Field(default=None, max_length=200)
+
+
+class FeedbackRecordedOutput(BaseModel):
+    """What `send_answer_feedback` returns once the feedback is stored.
+    REST answers 204 with no body; a tool must return something, so it
+    returns the run it rated and that the write happened."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str = Field(..., max_length=64)
+    recorded: bool
 
 
 server = MCPServer(
     name="system3-biomedical-search",
     version="1.0.0",
     instructions=(
-        "Ask a biomedical research question. Returns a cited answer "
-        "assembled from the NCBI knowledge graph and live NCBI APIs, or "
-        "an honest refusal."
+        "Ask a biomedical research question with ask_biomedical_question. It "
+        "returns a cited answer assembled from the NCBI knowledge graph and "
+        "live NCBI APIs, or an honest refusal. To ask a follow-up, pass back "
+        "the session_id the previous answer returned. When clarifying_question "
+        "is set, the answer is a question back to you: reply with one of "
+        "clarifying_options. list_past_searches, reopen_past_answer and "
+        "send_answer_feedback read your own past searches, reopen a saved "
+        "answer, and rate an answer."
     ),
 )
 
@@ -594,10 +810,13 @@ async def _authenticate_mcp_caller(ctx: Context) -> User:
             raise MCPError(code=INVALID_REQUEST, message=_AUTH_FAILURE_MESSAGE) from None
 
 
-def _reject_unknown_arguments(ctx: Context) -> None:
+def _reject_unknown_arguments(
+    ctx: Context, allowed: frozenset[str] = _ALLOWED_TOOL_ARGUMENT_NAMES
+) -> None:
     """F-4.1-A-13 (adversary round 1, fix round 2): reject a tool call
     carrying an argument this tool does not declare, before it is
-    silently dropped.
+    silently dropped. `allowed` is the calling tool's own declared names
+    (T-8.10-05 added three tools); it defaults to the ask tool's.
 
     The SDK's own auto-derived argument model (`func_metadata()`, read
     from the installed wheel) sets no stricter-than-default Pydantic
@@ -630,7 +849,7 @@ def _reject_unknown_arguments(ctx: Context) -> None:
     arguments = params.get("arguments") if params else None
     if not isinstance(arguments, dict):
         return
-    unknown = set(arguments) - _ALLOWED_TOOL_ARGUMENT_NAMES
+    unknown = set(arguments) - allowed
     if unknown:
         raise MCPError(
             code=INVALID_PARAMS,
@@ -791,8 +1010,43 @@ def _merge_disclosure_messages(existing: str | None, notes: list[str]) -> str:
     return " ".join(parts)[:500]
 
 
+def _is_ask_back(
+    *,
+    clarifying_question: str | None,
+    guard_payload: GuardPayload | None,
+    fatal_error_payload: ErrorPayload | None,
+    citation_events_seen: int,
+) -> bool:
+    """Whether this run's answer is a question back to the caller.
+
+    T-8.10-05. What a person saw before: a bare topic such as "GERD" came
+    back over MCP as a refusal (`trust_signal.outcome == "refuse"`), the
+    same label as "I cannot answer that", with the four one-click options
+    the web shows dropped entirely. The core sends an ask-back through the
+    refusal path on purpose, and every surface is left to tell the two
+    apart; the web does it by the `think` event's `clarifying_question`
+    (`frontend/src/hooks/useRunView.ts`, `clarification`), and this is the
+    same rule:
+
+    - a `think` event carried a non-empty clarifying question;
+    - the guardrail did not refuse the question, since a guardrail refusal
+      wins outright on the web too, and its reviewed wording is what a
+      refused question must say;
+    - no fatal error ended the run, so nothing here is a crash dressed as a
+      question;
+    - no citation arrived, so this is never used to relabel an answer.
+    """
+    if clarifying_question is None:
+        return False
+    if guard_payload is not None and not guard_payload.passed:
+        return False
+    if fatal_error_payload is not None:
+        return False
+    return citation_events_seen == 0
+
+
 async def _fold_run_to_response(
-    run_id: str, *, persona_name: str | None = None
+    run_id: str, *, persona_name: str | None = None, session_id: str | None = None
 ) -> AskBiomedicalQuestionOutput:
     """Drive `run_id` to its terminal event and fold the result into
     Section 13.2's locked response shape.
@@ -800,9 +1054,11 @@ async def _fold_run_to_response(
     Per Section 13.2: "the adapter waits on the internal event stream
     until done, folding think, plan, and tool_start out entirely and
     folding token and tool_result into the final structured response."
-    Concretely: `think`/`plan`/`tool_start`/`tool_result`/`guard`/`cost`
-    events are read and discarded (none of them map onto any field this
-    response carries); `token` events are concatenated into `answer`
+    Concretely: `plan`/`tool_start`/`tool_result`/`step`/`cost` events are
+    read and discarded (none of them map onto any field this response
+    carries); `guard` is kept only to word a guardrail refusal; `think`
+    contributes only its clarifying question and options, and `done` its
+    verdict and trust line (T-8.10-05); `token` events are concatenated into `answer`
     (`_narrative_chunks` in `core/graph.py` already terminates every
     chunk it emits with a trailing space, so plain concatenation
     reconstructs the narrative with no extra join logic needed);
@@ -841,11 +1097,30 @@ async def _fold_run_to_response(
     terminal_trust_outcome: Literal["answer", "flag", "ask", "refuse"] | None = None
     guard_payload: GuardPayload | None = None
     fatal_error_payload: ErrorPayload | None = None
+    clarifying_question: str | None = None
+    clarifying_options: list[str] = []
+    trust_line: str | None = None
 
     try:
         async with asyncio.timeout(_FOLD_LOOP_TIMEOUT_S):
             async for event in default_registry.subscribe(run_id, after_seq=-1):
-                if event.type == "token":
+                if event.type == "think":
+                    # T-8.10-05: the first `think` carrying a non-empty
+                    # clarifying question is the one the web reads too
+                    # (`useRunView.ts` finds the first such event), so a
+                    # later one can never swap in a different question.
+                    # Trimmed, so a blank question counts as none.
+                    if clarifying_question is None:
+                        think_payload = ThinkPayload(**event.payload)
+                        question = (think_payload.clarifying_question or "").strip()
+                        if question:
+                            clarifying_question = question
+                            clarifying_options = [
+                                option.strip()
+                                for option in think_payload.clarifying_options or []
+                                if option.strip()
+                            ]
+                elif event.type == "token":
                     answer_parts.append(TokenPayload(**event.payload).text)
                 elif event.type == "citation":
                     citation_events_seen += 1
@@ -864,8 +1139,12 @@ async def _fold_run_to_response(
                     if payload.fatal:
                         fatal_error_payload = payload
                 elif event.type == "done":
-                    terminal_trust_outcome = DonePayload(**event.payload).trust_outcome
-                # "think", "plan", "tool_start", "tool_result", and "cost"
+                    done_payload = DonePayload(**event.payload)
+                    terminal_trust_outcome = done_payload.trust_outcome
+                    # T-8.10-05: the trust line the web shows, read the way
+                    # the web reads it (trimmed, blank means none).
+                    trust_line = (done_payload.trust_line or "").strip() or None
+                # "plan", "tool_start", "tool_result", "step" and "cost"
                 # carry nothing this response's schema has a field for;
                 # discarded by simply not matching any branch above.
     except TimeoutError:
@@ -923,6 +1202,22 @@ async def _fold_run_to_response(
             guard_payload=guard_payload, error_payload=fatal_error_payload
         )
 
+    # T-8.10-05: an ask-back is reported as `ask`, never `refuse`. The core
+    # emits it through the refusal path, so without this the agent read
+    # "GERD" as a topic this system cannot answer. Set to `ask` rather than
+    # aggregated with the run's own verdict: `_is_ask_back` already requires
+    # zero citations, so no verdict above `ask` can be honest here, and
+    # `refuse` is the one this exists to replace. `grounded`, `risk_tier`
+    # and `message` are left exactly as the run reported them.
+    ask_back = _is_ask_back(
+        clarifying_question=clarifying_question,
+        guard_payload=guard_payload,
+        fatal_error_payload=fatal_error_payload,
+        citation_events_seen=citation_events_seen,
+    )
+    if ask_back:
+        answer_trust_signal = answer_trust_signal.model_copy(update={"outcome": "ask"})
+
     disclosures: list[str] = []
 
     if len(answer_text) > _MAX_ANSWER_LENGTH:
@@ -957,23 +1252,60 @@ async def _fold_run_to_response(
         trust_signal=answer_trust_signal,
         run_id=run_id,
         persona_name=persona_name,
+        session_id=session_id,
+        trust_line=trust_line,
+        clarifying_question=clarifying_question if ask_back else None,
+        clarifying_options=(clarifying_options or None) if ask_back else None,
     )
 
 
 @server.tool(
     description=(
-        "Ask a biomedical research question. Returns a cited answer "
-        "assembled from the NCBI knowledge graph and live NCBI APIs, or "
-        "an honest refusal."
+        "Ask a biomedical research question about genes, variants, diseases, "
+        "publications or sequencing records. Returns a cited answer assembled "
+        "from the NCBI knowledge graph and live NCBI APIs, or an honest refusal. "
+        "Every [n] marker in the answer resolves to an entry in citations. To "
+        "ask a follow-up in the same conversation, pass the session_id this "
+        "tool returned. When clarifying_question is set, the answer is a "
+        "question back to you: send one of clarifying_options, or your own "
+        "reply, as the next query with the same session_id."
     )
 )
 async def ask_biomedical_question(
-    query: Annotated[str, Field(max_length=2000), AfterValidator(_reject_control_bytes)],
+    query: Annotated[
+        str,
+        Field(
+            max_length=2000,
+            description="The question, in plain words, for example 'Which diseases are associated with BRCA1?'.",
+        ),
+        AfterValidator(_reject_control_bytes),
+    ],
     ctx: Context,
-    audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] = "researcher",
-    session_id: Annotated[str | None, Field(max_length=64)] = None,
+    audience_depth: Annotated[
+        AudienceDepth,
+        Field(
+            description=(
+                "Who the answer is written for. 'researcher' is the default here; "
+                "'plain_language' is the everyday wording the web app uses by "
+                "default; 'clinical_brief' and 'deep_technical' are the product's "
+                "other two depths."
+            )
+        ),
+    ] = _DEFAULT_AUDIENCE_DEPTH,
+    session_id: Annotated[
+        str | None,
+        Field(
+            max_length=64,
+            description=(
+                "Leave this out to start a new conversation. To ask a follow-up, "
+                "pass the session_id a previous answer returned, so 'it' or "
+                "'that gene' refers to what was just discussed."
+            ),
+        ),
+    ] = None,
 ) -> AskBiomedicalQuestionOutput:
-    """The one MCP tool this server advertises (Section 13.2).
+    """Ask one question and fold its run into one result (Section 13.2,
+    extended additively by T-8.10-05).
 
     Auth-first: `_authenticate_mcp_caller` runs before anything else in
     this function body, so a caller with a missing, malformed, or invalid
@@ -992,6 +1324,13 @@ async def ask_biomedical_question(
     not built until build phase 4.5, so a synthetic per-call session_id is
     the correct placeholder rather than inventing session continuity this
     phase does not implement. Logged as a build decision in DECISIONS.md.
+
+    T-8.10-05: that session id is now RETURNED, as `session_id`, and the
+    input schema says what it is for. Before, an agent had no way to learn
+    that follow-ups need one: every call without it started a fresh
+    conversation, so "what variants of it are pathogenic?" had no "it".
+    Session memory arrived in build phase 4.5, so the id this handler
+    mints is a real conversation an agent can continue by passing it back.
     """
     user = await _authenticate_mcp_caller(ctx)
     _reject_unknown_arguments(ctx)
@@ -1043,4 +1382,279 @@ async def ask_biomedical_question(
         persona_name=persona_for_session(
             session_id=query_obj.session_id, user_id=str(user.id)
         ),
+        session_id=query_obj.session_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# History, reopen and feedback: T-8.10-05, the owner's parity decision.
+# ---------------------------------------------------------------------------
+#
+# What a person gets: an AI agent working for them can list the searches
+# they made, open an answer they already got without paying for a second
+# search, and tell the team an answer was wrong, the same three things the
+# web app's history rail and feedback buttons do.
+#
+# ONE RULE FOR EVERY TOOL BELOW, and it is the REST routes' rule, not a new
+# one. The caller is resolved from the bearer token by the same
+# `_authenticate_mcp_caller` the ask tool uses, and every read or write is
+# scoped by `_owner_id_for(user)`, the namespaced `user:<uuid>` the REST
+# routes read off `Principal.owner_id` for the same account. No tool takes
+# an owner, a user id or an account from its arguments, so no argument can
+# widen what a caller reaches. The service functions then apply their own
+# checks exactly as they do for REST:
+#
+#   - `list_history` and `get_saved_answer` filter on `owner_id` in SQL.
+#     Another account's row is never fetched, and `get_saved_answer`
+#     answers one `None` for "no such row", "not yours" and "nothing
+#     saved", so a stranger learns nothing about a trace id.
+#   - Feedback first resolves the run through the registry's one ownership
+#     rule, `resolve_owned_run`, as REST's `_get_owned_run` does, then
+#     `record_feedback` checks the stored row's owner again under a row
+#     lock before any write.
+#
+# Guests: this surface authenticates registered accounts only
+# (`resolve_user_from_bearer_token`), so a guest token is refused before
+# any of this runs. A guest gets less here than on REST, never more.
+
+
+def _owner_id_for(user: User) -> str:
+    """The namespaced principal every owner-scoped read and write keys on,
+    in the exact shape `auth/dependencies.py` mints for a registered
+    account, so this surface and REST reach the same rows for one caller.
+    """
+    return f"user:{user.id}"
+
+
+@server.tool(
+    description=(
+        "List your own past searches, newest first: each one's trace_id, the "
+        "question, when it was asked, its trust verdict, how many sources it "
+        "cited, and whether its answer can be reopened with reopen_past_answer. "
+        "Searches this account made on the web app, the command line or this "
+        "server all appear."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True),
+)
+async def list_past_searches(
+    ctx: Context,
+    limit: Annotated[
+        int,
+        Field(
+            ge=1,
+            le=MAX_LIMIT,
+            description=f"How many searches to return, 1 to {MAX_LIMIT}. Defaults to {DEFAULT_LIMIT}.",
+        ),
+    ] = DEFAULT_LIMIT,
+) -> PastSearchesOutput:
+    """`GET /v1/history` over MCP: `list_history` with the caller's own
+    `owner_id`, and the REST handler's own per-row guard, so a row REST
+    withholds is withheld here too and counted in `omitted_count`.
+
+    `list_history` is a blocking database read, so it runs in a worker
+    thread rather than on the event loop the MCP transport shares.
+    """
+    user = await _authenticate_mcp_caller(ctx)
+    _reject_unknown_arguments(ctx, _LIST_PAST_SEARCHES_ARGUMENT_NAMES)
+
+    entries = await asyncio.to_thread(list_history, owner_id=_owner_id_for(user), limit=limit)
+    items: list[PastSearch] = []
+    omitted_count = 0
+    for entry in entries:
+        # The REST handler's two reasons, in its order: a row with no
+        # honest citation count (F-4.13-RV-02), and a row that no longer
+        # fits this model's bounds (F-4.13-A-02). Either is dropped and
+        # counted, never allowed to fail the whole list.
+        if entry.citation_count is None:
+            omitted_count += 1
+            continue
+        try:
+            items.append(
+                PastSearch(
+                    trace_id=entry.trace_id,
+                    question=entry.question,
+                    asked_at=entry.asked_at,
+                    trust_signal=entry.trust_signal,
+                    citation_count=entry.citation_count,
+                    has_saved_answer=entry.has_saved_answer,
+                )
+            )
+        except ValidationError:
+            omitted_count += 1
+    return PastSearchesOutput(items=items, count=len(items), omitted_count=omitted_count)
+
+
+# The stored depths this surface reports back as they are. Anything else,
+# which only a direct database write could produce, reads back as the
+# product's own default, the same floor `get_saved_answer` itself applies.
+_STORED_DEPTHS: frozenset[str] = frozenset(
+    {"plain_language", "researcher", "clinical_brief", "deep_technical"}
+)
+
+
+@server.tool(
+    description=(
+        "Reopen the answer one of your past searches gave, by the trace_id "
+        "list_past_searches returned, without running the search again. Only "
+        "searches listed with has_saved_answer true can be reopened."
+    ),
+    annotations=ToolAnnotations(read_only_hint=True),
+)
+async def reopen_past_answer(
+    ctx: Context,
+    trace_id: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=64,
+            description="The trace_id of one of your past searches, from list_past_searches.",
+        ),
+    ],
+) -> ReopenedAnswerOutput:
+    """`GET /v1/history/{trace_id}/answer` over MCP: `get_saved_answer`
+    with the caller's own `owner_id`.
+
+    ONE REFUSAL FOR THREE CAUSES, exactly as REST's one 404: the row not
+    existing, the row being another account's, and the row holding no saved
+    answer all raise the same message, because any answer that told them
+    apart would confirm to a stranger that a trace id exists and is
+    someone's. `get_saved_answer` collapses the three to `None` in SQL, so
+    this handler has one branch and cannot grow a second that leaks the
+    difference.
+    """
+    user = await _authenticate_mcp_caller(ctx)
+    _reject_unknown_arguments(ctx, _REOPEN_PAST_ANSWER_ARGUMENT_NAMES)
+
+    try:
+        saved = await asyncio.to_thread(
+            get_saved_answer, owner_id=_owner_id_for(user), trace_id=trace_id
+        )
+    except ValueError:
+        # `get_saved_answer` refuses an empty or over-long trace id rather
+        # than querying; no caller can have a saved answer under one, so it
+        # is the same "nothing saved here" as a miss, as on REST.
+        saved = None
+    if saved is None:
+        raise MCPError(code=INVALID_PARAMS, message=_NO_SAVED_ANSWER_MESSAGE)
+
+    citations: list[CitationPayload] = []
+    citations_omitted = 0
+    for stored in saved.citations:
+        if len(citations) >= _MAX_CITATIONS:
+            citations_omitted += 1
+            continue
+        try:
+            citations.append(CitationPayload.model_validate(stored))
+        except ValidationError:
+            citations_omitted += 1
+    audience_depth: AudienceDepth = (
+        saved.depth if saved.depth in _STORED_DEPTHS else _DEFAULT_AUDIENCE_DEPTH  # type: ignore[assignment]
+    )
+    return ReopenedAnswerOutput(
+        trace_id=saved.trace_id,
+        question=saved.question,
+        asked_at=saved.asked_at,
+        audience_depth=audience_depth,
+        answer_markdown=saved.answer_markdown,
+        citations=citations,
+        citations_omitted=citations_omitted,
+        trust_signal=saved.trust_signal,
+        trust_line=saved.trust_line,
+    )
+
+
+@server.tool(
+    description=(
+        "Tell the team what you thought of one answer: a thumbs up or down, a "
+        "comment, a reason it was wrong, or the citations that do not support "
+        "their claim. run_id is the one ask_biomedical_question returned. "
+        "Sending feedback again for the same answer replaces the earlier one."
+    ),
+    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True),
+)
+async def send_answer_feedback(
+    ctx: Context,
+    run_id: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=64,
+            description="The run_id ask_biomedical_question returned for the answer you are rating.",
+        ),
+    ],
+    rating: Annotated[
+        Literal["up", "down"] | None,
+        Field(description="'up' if the answer helped, 'down' if it did not."),
+    ] = None,
+    comment: Annotated[
+        str | None,
+        Field(max_length=2000, description="Anything you want the team to read about this answer."),
+    ] = None,
+    flagged_reason: Annotated[
+        str | None,
+        Field(max_length=200, description="A short reason the answer is wrong or unsafe, if it is."),
+    ] = None,
+    citation_flags: Annotated[
+        list[FeedbackCitationFlag] | None,
+        Field(
+            max_length=50,
+            description="Citations that do not support their claim: each a citation_id and a reason.",
+        ),
+    ] = None,
+) -> FeedbackRecordedOutput:
+    """`POST /v1/query/{run_id}/feedback` over MCP, step for step.
+
+    1. The run is resolved through `RunRegistry.resolve_owned_run`, the one
+       ownership rule REST's `_get_owned_run` maps onto 404 and 403. Unknown
+       is checked before ownership, so an evicted run reads as missing.
+    2. `record_feedback` writes, and re-checks the stored row's owner under
+       a row lock before any write (`feedback/writer.py`), so a refused
+       caller changes nothing.
+    3. The same best-effort feedback-submitted count REST fires, after a
+       successful write only, with aggregates only, never the comment.
+
+    Every field bound here is `FeedbackPayload`'s own, and `record_feedback`
+    validates the payload through that model again. Retry-safe: the write
+    replaces rather than appends, so a repeated call leaves one end state.
+    """
+    user = await _authenticate_mcp_caller(ctx)
+    _reject_unknown_arguments(ctx, _SEND_ANSWER_FEEDBACK_ARGUMENT_NAMES)
+    owner_id = _owner_id_for(user)
+
+    try:
+        entry = default_registry.resolve_owned_run(run_id, owner_id)
+    except RunNotFoundError:
+        raise MCPError(code=INVALID_PARAMS, message=_NO_SUCH_RUN_MESSAGE) from None
+    except RunNotOwnedError:
+        raise MCPError(code=INVALID_PARAMS, message=_NOT_YOUR_RUN_MESSAGE) from None
+
+    flags = list(citation_flags or [])
+    try:
+        await record_feedback(
+            trace_id=entry.run_id,
+            owner_id=owner_id,
+            rating=rating,
+            comment=comment,
+            flagged_reason=flagged_reason,
+            citation_flags=[flag.model_dump() for flag in flags],
+        )
+    except InteractionNotFound:
+        raise MCPError(code=INVALID_REQUEST, message=_FEEDBACK_NOT_YET_CAPTURED_MESSAGE) from None
+    except FeedbackOwnershipError:
+        # The same words as the registry-level refusal above, as on REST,
+        # so the two refusals cannot be told apart.
+        raise MCPError(code=INVALID_PARAMS, message=_NOT_YOUR_RUN_MESSAGE) from None
+
+    feedback_properties: dict[str, bool | int | str] = {
+        "has_comment": bool(comment),
+        "was_flagged": bool(flagged_reason),
+        "citation_flag_count": len(flags),
+    }
+    if rating is not None:
+        feedback_properties["rating"] = rating
+    await capture_event(
+        AnalyticsEvent.FEEDBACK_SUBMITTED,
+        distinct_id=owner_id,
+        properties=feedback_properties,
+    )
+    return FeedbackRecordedOutput(run_id=entry.run_id, recorded=True)
