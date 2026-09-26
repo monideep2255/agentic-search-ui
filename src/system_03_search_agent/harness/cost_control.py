@@ -604,16 +604,11 @@ def build_cost_event_payload(
     cap = per_query_cost_cap_usd() if query_cap_usd is None else query_cap_usd
     current = harness.get_query_cost_usd(trace_id)
     cap_fraction = current / cap if cap > 0 else 0.0
-    # Build phase 8.6, T-8.6-08 (C5): the call's own time beside the running
-    # cost. Read defensively, since a stand-in harness in a test may predate
-    # it; a missing time leaves the optional field empty, never the event.
-    last_call_elapsed_s = getattr(harness, "last_call_elapsed_s", None)
     return CostPayload(
         query_cost_usd=current,
         query_cap_usd=cap,
         cap_fraction=cap_fraction,
         model_tier=tier,
-        call_elapsed_s=last_call_elapsed_s(trace_id, tier) if callable(last_call_elapsed_s) else None,
     )
 
 

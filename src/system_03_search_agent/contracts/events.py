@@ -50,32 +50,16 @@ TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
 
 class DecisionRecord(BaseModel):
     """One classifier-seam decision (build phase 8.2, DECISIONS.md 2026-09-25,
-    cards 8, 9, 10 and 13; build phase 8.6): which closed option was chosen
-    at one decision point, and which model chose it.
+    cards 8, 9, 10 and 13): a comparison row between Jev, the dedicated
+    classifier reached over OpenRouter's `/api/alpha/decisions` endpoint,
+    and the guard tier, which decides the same closed-option question
+    alongside it purely for this record.
 
-    Built by `harness.decide.decide`; the loop attaches one per decision it
-    made to the `done` event's `decisions` (`core/graph.py`, "classifier
-    seam, wired"). Who decides, since build phase 8.6 (DECISIONS.md
-    2026-09-25, "Jev decides; the guard tier is Jev's fallback on failure
-    only"):
-
-    - `CLASSIFIER_PROVIDER=jev`: Jev, reached over OpenRouter's
-      `/api/alpha/decisions` endpoint, decides alone. `decided_by` is "jev",
-      and the guard fields stay empty, since the guard tier is not asked.
-    - Only when Jev fails is the guard tier asked the same question:
-      `decided_by` is "guard", `guard_choice` holds its pick and
-      `fallback_reason` names Jev's failure.
-    - With the code default, `guard`, the guard tier decides alone and Jev
-      is never asked.
-    - When no model made a usable pick, both picks are None,
-      `fallback_reason` starts with "no_usable_pick" and `chosen` is the
-      caller's fail-open default.
-
-    Nothing runs a second model beside the first on the live path, so
-    `agreed` stays None on every live record; the side-by-side comparison
-    of the two models runs offline only (T-8.6-03). `jev_confidence` is
-    Jev's own `confidence`, the margin between the options, not the
-    probability of the pick (F-8.6-A16).
+    Built by `harness.decide.decide`. Nothing in the agent loop constructs
+    or attaches one to a `done` event yet: wiring `DonePayload.decisions`
+    into the loop is a later build-phase 8.2 wave, not this one. This
+    model exists now so `DonePayload` can carry the additive, optional
+    field ahead of that wiring, per `system-design-patterns` pattern 10.
 
     `extra="forbid"` and a `max_length` on every string field, per
     `production-standards.md`'s multi-agent pipeline gate: this record
@@ -85,9 +69,8 @@ class DecisionRecord(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # The decision point's name, e.g. "guardrail.relevancy",
-    # "guardrail.injection", "think.ask_back", "think.recent_years",
-    # "think.asks_features", "plan.literature".
+    # The decision point's name, e.g. "think.ask_back", "guardrail.relevancy",
+    # "plan.literature", "plan.resource", "think.recent_years".
     name: Annotated[str, Field(..., max_length=64)]
     options: list[Annotated[str, Field(max_length=200)]] = Field(..., max_length=12)
     chosen: Annotated[str, Field(..., max_length=200)]
@@ -468,19 +451,6 @@ class CostPayload(BaseModel):
     query_cap_usd: float = Field(..., ge=0.0)
     cap_fraction: float = Field(..., ge=0.0)
     model_tier: Literal["guard", "plan", "synth"] = Field(..., max_length=16)
-    # Build phase 8.6, T-8.6-08 (product harness review C5): how many seconds
-    # the latest completed call on `model_tier` for this question took,
-    # beside the running cost, so an analyst can read time per call by tier.
-    # It is one call's time, not the emitting step's: a step that emits a
-    # cost event without calling `model_tier` repeats an earlier call's time
-    # (Plan answering from a template repeats Think's plan-tier call), so
-    # summing it over a question's events can count a call twice (fix
-    # round, F-8.6-J11; `Harness.last_call_elapsed_s`). Additive and
-    # optional per `system-design-patterns` pattern 10; None when no call on
-    # `model_tier` has completed. The event stays operator-only: every
-    # end-user adapter filters `cost` out (`harness.cost_control`, Section
-    # 19.4).
-    call_elapsed_s: float | None = Field(default=None, ge=0.0)
 
 
 class ErrorPayload(BaseModel):
@@ -589,20 +559,18 @@ class DonePayload(BaseModel):
     """
 
     decisions: Annotated[list[DecisionRecord] | None, Field(default=None, max_length=16)] = None
-    """The classifier-seam decisions this query made, one `DecisionRecord`
-    each, or None when it made none.
+    """The classifier-seam comparison rows for this query, or None.
 
     Build phase 8.2, cards 8, 9, 10 and 13 (DECISIONS.md 2026-09-25).
     ADDITIVE and OPTIONAL, per `system-design-patterns` pattern 10: an
     older client that does not know this field ignores it and behaves
-    exactly as before. The loop attaches every `harness.decide.decide`
-    result it made here (`core/graph.py`, "classifier seam, wired"); since
-    build phase 8.6 each record names the one model that decided, Jev
-    alone with `CLASSIFIER_PROVIDER=jev` and the guard tier only when Jev
-    failed (see `DecisionRecord`). `max_length=16` bounds it well above
-    the decision points wired today, since a single query can revisit a
-    decision point more than once (for example two ask-back checks in one
-    turn).
+    exactly as before. `None` until the loop actually calls
+    `harness.decide.decide` and attaches its results here, which is not
+    this wave's job (see `harness/decide.py`'s own module docstring).
+    `max_length=16` bounds it well above the five decision points named
+    in `docs/architecture/Model_architecture.md`'s planned section, since
+    a single query can revisit a decision point more than once (for
+    example two ask-back checks in one turn).
     """
 
 

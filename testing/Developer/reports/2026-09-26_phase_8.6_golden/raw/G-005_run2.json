@@ -1,0 +1,683 @@
+{
+ "record": {
+  "id": "G-005",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.",
+  "session_id": "c103-f6013c3a49ab",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:09:10+00:00",
+  "run_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "MedGen:C1519126",
+   "MedGen:C4302012",
+   "MedGen:C4302019"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_2_api": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "call did not complete within its per-step timeout budget"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 98,
+  "answer_start": "Found 1 medgen record for SARS: SARS Coronavirus Protease Pathway [1]. \n\nMedgen records found\n\nMedgen title: SARS Coronavirus Protease Pathway [1]. \n\nNote: the ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 98.711,
+  "seconds": 99.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 11,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  },
+  "first_word_s": 98.894,
+  "first_token_ts": "2026-09-26T17:09:10.233859Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 0,
+   "ts": "2026-09-26T17:07:32.696298Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 2,
+   "ts": "2026-09-26T17:07:36.631408Z",
+   "payload": {
+    "narrative": "The query asks to find SRA runs (a collection of records) based on multiple filters and to explain why each matched, which requires assembling evidence across records. (SARS: 3 MedGen records matched by name)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 4,
+   "ts": "2026-09-26T17:07:36.634157Z",
+   "payload": {
+    "narrative": "searching 3 layers for sars coronavirus protease pathway. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-dc86768adb52",
+      "layer": "layer_1_graph",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a183a1f9e2ac",
+      "layer": "layer_3_enrichment",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-78424cdda2d4",
+      "layer": "layer_3_enrichment",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2cc697cdf21a",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-853e5dabc166",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-faa761f7f16c",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-8c14fc84b06f",
+      "layer": "layer_3_enrichment",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-970c34bad567",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 6,
+   "ts": "2026-09-26T17:07:36.635413Z",
+   "payload": {
+    "call_id": "cq-dc86768adb52",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 7,
+   "ts": "2026-09-26T17:07:36.635452Z",
+   "payload": {
+    "call_id": "pa-a183a1f9e2ac",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 8,
+   "ts": "2026-09-26T17:07:36.635463Z",
+   "payload": {
+    "call_id": "ct-78424cdda2d4",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 9,
+   "ts": "2026-09-26T17:07:36.635472Z",
+   "payload": {
+    "call_id": "ne-2cc697cdf21a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 10,
+   "ts": "2026-09-26T17:07:36.635481Z",
+   "payload": {
+    "call_id": "ne-853e5dabc166",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 11,
+   "ts": "2026-09-26T17:07:36.635490Z",
+   "payload": {
+    "call_id": "ne-faa761f7f16c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 12,
+   "ts": "2026-09-26T17:07:36.635499Z",
+   "payload": {
+    "call_id": "pa-8c14fc84b06f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 13,
+   "ts": "2026-09-26T17:07:36.635507Z",
+   "payload": {
+    "call_id": "ne-970c34bad567",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 14,
+   "ts": "2026-09-26T17:07:36.790543Z",
+   "payload": {
+    "call_id": "pa-a183a1f9e2ac",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 15,
+   "ts": "2026-09-26T17:07:36.793904Z",
+   "payload": {
+    "call_id": "ct-78424cdda2d4",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 16,
+   "ts": "2026-09-26T17:07:36.796427Z",
+   "payload": {
+    "call_id": "ne-2cc697cdf21a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 17,
+   "ts": "2026-09-26T17:07:36.945166Z",
+   "payload": {
+    "call_id": "ne-853e5dabc166",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 18,
+   "ts": "2026-09-26T17:09:06.636318Z",
+   "payload": {
+    "call_id": "cq-dc86768adb52",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "call did not complete within its per-step timeout budget",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 19,
+   "ts": "2026-09-26T17:09:06.636513Z",
+   "payload": {
+    "call_id": "ne-faa761f7f16c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 20,
+   "ts": "2026-09-26T17:09:06.636553Z",
+   "payload": {
+    "call_id": "pa-8c14fc84b06f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 21,
+   "ts": "2026-09-26T17:09:06.770417Z",
+   "payload": {
+    "call_id": "ne-970c34bad567",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 22,
+   "ts": "2026-09-26T17:09:06.772487Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 23,
+   "ts": "2026-09-26T17:09:10.233859Z",
+   "payload": {
+    "text": "Found 1 medgen record for SARS: SARS Coronavirus Protease Pathway [1]. ",
+    "marker_ids": [
+     "ne-970c34bad567-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "SARS Coronavirus Protease Pathway",
+     "SARS"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "276768",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/276768",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "4f00f732-5179-48ff-a588-58f88f0789c6",
+   "seq": 38,
+   "ts": "2026-09-26T17:09:10.234131Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 98711,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 260
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.95,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 118
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 131
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 158
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 medgen record for SARS: SARS Coronavirus Protease Pathway [1]. \n\nMedgen records found\n\nMedgen title: SARS Coronavirus Protease Pathway [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: SARS Coronavirus Protease Pathway, Probable SARS (severe acute respiratory syndrome), SARS (severe acute respiratory syndrome) confirmed. Ask about them individually for a complete answer.\n\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry."
+}

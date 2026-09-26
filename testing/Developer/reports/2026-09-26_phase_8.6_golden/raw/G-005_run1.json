@@ -1,0 +1,717 @@
+{
+ "record": {
+  "id": "G-005",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.",
+  "session_id": "c103-be38034ccd2c",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:02:58+00:00",
+  "run_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C1519126",
+   "MedGen:C4302012",
+   "MedGen:C4302019"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 4 sources, not yet confirmed",
+  "citations": 4,
+  "distinct_sources": 4,
+  "citations_by_layer": {
+   "layer_2_api": 4
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 3,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   3
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 85,
+  "answer_start": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [1], Probable SARS (severe acute respiratory syndrome) [2] and SARS (severe acute respirator",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 9.946,
+  "seconds": 10.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 13,
+   "citation": 4,
+   "trust_signal": 5,
+   "done": 1
+  },
+  "first_word_s": 10.116,
+  "first_token_ts": "2026-09-26T17:01:29.521781Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 0,
+   "ts": "2026-09-26T17:01:21.344606Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 2,
+   "ts": "2026-09-26T17:01:24.713625Z",
+   "payload": {
+    "narrative": "The query asks to find SRA runs with multiple filters (organism, platform, sample type) and explain matching reasons, requiring exploration across metadata fields and reasoning. (SARS: 3 MedGen records matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 4,
+   "ts": "2026-09-26T17:01:24.978040Z",
+   "payload": {
+    "narrative": "searching 3 layers for sars coronavirus protease pathway. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-85082ec9c421",
+      "layer": "layer_1_graph",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a3c73f24bada",
+      "layer": "layer_3_enrichment",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-8d8447f0f39e",
+      "layer": "layer_3_enrichment",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cbcb53d4d799",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7dee425952b9",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-74543857e349",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-caa58ae7f230",
+      "layer": "layer_3_enrichment",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-474122ab5deb",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 6,
+   "ts": "2026-09-26T17:01:24.980173Z",
+   "payload": {
+    "call_id": "cq-85082ec9c421",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 7,
+   "ts": "2026-09-26T17:01:24.982984Z",
+   "payload": {
+    "call_id": "pa-a3c73f24bada",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 8,
+   "ts": "2026-09-26T17:01:24.983051Z",
+   "payload": {
+    "call_id": "ct-8d8447f0f39e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 9,
+   "ts": "2026-09-26T17:01:24.983066Z",
+   "payload": {
+    "call_id": "ne-cbcb53d4d799",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 10,
+   "ts": "2026-09-26T17:01:24.983079Z",
+   "payload": {
+    "call_id": "ne-7dee425952b9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 11,
+   "ts": "2026-09-26T17:01:24.983092Z",
+   "payload": {
+    "call_id": "ne-74543857e349",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 12,
+   "ts": "2026-09-26T17:01:24.983105Z",
+   "payload": {
+    "call_id": "pa-caa58ae7f230",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 13,
+   "ts": "2026-09-26T17:01:24.983118Z",
+   "payload": {
+    "call_id": "ne-474122ab5deb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 14,
+   "ts": "2026-09-26T17:01:25.167887Z",
+   "payload": {
+    "call_id": "ct-8d8447f0f39e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 15,
+   "ts": "2026-09-26T17:01:25.230318Z",
+   "payload": {
+    "call_id": "ne-cbcb53d4d799",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 16,
+   "ts": "2026-09-26T17:01:25.312612Z",
+   "payload": {
+    "call_id": "pa-a3c73f24bada",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 17,
+   "ts": "2026-09-26T17:01:25.322630Z",
+   "payload": {
+    "call_id": "ne-7dee425952b9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 18,
+   "ts": "2026-09-26T17:01:25.515627Z",
+   "payload": {
+    "call_id": "cq-85082ec9c421",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "3 row(s) of 3",
+    "result_count": 3,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 19,
+   "ts": "2026-09-26T17:01:25.517101Z",
+   "payload": {
+    "call_id": "ne-74543857e349",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 20,
+   "ts": "2026-09-26T17:01:25.517137Z",
+   "payload": {
+    "call_id": "pa-caa58ae7f230",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 21,
+   "ts": "2026-09-26T17:01:25.658506Z",
+   "payload": {
+    "call_id": "ne-474122ab5deb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 22,
+   "ts": "2026-09-26T17:01:25.659824Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 23,
+   "ts": "2026-09-26T17:01:29.521781Z",
+   "payload": {
+    "text": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [1], Probable SARS (severe acute respiratory syndrome) [2] and SARS (severe acute respiratory syndrome) confirmed [3]. ",
+    "marker_ids": [
+     "cq-85082ec9c421-1",
+     "cq-85082ec9c421-2",
+     "cq-85082ec9c421-3"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "SARS (severe acute respiratory syndrome) confirmed",
+     "Probable SARS (severe acute respiratory syndrome)",
+     "SARS Coronavirus Protease Pathway",
+     "SARS"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1519126",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1519126",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4302012",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4302012",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4302019",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4302019",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "276768",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/276768",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "d73fb2a7-c1d9-4327-a0b8-bb6e33c50f3c",
+   "seq": 46,
+   "ts": "2026-09-26T17:01:29.522118Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 9946,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 4 sources, not yet confirmed",
+    "layer_calls_used": 17,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 176
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 185
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.96,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 262
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 274
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [1], Probable SARS (severe acute respiratory syndrome) [2] and SARS (severe acute respiratory syndrome) confirmed [3]. \n\nDisease records found\n\nDisease name: SARS Coronavirus Protease Pathway [1]. Disease name: Probable SARS (severe acute respiratory syndrome) [2]. Disease name: SARS (severe acute respiratory syndrome) confirmed [3]. \n\nMedgen records found\n\nMedgen title: SARS Coronavirus Protease Pathway [4]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}
