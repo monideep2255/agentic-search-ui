@@ -203,7 +203,7 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
 | builder A, R-01 to R-03 | Opus 5.5 | default | 18:52 | (resumed for the R-01 fix) | |
-| builder B, R-04 | Sonnet 5 | default | 18:52 | 19:35 | 333,398 or more |
+| builder B, R-04 | Sonnet 5 | default | 18:52 | 19:35 | 341,979 |
 
 ### Re-land tickets
 
