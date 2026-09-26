@@ -351,6 +351,11 @@ def _set_describe(stated: Any, truth: Any) -> str:
     return "; ".join(parts)
 
 
+def _subset_describe(stated: Any, truth: Any) -> str:
+    extra = set(stated) - set(truth)
+    return show(set(truth)) + ("; named but not so: " + show(extra) if extra else "")
+
+
 def _mapping_describe(stated: Any, truth: Any) -> str:
     diffs = [
         f"{k}: {show(truth.get(k))}"
@@ -397,7 +402,7 @@ SET = Cmp("set", lambda s, t: set(s) == set(t), _set_describe, lambda s: frozens
 SUBSET = Cmp(
     "subset",
     lambda s, t: set(s) <= set(t),
-    lambda s, t: show(set(t)) + "; named but not so: " + show(set(s) - set(t)),
+    _subset_describe,
     lambda s: frozenset(s),
     lambda t: frozenset(),
 )

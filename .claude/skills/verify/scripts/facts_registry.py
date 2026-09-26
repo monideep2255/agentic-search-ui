@@ -125,6 +125,8 @@ GRAPHQL_CONTEXT = f"{PKG}/adapters/graphql/context.py"
 WEB_APP = f"{PKG}/adapters/web_sse/app.py"
 AUTH_ROUTER = f"{PKG}/auth/router.py"
 PERSONAS = f"{PKG}/data/personas_v1.json"
+S3_CLI = f"{PKG}/adapters/cli/main.py"
+KGX_CLI = f"{PKG}/export/cli.py"
 GOLDEN = "eval/golden/golden_dataset.json"
 PYPROJECT = "pyproject.toml"
 
@@ -431,6 +433,26 @@ def _routes(repo: Repo, path: str, owner: str) -> tuple[str, ...]:
                 ):
                     found.append(prefix + d.args[0].value)
     return tuple(found)
+
+
+def cli_options(path: str):
+    """Every `--option` a console command's argument parser declares."""
+
+    def read(repo: Repo) -> Truth:
+        found = sorted(
+            {
+                a.value
+                for node in ast.walk(parse_python(repo, path))
+                if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"
+                for a in node.args
+                if isinstance(a, ast.Constant)
+                and isinstance(a.value, str)
+                and a.value.startswith("--")
+            }
+        )
+        return Truth(tuple(found), path, 1)
+
+    return read
 
 
 def auth_routes(repo: Repo) -> Truth:
@@ -1197,6 +1219,26 @@ FACTS: tuple[Fact, ...] = (
         stated=(
             w(INTEGRATIONS, INFO, r"(Two) console commands", COUNT),
             w(INTEGRATIONS, INFO, r"\b(s3(?:-[a-z]+)*) (?:asks|writes)", SET, g(), union),
+        ),
+    ),
+    Fact(
+        "surfaces.s3_options",
+        "the options the s3 command accepts",
+        Computed(S3_CLI, cli_options(S3_CLI), swap(S3_CLI, r'"--depth",', '"--json",')),
+        stated=(w(INTEGRATIONS, INFO, r"JSON with (--[a-z-]+)", MEMBER, g()),),
+    ),
+    Fact(
+        "surfaces.kgx_options",
+        "the options the s3-kgx-export command accepts",
+        Computed(KGX_CLI, cli_options(KGX_CLI), swap(KGX_CLI, r'"--hops",', '"--depth",')),
+        stated=(
+            w(
+                INTEGRATIONS,
+                INFO,
+                r"export const KGX_EXAMPLE = `([^`]*)`",
+                SUBSET,
+                lambda m: frozenset(re.findall(r"--[a-z-]+", m.group(1))),
+            ),
         ),
     ),
     Fact(
