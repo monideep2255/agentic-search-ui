@@ -1805,7 +1805,8 @@ def drop_no_clinical_features_findings(
     """Remove every "MedGen lists no clinical features for ..." finding.
 
     Build phase 8.6, T-8.6-06. The statement is true of the record it cites
-    and was said on every disease question: 15 of 99 answered golden runs
+    and was said on any disease question whose MedGen record lists no
+    features, whatever the question asked: 15 of 99 answered golden runs
     carried it, one of them "for Seen by breast cancer nurse" inside an
     answer to how many genes are associated with breast cancer. It answers
     only a question about a condition's features, so `core/graph.py`'s

@@ -11170,15 +11170,16 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     #   read with none keeps its one "MedGen lists no clinical features for
     #   <disease>" statement, the honest answer to that question.
     # - Not asked, or no usable pick: no reservation, since round 2
-    #   (F-8.1-V01) showed it takes 11 of the 30 prompt slots on every
-    #   disease question and can push the definition out of `What is Marfan
-    #   syndrome?`; and the "lists none" statement is dropped, since it
-    #   answers nothing the question asked (15 golden answers carried it,
-    #   one "for Seen by breast cancer nurse"). The features themselves stay
-    #   in the code-built listing, beneath their disease.
+    #   (F-8.1-V01) showed it can take 11 of the 30 prompt slots on any
+    #   disease question with a long graph answer and can push the
+    #   definition out of `What is Marfan syndrome?`; and the "lists none"
+    #   statement is dropped, since it answers nothing the question asked
+    #   (15 golden answers carried it, one "for Seen by breast cancer
+    #   nurse"). The features themselves stay in the code-built listing,
+    #   beneath their disease.
     #
-    # Both renumber, so this runs before `row_types` and the prompt slice
-    # read the numbering.
+    # Either can renumber, so this runs before `row_types` and the prompt
+    # slice read the numbering.
     clinical_features_asked = await _clinical_features_asked(harness)
     if clinical_features_asked:
         synth_findings = reserve_prompt_slots(
