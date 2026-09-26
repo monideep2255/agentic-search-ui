@@ -451,6 +451,13 @@ class CostPayload(BaseModel):
     query_cap_usd: float = Field(..., ge=0.0)
     cap_fraction: float = Field(..., ge=0.0)
     model_tier: Literal["guard", "plan", "synth"] = Field(..., max_length=16)
+    # Build phase 8.6, T-8.6-08 (product harness review C5): how many seconds
+    # the metered call this event follows took, beside the running cost, so
+    # an analyst can read time per call by tier. Additive and optional per
+    # `system-design-patterns` pattern 10; None when no call on `model_tier`
+    # has completed. The event stays operator-only: every end-user adapter
+    # filters `cost` out (`harness.cost_control`, Section 19.4).
+    call_elapsed_s: float | None = Field(default=None, ge=0.0)
 
 
 class ErrorPayload(BaseModel):

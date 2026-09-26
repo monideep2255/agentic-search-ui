@@ -838,6 +838,33 @@ class TestCostPayload:
                 model_tier="guard",
             )
 
+    # Build phase 8.6, T-8.6-08 (product harness review C5): one additive,
+    # optional field within v1 (system-design-patterns pattern 10).
+
+    def test_call_elapsed_s_is_optional_so_every_v1_payload_still_validates(self) -> None:
+        payload = CostPayload.model_validate(
+            {"query_cost_usd": 0.01, "query_cap_usd": 0.10, "cap_fraction": 0.1, "model_tier": "guard"}
+        )
+        assert payload.call_elapsed_s is None
+
+    def test_call_elapsed_s_is_carried(self) -> None:
+        payload = CostPayload(
+            query_cost_usd=0.01, query_cap_usd=0.10, cap_fraction=0.1, model_tier="synth", call_elapsed_s=6.4
+        )
+        assert payload.call_elapsed_s == pytest.approx(6.4)
+
+    def test_negative_call_elapsed_s_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CostPayload(
+                query_cost_usd=0.01, query_cap_usd=0.10, cap_fraction=0.1, model_tier="plan", call_elapsed_s=-1.0
+            )
+
+    def test_the_payload_still_forbids_unknown_fields(self) -> None:
+        with pytest.raises(ValidationError):
+            CostPayload(
+                query_cost_usd=0.01, query_cap_usd=0.10, cap_fraction=0.1, model_tier="plan", elapsed=1.0
+            )
+
 
 class TestErrorPayload:
     def test_example_from_spec(self) -> None:
