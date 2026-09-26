@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-ENV_PATH = "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/.env"  # local-refs: allow
+ENV_PATH = "<repo-root>/.env"  # local-refs: allow
 
 
 def load_api_key() -> str:

@@ -1,10 +1,10 @@
 // Playwright capture of the develop web UI's "writing" state and answer
 // streaming behaviour, for the streaming investigation.
-import { chromium } from "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/frontend/node_modules/playwright/index.mjs";
+import { chromium } from "<repo-root>/frontend/node_modules/playwright/index.mjs";
 import fs from "fs";
 import path from "path";
 
-const OUT_DIR = "/private/tmp/claude-501/-Users-anuradhachakraborti-Desktop-Tech-Skills-agentic-search-ui/4f191f8a-e777-42e2-84cd-0f89ca301845/scratchpad/streamcheck";
+const OUT_DIR = "/private/tmp/claude-501/-Users-<user>-Desktop-Tech-Skills-agentic-search-ui/4f191f8a-e777-42e2-84cd-0f89ca301845/scratchpad/streamcheck";
 const FRAMES_DIR = path.join(OUT_DIR, "frames");
 fs.mkdirSync(FRAMES_DIR, { recursive: true });
 

@@ -221,7 +221,7 @@ Evidence:
 - `src/system_03_search_agent/tools/cypher_validator.py`: `ValidationResult` frozen dataclass at line 108, `validate_cypher` at line 209, reason constants at lines 55 to 60.
 - `tests/system_03_search_agent/tools/test_cypher_validator.py`: 41 tests, one per acceptance criterion plus casing variants (12 casings across the 8 forbidden clauses) and 5 untyped-relationship shorthands.
 - Test run, from the worktree root:
-  `"/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/venv/bin/python" -m pytest tests/system_03_search_agent/tools/test_cypher_validator.py -v`
+  `"<repo-root>/venv/bin/python" -m pytest tests/system_03_search_agent/tools/test_cypher_validator.py -v`
   Result: `41 passed in 0.04s` (last line of the run), zero failures, zero skips.
 - Determinism check: `test_validation_is_deterministic_across_repeated_calls` runs `validate_cypher` 5 times on the same string and asserts all 5 `ValidationResult` values are equal (test_cypher_validator.py line ~304).
 - Substring false-positive guard verified directly: `test_identifier_containing_forbidden_keyword_as_substring_is_not_flagged` (a `dataset_id` property with no literal passes cleanly) and `test_identifier_substring_with_a_real_literal_fails_for_the_right_reason` (a `dataset_id` property with a literal value fails with `literal_interpolation_suspected`, never `write_clause_forbidden`).
@@ -257,10 +257,10 @@ Evidence:
 - `src/system_03_search_agent/tools/cypher_provenance.py`: `source_url_for_curie` at line 96, `to_output_row` at line 164, the five documented URL builders at lines 46 to 68, the GO/MeSH/HP/MONDO disposition documented in the module docstring (lines 1 to 26).
 - `tests/system_03_search_agent/tools/test_cypher_provenance.py`: 24 tests. `test_documented_prefix_maps_to_expected_ncbi_record_url` (5 cases, one per mapped prefix), `test_non_ncbi_ontology_prefix_returns_none` (4 cases, GO/MeSH/HP/MONDO), `test_every_curie_prefix_in_the_graph_schema_is_covered_by_a_test` (asserts the 5 plus 4 equal all 9 `CURIE_PREFIXES`, guards a future 10th prefix landing untested), `test_unrecognized_or_malformed_curie_returns_none` (6 cases including an unknown prefix, empty string, no colon, empty prefix, empty local id), `test_to_output_row_keeps_a_valid_stored_source_url`, `test_to_output_row_discards_a_stored_source_url_on_a_foreign_host`, `test_to_output_row_falls_back_to_none_when_no_valid_url_can_be_derived`.
 - Test run, from the worktree root:
-  `"/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/venv/bin/python" -m pytest tests/system_03_search_agent/tools/test_cypher_provenance.py -v`
+  `"<repo-root>/venv/bin/python" -m pytest tests/system_03_search_agent/tools/test_cypher_provenance.py -v`
   Result: `24 passed in 0.04s` (last line of the run), zero failures, zero skips.
 - Combined run for both T-2.1-04 and T-2.1-05:
-  `"/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/venv/bin/python" -m pytest tests/system_03_search_agent/tools/ -q`
+  `"<repo-root>/venv/bin/python" -m pytest tests/system_03_search_agent/tools/ -q`
   Result: `65 passed in 0.05s`.
 
 History:

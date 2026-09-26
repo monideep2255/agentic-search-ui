@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-MAIN_REPO = Path("/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui")  # local-refs: allow
+MAIN_REPO = Path("<repo-root>")  # local-refs: allow
 MY_WORKTREE = Path(__file__).resolve().parents[4]  # .../worktrees/agent-.../
 
 for line in (MAIN_REPO / ".env").read_text().splitlines():

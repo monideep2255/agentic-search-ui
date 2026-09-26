@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO = Path("/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui")
+REPO = Path("<repo-root>")
 sys.path.insert(0, str(REPO / "src"))
 
 for line in (REPO / ".env").read_text().splitlines():

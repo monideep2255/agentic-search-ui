@@ -1,211 +1,211 @@
 session memory not recorded for trace_id=mw-33c16a22
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-33c16a22
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-33c16a22
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-2e25fed2
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-2e25fed2
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-2e25fed2
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-6d13df15
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-6d13df15
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-6d13df15
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-dabe3db0
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-dabe3db0
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-dabe3db0
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-b5255b2d
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-b5255b2d
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-b5255b2d
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 {"elapsed_s": 36.4, "outcome": "ask", "errors": [], "source_count": 11, "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.", "step_seconds": {"guard": 24.133, "think": 5.078, "plan": 0.057, "act": 0.605, "write": 6.348}}
@@ -215,212 +215,212 @@ system_03_search_agent.core.session_memory.CallerIdentityRequired: session memor
 {"elapsed_s": 6.9, "outcome": "ask", "errors": [], "source_count": 11, "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.", "step_seconds": {"guard": 1.913, "think": 2.116, "plan": 0.013, "act": 0.535, "write": 2.326}}
 session memory not recorded for trace_id=mw-959b6f27
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-959b6f27
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-959b6f27
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-d73ed4fa
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-d73ed4fa
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-d73ed4fa
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-4161cd59
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-4161cd59
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-4161cd59
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-bc334dc9
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-bc334dc9
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-bc334dc9
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-438d73a8
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-438d73a8
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-438d73a8
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 {"elapsed_s": 35.2, "outcome": "ask", "errors": [], "source_count": 20, "first_sentence": "Found 13 sequence variant records for BRCA1, of 15310 available.", "step_seconds": {"guard": 14.711, "think": 4.691, "plan": 0.045, "act": 2.46, "write": 13.282}}
@@ -430,212 +430,212 @@ system_03_search_agent.core.session_memory.CallerIdentityRequired: session memor
 {"elapsed_s": 14.7, "outcome": "answer", "errors": [], "source_count": 20, "first_sentence": "Found 13 sequence variant records for BRCA1, of 15310 available.", "step_seconds": {"guard": 1.048, "think": 1.14, "plan": 0.004, "act": 2.344, "write": 10.115}}
 session memory not recorded for trace_id=mw-1716ae8c
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-1716ae8c
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-1716ae8c
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-5bc412e4
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-5bc412e4
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-5bc412e4
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-879fcadb
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-879fcadb
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-879fcadb
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-93cbc0a1
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-93cbc0a1
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-93cbc0a1
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 session memory not recorded for trace_id=mw-3f83b46c
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 625, in run
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 625, in run
     await _remember_turn(query, final_state["events"])
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 529, in _remember_turn
     await remember_turn_for_caller(
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 interaction capture failed for trace_id=mw-3f83b46c
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
     await capture_run(query, events)
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+  File "<repo-root>/src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
     row = assemble_interaction(query, events)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 analytics query_completed event failed for trace_id=mw-3f83b46c
 Traceback (most recent call last):
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+  File "<repo-root>/src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
     interaction = assemble_interaction(query, events)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
+  File "<repo-root>/src/system_03_search_agent/feedback/capture.py", line 240, in assemble_interaction
     session_id = session_row_key(  # type: ignore[arg-type]
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
     owner = _require_owner_id(owner_id)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+  File "<repo-root>/src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
     raise CallerIdentityRequired(
 system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
 {"elapsed_s": 30.0, "outcome": "ask", "errors": [], "source_count": 20, "first_sentence": "Found 13 sequence variant records for GCK, of 1333 available.", "step_seconds": {"guard": 2.951, "think": 3.979, "plan": 0.005, "act": 2.356, "write": 20.716}}

@@ -31,7 +31,7 @@ Auto mode is not the primary cause of the slowdown. It is a real cost multiplier
 
 ## Is the reference repo a fair comparison
 
-Read from `reference/ncbi_ai_agents-ncbi-kg`, a read-only symlink resolving to `/Users/anuradhachakraborti/Desktop/Tech Skills/ncbi_ai_agents`.
+Read from `reference/ncbi_ai_agents-ncbi-kg`, a read-only symlink resolving to a sibling checkout of `ncbi_ai_agents` on the local machine.
 
 | Metric | Reference repo | This repo (System 3, since 2026-05-05) |
 |--------|----------------|------------------------------------------|
