@@ -54,9 +54,11 @@ Last updated: 2026-09-26.
 
 ## The decision guard watermark
 
-`/phase-checkpoint` Step 0 reads every DECISIONS.md row below this watermark, updates the rows above for any decision that changes a document's shape or a process, then moves the watermark. The watermark is a row number and a date, never a count of rows, so the drift checker does not read it as a claim.
+`/phase-checkpoint` Step 0 reads every DECISIONS.md row after the watermark row, updates the rows above for any decision that changes a document's shape or a process, then moves the watermark. The watermark is the last guarded row's date and the first words of its Decision cell, quoted exactly, so searching DECISIONS.md for the quote finds the row.
 
-Guarded through DECISIONS.md row 716, dated 2026-09-25, the product owner's answers of the overnight plan and the lead's decisions of that night. None of them changes a registered document's shape or a process this skill runs: the overnight plan (`testing/Overnight_build_plan_2026-09-25.md`) and the settings log (`testing/Overnight_settings_log.json`) are records of one night, not living documents, and the board and the test queries keep their registered shapes.
+It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
+
+Guarded through the DECISIONS.md row dated 2026-09-25 that begins "Keep the four streaming-timing test files (the card 37 deletion reverted in phase 8.5)", the last of the product owner's answers of the overnight plan and the lead's decisions of that night. None of them changes a registered document's shape or a process this skill runs: the overnight plan (`testing/Overnight_build_plan_2026-09-25.md`) and the settings log (`testing/Overnight_settings_log.json`) are records of one night, not living documents, and the board and the test queries keep their registered shapes.
 
 ## Why the registry lives here
 
