@@ -456,6 +456,27 @@ COUNT = Cmp(
     lambda s, t: f"{len(t)}: {show(t)}",
     lambda s: tuple(f"item{i}" for i in range(s)),
 )
+
+
+def _every_describe(stated: Any, truth: Any) -> str:
+    bad = [item for item, qualifies in truth if not qualifies]
+    good = len(truth) - len(bad)
+    return f"{len(truth)} in all, {good} qualifying" + (
+        "; not qualifying: " + ", ".join(str(b) for b in bad) if bad else ""
+    )
+
+
+# The truth is a tuple of (item, qualifies) pairs. A sentence such as "these
+# four are real questions" passes only when it counts every item AND every
+# item qualifies: counting only the ones that qualify would let a fifth,
+# unqualified item ride under "four" (PR118-V03).
+EVERY = Cmp(
+    "every",
+    lambda s, t: s == len(t) and all(qualifies for _, qualifies in t),
+    _every_describe,
+    lambda s: tuple((f"item{i}", True) for i in range(s)),
+    lambda t: tuple(t) + ((MUTANT, False),),
+)
 SET = Cmp("set", lambda s, t: set(s) == set(t), _set_describe, lambda s: frozenset(s))
 SUBSET = Cmp(
     "subset",

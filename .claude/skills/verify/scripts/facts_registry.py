@@ -38,6 +38,7 @@ import tomllib
 from check_facts import (
     BOOL,
     COUNT,
+    EVERY,
     EXACT,
     MAPPING,
     MEMBER,
@@ -605,8 +606,20 @@ def personas_historical(repo: Repo) -> Truth:
     )
 
 
-def _words(text: str) -> str:
-    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+def _spaced(text: str) -> str:
+    """Normalised for case and spacing only: punctuation and every word stay."""
+    return " ".join(text.lower().split())
+
+
+def question_forms(question: str) -> frozenset[str]:
+    """The whole-question forms a seed may take to count as this golden
+    question, normalised for case and spacing: the question's whole text,
+    and the same whole text without its one closing question mark or full
+    stop, since the Home screen writes its seeds without one. Nothing
+    shorter counts: a fragment such as "RCA1" or a phrase inside a longer
+    question is not the question (PR118-V03)."""
+    whole = _spaced(question)
+    return frozenset({whole, re.sub(r"\s*[?.]$", "", whole)})
 
 
 def _seeds(repo: Repo) -> tuple[list[str], re.Match[str]]:
@@ -622,21 +635,25 @@ def _seeds(repo: Repo) -> tuple[list[str], re.Match[str]]:
 
 
 def seeds_in_golden_set(repo: Repo) -> Truth:
-    """The Home screen's seed questions that appear word for word, after
-    lower-casing and dropping punctuation, inside a question of the golden
-    evaluation set.
+    """Every seed question on the Home screen, each paired with whether it
+    IS a golden evaluation question: its whole text, normalised for case and
+    spacing, equals one of `question_forms` of a golden question.
 
     That is the only provenance a script can check honestly. The first
-    version matched identifiers alone, so "Songs about BRCA1" passed as a
-    question from the evaluation set (PR118-04). The note still names, for
-    each seed that fails, the golden question carrying the same identifiers,
-    as a lead for whoever fixes the page; it decides nothing."""
+    version matched identifiers alone, so "Songs about BRCA1" passed
+    (PR118-04). The second matched a substring of joined words, so "RCA1"
+    passed, and counted matches rather than seeds, so a fifth seed rode
+    under "these four" (PR118-V03). The place compares its number with the
+    number of seeds, and every seed must qualify (`EVERY`). The note still
+    names, for each seed that fails, the golden question carrying the same
+    identifiers, as a lead for whoever fixes the page; it decides nothing."""
     seeds, _ = _seeds(repo)
     questions = [q["question"] for q in json.loads(repo.text(GOLDEN))["queries"]]
-    matched = [seed for seed in seeds if any(_words(seed) in _words(q) for q in questions)]
+    forms = frozenset().union(*(question_forms(q) for q in questions))
+    judged = tuple((seed, _spaced(seed) in forms) for seed in seeds)
     leads = []
-    for seed in seeds:
-        if seed in matched:
+    for seed, qualifies in judged:
+        if qualifies:
             continue
         ids = [w for w in re.findall(r"[A-Za-z0-9]+", seed) if re.search(r"\d|[A-Z]", w[1:])]
         near = next(
@@ -648,13 +665,14 @@ def seeds_in_golden_set(repo: Repo) -> Truth:
             None,
         )
         leads.append(f"{seed!r} -> " + (repr(near) if near else "no golden question names it"))
-    note = f"{len(seeds)} seeds, {len(matched)} word for word; " + "; ".join(leads)
-    return Truth(tuple(matched), GOLDEN, 1, note)
+    good = sum(1 for _, qualifies in judged if qualifies)
+    note = f"{len(seeds)} seeds, {good} a golden question whole; " + "; ".join(leads)
+    return Truth(judged, GOLDEN, 1, note)
 
 
 def _seed_mutation(repo: Repo) -> dict[str, str]:
-    """For the self-test: make the first seed a golden question word for
-    word, so the count of matching seeds must move."""
+    """For the self-test: make the first seed a golden question, whole, so
+    that seed's verdict must move."""
     _, block = _seeds(repo)
     question = json.loads(repo.text(GOLDEN))["queries"][0]["question"].replace('"', "'")
     home = repo.text(HOME_TSX)
@@ -1589,10 +1607,10 @@ FACTS: tuple[Fact, ...] = (
     ),
     Fact(
         "seeds.from_golden_set",
-        "the Home screen's seed questions appear word for word in the golden evaluation set",
+        "the Home screen shows as many seeds as the tour says, and each is a golden question, whole",
         Computed(GOLDEN, seeds_in_golden_set, _seed_mutation),
         stated=(
-            w(TOUR, TOUR_TSX, r"These (\w+) are real questions from the evaluation set", COUNT),
+            w(TOUR, TOUR_TSX, r"These (\w+) are real questions from the evaluation set", EVERY),
         ),
     ),
 )
