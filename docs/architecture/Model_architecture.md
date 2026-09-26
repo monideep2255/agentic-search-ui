@@ -66,7 +66,7 @@ Every row below is issued through `Harness.call_tier` (`src/system_03_search_age
 | Think, classification | What kind of question this is (a lookup, a comparison, a multi-hop question, and so on) and which entities it names | Plan | A Pydantic schema (`_ThinkClassification`) must parse; one retry on an unusable reply, with a bounded excerpt of the bad reply logged so the cause is visible | Never fabricates or defaults a classification. Two unusable replies in a row fail the step and end the question with a generic error | `src/system_03_search_agent/core/graph.py:2250` |
 | Act, Cypher generation fallback | The literal Cypher query text, only when no fixed template matches the question shape | Plan | The Cypher validator (`src/system_03_search_agent/tools/cypher_validator.py`) checks the generated text before it ever reaches the graph; a validator rejection is fed back to the model once as a repair prompt | A second failed attempt returns a tool-level error result, not a query run against the graph with unvalidated text | `src/system_03_search_agent/tools/cypher_generation.py:334`, called from `src/system_03_search_agent/tools/cypher_query.py` |
 | Act, reader pass | A short read of one free-text tool result (for example an abstract), pulling out entities and normalized ids from it | Guard | The reply is parsed into a fixed `Finding` shape; nothing free-text from this pass reaches the user unmediated, and the Write step only ever sees what this parsed shape carries | A cap breach, timeout, or classified failure degrades to an empty-but-valid `Finding` marked as not attempted, rather than raising and failing every other concurrent tool call | `src/system_03_search_agent/harness/coordinator_worker.py:471` |
-| Write, sentence check | Whether one reworded answer sentence says anything more than the exact record text it quotes, for sentences that already passed every code-only check but the wording itself | Guard | Runs only after three deterministic checks already passed (the quote is in the record character for character, every number in the sentence is in the quote, the sentence negates exactly when its quote does); the model only ever answers the one remaining question | Fails closed: no candidates, too little time budget, the cost cap, a failed or unreadable reply, or a spent budget all approve nothing, and the answer falls back to what code alone already accepted | `src/system_03_search_agent/core/graph.py:7067`, decision logic in `src/system_03_search_agent/synthesis/sentence_check.py` |
+| Write, sentence check | Whether one reworded answer sentence says anything more than the exact record text it quotes, for sentences that already passed every code-only check but the wording itself. As a Jev decision: one yes-or-no question per sentence, every sentence of one answer in one call, and only "no, it says nothing more" approves | Guard. Jev when `CLASSIFIER_PROVIDER=jev`, with the guard tier only when Jev fails, once `core/graph.py` calls `check_reworded_sentences` (build phase 8.6; the call is a one-hunk patch in builder K's report, `testing/Developer/reports/2026-09-26_phase_8.6/`, and until it lands the loop makes the guard call) | Runs only after three deterministic checks already passed (the quote is in the record character for character, every number in the sentence is in the quote, the sentence negates exactly when its quote does); the model only ever answers the one remaining question | Fails closed: no candidates, too little time budget, the cost cap, a failed or unreadable reply, or a spent budget all approve nothing, and the answer falls back to what code alone already accepted. After a Jev failure the guard tier is asked only when at least 2 seconds of the check's budget remain | `src/system_03_search_agent/core/graph.py`'s `_ground_with_sentence_check`, decision logic in `src/system_03_search_agent/synthesis/sentence_check.py` |
 | Write, answer synthesis | The prose answer itself, built only from the facts it was handed | Synth | The deterministic cite-or-refuse grounding gate (`src/system_03_search_agent/synthesis/grounding.py`) strips any clause that cannot be traced to a specific finding, and refuses the whole answer if that strips out the question's core ask | A step timeout or classified call failure ends the question with a generic "a step hit a temporary error" message; the model never gets a second unchecked chance to fabricate | `src/system_03_search_agent/core/graph.py:9790` |
 | Write, repair pass | A second attempt at the same answer, only when the first pass left out a fact it was shown and code alone cannot already tell the reader wrote it in another way | Synth | The same grounding gate re-runs against the repaired text | Runs only within whatever time remains of the Write step's one shared budget; if that budget or the cost cap is spent, the first pass's already-grounded answer stands | `src/system_03_search_agent/core/graph.py:9981` |
 
@@ -154,23 +154,33 @@ The decisions it makes on develop:
 - Whether a question asks for papers (`plan.literature`), replacing a word list.
 - Whether a question asks for recent work without saying how recent (`think.recent_years`), which asks "How far back should I search?".
 - Which resource to pull (`plan.resource`) is NOT wired: the plan makes no runtime choice between tools today. The closed option list it would use is `tools/catalogue.py`.
+- Whether each reworded answer sentence says anything its quoted record words do not (the Write step's sentence check, build phase 8.6). Built in `synthesis/sentence_check.py`'s `check_reworded_sentences`: one call per answer carrying one yes-or-no question per sentence, which the endpoint accepts (thirty questions measured at 343 to 611 ms for $0.00033), with the guard tier only when Jev fails. The loop starts using it when `core/graph.py` calls that function, a one-hunk patch in builder K's report, which another builder's file fence held back; until then the guard tier makes this check.
 
-How each decision is made:
+How each decision is made, since build phase 8.6 (DECISIONS.md 2026-09-25, "Jev decides; the guard tier (DeepSeek) is Jev's fallback on failure only"):
 
-- The guard tier makes the same decision alongside Jev, purely for comparison.
-- Jev's answer is used when it arrives within 3 seconds with an offered option; otherwise the guard tier's pick is used and the reason recorded.
-- The guard tier's comparison pick is given one second after Jev answers (`GUARD_COMPARISON_GRACE_S`), so many records read not ready.
-- Every decision rides on the answer's done event in `decisions`. The first comparison table is `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md`.
+- Jev is asked alone. Its answer is used when it arrives within its 3-second total limit with one of the offered options, and the decision then takes Jev's time and nothing more.
+- The guard tier is asked only when Jev fails: a timeout, an HTTP error, a malformed reply, an option outside the set, the cost cap, or an unexpected error. Its pick is used and Jev's reason is recorded in `fallback_reason`.
+- When neither model makes a pick, the loop does what the decision point's fail-open option says, and the record reads `no_usable_pick:<Jev's reason>`.
+- Nothing runs beside Jev any more. Build phase 8.2 asked the guard tier every decision at the same time as Jev and waited up to one second (`GUARD_COMPARISON_GRACE_S`, now removed) for a pick that was only recorded.
+- Every decision rides on the answer's done event in `decisions`. Build phase 8.2's live comparison table is `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md`.
 
 ```mermaid
 flowchart LR
     Q[Loop needs a small choice] --> J[Ask Jev]
     J -->|answers in time| D[Use Jev's choice]
-    J -->|errors or times out| F[Fall back to guard tier]
-    Q -.record only.-> GT[Guard tier also decides]
-    GT -.-> CMP[Comparison table]
-    D --> CMP
+    J -->|fails| F[Ask the guard tier]
+    F -->|picks| G[Use the guard's choice]
+    F -->|no pick| O[Use the fail-open option]
 ```
+
+How the two models are compared now, off the live path (build phase 8.6):
+
+- `testing/Developer/scripts/compare_classifiers.py` takes golden question ids and runs the loop's own Guardrail, Think and Plan steps for each, never Act or Write.
+- Every decision the loop asks there goes to both Jev and the guard tier at once, through `compare_models` in `harness/decide.py`; the loop carries on with the pick the live seam would use. No live path calls either.
+- It writes an agreement table per decision point and every disagreement with Jev's confidence, and it cannot spend past its budget, which it enforces as a per-question cost cap.
+- The committed run, 10 golden questions and 18 decisions: all 18 agreed, Jev's median time per decision was 266 to 314 ms against the guard tier's 947 to 1334 ms, and the run cost $0.0097 (`testing/Developer/reports/2026-09-26_phase_8.6/classifier_comparison.md`).
+- A first run minutes earlier disagreed once, on the one-word question "the": the guard tier said on topic and Jev said off topic at 0.84. In the committed run the guard tier changed its answer and Jev did not.
+- It does not compare the Write step's sentence check, which needs a full answer, and no golden question reaches the ask-back decision, since the only two short ones are refused at the guardrail first.
 
 ## Where to change a model
 
