@@ -20,10 +20,12 @@ The registry, `facts_registry.py` beside this file, lists every fact. Each
 fact names:
 
   - how its truth is computed from its one source, never from a second copy.
-    Python sources are read with `ast`, never imported, so nothing runs, no
-    environment variable or secret is read, and a checkout without installed
-    dependencies still checks. Documents and data files are read as text or
-    JSON.
+    Python sources are read with `ast`, never imported, so no code under
+    check runs, no environment variable or secret is read, and a checkout
+    without installed dependencies still checks. Documents and data files are
+    read as text or JSON. The one process the script starts is
+    `git rev-parse`, to find the main checkout when `reference/` does not
+    resolve in an agent worktree.
   - every place a screen states it, as a file and a pattern that captures
     what the page says. The stated value is read out of the page's source
     each run, so an edited page is checked as edited.
@@ -33,23 +35,34 @@ WHY THE REGISTRY IS PYTHON RATHER THAN JSON OR YAML. A fact's truth is
 rarely a plain lookup: a count is the length of a `Literal`, "115M" is a
 rounding of 115,406,761, "which steps ask a model" is a walk of the call
 graph. A data format would need a small language for those; Python already
-is one, and ruff checks it. The registry holds only declarations, and every
-computation it uses lives here, so an edit to the registry cannot change how
-a check decides.
+is one, and ruff checks it.
 
-THE VERDICTS, the same three words `/verify` uses, plus one for the tool:
+WHAT LIVES WHERE, stated as it is rather than as a wish. This file holds the
+engine: the readers for constants, `Literal`s and fields, the comparisons,
+the call graph, the verdicts and the self-test. The registry holds the fact
+declarations AND the small functions that compute a fact's truth or parse
+what a place says (tool layers, API families, the seed match, and so on).
+So an edit to the registry can change how that fact is decided. It gets the
+same review as an edit here, and `--self-test` must pass after it.
+
+THE VERDICTS, the same three words `/verify` uses, plus one for the tool.
+Only PASS passes; every other verdict fails `/verify`.
 
   PASS   what the place says matches the source.
   FAIL   it does not: the page or document is stale.
   GAP    the source could not be read here, for example the data-engineering
-         repository behind `reference/` is not checked out. Named, never
-         counted as a pass.
-  ERROR  the registry no longer matches the code: a pattern finds nothing, or
-         a constant it names is gone. The registry must be updated, which is
-         the point: a fact cannot silently stop being checked.
+         repository behind `reference/` is not checked out. The place is
+         unchecked, so the run does not pass.
+  ERROR  the registry no longer matches the code, or a source cannot be read
+         without running it: a pattern finds nothing, a place reads as
+         nothing, a constant is gone or is not a literal. The registry must
+         be updated, which is the point: a fact cannot silently stop being
+         checked. When a fact's truth cannot be computed, every one of its
+         places gets its own ERROR line, so none is silently dropped.
 
-EXIT CODES: 0 nothing failed; 1 at least one FAIL; 2 at least one ERROR, or
-bad arguments. GAP alone exits 0 and is printed.
+EXIT CODES: 0 every place PASS; 1 at least one FAIL; 2 at least one ERROR,
+or bad arguments, or a Python older than 3.11; 3 at least one GAP and no
+FAIL or ERROR. Any exit but 0 fails `/verify`.
 
 WHAT THIS SCRIPT DOES NOT CHECK, stated so a gap is arguable:
 
@@ -74,12 +87,19 @@ USAGE
   check_facts.py                  every check; prints FAIL, GAP, ERROR and a summary
   check_facts.py --all            also prints every PASS line
   check_facts.py --map            the downstream map: each fact, its source, every place
-  check_facts.py --from PATH      only the facts whose source is PATH, for "what does
-                                  this change touch" (combine with --map)
+  check_facts.py --from PATH      only the facts computed from PATH, for "what does
+                                  this change touch" (combine with --map); a file
+                                  no fact reads prints so and exits 0
   check_facts.py --reference DIR  the data-engineering repository, when reference/
-                                  does not resolve (an agent worktree)
+                                  does not resolve (an agent worktree); a DIR that
+                                  does not exist is refused, never ignored
   check_facts.py --root DIR       check another checkout
-  check_facts.py --self-test      prove every check can pass and can fail
+  check_facts.py --self-test      prove every check can pass and can fail; exits 1
+                                  unless every reader is proven, so run it with
+                                  the reference repository present
+
+Run it with the repository's virtual environment, `venv/bin/python`, or any
+Python 3.11 or later. An older Python is refused with exit code 2.
 """
 
 from __future__ import annotations
@@ -107,6 +127,18 @@ MUTANT = "__mutant__"
 # ------------------------------------------------------------------ errors
 
 
+def literal(value: ast.expr, where: str) -> Any:
+    """`ast.literal_eval`, or a RegistryError naming the file and constant:
+    a value computed at run time cannot be read without running the code."""
+    try:
+        return ast.literal_eval(value)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError) as exc:
+        raise RegistryError(
+            f"{where} is not a literal, so it cannot be read without running the code "
+            f"({type(exc).__name__}); point the registry at the literal it is built from"
+        ) from None
+
+
 class Gap(Exception):
     """The source is not available here. Reported as GAP, never a pass."""
 
@@ -116,6 +148,20 @@ class RegistryError(Exception):
 
 
 # ------------------------------------------------------------------ repository
+
+
+def scrub(text: str, repo: Repo | None = None) -> str:
+    """Replace any absolute local path in a message with a placeholder, so a
+    line pasted into a committed report carries none."""
+    pairs = []
+    if repo is not None:
+        pairs.append((str(repo.root), "<repo-root>"))
+        if repo.reference is not None:
+            pairs.append((str(repo.reference), "<reference>"))
+    pairs += [(str(DEFAULT_ROOT), "<repo-root>"), (str(Path.home()), "<home>")]
+    for value, placeholder in pairs:
+        text = text.replace(value, placeholder)
+    return text
 
 
 class Repo:
@@ -173,9 +219,11 @@ def find_reference(root: Path, explicit: str | None) -> Path | None:
     """The data-engineering repository: --reference, then reference/, then
     the main checkout's reference/ when `root` is an agent worktree whose
     relative symlink does not resolve."""
-    candidates: list[Path] = []
     if explicit:
-        candidates.append(Path(explicit))
+        if not Path(explicit).is_dir():
+            raise RegistryError("--reference names no directory; nothing was checked")
+        return Path(explicit).resolve()
+    candidates: list[Path] = []
     candidates.append(root / REFERENCE_LINK)
     try:
         common = subprocess.run(
@@ -243,7 +291,14 @@ NUMBER_WORDS = {
     "thirteen": 13,
     "fourteen": 14,
     "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
     "twenty": 20,
+    "thirty": 30,
+    "forty": 40,
+    "fifty": 50,
 }
 MONTHS = [dt.date(2000, m, 1).strftime("%B") for m in range(1, 13)]
 
@@ -525,7 +580,7 @@ class PyConst(Reader):
 
     def read(self, repo: Repo) -> Truth:
         node, value = self._node(repo)
-        raw = ast.literal_eval(value)
+        raw = literal(value, f"{self.path}: {self.name}")
         return Truth(self.conv(raw) if self.conv else raw, self.path, node.lineno)
 
     def mutate(self, repo: Repo) -> dict[str, str]:
@@ -617,7 +672,8 @@ class PyFieldKw(Reader):
 
     def read(self, repo: Repo) -> Truth:
         keyword = self._kw(repo)
-        return Truth(ast.literal_eval(keyword.value), self.path, keyword.value.lineno)
+        value = literal(keyword.value, f"{self.path}: {self.cls}.{self.field} {self.kw}")
+        return Truth(value, self.path, keyword.value.lineno)
 
     def mutate(self, repo: Repo) -> dict[str, str]:
         text = repo.text(self.path)
@@ -1065,17 +1121,32 @@ def statements(repo: Repo, where: Where) -> list[Statement]:
         )
     found = []
     for match in matches:
+        line = line_of(text, match.start())
         try:
             value = where.parse(match)
-        except (ValueError, KeyError) as exc:
+        except Exception as exc:  # noqa: BLE001 - any parse failure is one ERROR line
             raise RegistryError(
-                f"{repo.display(where.path)}: cannot parse {match.group(0)!r}: {exc}"
-            ) from exc
-        found.append(Statement(where, value, line_of(text, match.start()), _says(match, value)))
+                f"{repo.display(where.path)}:{line}: cannot read {_clip(match.group(0), 80)!r}: "
+                f"{type(exc).__name__}: {exc}"
+            ) from None
+        if _empty(value):
+            raise RegistryError(
+                f"{repo.display(where.path)}:{line}: reads as nothing, so it cannot be judged; "
+                "the page no longer says what the registry expects there"
+            )
+        found.append(Statement(where, value, line, _says(match, value)))
     if where.collect is not None:
         first = found[0]
         return [replace(first, value=where.collect([s.value for s in found]))]
     return found
+
+
+def _empty(value: Any) -> bool:
+    """A reading with nothing in it. It is never compared: an empty set is a
+    subset of anything, so it would pass whatever the page said."""
+    return value is None or (
+        isinstance(value, (str, set, frozenset, list, tuple, dict)) and not value
+    )
 
 
 def _clip(text: str, limit: int = 100) -> str:
@@ -1099,19 +1170,41 @@ def check_fact(repo: Repo, fact: Fact) -> list[Result]:
         truth = fact.truth.read(repo)
     except Gap as exc:
         return [
-            Result("GAP", fact, w, f"GAP | {fact.fact_id} | {w.place} | {exc} | {w.path}")
+            Result(
+                "GAP",
+                fact,
+                w,
+                f"GAP | {fact.fact_id} | {w.place} | {scrub(str(exc), repo)} | {w.path}",
+            )
             for w in places
         ]
-    except RegistryError as exc:
-        return [Result("ERROR", fact, None, f"ERROR | {fact.fact_id} | {exc}")]
+    except Exception as exc:  # noqa: BLE001 - one ERROR line per place, and the run goes on
+        reason = scrub(
+            str(exc) if isinstance(exc, RegistryError) else f"{type(exc).__name__}: {exc}", repo
+        )
+        return [
+            Result(
+                "ERROR",
+                fact,
+                w,
+                f"ERROR | {fact.fact_id} | {w.place} | not judged, the truth could not be "
+                f"computed: {reason} | {w.path}",
+            )
+            for w in places
+        ] or [Result("ERROR", fact, None, f"ERROR | {fact.fact_id} | {reason}")]
     source = f"{repo.display(truth.path)}:{truth.line}"
     results = []
     for where in places:
         try:
             found = statements(repo, where)
-        except RegistryError as exc:
+        except (Gap, RegistryError) as exc:
             results.append(
-                Result("ERROR", fact, where, f"ERROR | {fact.fact_id} | {where.place} | {exc}")
+                Result(
+                    "ERROR",
+                    fact,
+                    where,
+                    f"ERROR | {fact.fact_id} | {where.place} | {scrub(str(exc), repo)}",
+                )
             )
             continue
         for st in found:
@@ -1157,20 +1250,29 @@ def load_registry() -> tuple[Fact, ...]:
 def run_checks(repo: Repo, facts: tuple[Fact, ...], show_all: bool) -> int:
     counts = {"PASS": 0, "FAIL": 0, "GAP": 0, "ERROR": 0}
     stale: set[str] = set()
+    unchecked: set[str] = set()
     for fact in facts:
         for result in check_fact(repo, fact):
             counts[result.verdict] += 1
             if result.verdict == "FAIL":
                 stale.add(fact.fact_id)
+            elif result.verdict in ("GAP", "ERROR"):
+                unchecked.add(fact.fact_id)
             if show_all or result.verdict != "PASS":
                 print(result.render())
+    # Only PASS passes: a GAP or ERROR place was never judged, so it can hide
+    # a stale fact and must not read as a clean run.
+    verdict = "NOT PASSED" if (counts["FAIL"] or counts["GAP"] or counts["ERROR"]) else "PASS"
     print(
-        f"facts: {len(facts)} checked, {len(stale)} stale | places: PASS {counts['PASS']}, "
-        f"FAIL {counts['FAIL']}, GAP {counts['GAP']}, ERROR {counts['ERROR']}"
+        f"facts: {len(facts)} | stale {len(stale)} | not fully checked {len(unchecked)} | "
+        f"places: PASS {counts['PASS']}, FAIL {counts['FAIL']}, GAP {counts['GAP']}, "
+        f"ERROR {counts['ERROR']} | {verdict}"
     )
     if counts["ERROR"]:
         return 2
-    return 1 if counts["FAIL"] else 0
+    if counts["FAIL"]:
+        return 1
+    return 3 if counts["GAP"] else 0
 
 
 def sources_read(repo: Repo, fact: Fact) -> set[str]:
@@ -1178,7 +1280,7 @@ def sources_read(repo: Repo, fact: Fact) -> set[str]:
     probe = Repo(repo.root, repo.reference, repo.overlay)
     try:
         fact.truth.read(probe)
-    except (Gap, RegistryError):
+    except Exception:  # noqa: BLE001, S110 - only the files it read matter here
         pass
     return {probe.display(p) for p in probe.read_log} | {probe.display(fact.truth.path)}
 
@@ -1191,8 +1293,8 @@ def print_map(repo: Repo, facts: Iterable[Fact]) -> int:
         try:
             truth = fact.truth.read(repo)
             print(f"  source: {repo.display(truth.path)}:{truth.line}")
-        except (Gap, RegistryError) as exc:
-            print(f"  source: {repo.display(fact.truth.path)} ({exc})")
+        except Exception as exc:  # noqa: BLE001 - the map still lists the places
+            print(f"  source: {repo.display(fact.truth.path)} ({scrub(str(exc), repo)})")
         for where in (*fact.stated, *fact.downstream):
             try:
                 lines = ", ".join(str(s.line) for s in statements(repo, where))
@@ -1216,22 +1318,28 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
     3. The parsers on fixed inputs.
     """
     failures: list[str] = []
-    compared = 0
+    compared = proven = 0
     for fact in facts:
         for where in (*fact.stated, *fact.downstream):
             try:
                 found = statements(repo, where)
             except (Gap, RegistryError) as exc:
-                failures.append(f"{fact.fact_id} | {where.place}: cannot read the place: {exc}")
+                failures.append(
+                    f"{fact.fact_id} | {where.place}: cannot read the place: {scrub(str(exc), repo)}"
+                )
                 continue
             for st in found:
                 compared += 1
                 agreeing = where.cmp.agree(st.value)
-                if not where.cmp.ok(st.value, agreeing):
+                passes = where.cmp.ok(st.value, agreeing)
+                fails = not where.cmp.ok(st.value, where.cmp.mutate(agreeing))
+                if passes and fails:
+                    proven += 1
+                if not passes:
                     failures.append(
                         f"{fact.fact_id} | {where.place}:{st.line}: an agreeing truth does not pass"
                     )
-                if where.cmp.ok(st.value, where.cmp.mutate(agreeing)):
+                if not fails:
                     failures.append(
                         f"{fact.fact_id} | {where.place}:{st.line}: a changed truth still passes"
                     )
@@ -1243,19 +1351,23 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
             before = fact.truth.read(repo)
             overlay = fact.truth.mutate(repo)
         except Gap:
-            skipped.append(f"{fact.fact_id} (source not here)")
+            skipped.append(f"{fact.fact_id} (source not here: pass --reference)")
             continue
-        except RegistryError as exc:
-            failures.append(f"{fact.fact_id}: reader cannot read its source: {exc}")
+        except Exception as exc:  # noqa: BLE001 - reported, and the self-test goes on
+            failures.append(
+                f"{fact.fact_id}: reader cannot read its source: {scrub(str(exc), repo)}"
+            )
             continue
         if overlay is None:
-            skipped.append(fact.fact_id)
+            skipped.append(f"{fact.fact_id} (its source-level mutation no longer finds its target)")
             continue
         mutated += 1
         try:
             after = fact.truth.read(repo.with_overlay(overlay))
-        except (Gap, RegistryError, SyntaxError) as exc:
-            failures.append(f"{fact.fact_id}: the changed source no longer reads: {exc}")
+        except Exception as exc:  # noqa: BLE001 - reported, and the self-test goes on
+            failures.append(
+                f"{fact.fact_id}: the changed source no longer reads: {scrub(str(exc), repo)}"
+            )
             continue
         if _norm(after.value) == _norm(before.value):
             failures.append(
@@ -1265,6 +1377,7 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
     parser_cases: list[tuple[str, Any, Any]] = [
         ("to_int word", to_int("Eleven"), 11),
         ("to_int commas", to_int("115,406,761"), 115406761),
+        ("to_int sixteen", to_int("Sixteen"), 16),
         ("to_date spoken", to_date("22 April 2026"), dt.date(2026, 4, 22)),
         ("to_date iso", to_date("ncbi_kg_v1_2026-04-22"), dt.date(2026, 4, 22)),
         ("words_list and", words_list("guard, think and done"), ["guard", "think", "done"]),
@@ -1281,19 +1394,29 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
         if got != want:
             failures.append(f"parser {label}: got {got!r}, want {want!r}")
 
+    # A reader that was not proven is a failure, not a footnote: a self-test
+    # that proves fewer than all readers has not shown every check can fail.
+    for label in skipped:
+        failures.append(f"reader not proven: {label}")
     for failure in failures:
         print(f"SELF-TEST FAIL | {failure}")
-    if skipped:
-        print("no source-level mutation, proven at the comparison only: " + ", ".join(skipped))
     print(
-        f"self-test: {compared} comparisons proven to pass and to fail; "
-        f"{mutated} of {len(facts)} readers proven to follow a changed source; "
+        f"self-test: {proven} of {compared} comparisons proven to pass and to fail; "
+        f"{mutated - sum(1 for f in failures if 'did not change' in f or 'no longer reads' in f)} "
+        f"of {len(facts)} readers proven to follow a changed source; "
         f"{len(parser_cases)} parser cases; {len(failures)} failures"
     )
     return 1 if failures else 0
 
 
 def main(argv: list[str]) -> int:
+    if sys.version_info < (3, 11):  # noqa: UP036 - a system python3 may be 3.9
+        print(
+            "check_facts: needs Python 3.11 or later; run it with the repository's "
+            f"venv/bin/python (this is {sys.version_info[0]}.{sys.version_info[1]})",
+            file=sys.stderr,
+        )
+        return 2
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--all", action="store_true", help="also print PASS lines")
     parser.add_argument("--map", action="store_true", help="print the downstream map")
@@ -1304,7 +1427,12 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve() if args.root else DEFAULT_ROOT
-    repo = Repo(root, find_reference(root, args.reference))
+    try:
+        reference = find_reference(root, args.reference)
+    except RegistryError as exc:
+        print(f"check_facts: {exc}", file=sys.stderr)
+        return 2
+    repo = Repo(root, reference)
     facts = load_registry()
     if args.source:
         # A fact is selected when its truth reads the file, not only when the
@@ -1312,8 +1440,8 @@ def main(argv: list[str]) -> int:
         wanted = args.source.removeprefix("./")
         facts = tuple(f for f in facts if wanted in sources_read(repo, f))
         if not facts:
-            print(f"check_facts: no fact is computed from {wanted}")
-            return 2
+            print(f"check_facts: no fact is computed from {wanted}, so nothing restates it")
+            return 0
     if args.self_test:
         return self_test(repo, facts)
     if args.map:
