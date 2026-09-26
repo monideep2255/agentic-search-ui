@@ -202,6 +202,8 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
+| builder A, R-01 to R-03 | Opus 5.5 | default | 18:52 | (resumed for the R-01 fix) | |
+| builder B, R-04 | Sonnet 5 | default | 18:52 | 19:35 | 333,398 or more |
 
 ### Re-land tickets
 
@@ -273,6 +275,13 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 ### Re-land history
 
 - 2026-09-26 18:50: branch cut from d042860; b1f2cd7 restores the phase's 26 files; ledger section opened; transport preflight READY.
+- 2026-09-26 18:52: builders A (R-01 to R-03) and B (R-04) dispatched from 98e672c, in the worktrees `.claude/worktrees/reland-a` and `reland-b`.
+- 2026-09-26 19:19: builder A committed R-02 (f14ee34) and R-03 (fbdff94) and diagnosed R-01, in `testing/Developer/reports/2026-09-26_phase_8.6_reland/builder_A.md` on its branch.
+  - R-02 corrected the lead's diagnosis from the code. The guard classifier only says injection or off topic. `write_seeking`, `compute_request` and `medical_advice` come from `forbidden.screen`, which runs after the classifier admits. So Jev's injection pick now counts only after every other screen.
+  - R-01 diagnosis, read by the lead: the fatal "transient" guardrail error comes from the guard classifier's own call in `_guardrail_after_prefilter`. It is `Harness.enforce_timeout` at the guardrail's 15 s, or two transient failures inside `call_tier`, turned fatal by the `except HarnessCallError` arm. The phase did not introduce it: the same error appears in phase 8.2's golden run (G-046) and the 2026-09-22 run (G-019), 1 in 150 each, and the offline reproduction matches on 654f2d2. The fix lever: a slow first reply gets no second attempt inside the one 15 s budget.
+  - The lead approves R-01's fix within the unchanged 15 s step budget. The first classifier attempt is capped at about half the budget, and a timeout or transient failure gets one fresh attempt with the remaining time. No verdict still means no answer. The budget value itself is the owner's to change and is not changed.
+  - A note for the owner, not blocking: the live R-03 answer to "Tell me about the tree of life." is about tree lifespans and forest soil, not phylogeny, the same as phase 8.2's answer.
+- 2026-09-26 19:35: builder B finished R-04 (c335b07, 0dbf51b, 0f5368b, 863e476, report bca1abe). One file outside its fence: `tests/system_03_search_agent/synthesis/test_sentence_check.py`, a constant in one assertion that pinned a charge above the ceiling, forced by R-04's own clamp. No product file outside the fence changed. Accepted by the lead.
 
 ## Findings
 
