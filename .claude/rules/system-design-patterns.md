@@ -1,3 +1,6 @@
+---
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
+---
 ## System design patterns
 
 Mental models for designing the search agent, API routes, UI components, and tool integrations in this repo.

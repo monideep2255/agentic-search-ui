@@ -2,7 +2,7 @@
 
 How a visual design becomes React code in this repository. Four artifacts are involved and only one of them is the source of truth, so the first job of this document is to say which one and why. Written 2026-08-12 during the build phase 4.8 design review, and applicable to any future phase whose deliverable is visual rather than behavioural.
 
-For the twelve-stage cadence itself, read `../Build_workflow_cadence.md` one level up. This document sits on top of it and answers a narrower question: what does a builder actually build against when the deliverable is a look.
+For the build loop itself, read `.claude/skills/bossman-mode/SKILL.md`, its one home since 2026-09-25; when this was written it was the twelve-stage cadence in `../Build_workflow_cadence.md` one level up, which now keeps only the provider mapping. This document sits on top of it and answers a narrower question: what does a builder actually build against when the deliverable is a look.
 
 ## Table of contents
 
@@ -38,7 +38,7 @@ That third one is generated rather than copied on purpose. The artifact host sup
 | `design-system/prototype/app.html` | The prototype. The whole product, clickable, in one file | The product owner plays with it. People are shown it. No builder reads it as a spec |
 | `design-system/` (the cards) | The blueprints. 18 isolated cards: brand, foundations, identity, components, screens, flows | Builders build from it. Judges verify against it |
 | `Phase_4.8_visual_design.html` | The argument. One scroll explaining why the system looks the way it does | Anyone who needs the reasoning rather than the result |
-| Bossman mode | The build crew and the inspectors | Runs the twelve-stage cadence and produces the React code |
+| Bossman mode | The build crew and the inspectors | Runs the build loop (the twelve-stage cadence when this was written, one cadence with a risk dial since 2026-09-25) and produces the React code |
 
 The distinction that matters: the prototype and the pitch page are both allowed to go stale, because neither is what the code is checked against. The component cards are not allowed to go stale, because the premise gate asserts against them.
 
@@ -132,7 +132,7 @@ The practical rule: settle the design first, then open the phase. Treat the desi
 
 Stage zero, the design review. Not a build. No branch, no tickets, no bossman. The product owner reacts to the pitch page, pushes things around in Claude Design, and the two sides go back and forth until nothing more wants changing. This stage has no cadence and no gates on purpose.
 
-Stage one onward, the build. The design freezes, `phase/4.8-web-ui-visual-design` opens, and the normal twelve-stage cadence in `Build_workflow_cadence.md` takes over with the design system as its fixture.
+Stage one onward, the build. The design freezes, `phase/4.8-web-ui-visual-design` opens, and the normal build loop takes over with the design system as its fixture: the twelve-stage cadence in `Build_workflow_cadence.md` for build phase 4.8, the bossman-mode skill since 2026-09-25.
 
 ## What build phase 4.8 looks like
 
@@ -249,4 +249,4 @@ The test is not "is this biomedical" but "would someone copy or compare this cha
 
 With these settled, the design review is complete and the phase can open on `phase/4.8-web-ui-visual-design`.
 
-Last updated: 2026-09-24
+Last updated: 2026-09-26

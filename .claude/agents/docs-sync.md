@@ -48,7 +48,7 @@ These docs are owned elsewhere. This agent's job for every row is: verify it is 
 | `testing/UI_fix_plan.md` | The board: to do, build in progress, retest | /phase-checkpoint | Verify it is current; never edit it here |
 | `testing/UI_fixes_done.md` | Every closed item, the cutoff, the detail behind every card, and each day's shipped list as a session table | /phase-checkpoint | Verify it is current; never edit it here |
 | `LEARNINGS.md` | Append-only build-failure log | the learnings skill | Verify it is current; never edit it here |
-| `tracker/BOARD.md` | The build board, build phases only | the task-tracker skill | Verify it is current; never edit it here |
+| `tracker/BOARD.md` | The record of build phases 1.0 through 6.2, frozen on 2026-09-25. Current work lives on `testing/UI_fix_plan.md` and in the open ledgers `tracker/phase_N.M.md` | Nobody, for current work | Never edit it; flag any document that still reads it as current |
 | `docs/build/Debugging_guide.md` | Symptom-to-file index for `src/` | whoever adds, renames or deletes a file under `src/` | Verify it is current; never edit it here. Enforced by `tests/system_03_search_agent/test_debugging_guide_coverage.py` |
 | `CHANGELOG.md` | Release notes per version | the release workflow, generated on merge to production | Verify it is current; never edit it here |
 
@@ -62,7 +62,7 @@ Map each category of change to the docs that need checking.
 | --- | --- |
 | `.claude/skills/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Skills table |
 | `.claude/agents/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Sub-agents table |
-| `.claude/rules/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Key rules section |
+| `.claude/rules/` or `docs/rules/` (a rule added, removed, moved, or its `paths:` frontmatter changed) | The rules list under `CLAUDE.md`'s and `AGENTS.md`'s Skills section: which rules always load, which load on matching paths, and which is read on demand |
 | `.claude/hooks/` | No doc update needed (hooks are internal) |
 | `docs/` (file added or removed) | `CLAUDE.md` Reference docs table, `README.md` documentation links |
 | `src/` (new module) | `README.md` architecture section |
@@ -72,8 +72,8 @@ Map each category of change to the docs that need checking.
 | `README.md` itself | Check for stale doc links (paths that no longer exist in `docs/`) |
 | `src/` file added, renamed, or deleted | `docs/build/Debugging_guide.md` needs a row change in the same commit. Remind the caller; enforced by `tests/system_03_search_agent/test_debugging_guide_coverage.py` |
 | `testing/`, `tracker/`, `requirements/`, `HANDOFF.md`, `PROGRESS.md`, or `LEARNINGS.md` changed | Owned by /phase-checkpoint or the learnings skill. Verify only, do not edit here |
-| `CLAUDE.md`'s Current focus table's build row counts (tests, decisions, learnings) | Owned by /phase-checkpoint Step 5d via `tracker/check_doc_drift.py`. Do not hand-edit here; only confirm `python tracker/check_doc_drift.py --check` exits 0 |
-| `.github/workflows/` or `.github/gates/` changed | `CLAUDE.md` Build phase history only if a gate was added or removed |
+| `CLAUDE.md`'s Current focus table's build row | States no count since 2026-09-25 (build harness review item D1): it points at `python3 tracker/check_doc_drift.py --counts`, which computes the test, decision and learning counts on demand. Never add a count back here; only confirm `python3 tracker/check_doc_drift.py --check` exits 0 |
+| `.github/workflows/` or `.github/gates/` changed | `README.md`'s "Running the checks locally" table, only if a gate was added or removed. The build phase history that used to sit in `CLAUDE.md` moved to `requirements/Plan.md` on 2026-09-24; /phase-checkpoint owns it, so verify only |
 
 ## Order of operations
 

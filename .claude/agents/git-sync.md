@@ -72,13 +72,15 @@ Bad commit messages:
 
 ## Where a push goes
 
-- UI fix loop: push directly to `develop`. A named carve-out in `.claude/rules/bossman-mode.md`.
-- Build-phase mode: push to the `phase/N.M-...` branch with `git push -u origin <branch>`.
-- Anything under `.claude/`, hooks, or settings: push to a `chore/` or `fix/` branch and open a pull request.
+By the risk dial's position (`.claude/skills/bossman-mode/SKILL.md`, "Set the dial first"; the Deny entry on pushing to develop in `.claude/rules/bossman-mode.md`):
+
+- A card alone at position one or two (a copy or layout fix, or a change to runnable behaviour once its judge, adversary and fix-and-verify rounds have run): push directly to `develop`.
+- A numbered phase, at any position: push to the `phase/N.M-...` branch with `git push -u origin <branch>`.
+- Position three, auth, the graph credential, the event schema, or anything under `.claude/`, hooks, or settings: push to a `chore/` or `fix/` branch and open a pull request.
 
 ## Prove the push
 
-After pushing, compare `git rev-parse HEAD` and `git rev-parse origin/<branch>`. Equal hashes are the proof the push authenticated and reached the remote. Never capture a verbose curl trace to prove auth, per `.claude/rules/sandbox-diagnosis.md`: `GIT_TRACE_REDACT` does not cover the HTTP/2 frame trace, so a token can leak in cleartext.
+After pushing, compare `git rev-parse HEAD` and `git rev-parse origin/<branch>`. Equal hashes are the proof the push authenticated and reached the remote. Never capture a verbose curl trace to prove auth, per `docs/rules/Sandbox_diagnosis.md`: `GIT_TRACE_REDACT` does not cover the HTTP/2 frame trace, so a token can leak in cleartext.
 
 ## Important notes
 

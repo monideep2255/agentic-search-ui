@@ -1,7 +1,7 @@
 ---
 description: "Autonomous execution mode - suspends deliberation rules, runs one cadence with a risk dial inside 8 hours, 8 dispatches and two review rounds, ends every change on a product review of develop"
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
 ---
-
 ## Bossman mode rule
 
 When bossman mode is active (user has invoked `/bossman` and activation checklist passed):

@@ -1,7 +1,13 @@
 ---
 description: "Before/after code pairs for the highest-risk security patterns in this repo's FastAPI, psycopg2/AGE, and React stack."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths:
+  - "src/**/*"
+  - "frontend/src/**/*"
+  - "services/**/*"
+  - ".claude/settings.json"
+  - ".claude/hooks/block-bash-delete.sh"
 ---
 
 ## Production examples

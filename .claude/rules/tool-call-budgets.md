@@ -1,3 +1,15 @@
+---
+paths:
+  - "src/system_03_search_agent/tools/**/*"
+  - "src/system_03_search_agent/harness/call_budget.py"
+  - "services/graph_query_service/**/*"
+  - "tests/system_03_search_agent/tools/**/*"
+  - "tests/system_03_search_agent/harness/test_call_budget*.py"
+  - "tests/services/graph_query_service/**/*"
+  - ".github/gates/gate05_integration.sh"
+  - "docs/ncbi/Tool_implementation_mechanics.md"
+---
+
 ## Tool call budgets
 
 Every tool in the seven-tool roster (`requirements/Technical_specification.md` Section 6) carries a locked per-call timeout, and several carry a rate-limit pool they must respect. A tool without a declared timeout is not finished. A timeout that exists in the spec but not in the code is a defect, not a detail: the multi-agent pipeline gate in `production-standards` requires a schema for every tool, and a timeout is as load-bearing as `maxLength` or a host-pinned `source_url` regex. Apply this rule whenever writing, reviewing, or reasoning about any tool in `system_03_search_agent/tools/`, the read-only HTTPS graph query service, or the integration test suite that exercises live APIs.

@@ -1,9 +1,9 @@
 ---
 description: "Before any autonomous or multi-step run, write a goal contract (done-when, verify, output, constraints, blocked-stop). Stop on verified evidence, not on feel."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
 ---
-
 ## Goal contracts
 
 Before you run any "keep going until it's done" task, write the finish line down first. An agent that starts looping without a verifiable definition of done will stop when it feels done, which is the single most common way autonomous work goes wrong: it overclaims completion.

@@ -1,9 +1,9 @@
 ---
 description: "Always identify and attack the bottleneck before optimizing anything else."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
 ---
-
 ## Attack the constraint
 
 Before optimizing, automating, or adding to any system, ask: **what is the bottleneck right now?**

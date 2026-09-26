@@ -1,3 +1,6 @@
+---
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
+---
 <!-- scope: portable -->
 <!-- depends_on: [LLM-AI-insights/AI_PM_reference/Using_LLMs_without_letting_them_think_for_you.md] -->
 <!-- depended_by: [CLAUDE.md] -->
