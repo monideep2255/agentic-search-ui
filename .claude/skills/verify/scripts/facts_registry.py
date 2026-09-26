@@ -53,9 +53,11 @@ from check_facts import (
     TextMatch,
     Truth,
     Where,
+    call_graph,
     checked_by_code_alone,
     g,
     line_of,
+    loop_steps,
     merge_dicts,
     offsets,
     parse_python,
@@ -502,6 +504,26 @@ def route_depends_on(method: str, route: str, dependency: str, meaning: str) -> 
         return {WEB_APP: text[:start] + "mutant" + text[end:]}
 
     return Computed(WEB_APP, read, mutate)
+
+
+GRAPH_PY = f"{PKG}/core/graph.py"
+GATHER_FN = "_gather_planned_calls"
+
+
+def layer_one_read_first(repo: Repo) -> Truth:
+    """False when Act runs its planned calls together through
+    `asyncio.gather`, so no layer is read before another."""
+    module = "system_03_search_agent.core.graph"
+    graph = call_graph(repo)
+    node = graph.funcs.get(f"{module}:{GATHER_FN}")
+    if node is None:
+        raise RegistryError(f"{GRAPH_PY}: no function {GATHER_FN}")
+    act = next(fn for name, fn, _ in loop_steps(repo) if name == "act")
+    together = graph.reaches(f"{module}:{act}", f"{module}:{GATHER_FN}") and any(
+        isinstance(n, ast.Call) and getattr(n.func, "attr", "") == "gather" for n in ast.walk(node)
+    )
+    note = "Act runs every planned call at once with asyncio.gather" if together else ""
+    return Truth(not together, GRAPH_PY, node.lineno, note)
 
 
 def api_reference_served(repo: Repo) -> Truth:
@@ -1375,6 +1397,20 @@ FACTS: tuple[Fact, ...] = (
         "the write step asks the synth-tier model",
         step_uses_tier("write", "synth"),
         stated=(w(ABOUT, INFO, r'name: "Synth tier",[^}]*?Runs Write', BOOL, present, flags=S),),
+    ),
+    Fact(
+        "loop.layer_one_read_first",
+        "the agent reads the graph before it calls the live layers",
+        Computed(
+            GRAPH_PY,
+            layer_one_read_first,
+            swap(
+                GRAPH_PY,
+                r"await asyncio\.gather\(\*coroutines\)",
+                "for c in coroutines:\n        await c",
+            ),
+        ),
+        stated=(w(ARCH, ARCH_TSX, r"The agent reads layer 1 first", BOOL, present),),
     ),
     Fact(
         "loop.act_asks_no_model",
