@@ -844,6 +844,14 @@ _STEP_ERROR_END_USER_MESSAGES: dict[str, str] = {
 }
 
 
+#: What the person is told when the guard classifier answered twice and
+#: neither answer was usable (re-land follow-up, R-08; F-8.6-RJ10). Worded
+#: like `_STEP_ERROR_END_USER_MESSAGES`: what happened, then what to do.
+_GUARDRAIL_NO_USABLE_VERDICT_MESSAGE: Final[str] = (
+    "A step in this query could not complete. Retrying the query may succeed."
+)
+
+
 def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
     """Build the `ErrorPayload` constructor kwargs for a step's `HarnessCallError`.
 
@@ -1584,8 +1592,10 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         )
     except JevCallError as exc:
         # A reply that came back but could not be used was still billed:
-        # charge its reported cost, never zero, exactly as `decide()`'s own
-        # Jev call does (fix round, F-8.6-J10).
+        # charge `billed_cost_usd`, exactly as `decide()`'s own Jev call does
+        # (fix round, F-8.6-J10). It is never above `MAX_JEV_COST_USD`: the
+        # stated amount when that is a usable one within the ceiling, the
+        # ceiling otherwise (F-8.6-V01, V03, RA01, RJ05).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         return exc.reason
@@ -1853,7 +1863,6 @@ async def _guardrail_after_prefilter(
     # billable and is charged nothing, as everywhere else in the loop.
     classifier_verdict: GuardVerdict | None = None
     classification: classifier.InjectionClassification | None = None
-    parse_error: classifier.ClassificationUnavailableError | None = None
     call_error: HarnessCallError | None = None
     for attempt in (1, 2):
         remaining_s = step_deadline - time.monotonic()
@@ -1926,7 +1935,6 @@ async def _guardrail_after_prefilter(
             classifier_verdict = classifier.verdict_for(classification)
             break
         except classifier.ClassificationUnavailableError as exc:
-            parse_error = exc
             content = response.content if isinstance(response.content, str) else ""
             logger.warning(
                 "guard classification unusable (attempt %d of 2, trace %s): "
@@ -1944,13 +1952,19 @@ async def _guardrail_after_prefilter(
         # reached no verdict about this query, so reporting one would tell
         # the user something false. What matters for safety is that this
         # path does not admit, and it does not.
+        #
+        # Re-land follow-up, R-08 (F-8.6-RJ10): the person is told what to
+        # do next, in the words every other step error uses, rather than
+        # the parse error's own text, "the guard tier did not return valid JSON",
+        # which named an internal part and said nothing to do. The parse
+        # error itself is in the log line of each unusable attempt above.
         return {
             "step_error": {
                 "fatal": True,
                 "scope": "step",
                 "source": "guardrail",
                 "error_class": "recoverable",
-                "message": str(parse_error)[:256],
+                "message": _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE,
                 "retry_after_s": 0,
             }
         }

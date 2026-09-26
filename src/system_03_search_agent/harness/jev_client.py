@@ -553,8 +553,8 @@ class JevBatchResult(BaseModel):
     The same discipline as `JevResult` (`extra="forbid"`, every string and
     map bounded, and a reply reporting more than `MAX_JEV_COST_USD` for the
     whole call, about 30 times the $0.00033 measured for thirty questions,
-    not used, though its reported cost is still charged; see
-    `MAX_JEV_COST_USD`).
+    not used, and charged the `MAX_JEV_COST_USD` ceiling rather than the
+    figure it reported; see `MAX_JEV_COST_USD`).
     """
 
     model_config = ConfigDict(extra="forbid")

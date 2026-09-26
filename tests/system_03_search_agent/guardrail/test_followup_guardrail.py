@@ -619,3 +619,33 @@ def test_the_stub_classifier_replies_parse() -> None:
     assert admitted.admitted is True
     assert off.admitted is False and off.category == "off_topic"
 
+
+# ---------------------------------------------------------------------------
+# R-08 (F-8.6-RJ10): two unusable classifier replies tell the person what to
+# do next, not an internal part's name.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "behaviours",
+    [("I will look this up.",), ("hang", "I will look this up.")],
+    ids=["two unusable replies", "a hang, then an unusable reply"],
+)
+async def test_no_usable_verdict_says_what_to_do_next(
+    monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...]
+) -> None:
+    """MUTATION PROOF: returning the parse error's own text again turns this
+    red on the message."""
+    _shrink(monkeypatch)
+    _classifier(monkeypatch, *behaviours)
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert _guard(events) is None
+    assert result.get("step_error") == {
+        "fatal": True,
+        "scope": "step",
+        "source": "guardrail",
+        "error_class": "recoverable",
+        "message": "A step in this query could not complete. Retrying the query may succeed.",
+        "retry_after_s": 0,
+    }
