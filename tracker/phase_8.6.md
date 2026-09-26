@@ -296,6 +296,47 @@ For the owner's eye, not a code flag:
 - Jev still refuses the clearly unrelated questions: black holes, sourdough, the meaning of life.
 - RA03: very plainly biomedical questions that the allowlist admits never reach Jev's relevancy pick. This behaviour predates the phase.
 
+### Re-land follow-up tickets
+
+The trigger the owner's "Merge, named" set: once the golden run held (102 of 150, 20:59), the named should-fix flags are fixed on the branch `phase/8.6-followup`, cut from develop at 96aa963. One builder works R-05 to R-08, because all four share `core/graph.py`'s guardrail and `harness/jev_client.py`. The judge and the adversary review it, since it changes runnable behaviour. It is an answer-path change, so the golden run on develop must reach 102 of 150 again after the merge. Dispatches, from the re-land's 8: builder C, the judge and the adversary, with the product reviewer, which makes 8 of 8.
+
+#### R-05: One brief error in the guard model no longer fails the question, and a rate-limited provider is not hammered (RJ01, RJ08, RA02)
+
+- Builder: C. Answer path: yes. Status: todo.
+- Acceptance:
+  - An error lasting about a second no longer ends the question: the second attempt waits a short backoff first, inside the unchanged 15 s step budget.
+  - A rate-limited provider receives fewer requests than today's four back-to-back ones, with a gap between them.
+  - The provider's `retry_after` is honoured when it fits the budget.
+  - No verdict is still no answer.
+- Fence: `core/graph.py` (the guardrail's classifier attempts), a new test file `tests/system_03_search_agent/guardrail/test_followup_guardrail.py`.
+
+#### R-06: A refusal is not held up by a failing Jev decision that cannot change it (RJ03, RJ09)
+
+- Builder: C. Answer path: yes. Status: todo.
+- Acceptance:
+  - In Jev mode, when the classifier's off-topic verdict can only be set aside by Jev's own on-topic pick and Jev has failed, the refusal returns at once. It does not wait for the guard tier's fallback pick.
+  - When Jev's injection pick already refuses, the refusal does not wait on the relevancy decision.
+  - Every refusal and every admission stays exactly what it is today, only sooner.
+- Fence: shared with R-05.
+
+#### R-07: Every Jev reply that reached the provider is charged inside its ceiling, and the log says what was charged (RA01, RJ04, RJ05)
+
+- Builder: C. Answer path: yes, since a charge counts against the cost caps. Status: todo.
+- Acceptance:
+  - A reply whose cost or confidence is an integer too large for a float, and a 200 reply whose body is empty or not JSON, are charged at `MAX_JEV_COST_USD` at every charge site.
+  - The log line names the amount actually charged.
+- Fence: `harness/jev_client.py`, and a new test file `tests/system_03_search_agent/harness/test_jev_followup_costs.py`.
+
+#### R-08: The documents say what the code does (RJ06, RJ07, RJ10)
+
+- Builder: C. Answer path: no. Status: todo.
+- Acceptance:
+  - The comments and docstrings that still say an unusable reply is charged "its reported cost" say it is charged within the ceiling.
+  - The `DecisionRecord` docstring's claim about `agreed` holds when Jev made no pick.
+  - The parse-failure step error's message tells a person what to do next.
+  - Builder A's report states the request ceiling correctly: 6, not 4.
+- Fence: the docstrings and comments in the files above, `contracts/events.py`'s `DecisionRecord` docstring, and `testing/Developer/reports/2026-09-26_phase_8.6_reland/builder_A.md`.
+
 ### Re-land history
 
 - 2026-09-26 18:50: branch cut from d042860; b1f2cd7 restores the phase's 26 files; ledger section opened; transport preflight READY.
