@@ -473,7 +473,7 @@ The outbound-only MCP server, wrapping the same core agent loop the web adapter 
 | File | What it does | Open it when |
 |---|---|---|
 | `src/system_03_search_agent/adapters/mcp/__init__.py` | Package marker for the outbound-only MCP server. | Confirming this is the MCP adapter package |
-| `src/system_03_search_agent/adapters/mcp/server.py` | Exposes exactly one MCP tool, `ask_biomedical_question`, wrapping `RunRegistry.create_run`/`subscribe`, never the seven internal tools directly. | An MCP client gets a malformed or fatal-disclosure response from `ask_biomedical_question` |
+| `src/system_03_search_agent/adapters/mcp/server.py` | Exposes four MCP tools since phase 8.10: `ask_biomedical_question`, wrapping `RunRegistry.create_run`/`subscribe`, and `list_past_searches`, `reopen_past_answer` and `send_answer_feedback`, which call the REST routes' service functions under their ownership checks. Never the seven internal tools directly. | An MCP client gets a malformed or fatal-disclosure response, a past search from another account, or a citation cut short |
 
 ### `auth/`
 
