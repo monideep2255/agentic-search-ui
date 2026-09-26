@@ -448,8 +448,10 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import email.utils
 import json
 import logging
+import math
 import os
 import re
 import secrets
@@ -457,7 +459,7 @@ import time
 import uuid
 import weakref
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Final, Literal, TypeVar
@@ -840,6 +842,14 @@ _STEP_ERROR_END_USER_MESSAGES: dict[str, str] = {
     "recoverable": "A step in this query could not complete as requested.",
     "unexpected": "A step in this query failed unexpectedly.",
 }
+
+
+#: What the person is told when the guard classifier answered twice and
+#: neither answer was usable (re-land follow-up, R-08; F-8.6-RJ10). Worded
+#: like `_STEP_ERROR_END_USER_MESSAGES`: what happened, then what to do.
+_GUARDRAIL_NO_USABLE_VERDICT_MESSAGE: Final[str] = (
+    "A step in this query could not complete. Retrying the query may succeed."
+)
 
 
 def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
@@ -1255,9 +1265,11 @@ async def _await_within_step(
     *,
     point: str,
     trace_id: str,
+    why: str = "its step's budget ran out",
 ) -> _T:
     """A decision's result, waited for no later than the calling step's
-    `deadline` (`_step_deadline`).
+    `deadline` (`_step_deadline`), or an earlier one the caller names in
+    `why` for the log line (re-land follow-up, R-06: Jev's own window).
 
     Build phase 8.6 fix round (F-8.6-A03, J08, A14). A decision whose model
     fails over, Jev timing out and then the guard tier being asked, can
@@ -1275,9 +1287,9 @@ async def _await_within_step(
     if not task.done():
         task.cancel()
         logger.warning(
-            "decision %s still running when its step's budget ran out (trace %s); "
-            "taking its default",
+            "decision %s still running when %s (trace %s); taking its default",
             point,
+            why,
             trace_id,
         )
         return default
@@ -1386,6 +1398,19 @@ def _drop_features_decision(harness: Any) -> None:
 #: outer net only; the client's bound fires first.
 _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 
+#: How long after a Jev-mode decision starts Jev's OWN pick can still come
+#: back from it (re-land follow-up, R-06; F-8.6-RJ03, RJ09). `decide()`
+#: waits for Jev at most `JEV_TOTAL_TIMEOUT_S` plus half a second
+#: (`harness.decide._JEV_WAIT_S`, the same margin as above) and, on a pick,
+#: returns at once with no further wait; past that it is asking the guard
+#: tier. The quarter second on top covers the few lines `decide()` runs
+#: before its wait starts. A decision still running this long after it
+#: began can therefore only end in the guard tier's pick or in none, never
+#: in Jev's own, so a refusal that only Jev's own pick could change is not
+#: held for it. `test_followup_guardrail.py` pins this above `decide()`'s
+#: own wait, so a longer wait there cannot quietly cut Jev's pick off here.
+_JEV_OWN_PICK_WINDOW_S: Final[float] = _JEV_INJECTION_WAIT_S + 0.25
+
 #: The share of the guardrail's remaining budget the guard classifier's
 #: FIRST attempt may use (re-land, R-01); a second attempt, after a timeout
 #: or a transient error, gets the rest. A share, not a figure: the budget
@@ -1406,6 +1431,122 @@ _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 #:   only a first attempt long enough to finish helps: two thirds still
 #:   admits a steady 9 seconds, half does not.
 _CLASSIFIER_FIRST_ATTEMPT_SHARE: Final[float] = 2 / 3
+
+#: How long the guard classifier's second attempt waits after the first
+#: ended in an ERROR (re-land follow-up, R-05; F-8.6-RJ01, RJ08, RA02). R-01
+#: started the second attempt the instant the first failed, so a provider
+#: error lasting even a second failed the question in about the time four
+#: requests take, with nearly the whole budget unused, and a rate-limiting
+#: provider was sent four requests back to back. Two seconds outlasts an
+#: error of about a second and still leaves the second attempt thirteen of
+#: the guardrail's fifteen seconds when the first failed at once. A first
+#: attempt that ran out of time (a hang, G-005's shape) gets no wait: its
+#: wait has already happened.
+_CLASSIFIER_RETRY_BACKOFF_S: Final[float] = 2.0
+
+#: The least time a second attempt must keep for itself after any wait
+#: before it. Phase 8.6's golden run put the guard verdict's median at 1.53
+#: seconds; three seconds covers most replies. A wait that would leave less
+#: is shortened, or, when it is the provider's own `Retry-After`, the second
+#: attempt is not made at all, since asking before the provider said to is
+#: exactly the hammering R-05 removes.
+_CLASSIFIER_MIN_SECOND_ATTEMPT_S: Final[float] = 3.0
+
+def _rate_limit_behind(exc: BaseException) -> BaseException | None:
+    """The provider's HTTP 429 behind a classifier call's failure, or None.
+
+    `call_tier` raises `HarnessCallError` from the provider's own exception,
+    so the 429 is on the cause chain; `litellm.RateLimitError` carries
+    `status_code` 429. Read by status, not by class, so this module needs no
+    import of the provider library.
+    """
+    cause = exc.__cause__
+    for _ in range(5):
+        if cause is None:
+            return None
+        if getattr(cause, "status_code", None) == 429:
+            return cause
+        cause = cause.__cause__
+    return None
+
+
+def _header_value(headers: Any, name: str) -> str | None:
+    """One header's value from an `httpx.Headers` or a plain mapping, matched
+    without regard to case; None when absent or unreadable."""
+    if headers is None:
+        return None
+    try:
+        items = headers.items()
+    except AttributeError:
+        return None
+    try:
+        for key, value in items:
+            if str(key).lower() == name:
+                return str(value)
+    except Exception:  # noqa: BLE001 - an odd header object states no wait
+        return None
+    return None
+
+
+def _provider_retry_after_s(error: BaseException) -> float | None:
+    """The wait, in seconds, a rate-limiting provider asked for in its
+    `Retry-After` header: a number of seconds or an HTTP date. None when the
+    error carries no such header or one that is not a usable wait.
+
+    litellm keeps the provider's headers in one of three places depending
+    on how the error was raised; each is read in turn.
+    """
+    sources = (
+        getattr(error, "litellm_response_headers", None),
+        getattr(error, "headers", None),
+        getattr(getattr(error, "response", None), "headers", None),
+    )
+    for headers in sources:
+        raw = _header_value(headers, "retry-after")
+        if raw is None:
+            continue
+        try:
+            seconds = float(raw)
+        except ValueError:
+            try:
+                when = email.utils.parsedate_to_datetime(raw)
+            except (TypeError, ValueError):
+                continue
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=UTC)
+            seconds = (when - datetime.now(UTC)).total_seconds()
+        if math.isfinite(seconds):
+            return max(0.0, seconds)
+    return None
+
+
+def _classifier_retry_wait_s(exc: HarnessCallError, remaining_s: float) -> float | None:
+    """How long the guard classifier's second attempt waits after the first
+    failed with `exc`, a transient `HarnessCallError`, with `remaining_s` of
+    the guardrail's budget left; None when no second attempt is made
+    (re-land follow-up, R-05).
+
+    - A first attempt cut by its own budget: 0.0. The time has already
+      passed, and R-01's fix for a hung request (G-005) stands.
+    - A provider that rate-limited and said when to come back (`Retry-After`):
+      that wait, at least `_CLASSIFIER_RETRY_BACKOFF_S`, when it still leaves
+      the second attempt `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`; otherwise None,
+      and the question ends at once in the step error rather than asking
+      before the provider said to.
+    - Any other transient error, a rate limit that named no wait included:
+      `_CLASSIFIER_RETRY_BACKOFF_S`, shortened so the second attempt keeps
+      `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`, and 0.0 when even that is not
+      left, as before this change.
+    """
+    if exc.source.startswith("harness.enforce_timeout"):
+        return 0.0
+    rate_limit = _rate_limit_behind(exc)
+    stated = _provider_retry_after_s(rate_limit) if rate_limit is not None else None
+    if stated is not None:
+        wait_s = max(stated, _CLASSIFIER_RETRY_BACKOFF_S)
+        return wait_s if wait_s + _CLASSIFIER_MIN_SECOND_ATTEMPT_S <= remaining_s else None
+    return max(0.0, min(_CLASSIFIER_RETRY_BACKOFF_S, remaining_s - _CLASSIFIER_MIN_SECOND_ATTEMPT_S))
+
 
 #: The same bound `decide()` puts on every decision's state. `Query.text`
 #: is already capped at 2000 characters; this keeps the call bounded on its
@@ -1451,8 +1592,10 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         )
     except JevCallError as exc:
         # A reply that came back but could not be used was still billed:
-        # charge its reported cost, never zero, exactly as `decide()`'s own
-        # Jev call does (fix round, F-8.6-J10).
+        # charge `billed_cost_usd`, exactly as `decide()`'s own Jev call does
+        # (fix round, F-8.6-J10). It is never above `MAX_JEV_COST_USD`: the
+        # stated amount when that is a usable one within the ceiling, the
+        # ceiling otherwise (F-8.6-V01, V03, RA01, RJ05).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         return exc.reason
@@ -1462,6 +1605,35 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         return "unexpected_error"
     harness.track_cost(trace_id, "guard", result.cost_usd)
     return result
+
+
+async def _relevancy_decision(
+    harness: Harness, trace_id: str, text: str, started: list[float]
+) -> DecisionRecord | None:
+    """`guardrail.relevancy` through the seam, exactly as `_decide_point`
+    asks it, noting on `started` the moment it began (re-land follow-up,
+    R-06). `decide()` starts its wait for Jev in this same step, with no
+    wait before it, so `started` is where Jev's own window begins
+    (`_jev_own_pick_deadline`)."""
+    started.append(time.monotonic())
+    return await _decide_point(harness, trace_id, _RELEVANCY, text)
+
+
+def _jev_own_pick_deadline(started: Sequence[float] | None, step_deadline: float) -> float:
+    """When a refusal that only Jev's OWN relevancy pick could change stops
+    waiting for it (re-land follow-up, R-06; F-8.6-RJ03, RJ09).
+
+    The end of Jev's own window, `_JEV_OWN_PICK_WINDOW_S` after the decision
+    began, or the step's deadline when that comes first. With the provider
+    at its default, or when the decision's start is unknown (a caller that
+    passed none), the step's deadline, exactly as before. A decision that
+    has not started yet by the time this is read starts now, so its window
+    is counted from now: later, never earlier, than the real one.
+    """
+    if started is None or not _jev_decides():
+        return step_deadline
+    began = started[0] if started else time.monotonic()
+    return min(step_deadline, began + _JEV_OWN_PICK_WINDOW_S)
 
 
 def _injection_record(
@@ -1585,9 +1757,12 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     # the injection classifier below rather than after it: the person waits
     # for one model call, not two. Only its "off_topic" refuses, below.
     relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
+    relevancy_started: list[float] = []
     if not prefilter.clears_biomedical_allowlist(query.text):
         relevancy_task = asyncio.create_task(
-            _decide_point(harness, trace_id, _RELEVANCY, _relevancy_state(query.text, state))
+            _relevancy_decision(
+                harness, trace_id, _relevancy_state(query.text, state), relevancy_started
+            )
         )
     # guardrail.injection (build phase 8.6, T-8.6-04; fix round, F-8.6-A05,
     # A06, A10, J04, A12). With Jev as the classifier, Jev is a second judge
@@ -1603,7 +1778,12 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
         )
     try:
         return await _guardrail_after_prefilter(
-            state, sink, relevancy_task, injection_task, step_deadline=step_deadline
+            state,
+            sink,
+            relevancy_task,
+            injection_task,
+            step_deadline=step_deadline,
+            relevancy_started=relevancy_started,
         )
     finally:
         # Any path that ends the node before reading the relevancy or the
@@ -1620,12 +1800,16 @@ async def _guardrail_after_prefilter(
     injection_task: asyncio.Task[JevResult | str] | None = None,
     *,
     step_deadline: float | None = None,
+    relevancy_started: Sequence[float] | None = None,
 ) -> dict[str, Any]:
     """Section 10.1 steps 3 to 6, after the pre-filter, plus the relevancy
     decision `guardrail_node` started (None when the allowlist admitted) and,
     with Jev as the classifier, Jev's own injection pick (None otherwise).
     Neither is waited for past `step_deadline`, the guardrail's own budget
-    from the moment the node started (`_step_deadline`)."""
+    from the moment the node started (`_step_deadline`). `relevancy_started`
+    holds the moment the relevancy decision began (`_relevancy_decision`);
+    a refusal only Jev's own pick could change waits no longer than Jev's
+    window from it (`_jev_own_pick_deadline`)."""
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
@@ -1679,7 +1863,6 @@ async def _guardrail_after_prefilter(
     # billable and is charged nothing, as everywhere else in the loop.
     classifier_verdict: GuardVerdict | None = None
     classification: classifier.InjectionClassification | None = None
-    parse_error: classifier.ClassificationUnavailableError | None = None
     call_error: HarnessCallError | None = None
     for attempt in (1, 2):
         remaining_s = step_deadline - time.monotonic()
@@ -1722,14 +1905,29 @@ async def _guardrail_after_prefilter(
         except HarnessCallError as exc:
             if attempt == 2 or exc.error_class != "transient":
                 return {"step_error": _step_error_kwargs("guardrail", exc)}
+            # Re-land follow-up, R-05: the second attempt waits first, unless
+            # the first ran out of time, and a provider's own `Retry-After`
+            # that does not fit the budget means no second attempt at all.
+            wait_s = _classifier_retry_wait_s(exc, step_deadline - time.monotonic())
+            if wait_s is None:
+                logger.warning(
+                    "guard classification call rate-limited (attempt 1 of 2, trace %s) and "
+                    "the provider asked for a wait the guardrail's budget cannot fit; "
+                    "not asking again",
+                    trace_id,
+                )
+                return {"step_error": _step_error_kwargs("guardrail", exc)}
             call_error = exc
             logger.warning(
                 "guard classification call failed (attempt 1 of 2, trace %s, %s, %s); "
-                "asking once more within the guardrail's budget",
+                "asking once more within the guardrail's budget after %.1fs",
                 trace_id,
                 exc.source,
                 exc.error_class,
+                wait_s,
             )
+            if wait_s > 0:
+                await asyncio.sleep(wait_s)
             continue
 
         try:
@@ -1737,7 +1935,6 @@ async def _guardrail_after_prefilter(
             classifier_verdict = classifier.verdict_for(classification)
             break
         except classifier.ClassificationUnavailableError as exc:
-            parse_error = exc
             content = response.content if isinstance(response.content, str) else ""
             logger.warning(
                 "guard classification unusable (attempt %d of 2, trace %s): "
@@ -1755,13 +1952,19 @@ async def _guardrail_after_prefilter(
         # reached no verdict about this query, so reporting one would tell
         # the user something false. What matters for safety is that this
         # path does not admit, and it does not.
+        #
+        # Re-land follow-up, R-08 (F-8.6-RJ10): the person is told what to
+        # do next, in the words every other step error uses, rather than
+        # the parse error's own text, "the guard tier did not return valid JSON",
+        # which named an internal part and said nothing to do. The parse
+        # error itself is in the log line of each unusable attempt above.
         return {
             "step_error": {
                 "fatal": True,
                 "scope": "step",
                 "source": "guardrail",
                 "error_class": "recoverable",
-                "message": str(parse_error)[:256],
+                "message": _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE,
                 "retry_after_s": 0,
             }
         }
@@ -1854,8 +2057,20 @@ async def _guardrail_after_prefilter(
             # (F-8.6-A16). With the provider unset this branch is never
             # reached, so nothing is waited for that was not waited for
             # before.
+            #
+            # Re-land follow-up, R-06 (F-8.6-RJ03): only Jev's OWN pick can
+            # set this refusal aside, so it waits for no longer than Jev's
+            # own window (`_jev_own_pick_deadline`). A decision still running
+            # then is the guard tier's fallback after Jev failed, whose pick
+            # `_jev_picked` never acts on: the refusal was already certain,
+            # and it now returns without waiting for that fallback.
             relevancy_record = await _await_within_step(
-                relevancy_task, step_deadline, None, point=_RELEVANCY.point, trace_id=trace_id
+                relevancy_task,
+                _jev_own_pick_deadline(relevancy_started, step_deadline),
+                None,
+                point=_RELEVANCY.point,
+                trace_id=trace_id,
+                why="Jev's own pick could no longer arrive",
             )
             relevancy_read = True
             if not _jev_picked(relevancy_record, "on_topic"):
@@ -1884,10 +2099,38 @@ async def _guardrail_after_prefilter(
     # the question is on topic, so that verdict stands. A decision still
     # running at the guardrail's budget reads as no usable pick (fix round,
     # F-8.6-A03): the person does not wait on a classifier failing over.
+    #
+    # Re-land follow-up, R-06 (F-8.6-RJ09): when the classifier admitted the
+    # question and Jev's injection pick already refuses it, a refusal is
+    # certain and this decision can only change its category. It is then
+    # read within Jev's own window only (`_jev_own_pick_deadline`), not while
+    # the guard tier's fallback runs after Jev failed. Jev's own relevancy
+    # pick still decides the category exactly as before; a decision still
+    # running past the window reads as no pick, and the refusal is the
+    # forbidden screen's or the injection one below. So the one refusal
+    # whose category can differ from before is a question Jev called
+    # injection, whose relevancy Jev failed to judge, and whose guard-tier
+    # fallback would have said off topic after the window: refused as
+    # injection now, as off topic before. A memory-bound follow-up set aside
+    # above keeps its full wait, unchanged.
     if relevancy_task is not None:
         if not relevancy_read:
+            certain_refusal = jev_says_injection and classifier_verdict.admitted
             relevancy_record = await _await_within_step(
-                relevancy_task, step_deadline, None, point=_RELEVANCY.point, trace_id=trace_id
+                relevancy_task,
+                (
+                    _jev_own_pick_deadline(relevancy_started, step_deadline)
+                    if certain_refusal
+                    else step_deadline
+                ),
+                None,
+                point=_RELEVANCY.point,
+                trace_id=trace_id,
+                why=(
+                    "Jev's own pick could no longer arrive"
+                    if certain_refusal
+                    else "its step's budget ran out"
+                ),
             )
         relevancy = _usable_choice(relevancy_record)
         if relevancy == "off_topic":
