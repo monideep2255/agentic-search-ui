@@ -84,7 +84,7 @@
     "src/system_03_search_agent/harness/call_budget.py": "591664af1a26fd32873e1257cfd80f8548a1595367b7b8c9bfb70f4a0b42935c",
     "src/system_03_search_agent/harness/coordinator_worker.py": "f3178880b43d0be0fc05d5be1d907dc7bca0d10d6b87a07d98989349866c4059",
     "src/system_03_search_agent/harness/cost_control.py": "dbf40ac71d6838f46687e28a32cc705b7d64a6387331bbaccbbea27c4ef79251",
-    "src/system_03_search_agent/harness/decide.py": "3fbebffe3c82459db6b503e529360514be1d2b8a1cc641bbe1cb53c55f2779fb",
+    "src/system_03_search_agent/harness/decide.py": "5d9d6d879d04c64257c71973b0a443382c358e9b72b46bab639a239be3383054",
     "src/system_03_search_agent/harness/harness.py": "dda6722008624126e09a991b42d66ac5d6143c748f81540ef63723099ce28e16",
     "src/system_03_search_agent/harness/jev_client.py": "910e2e6ec740ec5c041c924ffc28fe502f69ab47d55ef048c423f2e58d1a8c2f",
     "src/system_03_search_agent/harness/task_tiers.py": "a3f1918735900cd9bf60346d6d80d9fe8487b7e6f58effaa0a2231a63c42335f",

@@ -553,7 +553,7 @@ The list reads each row's own fields for its label, its identifier and one extra
 - Answer path: no. Cost accounting, two docstrings and tests only.
 - Size: S, about 20 lines plus tests.
 - Source: phase 8.6's fresh verifier, F-8.6-V01, V03, V05, V06 and V07 in `tracker/phase_8.6.md`. Phase 8.6 merged with them named as open flags, and this ticket is their trigger.
-- Applies only once phase 8.6's code is back on develop. If 8.6 re-lands through a re-split that fixes these flags itself, this ticket is dropped.
+- DROPPED on 2026-09-26: phase 8.6's re-land carries the whole of this ticket as its R-04 (`tracker/phase_8.6.md`, "Re-land"). Builder M does not take it.
 
 What the person notices:
 
