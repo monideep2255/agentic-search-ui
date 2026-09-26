@@ -103,7 +103,9 @@ Checks the structure of every tracked markdown file, and two kinds of reference 
 - A phase-to-pull-request reference that names a pull request other than the one that merged the phase.
 - A phase called "next" that `tracker/BOARD.md`, frozen at build phase 6.2, marks done.
 
-Since 2026-09-25 it compares no count and no date (build harness review items D1 and D2). It no longer computes counts from source to fail a document that states a stale value, and a last-updated date older than the file's newest content is no longer a finding. `python3 tracker/check_doc_drift.py --counts` still computes the counts it used to compare (Python tests, frontend tests, Playwright tests, the premise gate, DECISIONS.md rows, LEARNINGS.md entries, open flags) and prints them, checking no document against them. A fact `--check` could not compute is a failure line naming why, never an "ok".
+Since 2026-09-25 it compares no count and no date (build harness review items D1 and D2). It no longer computes counts from source to fail a document that states a stale value, and a last-updated date older than the file's newest content is no longer a finding. A fact `--check` could not compute is a failure line naming why, never an "ok".
+
+`python3 tracker/check_doc_drift.py --counts` still computes the counts it used to compare (Python tests, frontend tests, Playwright tests, the premise gate, DECISIONS.md rows, LEARNINGS.md entries, open flags) and prints them, checking no document against them.
 
 Exit 0 is clean. A nonzero exit names each drifted document as `path:line`. Fix the document, then rerun. Never pass this check by narrowing it, and never report it as skipped when the script exists.
 
