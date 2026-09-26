@@ -693,6 +693,35 @@ class TestPastSearchesAreYoursAlone:
 
 @_needs_database
 @pytest.mark.usefixtures("_auth_secret")
+class TestGuestsGetNoMoreThanRest:
+    @pytest.mark.asyncio
+    async def test_a_real_guest_token_is_refused_by_every_parity_tool(self) -> None:
+        # This surface is registered accounts only, so a guest gets less here
+        # than on REST, never more. Mutation that turns this red: resolve the
+        # caller with a resolver that also accepts guest tokens, for example
+        # `auth.dependencies.resolve_caller_from_bearer_token`.
+        import httpx2
+
+        from system_03_search_agent.adapters.web_sse.app import app
+
+        async with httpx2.AsyncClient(
+            transport=httpx2.ASGITransport(app=app), base_url=_BASE_URL
+        ) as client:
+            minted = await client.post("/auth/guest")
+        assert minted.status_code == 201, "populate check: a real guest token was minted"
+        guest = {"Authorization": f"Bearer {minted.json()['guest_token']}"}
+
+        for name, arguments in (
+            ("list_past_searches", {}),
+            ("reopen_past_answer", {"trace_id": f"paritytest-{uuid.uuid4().hex}"}),
+            ("send_answer_feedback", {"run_id": str(uuid.uuid4()), "rating": "up"}),
+        ):
+            message = await _call_expecting_error(guest, name, arguments)
+            assert message == server_module._AUTH_FAILURE_MESSAGE, name
+
+
+@_needs_database
+@pytest.mark.usefixtures("_auth_secret")
 class TestReopeningIsYoursAlone:
     @pytest.mark.asyncio
     async def test_the_owner_reopens_the_answer_they_got(self) -> None:
