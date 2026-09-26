@@ -8454,8 +8454,13 @@ def _code_built_lines_will_cite(
     (`one_finding_per_record`): a paper that reached the prompt as its
     title, its abstract and its PMID is listed once, by its title. This
     compared citation ids, so the two views the listing folds into that row
-    were always "uncited", and the repair fired on nearly every question;
-    its reply reached nothing the reader saw in 4 of 5 traced questions.
+    were always "uncited", and the repair fired whenever the prose left out
+    a paper that arrived as several views, although the listing showed it.
+    Measured live on 2026-09-26 on a phenotype question: 7 of 19 omitted
+    findings were such views, and the old rule made a second writing call
+    the new one skips. (A question whose prose grounds nothing still gets
+    the repair: that is the second case listed above, and this rule is
+    never reached for it.)
     The rule is now `unreported_findings`', the one the answer's own
     omission count already applies after the listing: a folded view counts
     as cited when its record's row is. A finding the listing renders as a
@@ -10932,8 +10937,8 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # The question's elapsed time is read when each done event is built,
     # never here. Read at the top of the step it left the writing call out:
     # on 97 of 102 answered golden runs `done.elapsed_ms` under-read the
-    # question by the whole write step (build phase 8.6, T-8.6-07; product
-    # harness review W3).
+    # guard-to-done span by more than a second, tracking the write step
+    # (build phase 8.6, T-8.6-07; product harness review W3).
     total_tool_calls = state.get("findings_count", 0)
     findings: list[Finding] = state.get("findings", [])
     # T-3.4-05: empty for the common single-tool query; see GraphState's
