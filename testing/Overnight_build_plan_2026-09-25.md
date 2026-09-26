@@ -370,6 +370,12 @@ What the product owner will find in the morning, if every check passes:
 
 A merge whose check fails does not happen. It waits for the product owner, named in the morning summary with the failed check.
 
+Waiting for the product owner in the morning, each a yes or no:
+
+- The secret scan misses keys shaped like the product's own model-provider key, where a hyphen follows `sk-` straight away. The lead's hook check found it at 05:20. The gap is the same on develop, so the harness fixes did not cause it. Tighten the pattern to catch that shape? Recommendation: yes. It is a change to a hook, so it needs your item-by-item yes.
+- Check that the graph server accepts only SSH keys, with password login off. Only you can check this.
+- Rewrite git history to remove the server address from old commits? Recommendation: no. The address is public, and the fix is that no file pairs it with a login command any more.
+
 Not tonight: phases 8.7, 8.3, 8.4's remainder and the paper-sentence wiring (8.8).
 
 #### Automatic checks for each merge
