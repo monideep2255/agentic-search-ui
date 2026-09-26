@@ -26,12 +26,46 @@
 # Approved item by item by the product owner on 2026-09-26 ("Also close the
 # hook gaps"). tests/ci/test_claude_hooks.py pins every case both ways.
 #
-# Not covered, named here and not closed because the owner approved only those
-# four gaps: a pipe whose shell is not the word right after it (the shell on
-# the next line or after | and a backslash-newline, | (bash), | { bash; },
-# | tee >(bash), | $SHELL, | busybox sh, | ssh-agent bash, | mksh), and
-# destructive text the command encodes or splits so no whole-word rm is
-# written (base64 -d | bash, printf '\x72\x6d', 'r''m').
+# A here-string or here-document into a shell also counts with any other
+# redirect between the shell and the << (</dev/null, 0<in.txt, <&0, a quoted
+# target), with a quoted shell name ("bash", 'bash') and with a bracketed
+# shell ((bash), { bash; }): bash applies the redirects left to right, so the
+# here-string still feeds the shell. Approved item by item by the product
+# owner on 2026-09-26 (DECISIONS.md, "Three more guard gaps are closed", item
+# c).
+#
+# Every check reads the command in any letter case, not only rm and rmdir: a
+# runner, a wrapper, a shell or mkfs in upper or mixed case runs on that disk
+# just as it does in lower case, so BASH -c, Bash -c, | BASH, SH -c, ENV rm,
+# SUDO rm, | XARGS rm, MKFS.ext4 and PYTHON3 -c are read like their lower-case
+# forms. The edges stay whole words, so "ARM64", "RMS", "perform", "SHASUM" and
+# | SHA256SUM are neither rm nor a shell. Shell keywords (then, do), find's
+# -exec and the /dev/ path now match in any case too, which only blocks more.
+# Approved item by item by the product owner on 2026-09-26 (DECISIONS.md,
+# "Three more guard gaps are closed", item b).
+#
+# Not covered, named here and not closed, because the owner approved only the
+# gaps above and pattern matching cannot close these reliably:
+# - Destructive text the command encodes or splits so no whole-word rm is
+#   written: base64 -d | bash, printf '\x72\x6d', 'r''m'.
+# - rm behind a word the guard does not know as a runner: command rm,
+#   /usr/bin/env rm, LANG=C rm.
+# - A pipe or a here-document into an interpreter that is not a shell, such
+#   as python, perl or node.
+# - A pipe whose shell is not the word right after it: the shell on the next
+#   line or after | and a backslash-newline, | (bash), | { bash; },
+#   | tee >(bash), | $SHELL, | busybox sh, | ssh-agent bash, | mksh.
+# - A shell fed by process substitution (bash <(...), bash > >(tee log) <<<),
+#   and a here-string on the line after its shell, behind a backslash.
+# - A wrapper whose name is quoted before its flag or host: "bash" -c '...',
+#   "ssh" host '...', 'python3' -c. Each wrapper word needs a space after it.
+# - An escape the guard does not read as one: PowerShell's backtick (`n)
+#   right before rm inside a wrapper.
+# - Deletion that never names rm or rmdir: find -delete, unlink, shred,
+#   git clean, Python's os.remove.
+# - A command holding a JSON lone surrogate. The JSON reader cannot print it,
+#   so the guard reads the raw JSON text, where a newline is the two
+#   characters \n, and an rm on its own line passes.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/lib/_json.sh"
@@ -71,9 +105,13 @@ CMDWORD="$QUOTE?"'(\\|/([[:alnum:]_.-]+/)*)?'
 RM='[Rr][Mm]'
 RMDIR='[Rr][Mm][Dd][Ii][Rr]'
 
-# 1) rm / rmdir as a command word, as a whole word, in any letter case. `git rm`
-#    is a git subcommand, not in command position, and stays allowed as before.
-if printf '%s' "$SCAN" | grep -qE "$LEAD$PREFIX$CMDWORD($RM|$RMDIR)$QUOTE?$WORD_END"; then
+# Every grep below runs with -i: the disk is case-insensitive, so a runner,
+# wrapper, shell or mkfs in any letter case runs as its lower-case form does.
+#
+# 1) rm / rmdir as a command word, as a whole word, in any letter case, behind
+#    runners in any letter case (SUDO, ENV, XARGS). `git rm` is a git
+#    subcommand, not in command position, and stays allowed as before.
+if printf '%s' "$SCAN" | grep -qiE "$LEAD$PREFIX$CMDWORD($RM|$RMDIR)$QUOTE?$WORD_END"; then
   echo 'Blocked: file deletion via bash (rm/rmdir). Ask user first.' >&2
   exit 2
 fi
@@ -90,7 +128,7 @@ fi
 #    closed. rmdir, rmtree, dd if= and mkfs stay substring matches, as before,
 #    because a whole-word rmdir would let fs.rmdirSync(...) through. Any write
 #    into /dev other than /dev/null stays blocked inside a wrapper, as before.
-#    rm and rmdir match in any letter case here too.
+#    The wrapper and the destructive word both match in any letter case.
 #
 #    A pipe into a shell and a here-string or here-document into a shell are
 #    wrappers as well: the shell runs the text it reads as commands. A pipe
@@ -98,25 +136,36 @@ fi
 #    behind a runner such as sudo, a quote or a path such as /bin/sh, so
 #    | shasum, | shellcheck and | grep bash never count. A here-string or
 #    here-document counts when a shell word (not a script such as install.sh)
-#    is followed on its line by its arguments, any output redirects with their
-#    targets (2>&1, >out.txt, 2> err.log, >&2, &>log) and <<. The shells are
+#    is followed on its line by its arguments, any redirects with their
+#    targets, and <<. A redirect is an output one (2>&1, >out.txt, 2> err.log,
+#    >&2, &>log) or an input one (</dev/null, 0<in.txt, <>f.txt, 3<f.txt, <&0,
+#    0<&-), and its target may be quoted (2>"a;b"). The shell word may be
+#    quoted ("bash", 'bash') or end a group ((bash), { bash; }). The shells are
 #    bash, sh, zsh, dash, ksh, csh, tcsh and fish.
+#
+#    Still not counted, named and not closed: a shell fed by process
+#    substitution (bash <(...), bash > >(tee log) <<<), whose target is a
+#    command rather than a word, and a here-string on the line after its shell,
+#    behind a backslash and a newline, since grep reads one line at a time.
 SHELLS='((ba|da|k|z|c|tc)?sh|fish)'
 SHELL_END='([[:space:];&|)<>`"'"'"']|$)'   # what may follow a shell's name
 PIPE_SHELL='[|]&?[[:space:]]*('"$RUNNER"')*'"$CMDWORD$SHELLS$SHELL_END"
-SHELL_REDIR='[0-9]*(&>>?|>[>|&]?)[[:space:]]*[^[:space:];&|<>]+'   # 2>&1, >out, &>log
-HERE_SHELL='(^|[^[:alnum:]_.-])'"$SHELLS"'([[:space:]]+[^[:space:];&|<>]+|[[:space:]]*'"$SHELL_REDIR"')*[[:space:]]*<<'
+TARGET='("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:];&|<>])+'   # a word, or a quoted string
+SHELL_REDIR='[0-9]*(&>>?|>[>|&]?|<>|<&?)[[:space:]]*'"$TARGET"   # 2>&1, >out, </dev/null, <&0
+GROUP_END='[[:space:]]*;?[[:space:]]*[)}]'   # the end of (bash) or { bash; }
+HERE_SHELL='(^|[^[:alnum:]_.-])'"$SHELLS$QUOTE"'?([[:space:]]+[^[:space:];&|<>]+|[[:space:]]*'"$SHELL_REDIR"'|'"$GROUP_END"')*[[:space:]]*<<'
 WRAPPER='(ssh[[:space:]]|python3?[[:space:]]+-c|perl[[:space:]]+-e|ruby[[:space:]]+-e|node[[:space:]]+-e|bash[[:space:]]+-c|sh[[:space:]]+-c|zsh[[:space:]]+-c|eval[[:space:]]'"|$PIPE_SHELL|$HERE_SHELL)"
 ESCAPE='\\[[:alnum:]]+|\\[CM]-[[:alnum:]]'  # \n, \012, \x3b, \u000a; Ruby's \C-j
 INSIDE="(^|[^[:alnum:]_]|$ESCAPE)$RM$WORD_END|$RMDIR|rmtree|dd[[:space:]]+if=|mkfs|$DEVICE_WRITE"
-if printf '%s' "$SCAN" | grep -qE "$WRAPPER" \
-   && printf '%s' "$SCAN" | grep -qE "$INSIDE"; then
+if printf '%s' "$SCAN" | grep -qiE "$WRAPPER" \
+   && printf '%s' "$SCAN" | grep -qiE "$INSIDE"; then
   echo 'Blocked: destructive command inside an execution wrapper (ssh, python -c, bash -c, or a pipe, here-string or here-document into a shell). Ask user first.' >&2
   exit 2
 fi
 
 # 3) A write to a disk device outside a wrapper: a redirect into /dev, dd's of=
-#    into /dev, or mkfs as a command word. /dev/null was dropped in step 0. The
+#    into /dev, or mkfs as a command word, MKFS included. /dev/null was dropped
+#    in step 0, in lower case only, so /DEV/NULL is checked like a device. The
 #    stream devices (stdout, stderr, tty, fd/N) are dropped too: they hold no
 #    data, and outside a wrapper they were never checked before.
 STREAMS='(stdout|stderr|tty|fd/[0-9]+)'
@@ -124,7 +173,7 @@ DISKSCAN=$(printf '%s' "$SCAN" | sed -E \
   -e "s#$REDIRECT$QUOTE?/dev/$STREAMS$QUOTE?$END# \\2#g" \
   -e "s#of=$QUOTE?/dev/$STREAMS$QUOTE?$END# \\2#g")
 MKFS="$LEAD$PREFIX${CMDWORD}mkfs$WORD_END"
-if printf '%s' "$DISKSCAN" | grep -qE "$DEVICE_WRITE|$MKFS"; then
+if printf '%s' "$DISKSCAN" | grep -qiE "$DEVICE_WRITE|$MKFS"; then
   echo 'Blocked: write to a disk device (a redirect into /dev, dd of=/dev/..., mkfs). To discard output, redirect to /dev/null. Ask user first.' >&2
   exit 2
 fi

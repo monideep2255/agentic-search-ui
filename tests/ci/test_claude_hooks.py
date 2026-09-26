@@ -1,9 +1,10 @@
-"""Run the two Bash guard hooks the way the harness does, and assert block or allow.
+"""Run the guard hooks the way the harness does, and assert block or allow.
 
 `.claude/settings.json` wires `block-bash-delete.sh` and `scan-secrets.sh` as
-PreToolUse hooks on every Bash call. The harness runs each as `bash <hook>`,
-writes the tool call to its stdin as JSON, and treats exit 2 as "blocked" and
-exit 0 as "allowed". This file does exactly that, once per case below.
+PreToolUse hooks on every Bash call, and `scan-write-secrets.sh` on every Edit
+and Write. The harness runs each as `bash <hook>`, writes the tool call to its
+stdin as JSON, and treats exit 2 as "blocked" and exit 0 as "allowed". This
+file does exactly that, once per case below.
 
 Why it exists. The product owner approved two narrowings on 2026-09-25
 (DECISIONS.md, "Four security-layer changes approved item by item", items 1
@@ -16,6 +17,13 @@ The product owner approved four tightenings on 2026-09-26 ("Also close the
 hook gaps"): the secret scan's key with a hyphen after sk-, and the delete
 guard's any letter case, pipe into a shell, and here-string or here-document
 into a shell. Each is pinned both ways too.
+
+The product owner approved four more item by item later on 2026-09-26
+(DECISIONS.md, "The secret scan's slowdown on a very long command" and "Three
+more guard gaps are closed"): the secret scan's speed on a very long command,
+the hyphenated key in a file write, every command word of the delete guard in
+any letter case, and the rest of the here-string and here-document shapes.
+Each is pinned both ways too.
 
 WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
 
@@ -43,6 +51,14 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  an escape before it included. The whole-word edges are
                  pinned too: "ARM64", "RMS", "PERFORM" and `git RM` stay
                  allowed.
+    Covered      Every other command word the delete guard reads, in any
+                 letter case too: `BASH -c`, `Bash -c`, `SH -c`, `| BASH`,
+                 `| Sh`, `| SUDO bash`, `BASH <<<`, `SSH host`, `ENV rm`,
+                 `SUDO rm`, `| XARGS rm`, `NOHUP rm`, `MKFS.ext4`, `SUDO Mkfs`
+                 and `PYTHON3 -c`, an escape before rm included. The edges
+                 stay whole words: `| SHASUM`, `| SHA256SUM`, "ARM64 RMS
+                 PERFORM" into BASH, and a harmless command behind BASH, SUDO
+                 or ENV stay allowed.
     Covered      A pipe into a shell as an execution wrapper: `| bash`, `| sh`,
                  `| zsh`, `| dash`, `|& bash`, `| sudo bash`, `| sudo -u root
                  sh` and `| /bin/sh`, with the destructive word anywhere in
@@ -60,6 +76,16 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  too. A harmless one stays allowed, and so does a
                  here-document into cat or a here-string into a script such
                  as ./install.sh, with a redirect or without.
+    Covered      The rest of the here-string and here-document shapes (the
+                 checker's finding HG2-01 of 2026-09-26): an input redirect
+                 between the shell and the << (`</dev/null`, `0<in.txt`,
+                 `<>f.txt`, `3<f.txt`, `<&0`, `0<&-`, with no spaces too), a
+                 quoted redirect target (`2>"a;b"`), a quoted shell name
+                 (`"bash"`, `'bash'`, `"/bin/sh"`) and a bracketed shell
+                 (`(bash)`, `{ bash; }`, `(bash -s) 2>&1`), with `<<<` and
+                 with a here-document. The same shapes with no destructive
+                 word stay allowed, and so does cat or a script behind an
+                 input redirect.
     Covered      The secret scan: the token-prefix check on every command,
                  grep included. The field-assignment check skipped only for
                  the searches (grep, rg, git grep) a command starts with, and
@@ -78,6 +104,20 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  starts at a word boundary, so a name such as
                  "task-tracker-some-long-branch-name" stays allowed, and that
                  is pinned too.
+    Covered      The secret scan's two speed bounds (finding F02 of
+                 2026-09-26): a command longer than 8192 characters is
+                 field-checked whole, and the split stops after 64 pieces and
+                 field-checks the whole command. Both of F02's slow shapes,
+                 12,000 searches and 100,000 leading spaces, each followed by
+                 a literal key, must be blocked in under 5 seconds. A long
+                 search that names a field-shaped literal, and a 65-piece
+                 chain of searches, are pinned as failing closed; a 64-piece
+                 chain and a long command with no literal stay allowed.
+    Covered      The write scan's token prefix for the same hyphenated key
+                 shape, on a Write and an Edit into Python, TypeScript, shell,
+                 YAML and an .env file. The word boundary is pinned too: a
+                 branch name holding "task-tracker-..." and a short sk- name
+                 stay allowed in a source file and in an .env file.
 
     NOT covered  The hooks' no-Python fallback in `lib/_json.sh`. Every case
                  here runs with a working Python on PATH, as it does on the
@@ -91,20 +131,22 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  `%0a`. The letter before rm is an ordinary character until
                  the command runs, so a whole-word match cannot tell it from
                  "platform"; the old substring match blocked these.
-    NOT covered  A command word in upper case other than rm and rmdir. The
-                 case-insensitive disk runs `ENV rm`, `ls | XARGS rm`,
-                 `BASH -c "..."`, `| BASH` and `MKFS.ext4`, and the guard
-                 matches runners, wrappers, shells and mkfs in lower case
-                 only.
     NOT covered  rm behind a word the guard does not know as a runner: an
                  assignment (`LANG=C rm -rf x`), the `command` builtin, or a
                  runner given as a path (`/usr/bin/env rm`, and
                  `| /usr/bin/env bash`).
-    NOT covered  Text that reaches a shell other than by a pipe, or a
-                 here-string or here-document on the shell's own line:
-                 process substitution (`bash <(...)`), `source /dev/stdin
-                 <<<`, or a shell that is the argument of another program
+    NOT covered  A here-string or here-document into a shell outside the one
+                 rule the guard reads: the shell word, maybe quoted or closing
+                 a group, followed on the same line by its arguments, its
+                 redirects with word or quoted targets, and the <<. So these
+                 pass: process substitution (`bash <(...)`, `bash >
+                 >(tee log) <<<`), a here-string on the line after its shell
+                 behind a backslash and a newline, `source /dev/stdin <<<`,
+                 and a shell that is the argument of another program
                  (`| docker exec -i c sh`).
+    NOT covered  A wrapper whose name is quoted before its flag or host, such
+                 as `"bash" -c '...'`, `"ssh" host '...'` or `'python3' -c`.
+                 Each wrapper word must be followed by a space.
     NOT covered  A pipe or a here-document into an interpreter that is not a
                  shell, such as `python3 -`, `perl` or `node`. The guard does
                  not treat one as a wrapper, so even a named rmtree passes.
@@ -115,15 +157,27 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  `| (bash)`, `| { bash; }`, `| tee >(bash)`, `| $SHELL`,
                  `| busybox sh`, `| ssh-agent bash`, `| mksh`,
                  `base64 -d | bash`, `printf '\\x72\\x6d'` and `'r''m'`.
+    NOT covered  An escape the delete guard does not read as one: PowerShell's
+                 backtick (a backtick then n) right before rm inside an ssh
+                 wrapper (the checker's finding F01 of 2026-09-26).
+    NOT covered  A command holding a JSON lone surrogate. The hooks' JSON
+                 reader cannot print it, so each hook reads the raw JSON text
+                 instead: the delete guard then misses an rm on its own line,
+                 and the secret scan a quoted field-shaped literal.
     NOT covered  A search whose own option runs another command, such as git
                  grep's pager option. The option's text is part of a leading
                  search, so the field check skips it, as the approval skips a
                  search; the token-prefix check still reads it.
+    NOT covered  The secret scan's speed on a command at or under 8192
+                 characters in general. The worst shapes measured on
+                 2026-09-26 took under a second there, and no test here
+                 times them.
     NOT covered  Whether the permission rules in `.claude/settings.json` also
                  deny a command. This file tests the hooks alone.
-    NOT covered  `scan-write-secrets.sh`, the secret hook on Edit and Write.
-                 This file does not run it, and its own token prefix still
-                 misses a key with a hyphen or underscore after sk-.
+    NOT covered  The rest of `scan-write-secrets.sh`, the secret hook on Edit
+                 and Write: its other token prefixes and its field check on
+                 config files are not pinned here. It checks no file type
+                 outside its two lists, markdown and plain text included.
 
 Secret-shaped values are assembled from fragments at run time, so no literal
 the scanners look for ever sits in this file.
@@ -131,6 +185,7 @@ the scanners look for ever sits in this file.
 Depends on:
     - .claude/hooks/block-bash-delete.sh
     - .claude/hooks/scan-secrets.sh
+    - .claude/hooks/scan-write-secrets.sh
     - .claude/hooks/lib/_json.sh
 
 Writes:
@@ -143,6 +198,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -151,6 +207,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS = REPO_ROOT / ".claude" / "hooks"
 DELETE_GUARD = "block-bash-delete.sh"
 SECRET_SCAN = "scan-secrets.sh"
+WRITE_SCAN = "scan-write-secrets.sh"
 
 BLOCKED = 2
 ALLOWED = 0
@@ -173,6 +230,28 @@ def run_hook(hook: str, command: str) -> subprocess.CompletedProcess:
     )
     return subprocess.run(
         ["bash", str(HOOKS / hook)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT_S,
+        check=False,
+        env={**os.environ, "CLAUDE_PROJECT_DIR": str(REPO_ROOT)},
+    )
+
+
+def run_write_hook(tool: str, file_path: str, text: str) -> subprocess.CompletedProcess:
+    """Feed one Write (text as content) or Edit (text as new_string) call to the write scan."""
+    field = "content" if tool == "Write" else "new_string"
+    payload = json.dumps(
+        {
+            "session_id": "hook-regression",
+            "hook_event_name": "PreToolUse",
+            "tool_name": tool,
+            "tool_input": {"file_path": file_path, field: text},
+        }
+    )
+    return subprocess.run(
+        ["bash", str(HOOKS / WRITE_SCAN)],
         input=payload,
         capture_output=True,
         text=True,
@@ -385,6 +464,54 @@ DELETE_GUARD_BLOCKS = [
     pytest.param(
         "bash >>out.txt 2>&1 <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-after-two-redirects"
     ),
+    # The rest of the here-string and here-document shapes (the checker's
+    # finding HG2-01 of 2026-09-26; DECISIONS.md, "Three more guard gaps are
+    # closed", item c): an input redirect, a quoted target, a quoted shell name
+    # or a bracketed shell between the shell and the <<. Bash applies
+    # redirects left to right, so the here-string still feeds the shell.
+    pytest.param("bash </dev/null <<< 'rm -rf x'", id="here-string-after-devnull-input"),
+    pytest.param("bash 0<in.txt <<< 'rm -rf x'", id="here-string-after-fd0-input"),
+    pytest.param("bash <>f.txt <<< 'rm -rf x'", id="here-string-after-read-write"),
+    pytest.param("bash 3<f.txt <<< 'rm -rf x'", id="here-string-after-fd3-input"),
+    pytest.param("bash 2>&1 <&0 <<< 'rm -rf x'", id="here-string-after-input-dup"),
+    pytest.param("bash 2>&1 0<&- <<< 'rm -rf x'", id="here-string-after-input-close"),
+    pytest.param("bash</dev/null<<<'rm -rf x'", id="here-string-after-input-no-spaces"),
+    pytest.param("bash 2>\"a;b\" <<< 'rm -rf x'", id="here-string-after-quoted-target"),
+    pytest.param("\"bash\" <<< 'rm -rf x'", id="here-string-into-double-quoted-bash"),
+    pytest.param("'bash' <<< 'rm -rf x'", id="here-string-into-single-quoted-bash"),
+    pytest.param("\"/bin/sh\" <<< 'rm -rf x'", id="here-string-into-quoted-path-sh"),
+    pytest.param("(bash) <<< 'rm -rf x'", id="here-string-into-subshell-bash"),
+    pytest.param("{ bash; } <<< 'rm -rf x'", id="here-string-into-group-bash"),
+    pytest.param("(bash -s) 2>&1 <<< 'rm -rf x'", id="here-string-into-subshell-then-redirect"),
+    pytest.param("bash </dev/null <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-after-devnull-input"),
+    pytest.param("bash 0<in.txt <<'EOF'\nLANG=C rm -rf x\nEOF", id="here-doc-after-fd0-input"),
+    pytest.param("\"bash\" <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-into-quoted-bash"),
+    pytest.param("(bash) <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-into-subshell-bash"),
+    pytest.param("{ bash; } <<'EOF'\nLANG=C rm -rf x\nEOF", id="here-doc-into-group-bash"),
+    # Every command word in any letter case, not only rm and rmdir: on the
+    # case-insensitive disk a runner, a wrapper, a shell or mkfs in upper or
+    # mixed case runs as its lower-case form does (DECISIONS.md 2026-09-26,
+    # "Three more guard gaps are closed", item b).
+    pytest.param('BASH -c "rm -rf /tmp/x"', id="upper-bash-c"),
+    pytest.param('Bash -c "rm -rf /tmp/x"', id="mixed-case-bash-c"),
+    pytest.param('SH -c "rm -rf x"', id="upper-sh-c"),
+    pytest.param("echo 'rm -rf x' | BASH", id="pipe-into-upper-bash"),
+    pytest.param("echo 'rm -rf x' | Sh", id="pipe-into-mixed-case-sh"),
+    pytest.param("echo 'rm -rf x' | SUDO bash", id="pipe-into-upper-sudo-bash"),
+    pytest.param("BASH <<< 'rm -rf x'", id="here-string-into-upper-bash"),
+    pytest.param('SSH host "rm -rf /data"', id="upper-ssh-rm"),
+    pytest.param("ENV rm -rf x", id="upper-env-rm"),
+    pytest.param("SUDO rm -rf /", id="upper-sudo-rm"),
+    pytest.param("ls | XARGS rm", id="pipe-upper-xargs-rm"),
+    pytest.param("NOHUP rm -rf x &", id="upper-nohup-rm"),
+    pytest.param("MKFS.ext4 /dev/sdb1", id="upper-mkfs"),
+    pytest.param("SUDO Mkfs -t ext4 /dev/sdb1", id="upper-sudo-mixed-case-mkfs"),
+    pytest.param('bash -c "MKFS.ext4 /dev/sdb1"', id="bash-c-upper-mkfs"),
+    pytest.param("PYTHON3 -c \"import os; os.system('rm -rf ~')\"", id="upper-python3-c"),
+    pytest.param(
+        f"PYTHON3 -c \"import os; os.system('true{_BS}nrm -rf ~')\"",
+        id="upper-python3-c-escape-newline",
+    ),
 ]
 
 DELETE_GUARD_ALLOWS = [
@@ -492,6 +619,30 @@ DELETE_GUARD_ALLOWS = [
     pytest.param(
         "./install.sh 2>&1 <<< 'rm the old build'", id="here-string-into-script-after-redirect"
     ),
+    # An input redirect, a quoted shell name or a bracketed shell changes
+    # neither: a shell with no destructive word stays allowed, and a program
+    # that is not a shell stays one.
+    pytest.param("bash </dev/null <<< 'echo hi'", id="here-string-after-devnull-input-harmless"),
+    pytest.param("\"bash\" <<< 'echo hi'", id="here-string-into-quoted-bash-harmless"),
+    pytest.param("(bash) <<< 'echo hi'", id="here-string-into-subshell-bash-harmless"),
+    pytest.param("{ bash; } <<< 'echo hi'", id="here-string-into-group-bash-harmless"),
+    pytest.param(
+        "cat 0<in.txt <<EOF\nthe word rm appears here\nEOF", id="here-doc-into-cat-after-input"
+    ),
+    pytest.param("(cat) <<< 'rm the old build'", id="here-string-into-subshell-cat"),
+    pytest.param(
+        "./install.sh </dev/null <<< 'rm the old build'", id="here-string-into-script-after-input"
+    ),
+    # Any letter case keeps every whole-word edge: a program whose name only
+    # starts with SH is not a shell, rm inside a longer word is not rm, and a
+    # harmless command into an upper-case shell or runner stays allowed.
+    pytest.param("echo 'rm -rf x' | SHASUM -a 256", id="pipe-rm-text-into-upper-shasum"),
+    pytest.param("printf 'rm -rf x' | SHA256SUM", id="pipe-rm-text-into-upper-sha256sum"),
+    pytest.param("echo ARM64 RMS PERFORM | BASH", id="words-holding-rm-into-upper-bash"),
+    pytest.param("echo hi | BASH", id="pipe-harmless-into-upper-bash"),
+    pytest.param('Bash -c "echo hi"', id="mixed-case-bash-c-harmless"),
+    pytest.param("SUDO ls /var/log", id="upper-sudo-harmless"),
+    pytest.param("ENV FOO=1 make build", id="upper-env-harmless"),
 ]
 
 
@@ -606,6 +757,20 @@ SECRET_SCAN_FIELD_CHECK_KEPT = [
         f'grep -E "{_API_KEY}=abc|{_AUTH_SECRET}=abcdefgh1" .',
         id="separator-in-quoted-pattern-fails-closed",
     ),
+    # A command longer than 8192 characters is never split: it is field-checked
+    # whole, so a long search that names a field-shaped literal is blocked,
+    # where a short one is not. This fails closed on purpose (finding F02).
+    pytest.param(
+        f'grep -rn "{_API_KEY_LOWER}=settings" ' + "src/ " * 1700,
+        id="search-longer-than-8192-field-checked-whole",
+    ),
+    # The split stops after 64 pieces and field-checks the whole command, so a
+    # field-shaped literal in a search after 64 others is blocked. 64 pieces
+    # still split, as the allowed twin below shows.
+    pytest.param(
+        "grep -q x f;" * 64 + f'grep -rn "{_API_KEY_LOWER}=settings" src/',
+        id="search-chain-of-65-pieces-field-checked-whole",
+    ),
 ]
 
 SECRET_SCAN_ALLOWS = [
@@ -649,6 +814,29 @@ SECRET_SCAN_ALLOWS = [
     pytest.param("ls risk-register_for-the-next-quarter/", id="word-ending-in-risk"),
     pytest.param('grep -rn "sk-" src/', id="bare-sk-prefix"),
     pytest.param("echo sk-short-name", id="short-sk-name"),
+    # Under the two bounds of finding F02 the split still skips the searches: a
+    # chain of 64 pieces, and a long command with no literal at all.
+    pytest.param(
+        "grep -q x f;" * 63 + f'grep -rn "{_API_KEY_LOWER}=settings" src/',
+        id="search-chain-of-64-pieces-still-split",
+    ),
+    pytest.param("echo x;" * 1200, id="long-command-without-a-literal"),
+    pytest.param("grep -rn TODO " + "src/ " * 1700, id="long-search-without-a-literal"),
+]
+
+# Finding F02 of 2026-09-26: the split used to walk a long command a piece at a
+# time, in time that grew with the square of its length. These two shapes took
+# about 63 and 65 seconds, past the harness's time limit for a hook. Each must
+# now finish well inside that limit, and still be blocked.
+_LONG_COMMAND_LIMIT_S = 5.0
+
+SECRET_SCAN_LONG_COMMANDS = [
+    pytest.param(
+        "grep x f;" * 12000 + f" export {_NCBI_KEY}={_HEX_36}", id="12000-searches-then-export"
+    ),
+    pytest.param(
+        " " * 100000 + f"echo x; export {_NCBI_KEY}={_HEX_36}", id="100000-spaces-then-export"
+    ),
 ]
 
 
@@ -665,3 +853,85 @@ def test_secret_scan_field_checks_everything_but_a_leading_search(command: str) 
 @pytest.mark.parametrize("command", SECRET_SCAN_ALLOWS)
 def test_secret_scan_allows_search_and_reference(command: str) -> None:
     assert_verdict(SECRET_SCAN, command, ALLOWED)
+
+
+@pytest.mark.parametrize("command", SECRET_SCAN_LONG_COMMANDS)
+def test_secret_scan_is_fast_on_a_long_command_and_still_blocks(command: str) -> None:
+    start = time.monotonic()
+    result = run_hook(SECRET_SCAN, command)
+    elapsed = time.monotonic() - start
+    assert result.returncode == BLOCKED, (
+        f"{SECRET_SCAN} exited {result.returncode} on a {len(command)}-character command "
+        f"that sets a literal key\nstderr: {result.stderr.strip()}"
+    )
+    assert elapsed < _LONG_COMMAND_LIMIT_S, (
+        f"{SECRET_SCAN} took {elapsed:.2f}s on a {len(command)}-character command, "
+        f"over the {_LONG_COMMAND_LIMIT_S}s limit"
+    )
+
+
+# ---------------------------------------------------------------------------
+# The write scan, scan-write-secrets.sh, on Edit and Write
+#
+# Only its hyphenated-key shape is pinned here: the alternative it gained on
+# 2026-09-26, the same one the Bash secret scan carries. Source files get the
+# token-prefix check alone, so a key written into one is caught by that check
+# and nothing else. Config files also get the field check.
+# ---------------------------------------------------------------------------
+
+WRITE_SCAN_BLOCKS = [
+    pytest.param(
+        "Write", "src/app/client.py", f'client = Client(api_key="{_ROUTER_KEY_FULL}")\n',
+        id="router-key-into-python",
+    ),
+    pytest.param(
+        "Edit", "frontend/src/config.ts", f"const key = '{_ROUTER_KEY_FULL}';",
+        id="router-key-edited-into-typescript",
+    ),
+    pytest.param(
+        "Write", "scripts/run.sh", f"curl -H 'Authorization: Bearer {_ANT_KEY}' x\n",
+        id="hyphenated-key-into-shell-script",
+    ),
+    pytest.param("Write", "deploy/values.yaml", f"key: {_PROJ_KEY}\n", id="proj-key-into-yaml"),
+    pytest.param("Write", ".env", f"{_ROUTER_KEY_FULL}\n", id="bare-router-key-into-env-file"),
+]
+
+WRITE_SCAN_ALLOWS = [
+    # The check starts at a word boundary, so a name that holds sk- inside a word
+    # is not a key, however long it runs. A short sk- name is not a key either.
+    pytest.param(
+        "Write", "scripts/branch.sh", "git checkout -b chore/task-tracker-some-long-branch-name\n",
+        id="branch-name-with-task-in-shell-script",
+    ),
+    pytest.param(
+        "Edit", "src/app/names.py", 'BRANCH = "chore/task-tracker-some-long-branch-name"',
+        id="branch-name-with-task-in-python",
+    ),
+    pytest.param(
+        "Write", ".env", "BRANCH=chore/task-tracker-some-long-branch-name\n",
+        id="branch-name-with-task-in-env-file",
+    ),
+    pytest.param("Write", "src/app/flags.py", 'PREFIX = "sk-short-name"\n', id="short-sk-name"),
+    pytest.param(
+        "Write", "src/app/client.py", 'api_key = os.environ["OPENROUTER_API_KEY"]\n',
+        id="key-read-from-environment",
+    ),
+]
+
+
+@pytest.mark.parametrize(("tool", "file_path", "text"), WRITE_SCAN_BLOCKS)
+def test_write_scan_blocks_hyphenated_key(tool: str, file_path: str, text: str) -> None:
+    result = run_write_hook(tool, file_path, text)
+    assert result.returncode == BLOCKED, (
+        f"{WRITE_SCAN} exited {result.returncode} on a {tool} of a key into {file_path}"
+        f"\nstderr: {result.stderr.strip()}"
+    )
+
+
+@pytest.mark.parametrize(("tool", "file_path", "text"), WRITE_SCAN_ALLOWS)
+def test_write_scan_allows_name_that_is_not_a_key(tool: str, file_path: str, text: str) -> None:
+    result = run_write_hook(tool, file_path, text)
+    assert result.returncode == ALLOWED, (
+        f"{WRITE_SCAN} exited {result.returncode} on a {tool} into {file_path}: {text!r}"
+        f"\nstderr: {result.stderr.strip()}"
+    )
