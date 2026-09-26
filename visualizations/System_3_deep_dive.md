@@ -72,7 +72,7 @@ flowchart LR
 How a run ends early, all by the routing functions beside `_build_graph`:
 
 - A guardrail refusal ends the run with a `guard` event and `done`, trust `refuse`. A daily cap decline ends it with an `error` event and `done`. Neither is a partial answer.
-- A per-query cost cap hit before Write routes straight to Write, which ships what it has with a note saying so, trust `flag`.
+- A per-query cost cap hit, at Write's own answer call or any step before it, or a call Act skipped at the call ceiling, ends in Write returning at once (`write_node`, the `cap_exceeded` check). It sends one fixed note and a `done` event with trust `flag`, and no findings and no citations (`_partial_result_for_cap`). The findings Act already gathered are not shown.
 - A step error before Write routes straight to Write, which sends a generic error message and a refusal. The message never names the model (`_STEP_ERROR_END_USER_MESSAGES`).
 
 The guardrail, in its real order:
@@ -180,7 +180,7 @@ Which model answers each tier:
 
 Why each tier, and how it is set:
 
-- Guard: the fast, cheap tier, for yes-or-no and short classification. Output is capped at 128 tokens.
+- Guard: the fast, cheap tier, for yes-or-no and short classification. Its default output cap is 128 tokens. Two calls override it: the ask-back writer at 300 (`_CLARIFY_MAX_TOKENS`) and the sentence check at 256.
 - Plan: the mid-range tier, for classifying a question and naming its entities, and for writing Cypher when no template fits. Output is capped at 4,000 tokens.
 - Synth: the strongest tier, used to write the answer from findings that are already verified. Output is capped at 4,000 tokens.
 - Reasoning is off on all three (`effort: none`, `_TIER_REASONING`). It was measured, not assumed: on the plan tier's Cypher it cost about 27 times the latency for the same correct output, and on the synth tier it sometimes spent the whole output budget and returned nothing.
@@ -318,7 +318,7 @@ The harness is the code that bounds every model call and tool call. It sets what
 ```mermaid
 flowchart LR
     A[A step needs a model] --> B[Per-query cap check]
-    B -->|would exceed| P[Stop, partial answer]
+    B -->|would exceed| P[Stop, note only]
     B -->|fits| C[call_tier via LiteLLM]
     C -->|transient error| C2[One retry]
     C --> D[Step timeout]
@@ -329,13 +329,15 @@ flowchart LR
 
 ### The cost caps and the call ceiling
 
-- Per-query dollar cap, `PER_QUERY_COST_CAP_USD`, the specification's starter value $0.10. It is checked before every model call with a deliberately high estimate, so a call that could breach it is never sent (`harness/cost_control.py`, `check_per_query_cap`). A breach routes to Write, which ships what it has and says so.
+- Per-query dollar cap, `PER_QUERY_COST_CAP_USD`, the specification's starter value $0.10. It is checked before every model call with a deliberately high estimate, so a call that could breach it is never sent (`harness/cost_control.py`, `check_per_query_cap`). A breach routes to Write, which sends only the fixed note and a `done` event with trust `flag`, with no findings and no citations.
 - Per-user daily question count, `PER_USER_DAILY_QUERY_CAP`, starter value 100. System-wide daily dollars, `SYSTEM_DAILY_CAP_USD`, starter value $10. Both are checked first thing in Guardrail.
 - Guests: `ANON_DAILY_RUN_CAP` bounds all guest runs in a day, with a per-source share of it, checked at `POST /v1/query` (`adapters/web_sse/app.py`).
 - Every cap is a deployment setting. A missing setting raises an error naming it rather than falling back to a silent default.
 - A model call cut off by its timeout is still billed by the provider, so it is metered at the tier's full output ceiling. A cap that has to guess guesses toward stopping (`call_tier`, the cancellation branch).
-- The call ceiling: at most 20 Layer 2 and Layer 3 calls per question (`harness/call_budget.py`, `MAX_LAYER_2_3_CALLS_PER_QUERY`). They are free, so no dollar cap sees them. The two transports count them, not Act, because a retry or a fan-out happens inside a tool. Act skips calls past the ceiling and marks the answer partial. Graph calls are not counted.
+- The call ceiling: at most 20 Layer 2 and Layer 3 calls per question (`harness/call_budget.py`, `MAX_LAYER_2_3_CALLS_PER_QUERY`). They are free, so no dollar cap sees them. The two transports count them, not Act, because a retry or a fan-out happens inside a tool. Act skips the calls past the ceiling and sets the cap flag, so Write sends the same note only, with none of the findings the other calls returned. `contracts/events.py` records what people saw when it happened: a question that crossed the ceiling "refused with no citations". Graph calls are not counted.
 - Each API family has a rate pool with a bounded queue. A queued call waits at most a tenth of its question class's budget, between 0.5 and 5 seconds, then fails fast with `rate_limited`, a `retry_after` estimate and the family's name (`tools/ncbi_transport.py`).
+
+A known problem, not a design: the fixed note reads "the answer below reflects a partial result gathered so far" (`PER_QUERY_CAP_PARTIAL_RESULT_NOTE`, `harness/cost_control.py`), but nothing follows it, since Write sends no findings on this path.
 
 ### Step budgets and timeouts
 
@@ -355,9 +357,11 @@ A model-calling step's budget follows the tier that answers it, because measured
 | Repair pass | What is left of Write's 45 s, at least 5 s | `_WRITE_REPAIR_MIN_BUDGET_S` |
 | A whole `cypher_query` call, Cypher writing included | 90 s | `tools/graph_schema_constants.py` |
 | One Layer 2 or Layer 3 HTTP call | 15 s by default | `tools/ncbi_transport.py` |
-| Pathogen Detection bulk transfer | 60 s | `tools/pathogen_ftp_transport.py` |
+| Pathogen Detection isolate search | 120 s for all of one call's reads, and Act waits up to 150 s | `_TOTAL_BUDGET_S` in `tools/pathogen_detection.py`, `_LAYER_TOOL_ACT_TIMEOUT_SECONDS` in `core/graph.py` |
 
 The `cypher_query` figure is 90 seconds in code while `.claude/rules/tool-call-budgets.md` and the specification say 30. The comment above the constant gives the measured reason: writing the Cypher, not the graph read, consumed the budget. It is filed as a reconciliation item.
+
+The Pathogen Detection figure differs from the rule and the specification in the other direction. `.claude/rules/tool-call-budgets.md` and the specification state "60 seconds or more". The transport's own 60 seconds (`DEFAULT_TIMEOUT_S` in `tools/pathogen_ftp_transport.py`) applies only when a caller passes no deadline, and the tool always passes one: 120 seconds from the start of the call, shared across its reads.
 
 ### Retries
 
@@ -532,7 +536,7 @@ The team, from the skill's "The team" table. Tier names map to models in `docs/b
 | Product reviewer | A script captures, depth and medium judge | The deployed develop app at 1280 and 390 beside the prototype, the golden run, the five-line rubric | Closes anything |
 
 - The fix agent is a builder working named findings, one agent per file. The fresh verifier is a judge with no prior context.
-- The judge, adversary and verifier run as the `phase-reviewer` agent, and the product reviewer as `product-reviewer`. Both have Read, Grep, Glob and Bash, and no Write or Edit, so neither can change a file (`.claude/agents/`).
+- The judge, adversary and verifier run as the `phase-reviewer` agent, and the product reviewer as `product-reviewer`. Both have Read, Grep, Glob and Bash, and no Write or Edit tool (`.claude/agents/`). Bash can still write a file: the phase reviewer adds its findings to the phase's ledger with a shell append, `cat >>`, and the product reviewer appends its findings the same way to the one path its brief names.
 
 ```mermaid
 flowchart TD
@@ -556,7 +560,7 @@ The limits every phase runs inside (`DECISIONS.md`, 2026-09-24):
 - 8 hours from phase open to ready for the owner.
 - 8 agent dispatches, reviewers and the product reviewer included. Workers never dispatch agents.
 - Review: one judge round and one adversary round, then one fix-and-verify. There is no third round, even with the owner's authorisation.
-- A regression found inside a fix made in the same phase stops the round on the spot.
+- A regression found inside a fix made in the same phase stops the round on the spot (`.claude/skills/bossman-mode/reference/Review_rounds.md`, Rule 4).
 - Any drop in the golden answered count stops everything else landing on develop. Only the owner may accept a drop.
 
 ## Ledgers, rules, skills and hooks
@@ -706,6 +710,9 @@ A `/verify` pass at both widths will start the seven-day close for a wording or 
 
 ## What this document could not check in code
 
+- That `src/` is identical at `d042860`, `654f2d2` and `566e1ab` is taken from git, not from reading the code. Both commands below printed nothing, which means no file under `src/` differs:
+  - `git diff --stat 566e1ab d042860 -- src`
+  - `git diff --stat 654f2d2 d042860 -- src`
 - Develop's deployment settings. The develop values stated for `GUARD_MODEL`, `PLAN_MODEL` and `SYNTH_MODEL` come from `docs/architecture/Model_architecture.md`, read from the deployment on 2026-09-25. That `CLASSIFIER_PROVIDER` is `jev` on develop comes from phase 8.2's saved run records. Neither is in code, and either may have changed since.
 - The cap values on develop, `PER_QUERY_COST_CAP_USD`, `PER_USER_DAILY_QUERY_CAP`, `SYSTEM_DAILY_CAP_USD` and `ANON_DAILY_RUN_CAP`. The figures above are the specification's starter values, not develop's settings.
 - Whether develop reaches the graph directly or through the HTTPS graph query service, which `GRAPH_QUERY_URL` decides.
