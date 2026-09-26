@@ -88,7 +88,7 @@ Last updated: 2026-08-18.
 
 ## Two things to know about this folder
 
-`Claude_security_plugin_usage.md` cannot move. The locked technical specification references it at this exact path, and that spec is frozen until the Plan.md step 6.2 reconciliation. It is also a symlink into `personal-os-work` rather than a real file here, so it resolves only on a machine with that repo checked out alongside this one, and will dangle in a fresh clone or in CI. `data-engineering/` is pinned for the same reason.
+`Claude_security_plugin_usage.md` cannot move. The locked technical specification references it at this exact path, and that spec is frozen until the Plan.md step 6.2 reconciliation. It is also a symlink into the owner's private reference repository rather than a real file here, so it resolves only on a machine with that repository checked out alongside this one, and will dangle in a fresh clone or in CI. `data-engineering/` is pinned for the same reason.
 
 HTML pages here are the source, not a copy. The file in this folder is what gets edited and version controlled. Publishing derives a fragment from it with `publish_body.sh`, into a temp path rather than into the repo. Never edit a published page and expect the repo to follow; the dependency runs one way.
 

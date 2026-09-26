@@ -26,7 +26,7 @@ So there is no separate live-scrape gate. The real work is Step 2.3: refining th
 
 ## Step 2.1: the collected competency-question set
 
-The set as it stands (source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/01_Consolidated_findings.md`):
+The set as it stands (source: the owner's private notes (not published)):
 
 - 65 competency questions across three tiers: 10 Tier 1 (must-answer wedge), 28 Tier 2 (should-answer baseline), 27 Tier 3 (stretch, edge, or risky).
 - 11 personas. Strong evidence: literature researchers (1), sequence data users (2), geneticists (3), bioinformaticians (4), epidemiologists and public health (6, the strongest wedge persona), cross-database journey users (10), and AI agents / MCP / LLM consumers (11, an emerging 2025-2026 signal added during consolidation). Weak: structural biologists (5), drug discovery and pharma (7), educators and students (9). Clinicians (8) are moderate but need clinical-safety boundaries.

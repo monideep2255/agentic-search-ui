@@ -132,7 +132,7 @@ THE SOURCE MATERIAL THEY NAMED, both verified to exist on 2026-09-20: <!-- local
 
 | What | Where |
 |---|---|
-| The connection maps and per-database deep dives | `reference/personal-os-work/NIH/NCBI Technical-development-workflow/Architecture-and-databases` <!-- local-refs: allow --> |
+| The connection maps and per-database deep dives | the owner's private notes (not published) |
 | The databases paper | the `NCBI-databases-paper-09-2025` folder inside it |
 | Open this first | `NCBI_database_connection_map.md`, then `NCBI_databases_deep_dive.md` and `NCBI_enterprise_infrastructure_deep_dive.md` |
 

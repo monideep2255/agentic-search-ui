@@ -1,6 +1,6 @@
 ---
 name: skill-adapt-verify
-description: Verify that a skill copied or adapted from personal-os-work has been properly adapted for this repo. Catches personal-os paths, NWS/Django/GQuery references, broken sub-agent pointers, writing-style violations, and missing frontmatter. Use after copying any .claude/skills/* or .claude/agents/* file from reference/personal-os-work/ or from any other external repo.
+description: Verify that a skill copied or adapted from a private personal operating system repository has been properly adapted for this repo. Catches stale private-repo paths, NWS/Django/GQuery references, broken sub-agent pointers, writing-style violations, and missing frontmatter. Use after copying any .claude/skills/* or .claude/agents/* file from that private repository (typically symlinked under reference/) or from any other external repo.
 ---
 
 # skill-adapt-verify
@@ -9,8 +9,8 @@ Automates the "did I fully adapt this copied skill" check. Runs a script that gr
 
 ## When to use
 
-- After copying a skill from `reference/personal-os-work/.claude/skills/<name>/SKILL.md`
-- After copying an agent from `reference/personal-os-work/.claude/agents/<name>.md`
+- After copying a skill from the private personal operating system repository's `.claude/skills/<name>/SKILL.md`
+- After copying an agent from that same private repository's `.claude/agents/<name>.md`
 - After pulling a rule from another repo
 - Before committing any `.claude/*` file that originated outside this repo
 
@@ -23,7 +23,7 @@ Automates the "did I fully adapt this copied skill" check. Runs a script that gr
 
 The skill runs `scripts/verify_adaptation.py` against a target path. The script returns non-zero on failure and prints a categorized report. Categories checked:
 
-1. Stale paths: references to `NIH/`, `Forge/`, `Learning/`, `Automations/`, `Brainstorming/`, `Computercraft/`, `personal-os-work/`, `GROWTH_SYSTEM.md`, `EXTENSIONS.md`
+1. Stale paths: references to the private personal-OS repository's top-level folders, its own path segment, and its index files. The exact list lives in `scripts/verify_adaptation.py`, which is what the check runs.
 2. Wrong-repo content: `GQuery`, `NWS`, `django-gquery`, `USWDS`, `Confluence` branding
 3. Broken pointers: referenced agents/skills that do not exist in `.claude/agents/` or `.claude/skills/`
 4. Writing style: em dashes, bold markdown (`**text**`), emoji, title-case headings
@@ -59,7 +59,7 @@ Or run against all recently modified `.claude/` files:
 
 ## Fix conventions
 
-- Stale paths: remove the reference entirely, or replace with the equivalent in this repo (`reference/agentic-search-data-engineering/`, `reference/ncbi_ai_agents-ncbi-kg/`, `reference/personal-os-work/`)
+- Stale paths: remove the reference entirely, or replace with the equivalent in this repo (`reference/agentic-search-data-engineering/`, `reference/ncbi_ai_agents-ncbi-kg/`, or the private personal operating system repository's symlink)
 - Wrong-repo content: delete. Do not try to translate examples from other repos into ETL examples unless the original concept genuinely applies
 - Broken pointers: remove the row from the table, or replace with an existing agent/skill
 - Em dashes: replace with a comma, a period, or "in particular" / "specifically" per writing-style.md

@@ -216,7 +216,7 @@ Topics that cut across multiple sources and need explicit architecture decisions
 
 ### Step 1.11: review new intake research (30 sources) - COMPLETE (2026-07-21)
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/` (harnesses, model routing, KV cache, OpenRouter fusion, prototype to production).
+Source: the owner's private notes (not published) (harnesses, model routing, KV cache, OpenRouter fusion, prototype to production).
 
 | What to decide | Owner |
 | --- | --- |
@@ -229,7 +229,7 @@ Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/` (h
 
 ### Step 1.12: review conference learnings (3 sources) - COMPLETE (2026-07-21)
 
-Source: `reference/personal-os-work/NIH/Conference-notes/` (ISMB-2026, KGC-2026, Nodes-AI).
+Source: the owner's private notes (not published) (ISMB-2026, KGC-2026, Nodes-AI).
 
 | What to decide | Owner |
 | --- | --- |
@@ -363,7 +363,7 @@ Prerequisites: Phase 1 decisions locked. Phase 2 competency questions finalized.
 
 ### Step 3.1: outline the PRD
 
-Use the template from `reference/personal-os-work/NIH/Agentic-Search/Specs/` as starting structure. Adapt to our scope. The PRD is outcome-focused: every section ties back to an outcome a named stakeholder needs, not to features for their own sake.
+Use the template from the owner's private notes (not published) as starting structure. Adapt to our scope. The PRD is outcome-focused: every section ties back to an outcome a named stakeholder needs, not to features for their own sake.
 
 Sections (expected):
 - Problem statement
@@ -670,7 +670,7 @@ Reconcile the docs with what the build taught us. Five groups of work. The secur
 
 #### The new-intake sweep
 
-Folder: `reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/`.
+Folder: the owner's private notes (not published).
 
 - This is the one scheduled point during the build to review everything that landed there since Phase 4 locked.
 - Triage each note: architecture or product material feeds this reconciliation, harness or process material routes to the skills and rules.
@@ -934,7 +934,7 @@ I am attending KGC and Nodes AI conferences. I will encounter new ideas about:
 - UI/UX for AI systems
 
 New information flow:
-1. Collect: save reference material to `reference/personal-os-work/NIH/Agentic-Search/Reference/`
+1. Collect: save reference material to the owner's private notes (not published)
 2. Index: add to `requirements/context/Background_requirements.md` (new section or append to existing)
 3. Evaluate: does this change anything in the PRD or tech spec?
 4. If yes: update the PRD/tech spec, tag the change, rebuild affected components
@@ -1038,7 +1038,7 @@ Two things follow, and both matter for not wasting effort before the move:
 ## How new information gets incorporated
 
 1. Conference / research / new tool.
-2. Save to reference/personal-os-work/NIH/Agentic-Search/Reference.
+2. Save to the owner's private notes (not published).
 3. Add entry to requirements/context/Background_requirements.md.
 4. Is the build in progress?
    - YES: park it. Review post-v1.
@@ -1519,7 +1519,7 @@ MERGED OPEN, deliberately: three logo colours with no token, six undesigned surf
   - Build phase 2.1's premise-gate cadence folded into the tech spec as a new Section 23 subsection (PR #31).
   - The two remaining process decisions resolved (PR #32): Section 23's offline gate stays scheduled for build phase 5.1; the `release-workflow` phase-end mandate (0-of-6 real dispatches) rewritten to name the judge round, adversary round, and stage-10 gates as the real requirement.
   - All 14 items explicitly tagged "Step 6.2" as owner in the continuation prompt's Open items table closed (PR #34), researched with parallel read-only agents before any edit: four pure spec corrections plus real fixes spanning a live safety gap (F-3.1-50), a new `write_seeking` guardrail category (F-3.0-01, also catching a second hand-maintained copy of the category set in the frontend that would have silently rejected the event), two Layer 3 citation schema widenings (F-3.3-J-06, F-3.3-A-05), a `pathogen_detection` status split (F-3.5-A-09), and a live-probed 14-value `overall_status` enum widen (F-3.5-A-12, the live count differed from the 12 previously estimated). F-3.4-A-06 scheduled as its own dedicated task rather than rushed.
-  - The new-intake folder swept (PR #35): 19 notes triaged into `personal-os-work`'s permanent Reference folders. 3 phase-relevant suggestions (MCP server statelessness, signal-based feedback-loop review sampling, a semantic guardrail layer) got a one-line pointer in the continuation prompt rather than only living in the note.
+  - The new-intake folder swept (PR #35): 19 notes triaged into the owner's private reference repository's permanent Reference folders. 3 phase-relevant suggestions (MCP server statelessness, signal-based feedback-loop review sampling, a semantic guardrail layer) got a one-line pointer in the continuation prompt rather than only living in the note.
   - An informal manual smoke test run against the live system (PR #36), deliberately not the formal graded eval-harness gate: the 7 v1 must-pass moat questions asked directly, real LLM calls, real NCBI APIs, answers read by hand. The live graph was unreachable from the session that ran it (the SSH tunnel cannot be opened from a sandboxed coding session). Surfaced F-2.0-15: `think_node`'s real query classification was never built past its build-phase-2.0 stub, causing 4 of 7 must-pass questions to refuse outright and a 5th to answer near-empty. Filed unowned in `tracker/BOARD.md`; no phase in the current build order claims this scope.
   - The whole-repository security scan stays PAUSED INDEFINITELY on cost, unchanged by this reconciliation.
   - Also reconciled `tracker/BOARD.md`'s own staleness (items closed in PR #34 that were never removed from the Open flags table) and the doc-drift counts across `CLAUDE.md`, `AGENTS.md`, this document, `PROGRESS.md`, and the continuation prompt.

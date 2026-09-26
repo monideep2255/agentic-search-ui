@@ -16,8 +16,8 @@ We are in Phase 2 of System 3 planning: competency questions and the evaluation 
 2. `requirements/phase_1/Phase_1_synthesis.md` - the primary input: all Phase 1 decisions organized by topic.
 3. `requirements/phase_2/Session_July_22.md` - the Phase 2 discussion record so far.
 4. `DECISIONS.md` - all decisions (90 as of 2026-07-22).
-5. `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/01_Consolidated_findings.md` - the collected 65-CQ set being refined.
-6. `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/02_Tier1_eval_spec.md` - the 8-point rubric for Step 2.4.
+5. From the owner's private notes (not published) - the collected 65-CQ set being refined.
+6. From the owner's private notes (not published) - the 8-point rubric for Step 2.4.
 
 Phase 1 is complete. Phase 2 produces `requirements/Evaluation_playbook.md`.
 
@@ -69,7 +69,7 @@ Rules:
 Phase 2 is complete. All five steps (2.1 to 2.5) are decided and logged, and the deliverable `requirements/Evaluation_playbook.md` is assembled and graded (5 of 5). Next is Phase 3, the PRD (see Plan.md Phase 3):
 
 1. Run `/ship` to commit and push this session's planning documents.
-2. Step 3.1: outline the PRD from the template in `reference/personal-os-work/NIH/Agentic-Search/Specs/`, adapted to scope. The PRD is outcome-focused; the evaluation playbook supplies the competency questions as acceptance criteria and the personas.
+2. Step 3.1: outline the PRD from the template in the owner's private notes (not published), adapted to scope. The PRD is outcome-focused; the evaluation playbook supplies the competency questions as acceptance criteria and the personas.
 3. Step 3.2: draft the PRD from all Phase 1 and Phase 2 outputs.
 4. Step 3.3: lock the PRD.
 5. Create `requirements/phase_3/Continuation_prompt.md` when Phase 3 work begins.

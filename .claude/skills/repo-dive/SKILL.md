@@ -1,6 +1,6 @@
 ---
 name: repo-dive
-description: Deep dive an external repo (typically symlinked into reference/) and produce a first-principles analysis. Adapted from personal-os-work for the System 3 search-agent context. TRIGGER when user says "deep dive this repo", "what can we learn from X", or "analyze the reference at Y". DO NOT TRIGGER for normal code reading.
+description: Deep dive an external repo (typically symlinked into reference/) and produce a first-principles analysis. Adapted from a private personal operating system repository for the System 3 search-agent context. TRIGGER when user says "deep dive this repo", "what can we learn from X", or "analyze the reference at Y". DO NOT TRIGGER for normal code reading.
 ---
 
 # repo-dive: external repo first-principles analysis

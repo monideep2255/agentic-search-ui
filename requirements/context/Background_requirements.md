@@ -59,7 +59,7 @@ Source: `docs/architecture/Three_layer_data_architecture.md`
 
 ### Initial brainstorming (earlier iteration)
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/`
+Source: the owner's private notes (not published).
 
 Files:
 - `00_Plan_and_discussion.md`: framework for deriving competency questions from user research
@@ -69,7 +69,7 @@ Files:
 
 ### Architecture QA
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Data/Agentic_search_architecture_QA.md`
+Source: the owner's private notes (not published).
 
 Question-and-answer format covering architecture decisions and trade-offs.
 
@@ -79,7 +79,7 @@ Question-and-answer format covering architecture decisions and trade-offs.
 
 ### Competency question framework
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/01_Consolidated_findings.md`
+Source: the owner's private notes (not published).
 
 65 questions across 11 personas, organized into three tiers:
 
@@ -95,7 +95,7 @@ Tier 3 (stretch, 27 questions): edge personas, submission flows, clinical triage
 
 ### Evaluation rubric
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/02_Tier1_eval_spec.md`
+Source: the owner's private notes (not published).
 
 8-point scoring system: intent recognition, entity normalization, database routing, evidence quality, synthesis, freshness, safety, output usability. Minimum pass: 13/16.
 
@@ -159,7 +159,7 @@ Key files to reference:
 
 ## 5. Contractor architecture: NLQ and NFR baseline
 
-Source: `reference/personal-os-work/NIH/KG/Contractor/`
+Source: the owner's private notes (not published).
 
 Strategic design documents defining vision, constraints, and approved architecture for NLQ systems at NLM scale.
 
@@ -217,7 +217,7 @@ First-principles breakdown: `Contractor/April 21/NLM_KG_NFR_and_NLQ_first_princi
 
 ### NLM KG lessons synthesized for System 3
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/user-side/Lessons_from_NLM_KG_contractor_for_System_3.md`
+Source: the owner's private notes (not published).
 
 Prioritized recommendations:
 1. Entity grounding tool (high impact, low cost): pre-resolve entity mentions to canonical IDs before Cypher
@@ -270,7 +270,7 @@ CURIE convention: `NCBIGene:7157`, `ClinVar:123456`, `PMID:12345678`, `MONDO:000
 
 ### Data engineering fixes needed
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-must-update/V1_shoring_up_recommendations.md`
+Source: the owner's private notes (not published).
 
 - Extend PREFIX_TO_CATEGORY map (missing prefixes default to NamedThing)
 - Add connection recovery with exponential backoff
@@ -287,7 +287,7 @@ Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-must-u
 
 ## 7. Agent and harness engineering research
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system/`
+Source: the owner's private notes (not published).
 
 22 research documents on agent architecture, memory, evaluation, and LLM optimization. Key ones for System 3:
 
@@ -342,7 +342,7 @@ Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/system/`
 
 ### Agents of Chaos: red-teaming autonomous AI agents
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/security/Red_teaming_agents_of_chaos.md`
+Source: the owner's private notes (not published).
 
 Original paper: arXiv:2602.20021. A red-teaming study of autonomous AI agents that documents eleven case studies of how agents fail in realistic setups, even when built with current best practices.
 
@@ -365,7 +365,7 @@ Feeds into: security and threat model (Plan Step 1.10), guardrail implementation
 
 ### Hook model for adoption
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/user-side/Hook_model_and_belief_design_Nir_Eyal.md`
+Source: the owner's private notes (not published).
 
 - Trigger (internal): researcher has a question, needs evidence synthesis
 - Action: ask plain language question, get cited answer
@@ -376,26 +376,26 @@ Goal: researcher with a genomics question automatically thinks "ask the system f
 
 ### AI adoption gap
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/user-side/Bridging_the_AI_adoption_gap_enterprise.md`
+Source: the owner's private notes (not published).
 
 How to bridge the gap between AI capability and actual user adoption in enterprise/research settings.
 
 ### Build to learn vs. build to earn
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/user-side/Build_to_learn_vs_build_to_earn.md`
+Source: the owner's private notes (not published).
 
 Framework for deciding when a build is for learning vs. production.
 
 ### Board session notes
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/thoughts/`
+Source: the owner's private notes (not published).
 
 - `Board_session_collaboration_April_23.md`: collaboration patterns
 - `Board_session_collaborator_emotional_clarity_April_25.md`: emotional clarity in decision-making
 
 ### Meeting notes
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Meetings/NCBI-coordination-contact/1_April_30.md`
+Source: the owner's private notes (not published).
 
 Coordination meeting with an NCBI coordination contact.
 
@@ -419,7 +419,7 @@ Coordination meeting with an NCBI coordination contact.
 
 ### Spec templates
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Specs/`
+Source: the owner's private notes (not published).
 
 Templates for PRD and technical specification documents. Use these as the starting structure.
 

@@ -718,7 +718,7 @@ One subsection per tool, drawn directly from the capability sheet (`requirements
 
 Every `source_url` pattern below is Section 9.3's strict host-pinned regex (`NCBI_RECORD_HOST`, `CLINICALTRIALS_HOST`), never the looser any-subdomain form. A citation always resolves to the human-facing record page (`www.ncbi.nlm.nih.gov/...`, `pubmed.ncbi.nlm.nih.gov/...`), never the `eutils.` or `api.` fetch host the tool actually called to retrieve the data. This is the concrete enforcement point for Section 9.3's rule; a tool schema that used the looser pattern would let a fetch host leak into a citation, defeating the rule Section 9.3 states.
 
-The per-competency-question required IDs and fields (`reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/02_Tier1_eval_spec.md`) are the input-output contract each schema below is checked against: VCV/RCV accessions for ClinVar, nstd/nsv/esv for dbVar, MIM IDs for OMIM, CUIs for MedGen, NCT IDs for ClinicalTrials.gov, rsIDs and SPDI for variants. Every field that spec names as required for a Tier 1 answer appears in at least one schema below.
+The per-competency-question required IDs and fields (from the owner's private notes, not published) are the input-output contract each schema below is checked against: VCV/RCV accessions for ClinVar, nstd/nsv/esv for dbVar, MIM IDs for OMIM, CUIs for MedGen, NCT IDs for ClinicalTrials.gov, rsIDs and SPDI for variants. Every field that spec names as required for a Tier 1 answer appears in at least one schema below.
 
 ### 6.1 cypher_query
 

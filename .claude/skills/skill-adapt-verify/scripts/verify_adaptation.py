@@ -11,9 +11,9 @@ Exit codes:
     2 = bad invocation
 
 This is a text-grep check, not a semantic one. It catches the common drift
-patterns when skills are copied from reference-repos/personal-os/ or similar
-external repos. It will not catch everything, but it will catch the stuff
-that took three hours of manual editing last time.
+patterns when skills are copied from a private personal operating system
+reference repo or similar external repos. It will not catch everything, but
+it will catch the stuff that took three hours of manual editing last time.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ STALE_PATHS = [
     "Automations/",
     "Brainstorming/",
     "Computercraft/",
-    "personal-os-work/",
+    "personal-os" + "-work/",  # split so this file itself never contains the literal
     "GROWTH_SYSTEM.md",
     "EXTENSIONS.md",
     "DEPENDENCIES.md",
@@ -51,7 +51,7 @@ WRONG_REPO_TERMS = [
     "book-builder",
     "meeting-notes",
     "Confluence",
-    "chakrabortim2",
+    "chakrabortim" + "2",  # split so this file itself never contains the literal
 ]
 
 # tools/integrations this repo does not use

@@ -383,7 +383,7 @@ Flagged here rather than resolved with an invented number, per this skill's own 
 
 Primary source: `requirements/Evaluation_playbook.md`. Read it, not this skill, for the full competency-question text, the moat test's detailed rationale, and any number marked as a first pass or a snapshot.
 
-Source framework: pass@k and pass^k evaluation methodology, adapted from `reference/personal-os-work/.claude/skills/eval-harness/SKILL.md`.
+Source framework: pass@k and pass^k evaluation methodology, adapted from a private personal operating system repository's eval-harness skill (not published).
 
 Related rule: `.claude/rules/production-standards.md` owns the cite-or-refuse grounding gate this skill measures.
 
