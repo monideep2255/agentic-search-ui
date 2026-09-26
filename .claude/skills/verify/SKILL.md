@@ -120,7 +120,12 @@ node ../.claude/skills/verify/scripts/capture.mjs \
 - A screen reached by clicks or a question needs a JSON spec. `specs/home_and_answer.json` is the worked example, including how to reach the same screen in the prototype.
 - An agent worktree has no `frontend/node_modules`. Run the command from the main checkout's `frontend/` with the worktree's script path. The output still lands in the worktree, since the script derives every path from its own location.
 
-Per screen, at 1280x900 and at 390x844, each width in a fresh browser so a phone-width page loads at phone width:
+The widths are exactly 1280 and 390, by default 1280x900 and 390x844. A spec with any other widths is refused, because a failing screen could otherwise pass by dropping the width it fails at.
+
+- `--allow-partial-widths` runs other widths for a diagnosis.
+- Such a run prints, and records in `results.json`, that it cannot start the seven-day close.
+
+Per screen and per width, each width in a fresh browser so a phone-width page loads at phone width:
 
 - A full-page screenshot, `<screen>_<width>.png`, and the first screen a person sees on landing, `<screen>_<width>_fold.png`.
 - Horizontal overflow, the page's `scrollWidth` minus its `clientWidth`. Anything above zero fails, and the script lists up to five elements whose right edge passes the screen's, as candidates for the cause.
@@ -128,7 +133,7 @@ Per screen, at 1280x900 and at 390x844, each width in a fresh browser so a phone
 - An axe scan with the WCAG 2.1 A and AA tags `frontend/e2e/accessibility.spec.ts` uses. Every serious or critical violation is listed, and any one fails.
 - The same screen in `docs/build/design/design-system/prototype/app.html` at the same width, `prototype_<screen>_<width>.png`, when the spec says how to reach it there.
 
-It writes into `testing/Developer/reports/<date>_verify_<topic>/`:
+It writes into a new folder for every run, `testing/Developer/reports/<date>_verify_<topic>_<HHMMSS>Z/`, named by the UTC time. It refuses a folder that already holds files unless `--overwrite` is passed, so a rerun never overwrites committed evidence. The folder holds:
 
 - The screenshots.
 - `results.json`: every measurement, and one pass or fail line per scripted check.
@@ -136,7 +141,19 @@ It writes into `testing/Developer/reports/<date>_verify_<topic>/`:
 
 It replaces the repository root and the home folder with `<repo-root>` and `<home>` before anything reaches disk.
 
-Exit codes: 0 when every scripted check passed, 1 when at least one failed, 2 when the target was wrong or unreachable. Poll it until it exits. A question runs once per width, so one answer screen costs two of a guest's five answers and a few cents.
+Exit codes:
+
+- 0: every scripted check passed.
+- 1: at least one failed, or no check ran at all.
+- 2: the target was wrong or unreachable, or the arguments, the widths or the output folder were refused.
+
+Poll it until it exits. A question runs once per width, so one answer screen costs two of a guest's five answers and a few cents.
+
+`--self-test` checks the script's guards with no browser and no network, and `tests/ci/test_verify_capture.py` runs it in CI. The guards it checks:
+
+- The widths.
+- The output folder.
+- The exit code when no check ran.
 
 ## Step 4: judge
 
@@ -166,13 +183,13 @@ Run them exactly as written there. The `/verify` report names their result, or n
 ## Step 6: the loop
 
 - A failing line goes back to whoever built the change, with the line and its file.
-- They fix it, and `/verify` runs again with the same spec into a new folder, `<date>_verify_<topic>_round2`.
+- They fix it, and `/verify` runs again with the same spec. The rerun gets its own new folder, and its report names the round.
 - At most two rounds (`.claude/rules/self-eval-loop.md`). If a line still fails after round two, stop and name it: the change ships with that line named as open, or it is reverted. There is no third round.
 - Never make a check pass by changing the check. Dropping a failing screen or width from the spec, or rewording a line to pass, is a failed run (`.claude/rules/goal-contracts.md`).
 
 ## Step 7: closing
 
-- A wording or layout card that passes at both widths, 1280 and 390, starts the seven-day close. The owner's retest is a spot check, and the owner can object or reopen within the seven days (DECISIONS.md 2026-09-26, "A `/verify` pass at 1280 and 390 pixels starts the seven-day close").
+- A wording or layout card that passes at both widths, 1280 and 390, starts the seven-day close. A run with `--allow-partial-widths` never does. The owner's retest is a spot check, and the owner can object or reopen within the seven days (DECISIONS.md 2026-09-26, "A `/verify` pass at 1280 and 390 pixels starts the seven-day close").
 - The lead writes the "closes on" date on the card, as `.claude/skills/bossman-mode/reference/UI_fix_loop.md` step 8 says.
 - A card that changes answers waits for the owner's verdict, whatever `/verify` says.
 - `/verify` never moves a card or closes a ticket itself.
@@ -182,7 +199,7 @@ Run them exactly as written there. The `/verify` report names their result, or n
 The report is `report.md` in the same folder. An agent that may not write files returns it as text, and the lead saves it there. It is short, in this order:
 
 1. The target: the web and API URLs, `app_env`, the local checkout's commit and the deployed commit where known, and the round.
-2. Every check line, fails first, in this form:
+2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, and no others:
 
 ```text
 - FAIL | answer at 390 | horizontal overflow | 14 px | testing/Developer/reports/<folder>/results.json
@@ -192,7 +209,8 @@ The report is `report.md` in the same folder. An agent that may not write files 
 
 3. For an answer-path change, the golden run and rubric results, or that they are still to run.
 4. What was not captured and why, stated rather than implied.
-5. The verdict: passed at both widths, or the lines still failing.
+5. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. The line itself stays FAIL until the owner says otherwise.
+6. The verdict: PASS at both widths, or FAIL with the lines still failing.
 
 Before committing the folder, prove it holds no local path, secret or personal data. `grep -rlF "$HOME" <folder>` must print nothing, and read the `.txt` files. The capture runs as a guest, so no account appears on screen.
 

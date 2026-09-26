@@ -47,9 +47,15 @@
  * click {selector}, press {key, selector?}, waitFor {selector, timeoutMs?,
  * state?}, wait {ms}. Selectors are Playwright selector strings.
  *
- * What it measures, per screen and per width (default 1280x900 and 390x844),
- * each width in a fresh browser context so a phone-width page loads at phone
- * width rather than being resized after landing:
+ * Widths: exactly 1280 and 390, by default 1280x900 and 390x844. A spec
+ * whose widths are anything else is refused, because a failing screen could
+ * otherwise pass by dropping the width it fails at. --allow-partial-widths
+ * runs other widths for a diagnosis, and such a run says, on screen and in
+ * results.json, that it cannot start the seven-day close.
+ *
+ * What it measures, per screen and per width, each width in a fresh browser
+ * context so a phone-width page loads at phone width rather than being
+ * resized after landing:
  *   - a full-page screenshot, and a first-screen one of what a person sees
  *     on landing. A sticky or fixed element, such as the app's footer band, is
  *     drawn where the first screen ends in the full-page shot, not at the
@@ -70,8 +76,10 @@
  * with reduced motion so axe reads the settled colours, as the accessibility
  * suite does.
  *
- * Writes, into testing/Developer/reports/<date>_verify_<topic>/ unless --out
- * names another folder inside the repository:
+ * Writes, into testing/Developer/reports/<date>_verify_<topic>_<HHMMSS>Z/,
+ * one new folder per run by the UTC time, unless --out names another folder
+ * inside the repository. A folder that already holds files is refused unless
+ * --overwrite is passed, so a rerun never overwrites committed evidence:
  *   - <screen>_<width>.png, <screen>_<width>_fold.png,
  *     prototype_<screen>_<width>.png
  *   - <screen>_<width>.txt when the screen names saveText
@@ -80,8 +88,12 @@
  * No absolute local path is written: the repository root and the home folder
  * are replaced with <repo-root> and <home> before anything reaches disk.
  *
- * Exit codes: 0 every scripted check passed, 1 at least one failed,
- * 2 the target was wrong or unreachable, or the arguments were invalid.
+ * Exit codes: 0 every scripted check passed, 1 at least one failed or no
+ * check ran at all, 2 the target was wrong or unreachable, or the arguments,
+ * the widths or the output folder were refused.
+ *
+ * --self-test runs the guards above against fixed inputs, with no browser
+ * and no network, and exits 1 if any guard no longer holds.
  */
 
 import { execFileSync } from "node:child_process";
@@ -103,6 +115,9 @@ const DEFAULT_WIDTHS = [
   { width: 1280, height: 900 },
   { width: 390, height: 844 },
 ];
+const REQUIRED_WIDTHS = [1280, 390];
+const PARTIAL_WIDTHS_NOTE =
+  "partial widths: this run does not cover exactly 1280 and 390, so it cannot start the seven-day close";
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 const STEP_TIMEOUT_MS = 30_000;
 const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,39}$/i;
@@ -118,7 +133,10 @@ function fail(message, code = 2) {
 // ------------------------------------------------------------------ args
 
 function parseArgs(argv) {
-  const args = { screens: [], target: "develop", settleMs: 1500, prototype: true };
+  const args = {
+    screens: [], target: "develop", settleMs: 1500, prototype: true,
+    allowPartialWidths: false, overwrite: false,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const next = () => {
@@ -137,6 +155,9 @@ function parseArgs(argv) {
       case "--commit": args.commit = next(); break;
       case "--settle-ms": args.settleMs = Number(next()); break;
       case "--no-prototype": args.prototype = false; break;
+      case "--allow-partial-widths": args.allowPartialWidths = true; break;
+      case "--overwrite": args.overwrite = true; break;
+      case "--self-test": args.selfTest = true; break;
       case "--help": case "-h": args.help = true; break;
       default: throw new UsageError(`unknown argument ${JSON.stringify(flag)}`);
     }
@@ -147,7 +168,8 @@ function parseArgs(argv) {
 const USAGE = `usage: node capture.mjs (--spec <file.json> | --screen <name>=<path> ...)
          [--topic <slug>] [--target develop|local] [--web <url>] [--api <url>]
          [--out <dir inside the repository>] [--commit <deployed sha>]
-         [--settle-ms <ms>] [--no-prototype]`;
+         [--settle-ms <ms>] [--no-prototype] [--allow-partial-widths] [--overwrite]
+       node capture.mjs --self-test`;
 
 // --------------------------------------------------------------- targets
 
@@ -221,6 +243,58 @@ function checkSteps(steps, where) {
   });
 }
 
+/**
+ * Refuse any widths but exactly 1280 and 390, unless partial widths are
+ * allowed. Returns whether the widths are complete. An empty list is refused
+ * either way, since it would run no check at all.
+ */
+function validateWidths(widths, allowPartial) {
+  if (!Array.isArray(widths) || widths.length === 0) {
+    throw new UsageError("widths must be a non-empty list: a run with no width checks nothing");
+  }
+  for (const [i, entry] of widths.entries()) {
+    if (!Number.isInteger(entry?.width) || entry.width <= 0 || !Number.isInteger(entry?.height) || entry.height <= 0) {
+      throw new UsageError(`widths[${i}] needs a positive integer width and height`);
+    }
+  }
+  const given = widths.map((entry) => entry.width).sort((a, b) => a - b);
+  const required = [...REQUIRED_WIDTHS].sort((a, b) => a - b);
+  const complete = given.length === required.length && given.every((w, i) => w === required[i]);
+  if (!complete && !allowPartial) {
+    throw new UsageError(
+      `widths must be exactly ${REQUIRED_WIDTHS.join(" and ")}, got ${given.join(", ")}. ` +
+        "Pass --allow-partial-widths for a diagnosis run, which cannot start the seven-day close",
+    );
+  }
+  return complete;
+}
+
+/** Refuse a folder that already holds files, unless overwriting was asked for. */
+function checkOutDir(outDir, overwrite) {
+  if (overwrite || !fs.existsSync(outDir)) return;
+  if (!fs.statSync(outDir).isDirectory()) throw new UsageError(`${rel(outDir)} exists and is not a folder`);
+  const held = fs.readdirSync(outDir);
+  if (held.length > 0) {
+    throw new UsageError(
+      `${rel(outDir)} already holds ${held.length} file(s). A rerun never overwrites evidence: ` +
+        "let the run take its own new folder, or pass --overwrite",
+    );
+  }
+}
+
+/** One new folder per run: the date and the UTC time to the second. */
+function defaultOutDir(now, topic) {
+  const iso = now.toISOString();
+  const stamp = iso.slice(11, 19).replace(/:/g, "");
+  return path.join(REPO_ROOT, "testing", "Developer", "reports", `${iso.slice(0, 10)}_verify_${topic}_${stamp}Z`);
+}
+
+/** 0 only when at least one check ran and none failed. */
+function exitCodeFor(checks) {
+  if (checks.length === 0) return 1;
+  return checks.some((c) => c.result === "fail") ? 1 : 0;
+}
+
 function loadSpec(args) {
   let spec = { screens: [] };
   if (args.spec) {
@@ -255,6 +329,7 @@ function loadSpec(args) {
     if (screen.prototype) checkSteps(screen.prototype.steps ?? [], `${screen.name}.prototype`);
   }
   spec.widths = spec.widths ?? DEFAULT_WIDTHS;
+  spec.widths_complete = validateWidths(spec.widths, args.allowPartialWidths);
   return spec;
 }
 
@@ -390,6 +465,7 @@ async function main() {
       console.log(USAGE);
       return 0;
     }
+    if (args.selfTest) return selfTest();
     spec = loadSpec(args);
     target = resolveTarget(args);
   } catch (error) {
@@ -397,11 +473,17 @@ async function main() {
     throw error;
   }
 
-  const date = new Date().toISOString().slice(0, 10);
-  const outDir = path.resolve(
-    args.out ?? path.join(REPO_ROOT, "testing", "Developer", "reports", `${date}_verify_${spec.topic}`),
-  );
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const outDir = path.resolve(args.out ?? defaultOutDir(now, spec.topic));
   if (!outDir.startsWith(REPO_ROOT + path.sep)) fail("--out must be a folder inside the repository");
+  try {
+    checkOutDir(outDir, args.overwrite);
+  } catch (error) {
+    if (error instanceof UsageError) fail(error.message);
+    throw error;
+  }
+  if (!spec.widths_complete) console.log(PARTIAL_WIDTHS_NOTE);
 
   const health = await readHealth(target.api);
   const results = {
@@ -413,6 +495,8 @@ async function main() {
     checkout_head: gitHead(),
     deployed_commit: args.commit ?? null,
     widths: spec.widths,
+    widths_complete: spec.widths_complete,
+    seven_day_close: spec.widths_complete ? "eligible if every check passes" : PARTIAL_WIDTHS_NOTE,
     context: { reduced_motion: "reduce", axe_tags: AXE_TAGS, settle_ms: args.settleMs },
     screens: [],
     checks: [],
@@ -579,13 +663,98 @@ async function main() {
   }
   console.log(`awaiting judgement: ${results.awaiting_judgement.length} screenshot pairs`);
   console.log(`scripted checks: ${results.summary.pass} pass, ${results.summary.fail} fail`);
+  if (results.checks.length === 0) console.log("no scripted check ran, so nothing passed");
+  if (!spec.widths_complete) console.log(PARTIAL_WIDTHS_NOTE);
   console.log(`results: ${rel(path.join(outDir, "results.json"))}`);
-  return failed === 0 ? 0 : 1;
+  return exitCodeFor(results.checks);
+}
+
+// -------------------------------------------------------------- self-test
+
+/**
+ * The guards that keep a failing screen from passing, each asserted against
+ * fixed inputs. Each assertion must go red when its guard is removed.
+ */
+function selfTest() {
+  const failures = [];
+  let ran = 0;
+  const expect = (label, condition) => {
+    ran += 1;
+    if (!condition) failures.push(label);
+  };
+  const refuses = (fn, about = /./) => {
+    try {
+      fn();
+      return false;
+    } catch (error) {
+      return error instanceof UsageError && about.test(error.message);
+    }
+  };
+
+  // Widths: exactly 1280 and 390, or refused.
+  expect("the default widths are complete", validateWidths(DEFAULT_WIDTHS, false) === true);
+  expect("1280 and 390 in either order are complete",
+    validateWidths([{ width: 390, height: 844 }, { width: 1280, height: 900 }], false) === true);
+  expect("1280 alone is refused", refuses(() => validateWidths([{ width: 1280, height: 900 }], false)));
+  expect("390 alone is refused", refuses(() => validateWidths([{ width: 390, height: 844 }], false)));
+  expect("1280 twice is refused",
+    refuses(() => validateWidths([{ width: 1280, height: 900 }, { width: 1280, height: 900 }], false)));
+  expect("an extra width is refused",
+    refuses(() => validateWidths([...DEFAULT_WIDTHS, { width: 768, height: 1024 }], false)));
+  expect("an empty list is refused", refuses(() => validateWidths([], false)));
+  expect("an empty list is refused even with partial widths allowed", refuses(() => validateWidths([], true)));
+  expect("1280 alone runs with partial widths allowed, marked incomplete",
+    validateWidths([{ width: 1280, height: 900 }], true) === false);
+  expect("a spec with one width is refused by loadSpec", refuses(() => loadSpecFrom({
+    topic: "t", widths: [{ width: 1280, height: 900 }], screens: [{ name: "home" }],
+  }, false), /widths must be exactly/));
+  expect("a spec with both widths loads and is marked complete", loadSpecFrom({
+    topic: "t", widths: DEFAULT_WIDTHS, screens: [{ name: "home" }],
+  }, false).widths_complete === true);
+
+  // Exit code: no check is not a pass.
+  expect("no check ran exits non-zero", exitCodeFor([]) !== 0);
+  expect("one fail exits 1", exitCodeFor([{ result: "pass" }, { result: "fail" }]) === 1);
+  expect("all passing exits 0", exitCodeFor([{ result: "pass" }]) === 0);
+
+  // Output folder: never overwrite evidence.
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "verify-self-test-"));
+  const held = path.join(scratch, "held");
+  fs.mkdirSync(held);
+  fs.writeFileSync(path.join(held, "results.json"), "{}\n");
+  expect("a folder that holds files is refused", refuses(() => checkOutDir(held, false), /already holds/));
+  expect("--overwrite lets a folder that holds files through", !refuses(() => checkOutDir(held, true)));
+  const emptyDir = path.join(scratch, "empty");
+  fs.mkdirSync(emptyDir);
+  expect("an empty folder is accepted", !refuses(() => checkOutDir(emptyDir, false)));
+  expect("a new folder is accepted", !refuses(() => checkOutDir(path.join(scratch, "new"), false)));
+  fs.rmSync(scratch, { recursive: true, force: true });
+  const first = defaultOutDir(new Date("2026-09-26T19:03:12Z"), "t");
+  const second = defaultOutDir(new Date("2026-09-26T19:03:13Z"), "t");
+  expect("two runs a second apart get different folders", first !== second);
+  expect("the default folder carries the date and the UTC time",
+    path.basename(first) === "2026-09-26_verify_t_190312Z");
+
+  for (const label of failures) console.log(`self-test FAIL: ${label}`);
+  console.log(`self-test: ${ran - failures.length} of ${ran} passed`);
+  return failures.length === 0 ? 0 : 1;
+}
+
+function loadSpecFrom(spec, allowPartialWidths) {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "verify-spec-")), "spec.json");
+  fs.writeFileSync(file, JSON.stringify(spec));
+  try {
+    return loadSpec({ spec: file, screens: [], allowPartialWidths });
+  } finally {
+    fs.rmSync(path.dirname(file), { recursive: true, force: true });
+  }
 }
 
 function gitHead() {
   try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).trim();
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      cwd: REPO_ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return null;
   }
