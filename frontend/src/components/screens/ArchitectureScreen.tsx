@@ -439,7 +439,7 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
           </StopText>
 
           <StopText>
-            The search agent gives one graph query 90 seconds and accepts at most 500 rows back. A
+            The search agent gives one graph query 30 seconds and accepts at most 500 rows back. A
             query that would exceed either says so rather than leaving you waiting.
           </StopText>
 
@@ -474,11 +474,11 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
 
         <JourneyStop index={4} last title="All three layers feed the search agent">
           <StopText>
-            The agent reads layer 1 first, because one query over the snapshot returns a stored
-            link in milliseconds, and it reaches layers 2 and 3 live while you wait for whatever
-            the snapshot cannot answer or cannot keep current. Seven tools cover the three layers,
-            each one reaching exactly one of them and one access path within it, and each carrying
-            its own time limit in code rather than one the model chooses.
+            The agent reads all three layers at once: the tools Plan chose go out together, so the
+            graph query and any live layer 2 and 3 calls run in parallel rather than one after
+            another, and the answer waits on whichever finishes last. Seven tools cover the three layers,
+            each one reaching exactly one of them and one access path within it, and each
+            carrying its own time limit in code rather than one the model chooses.
           </StopText>
 
           <StopText>
