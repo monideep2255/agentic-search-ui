@@ -68,7 +68,7 @@ How to read it:
 - Per change. For a numbered phase, the highest position any of its tickets needs sets the phase's position.
 - Up, when in doubt. A change whose position is argued is at the higher one.
 - An answer-path change is position 2 at least, and the golden consistency run blocks it at every position. The delegation of 2026-09-25 keeps this in so many words: an answer-path change still gets its review rounds and the golden run.
-- The product reviewer runs before the owner's retest at every position, and the owner's verdict closes at every position.
+- The product reviewer runs before the owner's retest at every position, and the owner's verdict closes at every position, with one exception: a wording or layout card the product reviewer passed at both widths closes by itself seven days after reaching Retest unless the owner objects (the product owner's decision of 2026-09-25 (DECISIONS.md, "A wording or layout card closes by itself seven days after reaching Retest")).
 
 Two shapes of work run through the dial:
 
@@ -131,7 +131,7 @@ Three halves of verification, and the reason each exists:
 
 - Agents verify the engineering. The judge asks whether it works, whether it is correct and whether it is safe to ship, and must produce cited evidence for every claim. The adversary asks whether it can be made to fail in a way nobody wrote a check for.
 - The product reviewer pre-screens the product. It looks at the deployed screens at 1280 and 390 beside the design, asks the golden questions again, and reads the answers against the five-line rubric. It closes nothing.
-- The product owner verifies the product. Is this the right thing to have built, does it meet the user need, and does it actually feel right. No agent can answer that last one, and their verdict is the only thing that sets `done`.
+- The product owner verifies the product. Is this the right thing to have built, does it meet the user need, and does it actually feel right. No agent can answer that last one, and their verdict is the only thing that sets `done`, apart from the seven-day close of a wording or layout card they have not objected to.
 
 The adversary sits on the boundary. It hunts the confident wrong answer, an engineering failure in mechanism and a product failure in consequence. It belongs to the agent half because finding it is mechanical; what it protects is the trust moat, which is a product concern.
 
@@ -180,7 +180,7 @@ flowchart TD
   K -. answer rate drops .-> N
 ```
 
-A pull request exists at position 3 and for every numbered phase. Where there is one, the owner merging it after reading the checkpoint is what lands the change on develop. Develop then deploys, the product reviewer runs against it and the owner retests there. Tickets merge at `in-review` and reach `done` only on the owner's verdict.
+A pull request exists at position 3 and for every numbered phase. Where there is one, the owner merging it after reading the checkpoint is what lands the change on develop. Develop then deploys, the product reviewer runs against it and the owner retests there. Tickets merge at `in-review` and reach `done` only on the owner's verdict, or by the seven-day close of a wording or layout card the reviewer passed.
 
 The order of work, at every position, is what a person sees first: answer quality and speed ahead of technical specification Section 25's order (DECISIONS.md, 2026-09-24). Section 25 still says what each phase delivers and which dependencies are real. It no longer says what comes next.
 
@@ -204,7 +204,7 @@ Each change walks these stages. The dial says which of them run:
 | 8 | Checkpoint, tickets left at `in-review`, the pull request where one exists | Lead, clerk | clerk speed | low |
 | 9 | Read the checkpoint and merge, where there is a pull request | Product owner | human | n/a |
 | 10 | Product review of the deployed develop app; the golden consistency run blocks an answer-path change | Product reviewer: a script captures, the model judges | depth | medium |
-| 11 | Retest on develop; the verdict sets `done` or sends defects back to stage 5 | Product owner | human | n/a |
+| 11 | Retest on develop; the verdict sets `done` or sends defects back to stage 5; a wording or layout card the reviewer passed closes after seven days without an objection | Product owner | human | n/a |
 
 Recording what broke is not a stage. Whoever hits a failure that cost more than five minutes writes it to `LEARNINGS.md` before continuing (the `learnings` skill).
 

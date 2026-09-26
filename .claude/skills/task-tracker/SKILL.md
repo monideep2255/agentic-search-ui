@@ -85,7 +85,7 @@ One writer per state. This is the rule that keeps parallel agents from corruptin
 | `blocked` | Cannot proceed, reason required | The builder that hit the block |
 | `in-review` | Builder done, awaiting the judge where the dial runs one, then the owner's verdict | The builder that finished |
 | `rejected` | Judge or adversary found a defect, reason required | Judge only |
-| `done` | The judge passed with evidence where a judge ran, then the product owner's retest on develop approved it (the cadence's stage 11) | The lead records the owner's verdict; never the builder, and never on a judge pass alone |
+| `done` | The judge passed with evidence where a judge ran, then the product owner's retest on develop approved it (the cadence's stage 11), or, for a wording or layout card the product reviewer passed at both widths, seven days passed in Retest with no objection from the owner | The lead records the owner's verdict or the seven-day close; never the builder, and never on a judge pass alone |
 
 The builder that did the work never marks it done. That is the maker-cannot-sign-off split from `self-eval-loop.md`, applied to the record.
 
@@ -176,7 +176,10 @@ Open a phase (`--open N.M`):
 
 Status (`--status`): print the open ledgers' tickets grouped by status, blocked tickets first with their reasons, then the board's Build in progress column.
 
-Close a ticket (`--close`): record the evidence in the ticket's Evidence block (the judge's, where a judge ran) and append the history line. Leave the ticket at `in-review`; `done` is set when the lead records the owner's verdict.
+Close a ticket (`--close`): record the evidence in the ticket's Evidence block (the judge's, where a judge ran) and append the history line. Leave the ticket at `in-review`. `done` is set when the lead records one of two things:
+
+- The owner's verdict.
+- The seven-day close, for a wording or layout card the product reviewer passed at both widths.
 
 Phase close: every ticket in the phase file is `done` or explicitly deferred with a reason. A phase with an open ticket is not complete, regardless of what the builders reported.
 

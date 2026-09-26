@@ -139,6 +139,12 @@ The report is short and ranked, because the owner reads it before retesting:
 
 Then stop. The owner retests, and their verdict moves the item.
 
+For a wording or layout card, one more line: whether it passed at both widths, 1280 and 390.
+
+- A pass starts the seven-day clock in the UI fix loop's step 8, the product owner's decision of 2026-09-25.
+- A fail leaves the card waiting for the owner's verdict.
+- A card that changes answers always waits for the owner's verdict.
+
 ## What is automated, and what waits
 
 Automate last, and only what already exists. The consistency run and the live journeys already exist, so they are the capture step today. Nothing new gets automated, including a nightly schedule on develop, until the product review has run by hand on two phases and the owner has seen both reports. It has run on phases 8.1 and 8.2; the schedule is still the owner's to ask for.
