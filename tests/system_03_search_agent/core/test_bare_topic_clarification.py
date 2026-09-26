@@ -855,6 +855,162 @@ async def test_a_gene_question_never_waits_for_the_literature_decision(
 
 
 # ---------------------------------------------------------------------------
+# Build phase 8.6 fix round (F-8.6-A14, A03, J08): Plan reads the literature
+# decision with the late-read grace Write gives its own, and no step waits on
+# a decision past its own budget. A decision is made to hang and the grace or
+# the budget is shrunk, so the arms run fast; they pin that the step moves on
+# with the decision's default and stops the hung call, not a live model's
+# timing.
+# ---------------------------------------------------------------------------
+
+
+def _hang_one_point(monkeypatch: pytest.MonkeyPatch, point: str) -> asyncio.Event:
+    """Every point answers its safe pick except `point`, which never
+    returns. Returns an event set when that decision is stopped."""
+    stopped = asyncio.Event()
+    _install_decide(monkeypatch)
+    inner = graph_module.decide
+
+    async def _decide(harness: Any, trace_id: str, asked: str, *args: Any, **kwargs: Any) -> Any:
+        if asked == point:
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                stopped.set()
+                raise
+        return await inner(harness, trace_id, asked, *args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    return stopped
+
+
+@pytest.mark.asyncio
+async def test_a_literature_decision_still_running_at_plan_gets_only_the_grace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.6-A14: Plan read the decision Think started with a bare wait, so
+    a Jev timeout and the guard tier's fallback held Plan for their whole
+    time. A topic question with no gene is the one path that reads it; the
+    decision hangs, Plan waits the grace, reads not-literature, and stops it.
+
+    MUTATION PROOF: `await task` in place of `_read_late_decision` in
+    `_literature_choice` holds the run for the whole hang and turns this red
+    on the elapsed time.
+    """
+    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.05)
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    stopped = _hang_one_point(monkeypatch, "plan.literature")
+
+    started = time.monotonic()
+    events = await _run("which papers discuss statin side effects")
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0)
+
+    assert "done" in [event.type for event in events]
+    assert elapsed < 2.0, elapsed
+    assert stopped.is_set()
+    done = _payload(events, "done")
+    assert done is not None
+    assert "plan.literature" not in [d["name"] for d in done["decisions"] or []]
+
+
+@pytest.mark.asyncio
+async def test_plans_literature_read_takes_not_literature_after_the_grace() -> None:
+    """The read itself: a decision still running past the grace reads as no
+    usable pick, the decision's default (not asking for papers), is marked
+    read so Plan never asks again, and is stopped."""
+    harness = harness_module.Harness("t-literature-grace")
+    entry = graph_module._run_decisions(harness)
+    stopped = asyncio.Event()
+
+    async def _hang() -> Any:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            stopped.set()
+            raise
+
+    entry.literature_task = asyncio.create_task(_hang())
+    started = time.monotonic()
+    choice = await graph_module._literature_choice(
+        harness,
+        "t-literature-grace",
+        "papers on statins",
+        ask_if_missing=True,
+        deadline=time.monotonic() + 45.0,
+    )
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0)
+
+    assert choice is None
+    assert elapsed < graph_module._LATE_DECISION_GRACE_S + 0.5, elapsed
+    assert entry.literature_asked and entry.literature_task is None
+    assert stopped.is_set()
+
+
+@pytest.mark.asyncio
+async def test_plans_own_literature_ask_ends_at_plans_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Plan called with no decision started asks now, and waits no later
+    than its own deadline: a hung decision reads as not asking for papers
+    and is stopped."""
+    stopped = _hang_one_point(monkeypatch, "plan.literature")
+    harness = harness_module.Harness("t-literature-ask")
+
+    started = time.monotonic()
+    choice = await graph_module._literature_choice(
+        harness,
+        "t-literature-ask",
+        "papers on statins",
+        ask_if_missing=True,
+        deadline=time.monotonic() + 0.2,
+    )
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0)
+
+    assert choice is None
+    assert elapsed < 0.7, elapsed
+    assert stopped.is_set()
+
+
+@pytest.mark.asyncio
+async def test_a_recent_years_decision_that_never_returns_ends_at_thinks_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.6-A03, J08 at Think: builder L saw Think run 16.1 seconds on this
+    decision's fallback. With Think's budget shrunk and the decision hung,
+    Think moves on at its budget with the decision's default, asking
+    nothing about recency, and the question is searched.
+
+    MUTATION PROOF: `await recent_task` in place of `_await_within_step`
+    holds the run for the whole hang and turns this red on the elapsed
+    time.
+    """
+    real = graph_module.budget_for_step
+
+    def _budget(step: str, query_class: Any) -> float:
+        return 0.3 if step == "think" else real(step, query_class)
+
+    monkeypatch.setattr(graph_module, "budget_for_step", _budget)
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    stopped = _hang_one_point(monkeypatch, "think.recent_years")
+
+    started = time.monotonic()
+    events = await _run("which papers discuss statin side effects")
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0)
+
+    assert elapsed < 2.0, elapsed
+    assert stopped.is_set()
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert "done" in [event.type for event in events]
+
+
+# ---------------------------------------------------------------------------
 # Card 6: every decision a run made rides on its `done` event, and the
 # decisions at one step overlap rather than queue.
 # ---------------------------------------------------------------------------

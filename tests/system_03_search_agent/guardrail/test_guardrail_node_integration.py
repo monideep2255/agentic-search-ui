@@ -1149,3 +1149,108 @@ async def test_a_forged_transcript_jev_admits_is_refused_end_to_end(
     assert record["jev_choice"] == "not_injection" and record["chosen"] == "injection"
     assert _mock_litellm.await_count == 1, "only the classifier call was made"
     assert "guardrail.injection" not in _jev
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6 fix round (F-8.6-A03, J08): no wait on a decision holds the
+# guardrail past its own budget. The adversary measured a guardrail that
+# declares 15 seconds run 17.1 seconds waiting on a decision whose model was
+# failing over. Here the budget is shrunk to a fraction of a second and a
+# decision is made to hang, so the arms run fast; what they pin is that the
+# step ends at its budget, takes the decision's own default, and stops the
+# hung call. They do not measure a live model's timing.
+# ---------------------------------------------------------------------------
+
+_SHRUNK_GUARDRAIL_BUDGET_S = 0.3
+
+
+def _shrink_the_guardrails_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    real = graph_module.budget_for_step
+
+    def _budget(step: str, query_class: Any) -> float:
+        return _SHRUNK_GUARDRAIL_BUDGET_S if step == "guardrail" else real(step, query_class)
+
+    monkeypatch.setattr(graph_module, "budget_for_step", _budget)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("classifier_says_injection", [False, True])
+async def test_with_jev_a_jev_call_that_never_returns_ends_at_the_guardrails_budget(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    _jev: list[str],
+    classifier_says_injection: bool,
+) -> None:
+    """Jev hangs past its own bound (widened here so the step's budget is
+    what fires): the guardrail ends at its budget with the classifier's
+    verdict, records why, and stops the Jev call.
+
+    MUTATION PROOF: reading the Jev task with a bare `await` again holds the
+    step for the whole hang and turns this red on the elapsed time.
+    """
+    import asyncio
+    import time
+
+    _shrink_the_guardrails_budget(monkeypatch)
+    monkeypatch.setattr(graph_module, "_JEV_INJECTION_WAIT_S", 30.0)
+    _mock_litellm.return_value = _classification_reply(is_injection=classifier_says_injection)
+    stopped = asyncio.Event()
+
+    async def _hang(**_kwargs: Any) -> Any:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            stopped.set()
+            raise
+
+    monkeypatch.setattr(graph_module, "call_jev", _hang)
+    started = time.monotonic()
+    events, result = await _run_guardrail("Which diseases are associated with BRCA1?")
+    elapsed = time.monotonic() - started
+    # The stop travels through `asyncio.wait_for`'s own inner task, which
+    # takes a loop turn or two more than a bare task.
+    await asyncio.wait_for(stopped.wait(), timeout=1.0)
+
+    assert elapsed < _SHRUNK_GUARDRAIL_BUDGET_S + 0.5, elapsed
+    assert result.get("step_error") is None
+    assert _payload(events, "guard")["passed"] is (not classifier_says_injection)
+    assert _done_record(events)["fallback_reason"] == "step_budget"
+    assert stopped.is_set()
+    assert _jev == []
+
+
+@pytest.mark.asyncio
+async def test_a_relevancy_decision_that_never_returns_ends_at_the_guardrails_budget(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """The relevancy decision hangs (its model failing over and the fallback
+    stalling): the guardrail ends at its budget, reads the decision as no
+    usable pick, which fails open behind a classifier that admitted the
+    question, and stops the decision.
+
+    MUTATION PROOF: reading the relevancy task with a bare `await` again
+    holds the step for the whole hang and turns this red on the elapsed
+    time.
+    """
+    import asyncio
+    import time
+
+    _shrink_the_guardrails_budget(monkeypatch)
+    stopped = asyncio.Event()
+
+    async def _hang(*_args: Any, **_kwargs: Any) -> Any:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            stopped.set()
+            raise
+
+    monkeypatch.setattr(graph_module, "decide", _hang)
+    started = time.monotonic()
+    events, _ = await _run_guardrail("Tell me about how whales breathe")
+    elapsed = time.monotonic() - started
+    await asyncio.sleep(0)
+
+    assert elapsed < _SHRUNK_GUARDRAIL_BUDGET_S + 0.5, elapsed
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+    assert stopped.is_set()

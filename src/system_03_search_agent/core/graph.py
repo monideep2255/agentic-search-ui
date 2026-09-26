@@ -460,7 +460,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, TypeVar
 
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -1064,12 +1064,14 @@ _ASKS_FEATURES: Final = _DecisionSpec(
 #: literature, asks_features).
 _MAX_DONE_DECISIONS: Final[int] = 16
 
-#: How long a step waits, at the point it needs a decision started earlier,
-#: for one that has not finished yet (build phase 8.6). A decision started
-#: at Think has normally finished long before Write reads it; one still
-#: running this late is Jev failing over to the guard tier, and the person
-#: should not wait on it. Not finished within this many seconds is read as
-#: no usable pick, and the decision is stopped.
+#: How long a later step waits, at the point it needs a decision Think
+#: started, for one that has not finished yet (build phase 8.6): Plan's
+#: literature read (since the fix round, F-8.6-A14) and Write's features
+#: read. A decision started at Think has normally finished long before
+#: either reads it; one still running this late is Jev failing over to the
+#: guard tier, and the person should not wait on it. Not finished within
+#: this many seconds, or within the step's own remaining budget when that is
+#: shorter, is read as no usable pick, and the decision is stopped.
 _LATE_DECISION_GRACE_S: Final[float] = 1.0
 
 
@@ -1208,23 +1210,85 @@ def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
         task.cancel()
 
 
+#: A decision task's result type, for `_await_within_step`.
+_T = TypeVar("_T")
+
+
+def _step_deadline(step: str, query_class: QueryClass = "lookup") -> float:
+    """When the step starting now must be done by, on the monotonic clock:
+    its declared budget (`budget_for_step`) from this moment.
+
+    Build phase 8.6 fix round (F-8.6-A03, J08, A14): every wait on a
+    decision is bounded by what is left of it, so a classifier failing over
+    never holds a step past the budget the step declares. A model-calling
+    step's budget depends on its tier alone, so the class matters only
+    for Act, which awaits no decision.
+    """
+    return time.monotonic() + budget_for_step(step, query_class)
+
+
+async def _await_within_step(
+    task: asyncio.Task[_T] | None,
+    deadline: float,
+    default: _T,
+    *,
+    point: str,
+    trace_id: str,
+) -> _T:
+    """A decision's result, waited for no later than the calling step's
+    `deadline` (`_step_deadline`).
+
+    Build phase 8.6 fix round (F-8.6-A03, J08, A14). A decision whose model
+    fails over, Jev timing out and then the guard tier being asked, can
+    outlast the step waiting on it: the adversary measured a guardrail
+    declaring 15 seconds run 17.1 seconds on one. A task still running when
+    the step's budget runs out is stopped and reads as `default`, the
+    decision's own default, and the step goes on within its budget. A task
+    that failed or was stopped, or none at all, reads as `default` too.
+    """
+    if task is None:
+        return default
+    remaining = deadline - time.monotonic()
+    if not task.done() and remaining > 0:
+        await asyncio.wait({task}, timeout=remaining)
+    if not task.done():
+        task.cancel()
+        logger.warning(
+            "decision %s still running when its step's budget ran out (trace %s); "
+            "taking its default",
+            point,
+            trace_id,
+        )
+        return default
+    if task.cancelled() or task.exception() is not None:
+        return default
+    return task.result()
+
+
 async def _literature_choice(
-    harness: Harness, trace_id: str, text: str, *, ask_if_missing: bool
+    harness: Harness, trace_id: str, text: str, *, ask_if_missing: bool, deadline: float
 ) -> str | None:
     """`plan.literature`'s usable pick for this run, or None.
 
     Think starts the decision (`think_node`), so by the time Plan reads it,
-    it has usually long finished: reading it costs no wait. With
-    `ask_if_missing`, a run whose Think never started it (Plan called on
-    its own) asks now instead. Read once per run, never asked twice.
+    it has usually long finished: reading it costs no wait. One still
+    running is read with the late-read grace Write gives its own decision
+    (`_read_late_decision`, fix round F-8.6-A14): it was a bare wait, so a
+    Jev timeout followed by the guard tier's fallback held Plan for up to
+    the fallback's whole time. With `ask_if_missing`, a run whose Think
+    never started it (Plan called on its own) asks now instead, waiting no
+    later than Plan's `deadline`. Read once per run, never asked twice.
     """
     entry = _run_decisions(harness)
     if entry.literature_task is not None:
         task, entry.literature_task = entry.literature_task, None
-        entry.literature_record = await task
+        entry.literature_record = await _read_late_decision(task, deadline)
         entry.literature_asked = True
     if not entry.literature_asked and ask_if_missing:
-        entry.literature_record = await _decide_point(harness, trace_id, _LITERATURE, text)
+        asked = asyncio.create_task(_decide_point(harness, trace_id, _LITERATURE, text))
+        entry.literature_record = await _await_within_step(
+            asked, deadline, None, point=_LITERATURE.point, trace_id=trace_id
+        )
         entry.literature_asked = True
     return _usable_choice(entry.literature_record)
 
@@ -1249,18 +1313,23 @@ def _drop_literature_decision(harness: Harness) -> None:
 
 async def _read_late_decision(
     task: asyncio.Task[DecisionRecord | None] | None,
+    deadline: float | None = None,
 ) -> DecisionRecord | None:
     """A decision started at an earlier step, read by the step that needs it.
 
     Build phase 8.6. A decision that has finished is read at no cost. One
-    still running is waited for at most `_LATE_DECISION_GRACE_S` and then
-    stopped, and reads as no decision: the person never waits on a
-    classifier that is failing over. None when no decision was started.
+    still running is waited for at most `_LATE_DECISION_GRACE_S`, or less
+    when the reading step's `deadline` comes sooner, and then stopped, and
+    reads as no decision: the person never waits on a classifier that is
+    failing over. None when no decision was started.
     """
     if task is None:
         return None
-    if not task.done():
-        await asyncio.wait({task}, timeout=_LATE_DECISION_GRACE_S)
+    wait_s = _LATE_DECISION_GRACE_S
+    if deadline is not None:
+        wait_s = min(wait_s, deadline - time.monotonic())
+    if not task.done() and wait_s > 0:
+        await asyncio.wait({task}, timeout=wait_s)
     if not task.done():
         task.cancel()
         return None
@@ -1269,17 +1338,18 @@ async def _read_late_decision(
     return task.result()
 
 
-async def _clinical_features_asked(harness: Harness) -> bool:
+async def _clinical_features_asked(harness: Harness, deadline: float | None = None) -> bool:
     """Whether `think.asks_features` picked `asks_features` for this run.
 
-    Build phase 8.6, T-8.6-06. Read once, by Write. No decision started, no
-    usable pick, or one still running past the grace all read as False, the
+    Build phase 8.6, T-8.6-06. Read once, by Write, with the late-read
+    grace, bounded by Write's own `deadline`. No decision started, no usable
+    pick, or one still running past the grace all read as False, the
     decision's fail-open side: nothing is said about a condition's features
     that the question did not ask about.
     """
     entry = _run_decisions(harness)
     task, entry.features_task = entry.features_task, None
-    return _usable_choice(await _read_late_decision(task)) == "asks_features"
+    return _usable_choice(await _read_late_decision(task, deadline)) == "asks_features"
 
 
 def _drop_features_decision(harness: Any) -> None:
@@ -1409,6 +1479,9 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     query = state["query"]
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
+    # The step's own budget, on the clock from the moment it starts: no wait
+    # on a decision below outlasts it (fix round, F-8.6-A03, J08).
+    step_deadline = _step_deadline("guardrail")
 
     with session_scope() as session:
         try:
@@ -1479,7 +1552,9 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
             _jev_injection_pick(harness, trace_id, query.text)
         )
     try:
-        return await _guardrail_after_prefilter(state, sink, relevancy_task, injection_task)
+        return await _guardrail_after_prefilter(
+            state, sink, relevancy_task, injection_task, step_deadline=step_deadline
+        )
     finally:
         # Any path that ends the node before reading the relevancy or the
         # injection decision (a refusal, a cap hit, a step error) stops it
@@ -1493,13 +1568,19 @@ async def _guardrail_after_prefilter(
     sink: _EventSink,
     relevancy_task: asyncio.Task[DecisionRecord | None] | None,
     injection_task: asyncio.Task[JevResult | str] | None = None,
+    *,
+    step_deadline: float | None = None,
 ) -> dict[str, Any]:
     """Section 10.1 steps 3 to 6, after the pre-filter, plus the relevancy
     decision `guardrail_node` started (None when the allowlist admitted) and,
-    with Jev as the classifier, Jev's own injection pick (None otherwise)."""
+    with Jev as the classifier, Jev's own injection pick (None otherwise).
+    Neither is waited for past `step_deadline`, the guardrail's own budget
+    from the moment the node started (`_step_deadline`)."""
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
+    if step_deadline is None:
+        step_deadline = _step_deadline("guardrail")
 
     # Step 3, Section 10.4. The first and only model call this node makes.
     # Dispatched through `_dispatch_tier_call` rather than calling the
@@ -1586,11 +1667,14 @@ async def _guardrail_after_prefilter(
     # ...") that the classifier refused every time. When Jev made no pick
     # (a timeout, an HTTP error, a malformed or out-of-set reply, the cost
     # cap), the classifier's own verdict stands, exactly as with the guard
-    # provider. Read only after the classifier's own failure paths above,
-    # which are unchanged. (`classification` is set whenever
+    # provider, and so it does when Jev is still running at the guardrail's
+    # budget ("step_budget"). Read only after the classifier's own failure
+    # paths above, which are unchanged. (`classification` is set whenever
     # `classifier_verdict` is.)
     if injection_task is not None and classification is not None:
-        jev = await injection_task
+        jev = await _await_within_step(
+            injection_task, step_deadline, "step_budget", point=_INJECTION.point, trace_id=trace_id
+        )
         jev_says_injection = isinstance(jev, JevResult) and jev.choice == "injection"
         if not isinstance(jev, JevResult):
             logger.warning(
@@ -1646,9 +1730,15 @@ async def _guardrail_after_prefilter(
     # question, since that classifier has already judged topicality too.
     # When the classifier's own off-topic verdict was set aside above on the
     # referring-word rule alone, nothing that saw the conversation has said
-    # the question is on topic, so that verdict stands.
+    # the question is on topic, so that verdict stands. A decision still
+    # running at the guardrail's budget reads as no usable pick (fix round,
+    # F-8.6-A03): the person does not wait on a classifier failing over.
     if relevancy_task is not None:
-        relevancy = _usable_choice(await relevancy_task)
+        relevancy = _usable_choice(
+            await _await_within_step(
+                relevancy_task, step_deadline, None, point=_RELEVANCY.point, trace_id=trace_id
+            )
+        )
         if relevancy == "off_topic":
             return _decline_for_guardrail(
                 state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
@@ -3126,10 +3216,13 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     `decide(point="think.asks_features")`, started at the same moment and
     handed to Write (`_RunDecisions.features_task`). Any path out of this node that ends
     the search, a question asked back, a cap hit, a step error, cancels
-    whatever is still in flight rather than letting it spend on.
+    whatever is still in flight rather than letting it spend on. No wait on
+    a decision here outlasts Think's own budget from this moment (fix
+    round, F-8.6-A03, J08).
     """
     harness = state["harness"]
     query = state["query"]
+    step_deadline = _step_deadline("think")
     small_talk = _is_small_talk(query.text)
     # A question that IS a picked "How far back" option has already said
     # how recent, so the recent-work decision is not asked for it at all.
@@ -3152,7 +3245,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         )
     result: dict[str, Any] | None = None
     try:
-        result = await _think(state, recent_task)
+        result = await _think(state, recent_task, step_deadline)
         return result
     finally:
         _cancel_if_pending(recent_task)
@@ -3185,12 +3278,16 @@ async def _no_decision() -> DecisionRecord | None:
 
 
 async def _think(
-    state: GraphState, recent_task: asyncio.Task[DecisionRecord | None]
+    state: GraphState,
+    recent_task: asyncio.Task[DecisionRecord | None],
+    step_deadline: float | None = None,
 ) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
+    if step_deadline is None:
+        step_deadline = _step_deadline("think")
 
     # Fix-plan item 12.3, REDESIGNED 2026-09-24, and routed through the
     # classifier seam on 2026-09-25 (build phase 8.2, card 9). Checked
@@ -3211,13 +3308,21 @@ async def _think(
     if _session_memory(state) is None:
         trigger_words = query.text.strip().split()
         if trigger_words and len(trigger_words) <= _MAX_CLARIFY_TRIGGER_WORDS:
-            # The recent_years decision is gathered here too, so all three
-            # of Think's opening calls overlap (card 6).
-            ask_record, choices, _ = await asyncio.gather(
-                _decide_point(harness, trace_id, _ASK_BACK, query.text),
-                _write_clarify_choices(harness, trace_id, sink, query.text),
-                recent_task,
-            )
+            # The recent_years decision is waited for here too, so all three
+            # of Think's opening calls overlap (card 6). Neither decision is
+            # waited for past Think's budget (fix round, F-8.6-A03, J08); one
+            # still running then reads as no usable pick, which searches.
+            ask_task = asyncio.create_task(_decide_point(harness, trace_id, _ASK_BACK, query.text))
+            try:
+                choices = await _write_clarify_choices(harness, trace_id, sink, query.text)
+                ask_record = await _await_within_step(
+                    ask_task, step_deadline, None, point=_ASK_BACK.point, trace_id=trace_id
+                )
+                await _await_within_step(
+                    recent_task, step_deadline, None, point=_RECENT_YEARS.point, trace_id=trace_id
+                )
+            finally:
+                _cancel_if_pending(ask_task)
             if _usable_choice(ask_record) == "ask_back":
                 if choices is not None:
                     return _ask_back(
@@ -3284,12 +3389,18 @@ async def _think(
     # slower of the two, never for both in turn. When the classifier says
     # the question asks for recent work WITHOUT saying how recent, and the
     # question states no range either, the person is asked which range,
-    # and the classification still in flight is cancelled unread.
+    # and the classification still in flight is cancelled unread. The
+    # decision is not waited for past Think's budget (fix round, F-8.6-A03,
+    # J08); one still running then reads as no usable pick, which asks
+    # nothing and searches.
     classify_task = asyncio.create_task(
         _run_think_classification(harness, trace_id, think_messages)
     )
     try:
-        if _asks_for_unbounded_recent_work(await recent_task, query.text):
+        recent_record = await _await_within_step(
+            recent_task, step_deadline, None, point=_RECENT_YEARS.point, trace_id=trace_id
+        )
+        if _asks_for_unbounded_recent_work(recent_record, query.text):
             # Remembered against this session, so the option the person
             # clicks carries its window as a value (F-8.2-A07, J01).
             choices = clarify.offer_recent_windows(_offer_key(query), query.text)
@@ -5599,6 +5710,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
     query_class: QueryClass = state.get("query_class", "lookup")
+    # The step's own budget from this moment, which bounds its one wait on a
+    # decision, the literature read below (fix round, F-8.6-A14).
+    step_deadline = _step_deadline("plan", query_class)
 
     if state.get("clarification_needed"):
         # Item 7.5: Think found a reference with nothing to bind to. There
@@ -5748,8 +5862,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # seven more) that decided it until 2026-09-25. A question the list did
     # not happen to cover was treated as not wanting papers. It is asked
     # only when it can change the plan, here, with no gene resolved; Think
-    # started it, so reading it costs no wait. No usable pick counts as
-    # not asking for papers, which is what this path did before it existed.
+    # started it, so reading it costs no wait, and one still running is
+    # given the late-read grace and no more (fix round, F-8.6-A14). No
+    # usable pick counts as not asking for papers, which is what this path
+    # did before it existed.
     #
     # `target_curies` is THINK'S OWN list, deliberately, not
     # `planned.cypher_input.target_entities`: the latter carries a
@@ -5762,7 +5878,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         if not gene_resolved:
             if literature_choice is None:
                 literature_choice = await _literature_choice(
-                    harness, trace_id, query.text, ask_if_missing=True
+                    harness, trace_id, query.text, ask_if_missing=True, deadline=step_deadline
                 )
             asks_for_literature = literature_choice == "wants_literature"
         if not gene_resolved and (asks_for_literature or not target_curies):
@@ -10963,6 +11079,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     query = state["query"]
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
+    # Bounds Write's one wait on a decision, the features read below, by
+    # the step's own budget from this moment as well as by the late-read
+    # grace (fix round, F-8.6-A03, J08).
+    step_deadline = _step_deadline("write", state.get("query_class", "lookup"))
     # The question's elapsed time is read when each done event is built,
     # never here. Read at the top of the step it left the writing call out:
     # on 97 of 102 answered golden runs `done.elapsed_ms` under-read the
@@ -11256,7 +11376,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     #
     # Either can renumber, so this runs before `row_types` and the prompt
     # slice read the numbering.
-    clinical_features_asked = await _clinical_features_asked(harness)
+    clinical_features_asked = await _clinical_features_asked(harness, step_deadline)
     if clinical_features_asked:
         synth_findings = reserve_prompt_slots(
             synth_findings,
