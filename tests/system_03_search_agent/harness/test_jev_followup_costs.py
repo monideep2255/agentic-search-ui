@@ -58,19 +58,42 @@ from system_03_search_agent.synthesis import sentence_check as sentence_check_mo
 _HUGE = "1" + "0" * 400  # an integer JSON parses and `float()` cannot hold
 
 
+def _raw_json(body: dict[str, Any], raw: dict[str, str]) -> str:
+    """`body` as JSON with each placeholder string in `raw` replaced by its
+    raw JSON text, so a number too large for a float, or a string where a
+    number belongs, can be written exactly as a reply would carry it."""
+    text = json.dumps(body)
+    for placeholder, value in raw.items():
+        text = text.replace(json.dumps(placeholder), value)
+    return text
+
+
 def _single_body(*, key: str, choice: str, cost: str = "0.001", confidence: str = "0.8", prob: str = "0.8") -> str:
-    return (
-        '{"model":"m","answers":{"%s":{"type":"choice","choice":"%s","confidence":%s,'
-        '"probabilities":{"%s":%s}}},"usage":{"input_tokens":10,"output_tokens":1,"cost":%s}}'
-    ) % (key, choice, confidence, choice, prob, cost)
+    body = {
+        "model": "m",
+        "answers": {
+            key: {
+                "type": "choice",
+                "choice": choice,
+                "confidence": "<confidence>",
+                "probabilities": {choice: "<prob>"},
+            }
+        },
+        "usage": {"input_tokens": 10, "output_tokens": 1, "cost": "<cost>"},
+    }
+    return _raw_json(body, {"<confidence>": confidence, "<prob>": prob, "<cost>": cost})
 
 
 def _batch_body(*, cost: str = "0.001", confidence: str = "0.8") -> str:
-    return (
-        '{"model":"m","answers":{"item_1":{"choice":"no","confidence":%s,"probabilities":{"no":0.8}},'
-        '"item_2":{"choice":"no","confidence":0.8,"probabilities":{"no":0.8}}},'
-        '"usage":{"input_tokens":10,"output_tokens":1,"cost":%s}}'
-    ) % (confidence, cost)
+    body = {
+        "model": "m",
+        "answers": {
+            "item_1": {"choice": "no", "confidence": "<confidence>", "probabilities": {"no": 0.8}},
+            "item_2": {"choice": "no", "confidence": 0.8, "probabilities": {"no": 0.8}},
+        },
+        "usage": {"input_tokens": 10, "output_tokens": 1, "cost": "<cost>"},
+    }
+    return _raw_json(body, {"<confidence>": confidence, "<cost>": cost})
 
 
 def _patch_reply(monkeypatch: pytest.MonkeyPatch, content: bytes) -> None:
@@ -179,9 +202,11 @@ async def test_the_warning_names_the_amount_actually_charged(
     charged. The warning and the error's charge now agree."""
     assert f"${MAX_JEV_COST_USD:.2f}" == "$0.01"
     _patch_reply(monkeypatch, content)
-    with caplog.at_level(logging.WARNING, logger=jev_client_module.__name__):
-        with pytest.raises(JevCallError) as excinfo:
-            await _single()
+    with (
+        caplog.at_level(logging.WARNING, logger=jev_client_module.__name__),
+        pytest.raises(JevCallError) as excinfo,
+    ):
+        await _single()
     assert said in caplog.text
     assert excinfo.value.billed_cost_usd == pytest.approx(MAX_JEV_COST_USD)
 
