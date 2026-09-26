@@ -14,7 +14,7 @@ Its whole reason for existing is that the product owner asks "where are we" mid-
 
 1. `git branch --show-current` and `git log --oneline -8`: what is actually committed, and on what.
 2. `git status --short`: whether anything is uncommitted right now.
-3. `tracker/BOARD.md`: the phase in flight and its open flags.
+3. The board, `testing/UI_fix_plan.md`, and the open ledgers under `tracker/`: the card or numbered phase in flight. `tracker/BOARD.md` is frozen at build phase 6.2 and says nothing about current work.
 4. `tracker/phase_N.M.md` for that phase, bottom first: the newest sections carry the current state, and a WITHDRAWN or superseded heading there outranks anything older in the same file.
 5. `HANDOFF.md`: what is live, what awaits the product owner, and the one next action the last session left for this one.
 

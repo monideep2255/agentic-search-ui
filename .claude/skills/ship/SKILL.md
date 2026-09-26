@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Runs the CI gates locally before anything is staged. Syncs the four canonical docs and commits with a Conventional Commit subject. Pushes to develop in the UI fix loop or to the phase branch in build-phase mode. Proves the remote advanced and confirms the deploy. Clears away leftover agent worktrees. Use when ending a work block or after a logical milestone.
+description: Runs the CI gates locally before anything is staged. Syncs the four canonical docs and commits with a Conventional Commit subject. Pushes to develop for a card alone at risk-dial position one or two, or to a branch for a numbered phase or position three. Proves the remote advanced and confirms the deploy. Clears away leftover agent worktrees. Use when ending a work block or after a logical milestone.
 ---
 
 # /ship - gates, docs-sync, git-sync, then worktree cleanup
@@ -19,7 +19,7 @@ A single ritual to end a work block: run the local gates, bring docs in line wit
 
 ## Step 0: the gates, before anything is staged
 
-No verification ran before a push until this step existed. The product owner set standing pre-push checks on 2026-09-12 and 2026-09-20, and until now they lived only in memory and in the old continuation prompt, never enforced here. CI on GitHub runs on every push to `develop` and on every pull request, but it reports after the push, and this repository also works in a UI fix loop where pushes go straight to `develop` with no PR and no review round. So the local gates below are the only checks that run before a change reaches `develop`.
+No verification ran before a push until this step existed. The product owner set standing pre-push checks on 2026-09-12 and 2026-09-20, and until now they lived only in memory and in the old continuation prompt, never enforced here. CI on GitHub runs on every push to `develop` and on every pull request, but it reports after the push, and a card alone at risk-dial position one or two is pushed straight to `develop` with no PR, at position one with no review round. So the local gates below are the only checks that run before a change reaches `develop`.
 
 ### Gate on the exit code, never through a pipe
 
@@ -189,7 +189,10 @@ Additional context to pass to git-sync:
 
 - The commit subject follows Conventional Commits per `.claude/rules/git-workflow.md`: `<type>[optional scope]: <description>` in sentence case, one logical change per commit, the body saying why.
 - NEVER add `Co-Authored-By` lines or any co-author trailer (project rule).
-- Push target by mode: in the UI fix loop, `develop` directly, which is one of the two named carve-outs in `.claude/rules/bossman-mode.md`; in build-phase mode, the `phase/N.M-...` branch with `-u`, then offer the pull request; anything under `.claude/`, hooks or settings goes on a `chore/` or `fix/` branch with a pull request regardless of mode.
+- Push target by the risk dial's position, which the Deny entry on pushing to develop in `.claude/rules/bossman-mode.md` bounds (`.claude/skills/bossman-mode/SKILL.md`, "Set the dial first"):
+  - A card alone at position one or two: `develop` directly, once its position's steps have run.
+  - A numbered phase, at any position: the `phase/N.M-...` branch with `-u`, then offer the pull request.
+  - Position three, auth, the graph credential, the event schema, or anything under `.claude/`, hooks or settings: a `chore/` or `fix/` branch with a pull request.
 - Prove the push: compare `git rev-parse HEAD` with `git rev-parse origin/<branch>` and require equality; never a verbose curl trace (`docs/rules/Sandbox_diagnosis.md`).
 - After a push to develop, confirm the Railway deploy for that commit reached SUCCESS (the `develop` project's API service; a deploy takes two to three minutes) before telling the product owner anything is live; a push is not a deploy.
 

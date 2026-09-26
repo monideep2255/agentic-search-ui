@@ -42,7 +42,7 @@ It is a PROTOTYPE. What that means in practice, stated because a demo link invit
 - CI runs Section 24's ten gates on every pull request and on every push to `develop` or `production` (build phases 4.14 and 4.15). The gates are ADVISORY rather than merge-blocking, since branch protection needs GitHub Pro or a public repository, so a merge deploys regardless of gate outcome and the only thing stopping a red merge is a person choosing not to click. Since build phase 4.15 that exposure is one step further from the audience: a merge to `develop` reaches the develop deployment, and production moves only on a deliberate release.
 - Coverage is uneven by organism and by database. Treat an answer as a starting point for verification, never as an endpoint.
 
-Known open items are tracked on `tracker/BOARD.md` rather than duplicated here. The six UI defects the first live session surfaced, plus a seventh found alongside them, were all closed by build phase 4.16 on 2026-08-25.
+Known open items are tracked in two places rather than duplicated here: the board (`testing/UI_fix_plan.md`) and the open phase ledgers under `tracker/`. `tracker/BOARD.md` is frozen as the record of build phases through 6.2. The six UI defects the first live session surfaced, plus a seventh found alongside them, were all closed by build phase 4.16 on 2026-08-25.
 
 ---
 
@@ -235,10 +235,10 @@ agentic-search-ui/
     e2e/                        # Playwright specs, including the live diagnostics gated behind RUN_LIVE_DIAGNOSTICS
   tests/                        # pytest suite, including the per-phase premise gates and mutation harnesses
   testing/                      # UI testing entry point: manual workflows, the ranked spec, evidence and feedback capture (see testing/Developer/Developer_workflows.md)
-  docs/                         # Architecture, NCBI, build cadence, the design system, and rules/ for the one rule read on demand
+  docs/                         # Architecture, NCBI, build process, the design system, and rules/ for the one rule read on demand
   reference/                    # Symlink to agentic-search-data-engineering (System 1 and 2)
   requirements/                 # Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
-  tracker/                      # The build board: BOARD.md, phase tickets, render_board.py, check_doc_drift.py
+  tracker/                      # Phase ledgers, check_doc_drift.py, and the build board frozen at phase 6.2 (BOARD.md, render_board.py)
   alembic/                      # Migrations for the user-data schema
   .claude/                      # Claude Code rules, skills, agents, hooks
   .github/                      # CI workflow (ci.yml) and one script per Section 24 gate (gates/)
@@ -281,8 +281,8 @@ agentic-search-ui/
 | [Agent teams tmux quickstart](docs/build/Agent_teams_tmux_quickstart.md) | tmux launch guide for bossman-mode parallel builders |
 | [Claude security plugin usage](docs/Claude_security_plugin_usage.md) | How to run the on-demand `claude-security` scan, apply patches, and how it complements the always-on `security-guidance` plugin |
 | [Tool implementation mechanics](docs/ncbi/Tool_implementation_mechanics.md) | Per-tool API traps from tech spec section 6: edge-label enforcement, ELink target db, the `global_mafs` array, sequential dbSNP calls, snapshot pinning |
-| [Build workflow cadence](docs/build/Build_workflow_cadence.md) | The quick reference for how a build phase runs: the twelve stages, who acts at each, the model and effort per stage. Stage 5, the premise gate, is mandatory and blocking for a model-generating phase |
-| [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build cadence as a visual page, also published as a Claude artifact |
+| [Build workflow cadence](docs/build/Build_workflow_cadence.md) | Since 2026-09-25 a pointer holding the provider mapping, the tier-to-model table. It was the quick reference for how a build phase runs, with its stages, who acts at each, and the model and effort per stage. Its stage 5 premise gate, mandatory and blocking for a model-generating phase, was retired on 2026-09-24 for everything except answer behaviour. The build loop now lives in [the bossman-mode skill](.claude/skills/bossman-mode/SKILL.md), one cadence with a risk dial |
+| [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build loop as it stood on 2026-09-24, as a visual page, also published as a Claude artifact. A record, not the loop that runs today |
 | [Sandbox diagnosis](docs/rules/Sandbox_diagnosis.md) | The rule read on demand: how to classify a command the sandbox blocked before ever disabling it |
 | [CI gate scripts](.github/gates/README.md) | Why the CI workflow contains no inline shell: one script per Section 24 gate, and the premise-gate defeats that forced the design |
 | [Debugging guide](docs/build/Debugging_guide.md) | Which file to open when something is wrong: a symptom index, then what every source file does |

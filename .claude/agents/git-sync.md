@@ -72,9 +72,11 @@ Bad commit messages:
 
 ## Where a push goes
 
-- UI fix loop: push directly to `develop`. A named carve-out in `.claude/rules/bossman-mode.md`.
-- Build-phase mode: push to the `phase/N.M-...` branch with `git push -u origin <branch>`.
-- Anything under `.claude/`, hooks, or settings: push to a `chore/` or `fix/` branch and open a pull request.
+By the risk dial's position (`.claude/skills/bossman-mode/SKILL.md`, "Set the dial first"; the Deny entry on pushing to develop in `.claude/rules/bossman-mode.md`):
+
+- A card alone at position one or two (a copy or layout fix, or a change to runnable behaviour once its judge, adversary and fix-and-verify rounds have run): push directly to `develop`.
+- A numbered phase, at any position: push to the `phase/N.M-...` branch with `git push -u origin <branch>`.
+- Position three, auth, the graph credential, the event schema, or anything under `.claude/`, hooks, or settings: push to a `chore/` or `fix/` branch and open a pull request.
 
 ## Prove the push
 

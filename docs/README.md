@@ -26,7 +26,7 @@ Last updated: 2026-09-26.
 | Wire up one of the seven tools | `ncbi/Tool_implementation_mechanics.md` first, then that tool's section in the tech spec |
 | Find an NCBI endpoint, rate limit, or record count | `ncbi/NCBI_databases_and_APIs_reference.md` |
 | Decide whether to build or reuse something NCBI published | `ncbi/NCBI_repos_deep_dive.md` |
-| Run a build phase | `build/Build_workflow_cadence.md`, or `build/Phase_6_execution_flow.html` for the visual |
+| Run a build phase | `.claude/skills/bossman-mode/SKILL.md`, the one home of the build loop since 2026-09-25. `build/Build_workflow_cadence.md` keeps its provider mapping, and `build/Phase_6_execution_flow.html` shows the loop as it stood on 2026-09-24 |
 | Unblock a command the sandbox refused | `rules/Sandbox_diagnosis.md`, before ever disabling the sandbox |
 | Watch parallel builders in live panes | `build/Agent_teams_tmux_quickstart.md` |
 | Run the security scan before a pull request | `Claude_security_plugin_usage.md` |
@@ -47,8 +47,8 @@ Last updated: 2026-09-26.
 
 | Doc | What it is |
 |-----|-----------|
-| `Build_workflow_cadence.md` | The quick reference for one build phase: twelve stages, who acts at each, the model and effort per stage, where every file gets written. Stage 5 is the blocking premise gate |
-| `Phase_6_execution_flow.html` | The same cadence as a visual page. Opens in a browser with no server. Also published as a Claude artifact |
+| `Build_workflow_cadence.md` | Since 2026-09-25 a pointer that keeps the provider mapping, the tier-to-model table. Until then it was the quick reference for one build phase: its stages, who acts at each, the model and effort per stage, where every file gets written, and a blocking premise gate at stage 5 until 2026-09-24. The loop now lives in `.claude/skills/bossman-mode/SKILL.md` |
+| `Phase_6_execution_flow.html` | The build loop as it stood on 2026-09-24, as a visual page. Opens in a browser with no server. Also published as a Claude artifact. A record, not the loop that runs today |
 | `Debugging_guide.md` | Which file to open when something is wrong, and what every source file does. A symptom index plus a full inventory of `src/` |
 | `Agent_teams_tmux_quickstart.md` | tmux launch guide so parallel builders appear in live panes rather than invisible background sessions |
 
@@ -90,7 +90,7 @@ Last updated: 2026-09-26.
 | The gate list, every obligation mapped to its owner | `requirements/phase_5/Coverage_map.md` |
 | Decisions and their rationale | `DECISIONS.md` at the repo root |
 | What broke during the build and what fixed it | `LEARNINGS.md` at the repo root |
-| Current build status | `tracker/BOARD.md`, or `tracker/board.html` for the kanban view |
+| Current build status | `HANDOFF.md` for what is live and the next action; the board, `testing/UI_fix_plan.md`; an open phase's ledger, `tracker/phase_N.M.md`. `tracker/BOARD.md` and its kanban view `tracker/board.html` are frozen as the record of build phases through 6.2 |
 | Pipeline, parser, and graph-loading docs | The System 1 and 2 repo, symlinked at `reference/agentic-search-data-engineering` |
 
 ## Two things to know about this folder
