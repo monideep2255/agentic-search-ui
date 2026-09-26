@@ -1,0 +1,449 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-fd5d3407621b",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:11:34+00:00",
+  "run_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "citations": 6,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 6
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 258,
+  "answer_start": "Found 5 pubmed records: International association for the study of lung cancer/american thoracic society/european respiratory society international multidiscipl",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 24.323,
+  "seconds": 25.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 11,
+   "citation": 6,
+   "trust_signal": 7,
+   "done": 1
+  },
+  "first_word_s": 24.684,
+  "first_token_ts": "2026-09-26T17:10:20.329023Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 0,
+   "ts": "2026-09-26T17:10:02.975855Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 2,
+   "ts": "2026-09-26T17:10:11.239838Z",
+   "payload": {
+    "narrative": "A single API call to a clinical-trials registry directly answers the question by filtering on the condition.",
+    "query_class": "lookup",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 4,
+   "ts": "2026-09-26T17:10:11.242507Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: clinical, trials, carcinoma, otherwise, specified",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-85671282169b",
+      "layer": "layer_2_api",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-821ae3726bad",
+      "layer": "layer_2_api",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-81fac633b9f1",
+      "layer": "layer_3_enrichment",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 6,
+   "ts": "2026-09-26T17:10:11.243651Z",
+   "payload": {
+    "call_id": "ne-85671282169b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 7,
+   "ts": "2026-09-26T17:10:11.243687Z",
+   "payload": {
+    "call_id": "ne-821ae3726bad",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 8,
+   "ts": "2026-09-26T17:10:11.243702Z",
+   "payload": {
+    "call_id": "pa-81fac633b9f1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 9,
+   "ts": "2026-09-26T17:10:11.584211Z",
+   "payload": {
+    "call_id": "ne-85671282169b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 10,
+   "ts": "2026-09-26T17:10:11.891284Z",
+   "payload": {
+    "call_id": "pa-81fac633b9f1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 11,
+   "ts": "2026-09-26T17:10:11.967938Z",
+   "payload": {
+    "call_id": "ne-821ae3726bad",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 12,
+   "ts": "2026-09-26T17:10:11.970789Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 13,
+   "ts": "2026-09-26T17:10:20.329023Z",
+   "payload": {
+    "text": "Found 5 pubmed records: International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma. [2], Incidence and prognosis of patients with brain metastases at diagnosis of systemic malignancy: a population-based study. [3], Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery. [4], Sintilimab plus chemotherapy for patients with EGFR-mutated non-squamous non-small-cell lung cancer with disease progression after EGFR tyrosine-kinase inhibitor therapy (ORIENT-31): second interim analysis from a double-blind, randomised, placebo-controlled, phase 3 trial. [5] and Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial. [6]. ",
+    "marker_ids": [
+     "ne-821ae3726bad-1",
+     "ne-821ae3726bad-2",
+     "ne-821ae3726bad-3",
+     "ne-821ae3726bad-4",
+     "ne-821ae3726bad-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery.",
+     "International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma.",
+     "Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial.",
+     "Incidence and prognosis of patients with brain metastases at diagnosis of systemic malignancy: a population-based study."
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28444227",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28444227/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "21252716",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/21252716/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28444227",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28444227/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34529930",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34529930/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37156249",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37156249/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39699905",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39699905/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "b993a9c0-1362-4cc0-b297-0797267e1199",
+   "seq": 38,
+   "ts": "2026-09-26T17:10:20.329804Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 24323,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 184
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 211
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 203
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma. [2], Incidence and prognosis of patients with brain metastases at diagnosis of systemic malignancy: a population-based study. [3], Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery. [4], Sintilimab plus chemotherapy for patients with EGFR-mutated non-squamous non-small-cell lung cancer with disease progression after EGFR tyrosine-kinase inhibitor therapy (ORIENT-31): second interim analysis from a double-blind, randomised, placebo-controlled, phase 3 trial. [5] and Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial. [6]. \n\nThese data were drawn from 1,302,166 patients with nonhematologic malignancies diagnosed between 2010 and 2013 [1]. \n\nPubmed records found\n\nPubmed title: International association for the study of lung cancer/american thoracic society/european respiratory society international multidisciplinary classification of lung adenocarcinoma [2]. Pubmed title: Incidence and prognosis of patients with brain metastases at diagnosis of systemic malignancy: a population-based study [3]. Pubmed title: Stereotactic ablative radiotherapy for operable stage I non-small-cell lung cancer (revised STARS): long-term results of a single-arm, prospective trial with prespecified comparison to surgery [4]. Pubmed title: Sintilimab plus chemotherapy for patients with EGFR-mutated non-squamous non-small-cell lung cancer with disease progression after EGFR tyrosine-kinase inhibitor therapy (ORIENT-31): second interim analysis from a double-blind, randomised, placebo-controlled, phase 3 trial [5]. Pubmed title: Stereotactic Body Radiotherapy vs Sorafenib Alone in Hepatocellular Carcinoma: The NRG Oncology/RTOG 1112 Phase 3 Randomized Clinical Trial [6]. "
+}

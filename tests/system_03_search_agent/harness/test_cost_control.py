@@ -538,50 +538,6 @@ def test_build_cost_event_payload_validates_against_event_envelope() -> None:
     assert event.payload["query_cost_usd"] == pytest.approx(0.01)
 
 
-# Build phase 8.6, T-8.6-08 (product harness review C5): the cost event
-# carries the time of the call it follows, beside the running cost.
-
-
-def test_the_cost_event_carries_the_calls_elapsed_seconds() -> None:
-    harness = Harness(trace_id="trace-1")
-    harness._last_call_elapsed_s[("trace-1", "synth")] = 7.25
-    harness.track_cost("trace-1", "synth", 0.01)
-
-    payload = build_cost_event_payload(harness, "trace-1", "synth", query_cap_usd=0.10)
-    other_tier = build_cost_event_payload(harness, "trace-1", "guard", query_cap_usd=0.10)
-
-    assert payload.call_elapsed_s == pytest.approx(7.25)
-    assert other_tier.call_elapsed_s is None, "no guard call completed on this query"
-    assert payload.query_cost_usd == pytest.approx(0.01), "the running cost is unchanged"
-
-
-def test_the_cost_event_still_builds_from_a_harness_without_timing() -> None:
-    """A stand-in harness that predates the timing leaves the field empty,
-    never breaks the event."""
-
-    class _OldHarness:
-        def get_query_cost_usd(self, trace_id: str) -> float:
-            return 0.02
-
-    payload = build_cost_event_payload(_OldHarness(), "trace-1", "plan", query_cap_usd=0.10)  # type: ignore[arg-type]
-
-    assert payload.call_elapsed_s is None and payload.query_cost_usd == pytest.approx(0.02)
-
-
-def test_the_timed_cost_event_is_still_operator_only() -> None:
-    """The new field changes nothing about who sees the event: the end-user
-    filter still drops every cost event, timed or not."""
-    harness = Harness(trace_id="trace-1")
-    harness._last_call_elapsed_s[("trace-1", "plan")] = 3.0
-    payload = build_cost_event_payload(harness, "trace-1", "plan", query_cap_usd=0.10)
-    cost_event = Event(
-        type="cost", version="v1", trace_id="trace-1", seq=0, ts=datetime.now(UTC), payload=payload.model_dump()
-    )
-
-    assert cost_event.payload["call_elapsed_s"] == pytest.approx(3.0)
-    assert filter_events_for_end_user([cost_event]) == []
-
-
 # ---------------------------------------------------------------------------
 # End-user event filter: cost events never reach an end-user surface.
 # ---------------------------------------------------------------------------

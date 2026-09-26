@@ -1,6 +1,6 @@
 """One table naming, for every place the agent loop calls a model, which
 tier or provider serves it (build phase 8.2, card 8, DECISIONS.md
-2026-09-25; brought up to date in build phase 8.6's fix round, F-8.6-J16).
+2026-09-25).
 
 Depends on:
     - Nothing repo-local. Pure data plus a lookup function.
@@ -13,13 +13,10 @@ Writes:
 
 Restates `docs/architecture/Model_architecture.md`'s "Every model call in
 one question" table (the eight existing call sites) as code, and adds the
-classifier decision points as `"classifier"` rows. Since build phase 8.6 a
-classifier row means Jev decides alone with `CLASSIFIER_PROVIDER=jev`, the
-guard tier only when Jev fails, and the guard tier alone with the code
-default (see `TaskTier`). The classifier seam itself is wired into
-`core/graph.py` (its "classifier seam, wired" section), but this table is
-not: nothing calls `task_tier_for`, so it is documentation in code form,
-and no behaviour follows from it.
+five decision points build phase 8.2 introduces as `"classifier"` rows.
+Nothing in the loop calls `task_tier_for` yet; this module is pure data
+and a lookup function, wired up by a later wave once the classifier seam
+(`harness/decide.py`) is actually threaded into `core/graph.py`.
 
 Keeping this in sync with `Model_architecture.md` is a manual discipline,
 the same one that document's own "What this document did not check"
@@ -35,13 +32,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 # "classifier" is not one of the three call_tier tiers ("guard", "plan",
-# "synth"): it names a classification decision whose model the deployment's
-# CLASSIFIER_PROVIDER chooses (build phase 8.6, DECISIONS.md 2026-09-25).
-# With "jev", Jev decides alone and nothing runs beside it: a decision
-# through `harness.decide.decide` asks the guard tier only when Jev fails,
-# and the reworded-sentence check asks no other model at all and approves
-# nothing. With the code default, "guard", the guard tier decides alone and
-# Jev is never asked. A row of this kind is a "which decision path" fact,
+# "synth"): it names a call routed through `harness.decide.decide`, which
+# itself dispatches a guard-tier call and, when CLASSIFIER_PROVIDER=jev,
+# Jev concurrently. A row of this kind is a "which decision path" fact,
 # not a "which of the three tiers" fact, hence the separate literal rather
 # than folding it into `harness.tiers.Tier`.
 TaskTier = Literal["guard", "plan", "synth", "classifier"]
@@ -62,9 +55,7 @@ class TaskTierEntry:
 
 
 # The eight call sites `Model_architecture.md` names today, restated as
-# data. Order matches that document's own table, top to bottom. Seven are
-# served by one of the three tiers; the sentence check is a classifier
-# decision since build phase 8.6 (T-8.6-02).
+# data. Order matches that document's own table, top to bottom.
 _EXISTING_CALL_SITES: tuple[TaskTierEntry, ...] = (
     TaskTierEntry(
         call_site="guardrail.attack_classification",
@@ -99,12 +90,8 @@ _EXISTING_CALL_SITES: tuple[TaskTierEntry, ...] = (
     TaskTierEntry(
         call_site="write.sentence_check",
         step="write",
-        tier="classifier",
-        note=(
-            "Whether one reworded answer sentence says more than the exact quote it cites. "
-            "Jev alone with CLASSIFIER_PROVIDER=jev, approving only a 'no' Jev's own "
-            "probabilities back, and nothing when Jev fails; the guard tier otherwise."
-        ),
+        tier="guard",
+        note="Whether one reworded answer sentence says more than the exact quote it cites.",
     ),
     TaskTierEntry(
         call_site="write.answer_synthesis",
@@ -120,11 +107,10 @@ _EXISTING_CALL_SITES: tuple[TaskTierEntry, ...] = (
     ),
 )
 
-# The decision points asked through `harness.decide.decide`: the five build
-# phase 8.2 introduced and the two build phase 8.6 added. Each is wired into
-# the loop step named here (`core/graph.py`, "classifier seam, wired")
-# except `plan.resource`, whose options exist (`tools/catalogue.
-# resource_options`) but which no step asks yet.
+# The five decision points build phase 8.2 introduces (planned section of
+# Model_architecture.md). Each one is a `harness.decide.decide` call, not
+# yet wired into the loop step named here; the step is where it WILL sit
+# once wired.
 _CLASSIFIER_DECISION_POINTS: tuple[TaskTierEntry, ...] = (
     TaskTierEntry(
         call_site="guardrail.relevancy",
@@ -154,26 +140,7 @@ _CLASSIFIER_DECISION_POINTS: tuple[TaskTierEntry, ...] = (
         call_site="plan.resource",
         step="plan",
         tier="classifier",
-        note="Which resource to pull. Its options exist, but no step asks it yet.",
-    ),
-    TaskTierEntry(
-        call_site="guardrail.injection",
-        step="guardrail",
-        tier="classifier",
-        note=(
-            "Jev's verdict on whether the question is a prompt-injection attempt, beside the "
-            "guard tier's attack classification (T-8.6-04); how the two combine is the "
-            "guardrail node's in core/graph.py."
-        ),
-    ),
-    TaskTierEntry(
-        call_site="think.asks_features",
-        step="think",
-        tier="classifier",
-        note=(
-            "Whether the question asks about a condition's features or symptoms (T-8.6-06), "
-            "which decides whether the answer makes room for them."
-        ),
+        note="Which resource to pull.",
     ),
 )
 
