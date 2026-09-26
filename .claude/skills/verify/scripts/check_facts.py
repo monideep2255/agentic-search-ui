@@ -46,7 +46,10 @@ So an edit to the registry can change how that fact is decided. It gets the
 same review as an edit here, and `--self-test` must pass after it.
 
 THE VERDICTS, the same three words `/verify` uses, plus one for the tool.
-Only PASS passes; every other verdict fails `/verify`.
+Only PASS passes this step: any line this script prints that is not PASS
+fails `/verify`, a GAP included. That is stricter than the `/verify` report
+as a whole, where a GAP line the model writes, for a screen with no design
+or an unread deploy record, names a gap without failing the verdict.
 
   PASS   what the place says matches the source.
   FAIL   it does not: the page or document is stale.

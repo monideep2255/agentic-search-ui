@@ -206,7 +206,7 @@ venv/bin/python .claude/skills/verify/scripts/check_facts.py
 - It needs Python 3.11 or later, which the venv has. A system `python3` may be 3.9, and the script refuses it with exit code 2 and a message naming the venv.
 - It reads the code and never imports or runs it, so the stack need not be up. It needs no network and no secret. The one process it starts is `git rev-parse`.
 - In an agent worktree the `reference/` link does not resolve. The script falls back to the main checkout's copy, or takes `--reference <dir>`. A `--reference` that names no directory is refused, never ignored.
-- Only PASS passes. Exit 0 means every place matches its source, and any other exit fails `/verify`:
+- This step has its own rule, stricter than the report's verdict: the facts check passes only on exit 0, which means every place matches its source. Any other exit fails `/verify`, whatever the screens show:
   - Exit 1: at least one FAIL, a stale screen, document or copy in code.
   - Exit 2: at least one ERROR. The registry no longer matches the code, or a place reads as nothing; update the registry in the same change.
   - Exit 3: at least one GAP and nothing worse. A source could not be read here, so those places were never judged. Rerun with the reference present.
@@ -230,7 +230,7 @@ venv/bin/python .claude/skills/verify/scripts/check_facts.py \
    - The API service: read its latest deployment the way `/ship` does, which must show SUCCESS and the commit `git rev-parse origin/develop` names.
    - The web service: `/ship` does not read it. Read its latest deployment the same way from the deployment platform, or write a GAP line for it.
    - Write each commit, and where it was read, in the report's target line.
-3. If a deploy record cannot be read, write a GAP line, "deployed commit unknown for <service>, /health reports none". The facts are then proven for the merged code, not for what develop serves.
+3. If a deploy record cannot be read, write a GAP line, "deployed commit unknown for <service>, /health reports none". The facts are then proven for the merged code, not for what develop serves. This GAP line is written by the model, not printed by the facts check, so it names the gap without failing the verdict (The report, item 7).
 
 ### Integrations smoke, not yet wired in
 
@@ -246,6 +246,7 @@ The Integrations audit is on develop, and its smoke script is `testing/Developer
 ## Step 8: closing
 
 - A wording or layout card that passes at both widths, 1280 and 390, starts the seven-day close. A run with `--allow-partial-widths` never does. The owner's retest is a spot check, and the owner can object or reopen within the seven days (DECISIONS.md 2026-09-26, "A `/verify` pass at 1280 and 390 pixels starts the seven-day close").
+- A facts check that did not exit 0 makes the verdict FAIL (The report, item 7), so it holds the close too. A GAP line for a screen with no design, or for an unread deploy record, does not.
 - The lead writes the "closes on" date on the card, as `.claude/skills/bossman-mode/reference/UI_fix_loop.md` step 8 says.
 - A card that changes answers waits for the owner's verdict, whatever `/verify` says.
 - `/verify` never moves a card or closes a ticket itself.
@@ -255,7 +256,7 @@ The Integrations audit is on develop, and its smoke script is `testing/Developer
 The report is `report.md` in the same folder. An agent that may not write files returns it as text, and the lead saves it there. It is short, in this order:
 
 1. The target: the web and API URLs, `app_env`, the local checkout's commit and the deployed commit where known, and the round.
-2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, plus ERROR on a facts line from Step 6, and no others. Only PASS passes:
+2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, plus ERROR on a facts line from Step 6, and no others:
 
 ```text
 - FAIL | answer at 390 | horizontal overflow | 14 px | testing/Developer/reports/<folder>/results.json
@@ -267,7 +268,10 @@ The report is `report.md` in the same folder. An agent that may not write files 
 4. The facts lines from Step 6, fails first, and the deployed commit or its GAP line.
 5. What was not captured and why, stated rather than implied.
 6. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. The line itself stays FAIL until the owner says otherwise.
-7. The verdict: PASS when every line is PASS, at both widths for a change with screens, or on the facts check alone for a backend-only change. Otherwise FAIL, with the lines that are not PASS.
+7. The verdict: PASS at both widths, or FAIL with the lines still failing. How the lines count:
+   - A GAP line the model writes does not fail the verdict: a screen with no design (Step 4), or a deploy record that could not be read after the merge (Step 6). It names what was not judged, and the owner reads it.
+   - The facts check keeps its own stricter rule (Step 6): it passes only when `check_facts.py` exits 0. Any other exit makes the verdict FAIL, and every line the script printed that is not PASS, its GAP and ERROR lines included, is a line still failing.
+   - A backend-only change has no screen to capture, so its verdict is the facts check's alone.
 
 Before committing the folder, prove it holds no local path, secret or personal data. `grep -rlF "$HOME" <folder>` must print nothing, and read the `.txt` files. The capture runs as a guest, so no account appears on screen.
 
@@ -288,7 +292,8 @@ Before committing the folder, prove it holds no local path, secret or personal d
 - [ ] Every scripted line was copied unchanged, with its file
 - [ ] Every screenshot pair has a judgement line naming both files, or a gap line
 - [ ] An answer-path change names the golden run and the rubric, run or still to run
-- [ ] The facts check ran with the venv and exited 0, or every FAIL, GAP and ERROR line was copied and the run is FAIL
+- [ ] The verdict is PASS at both widths, or FAIL with the lines still failing; a GAP line for a screen with no design or an unread deploy record was named and did not fail it
+- [ ] The facts check ran with the venv and exited 0, or every FAIL, GAP and ERROR line it printed was copied and the verdict is FAIL, since any exit but 0 fails `/verify`
 - [ ] After the merge, the facts check reran on the merged develop commit, and each service's deployed commit was confirmed or named as a GAP
 - [ ] At most two rounds, and anything still failing is named as open
 - [ ] The report folder holds no local path, secret or personal data
