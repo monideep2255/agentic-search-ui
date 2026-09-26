@@ -1,3 +1,10 @@
+---
+paths:
+  - ".claude/hooks/**/*"
+  - ".claude/settings.json"
+  - "src/system_03_search_agent/**/*.py"
+---
+
 ## Dependency tracking
 
 Scope: hooks under `.claude/`, and every Python module under `src/system_03_search_agent/`. Skills, rules, and agents are exempt (see below).
@@ -25,7 +32,7 @@ What counts:
 Skills, rules, and agents do not need `depends_on`/`depended_by`:
 
 - Skills: every skill is enumerated in CLAUDE.md's skills table, one row per skill naming its purpose and invocation. That table is the dependency record; a separate frontmatter field would just duplicate it, the same reasoning that already applies to agents below.
-- Rules: every rule in `.claude/rules/` is loaded automatically each session regardless of whether anything declares a link to it. There is no "undiscoverable" failure mode to guard against.
+- Rules: every rule in `.claude/rules/` is loaded automatically regardless of whether anything declares a link to it. A rule with no `paths:` frontmatter loads each session; a rule with `paths:` loads when a file matching one of its globs is read. The one rule kept in `docs/rules/` loads only when read, and `CLAUDE.md` names the situation that calls for it. There is no "undiscoverable" failure mode to guard against.
 - Agents: agents are invoked by name from a small, fixed roster listed in CLAUDE.md's sub-agent table. That table is the dependency record; a separate frontmatter field would just duplicate it.
 
 If a skill, rule, or agent cross-references another component in its prose (as this rule does), that is fine and encouraged, but it is not a tracked, enforced field.

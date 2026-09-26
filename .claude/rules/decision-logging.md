@@ -1,10 +1,10 @@
 ---
 description: "Log non-trivial decisions to DECISIONS.md when choosing between alternatives that affect future work."
 scope: portable
-alwaysApply: true
+alwaysApply: false
 depends_on: [DECISIONS.md]
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
 ---
-
 ## Decision logging
 
 When a non-trivial choice is made between alternatives, log it to `DECISIONS.md` at the repo root.

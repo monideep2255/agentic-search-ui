@@ -20,6 +20,7 @@ Why, from the build record:
 - [When it runs](#when-it-runs)
 - [Step 1: capture the screens](#step-1-capture-the-screens)
 - [Step 2: the golden consistency run](#step-2-the-golden-consistency-run)
+- [Why the golden run is the premise check](#why-the-golden-run-is-the-premise-check)
 - [Step 3: read the answers against the rubric](#step-3-read-the-answers-against-the-rubric)
 - [Step 4: report what to look at first](#step-4-report-what-to-look-at-first)
 - [What is automated, and what waits](#what-is-automated-and-what-waits)
@@ -30,13 +31,13 @@ It is `.claude/agents/product-reviewer.md`: read-only tools plus Bash for the ca
 
 - A script captures; the model only judges. Every judgement names the screenshot or answer file it read. The 2026-09-01 decision was taken because every capture the assistant interpreted needed correcting at least once, so a judgement with no file behind it is not written.
 - It is a pre-screen. It tells the owner what to look at first. It never moves a card, sets a ticket state, or closes a finding. The owner's verdict closes.
-- It files findings; it does not fix them. In build-phase mode its findings are ledger rows in `tracker/phase_N.M.md`. In UI fix mode they go to the report folder below.
+- It files findings; it does not fix them. For a numbered phase its findings are ledger rows in `tracker/phase_N.M.md`. For a card worked alone they go to the report folder below.
 
 ## When it runs
 
-- Build-phase mode: after the owner merges the phase's pull request and develop has deployed it, before the owner retests.
-- UI fix mode: before the owner retests an item, on any item that changes a screen or the answer path.
-- Every answer-path change, in either mode, waits on Step 2. An answer-path change is one that can change what an answer says, which records it names or cites, or whether a question is answered or refused.
+- A numbered phase: after the owner merges the phase's pull request and develop has deployed it, before the owner retests.
+- A card alone: after it lands on develop, before the owner retests, on any card that changes a screen or the answer path.
+- Every answer-path change, at every dial position, waits on Step 2. An answer-path change is one that can change what an answer says, which records it names or cites, or whether a question is answered or refused.
 
 Before capturing anything, confirm which app answered. A screenshot of the wrong deployment looks identical to a screenshot of the right one.
 
@@ -76,12 +77,40 @@ python3 testing/Developer/reports/2026-09-22_10.3_consistency/summarize.py \
 ```
 
 - The accounts file holds sign-in bodies and is never committed or printed. The lead passes its path in the brief. The per-user daily cap is 100, which is why there are two accounts and two workers.
-- The floor is the answered count of the latest run the owner accepted. Today that is 86 of 150, the 2026-09-22 run at commit `63ec316`. When the owner approves a change whose run answered more, that run becomes the floor.
+- The floor is the answered count of the latest run the owner accepted. Today that is 102 of 150, phase 8.2's run of 2026-09-25 (`testing/Developer/reports/2026-09-25_phase_8.2_golden/summary.md`), which became the floor when the owner kept the overnight build on develop. When the owner approves a change whose run answered more, that run becomes the floor.
 - Any drop in the total answered count below the floor stops the phase. Nothing else lands on develop until the change is fixed or reverted.
 - Repeated runs, not one: the three passes are the repetition. Outcomes vary between runs of one question (15 of 32 questions gave different outcomes across runs on 2026-09-12), which is why one pass per question is never the measure.
 - A drop is not argued away as noise, and the run is not repeated until it comes out green. That is corrupting the check. The lead may show the owner the per-question table; only the owner may accept a drop.
 - A run with any rate-limit signal (`rate_limit_signals` above zero) is contaminated and does not count either way. Re-run it after the pool clears.
 - Report, beside the total: the questions that got worse, the questions that never answer, and time to answer from the summary's Latency section, median, p90 and worst, with every answered question over 25 seconds named.
+
+Two numbers, not one, since 2026-09-25 (build harness review, A3). The golden-run scripts are unchanged; the second number is the reviewer's own read.
+
+- Answered: the total the summary prints, against the floor. Any drop blocks, as above.
+- Answered well: the rubric read of a fixed sample of ten answered golden questions, the same ten every run. The sample is the ten lowest-numbered golden questions that the floor run answered in all three passes, listed by id in the report so the next run reads the same ten; it changes only when the floor does. A question counts as answered well when rubric lines 1 and 2 in Step 3 both pass, each verdict quoting the sentence it rests on.
+- The summary's "Answered every time" count is the stable number to read beside them. In the two overnight runs of 2026-09-25 it was 33 in both, and the questions answered only some of the time numbered 0 and 2, where the 2026-09-12 baseline varied on 15 of 32.
+
+Why: phase 8.1's run answered 99 of 150, and its product review read 11 of 17 answers failing rubric line 2; one question's gain from 0 to 3 was an SRA question answered with a SARS pathway (`testing/Developer/reports/2026-09-25_product_review_8.1/report.md`). A change that raises answered and lowers answered well is visible on one line.
+
+## Why the golden run is the premise check
+
+A premise check is a test that runs the real model against real ground truth and asserts the answer means the right thing. An ordinary test suite checks the SHAPE of an answer: rows came back, every row is cited. Both of those pass on an answer that is completely wrong.
+
+The case that created it: build phase 2.1 shipped a fully green suite that answered "which diseases are associated with BRCA1?" with twenty-five non-human orthologs. Every row carried a real, resolving NCBI citation, so every shape check passed.
+
+Where it applies now, and where it does not:
+
+- Answer behaviour only: a change that can alter what an answer says, which records it names or cites, or whether a question is answered or refused.
+- For every such change, the check is this golden consistency run, 50 questions three times on develop, and it blocks.
+- An answer-path phase may still add a premise gate for a behaviour the golden questions cannot see. It is written first and seen failing before the code it grades. Its acceptance criteria are fixed: the four properties below, a statement of which shapes of question it exercises and which it omits, and a red run before any other ticket opens. A gate that passed on first run has not been shown able to fail.
+- Nothing else gets a premise gate, a mutation harness file or a coverage claim. Spread from model-generated output to CI, release and rate limiting, those instruments became the main source of findings, 43 to 45 percent late in the build. Breaking a control to see a test go red is one line on the judge's checklist.
+
+The four properties that make an answer-path check worth running, each a measured failure in 2.1:
+
+- It does NOT mock the model. A mocked call supplies an answer someone already knew was correct.
+- It asserts on the MEANING of the answer, not its shape.
+- Its ground truth is read from the live source and pinned, so "correct" is checkable rather than plausible.
+- It runs the way PRODUCTION runs. A first draft of 2.1's gate hand-picked an input and scored 8 of 9, where the input production actually sends scored 3 of 9. The golden run meets this by asking the deployed develop API.
 
 ## Step 3: read the answers against the rubric
 
@@ -103,13 +132,19 @@ Each line gets one of three verdicts, and each verdict quotes the sentence or na
 
 The report is short and ranked, because the owner reads it before retesting:
 
-- The golden result: answered against the floor, blocked or clear, and the questions that got worse.
+- The golden result: answered against the floor, blocked or clear; answered well of the fixed ten, with the ten ids; the questions that got worse.
 - The ranked list of what the owner should look at first: every fail, then every "needs your eye", each with its screenshot or answer file.
 - Every screen with horizontal overflow at 390, and every surface with no design.
 - What was not captured and why, stated rather than implied.
 
 Then stop. The owner retests, and their verdict moves the item.
 
+For a wording or layout card, one more line: whether it passed at both widths, 1280 and 390.
+
+- A pass starts the seven-day clock in the UI fix loop's step 8, the product owner's decision of 2026-09-25.
+- A fail leaves the card waiting for the owner's verdict.
+- A card that changes answers always waits for the owner's verdict.
+
 ## What is automated, and what waits
 
-Automate last, and only what already exists. The consistency run and the live journeys already exist, so they are the capture step today. Nothing new gets automated, including a nightly schedule on develop, until the product review has run by hand on two phases and the owner has seen both reports.
+Automate last, and only what already exists. The consistency run and the live journeys already exist, so they are the capture step today. Nothing new gets automated, including a nightly schedule on develop, until the product review has run by hand on two phases and the owner has seen both reports. It has run on phases 8.1 and 8.2; the schedule is still the owner's to ask for.

@@ -1,7 +1,13 @@
 ---
 description: "Before/after code pairs for the highest-risk security patterns in this repo's FastAPI, psycopg2/AGE, and React stack."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths:
+  - "src/**/*"
+  - "frontend/src/**/*"
+  - "services/**/*"
+  - ".claude/settings.json"
+  - ".claude/hooks/block-bash-delete.sh"
 ---
 
 ## Production examples
@@ -196,11 +202,18 @@ The real residual risk:
 - `Bash(ssh:*)` allows `ssh some-host "rm -rf /important/data"` outright. The destructive command lives inside the double-quoted remote-command argument passed to the remote shell. To the permission engine this is one segment starting with `ssh`.
 - `Bash(python:*)` and `Bash(python -c:*)` allow `python -c "import os; os.system('rm -rf ~')"`. One segment, starts with `python`, matches. The destructive call is inside the quoted `-c` argument.
 - The same shape applies to any allowed program that can take an arbitrary string to execute: `bash -c "..."`, `sh -c "..."`, `perl -e "..."`, `osascript -e "..."`.
-- `.claude/hooks/block-bash-delete.sh` matches `rm` or `rmdir` only at the start of the command string or immediately after a bare `;`, `&`, or `|` character. It is a plain-text regex over the whole command, not a shell parser, and it does not look inside single or double quotes. In `ssh host "rm -rf ..."` and `python -c "...os.system('rm -rf ~')..."`, the character immediately before `rm` is a quote, not the start of the string or a bare separator, so the hook's pattern does not match and the command passes through.
+- `.claude/hooks/block-bash-delete.sh` now covers the quoted shape for the common wrappers. It is still a plain-text regex, not a shell parser:
+  - It matches `rm` and `rmdir` as whole command words after a separator, an opener, `find -exec` or a runner such as `sudo` or `xargs`.
+  - In a command that names an execution wrapper (`ssh`, `python -c`, `perl -e`, `ruby -e`, `node -e`, `bash -c`, `sh -c`, `zsh -c`, `eval`), it blocks `rmdir`, `rmtree`, `dd if=`, `mkfs` or a write into `/dev` anywhere in the command.
+  - In the same command it blocks `rm` as a whole word, or right after an escape sequence that ends in a letter or digit (`\n`, `\012`, `\x3b`, `\u000a`, Ruby's `\C-j`), which the wrapper decodes into a newline or a separator. An escape right before a word that ends in rm, such as `\nperform`, is blocked too: the hook cannot tell the two apart, so it fails closed.
+- What the hook does not see, checked on 2026-09-26, which `tests/ci/test_claude_hooks.py` states too:
+  - A wrapper outside that list, such as `osascript -e`.
+  - Deletion that never names those words, such as `find -delete`, `unlink`, `shred`, `git clean` or Python's `os.remove`.
+  - An `rm` that a transformation inside the wrapper puts behind a separator, such as a character the command replaces with a newline, or a URL-decoded `%0a`. Until the command runs, the letter before `rm` is an ordinary character, so a whole-word match cannot tell it from "platform".
 
 Correct posture:
 - Pair every narrow allow rule with an explicit deny list for the specific destructive commands and constructs. Deny beats allow in the permission engine, so the deny entries are the load-bearing control, not the prefix allow rule or the hope that chaining gets caught.
-- Extend the rm-detecting hook, or add a new one, to scan the full command string for destructive patterns including inside single and double quotes, not only at the start of the string or after a bare separator. Closing the `ssh ... "rm -rf ..."` and `python -c "...rm -rf..."` gap needs a quoted-argument scan, which `block-bash-delete.sh` does not do today.
+- Keep the hook's wrapper scan, and widen it before relying on it for a wrapper or a deletion it does not see today: `osascript -e`, `find -delete`, `unlink`, `shred`, `git clean`, `os.remove` and an `rm` a transformation moves behind a separator all pass it. Widening it is a change to the security layer, so it needs the product owner's item-by-item yes.
 - Treat any Bash allow rule for a program that can execute an arbitrary string argument (`ssh`, `python -c`, `bash -c`, `sh -c`, `perl -e`, `osascript -e`) as higher risk than a program that only takes flags and file paths (`ls`, `cat`, `wc`). Scope those allow rules narrower, or require a quoted-argument-aware hook before broadening them.
 
 The test: does my code pass user input directly to Cypher, SQL, HTTP responses, URLs, or log messages without sanitization, and does my shell allowlist or hook scan inside quoted subcommand arguments, not just the leading token and top-level chain operators?

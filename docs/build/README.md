@@ -1,6 +1,12 @@
 # Build documentation
 
-How a build phase actually runs: the loop, the roles, the model tiering, and what the build has taught us so far. This folder answers "how do we build", not "what are we building". For what the system does, start at `docs/data-engineering/Project_overview_A_to_Z.md`; for the build order itself, read `requirements/Technical_specification.md` Section 25.
+How the build runs and what it has taught us so far. This folder answers "how do we build", not "what are we building". Since 2026-09-25 the loop itself lives in one home, `.claude/skills/bossman-mode/SKILL.md` and its four reference files, with its roles and its stages. This folder keeps:
+
+- The model tiering's provider mapping.
+- The historical page of the loop.
+- The build's own records.
+
+For what the system does, start at `docs/data-engineering/Project_overview_A_to_Z.md`; for the build order itself, read `requirements/Technical_specification.md` Section 25.
 
 ## Table of contents
 
@@ -15,10 +21,14 @@ How a build phase actually runs: the loop, the roles, the model tiering, and wha
 
 | File | What it is | Read when |
 |------|-----------|-----------|
-| `Build_workflow_cadence.md` | The twelve stages, who acts at each, the model tier and effort per stage, and where every file gets written. Also the provider mapping table, the single place a provider name appears | Before opening any build phase, and any time the model tiering is in question |
-| `Phase_6_execution_flow.html` | The same cadence as a visual page, openable in a browser. Also published as an artifact | When explaining the loop to someone, or checking the flow at a glance |
+| `Build_workflow_cadence.md` | A pointer since 2026-09-25. It keeps the provider mapping table, the single place a provider name appears, and says where each part of the loop now lives: the eleven stages, who acts at each, the model tier and effort per stage, and where every file gets written are in `.claude/skills/bossman-mode/SKILL.md` | Any time the model tiering is in question, or to find where a part of the loop is described |
+| `Phase_6_execution_flow.html` | The loop as it stood on 2026-09-24, as a visual page, openable in a browser. Also published as an artifact. A note at its top says it is a record, not the loop that runs today | When explaining how the loop worked before the modes merged on 2026-09-25 |
 
-These two are one thing in two forms. If they ever disagree, the markdown is the source and the page is regenerated from it.
+Until 2026-09-25 these two were one thing in two forms, the markdown the source and the page regenerated from it. Since then:
+
+- The skill is the source.
+- The markdown points at it.
+- The page is kept as the record of the 2026-09-24 design rather than regenerated.
 
 Premise gates were retired on 2026-09-24 for everything except answer behaviour (DECISIONS.md): the golden consistency run now blocks any answer-path change at stage 10, and it is the check most likely to feel skippable and least safe to skip.
 
@@ -65,7 +75,7 @@ What is in it:
 | File | What it is |
 |------|-----------|
 | `Multi_model_harness_plan.md` | The plan, the activation runbook, the model choices and why, the overnight requirements |
-| `Mixed_model_cadence.html` | The visual version: the twelve stages across two engines, and where a phase parks |
+| `Mixed_model_cadence.html` | The visual version of the loop as it stood before the 2026-09-24 redesign: the twelve stages across two engines, and where a phase parks |
 | `Verification_record.md` | Evidence the setup works, and the three defects testing found |
 | `setup/claude-build`, `setup/claude-review` | Copies of the launch wrappers that live on PATH |
 | `setup/build-models.env` | Copy of the model set with prices and read date |
@@ -91,4 +101,4 @@ The reference-edit argument above did not block the split, it shaped it. Measure
 
 What remains at this level is four cadence documents plus this README, which is comfortably back under the trigger. Revisit again if that grows past roughly ten.
 
-Last updated: 2026-09-24
+Last updated: 2026-09-26

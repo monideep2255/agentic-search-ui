@@ -1006,7 +1006,7 @@ def test_p10_the_database_port_is_still_closed_to_the_internet() -> None:
     unreachable destination with a timeout rather than a refusal. A
     TimeoutError is an OSError, so that arm passed on a sandbox denial and
     would have gone on passing with the database port wide open. This is
-    `.claude/rules/sandbox-diagnosis.md`'s own warning arriving as a test
+    `docs/rules/Sandbox_diagnosis.md`'s own warning arriving as a test
     defect: a denial and an outage look identical at this layer.
 
     The rebuild makes the two outcomes distinguishable inside ONE run, which

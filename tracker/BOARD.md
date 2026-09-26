@@ -1,12 +1,25 @@
 # Build board
 
-The index of every phase. Maintained by the `task-tracker` skill. Per-phase tickets live in `tracker/phase_N.M.md`, created when a phase opens.
+The record of build phases 1.0 through 6.2, frozen on 2026-09-25. Per-phase tickets for those phases live in `tracker/phase_N.M.md`.
 
-Build phases and their dependencies come from `requirements/Technical_specification.md` Section 25, which is the source of truth. This board never invents a phase.
+- This board ends at build phase 6.2. No row is added for anything after it, and no row here changes again. Its rows stand as they read on 2026-09-24, including build phase 6.2's `in-progress` status, which the build harness review of 2026-09-25 noted against its merge as PR #92 on 2026-09-01. A frozen record is not corrected silently, so the row is left as it was and this line says so.
+- Current work lives on `testing/UI_fix_plan.md`, the board of cards, with a ledger for each numbered phase from 8.1 onward under `tracker/phase_N.M.md`. The `task-tracker` skill says how those are kept.
+- Why one board: the build harness review of 2026-09-25 (D3) found two boards, this one with no row for any 8.x phase and unable to hold one, since its rows come from technical specification Section 25. A reader asking what is in flight needs one answer.
+- The renderer `tracker/render_board.py` and the page `tracker/board.html` stay as they are. The hook that re-rendered the page after every edit is removed from `.claude/settings.json` under the product owner's item-by-item approval of 2026-09-25 (DECISIONS.md), the board file staying as history.
 
-The build narrative that used to sit here, why rows were inserted, pulled forward or removed, and each phase's full story, moved to `requirements/Plan.md` on 2026-09-24, under Phase 6's "Build narrative, moved out of the board". This board is a status table: one line per phase on what it delivers, its status, its gates and its flags. What to do next is in `HANDOFF.md`.
+Build phases and their dependencies came from `requirements/Technical_specification.md` Section 25, the source of truth for these rows. This board never invented a phase.
 
-Last updated: 2026-09-24.
+The build narrative that used to sit here (why rows were inserted, pulled forward or removed, and each phase's full story) moved to `requirements/Plan.md` on 2026-09-24, under Phase 6's "Build narrative, moved out of the board". This board is a status table: one line per phase on what it delivers, its status, its gates and its flags. What to do next is in `HANDOFF.md`.
+
+Last updated: 2026-09-25.
+
+## Table of contents
+
+- [Status counts](#status-counts)
+- [Planning phases](#planning-phases)
+- [Build phases](#build-phases)
+- [Open flags](#open-flags)
+- [Visualizing this board](#visualizing-this-board)
 
 ## Status counts
 

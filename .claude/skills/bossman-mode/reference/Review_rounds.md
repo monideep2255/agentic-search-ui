@@ -2,13 +2,19 @@
 
 Read this before dispatching a judge or an adversary, and again before dispatching any fix agent or verifier. Nothing else in this skill needs it, which is why it is a separate file: a reviewer reads it alone rather than finding it buried in a phase-open checklist.
 
-This file is the canonical home of the four review-loop rules. `docs/build/Build_workflow_cadence.md` carries a condensed version and points here.
+This file is the canonical home of the four review-loop rules. `SKILL.md` points here, and nothing else restates them.
 
 What changed on 2026-09-24, from the product owner's acceptance of `docs/build/Bossman_mode_redesign.md`:
 
 - One judge round and one adversary round, then one fix-and-verify round. No third round, ever, even with the owner's authorisation.
 - Premise gates, mutation harness files and coverage claims are gone for everything except answer behaviour. Breaking a control to see a test go red is one line on the judge's checklist, not a file and not a dispatch.
 - Findings live as ledger rows in the phase file, not in per-round report files.
+
+Since 2026-09-25 the dial says when a round runs (`SKILL.md`, "Set the dial first"):
+
+- At position 2 or 3, a change to runnable behaviour and up, the judge and the adversary each run once, then one fix-and-verify.
+- At position 1, a copy or layout fix, neither runs. The product reviewer and the owner's retest are the check.
+- The judge reads the change wherever it sits. For a numbered phase that is the phase branch's diff against `develop`. For a card alone at position 2 it is the unpushed commits in the lead's checkout, `git diff origin/develop...HEAD`, read before the push; the findings go to a dated report folder rather than a ledger.
 
 ## Table of contents
 
@@ -54,7 +60,7 @@ The adversary is the unscripted half. It uses the running system in hostile ways
 - Above all, queries engineered to draw a confident wrong answer, especially where the graph returns nothing and the system should refuse rather than answer from priors.
 - The lying trust signal: a pill, an outcome or a status line that says something the answer does not bear out.
 
-- It runs one round, after the judge, on any phase that changes runnable code. It does not run on a documentation-only change, and it never runs a second round.
+- It runs one round, after the judge, on any change at dial position 2 or 3, which is any change to runnable code. It does not run on a documentation-only change, and it never runs a second round.
 - It over-reports on purpose, because for a biomedical user a false alarm is cheap and a missed wrong answer is not.
 - It files every finding to the ledger AS IT FINDS IT, not in a batch at the end, and stops there. It never fixes, triages or closes its own findings.
 

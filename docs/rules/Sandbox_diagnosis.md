@@ -1,10 +1,17 @@
 ---
 description: "Before disabling the sandbox for a failed command, classify the failure (filesystem deny, Layer-7 HTTPS block, Layer-4 SSH) and apply the durable fix that keeps the security boundary intact."
 scope: portable
-alwaysApply: true
+alwaysApply: false
 ---
 
 ## Diagnose before disabling the sandbox
+
+This rule lives in `docs/rules/` since 2026-09-26, not in `.claude/rules/`, so it no longer loads into every session and agent (the product owner's item-by-item approval of 2026-09-25, DECISIONS.md). It concerns a failed command rather than a file, so no `paths:` glob could scope it. `CLAUDE.md` names the situations that call for it:
+
+- A command blocked with "operation not permitted", "could not lock", or a write outside the allowlist.
+- A blocked connection to an `https://` host.
+- A failed SSH connection, such as a push to `git@github.com:22`.
+- Always, before disabling the sandbox for any command.
 
 The sandbox is a security boundary. `dangerouslyDisableSandbox: true` removes it for one command. Reaching for it on the first failure trades that boundary for convenience and hides a fixable root cause. Before you disable anything, classify the failure. Most sandbox failures have a durable fix that keeps the boundary intact.
 

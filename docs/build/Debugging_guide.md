@@ -686,16 +686,16 @@ Directory counts, from `find tests -name "*.py"`. There are 179 Python test file
 
 Those sum to 179. Of the five files sitting directly in `tests/system_03_search_agent/`, two are the shared helpers listed above, `graph_gate.py` and `model_stub.py`. The others are `__init__.py`, `test_integrations_page_claims.py`, and `test_debugging_guide_coverage.py`, which is the gate described under Keeping this guide current. Separately, the frontend carries 18 `*.test.*` files under `frontend/src/` and 13 Playwright spec files under `frontend/e2e/`.
 
-### `tracker/` the build board and its scripts
+### `tracker/` the phase ledgers, the frozen build board and their scripts
 
 One Python script per job, each read for its own docstring and its own argument parsing rather than assumed.
 
 | Script | Job | Flags |
 |--------|-----|-------|
 | `preflight.py` | Probes one endpoint per transport (the product's own model provider, the build harness's own model provider, and the Layer 1 graph) before dispatching anything expensive, using stdlib only. | `--transport` (repeatable, choices are the HTTPS transports plus `graph`, default is all of them), `--timeout` (float seconds per probe, default `PREFLIGHT_TIMEOUT` environment variable or `6`) |
-| `check_doc_drift.py` | Computes every tracked fact (a test count, a decision count, a phase status, a PR number) from source, then scans every tracked markdown file for a stale copy of it, plus a handful of recurring structural defects. | `--check` (exit 0 on a clean run, exit 1 if any drift is found) |
-| `render_board.py` | Renders `tracker/BOARD.md` into `tracker/board.html`, the kanban view. It is the only thing that writes that file, so the two can never drift by hand. | `--check` (parse and report, write nothing) |
-| `check_learnings_coverage.py` | Fails a phase close if that phase had confirmed or closed findings and zero matching rows in `LEARNINGS.md`. | Positional `<phase>` (for example `2.0`), `--phase-file PATH` (defaults to the phase's own tracker file) |
+| `check_doc_drift.py` | Scans every tracked markdown file for recurring structural defects (a table of contents out of step with its headings, duplicate phase headings, a "Last updated:" line older than a date in its own body, a broken append-only table) and for a phase-to-PR reference or a "next" phase that git or the frozen board contradicts, reading each phase status and PR number from source. Since 2026-09-25 it compares no count, and no date is ever compared with today's; `--counts` computes the test, decision, learning, flag, premise gate and Playwright counts from source and prints them. A fact it could not compute is a failure line, never an ok. | `--check` (exit 0 on a clean run, exit 1 on any finding or any fact it could not compute), `--counts` (print only, exit 1 when a count could not be computed or pytest reported collection errors), `--verbose`, `--self-test` |
+| `render_board.py` | Renders `tracker/BOARD.md`, frozen on 2026-09-25 as the record of build phases through 6.2, into `tracker/board.html`, the kanban view. It is the only thing that writes that file, so the two can never drift by hand. Nothing runs it automatically since 2026-09-26, when the `sync-board.sh` hook was unwired; `check_doc_drift.py` reuses its parser. | `--check` (parse and report, write nothing) |
+| `check_learnings_coverage.py` | Fails a phase close if that phase had confirmed or closed findings and zero matching rows in `LEARNINGS.md`. Invoked on demand only since 2026-09-25, when build harness review item D4 took it out of the phase-end chain. | Positional `<phase>` (for example `2.0`), `--phase-file PATH` (defaults to the phase's own tracker file) |
 
 ### `.github/` continuous integration
 
@@ -828,7 +828,7 @@ Nothing here is asserted on trust. Run these to check it yourself.
 |---|---|
 | Every source file has a row, no phantom paths, no repurposed file with a stale row | `pytest tests/system_03_search_agent/test_debugging_guide_coverage.py -v` |
 | House style, the same gate every document in this repository passes | `python .claude/skills/doc-readability/scripts/check_style.py docs/build/Debugging_guide.md` |
-| No stated count has gone stale anywhere in the repository | `python tracker/check_doc_drift.py --check` |
+| No tracked document has a broken table of contents, a broken append-only table, or a phase-to-PR reference that git contradicts | `python tracker/check_doc_drift.py --check` |
 | Every transport this guide names is actually reachable right now | `python3 tracker/preflight.py` |
 
 To find a symbol this guide names, without a line number that would have rotted:

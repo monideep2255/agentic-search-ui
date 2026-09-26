@@ -1,3 +1,6 @@
+---
+paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
+---
 ## V1 scope boundary
 
 `requirements/PRD.md` and `requirements/Technical_specification.md` are locked. Both name capabilities explicitly excluded from v1. Nothing currently enforces either list at the point an agent is actually writing code, which is low risk under supervised work and high risk under a long autonomous run: an out-of-scope capability that looks easy, fits naturally next to what is already being built, or would make a demo more impressive is exactly the kind of boundary an agent talks itself across when no one is watching each step. This rule is the enforcement point. Read the two source lists, never edit them: `PRD.md` and `Technical_specification.md` are locked documents.

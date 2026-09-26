@@ -74,7 +74,7 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | Which documents this skill keeps current, and their current shape | `tracker/Living_documents.md` | Nowhere else. This skill names jobs, the registry names sections |
 | What a fresh session needs: what is live, what awaits the product owner, the one next action, pointers | `HANDOFF.md`, under about 80 lines, rewritten in place | Nowhere else. It states no fact another file owns beyond its pointers, and never a count |
 | Per-phase tickets, findings, evidence | `tracker/phase_N.M.md` | A pointer, never a copy |
-| Phase status and open flags | `tracker/BOARD.md` | A pointer, for build phases only; the UI fix loop does not write it |
+| Phase status and open flags | For a numbered phase, its ledger `tracker/phase_N.M.md`: ticket statuses and open findings. `tracker/BOARD.md` holds them for build phases 1.0 through 6.2 only, frozen on 2026-09-25 | A pointer. Nothing writes the frozen board |
 | What is not yet started, what is being built now, and what is live awaiting retest | The board, `testing/UI_fix_plan.md`, one card per item in the column its status says | Nowhere else. `tracker/BOARD.md` does NOT track UI fix items and is not expected to |
 | Every closed item with its detail, the detail behind every card, the cutoff, the ordered next actions, and each day's shipped list as a session table | `testing/UI_fixes_done.md` | A pointer, never a copy. An item's card lives in exactly one board column until approved, and its detail lives in exactly one of the two files |
 | Every query worth typing, what a person should see, and the retest steps the board's Retest cards point at by query number | `testing/Test_queries_and_workflows.md` | A pointer by query number, never a copy |
@@ -82,7 +82,7 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | Failures and their fixes | `LEARNINGS.md` | A pointer; Step 1b checks the session's failures are logged |
 | Choices between alternatives | `DECISIONS.md` | A pointer |
 | Build order | `requirements/Technical_specification.md` Section 25 | A pointer |
-| Counts (tests, decisions, entries, flags) | Computed by `tracker/check_doc_drift.py` | Only the Current focus table's build row in CLAUDE.md, the same row in AGENTS.md, and Plan.md's decisions line state them. `HANDOFF.md` never does |
+| Counts (tests, decisions, entries, flags) | Computed on demand by `python3 tracker/check_doc_drift.py --counts`, and stored in no document | Nowhere. No document states them as current and no step here writes one (build harness review item D1, 2026-09-25) |
 | The plain-language state of the project, for a non-technical reader | `PROGRESS.md` | Nowhere else. It is the only document written for someone outside the build |
 
 `PROGRESS.md` is the one deliberate exception to the pointer rule, and it is worth saying why. Every other row above avoids restating a fact because a second copy drifts. `PROGRESS.md` restates many of them on purpose, in different words, because its reader cannot follow a pointer into `tracker/phase_N.M.md` and get anything useful out of it. The protection against drift is that it is refreshed at Step 5b of every checkpoint, from the same sources, rather than edited ad hoc.
@@ -113,9 +113,9 @@ The first step, and the reason this skill no longer overrules a decision. Nothin
 
 1. Read `tracker/Living_documents.md` in full. It is the list of documents this run may write, and the shape of each.
 2. Run `python3 tracker/check_living_docs.py --shape`. A red line names a document whose registered anchors are no longer in the file, or a row whose shape is `unpinned`. A red line is a question, not an instruction: the document may have been reshaped on purpose, and the registry is what is stale.
-3. Read every `DECISIONS.md` row below the registry's watermark (the "decision guard watermark" section names the last guarded row), including rows appended this session and rows still uncommitted. For each row that changes a document's shape, its job, its owner, or a process this skill runs: edit that document's registry row first, and cite the decision row in its "Set by" cell. If the decision changes a process rather than a shape (a file family is no longer written, a step moves to another owner), the registry row records that, and this skill's job-level instruction below already follows the registry.
+3. Find the watermark row: the registry's "decision guard watermark" section quotes the last guarded row's date and the first words of its Decision cell, so search `DECISIONS.md` for that quote. Read every row after it, including rows appended this session and rows still uncommitted. For each row that changes a document's shape, its job, its owner, or a process this skill runs: edit that document's registry row first, and cite the decision row in its "Set by" cell. If the decision changes a process rather than a shape (a file family is no longer written, a step moves to another owner), the registry row records that, and this skill's job-level instruction below already follows the registry.
 4. Rerun `--shape`. Every red line must now be explained by a registry edit made in this step, or by a shape still marked `unpinned` because the rewrite that pins it has not landed. A red line with no decision behind it means the document was reshaped without a recorded decision: STOP and ask the product owner whether the new shape stands (then log the row and register it) or the old one does (then they restore it). Never choose.
-5. Move the watermark to the last row read, and set the registry's date line to today.
+5. Move the watermark to the last row read, written as that row's date and the first words of its Decision cell, quoted exactly so a search finds exactly one row. Never a line number or a row number: a line number moves whenever anything above it changes, and "row 716" was once written for what was line 716 of a file holding 687 rows (build harness review item S4, 2026-09-25). In the same edit, set the registry's date line to today. If no row was read, change neither.
 
 A planned edit that conflicts with a product-owner decision, at this step or any later one, stops the run and asks. The skill does not pick the reading that lets it continue.
 
@@ -162,14 +162,14 @@ Rules:
 
 - Under about 80 lines. If it is longer, it is restating something an owner file already says: move the fact to its owner and leave a pointer.
 - Rewritten in place, never appended to. Every sentence describing a state this session superseded is deleted, not left below the new one. This is the failure the rule exists to prevent: after five build phases handled as appends instead of rewrites, the old continuation prompt described build phase 2.1 in five contradictory sections at once, and its own copy-paste block told the next agent not to open build phase 2.2, the phase that was actually next.
-- No history. What landed goes to Plan.md's Revision history (Step 5) and, in the UI fix loop, the done file's session table (Step 5a). No counts: those are computed and stated only where the one-owner table says.
-- Set its date line to today.
+- No history. What landed goes to Plan.md's Revision history (Step 5) and, in the UI fix loop, the done file's session table (Step 5a). No counts: none is stated in any document, and `python3 tracker/check_doc_drift.py --counts` computes them on demand.
+- Set its date line to today. It is the one document every session end rewrites, so it is the one document dated at every session end.
 
 ### Step 5: synthesis and Plan status (all modes, different scope)
 
 - Planning-phase mode, phase-end only: extend or write `requirements/phase_N/Phase_N_synthesis.md`, the topic-organized narrative of the phase's decisions, ready for the downstream phase.
-- Build-phase mode: no per-phase synthesis doc (Step 6.2's one scheduled reconciliation plays that role once, mid-build). Instead, always update `requirements/Plan.md`: bump the Phase 6 status-table row to name the build phase just merged and the one next up, update the last-updated line, and append a Revision history entry naming what merged, its PR number, and its release-gate outcome (tests passing, findings fixed, any decisions logged). Plan.md no longer carries a separate "Summary of what happens next" paragraph, so there is no fourth edit to make; do not recreate one.
-- UI-fix-loop mode: append a `requirements/Plan.md` Revision history entry naming the session's date, what landed, what was reverted or held and why, and any decision logged. Update the last-updated line. Do NOT bump the Phase 6 status-table row, which names build phases; a fix set is not one, and writing one in there makes the table claim a phase exists that Section 25 does not contain.
+- Build-phase mode: no per-phase synthesis doc (Step 6.2's one scheduled reconciliation plays that role once, mid-build). Instead, always update `requirements/Plan.md`: bump the Phase 6 status-table row to name the build phase just merged and the one next up, and append a Revision history entry naming what merged, its PR number, and its release-gate outcome (tests passing, findings fixed, any decisions logged). Plan.md no longer carries a separate "Summary of what happens next" paragraph, so there is no fourth edit to make; do not recreate one.
+- UI-fix-loop mode: append a `requirements/Plan.md` Revision history entry naming the session's date, what landed, what was reverted or held and why, and any decision logged. Do NOT bump the Phase 6 status-table row, which names build phases; a fix set is not one, and writing one in there makes the table claim a phase exists that Section 25 does not contain.
 
 ### Step 5a: the board and the done file (UI-fix-loop mode only)
 
@@ -181,7 +181,7 @@ Each instruction below names a job. The registry row for the file says which sec
 - WHEN A NEW ITEM IS ADDED: write its card in the not-started column, in priority order with what it is waiting on (the values the column already uses), and its detail under the section for items on the board, before any work starts on it. The board is the source of truth for what gets worked on, so an item exists there first.
 - WHEN WORK STARTS on a not-started item: move its card to the building column.
 - Keep the columns current and in priority order. The building column carries the sentence the file already uses when nothing is being built. The retest column lists newest first.
-- Refresh the board's date line to today.
+- When a card moved, move the board's date line to today in the same edit. A board nothing changed on keeps its date.
 - Rewrite the done file's cutoff section in place. It is the cutoff, and the next session starts from it rather than reconstructing state. It carries what is live, what is parked and why, what is waiting on the product owner, the known loose ends, and the ordered next actions. Set its date line to today.
 - An item that was merged and then reverted is NOT quietly returned to its earlier status. Say it was reverted, and say what question is open, or the next session will re-land the same work into the same defect.
 - Rewrite the ordered next actions in the same order as the not-started column. The two must agree: the ordered list is the detail and reasons behind the board's priority order, not a separate ordering.
@@ -205,7 +205,6 @@ What to update, every checkpoint, in the sections the registry names for it:
 - The sprint table: add a row for the phase that just merged, with its plain-terms description and its date.
 - The "what is next" ordered list, so item 1 is genuinely the next thing.
 - The known-problems table: add anything this phase carried, remove anything it closed, and keep each row's "when it gets fixed" honest rather than aspirational.
-- The last-updated date.
 
 Rules for the writing, which are stricter here than anywhere else in the repository:
 
@@ -224,26 +223,19 @@ Rules for the writing, which are stricter here than anywhere else in the reposit
 
 There is no per-query status line to keep in step: the card's column is the status, and the 2026-09-24 rewrite removed the per-query lines.
 
-### Step 5d: the tracked counts (all modes)
-
-- Run `python tracker/check_doc_drift.py --check`. It takes about two minutes, since it collects the whole test suite.
-- For every "says X (computed: Y)" line it reports, update that document to Y: the Current focus table's build row in `CLAUDE.md` and `AGENTS.md` for tests, decisions, and learnings, and `requirements/Plan.md`'s decisions line for decisions.
-- Set `CLAUDE.md`'s and `AGENTS.md`'s "Last updated" line to today.
-- Never edit the checker to make it pass, per `.claude/rules/goal-contracts.md`.
-
 ### Step 6: structural hygiene pass (all modes)
 
 Before the exit checklist, verify the structure of every document this checkpoint created or updated, per writing-style.md. This step exists because a status block was once crammed into a single run-on paragraph, and a table of contents lagged the body as sections were appended.
 
 - No walls of text: any passage that enumerates three or more items (decisions, steps, sources, dispositions) is a bulleted list or a table, not a run-on paragraph chained by semicolons or commas. A status is a table; a changelog is a dated bullet list, newest first.
 - Table of contents current: every `##` section added this checkpoint has a matching ToC entry, and the ToC lists all sections, not just the early ones.
-- Status and counts current: the handoff, the Plan.md status table, and any progress table name the correct current phase. No finished phase is labeled "next", and no just-merged build phase is labeled "not started".
+- Status current: the handoff, the Plan.md status table, and any progress table name the correct current phase. No finished phase is labeled "next", and no just-merged build phase is labeled "not started".
 - Titles and filenames current: a session doc or meeting note whose title or filename names fewer steps than it now covers is retitled, and the file renamed with `mv` (never `rm`) if the step span in the name is wrong.
 
 ### Step 7: the two checks (all modes)
 
-- `python tracker/check_doc_drift.py --check`. It computes the tracked counts (tests, DECISIONS.md rows, LEARNINGS.md entries, open flags, PR numbers) from source and fails if any tracked document states a stale value. Run a second time here, after Step 5d's edits, so the run ends on a green check rather than on the one that named the stale values.
-- `python3 tracker/check_living_docs.py`, both `--shape` and `--fresh`: every registered anchor exists, and every registered date line is today. `/ship` runs `--fresh` again and refuses to push when it is red, which is how "checkpoint then ship" is enforced rather than remembered.
+- `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, a "Last updated" line older than a date in its own body, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
+- `python3 tracker/check_living_docs.py --shape`: every registered anchor exists.
 
 A nonzero exit from either blocks the checkpoint: fix the document the script names, then rerun. Never declare the checkpoint done on a failing or unrun check, and never edit a checker so it passes.
 
@@ -256,6 +248,8 @@ A nonzero exit from either blocks the checkpoint: fix the document the script na
 - Never write a section the registry does not list for that document, and never restore one a red `--shape` says is gone. Both are decisions, and Step 0 says what to do with a decision.
 - Never invent a build phase in UI-fix-loop mode. There is no merged phase and no PR number; a checkpoint that writes one into Plan.md or the board makes both claim a phase Section 25 does not contain.
 - Never invent a build phase or its deliverables. Build-phase mode content comes from `requirements/Technical_specification.md` Section 25 and the merged phase's own `tracker/phase_N.M.md`, not from memory.
+- Write no count. Test, decision and learning counts are computed on demand by `python3 tracker/check_doc_drift.py --counts` and stated in no document. Build harness review item D1, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways): 87 of the 92 commits to `CLAUDE.md` in the two weeks before only moved a count or a date.
+- Move no date on its own. A document's "Last updated" line moves in the same edit that changes its content, and never in an edit of its own. `HANDOFF.md`, rewritten at every checkpoint (Step 4), is the one document dated at every session end. Review item D2, the same delegation.
 
 ## Exit checklist
 
@@ -271,17 +265,17 @@ Before declaring the checkpoint done, verify:
 - [ ] UI-fix-loop mode: the done file's session history has a table for this session, one row per item touched, and no `testing/Shipped_<date>.md` was created.
 - [ ] UI-fix-loop mode: every item whose state changed says the same thing in the places that carry it: its card's column, its detail section, and its query in `testing/Test_queries_and_workflows.md`. Measured 2026-09-24: seven statuses had gone stale in the items' own detail because only a derived summary was updated.
 - [ ] UI-fix-loop mode: `requirements/Plan.md` has a Revision history entry for the session, and its Phase 6 status row was NOT bumped to name a fix set.
-- [ ] `PROGRESS.md` refreshed: the sprint table has a row for the phase that just merged, "what works today" and "what does not work yet" reflect the current state, item 1 of "what is next" is genuinely next, the known-problems table matches the open flags on `tracker/BOARD.md`, and the last-updated date is today. Written in plain English with no internal finding identifiers in the body.
+- [ ] `PROGRESS.md` refreshed: the sprint table has a row for the phase that just merged, "what works today" and "what does not work yet" reflect the current state, item 1 of "what is next" is genuinely next, and the known-problems table matches the open findings in the ledger `tracker/phase_N.M.md` of each numbered phase, since `tracker/BOARD.md` holds open flags for build phases 1.0 through 6.2 only, frozen on 2026-09-25. Written in plain English with no internal finding identifiers in the body.
 - [ ] Planning-phase mode, phase-end: the phase synthesis is updated.
-- [ ] Build-phase mode: `requirements/Plan.md`'s status table, last-updated line, and Revision history are all updated to name the merged build phase.
+- [ ] Build-phase mode: `requirements/Plan.md`'s status table and Revision history are both updated to name the merged build phase.
 - [ ] No existing content in DECISIONS.md or a session doc was deleted or rewritten. Every other document this checkpoint touched was corrected in place: a superseded section was deleted, not left below the new one.
 - [ ] No wall of text: every enumerated passage in a touched doc is a list or a table, not a run-on paragraph (writing-style.md).
-- [ ] Every touched doc's table of contents, status, counts, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no stale count, no title or filename naming fewer steps than the file covers.
+- [ ] Every touched doc's table of contents, status, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no title or filename naming fewer steps than the file covers.
 - [ ] All modes: every failure the session hit is a row in LEARNINGS.md.
-- [ ] All modes: the counts on the Current focus table's build row in CLAUDE.md and AGENTS.md, and Plan.md's decisions line, equal the drift check's computed values.
-- [ ] `python tracker/check_doc_drift.py --check` exits 0.
-- [ ] `python3 tracker/check_living_docs.py` exits 0 on both `--shape` and `--fresh`, or the only red line is a shape the registry marks `unpinned` and the report says so.
+- [ ] All modes: no document this checkpoint touched states a test, decision or learning count as current, and no edit this checkpoint made only moved a date.
+- [ ] `python3 tracker/check_doc_drift.py --check` exits 0.
+- [ ] `python3 tracker/check_living_docs.py --shape` exits 0, or the only red line is a shape the registry marks `unpinned` and the report says so.
 
 ## Output
 
-Report: which mode ran, what Step 0 found (rows read, registry rows changed, any stop), which artifacts were created or updated (with paths), the new DECISIONS.md count, (build-phase mode) which build phase just closed and which is next, (UI-fix-loop mode) which fix items changed state and what `HANDOFF.md` now names as the next action, and the count values written. Suggest running `/ship` next to commit and push.
+Report: which mode ran, what Step 0 found (rows read, registry rows changed, any stop), which artifacts were created or updated (with paths), the DECISIONS.md and LEARNINGS.md rows appended this session, (build-phase mode) which build phase just closed and which is next, and (UI-fix-loop mode) which fix items changed state and what `HANDOFF.md` now names as the next action. Suggest running `/ship` next to commit and push.
