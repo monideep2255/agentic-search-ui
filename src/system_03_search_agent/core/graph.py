@@ -556,7 +556,9 @@ from system_03_search_agent.synthesis.findings import (
     build_structured_fallback_narrative,
     build_synth_findings,
     build_synth_messages,
+    drop_no_clinical_features_findings,
     drop_placeholder_condition_findings,
+    reserve_prompt_slots,
     unreported_findings,
 )
 from system_03_search_agent.synthesis.freshness import (
@@ -1008,9 +1010,43 @@ _LITERATURE: Final = _DecisionSpec(
     },
 )
 
-#: `DonePayload.decisions`' own `max_length`. A run makes at most four
-#: decisions today (relevancy, ask_back, recent_years, literature).
+_ASKS_FEATURES: Final = _DecisionSpec(
+    point="think.asks_features",
+    options=("asks_features", "not_applicable"),
+    fail_open="not_applicable",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. Decide whether it asks about a condition's features: the signs, "
+        "symptoms, clinical features or phenotype of a disease, syndrome or "
+        "condition."
+    ),
+    criteria={
+        "asks_features": (
+            "It asks what the features, signs, symptoms, clinical features, "
+            "manifestations, presentation or phenotype of a disease, syndrome or "
+            "condition are, or how the condition shows itself in a person."
+        ),
+        "not_applicable": (
+            "Anything else. It asks what a condition is, which genes, variants or "
+            "causes are linked to it, how many of something there are, about "
+            "treatment, trials, papers or records, or it is not about a condition at "
+            "all. Naming a condition is not asking about its features."
+        ),
+    },
+)
+
+#: `DonePayload.decisions`' own `max_length`. A run makes at most five
+#: decisions today (relevancy, ask_back, recent_years, literature,
+#: asks_features).
 _MAX_DONE_DECISIONS: Final[int] = 16
+
+#: How long a step waits, at the point it needs a decision started earlier,
+#: for one that has not finished yet (build phase 8.6). A decision started
+#: at Think has normally finished long before Write reads it; one still
+#: running this late is Jev failing over to the guard tier, and the person
+#: should not wait on it. Not finished within this many seconds is read as
+#: no usable pick, and the decision is stopped.
+_LATE_DECISION_GRACE_S: Final[float] = 1.0
 
 
 @dataclasses.dataclass
@@ -1033,6 +1069,11 @@ class _RunDecisions:
     #: True once the literature decision has been asked for this run, so
     #: Plan never asks twice.
     literature_asked: bool = False
+    #: `think.asks_features` (build phase 8.6, T-8.6-06), started at Think
+    #: beside the other Think-step decisions and read by Write, the step
+    #: that decides what is said about a condition's clinical features. None
+    #: when Think never started it (small talk, or a Write reached directly).
+    features_task: asyncio.Task[DecisionRecord | None] | None = None
 
 
 #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
@@ -1162,6 +1203,49 @@ def _drop_literature_decision(harness: Harness) -> None:
         entry.literature_record = task.result()
     else:
         task.cancel()
+
+
+async def _read_late_decision(
+    task: asyncio.Task[DecisionRecord | None] | None,
+) -> DecisionRecord | None:
+    """A decision started at an earlier step, read by the step that needs it.
+
+    Build phase 8.6. A decision that has finished is read at no cost. One
+    still running is waited for at most `_LATE_DECISION_GRACE_S` and then
+    stopped, and reads as no decision: the person never waits on a
+    classifier that is failing over. None when no decision was started.
+    """
+    if task is None:
+        return None
+    if not task.done():
+        await asyncio.wait({task}, timeout=_LATE_DECISION_GRACE_S)
+    if not task.done():
+        task.cancel()
+        return None
+    if task.cancelled() or task.exception() is not None:
+        return None
+    return task.result()
+
+
+async def _clinical_features_asked(harness: Harness) -> bool:
+    """Whether `think.asks_features` picked `asks_features` for this run.
+
+    Build phase 8.6, T-8.6-06. Read once, by Write. No decision started, no
+    usable pick, or one still running past the grace all read as False, the
+    decision's fail-open side: nothing is said about a condition's features
+    that the question did not ask about.
+    """
+    entry = _run_decisions(harness)
+    task, entry.features_task = entry.features_task, None
+    return _usable_choice(await _read_late_decision(task)) == "asks_features"
+
+
+def _drop_features_decision(harness: Any) -> None:
+    """Stop `think.asks_features` on a path that ends the run without
+    reading it (a refusal or error Write ships early). Never awaits."""
+    entry = _run_decisions(harness)
+    task, entry.features_task = entry.features_task, None
+    _cancel_if_pending(task)
 
 
 # ---------------------------------------------------------------------------
@@ -2854,7 +2938,9 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     so they overlap everything Think does before either is needed: the
     person waits for one decision, not three (card 6). Recent-years is read
     here; the literature decision is Plan's, handed over still running
-    (`_RunDecisions.literature_task`). Any path out of this node that ends
+    (`_RunDecisions.literature_task`). Build phase 8.6 adds
+    `decide(point="think.asks_features")`, started at the same moment and
+    handed to Write (`_RunDecisions.features_task`). Any path out of this node that ends
     the search, a question asked back, a cap hit, a step error, cancels
     whatever is still in flight rather than letting it spend on.
     """
@@ -2874,6 +2960,12 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         decisions.literature_task = asyncio.create_task(
             _decide_point(harness, query.trace_id, _LITERATURE, query.text)
         )
+    # think.asks_features (build phase 8.6, T-8.6-06): started beside the
+    # other Think-step decisions and read by Write, so it adds no wait.
+    if not small_talk and decisions.features_task is None:
+        decisions.features_task = asyncio.create_task(
+            _decide_point(harness, query.trace_id, _ASKS_FEATURES, query.text)
+        )
     result: dict[str, Any] | None = None
     try:
         result = await _think(state, recent_task)
@@ -2883,6 +2975,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         if result is None or not _search_goes_ahead(result):
             _cancel_if_pending(decisions.literature_task)
             decisions.literature_task = None
+            _cancel_if_pending(decisions.features_task)
+            decisions.features_task = None
 
 
 def _search_goes_ahead(think_result: dict[str, Any]) -> bool:
@@ -7285,6 +7379,11 @@ def _anchor_disease_prompt_reservation(synth_findings: list[SynthFinding]) -> li
     question-shape rule is involved. A record that lists none contributes
     its one "lists none" finding, which is the honest answer to a phenotype
     question about it. Empty when there are no such findings.
+
+    Called only when the `think.asks_features` decision picked
+    `asks_features` (build phase 8.6, T-8.6-06): whether the question asks
+    about features is the classifier's call, and this only says which
+    findings to keep in view once it has.
     """
     features = [f for f in synth_findings if f.field == CLINICAL_FEATURES_FIELD]
     features = features[:_ANCHOR_FEATURE_PROMPT_SLOTS]
@@ -10580,6 +10679,20 @@ def _answer_tokens(
 
 
 async def write_node(state: GraphState) -> dict[str, Any]:
+    """The Write step (Section 8), `_write_answer`, plus one settling rule.
+
+    Build phase 8.6, T-8.6-06: the `think.asks_features` decision Think
+    started is read on the answer path only. Every other way out of Write
+    (a step error, a cap hit, a question asked back, a refusal) ends the
+    run without reading it, so it is stopped here rather than left spending.
+    """
+    try:
+        return await _write_answer(state)
+    finally:
+        _drop_features_decision(state["harness"])
+
+
+async def _write_answer(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
@@ -10851,15 +10964,35 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         synth_findings
     )
 
-    # F-8.1-A12's prompt-slot reservation (`reserve_prompt_slots` with
-    # `_anchor_disease_prompt_reservation`) is deliberately NOT called here.
-    # Round 2 (F-8.1-V01) showed it takes 11 of the 30 prompt slots on every
-    # disease-anchored question, phenotype-shaped or not, and can push the
-    # definitional abstracts out of `What is Marfan syndrome?`. The lead
-    # withdrew the call rather than merge that trade: a disease's features
-    # still reach the reader in the code-built listing at every depth. The
-    # follow-up is to reserve the slots only when a classifier decides the
-    # question asks for phenotypes (phase 8.2's seam), recorded on the board.
+    # Build phase 8.6, T-8.6-06: what is said about a condition's clinical
+    # features follows the `think.asks_features` decision, never the
+    # findings alone.
+    #
+    # - Asked: F-8.1-A12's prompt-slot reservation runs, so up to
+    #   `_ANCHOR_FEATURE_PROMPT_SLOTS` features and their record's title sit
+    #   inside the model's prompt behind a long graph answer, and a record
+    #   read with none keeps its one "MedGen lists no clinical features for
+    #   <disease>" statement, the honest answer to that question.
+    # - Not asked, or no usable pick: no reservation, since round 2
+    #   (F-8.1-V01) showed it takes 11 of the 30 prompt slots on every
+    #   disease question and can push the definition out of `What is Marfan
+    #   syndrome?`; and the "lists none" statement is dropped, since it
+    #   answers nothing the question asked (15 golden answers carried it,
+    #   one "for Seen by breast cancer nurse"). The features themselves stay
+    #   in the code-built listing, beneath their disease.
+    #
+    # Both renumber, so this runs before `row_types` and the prompt slice
+    # read the numbering.
+    clinical_features_asked = await _clinical_features_asked(harness)
+    if clinical_features_asked:
+        synth_findings = reserve_prompt_slots(
+            synth_findings,
+            _anchor_disease_prompt_reservation(synth_findings),
+            _MAX_FINDINGS_FOR_MODEL_PROMPT,
+            lead_call_ids=answer_call_ids,
+        )
+    else:
+        synth_findings = drop_no_clinical_features_findings(synth_findings)
 
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 
@@ -10941,6 +11074,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 query.audience_depth,
                 answer_ref_indices=answer_ref_indices,
                 topic_question=bool(state.get("topic_search_term")),
+                clinical_features_asked=clinical_features_asked,
             ),
             budget_s=write_budget_s,
         )
@@ -11133,6 +11267,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                         ),
                         answer_ref_indices=answer_ref_indices,
                         topic_question=bool(state.get("topic_search_term")),
+                        clinical_features_asked=clinical_features_asked,
                     ),
                     budget_s=repair_budget_s,
                 )

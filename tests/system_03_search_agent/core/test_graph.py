@@ -1744,8 +1744,9 @@ async def test_a_long_graph_answer_keeps_its_prompt_slots_from_clinical_features
     The lead withdrew the reservation, so a long graph answer keeps all 30
     slots and the features reach the reader through the code-built listing
     (the test below). Re-enabling the unconditional reservation turns this
-    red; the follow-up gates it on a classifier deciding the question asks
-    for phenotypes."""
+    red. Build phase 8.6 re-enabled it behind the `think.asks_features`
+    decision only; this Write is reached with no decision at all, which
+    reads as not asked (the T-8.6-06 arms below pin each pick)."""
     findings, planned = await _marfan_researcher_findings()
     query = _valid_query(
         text="What phenotypic features are associated with Marfan syndrome?",
@@ -1838,6 +1839,304 @@ async def test_a_plain_language_listing_keeps_features_beneath_the_one_list(
     items = [t for t in tokens if t["kind"] == "list_item"]
     assert any(t["cells"] == ["Marfan syndrome"] for t in items)
     assert sum(1 for t in items if t["cells"][0] in set(_MARFAN_FEATURE_NAMES)) >= 10
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6, T-8.6-06: what is said about a condition's clinical
+# features follows the `think.asks_features` decision. These arms hand Write
+# the decision Think would have started (`_RunDecisions.features_task`), so
+# each path of the decision is pinned without a model: asked, not asked, no
+# usable pick from either model, and a decision still running when Write
+# needs it.
+# ---------------------------------------------------------------------------
+
+_NO_FEATURES_TITLE = "Condition with no listed features"
+
+
+def _features_record(pick: str | None) -> object:
+    """What `decide` returns for `think.asks_features`: Jev's pick, or, for
+    None, the record when NEITHER model made a usable pick."""
+    from system_03_search_agent.contracts.events import DecisionRecord
+
+    options = ["asks_features", "not_applicable"]
+    if pick is None:
+        return DecisionRecord(
+            name="think.asks_features",
+            options=options,
+            chosen="not_applicable",
+            decided_by="guard",
+            fallback_reason="no_usable_pick:timeout",
+        )
+    return DecisionRecord(
+        name="think.asks_features",
+        options=options,
+        chosen=pick,
+        decided_by="jev",
+        jev_choice=pick,
+    )
+
+
+def _hand_write_the_features_decision(state: dict[str, object], pick: str | None) -> None:
+    import asyncio
+
+    record = _features_record(pick)
+
+    async def _decided() -> object:
+        return record
+
+    graph_module._run_decisions(state["harness"]).features_task = asyncio.get_running_loop().create_task(
+        _decided()
+    )
+
+
+def _synth_prompt(mock: AsyncMock) -> str:
+    synth_calls = [
+        call
+        for call in mock.call_args_list
+        if any(
+            "You write the final answer for a biomedical search system" in (m.get("content") or "")
+            for m in (call.kwargs.get("messages") or [])
+        )
+    ]
+    assert synth_calls, "the write step must have made a synth call"
+    return "\n".join(m.get("content") or "" for m in synth_calls[0].kwargs["messages"])
+
+
+async def _no_features_findings() -> tuple[list[object], list[object]]:
+    """A question's graph answer beside a MedGen record that was read and
+    lists no clinical features, the shape behind the stray sentence."""
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    harness = harness_module.Harness(trace_id="test-trace-no-features")
+    graph_call = ToolCall(tool="cypher_query", call_id="cy-nofeat", layer="layer_1_graph")
+    graph_fields = {
+        "status": "ok",
+        "row_count": 3,
+        "total_available": 3,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(3)],
+        "error": None,
+    }
+    medgen_output = NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[
+            NcbiEfetchRecord(
+                id="1633554",
+                db="medgen",
+                fields={
+                    "title": _NO_FEATURES_TITLE,
+                    "clinical_features": [],
+                    "clinical_features_total": 0,
+                },
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/1633554",
+            )
+        ],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+    medgen_call = ToolCall(tool="ncbi_efetch", call_id="ne-nofeat", layer="layer_2_api")
+    medgen_fields = graph_module._ncbi_efetch_output_to_structured_fields(
+        medgen_output, "medgen_summary"
+    )
+    findings = await coordinator_worker_execute(
+        harness,
+        [graph_call, medgen_call],
+        [
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=graph_fields),
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=medgen_fields),
+        ],
+    )
+    planned = [
+        SimpleNamespace(tool_call=graph_call, context_only=False),
+        SimpleNamespace(tool_call=medgen_call, context_only=False),
+    ]
+    return findings, planned
+
+
+def _everything_the_reader_sees(events: list[object]) -> str:
+    """Every token's text and cells, and every citation's claim, joined."""
+    parts: list[str] = []
+    for event in events:
+        payload = event.payload  # type: ignore[attr-defined]
+        if event.type == "token":  # type: ignore[attr-defined]
+            parts.append(payload.get("text") or "")
+            parts.extend(str(cell) for cell in payload.get("cells") or [])
+        elif event.type == "citation":  # type: ignore[attr-defined]
+            parts.append(str(payload.get("claim_text") or ""))
+    return "\n".join(parts)
+
+
+@pytest.mark.asyncio
+async def test_a_features_question_reserves_the_diseases_features_in_the_prompt(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Asked: F-8.1-A12's reservation is back, behind the decision only. The
+    record's title and `_ANCHOR_FEATURE_PROMPT_SLOTS` features sit inside the
+    30-finding prompt behind a 43-row graph answer, and the model is told
+    how a feature can be cited. Deleting the reservation call, or reading
+    the decision as never asked, turns this red."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="Which features does this condition show?", audience_depth="researcher"
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, "asks_features")
+    await graph_module.write_node(state)
+
+    prompt = _synth_prompt(_mock_litellm)
+    lines = [body for _, body in _FINDING_LINE.findall(prompt)]
+    assert len(lines) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
+    feature_lines = [line for line in lines if " clinical_features: " in line]
+    assert len(feature_lines) == graph_module._ANCHOR_FEATURE_PROMPT_SLOTS == 10
+    assert feature_lines[0].endswith(_MARFAN_FEATURE_NAMES[0])
+    assert "medgen title: Marfan syndrome" in lines
+    # The question's own answer rows still lead the prompt.
+    assert lines[0].startswith("Gene ")
+    assert "CLINICAL FEATURES:" in prompt
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["not_applicable", None])
+async def test_a_question_not_about_features_keeps_every_prompt_slot_and_no_feature_directive(
+    _mock_litellm: AsyncMock, pick: str | None
+) -> None:
+    """Not asked, and no usable pick from either model, read the same way:
+    no reservation (F-8.1-V01) and no line steering the model into a feature
+    list. The features stay in the code-built listing."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(text="Which records name this condition?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, pick)
+    result = await graph_module.write_node(state)
+
+    prompt = _synth_prompt(_mock_litellm)
+    lines = [body for _, body in _FINDING_LINE.findall(prompt)]
+    assert [line for line in lines if " clinical_features: " in line] == []
+    assert "CLINICAL FEATURES:" not in prompt
+    headings = [
+        event.payload["text"].strip()
+        for event in result["events"]
+        if event.type == "token" and event.payload["kind"] == "heading"
+    ]
+    assert any(h.startswith("Clinical features MedGen lists for Marfan syndrome") for h in headings)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["not_applicable", None])
+async def test_a_record_with_no_features_is_never_spoken_of_unless_the_question_asks(
+    _mock_litellm: AsyncMock, pick: str | None
+) -> None:
+    """The stray sentence (product review PR-8.1-07): "MedGen lists no
+    clinical features for ..." appeared in 15 golden answers that never asked
+    about features. Not asked, it is in no token, no cell, no citation and
+    not in the model's prompt. Removing the drop turns this red."""
+    findings, planned = await _no_features_findings()
+    query = _valid_query(text="Which records name this condition?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, pick)
+    result = await graph_module.write_node(state)
+
+    seen = _everything_the_reader_sees(result["events"])
+    assert "MedGen lists no clinical features" not in seen, seen
+    assert "MedGen lists no clinical features" not in _synth_prompt(_mock_litellm)
+    # The record itself is still listed, by its own title.
+    assert _NO_FEATURES_TITLE in seen
+
+
+@pytest.mark.asyncio
+async def test_a_features_question_about_a_record_with_none_is_told_so(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Asked, the statement is the honest answer, and it stays."""
+    findings, planned = await _no_features_findings()
+    query = _valid_query(text="Which features does this condition show?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, "asks_features")
+    result = await graph_module.write_node(state)
+
+    seen = _everything_the_reader_sees(result["events"])
+    assert f"MedGen lists no clinical features for {_NO_FEATURES_TITLE}" in seen, seen
+
+
+@pytest.mark.asyncio
+async def test_a_features_decision_still_running_at_write_is_not_waited_on(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A decision still running when Write needs it is Jev failing over; the
+    person does not wait on it. Past the grace it is stopped and read as not
+    asked."""
+    import asyncio
+
+    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.05)
+    cancelled = asyncio.Event()
+
+    async def _slow() -> object:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return _features_record("asks_features")
+
+    findings, planned = await _no_features_findings()
+    query = _valid_query(text="Which features does this condition show?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    graph_module._run_decisions(state["harness"]).features_task = asyncio.get_running_loop().create_task(
+        _slow()
+    )
+    started = time.monotonic()
+    result = await graph_module.write_node(state)
+    await asyncio.sleep(0)
+
+    assert time.monotonic() - started < 5.0
+    assert cancelled.is_set()
+    assert "MedGen lists no clinical features" not in _everything_the_reader_sees(result["events"])
+
+
+@pytest.mark.asyncio
+async def test_a_write_that_ends_early_stops_the_features_decision(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """A step error ends the run in Write without reading the decision, so
+    it is stopped rather than left spending."""
+    import asyncio
+
+    cancelled = asyncio.Event()
+
+    async def _slow() -> object:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return _features_record("asks_features")
+
+    query = _valid_query(text="Which features does this condition show?")
+    state = _write_state(query, [])
+    state["step_error"] = {
+        "fatal": True,
+        "scope": "step",
+        "source": "plan",
+        "error_class": "recoverable",
+        "message": "a stand-in step error",
+        "retry_after_s": 0,
+    }
+    task = asyncio.get_running_loop().create_task(_slow())
+    graph_module._run_decisions(state["harness"]).features_task = task
+    await asyncio.sleep(0)
+    await graph_module.write_node(state)
+    await asyncio.sleep(0)
+    assert cancelled.is_set() and task.cancelled()
 
 
 @pytest.mark.asyncio

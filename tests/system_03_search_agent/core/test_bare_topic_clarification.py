@@ -243,6 +243,7 @@ _SAFE_PICKS: dict[str, str] = {
     "think.ask_back": "proceed",
     "think.recent_years": "not_applicable",
     "plan.literature": "not_literature",
+    "think.asks_features": "not_applicable",
 }
 
 
@@ -874,6 +875,38 @@ async def test_a_searched_question_carries_its_decisions_on_done(
     assert "think.recent_years" in names and "plan.literature" in names, names
     for record in done["decisions"]:
         assert record["decided_by"] == "jev" and record["guard_choice"] == record["chosen"]
+
+
+@pytest.mark.asyncio
+async def test_a_searched_question_asks_whether_it_is_about_features_and_carries_it_on_done(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Build phase 8.6, T-8.6-06: `think.asks_features` is asked at Think,
+    with its fixed description, beside the other Think-step decisions, and
+    its record rides on the `done` event like theirs."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch, {"think.asks_features": "asks_features"})
+
+    events = await _run("which papers discuss statin side effects")
+    assert "think.asks_features" in asked, asked
+    done = _payload(events, "done")
+    assert done is not None
+    record = next(d for d in done["decisions"] if d["name"] == "think.asks_features")
+    assert record["options"] == ["asks_features", "not_applicable"]
+    assert record["chosen"] == "asks_features"
+
+
+@pytest.mark.asyncio
+async def test_small_talk_is_never_asked_whether_it_is_about_features(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch)
+
+    await _run("what can you do")
+    assert "think.asks_features" not in asked, asked
 
 
 @pytest.mark.asyncio
