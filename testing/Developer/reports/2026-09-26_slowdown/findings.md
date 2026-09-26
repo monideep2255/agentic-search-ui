@@ -16,6 +16,7 @@ The golden run's median slowdown traces almost entirely to the write step: write
 - [Answer size and the missing token events](#answer-size-and-the-missing-token-events)
 - [Confidence: what this data can and cannot show](#confidence-what-this-data-can-and-cannot-show)
 - [Method](#method)
+- [Lead's note, added after the analysis](#leads-note-added-after-the-analysis)
 
 ## Stage timing, medians and p90, both runs
 

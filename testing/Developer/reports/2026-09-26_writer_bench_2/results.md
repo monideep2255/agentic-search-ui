@@ -15,6 +15,7 @@ Product-owner decision (DECISIONS.md, 2026-09-25): bench the writing (synth) tie
 - [openai/gpt-5.6-sol-pro](#openaigpt-56-sol-pro)
 - [Summary](#summary)
 - [Three side-by-side excerpts on the same question](#three-side-by-side-excerpts-on-the-same-question)
+- [The Opus 5.5 reasoning-on probe, not part of the comparison above](#the-opus-55-reasoning-on-probe-not-part-of-the-comparison-above)
 - [What this bench does not settle](#what-this-bench-does-not-settle)
 
 ## Verdict

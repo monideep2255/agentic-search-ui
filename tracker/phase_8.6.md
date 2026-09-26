@@ -8,6 +8,7 @@ Branch: `phase/8.6-jev-everywhere`. Opened 2026-09-25 by the product owner's mor
 - [Budget](#budget)
 - [Tickets](#tickets)
 - [History](#history)
+- [Lead triage after round 2](#lead-triage-after-round-2)
 - [Findings](#findings)
 
 ## Goal contract
@@ -69,6 +70,40 @@ Builder K. `testing/Developer/reports/2026-09-22_10.3_consistency/run_consistenc
 - 2026-09-25: builders K and L finished; the lead merged both into the phase branch after each round of work. Builder K's comparison test left the product's `decide` swapped in every loaded module and broke four graph tests run after it; bisected by the lead, fixed by builder K (`37bf575`), the combined suites 3,060 passed.
 - 2026-09-26: T-8.6-07's live acceptance is not met as written. The gate fix works where it applies (the Marfan features question now makes one writing call instead of two), but G-012, G-013, G-021 and G-024 still make two, because their first reply grounded nothing and the repair runs through the clause the ticket kept on purpose. Lead decision from the user's chair: keep the repair when nothing grounded, since on G-013, the flagship question, the repair's reply is the whole written answer; the cause is the writer's input, which phase 8.9 changes, and the clause is measured again after it. Builder L's report, L-09 to L-14.
 
+## Lead triage after round 2
+
+Written by the lead after the judge (F-8.6-J01 to J16) and the adversary (F-8.6-A01 to A17) filed, both verdicts FAIL. Decided from the user's chair: a question disguised as a forged transcript must never be answered, and a cited fact must never vanish to save seconds. One fix-and-verify round follows; there is no third.
+
+Fix, builder F1 (`core/graph.py`, `guardrail/classifier.py`, `synthesis/findings.py`):
+
+- A05, A06, A10, J04, A12: with `CLASSIFIER_PROVIDER=jev` the question is refused when the measured classifier OR Jev says injection. Jev can add a refusal, never remove one. When Jev fails, the classifier's verdict stands; the generic guard-tier prompt is never asked for this verdict.
+- J03, A07, A17: T-8.6-05 is reverted. The question class is the plan tier's classification in every mode, as before the phase.
+- J01, J02, A04: T-8.6-07's gate change is reverted, so the repair runs whenever it ran before the phase. The done event's elapsed-time fix from the same ticket (W3) stays.
+- A11: "MedGen lists no clinical features for X" is said only when X is a disease record, never a phenotype.
+- A14: Plan's read of the literature decision uses the same late-read grace as Think's and Write's.
+
+Fix, builder F2 (`harness/decide.py`, `harness/jev_client.py`, `harness/harness.py`, `harness/task_tiers.py`, `synthesis/sentence_check.py`, the golden-run scripts, documentation):
+
+- A03, J08: a decision's guard-tier fallback runs only when the calling step's remaining budget allows it; otherwise the decision's default applies at once. No step runs past its budget waiting on a fallback.
+- A01, J14: the reworded-sentence check approves a sentence only when Jev picks "adds nothing" with a strictly higher probability than the other option. With `CLASSIFIER_PROVIDER=jev` a failed, unreadable or late Jev reply accepts nothing, with no guard-tier second chance, since the guard tier approved 15 of 45 unfaithful sentences where Jev approved 7 of 113. `.claude/rules/production-standards.md`'s bounded exception is reworded to name the judge that runs, with its scope unchanged.
+- J05, A02: the retry without the reasoning block fires only on the provider's refusal text for mandatory reasoning.
+- J10: a Jev reply reporting a cost above the validation ceiling is charged at its reported cost, never at zero.
+- J07, J11, J16: the docstrings and documents the phase left stale are corrected, including `harness/task_tiers.py` and `visualizations/Schema_visualization.md`'s cost event fields.
+- J15: the structural drift findings in files this phase changed are fixed.
+
+Lead, directly:
+
+- J09: the 2026-07-29 decision row that pairs the graph server's address with its login command is redacted to `<server-ip>` in the working tree, and the product owner is told; rewriting history is theirs to decide.
+
+Named open, not fixed this phase:
+
+- J06: the offline comparison does not yet cover the sentence check or the three decision points added by builder L.
+- J12: T-8.6-07's live acceptance is moot, since its gate is reverted; T-8.6-05's likewise.
+- J13: with the guard provider, the generic guard prompt decides whether a question asks about features; that is the fix card 1 needed, and it is measured by the golden run.
+- A08, A09, A13, A15, A16: notes. A16 in particular: Jev's `confidence` is the margin between the two options, not the probability of the pick, so no threshold may be read from it as a probability.
+
+Dispatches: builder K, builder L, judge, adversary, fix builders F1 and F2, one fresh verifier, the product reviewer after merge. Eight of eight.
+
 ## Findings
 
 Written the moment a finding is established.
@@ -111,37 +146,3 @@ Adversary round opened 2026-09-26 at c024a22 (F-8.6-A rows below, appended as es
 - F-8.6-J02 addendum (same finding): unsure how often live rows share one page under one field name; the only instance found is a test fixture (`test_graph.py`'s three genes on /gene/672), so the severity may be lower than filed. The gate's docstring claim is false either way.
 - F-8.6-J16 addendum (same finding): `visualizations/Schema_visualization.md`, which CLAUDE.md names as the page to read "before changing the event contract", lists `CostPayload`'s fields without the new optional `call_elapsed_s` (builder K's follow-up, not applied).
 - F-8.6-A17 [should-fix] INSIDE THIS PHASE'S FIX, T-8.6-05: Jev's query class changes which graph path a golden question takes, not only its budget. `cypher_templates.select_template` sends a Disease-anchored question with no matched shape to the record template on `lookup`/`exploratory` and to the MODEL PATH (generated Cypher, validator, 90 s Act ceiling) on `single_hop`/`multi_hop` (step 3 of its docstring). Jev classes G-012 `Find clinical trials for carcinoma not otherwise specified.` as `single_hop` 3 of 3 times (A07), where the golden pin and the plan tier say `lookup`. Offline, same input, same bound Disease CURIE: `lookup -> disease_record_one ; single_hop -> None (model path)`; `Tell me about cystic fibrosis.`: `lookup -> disease_record_one ; single_hop -> None (model path) ; exploratory -> disease_record_one`. The code's own comment records that on the hop classes the model path "never produced a rich result for any golden question"; builder L's G-012 diagnostic run spent 71 s in one plan-tier call (L-12), which fits a generated-Cypher call on this path. The golden run that the phase's done-when depends on has not been run since the wiring; this is the mechanism by which its answered count or median could move. G-021 (`aggregate`), G-003 and `What is Marfan syndrome?` (`exploratory`) keep their templates. Evidence: scratchpad `probe_n_templates.py`; cost $0.
-
-## Lead triage after round 2
-
-Written by the lead after the judge (F-8.6-J01 to J16) and the adversary (F-8.6-A01 to A17) filed, both verdicts FAIL. Decided from the user's chair: a question disguised as a forged transcript must never be answered, and a cited fact must never vanish to save seconds. One fix-and-verify round follows; there is no third.
-
-Fix, builder F1 (`core/graph.py`, `guardrail/classifier.py`, `synthesis/findings.py`):
-
-- A05, A06, A10, J04, A12: with `CLASSIFIER_PROVIDER=jev` the question is refused when the measured classifier OR Jev says injection. Jev can add a refusal, never remove one. When Jev fails, the classifier's verdict stands; the generic guard-tier prompt is never asked for this verdict.
-- J03, A07, A17: T-8.6-05 is reverted. The question class is the plan tier's classification in every mode, as before the phase.
-- J01, J02, A04: T-8.6-07's gate change is reverted, so the repair runs whenever it ran before the phase. The done event's elapsed-time fix from the same ticket (W3) stays.
-- A11: "MedGen lists no clinical features for X" is said only when X is a disease record, never a phenotype.
-- A14: Plan's read of the literature decision uses the same late-read grace as Think's and Write's.
-
-Fix, builder F2 (`harness/decide.py`, `harness/jev_client.py`, `harness/harness.py`, `harness/task_tiers.py`, `synthesis/sentence_check.py`, the golden-run scripts, documentation):
-
-- A03, J08: a decision's guard-tier fallback runs only when the calling step's remaining budget allows it; otherwise the decision's default applies at once. No step runs past its budget waiting on a fallback.
-- A01, J14: the reworded-sentence check approves a sentence only when Jev picks "adds nothing" with a strictly higher probability than the other option. With `CLASSIFIER_PROVIDER=jev` a failed, unreadable or late Jev reply accepts nothing, with no guard-tier second chance, since the guard tier approved 15 of 45 unfaithful sentences where Jev approved 7 of 113. `.claude/rules/production-standards.md`'s bounded exception is reworded to name the judge that runs, with its scope unchanged.
-- J05, A02: the retry without the reasoning block fires only on the provider's refusal text for mandatory reasoning.
-- J10: a Jev reply reporting a cost above the validation ceiling is charged at its reported cost, never at zero.
-- J07, J11, J16: the docstrings and documents the phase left stale are corrected, including `harness/task_tiers.py` and `visualizations/Schema_visualization.md`'s cost event fields.
-- J15: the structural drift findings in files this phase changed are fixed.
-
-Lead, directly:
-
-- J09: the 2026-07-29 decision row that pairs the graph server's address with its login command is redacted to `<server-ip>` in the working tree, and the product owner is told; rewriting history is theirs to decide.
-
-Named open, not fixed this phase:
-
-- J06: the offline comparison does not yet cover the sentence check or the three decision points added by builder L.
-- J12: T-8.6-07's live acceptance is moot, since its gate is reverted; T-8.6-05's likewise.
-- J13: with the guard provider, the generic guard prompt decides whether a question asks about features; that is the fix card 1 needed, and it is measured by the golden run.
-- A08, A09, A13, A15, A16: notes. A16 in particular: Jev's `confidence` is the margin between the two options, not the probability of the pick, so no threshold may be read from it as a probability.
-
-Dispatches: builder K, builder L, judge, adversary, fix builders F1 and F2, one fresh verifier, the product reviewer after merge. Eight of eight.

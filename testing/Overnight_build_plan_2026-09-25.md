@@ -359,12 +359,20 @@ Times in UTC. The order and rules are the product owner's "Yes, same rules" of 2
 - 04:00: phase 8.6 pull request #108; the judge and the adversary both returned FAIL. The blocking finding: in Jev mode a question disguised as a forged chat transcript was answered. Nothing of it had reached develop. The lead's triage is in `tracker/phase_8.6.md`; two fix builders are working.
 - Spend so far: $1.52 of the $8 cap, read from the credits endpoint.
 - 05:05: the product owner delegated every remaining merge tonight to the lead, each gated by automatic checks, and said to finish the job (DECISIONS.md, 2026-09-26). That covers the two pull requests the lead had left for the morning and phase 8.9's golden run, with the night's spend now stopping at $11.
+- 05:39: card 41 merged (#109). The address is gone from every tracked file except two decision rows, which phase 8.6 removes, and the Caddyfile's public web name, kept on purpose. The lead fixed a bug in the builder's deploy-script change before merging: a `.env` without the setting stopped the scripts silently.
+- 06:00: phase 8.6's two fix builders finished and merged into its branch. The forged-transcript question is now refused in Jev mode.
+- 06:15: the build-harness checker returned HOLD.
+  - The narrowed delete guard lets an escaped recursive delete through inside a wrapper, which breaks the approval's own "still blocking rm -rf".
+  - A search-led chained command skips the secret scan's field check.
+  - The reworded grounding-gate bullet reads weaker than before.
+  - One of the lead's own decision rows, which two deletions rest on, carries no words of the product owner.
+  - By the rule above, that pull request does not merge without the product owner. Builder H5 is fixing the findings on the branch so the morning decision is one yes or no.
 
 What the product owner will find in the morning, if every check passes:
 
 - Phase 8.6 merged, with its golden run and product review.
-- The build-harness fixes merged.
-- Card 41's clean-up of the server address merged.
+- The build-harness fixes as a pull request waiting for the product owner. Its automatic check failed, so it does not merge on the delegation. It will carry the checker's findings fixed and checked again.
+- Card 41's clean-up of the server address merged (#109).
 - Card 39's visualization deep dive in `visualizations/`.
 - Phase 8.9 merged with its golden run. If its checks have not all run by morning, it stays an open pull request that names the check still to run.
 
@@ -373,6 +381,8 @@ A merge whose check fails does not happen. It waits for the product owner, named
 Waiting for the product owner in the morning, each a yes or no:
 
 - The secret scan misses keys shaped like the product's own model-provider key, where a hyphen follows `sk-` straight away. The lead's hook check found it at 05:20. The gap is the same on develop, so the harness fixes did not cause it. Tighten the pattern to catch that shape? Recommendation: yes. It is a change to a hook, so it needs your item-by-item yes.
+- Merge the build-harness pull request, with the checker's findings fixed and checked again? Recommendation: yes, once the second check passes.
+- Does "nothing weakens a gate or threshold" in your delegation leave the doc drift check's count checks free to remove? The lead wrote a row on 2026-09-26 saying they are bookkeeping, not gates, and the harness branch removed them on that reading. The checker rightly noted the row has no words of yours behind it. Recommendation: yes. They only check whether documents restate counts. The product's gates, the golden run and CI's tests are untouched.
 - Check that the graph server accepts only SSH keys, with password login off. Only you can check this.
 - Rewrite git history to remove the server address from old commits? Recommendation: no. The address is public, and the fix is that no file pairs it with a login command any more.
 

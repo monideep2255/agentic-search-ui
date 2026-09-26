@@ -318,7 +318,7 @@ The lead's own notes from the session of 2026-09-25, which the repository does n
 5. The pre-commit local-reference check blocked absolute paths in ledgers and scripts; scripts now derive the repository root from their own file path.
 6. A stray " 2" copy of a ref file inside `.git` broke `git fetch`, likely from iCloud Desktop sync; the owner keeps the repository where it is.
 7. An analyst's report said its two golden runs started 27 minutes apart; its own table showed 3 hours 15 minutes. Nothing checks an analyst's report before the lead reads it.
-8. The owner's machine reported 5457 Python tests where this checkout computes 5704, likely about 247 tests failing to collect there; nothing reports collection errors.
+8. The owner's machine reported, as measured on 2026-09-25, 5457 Python tests where this checkout computes 5704, likely about 247 tests failing to collect there; nothing reports collection errors.
 9. The overnight build of 2026-09-25 merged three phases with five review-driven reverts, and parked a fourth phase (8.4) unmerged on a local tag.
 10. The owner twice said an explanation confused them (Jev's role, a byte ceiling), and once corrected the lead on cost: the money that matters is the OpenRouter balance, not develop's $10 brake.
 11. The per-phase dispatch cap of 8 and the concurrency ask-line of 8 are counted by the lead by hand.
