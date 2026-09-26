@@ -50,3 +50,23 @@ Same worktree state, $0.0187, trust outcome `ask`.
 - Jev timed out on all three decisions of this run (`fallback_reason: timeout`), so the guard tier decided each one. `think.asks_features` went to `asks_features` by the guard. This is the fallback path working live, not a planned test of it.
 - The prose names 11 features in one sentence, each with its own MedGen marker: "MedGen lists these clinical features: Aortic regurgitation [2], Arachnodactyly [3], ... Hypertropia [11] and Micrognathia [12]." Acceptance (at least five, at both depths) met.
 - The Think step took 16.1 s on this run, against 1.6 to 2.2 s at baseline. The cause is the pre-existing `think.recent_years` read inside Think, which waits for the guard's fallback pick once Jev has timed out. `think.asks_features` is not awaited in Think, so it adds nothing here. Builder K's T-8.6-01 owns how long a fallback may take.
+
+### L-04: T-8.6-04 asks the injection decision only when Jev is the classifier; with the default provider the guardrail is unchanged
+
+The brief asks for two things that cannot both hold if the decision is asked under every provider:
+
+- The injection verdict becomes `decide(point="guardrail.injection")`.
+- Every existing test in `tests/system_03_search_agent/guardrail` still passes.
+
+Why they collide: those tests run with the provider at its code default ("guard"), where `decide()` asks the guard tier through its own generic prompt. Their model mock answers every call with the classifier's JSON, which names neither option, so the decision would have no usable pick and every admitted question would fail closed. `test_the_guardrail_makes_exactly_one_model_call` would also see two calls. The Playwright backend (`tests/e2e_support/mock_llm_backend.py`, outside this fence) answers the same way, so the whole end-to-end suite would die at the guardrail, the failure its own docstring records twice.
+
+What was built, decided from the chair of the person typing a question:
+
+- `CLASSIFIER_PROVIDER=jev` (develop): the injection verdict is Jev's pick, asked beside the classifier call after the unchanged pre-filter. The classifier still runs, for its off-topic field only. The forbidden screen still runs after, in the same place. No usable pick from either model is today's classifier failure path, a `recoverable` step error from the guardrail, never an admission.
+- Provider at its default (production): the guard tier decides injection through the existing classifier call alone, one model call, byte for byte as before. Asking the guard tier the same question again through `decide()` would add a model call to every question and replace an instruction measured against real injection payloads (F-4.7-A-01) with an unmeasured generic one.
+- What a person notices: on develop, whether their question is treated as an attack is Jev's call. On production, nothing changes until the product owner switches the provider.
+- The gate is `core.graph._jev_decides()`, which reads `CLASSIFIER_PROVIDER` exactly as `harness/decide.py` does. If builder K renames that variable, this line must follow.
+
+Break-it check: removing the line that applies the decision's pick turned both "Jev decides" arms red, and letting a missing pick through turned the fail-closed arms red. Restored after.
+
+For the lead: `docs/architecture/Model_architecture.md` (outside this fence) still describes the guardrail's injection verdict as the guard tier's classifier alone, and lists the decisions on develop without `guardrail.injection`, `think.asks_features` or `think.query_class`.

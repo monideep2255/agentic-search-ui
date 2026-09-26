@@ -450,6 +450,7 @@ import asyncio
 import dataclasses
 import json
 import logging
+import os
 import re
 import secrets
 import time
@@ -1010,6 +1011,21 @@ _LITERATURE: Final = _DecisionSpec(
     },
 )
 
+#: The guardrail's injection verdict (build phase 8.6, T-8.6-04). Its
+#: description lives beside the classifier it replaces, in
+#: `guardrail/classifier.py`. Unlike every other point here this one FAILS
+#: CLOSED: no usable pick ends the run in the classifier's own step error,
+#: never an admission (`_guardrail_after_prefilter`). `fail_open` is
+#: therefore the option that does not admit, so a record of a decision
+#: nobody made never says the question was cleared.
+_INJECTION: Final = _DecisionSpec(
+    point=classifier.INJECTION_DECISION_POINT,
+    options=classifier.INJECTION_DECISION_OPTIONS,
+    fail_open="injection",
+    instructions=classifier.INJECTION_DECISION_INSTRUCTIONS,
+    criteria=classifier.INJECTION_DECISION_CRITERIA,
+)
+
 _ASKS_FEATURES: Final = _DecisionSpec(
     point="think.asks_features",
     options=("asks_features", "not_applicable"),
@@ -1035,9 +1051,9 @@ _ASKS_FEATURES: Final = _DecisionSpec(
     },
 )
 
-#: `DonePayload.decisions`' own `max_length`. A run makes at most five
-#: decisions today (relevancy, ask_back, recent_years, literature,
-#: asks_features).
+#: `DonePayload.decisions`' own `max_length`. A run makes at most six
+#: decisions today (relevancy, injection, ask_back, recent_years,
+#: literature, asks_features).
 _MAX_DONE_DECISIONS: Final[int] = 16
 
 #: How long a step waits, at the point it needs a decision started earlier,
@@ -1158,6 +1174,24 @@ def _usable_choice(record: DecisionRecord | None) -> str | None:
     if record.jev_choice is None and record.guard_choice is None:
         return None
     return record.chosen
+
+
+def _jev_decides() -> bool:
+    """Whether the classifier seam is switched to Jev, read exactly as
+    `harness.decide.decide` reads it (`CLASSIFIER_PROVIDER`, code default
+    "guard").
+
+    Build phase 8.6, T-8.6-04: the one place the loop itself asks. With the
+    provider at its default, the guard tier decides every point alone, and
+    for the injection verdict the guard tier already decides through the
+    guardrail's own classifier call, whose instruction was measured against
+    real injection payloads (F-4.7-A-01). Asking the guard tier the same
+    question a second time through `decide` would add a model call to every
+    question and swap that measured instruction for a generic one on
+    production. So `guardrail.injection` goes through the seam only when
+    Jev is the classifier.
+    """
+    return os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower() == "jev"
 
 
 def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
@@ -1331,21 +1365,45 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
         relevancy_task = asyncio.create_task(
             _decide_point(harness, trace_id, _RELEVANCY, _relevancy_state(query.text, state))
         )
+    # guardrail.injection (build phase 8.6, T-8.6-04). With Jev as the
+    # classifier, the injection verdict is its decision, started NOW beside
+    # the classifier call below so the person waits for the slower of the
+    # two, not both. The question alone is the state: an injection is
+    # judged on what was typed, never on the conversation. See
+    # `_jev_decides` for why the default provider keeps the classifier.
+    injection_task: asyncio.Task[DecisionRecord | None] | None = None
+    if _jev_decides():
+        injection_task = asyncio.create_task(
+            _decide_point(harness, trace_id, _INJECTION, query.text)
+        )
     try:
-        return await _guardrail_after_prefilter(state, sink, relevancy_task)
+        return await _guardrail_after_prefilter(state, sink, relevancy_task, injection_task)
     finally:
-        # Any path that ends the node before reading the relevancy decision
-        # (a refusal, a cap hit, a step error) stops it spending more.
+        # Any path that ends the node before reading the relevancy or the
+        # injection decision (a refusal, a cap hit, a step error) stops it
+        # spending more.
         _cancel_if_pending(relevancy_task)
+        _cancel_if_pending(injection_task)
+
+
+#: The step error's message when the injection decision had no usable pick
+#: from either model (build phase 8.6, T-8.6-04): the same fail-closed path
+#: as two unusable classifier replies, saying what to do next.
+_INJECTION_UNDECIDED_MESSAGE: Final[str] = (
+    "the injection classifier returned no usable verdict for this query, so it "
+    "was not admitted; retrying the query may succeed"
+)
 
 
 async def _guardrail_after_prefilter(
     state: GraphState,
     sink: _EventSink,
     relevancy_task: asyncio.Task[DecisionRecord | None] | None,
+    injection_task: asyncio.Task[DecisionRecord | None] | None = None,
 ) -> dict[str, Any]:
     """Section 10.1 steps 3 to 6, after the pre-filter, plus the relevancy
-    decision `guardrail_node` started (None when the allowlist admitted)."""
+    decision `guardrail_node` started (None when the allowlist admitted) and,
+    with Jev as the classifier, the injection decision (None otherwise)."""
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
@@ -1372,6 +1430,7 @@ async def _guardrail_after_prefilter(
     # parsed, whatever it said, is final on the first attempt, and two
     # unusable replies still end in the fail-closed step error below.
     classifier_verdict: GuardVerdict | None = None
+    classification: classifier.InjectionClassification | None = None
     parse_error: classifier.ClassificationUnavailableError | None = None
     for attempt in (1, 2):
         try:
@@ -1392,9 +1451,8 @@ async def _guardrail_after_prefilter(
             return {"step_error": _step_error_kwargs("guardrail", exc)}
 
         try:
-            classifier_verdict = classifier.verdict_for(
-                classifier.parse_classification(response.content)
-            )
+            classification = classifier.parse_classification(response.content)
+            classifier_verdict = classifier.verdict_for(classification)
             break
         except classifier.ClassificationUnavailableError as exc:
             parse_error = exc
@@ -1425,6 +1483,43 @@ async def _guardrail_after_prefilter(
                 "retry_after_s": 0,
             }
         }
+
+    # guardrail.injection (build phase 8.6, T-8.6-04): with Jev as the
+    # classifier, its pick is the injection verdict and the classifier's
+    # own `is_injection` is not; the classifier still judges topicality.
+    # Read only after the classifier's own failure paths above, which are
+    # unchanged. No usable pick from either model is today's classifier
+    # failure path, fail closed: a step error, never an admission, since no
+    # verdict was reached and reporting one would be false.
+    # (`classification` is set whenever `classifier_verdict` is.)
+    if injection_task is not None and classification is not None:
+        injection = _usable_choice(await injection_task)
+        if injection not in classifier.INJECTION_DECISION_OPTIONS:
+            logger.warning(
+                "guardrail.injection had no usable pick (trace %s); failing closed",
+                trace_id,
+            )
+            return {
+                "step_error": {
+                    "fatal": True,
+                    "scope": "step",
+                    "source": "guardrail",
+                    "error_class": "recoverable",
+                    "message": _INJECTION_UNDECIDED_MESSAGE,
+                    "retry_after_s": 0,
+                }
+            }
+        if (injection == "injection") != classification.is_injection:
+            logger.info(
+                "guardrail.injection picked %s; the guard classifier's own field "
+                "said is_injection=%s (trace %s)",
+                injection,
+                classification.is_injection,
+                trace_id,
+            )
+        classifier_verdict = classifier.verdict_for_decision(
+            injection == "injection", classification
+        )
 
     classifier_off_topic_set_aside = False
     if not classifier_verdict.admitted:
