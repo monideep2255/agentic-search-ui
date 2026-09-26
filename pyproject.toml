@@ -78,8 +78,8 @@ testpaths = ["tests"]
 # "." is here for `services/`, the separately deployed graph query service
 # added at build phase 4.11. It is not part of the agent distribution: it runs
 # on the Hetzner box, imports three modules out of this package, and is copied
-# there by its own deploy script, so it is deliberately not in the setuptools
-# packages list below.
+# there by its own deploy script, so it is deliberately outside the setuptools
+# package discovery below, which reads only `src/`.
 pythonpath = ["src", "."]
 markers = [
     "integration: marks tests that hit the network or require external services",
@@ -158,27 +158,30 @@ extend_skip = [
 # installed by anyone, and build phase 4.2 shipped the CLI without that being
 # visible.
 package-dir = { "" = "src" }
-packages = [
-    "system_03_search_agent",
-    "system_03_search_agent.adapters",
-    "system_03_search_agent.adapters.cli",
-    "system_03_search_agent.adapters.graphql",
-    "system_03_search_agent.adapters.mcp",
-    "system_03_search_agent.adapters.web_sse",
-    "system_03_search_agent.auth",
-    "system_03_search_agent.contracts",
-    "system_03_search_agent.core",
-    "system_03_search_agent.data",
-    # Added at build phase 4.6 (F-4.6-02). This list is hand-maintained, so a
-    # new package is invisible to an installed distribution until someone
-    # remembers to add it here, while `pythonpath = ["src"]` keeps the test
-    # suite green either way. `export` was missing since build phase 4.4 and
-    # was found by that same gap, not by a test.
-    "system_03_search_agent.export",
-    "system_03_search_agent.feedback",
-    "system_03_search_agent.guardrail",
-    "system_03_search_agent.harness",
-    "system_03_search_agent.orchestrator",
-    "system_03_search_agent.synthesis",
-    "system_03_search_agent.tools",
-]
+
+# Build phase 8.10, T-8.10-01: DISCOVERED, no longer a hand-kept list.
+#
+# The list this replaces missed a package twice. `export` was missing from
+# build phase 4.4 until 4.6 (F-4.6-02), and `observability` (added in 5.0) and
+# `eval` were missing from 2026-08-29 until the integrations audit of
+# 2026-09-26 found `s3-kgx-export --help` crashing on import from every
+# installed copy. Each time the tests stayed green, because
+# `pythonpath = ["src"]` reads the source tree and never the package.
+#
+# `find` under `src/` means a new package ships the day it is created. The
+# comment on `package-dir` above still holds: the `src/` layout is what needs
+# `package-dir`, and `where` below says the same thing to discovery.
+# `.github/gates/gate_packages_install.sh` is the check that would have
+# caught all three: it builds this wheel, compares it with `src/`, and runs
+# each console script from a clean install.
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["system_03_search_agent*"]
+
+# The data files the server reads at run time. They were never in the wheel,
+# so an installed server would have failed to load its personas and its
+# few-shot examples. The gate above fails if a file under the package is
+# left out of the wheel.
+[tool.setuptools.package-data]
+"system_03_search_agent.data" = ["*.json"]
+"system_03_search_agent.orchestrator" = ["*.json"]

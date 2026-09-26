@@ -80,12 +80,13 @@ from __future__ import annotations
 
 import codecs
 import json
+import typing
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from system_03_search_agent.adapters.cli.sse import _SseLineAccumulator
 from system_03_search_agent.contracts.events import (
@@ -498,8 +499,8 @@ def _parse_json_body(
         ) from exc
 
 
-# F-4.2-RR-03: the closed, eleven-member envelope-`type` taxonomy
-# (`contracts.events.PAYLOAD_MODEL_BY_TYPE`), used by `_decode_stream_event`
+# F-4.2-RR-03: the closed envelope-`type` taxonomy, twelve members since
+# `step` (`contracts.events.PAYLOAD_MODEL_BY_TYPE`), used by `_decode_stream_event`
 # to tell an ADDITIVE, not-yet-taught event type (system-design-patterns
 # rule 10, benign, safe to skip) apart from a frame that claims to be one
 # of the types this build already knows but whose envelope or payload
@@ -562,6 +563,99 @@ def _payload_declares_unknown_type(data: str) -> bool:
     if not isinstance(declared_type, str):
         return False
     return declared_type not in _KNOWN_EVENT_TYPES
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.10, T-8.10-02: an installed client reads tomorrow's stream.
+#
+# Every payload model in `contracts/events.py` says `extra="forbid"`, and it
+# must keep saying so: the SERVER validates what it sends against those
+# models, and that strictness is what caps every field an untrusted source
+# can reach. But this client validated what it RECEIVES against the same
+# strict models, so the day the server added an optional field (the
+# contract's own additive rule, `system-design-patterns` pattern 10), every
+# `s3` installed before that day turned the frame into a fatal decode error
+# and failed every answer at its last frame. The integrations audit of
+# 2026-09-26 measured it: today's `done` and `think` frames are rejected by
+# the contract as it stood on 2026-09-22, 2026-09-14 and 2026-09-13.
+#
+# The fix keeps the strict models and changes only what this client hands
+# them: a key the model does not declare is dropped first, at the envelope,
+# the payload and every nested model (a `DecisionRecord` inside
+# `done.decisions`, a `ToolCall` inside `plan.tool_calls`). Every field this
+# build DOES know is still validated with every bound it had, so nothing a
+# hostile server sends reaches the renderer unchecked; an unknown key simply
+# never reaches it at all. A new enum VALUE in a known field is not covered:
+# that frame still fails validation and still ends the run with a clear
+# error, which is the honest outcome when this build cannot say what the
+# value means.
+# ---------------------------------------------------------------------------
+
+
+def _nested_model_class(annotation: Any) -> type[BaseModel] | None:
+    """The pydantic model a field holds, directly or inside a list, an
+    `Optional` or an `Annotated`, or None for a field of plain values."""
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    for argument in typing.get_args(annotation):
+        found = _nested_model_class(argument)
+        if found is not None:
+            return found
+    return None
+
+
+def _known_fields_only(model_cls: type[BaseModel], data: Any) -> Any:
+    """`data` with every key `model_cls` does not declare removed, at every
+    nested model too. Values of declared keys are never touched, so the
+    strict model still validates each one exactly as the server sent it.
+    Anything that is not a JSON object is returned unchanged, for the strict
+    model to reject."""
+    if not isinstance(data, dict):
+        return data
+    kept: dict[str, Any] = {}
+    for key, value in data.items():
+        field = model_cls.model_fields.get(key)
+        if field is None:
+            continue
+        nested = _nested_model_class(field.annotation)
+        if nested is not None:
+            if isinstance(value, dict):
+                value = _known_fields_only(nested, value)
+            elif isinstance(value, list):
+                value = [_known_fields_only(nested, item) for item in value]
+        kept[key] = value
+    return kept
+
+
+def _decode_ignoring_unknown_fields(data: str) -> Event | None:
+    """Decode a frame of a KNOWN type after dropping every key this build
+    does not declare, or return None when that is not what made it fail.
+
+    None in three cases, each of which leaves the caller's existing
+    classification in charge: `data` is not a JSON object, its `type` is not
+    one this build knows (the benign-skip path handles that), or nothing was
+    dropped (so the strict failure was about a field this build does know,
+    and dropping keys cannot honestly repair it)."""
+    try:
+        raw = json.loads(data)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(raw, dict):
+        return None
+    declared_type = raw.get("type")
+    if not isinstance(declared_type, str) or declared_type not in PAYLOAD_MODEL_BY_TYPE:
+        return None
+    envelope = _known_fields_only(Event, raw)
+    payload = raw.get("payload")
+    if isinstance(payload, dict):
+        envelope["payload"] = _known_fields_only(PAYLOAD_MODEL_BY_TYPE[declared_type], payload)
+    if envelope == raw:
+        return None
+    try:
+        return Event.model_validate_json(json.dumps(envelope))
+    except ValidationError:
+        return None
+
 
 # The `trace_id` `_synthesize_decode_failure_event` stamps on a locally
 # built `error` Event: a fixed literal, never derived from anything the
@@ -690,8 +784,13 @@ class CliClient:
         # absence is a real protocol violation; `persona_name` is optional on
         # the wire, so a server that omits it degrades to no persona rather
         # than to a crash.
-        if "run_id" not in body:
+        # Build phase 8.10: this raise used to pass one argument to a
+        # three-argument constructor, so a missing `run_id` escaped as a
+        # `TypeError` and reached the user as "unexpected error".
+        if not isinstance(body, dict) or "run_id" not in body:
             raise CliApiError(
+                response.status_code,
+                None,
                 "the server's create-run response carried no run_id, so this "
                 "run cannot be followed. Check that the API version matches "
                 "this client."
@@ -882,6 +981,14 @@ class CliClient:
         try:
             return Event.model_validate_json(data)
         except ValidationError:
+            # T-8.10-02: a frame of a known type that carries a field this
+            # build has not been taught is the server's additive change, not
+            # a defect. Dropping the unknown keys and validating the rest
+            # with the unchanged strict models reads it; anything that still
+            # fails falls through to the three outcomes above, unchanged.
+            lenient = _decode_ignoring_unknown_fields(data)
+            if lenient is not None:
+                return lenient
             if is_trailing:
                 self.stream_truncated = True
                 return None
@@ -1001,4 +1108,9 @@ class CliClient:
         self.citations_export_truncated = (
             response.headers.get("x-citations-export-truncated") == "true"
         )
-        return [CitationPayload.model_validate(item) for item in body]
+        # T-8.10-02: the same leniency as the stream, for a citation field
+        # this build has not been taught yet.
+        return [
+            CitationPayload.model_validate(_known_fields_only(CitationPayload, item))
+            for item in body
+        ]

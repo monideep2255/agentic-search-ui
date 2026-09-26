@@ -1,0 +1,62 @@
+# system3-cli: `s3` and `s3 mcp`, without the backend.
+#
+# Build phase 8.10, T-8.10-04 (tracker/phase_8.10.md), on the product owner's
+# decision of 2026-09-26: people outside the project get the command line and
+# a local MCP server through one small package. Built, never published here.
+# Publishing is the owner's yes, release by release.
+#
+# SAME SOURCE, NO COPY. `package-dir` points at this repository's own `src/`,
+# so the wheel is built from exactly the files the server's distribution
+# ships. There is no second copy that could drift. The packages below are the
+# only ones `s3` imports; `tests/system_03_search_agent/adapters/cli/
+# test_system3_cli_package.py` fails the day `s3` imports anything outside
+# them, or anything from the server's dependencies.
+#
+# EVERY DEPENDENCY PINNED EXACTLY, the whole install closure, not only the two
+# direct ones (`httpx` and `pydantic`), per `.claude/rules/supply-chain-
+# security.md`: a floor on a transitive dependency would let `pip install`
+# pull a release nobody reviewed. The versions are the ones this repository's
+# own environment already runs. The MCP SDK is deliberately absent:
+# `mcp==2.0.0` requires `uvicorn` and `starlette`, and `s3 mcp` needs neither
+# (`adapters/cli/mcp_bridge.py` says why).
+#
+# To build the wheel, from the repository root:
+#     python -m pip wheel --no-deps -w dist clients/system3-cli
+# To install it:
+#     python -m pip install dist/system3_cli-0.1.0-py3-none-any.whl
+
+[build-system]
+requires = ["setuptools==83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "system3-cli"
+version = "0.1.0"
+description = "s3, the System 3 biomedical search command line, and s3 mcp, a local MCP server that lets an AI agent ask System 3 with your sign-in"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx==0.28.1",
+    "pydantic==2.13.4",
+    # The closure of the two above, each at the version this repository runs.
+    "annotated-types==0.8.0",
+    "anyio==4.14.2",
+    "certifi==2026.7.22",
+    "h11==0.16.0",
+    "httpcore==1.0.9",
+    "idna==3.18",
+    "pydantic-core==2.46.4",
+    "typing-extensions==4.16.0",
+    "typing-inspection==0.4.2",
+]
+
+[project.scripts]
+s3 = "system_03_search_agent.adapters.cli.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "../../src" }
+packages = [
+    "system_03_search_agent",
+    "system_03_search_agent.adapters",
+    "system_03_search_agent.adapters.cli",
+    "system_03_search_agent.contracts",
+]
