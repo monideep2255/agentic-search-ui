@@ -431,7 +431,9 @@ def verdict_for(classification: InjectionClassification) -> GuardVerdict:
 # With `CLASSIFIER_PROVIDER=jev`, `core.graph`'s guardrail asks Jev
 # `guardrail.injection` beside the call above, after the unchanged
 # deterministic pre-filter, and refuses when this module's `is_injection`
-# OR Jev's pick says injection. Jev can add a refusal, never remove one:
+# OR Jev's pick says injection, Jev's pick only once every other screen has
+# admitted the question (re-land, R-02). Jev can add a refusal, never
+# remove or replace one:
 # the adversary measured Jev admitting forged chat transcripts that the
 # call above refused every time. When Jev fails, the call above is the
 # verdict, and the guard tier's generic closed-choice prompt is never
@@ -491,6 +493,13 @@ def verdict_for_decision(
     Only a refusal Jev alone adds carries the fixed reason with no model
     text, since Jev returns a choice, never free text. Injection still
     outranks off-topic.
+
+    Re-land, R-02 (F-8.6-G01): `core.graph`'s guardrail calls this only
+    for a refusal Jev adds, and only once every other screen has admitted
+    the question, the Section 10.5 forbidden screen included. A refusal
+    another screen makes keeps its own category and reason, so a request
+    to change the graph still gets the read-only reply. The classifier's
+    own injection verdict (`verdict_for`) refuses before any of them.
     """
     if jev_says_injection and not classification.is_injection:
         return refused("injection", _INJECTION_REFUSAL_REASON)
