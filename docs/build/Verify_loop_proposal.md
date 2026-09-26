@@ -29,7 +29,7 @@ The owner's retest then confirms rather than discovers.
   - The product reviewer compares screenshots with the prototype after the merge.
   - The first person who judges the result against what the owner wanted is the owner.
 - The product reviewer is a pre-screen by design (`.claude/skills/bossman-mode/reference/Product_review.md`). It never closes an item, and it runs only after the merge, so what it finds is already on develop.
-- `/verify` today is this repository's pre-commit skill: compile, tests, lint, git status. A project skill takes precedence over a bundled one of the same name, so it shadows Claude Code's own `/verify`. That is the skill that builds, runs and observes an app. The loop the talk describes has never run here.
+- `/verify` was this repository's pre-commit skill when this was written: compile, tests, lint, git status. A project skill takes precedence over a bundled one of the same name, so it shadowed Claude Code's own `/verify`. That is the skill that builds, runs and observes an app. The loop the talk describes had never run here. On 2026-09-26 the pre-commit skill was renamed `/precommit`, and `/verify` became the skill this proposal describes.
 - The tools exist but are never chained into a check that must pass before the owner sees a change:
   - Playwright with 25 end-to-end specs, including `accessibility.spec.ts` and `design-system-audit.spec.ts`
   - CI's accessibility gate, `gate10`

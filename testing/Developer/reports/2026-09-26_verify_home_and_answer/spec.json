@@ -1,0 +1,87 @@
+{
+  "topic": "home_and_answer",
+  "screens": [
+    {
+      "name": "home",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/home.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "waitFor",
+          "selector": "main textarea[aria-label=\"Your question\"]"
+        }
+      ],
+      "prototype": {
+        "steps": [
+          {
+            "do": "disclaimer"
+          },
+          {
+            "do": "waitFor",
+            "selector": "#qbox"
+          }
+        ]
+      }
+    },
+    {
+      "name": "answer",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "What does BRCA1 do?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 150000
+        }
+      ],
+      "saveText": "main",
+      "prototype": {
+        "steps": [
+          {
+            "do": "disclaimer"
+          },
+          {
+            "do": "fill",
+            "selector": "#qbox",
+            "text": "What does BRCA1 do?"
+          },
+          {
+            "do": "press",
+            "selector": "#qbox",
+            "key": "Enter"
+          },
+          {
+            "do": "waitFor",
+            "selector": "#tail",
+            "timeoutMs": 60000
+          }
+        ]
+      }
+    }
+  ],
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ]
+}

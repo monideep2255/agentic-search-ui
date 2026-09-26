@@ -205,7 +205,7 @@ Each change walks these stages. The dial says which of them run:
 | 4 | Transport preflight, cut and push the branch, plan the 8 dispatches, dispatch builders from the pushed branch | Lead | depth | low |
 | 5 | Builders work tickets in parallel, each writing the tests for its own ticket | Builders | balance | medium |
 | 6 | One judge round, one adversary round, then one fix-and-verify round (positions 2 and 3) | Judge, adversary, fix agents, a fresh verifier | depth; fix agents balance | high |
-| 7 | Gates: `verify`, then `ship`'s CI gates run locally | Lead | depth | medium |
+| 7 | Gates: `precommit`, then `ship`'s CI gates run locally | Lead | depth | medium |
 | 8 | Checkpoint, tickets left at `in-review`, the pull request where one exists | Lead, clerk | clerk speed | low |
 | 9 | Read the checkpoint and merge, where there is a pull request | Product owner | human | n/a |
 | 10 | Product review of the deployed develop app; the golden consistency run blocks an answer-path change | Product reviewer: a script captures, the model judges | depth | medium |
