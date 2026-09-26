@@ -160,6 +160,17 @@ SURFACE_NAMES: dict[str, tuple[str, ...]] = {
     "cli": ("command line", "Command line", "the export"),
 }
 
+# How the Integrations page names the fields every citation carries, mapped
+# to `CitationPayload`'s field names. A phrase mapped to a field the payload
+# does not have fails.
+CITATION_FIELD_NAMES: dict[str, str] = {
+    "the layer": "layer",
+    "the tool": "tool",
+    "evidence type": "evidence_kind",
+    "confidence": "assertion_confidence",
+    "licence": "license",
+}
+
 # The answer mode labels a sentence may name. The labels themselves come
 # from DepthControl.tsx; one missing here reads as "not named" and fails.
 MODE_NAMES = ("Plain language", "Researcher")
@@ -225,6 +236,10 @@ def layer_calls(layer: int):
         raise ValueError(f"no layer {layer}")
 
     return parse
+
+
+def citation_fields_named(match: re.Match[str]) -> frozenset[str]:
+    return frozenset(v for k, v in CITATION_FIELD_NAMES.items() if k in match.group(1))
 
 
 def modes_named(match: re.Match[str]) -> frozenset[str]:
@@ -1034,6 +1049,20 @@ FACTS: tuple[Fact, ...] = (
         stated=(
             w(BANNER, BANNER_TSX, r"CATEGORY_COPY[^=]*= \{(.*?)\n\};", SET, ts_keys, flags=S),
             w(CODE, EVENTS_TS, r"category:((?:\s*\|\s*\"\w+\")+);", SET, ts_union),
+        ),
+    ),
+    Fact(
+        "citations.fields",
+        "what every citation carries",
+        PyFields(EVENTS_PY, "CitationPayload"),
+        stated=(
+            w(
+                INTEGRATIONS,
+                INFO,
+                r"Every claim is tied to a specific record, (with [^.]+)\.",
+                SUBSET,
+                citation_fields_named,
+            ),
         ),
     ),
     # ---- the question and the answer modes

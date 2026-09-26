@@ -397,7 +397,7 @@ SET = Cmp("set", lambda s, t: set(s) == set(t), _set_describe, lambda s: frozens
 SUBSET = Cmp(
     "subset",
     lambda s, t: set(s) <= set(t),
-    lambda s, t: "accepted: " + show(set(t)) + "; not accepted: " + show(set(s) - set(t)),
+    lambda s, t: show(set(t)) + "; named but not so: " + show(set(s) - set(t)),
     lambda s: frozenset(s),
     lambda t: frozenset(),
 )
@@ -1082,10 +1082,10 @@ def _says(match: re.Match[str], value: Any) -> str:
     else the captured text, else the value parsed out of a long block. A
     pipe becomes a slash so a table row cannot break the line's columns."""
     whole = " ".join(match.group(0).split())
-    if len(whole) > 100 and match.re.groups:
+    if len(whole) > 120 and match.re.groups:
         captured = " ".join((match.group(1) or "").split())
-        whole = captured if len(captured) <= 100 else "(reads as) " + show(value)
-    return _clip(whole).replace("|", "/")
+        whole = captured if len(captured) <= 140 else "(reads as) " + show(value)
+    return _clip(whole, 140).replace("|", "/")
 
 
 def check_fact(repo: Repo, fact: Fact) -> list[Result]:
