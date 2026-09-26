@@ -25,7 +25,9 @@ set -euo pipefail
 
 HOST="${GRAPH_BOX_HOST:-}"
 if [ -z "$HOST" ] && [ -f .env ]; then
-    HOST="$(grep -m1 '^GRAPH_BOX_HOST=' .env | cut -d= -f2-)"
+    # `|| true`: a .env without the line must reach the message below, not
+    # end the script silently under pipefail. Quotes and a CR are dropped.
+    HOST="$( { grep -m1 '^GRAPH_BOX_HOST=' .env || true; } | cut -d= -f2- | tr -d "\"' \r")"
 fi
 if [ -z "$HOST" ]; then
     echo "GRAPH_BOX_HOST is not set. Set it in the environment, or add a GRAPH_BOX_HOST= line to .env at the repository root; env.example shows its format." >&2
