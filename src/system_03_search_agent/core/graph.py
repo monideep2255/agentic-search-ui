@@ -450,7 +450,6 @@ import asyncio
 import dataclasses
 import json
 import logging
-import os
 import re
 import secrets
 import time
@@ -510,7 +509,7 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
-from system_03_search_agent.harness.decide import decide
+from system_03_search_agent.harness.decide import decide, jev_decides
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -588,8 +587,7 @@ from system_03_search_agent.synthesis.refuse import (
 )
 from system_03_search_agent.synthesis.sentence_check import (
     SentenceCheckUnreadable,
-    approved_keys,
-    build_sentence_check_messages,
+    check_reworded_sentences,
 )
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
@@ -1232,9 +1230,9 @@ def _usable_choice(record: DecisionRecord | None) -> str | None:
 
 
 def _jev_decides() -> bool:
-    """Whether the classifier seam is switched to Jev, read exactly as
-    `harness.decide.decide` reads it (`CLASSIFIER_PROVIDER`, code default
-    "guard").
+    """Whether the classifier seam is switched to Jev: `harness.decide.
+    jev_decides`, the one reading of `CLASSIFIER_PROVIDER` that `decide()`
+    and the reworded-sentence check share, so the three can never disagree.
 
     Build phase 8.6, T-8.6-04: the one place the loop itself asks. With the
     provider at its default, the guard tier decides every point alone, and
@@ -1246,7 +1244,7 @@ def _jev_decides() -> bool:
     production. So `guardrail.injection` goes through the seam only when
     Jev is the classifier.
     """
-    return os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower() == "jev"
+    return jev_decides()
 
 
 def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
@@ -8339,7 +8337,7 @@ async def _ground_with_sentence_check(
     trace_id: str,
     budget_s: float,
 ) -> GroundingResult:
-    """Ground a reply, asking the guard-tier model about reworded sentences.
+    """Ground a reply, asking a model about reworded sentences.
 
     Decided by the product owner on 2026-09-23 (items 12.9 and 12.10; the
     reasoning is in `synthesis/sentence_check.py`). Two grounding passes over
@@ -8348,9 +8346,12 @@ async def _ground_with_sentence_check(
     1. The ordinary pass, collecting every reworded sentence that passed all
        of code's exact checks (quote in the record, numbers, negation) and
        failed only the word check.
-    2. When there are any, ONE guard-tier call about all of them, then the
+    2. When there are any, ONE model check about all of them, then the
        pass again, accepting exactly the sentences the model approved with
-       exactly those quotes.
+       exactly those quotes. Which model is `sentence_check.
+       check_reworded_sentences`' job (build phase 8.6, T-8.6-02): Jev
+       when CLASSIFIER_PROVIDER=jev, with the guard tier only when Jev
+       fails; the guard tier alone, exactly as before, otherwise.
 
     Fails closed at every step: no candidates, too little budget, the cost
     cap, a failed or timed-out call, or an unreadable reply all return the
@@ -8367,20 +8368,30 @@ async def _ground_with_sentence_check(
     )
     if not candidates or budget_s < _SENTENCE_CHECK_MIN_BUDGET_S:
         return first
-    try:
+
+    async def _ask_guard_tier(messages: list[dict[str, str]], guard_budget_s: float) -> str:
         response = await _dispatch_tier_call(
             harness,
             trace_id,
             "guard",
             "write",
-            build_sentence_check_messages(candidates),
-            budget_s=min(budget_s - 1.0, _SENTENCE_CHECK_MAX_BUDGET_S),
+            messages,
+            budget_s=guard_budget_s,
             max_tokens=256,
             # A checker must not read the answering agent's prefix, for the
             # same measured reason the guardrail's classifier does not.
             cache_prefix=None,
         )
-        approved = approved_keys(_response_text(response), candidates)
+        return _response_text(response)
+
+    try:
+        approved = await check_reworded_sentences(
+            candidates,
+            harness=harness,
+            trace_id=trace_id,
+            budget_s=min(budget_s - 1.0, _SENTENCE_CHECK_MAX_BUDGET_S),
+            ask_guard=_ask_guard_tier,
+        )
     except (cost_control.QueryCapExceededError, HarnessCallError, SentenceCheckUnreadable) as exc:
         logger.warning(
             "sentence check approved nothing (trace %s): %s", trace_id, type(exc).__name__
@@ -8432,9 +8443,30 @@ def _code_built_lines_will_cite(
       boundary, or one that fails the number check), because only the
       model's own phrasing can still cite that finding.
 
-    `lists_every_finding` selects the Researcher listing, which renders every
-    prepared finding, over the tail, which renders only the omitted ones, so
-    the probe grounds exactly the narrative the answer will carry.
+    `lists_every_finding` selects the listing, which renders every prepared
+    finding, over the tail, which renders only the omitted ones, so the probe
+    grounds exactly the narrative the answer will carry. Every depth has
+    rendered the listing since 2026-09-14 (`tail_is_listing` in
+    `write_node`), and `write_node` passes True.
+
+    WHAT "CITED" MEANS, build phase 8.6, T-8.6-07 (the product harness
+    review's W1 and C1). The listing keeps ONE row per record
+    (`one_finding_per_record`): a paper that reached the prompt as its
+    title, its abstract and its PMID is listed once, by its title. This
+    compared citation ids, so the two views the listing folds into that row
+    were always "uncited", and the repair fired whenever the prose left out
+    a paper that arrived as several views, although the listing showed it.
+    Measured live on 2026-09-26 on a phenotype question: 7 of 19 omitted
+    findings were such views, and the old rule made a second writing call
+    the new one skips. (A question whose prose grounds nothing still gets
+    the repair: that is the second case listed above, and this rule is
+    never reached for it.)
+    The rule is now `unreported_findings`', the one the answer's own
+    omission count already applies after the listing: a folded view counts
+    as cited when its record's row is. A finding the listing renders as a
+    row of its own must be cited itself, and that includes every clinical
+    feature, which sits beneath its disease as its own row rather than
+    being folded into the disease's.
     """
     if tool_outcome != "ok" or not model_grounded or not omitted_findings:
         return False
@@ -8446,7 +8478,16 @@ def _code_built_lines_will_cite(
         question=question,
     )
     cited = {claim.finding.citation_id for claim in probe.claims}
-    return all(finding.citation_id in cited for finding in omitted_findings)
+    unreported = {finding.citation_id for finding in unreported_findings(cited, rendered)}
+    reported_by_its_row = {finding.citation_id for finding in rendered} - unreported
+    return all(
+        finding.citation_id in cited
+        or (
+            finding.field != CLINICAL_FEATURES_FIELD
+            and finding.citation_id in reported_by_its_row
+        )
+        for finding in omitted_findings
+    )
 
 
 def _build_repair_cap_note(omission_remains: bool = True) -> str:
@@ -10893,7 +10934,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     query = state["query"]
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
-    elapsed_ms = _elapsed_ms(state)
+    # The question's elapsed time is read when each done event is built,
+    # never here. Read at the top of the step it left the writing call out:
+    # on 97 of 102 answered golden runs `done.elapsed_ms` under-read the
+    # guard-to-done span by more than a second, tracking the write step
+    # (build phase 8.6, T-8.6-07; product harness review W3).
     total_tool_calls = state.get("findings_count", 0)
     findings: list[Finding] = state.get("findings", [])
     # T-3.4-05: empty for the common single-tool query; see GraphState's
@@ -10916,7 +10961,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -10927,7 +10972,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     if state.get("cap_exceeded", False):
         # Routed straight here from an earlier node's per-query cap hit;
         # ship the partial result per Section 19.1, never a blank failure.
-        return _partial_result_for_cap(sink, harness, trace_id, elapsed_ms, total_tool_calls)
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
 
     clarification_needed = state.get("clarification_needed")
     if clarification_needed:
@@ -10955,7 +11002,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -11014,7 +11061,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -11279,7 +11326,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # A cap hit discovered only here, at Write's own call, not routed
         # in from an earlier node: handled inline with the same partial-
         # result shape.
-        return _partial_result_for_cap(sink, harness, trace_id, elapsed_ms, total_tool_calls)
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
     except HarnessCallError as exc:
         sink.emit("error", ErrorPayload(**_step_error_kwargs("write", exc)))
         sink.emit(
@@ -11287,7 +11336,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -11445,7 +11494,12 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 synth_findings,
                 tool_outcome=tool_outcome,
                 model_grounded=bool(grounding.claims),
-                lists_every_finding=query.audience_depth == "researcher",
+                # Every depth lists every prepared finding (`tail_is_listing`
+                # below, since 2026-09-14), so the probe renders the same
+                # list at every depth (build phase 8.6, T-8.6-07). It used to
+                # render only the omitted findings below Researcher depth,
+                # a narrative no answer carries.
+                lists_every_finding=True,
                 question=query.text,
             )
         ):
@@ -12167,7 +12221,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         DonePayload(
             total_cost_usd=harness.get_query_cost_usd(trace_id),
             total_tool_calls=total_tool_calls,
-            elapsed_ms=elapsed_ms,
+            elapsed_ms=_elapsed_ms(state),
             trust_outcome=trust_outcome,
             layer_calls_used=call_budget.calls_made(),
             # UI fix set 9, item 9.9: the one plain line, derived from the
