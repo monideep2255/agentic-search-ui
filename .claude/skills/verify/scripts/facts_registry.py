@@ -184,6 +184,12 @@ CITATION_FIELD_NAMES: dict[str, str] = {
 # from DepthControl.tsx; one missing here reads as "not named" and fails.
 MODE_NAMES = ("Plain language", "Researcher")
 
+# Event types the web client leaves out of KNOWN_EVENT_TYPES on purpose, each
+# named in that file's own docstring: `cost` never reaches a non-operator
+# client (frontend/src/lib/events.ts). Any other type missing from the list
+# is a client that does not know the event.
+CLIENT_OMITS_ON_PURPOSE = ("cost",)
+
 # ------------------------------------------------------------------ parsers
 
 
@@ -599,10 +605,11 @@ def personas_historical(repo: Repo) -> Truth:
     )
 
 
-def seeds_in_golden_set(repo: Repo) -> Truth:
-    """The Home screen's seed questions that have a counterpart in the
-    golden evaluation set: a golden question carrying every identifier the
-    seed names (a word with a capital after its first letter, or a digit)."""
+def _words(text: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def _seeds(repo: Repo) -> tuple[list[str], re.Match[str]]:
     home = repo.text(HOME_TSX)
     block = re.search(r"const SEEDS[^=]*= \[(.*?)\];", home, S)
     if block is None:
@@ -611,14 +618,49 @@ def seeds_in_golden_set(repo: Repo) -> Truth:
         m.group(1) + (m.group(2) or "")
         for m in re.finditer(r'\{ text: "([^"]*)"(?:, mono: "([^"]*)")?', block.group(1))
     ]
+    return seeds, block
+
+
+def seeds_in_golden_set(repo: Repo) -> Truth:
+    """The Home screen's seed questions that appear word for word, after
+    lower-casing and dropping punctuation, inside a question of the golden
+    evaluation set.
+
+    That is the only provenance a script can check honestly. The first
+    version matched identifiers alone, so "Songs about BRCA1" passed as a
+    question from the evaluation set (PR118-04). The note still names, for
+    each seed that fails, the golden question carrying the same identifiers,
+    as a lead for whoever fixes the page; it decides nothing."""
+    seeds, _ = _seeds(repo)
     questions = [q["question"] for q in json.loads(repo.text(GOLDEN))["queries"]]
-    matched, unmatched = [], []
+    matched = [seed for seed in seeds if any(_words(seed) in _words(q) for q in questions)]
+    leads = []
     for seed in seeds:
+        if seed in matched:
+            continue
         ids = [w for w in re.findall(r"[A-Za-z0-9]+", seed) if re.search(r"\d|[A-Z]", w[1:])]
-        hit = ids and any(all(re.search(rf"\b{re.escape(i)}\b", q) for i in ids) for q in questions)
-        (matched if hit else unmatched).append(seed)
-    note = f"{len(seeds)} seeds; no golden question for: " + (", ".join(unmatched) or "none")
+        near = next(
+            (
+                q
+                for q in questions
+                if ids and all(re.search(rf"\b{re.escape(i)}\b", q) for i in ids)
+            ),
+            None,
+        )
+        leads.append(f"{seed!r} -> " + (repr(near) if near else "no golden question names it"))
+    note = f"{len(seeds)} seeds, {len(matched)} word for word; " + "; ".join(leads)
     return Truth(tuple(matched), GOLDEN, 1, note)
+
+
+def _seed_mutation(repo: Repo) -> dict[str, str]:
+    """For the self-test: make the first seed a golden question word for
+    word, so the count of matching seeds must move."""
+    _, block = _seeds(repo)
+    question = json.loads(repo.text(GOLDEN))["queries"][0]["question"].replace('"', "'")
+    home = repo.text(HOME_TSX)
+    first = re.search(r'\{ text: "[^"]*"(?:, mono: "[^"]*")? \}', home[block.start(1) :])
+    at = block.start(1) + first.start()
+    return {HOME_TSX: home[:at] + f'{{ text: "{question}" }}' + home[at + len(first.group(0)) :]}
 
 
 def _depth_options(repo: Repo) -> tuple[dict[str, str], str, int]:
@@ -1088,6 +1130,14 @@ FACTS: tuple[Fact, ...] = (
         stated=(
             w(INTEGRATIONS, INFO, r"A run emits (\w+) kinds of event", COUNT),
             w(INTEGRATIONS, INFO, r"kinds of event: ([a-z_, ]+?)\. Each SSE", SET, word_set),
+            w(
+                CODE,
+                EVENTS_TS,
+                r"export const KNOWN_EVENT_TYPES[^=]*= \[(.*?)\];",
+                SET,
+                lambda m: frozenset(quoted(m.group(1))) | set(CLIENT_OMITS_ON_PURPOSE),
+                flags=S,
+            ),
         ),
         downstream=(w(DOC, SCHEMA_VIS, r'string type "one of (\w+)"', COUNT),),
     ),
@@ -1539,8 +1589,8 @@ FACTS: tuple[Fact, ...] = (
     ),
     Fact(
         "seeds.from_golden_set",
-        "the Home screen's seed questions come from the evaluation set",
-        Computed(GOLDEN, seeds_in_golden_set, swap(GOLDEN, r"rs334", "rs999999")),
+        "the Home screen's seed questions appear word for word in the golden evaluation set",
+        Computed(GOLDEN, seeds_in_golden_set, _seed_mutation),
         stated=(
             w(TOUR, TOUR_TSX, r"These (\w+) are real questions from the evaluation set", COUNT),
         ),
