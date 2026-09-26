@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # scope: project
 # depends_on: [.claude/hooks/lib/_json.sh, tracker/render_board.py]
-# depended_by: [.claude/settings.json, .claude/skills/task-tracker/SKILL.md]
+# depended_by: [.claude/skills/task-tracker/SKILL.md]
+# NOT WIRED since 2026-09-26: its PostToolUse entry was removed from
+# .claude/settings.json, approved item by item by the product owner on
+# 2026-09-25 (DECISIONS.md, "Four security-layer changes approved item by
+# item", item 4). The file stays for history and runs only by hand, with --force.
 # PostToolUse (Edit|Write) sync: regenerate the kanban views whenever an agent
 # edits the board markdown, so the page the product owner reads is never stale.
 #
