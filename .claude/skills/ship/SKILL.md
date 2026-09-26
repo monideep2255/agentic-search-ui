@@ -19,7 +19,7 @@ A single ritual to end a work block: run the local gates, bring docs in line wit
 
 ## Step 0: the gates, before anything is staged
 
-No verification ran before a push until this step existed. The product owner set standing pre-push checks on 2026-09-12 and 2026-09-20, and until now they lived only in memory and in the old continuation prompt, never enforced here. CI on GitHub has been unable to run since 2026-09-22 because of the account's billing setting, and this repository also works in a UI fix loop where pushes go straight to `develop` with no PR and no review round. That leaves the local gates below as the only gates a push actually has.
+No verification ran before a push until this step existed. The product owner set standing pre-push checks on 2026-09-12 and 2026-09-20, and until now they lived only in memory and in the old continuation prompt, never enforced here. CI on GitHub runs on every push to `develop` and on every pull request, but it reports after the push, and this repository also works in a UI fix loop where pushes go straight to `develop` with no PR and no review round. So the local gates below are the only checks that run before a change reaches `develop`.
 
 ### Gate on the exit code, never through a pipe
 
@@ -40,16 +40,15 @@ A chain like `pytest ... | tail -3 && git commit` reports `tail`'s exit code, no
 - `isort --check-only --diff src tests services tracker alembic .claude .github`: matches CI gate 2.
 - `bash .github/gates/gate04_unit_suite.sh`: whenever any Python file under `src/`, `tests/`, `services/` or `tracker/` changed. Roughly five minutes. A docs-only change skips this and the report says so.
 - `npm run build` in `frontend/`: whenever any file under `frontend/` changed. Railway's own build is what fails silently otherwise, and this is the only local check that would catch it first.
-- `python tracker/check_doc_drift.py --check`: always. It collects the suite, roughly two minutes.
-- `python3 tracker/check_living_docs.py --fresh`: always at a session boundary. It proves `/phase-checkpoint` ran today by reading the dates the registry names (Step 1 below says why).
+- `python3 tracker/check_doc_drift.py --check`: always. It checks document structure (tables of contents, the two append-only tables, phase and pull request references), compares no count and runs no tests, so it takes seconds. A fact it could not compute is a failure line naming why, never an "ok".
 
 ### A red gate stops the ship
 
 Fix the cause, then make a NEW commit. Never `--amend`.
 
-### CI is advisory, and it has not run since 2026-09-22
+### CI runs after the push, so check it before claiming it
 
-Check `gh run list --branch develop --limit 3` before claiming CI ran on this push. If the billing setting still blocks Actions, treat a local green as the only evidence a push has. The report should say so rather than imply CI backed it up.
+CI runs failed from 2026-09-22 into 2026-09-24 while the account's billing setting blocked Actions, and completed green on `develop` again on 2026-09-25 and 2026-09-26 (`gh run list --branch develop`). Check `gh run list --branch develop --limit 3` for the pushed commit before claiming CI ran on it. A push that changes only Markdown runs no workflow (`paths-ignore` in `.github/workflows/ci.yml`), so for a documentation-only push the local gates are the only evidence, and the report says so rather than imply CI backed it up.
 
 ## Step 1: docs-sync agent
 
@@ -67,9 +66,11 @@ Wait for docs-sync to complete before proceeding. Its edits may add files to the
 
 ### What docs-sync owns, and what it must not touch
 
-docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`, and the list of those documents is not written here: it is every row of `tracker/Living_documents.md` whose owner is `/phase-checkpoint` (the handoff, the board, the done file, the test queries, Plan.md, PROGRESS.md and the tracked counts, as of 2026-09-24). So at a session boundary run `/phase-checkpoint` BEFORE `/ship`.
+docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`, and the list of those documents is not written here: it is every row of `tracker/Living_documents.md` whose owner is `/phase-checkpoint` (the handoff, the board, the done file, the test queries, Plan.md and PROGRESS.md, as of 2026-09-26).
 
-Ship checks it ran with one command, `python3 tracker/check_living_docs.py --fresh`. It reads the registry's freshness column and requires every registered date line to be today's, or the ship stops and says the checkpoint is missing. No file path and no section name is hardcoded here: when the product owner reshapes a document, the registry row changes and this check follows it. Memory recorded "checkpoint then ship" as a standing convention on 2026-09-20, and a convention that lives only in memory is not enforcement.
+A push does not need `/phase-checkpoint` first. One thing does, at a session end only: `HANDOFF.md` is rewritten before the push (`/phase-checkpoint` Step 4 is the procedure), so the next session starts from what is true. Every other document is edited when its fact changes, not because a date is due, and nothing here checks that a document carries today's date.
+
+That replaced a freshness gate on 2026-09-25. `python3 tracker/check_living_docs.py --fresh` used to require every registered document to carry today's date before a push, so every session ended with edits that only moved dates, and the documents still drifted within a day. Build harness review item D2 removed the gate and the rule that `/phase-checkpoint` runs before every push, delegated by the product owner that day (DECISIONS.md, the lead implements both harness reviews' takeaways).
 
 ## Step 1b: stray file sweep
 
@@ -241,7 +242,7 @@ This step is deletion, so it follows `file-protection`: say what is going before
 - Do NOT push with an unexplained stray file in the tree. Every path from BOTH of Step 1b's sources, `git status --porcelain` and the filesystem walk, is classified there, or the push waits. A clean `git status` is not evidence the tree is clean, since `.gitignore` hides the duplicate-copy family from it.
 - Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
 - Do NOT push with any Step 0 gate red or unrun
-- Do NOT push at a session boundary before `/phase-checkpoint` has run today, which `python3 tracker/check_living_docs.py --fresh` proves rather than asserts
+- Do NOT push at a session end until `HANDOFF.md` has been rewritten this session (`/phase-checkpoint` Step 4); its `Last updated:` line reading today's date is the proof. No other document needs a date to be pushed
 
 ## Output
 

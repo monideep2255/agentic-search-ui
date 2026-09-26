@@ -1,30 +1,73 @@
 #!/usr/bin/env python3
-"""Check tracked documentation for drifted facts and recurring structural defects.
+"""Check tracked documentation for structural defects and wrong references.
 
-This repository's docs drifted because the same fact (a test count, a
-decision count, a phase status, a PR number) gets written into many files
-and kept in sync by discipline alone. The one file pair with a mechanical
-sync behind it, CLAUDE.md and AGENTS.md, is the only pair that did not
-drift. This script is the mechanism for everything else: it computes each
-tracked fact from source, then scans every tracked markdown file for a
-stale copy of it, plus a handful of structural defects that caused the
-same cleanup this script follows.
+WHAT `--check` CHECKS
+
+Every tracked markdown file, for the structural defects that have actually
+broken this repository's documents, plus two kinds of reference that git and
+the build board can settle:
+
+  - Table of contents: the list under "## Table of contents" matches the
+    file's `##` headings, in body order.
+  - Duplicate phase headings: no two `##` headings name the same build phase.
+  - The two append-only tables, DECISIONS.md and LEARNINGS.md: no blank line
+    inside the table (markdown ends a table there), every dated row has the
+    header's column count, and every row carries its `<details>` wrappers.
+  - Phase and pull request references: a sentence of the shape "phase X.Y
+    ... PR #N" names the pull request that actually merged that phase.
+  - "Next" references: no document calls a build phase "next" when
+    `tracker/BOARD.md` marks it done.
+
+WHAT IT STOPPED CHECKING ON 2026-09-25: COUNTS AND DATES
+
+Until 2026-09-25 this script computed the test, decision, learning, premise
+gate and Playwright counts from source, running the whole pytest collection
+and the vitest suite to do it, and failed whenever a document stated a stale
+copy. It also failed when a "Last updated:" line predated a date in its own
+body. Both made the check go red because time passed rather than because a
+document was wrong, and the fix each time was an edit that only moved a
+number or a date: 87 of the 92 commits to CLAUDE.md in the two weeks before
+changed nothing else (`testing/Developer/reports/2026-09-25_harness_review/
+build_harness.md`, items D1 and D2). The product owner delegated the harness
+fixes to the lead on 2026-09-25 (DECISIONS.md, "The lead implements both
+harness reviews' takeaways"), so the documents stopped stating counts and this
+check stopped comparing them.
+
+The counts are still computed, on demand, by `--counts`, which prints them
+and checks no document against them.
+
+NEVER A SILENT OK
+
+A run that could not compute what it needs says so and exits 1; it never
+prints "ok" over a gap (build harness review item S3). The measured failure:
+in an agent worktree with no `venv/bin/python`, this script skipped the
+Python test count, still printed "ok" and exited 0, while the count it
+tracked was stale (F-8.5-J04 and F-8.5-V05, `tracker/phase_8.5.md`). So:
+
+  - `--check`: a fact the checks read that could not be computed (the
+    board's phase statuses, the merged pull request per phase) is a failure
+    line naming the reason, and so is a failure to list the tracked files.
+  - `--counts`: a count that could not be computed is a failure line naming
+    the reason, and so is a pytest collection that reports errors. When a
+    test module fails to import, pytest prints "N tests collected, M errors"
+    and N silently leaves out that module's tests, so N reads as a smaller
+    true count. Pytest 9 prints exactly that line, and exits 2, measured on
+    2026-09-25 with two modules that import a missing name.
 
 THE HISTORICAL-VERSUS-CURRENT RULE
 
-A number in a document is only stale if it is being asserted as CURRENT. A
-number that quotes a past state, an example of an error, or an unrelated
-count is not a finding even when it differs from the freshly computed
-value. This script tells the two apart with the following rule, applied to
-every regex match before it is reported:
+A reference in a document is only wrong if it is being asserted as CURRENT. A
+sentence that quotes a past state, an example of an error, or an unrelated
+phase is not a finding even when it disagrees with git or the board. The two
+reference checks tell the two apart with the following rule, applied to every
+regex match before it is reported:
 
-A matched number is treated as HISTORICAL, and skipped, when any one of
-these holds:
+A match is treated as HISTORICAL, and skipped, when any one of these holds:
 
   1. Dated record row. The line is a data row of a dated table or a dated
      bullet: it matches `^\\|\\s*\\d{4}-\\d{2}-\\d{2}\\s*\\|` (a DECISIONS.md or
      LEARNINGS.md row) or `^-\\s*\\d{4}-\\d{2}-\\d{2}\\b` (a Plan.md Revision
-     history bullet). A count attached to a past date is a record of what
+     history bullet). A reference attached to a past date is a record of what
      was true then, not a claim about now.
   2. Historical section. The nearest preceding heading (any line starting
      with `#`) contains a literal date, or the word "retrospective",
@@ -32,143 +75,109 @@ these holds:
      headings mark an entire section as a past snapshot, for example a
      tracker phase file's dated review-round sections or Plan.md's
      "## Revision history".
-  3. Hedge or correction cue near the number, not merely on the line. A
-     word within 50 characters of the matched number marks it as an
-     example of an error rather than a live claim: "was", "wrong", "stale",
-     "outdated", "incorrect", "previously", "used to", "prior to",
-     "superseded", "corrected", "instead of", "as measured", "as of", or
-     "at the" (the last catches "N at the 2026-08-01 merge"). The window is
-     deliberate: this repo often puts a full paragraph inside one markdown
-     table cell (one line), so a whole-line hedge check would let an
-     unrelated "was" fifty words away exempt a live number it has nothing
-     to do with. That is not hypothetical: CLAUDE.md's Priority-2 row
-     states a current test count in the same line as "the cause WAS a
-     composition defect", a genuinely historical clause about a different
-     topic entirely. A per-line check missed the exact fact this script
-     exists to catch; a windowed check does not.
+  3. Hedge or correction cue near the match, not merely on the line. A word
+     within 50 characters of the match marks it as an example of an error
+     rather than a live claim: "was", "wrong", "stale", "outdated",
+     "incorrect", "previously", "used to", "prior to", "superseded",
+     "corrected", "instead of", "as measured", "as of", or "at the". The
+     window is deliberate: this repository often puts a full paragraph inside
+     one markdown table cell (one line), so a whole-line hedge check would let
+     an unrelated "was" fifty words away exempt a live claim it has nothing to
+     do with. The measured case that set the window, from when this script
+     still checked counts: CLAUDE.md's Priority-2 row stated a current test
+     count in the same line as "the cause WAS a composition defect", a
+     genuinely historical clause about a different topic entirely.
 
-A number that survives all three checks is a CURRENT assertion. If the
-number it captures differs from the freshly computed canonical value, it
-is reported as stale.
-
-Deliberately absent from this rule: a generic scan for "any number that
-differs from a known fact". Every fact-assertion regex below is anchored
-to the specific phrasing this repository actually uses for that fact (for
-example `\\d+ Python tests`, `\\d+ decisions logged`), never a bare number.
-This is what keeps a line number, a port, a version, or a dollar figure
-out of the findings without needing a fourth exemption rule for
-"unrelated numbers": an unrelated number simply never matches an anchored
-pattern in the first place.
+A match that survives all three is a CURRENT assertion. If it disagrees with
+git or the board, it is reported.
 
 THE FALSE-NEGATIVE TRADE-OFF
 
-Every rule above is written to exempt generously. A check that cries wolf
-on legitimate historical text gets disabled, which loses all of its
-detection value; a check that misses one drifted sentence loses only that
-one instance. When a borderline case comes up, this script exempts it.
+Every rule above is written to exempt generously. A check that cries wolf on
+legitimate historical text gets disabled, which loses all of its detection
+value; a check that misses one wrong sentence loses only that one instance.
+When a borderline case comes up, this script exempts it.
 
 WHAT THIS SCRIPT DOES NOT CHECK
 
-A green run here is evidence about the specific facts and defects listed
-below, not a certification that the documentation is correct. Per this
-repo's own `goal-contracts` rule, a verify surface has to state its own
-coverage, or a clean run reads as "everything is verified" when it means
-"the things this script happens to compute are correct".
+A green run here is evidence about the specific checks listed at the top, not
+a certification that the documentation is correct. Per this repository's own
+`goal-contracts` rule, a verify surface has to state its own coverage.
 
-  - It verifies FACTS, not prose. Only the numeric and structural items
-    this script actually computes (test counts, DECISIONS.md/LEARNINGS.md
-    row counts, open flags, build-phase status, merged PR per phase, TOC
-    structure, duplicate phase headings, Last-updated currency) are
-    checked. A narrative claim, an architectural description, or a "why"
+  - No count, anywhere. A document may state a test, decision or learning
+    count and this script will not compare it with anything. The documents
+    that used to carry counts (CLAUDE.md, AGENTS.md, requirements/Plan.md)
+    point at `--counts` instead.
+  - No date. A "Last updated:" line older than its own body is not a
+    finding, and nothing requires any document to carry today's date.
+  - No prose. A narrative claim, an architectural description, or a "why"
     explanation can be entirely wrong and this script will not notice,
-    because it never reads for meaning, only for the specific anchored
-    patterns above.
-  - It never checks the two locked documents, `requirements/PRD.md` and
-    `requirements/Technical_specification.md`. Both are frozen until the
-    Step 6.2 reconciliation and are allowed to disagree with the live
-    system on purpose (the technical specification's "10 concept labels"
-    against the live graph's 11 is the recorded case). Flagging them would
-    produce a finding nobody may act on.
-  - It cannot detect a fact that is MISSING entirely, only one that is
-    PRESENT and wrong. A document that used to state the Python test count
-    and had the whole sentence deleted reports no finding here, because
-    there is no assertion left to compare against the computed value. This
-    script proves "no document states a stale copy of this fact"; it does
-    not prove "every document that should mention this fact still does".
-  - Every fact pattern is PHRASING-SPECIFIC, not meaning-specific. A fact
-    written in a phrasing no pattern below covers is invisible to this
-    script, full stop; it is not a lesser-confidence finding, it is no
-    finding at all. The measured case: `requirements/phase_6/
-    Continuation_prompt.md` stated "Learnings entries: 37, plus a
-    retrospective" (label-then-number, colon separator) while every
-    `learnings_entries` pattern was anchored number-first ("36 learnings
-    plus a retrospective"). The script computed the correct value (36) and
-    still reported 0 stale findings, because the number-first anchor never
-    matched a label-first sentence. Both orderings are covered now (see
-    `ASSERTION_PATTERNS` and `PREMISE_GATE_RE`), across the separators this
-    repo actually uses (colon, markdown table pipe, equals sign, en dash,
-    em dash, and a bulleted "Label - value" hyphen), but the fix is a
-    widened set of anchors, not a general-purpose fact detector. Adding a
-    new way of stating a tracked count in a document (a new label, a new
-    separator, a new surrounding phrase) requires adding a matching pattern
-    here, or that new phrasing is exactly as invisible as the case above
-    was. `frontend_test_files` (the vitest "Test Files" count) is computed
-    but has NO assertion pattern at all today, deliberately: no live
-    document currently states it as a current total outside dated per-
-    ticket build logs, so no real phrasing exists yet to anchor a pattern
-    to. The moment a document does assert it live, it is unchecked until a
-    pattern is added. `merged_prs` is the mirror case already documented at
-    `PHASE_THEN_PR_RE`: it matches only "phase X.Y ... PR #N", not the
-    reverse order, by design, because no reverse-ordered phrasing exists in
-    this repo today. Same rule, same risk, if that ever changes.
+    because it never reads for meaning, only for the anchored patterns above.
+  - The two locked documents, `requirements/PRD.md` and
+    `requirements/Technical_specification.md`. Both are frozen until the Step
+    6.2 reconciliation and are allowed to disagree with the live system on
+    purpose, so flagging them would produce a finding nobody may act on.
+  - A reference that is MISSING. This script proves "no document states a
+    wrong phase-to-pull-request pairing", not "every document that should
+    name a pull request still does".
+  - The reverse ordering "PR #N ... phase X.Y". `PHASE_THEN_PR_RE` matches
+    only "phase X.Y ... PR #N", by design, because no reverse-ordered
+    phrasing exists in this repository today. A document that starts using
+    one is unchecked until a pattern is added.
+  - A phase `tracker/BOARD.md` does not list. The phase and pull request
+    check, and the "next" check, read the board's Build phases table, so a
+    phase that is not on the board is not checked at all.
 
 Depends on:
-    - tracker/BOARD.md (parsed for build-phase statuses and the Open flags
-      table, via tracker/render_board.py's own parser)
-    - tracker/render_board.py (`parse_board`, `BoardError`; reused rather
-      than re-implemented so the two scripts never disagree about what
-      BOARD.md says)
-    - DECISIONS.md, LEARNINGS.md (row and entry counts, counted directly)
-    - tests/system_03_search_agent/tools/test_cypher_query_premise.py
-      (premise gate test count, via `pytest --collect-only`)
-    - frontend/e2e/*.spec.ts (Playwright test count, counted directly)
-    - venv/bin/python (to run pytest; SKIPPED if absent)
-    - frontend/node_modules (to run vitest; SKIPPED if absent)
-    - git log --merges (merged PR numbers per phase branch)
-    - git ls-files '*.md' (the set of tracked markdown files to scan)
+    - tracker/BOARD.md (parsed for build-phase statuses, each phase's branch
+      and, for `--counts`, the Open flags table, via tracker/render_board.py's
+      own parser)
+    - tracker/render_board.py (`parse_board`, `find_table`, `BoardError`;
+      reused rather than re-implemented so the two scripts never disagree
+      about what BOARD.md says)
+    - git log --merges (merged pull request numbers per phase branch)
+    - git ls-files '*.md' (the set of tracked markdown files to check)
+    - `--counts` only: venv/bin/python (to run pytest), frontend/node_modules
+      (to run vitest), frontend/e2e/*.spec.ts, DECISIONS.md, LEARNINGS.md,
+      tests/system_03_search_agent/tools/test_cypher_query_premise.py
+
+Depended on by:
+    - .claude/skills/doc-readability/scripts/check_style.py, which imports
+      `fenced_line_mask`, `heading_index`, `slugify`, `dedupe_slugs` and
+      `check_toc` rather than re-implementing them. Keep their signatures.
 
 Reads:
-    Runs `pytest --collect-only -q` and `npx vitest run` as read-only
-    measurement subprocesses. Neither mutates repository or test state.
+    `--counts` runs `pytest --collect-only -q` and `npx vitest run` as
+    read-only measurement subprocesses. Neither mutates repository or test
+    state. `--check` runs neither.
 
 Writes:
     Nothing. Stdout only. This script never edits a file.
 
 Usage:
-    python3 tracker/check_doc_drift.py            print a full report
+    python3 tracker/check_doc_drift.py             print a full report
     python3 tracker/check_doc_drift.py --check     exit 0 clean / 1 on any
                                                     finding, one line per
-                                                    finding
-    python3 tracker/check_doc_drift.py --verbose   also print every
-                                                    computed fact and how
-                                                    it was computed
-    python3 tracker/check_doc_drift.py --self-test run two fixture suites:
-                                                    the historical-versus-
-                                                    current classifier, and
-                                                    pattern coverage (every
-                                                    fact's ASSERTION_PATTERNS
-                                                    against both a number-
-                                                    then-label and a label-
-                                                    then-number phrasing);
-                                                    exit 0 only if every case
-                                                    in both suites passes.
-                                                    Does not touch source
-                                                    facts, pytest, vitest, or
-                                                    git.
-
-Exits non-zero when a stale fact or a structural defect is found, or when
-BOARD.md itself is malformed, because a drift checker that silently misses
-a case is worse than one that says so.
+                                                    finding, a fact it could
+                                                    not compute included
+    python3 tracker/check_doc_drift.py --verbose   also print every fact the
+                                                    checks read and how it
+                                                    was computed
+    python3 tracker/check_doc_drift.py --counts    print-only: the test,
+                                                    decision, learning, flag,
+                                                    premise gate and
+                                                    Playwright counts computed
+                                                    from source. Checks no
+                                                    document against them.
+                                                    Exit 1 when a count could
+                                                    not be computed or pytest
+                                                    reported collection errors
+    python3 tracker/check_doc_drift.py --self-test run the historical-versus-
+                                                    current classifier's
+                                                    fixtures; exit 0 only if
+                                                    every case passes. Does
+                                                    not touch source facts,
+                                                    pytest, vitest, or git.
 """
 
 from __future__ import annotations
@@ -176,7 +185,6 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -207,22 +215,6 @@ PYTEST_TIMEOUT_S = 180
 VITEST_TIMEOUT_S = 240
 GIT_TIMEOUT_S = 30
 
-WORD_NUMBERS = {
-    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
-}
-
-
-def word_or_digit(token: str) -> int:
-    token = token.strip()
-    if token.replace(",", "").isdigit():
-        return int(token.replace(",", ""))
-    return WORD_NUMBERS[token.lower()]
-
-
-def digits(token: str) -> int:
-    return int(token.replace(",", ""))
-
 
 # --------------------------------------------------------------------------
 # Data model
@@ -242,20 +234,27 @@ class Fact:
 
 @dataclass
 class Finding:
-    kind: str               # "stale" | "structural"
-    path: str
+    kind: str               # "stale" | "structural" | "unmeasured"
+    path: str               # "" for an unmeasured finding: it is about the run, not a file
     line: int
     message: str
 
     def format(self) -> str:
+        if not self.path:
+            return self.message
         return f"{self.path}:{self.line}: {self.message}"
 
 
-@dataclass
-class AssertionPattern:
-    fact_key: str
-    regex: re.Pattern
-    parser: Callable[[str], int] = digits
+def unmeasured_findings(facts: dict[str, Fact]) -> list[Finding]:
+    """One failure line per fact that could not be computed. A skipped fact
+    means every check that reads it checked nothing, so the run cannot say
+    ok; see "NEVER A SILENT OK" in the module docstring.
+    """
+    return [
+        Finding("unmeasured", "", 0, f"could not compute {fact.label}: {fact.skip_reason}")
+        for fact in facts.values()
+        if fact.skipped
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -272,13 +271,71 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProcess
         return None
 
 
+# The summary line `pytest --collect-only -q` ends with. Measured with pytest
+# 9.1.1 on 2026-09-25: "2 tests collected in 0.00s" when every module imports,
+# "2 tests collected, 1 error in 0.11s" and "2 tests collected, 2 errors in
+# 0.12s" when one or two modules fail to import (exit 2, after a line reading
+# "Interrupted: N errors during collection"), and "no tests collected" when
+# nothing is found. "N/M tests collected (K deselected)" appears only under a
+# marker filter, which this script never passes, and is accepted anyway.
+#
+# Both patterns are anchored to the START of a line, and that is load-bearing:
+# `--collect-only -q` lists every test id first, and a parametrized id can
+# carry any text. Measured on 2026-09-25: this script's own tests have ids
+# containing "Interrupted: 1 error during collection", and an unanchored
+# search read that id as a collection error in a clean run. A test id starts
+# with its file path, never with a digit, "no" or "!", so anchoring excludes
+# every id while still matching pytest's own lines.
+COLLECTED_RE = re.compile(
+    r"^=*[ \t]*(?P<collected>\d+|no)(?:/\d+)?[ \t]+tests?[ \t]+collected\b(?P<rest>.*)$",
+    re.MULTILINE,
+)
+COLLECTION_ERRORS_RE = re.compile(r"\b(\d+)[ \t]+errors?\b")
+INTERRUPTED_RE = re.compile(
+    r"^!+[ \t]*Interrupted:[ \t]+(\d+)[ \t]+errors?[ \t]+during collection\b",
+    re.MULTILINE,
+)
+
+
+def parse_collection_summary(output: str) -> tuple[int | None, int]:
+    """Return (tests collected, collection errors) from `pytest
+    --collect-only -q` output. The collected count is None when no summary
+    line is present. The error count is read from the summary line itself
+    and from pytest's "Interrupted: N errors during collection" line, taking
+    the larger, so an error is never missed because one of the two lines is
+    absent. It is 0 only when neither line reports an error.
+    """
+    errors = 0
+    interrupted = INTERRUPTED_RE.search(output)
+    if interrupted:
+        errors = int(interrupted.group(1))
+    summaries = list(COLLECTED_RE.finditer(output))
+    if not summaries:
+        return None, errors
+    last = summaries[-1]
+    collected = 0 if last.group("collected") == "no" else int(last.group("collected"))
+    on_summary = COLLECTION_ERRORS_RE.search(last.group("rest"))
+    if on_summary:
+        errors = max(errors, int(on_summary.group(1)))
+    return collected, errors
+
+
 def _pytest_collected_count(target: str | None) -> tuple[int | None, str]:
     """Run `pytest --collect-only -q` (optionally scoped to one file) and
-    parse the trailing "N tests collected" line. Returns (count, reason);
-    count is None and reason explains why when it could not be measured.
+    parse its summary line. Returns (count, reason); count is None and reason
+    explains why when it could not be measured honestly, which includes a
+    collection that reported errors: its count leaves out every test in the
+    modules that failed to import.
     """
     if not VENV_PYTHON.exists():
-        return None, f"{VENV_PYTHON.relative_to(REPO_ROOT)} not found"
+        try:
+            shown = VENV_PYTHON.relative_to(REPO_ROOT)
+        except ValueError:
+            shown = VENV_PYTHON
+        return None, (
+            f"{shown} not found, so pytest could not run. Run this from a checkout "
+            "that has the repository venv, or create it there"
+        )
     cmd = [str(VENV_PYTHON), "-m", "pytest", "--collect-only", "-q"]
     if target:
         cmd.append(target)
@@ -286,10 +343,25 @@ def _pytest_collected_count(target: str | None) -> tuple[int | None, str]:
     if proc is None:
         return None, "pytest invocation failed or timed out"
     combined = proc.stdout + "\n" + proc.stderr
-    m = re.search(r"^(\d+)\s+tests? collected", combined, re.MULTILINE)
-    if not m:
-        return None, "could not parse a 'N tests collected' line from pytest output"
-    return int(m.group(1)), ""
+    collected, errors = parse_collection_summary(combined)
+    if errors:
+        return None, (
+            f"pytest reported {errors} collection error{'s' if errors != 1 else ''}, so the "
+            f"{collected if collected is not None else 'unknown number of'} tests it did collect "
+            "leave out every test in the modules that failed to import. Run "
+            "`python -m pytest --collect-only -q` to see which modules failed"
+        )
+    if collected is None:
+        return None, (
+            "could not parse a 'N tests collected' line from pytest output "
+            f"(pytest exited {proc.returncode})"
+        )
+    if proc.returncode not in (0, 5):
+        return None, (
+            f"pytest exited {proc.returncode} while collecting, which is not a clean "
+            "collection even though it reported no error count"
+        )
+    return collected, ""
 
 
 def compute_python_test_count() -> Fact:
@@ -501,7 +573,19 @@ def compute_merged_pr_numbers() -> Fact:
     return Fact("merged_prs", "Merged PR numbers per phase", by_phase, display, source)
 
 
-def compute_all_facts() -> dict[str, Fact]:
+def compute_check_facts() -> dict[str, Fact]:
+    """The facts `--check` reads: the board's phase statuses, for the "next"
+    check, and the merged pull request per phase, for the reference check.
+    Deliberately no count: `--check` runs neither pytest nor vitest.
+    """
+    return {
+        "build_phase_statuses": compute_build_phase_statuses(),
+        "merged_prs": compute_merged_pr_numbers(),
+    }
+
+
+def compute_count_facts() -> dict[str, Fact]:
+    """The counts `--counts` prints. No document is checked against them."""
     facts: dict[str, Fact] = {}
     facts["python_tests"] = compute_python_test_count()
     facts["premise_gate_tests"] = compute_premise_gate_count()
@@ -512,8 +596,6 @@ def compute_all_facts() -> dict[str, Fact]:
     facts["decisions_rows"] = compute_decisions_row_count()
     facts["learnings_entries"] = compute_learnings_entry_count()
     facts["open_flags"] = compute_open_flags_count()
-    facts["build_phase_statuses"] = compute_build_phase_statuses()
-    facts["merged_prs"] = compute_merged_pr_numbers()
     return facts
 
 
@@ -544,14 +626,14 @@ HEDGE_WORD_RE = re.compile(
 # topics used to live in standalone files, `file-naming.md`, `no-prose-
 # walls.md`, and `clarify-before-drafting.md`; they were merged into
 # `writing-style.md` and `preserve-your-thinking.md` respectively and the
-# standalone files deleted.) A number inside one of these files is what that
-# session reported at the time, never a claim about the document's current
-# state.
-# Real case this caught: `requirements/phase_1/Session_May_07.md` says
-# "5 decisions logged to DECISIONS.md from Step 1.3", a per-step delta from
-# 2026-05-07, which a line-level check alone still matched as a current
-# 5-row claim because its heading text carries no date, "session", or
-# "retrospective" token.
+# standalone files deleted.) A reference inside one of these files is what
+# that session reported at the time, never a claim about the document's
+# current state.
+# Real case this caught, from when this script still checked counts:
+# `requirements/phase_1/Session_May_07.md` says "5 decisions logged to
+# DECISIONS.md from Step 1.3", a per-step delta from 2026-05-07, which a
+# line-level check alone still matched as a current claim because its heading
+# text carries no date, "session", or "retrospective" token.
 HISTORICAL_FILENAME_RES = [
     re.compile(r"^Session_[A-Za-z]+_\d{1,2}\.md$"),          # phase_N/Session_July_21.md
     re.compile(r"^\d{4}-\d{2}-\d{2}_.*\.md$"),                # meetings/2026-07-21_....md
@@ -581,8 +663,8 @@ def fenced_line_mask(lines: list[str]) -> list[bool]:
     SKILL.md`'s ```markdown fence around an example `## Component: [name]`
     heading is the real case) is not a section of the document. Markdown
     renderers do not treat a `#`-line inside a fence as a heading, a
-    fact-assertion regex should not treat a number inside one as a live
-    claim, and neither should this script.
+    reference regex should not treat a phase inside one as a live claim, and
+    neither should this script.
 
     Per CommonMark, a closing fence is a line consisting of the SAME
     character as the opener, repeated at least as many times as the
@@ -646,153 +728,28 @@ def is_historical_context(lines: list[str], idx: int, headings: list[tuple[int, 
 
 
 def has_nearby_hedge(line: str, start: int, end: int, window: int = 50) -> bool:
-    """Rule 3, scoped to a character window around one matched number.
+    """Rule 3, scoped to a character window around one match.
 
     This has to be per-match, not per-line, because this repo routinely
-    puts an entire paragraph inside one markdown table cell, one line. A
-    real, measured case: CLAUDE.md's Priority-2 row states a current test
-    count ("968 Python tests", the exact fact this script exists to catch)
-    in the same line as "the cause WAS a composition defect", a genuinely
-    historical clause describing build phase 2.1's root cause, hundreds of
-    characters away. A whole-line hedge check reads that "was" and exempts
-    the test count too, silently defeating the primary case this script was
-    built for. A window keeps the hedge word tied to the number it is
-    actually hedging, as in "968 AT THE 2026-08-01 merge", where the hedge
-    sits right next to the number it qualifies.
+    puts an entire paragraph inside one markdown table cell, one line. The
+    measured case, from when this script still checked counts: CLAUDE.md's
+    Priority-2 row stated a current test count ("968 Python tests") in the
+    same line as "the cause WAS a composition defect", a genuinely historical
+    clause describing build phase 2.1's root cause, hundreds of characters
+    away. A whole-line hedge check reads that "was" and exempts the live
+    claim too, silently defeating the case the check exists for. A window
+    keeps the hedge word tied to the claim it is actually hedging, as in
+    "968 AT THE 2026-08-01 merge", where the hedge sits right next to it.
     """
     lo = max(0, start - window)
     hi = min(len(line), end + window)
     return bool(HEDGE_WORD_RE.search(line[lo:hi]))
 
 
-# --------------------------------------------------------------------------
-# Fact-assertion patterns, anchored to phrasing this repo actually uses.
-# Anchoring to fact-specific phrasing (rather than a bare number) is what
-# keeps line numbers, ports, versions, and dollar figures out of scope
-# without a fourth exemption rule; see the module docstring.
-#
-# ORDERING: every fact below is stated in this repo BOTH number-first
-# ("977 Python tests") and label-first ("Python tests: 977"). A pattern
-# anchored to only one ordering misses the other silently, a green run with
-# a stale document underneath it: `requirements/phase_6/
-# Continuation_prompt.md` stated "Learnings entries: 37, plus a
-# retrospective" against a computed value of 36, and every prior
-# `learnings_entries` pattern was number-first only, so the drift was
-# invisible. Each fact below therefore carries at least one number-then-
-# label pattern AND at least one label-then-number pattern.
-#
-# SEPARATORS: `LABEL_NUM_SEP` covers the separators this repo actually uses
-# between a label and its number: a colon ("Python tests: 977"), a markdown
-# table cell pipe ("| Python tests | 977 |", where the separator is the
-# pipe plus surrounding spaces), an equals sign ("Python tests = 977"), and
-# a bulleted "Label - value" hyphen or en/em dash ("Decisions logged - 183",
-# "Decisions logged – 183"), the same spaced-hyphen bullet form
-# `writing-style.md` allows for "Label - description" bullets and table
-# cells. It intentionally does NOT allow a separator-free "Python tests
-# 977": without a separator character, that shape is indistinguishable from
-# incidental adjacent text and would reintroduce the "any number near this
-# label" false-positive risk the module docstring's opening section already
-# rejects for the number-first patterns.
-# --------------------------------------------------------------------------
-
-LABEL_NUM_SEP = r"\s*[:|=–—-]\s*"
-
-
-def _label_then_number(label_pattern: str) -> re.Pattern:
-    """Build a label-then-number AssertionPattern regex: `label_pattern`,
-    then one separator from `LABEL_NUM_SEP`, then the captured number.
-    `label_pattern` is inserted as-is (already `\\b`-bounded by the caller),
-    so this only assembles the shared separator-and-number tail once rather
-    than repeating it at every call site.
-    """
-    return re.compile(label_pattern + LABEL_NUM_SEP + r"(\d[\d,]*)\b", re.IGNORECASE)
-
-
-ASSERTION_PATTERNS: list[AssertionPattern] = [
-    # Python tests. Number-then-label: "977 Python tests". Label-then-
-    # number: "Python tests: 977", "Python tests | 977", "Python tests =
-    # 977", "Python tests - 977".
-    AssertionPattern("python_tests", re.compile(r"(\d[\d,]*)\s+Python tests\b")),
-    AssertionPattern("python_tests", _label_then_number(r"\bPython tests\b")),
-
-    # Frontend tests. Number-then-label: "120 frontend tests" / "120
-    # frontend unit tests". Label-then-number: "Frontend tests: 120".
-    AssertionPattern("frontend_tests", re.compile(r"(\d[\d,]*)\s+frontend (?:unit )?tests\b", re.IGNORECASE)),
-    AssertionPattern("frontend_tests", _label_then_number(r"\bfrontend (?:unit )?tests\b")),
-
-    # Playwright end-to-end tests. Number-then-label: "3 Playwright tests" /
-    # "3 Playwright end-to-end tests". Label-then-number: "Playwright end-
-    # to-end tests: 3".
-    AssertionPattern("playwright_tests", re.compile(r"(\d[\d,]*)\s+Playwright(?:\s+end-to-end)?\s+tests\b", re.IGNORECASE)),
-    AssertionPattern("playwright_tests", _label_then_number(r"\bPlaywright(?:\s+end-to-end)?\s+tests\b")),
-
-    # DECISIONS.md row count. Requires one of the repo's three anchor
-    # phrasings, never a bare "N decisions": the first number-then-label
-    # variant also requires the "(DECISIONS.md)" suffix, matching the
-    # repo's own total-count phrasing ("183 decisions logged
-    # (DECISIONS.md)"), specifically to avoid matching a per-step delta
-    # like "5 decisions logged to DECISIONS.md from Step 1.3", which is a
-    # historical count for one planning step, not a current claim about the
-    # file's total row count. The label-then-number forms below ("Decisions
-    # logged: 183") are a self-contained total-count assertion by
-    # construction, so they need no matching suffix requirement.
-    # "logged" is OPTIONAL, and that word is why this fact went unchecked in
-    # the two most-read files in the repository. CLAUDE.md's Current focus row
-    # and its AGENTS.md mirror both say "438 decisions (DECISIONS.md)", with no
-    # "logged", so they matched none of the five patterns here and drifted
-    # silently: AGENTS.md sat at 430 while the checker reported 0 stale, and a
-    # deliberately absurd 99999 in CLAUDE.md also passed. Measured on
-    # 2026-08-28 by mutating both files and watching the check stay green.
-    AssertionPattern("decisions_rows", re.compile(r"(\d[\d,]*)\s+decisions(?:\s+logged)?\s*\(DECISIONS\.md\)")),
-    AssertionPattern("decisions_rows", re.compile(r"(\d[\d,]*)\s+decision rows\b")),
-    AssertionPattern("decisions_rows", re.compile(r"(\d[\d,]*)\s+DECISIONS\.md rows\b")),
-    AssertionPattern("decisions_rows", _label_then_number(r"\bDecisions logged\b")),
-    AssertionPattern("decisions_rows", _label_then_number(r"\bDecision rows\b")),
-    AssertionPattern("decisions_rows", _label_then_number(r"\bDECISIONS\.md rows\b")),
-
-    # LEARNINGS.md entry count. Same shape as DECISIONS.md rows above. The
-    # label-then-number form is the one that missed the real regression:
-    # "Learnings entries: 37, plus a retrospective" against a computed 36.
-    AssertionPattern("learnings_entries", re.compile(r"(\d[\d,]*)\s+learnings\s+plus\s+(?:a|the)\s+retrospective\b")),
-    AssertionPattern("learnings_entries", re.compile(r"(\d[\d,]*)\s+learnings entries\b")),
-    AssertionPattern("learnings_entries", re.compile(r"(\d[\d,]*)\s+LEARNINGS\.md entries\b")),
-    AssertionPattern("learnings_entries", _label_then_number(r"\bLearnings entries\b")),
-    AssertionPattern("learnings_entries", _label_then_number(r"\bLEARNINGS\.md entries\b")),
-
-    # Open flags. Both digit and word-number forms, both orderings.
-    AssertionPattern(
-        "open_flags",
-        re.compile(r"(\d[\d,]*|one|two|three|four|five|six|seven|eight|nine|ten)\s+open flags?\b", re.IGNORECASE),
-        parser=word_or_digit,
-    ),
-    AssertionPattern(
-        "open_flags",
-        re.compile(
-            r"\bopen flags?\b" + LABEL_NUM_SEP
-            + r"(\d[\d,]*|one|two|three|four|five|six|seven|eight|nine|ten)\b",
-            re.IGNORECASE,
-        ),
-        parser=word_or_digit,
-    ),
-]
-
-# Premise gate: "premise gate 9 of 9" (bare), "premise gate at 9 of 9", and
-# now "Premise gate: 9 of 9" / "Premise gate | 9 of 9" / "Premise gate = 9
-# of 9" / "Premise gate - 9 of 9" (the label-then-number forms, one
-# `LABEL_NUM_SEP` separator in place of the space-or-" at" join). The real
-# case this widened for: `requirements/phase_6/Continuation_prompt.md`
-# states "Premise gate: 9 of 9", which the previous space-or-"at"-only
-# pattern never matched.
-PREMISE_GATE_RE = re.compile(
-    r"premise gate(?:\s*[:|=–—-]|\s+at)?\s+(\d+)\s+of\s+(\d+)\b",
-    re.IGNORECASE,
-)
-
 # Directional by design: "phase X.Y (..., PR #N)" is the phrasing this repo
 # uses everywhere it was found (CLAUDE.md, AGENTS.md). The reverse order is
 # not scanned for; see the module docstring's "WHAT THIS SCRIPT DOES NOT
-# CHECK" section, which names this as the same class of ordering gap the
-# fact-assertion patterns above were widened for, left as-is here because no
+# CHECK" section, which names this ordering gap, left as-is because no
 # reverse-ordered phrasing exists in this repo today.
 #
 # The window excludes both "." and "|": "." keeps the pairing inside one
@@ -809,10 +766,14 @@ PHASE_THEN_PR_RE = re.compile(r"\bphase\s+(\d+\.\d+)\b[^.\n|]{0,120}?\bPR\s*#(\d
 # --------------------------------------------------------------------------
 
 
-def tracked_markdown_files() -> list[Path]:
+def tracked_markdown_files() -> list[Path] | None:
+    """Every tracked markdown file except the locked documents, or None when
+    git could not list them. None is not an empty list: an empty list checks
+    nothing and would print "ok", which is the silent pass `main` refuses.
+    """
     proc = _run(["git", "ls-files", "*.md"], cwd=REPO_ROOT, timeout=GIT_TIMEOUT_S)
     if proc is None or proc.returncode != 0:
-        return []
+        return None
     paths = []
     for rel in proc.stdout.splitlines():
         rel = rel.strip()
@@ -823,58 +784,8 @@ def tracked_markdown_files() -> list[Path]:
 
 
 # --------------------------------------------------------------------------
-# Stale-fact scan
+# Reference check: "phase X.Y ... PR #N"
 # --------------------------------------------------------------------------
-
-
-def scan_stale_facts(files: list[Path], facts: dict[str, Fact]) -> list[Finding]:
-    findings: list[Finding] = []
-    premise_fact = facts.get("premise_gate_tests")
-    for path in files:
-        rel = path.relative_to(REPO_ROOT).as_posix()
-        if is_historical_file(rel):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
-        lines = text.splitlines()
-        mask = fenced_line_mask(lines)
-        headings = heading_index(lines, mask)
-
-        for i, line in enumerate(lines):
-            if mask[i] or is_historical_context(lines, i, headings):
-                continue
-
-            for ap in ASSERTION_PATTERNS:
-                fact = facts.get(ap.fact_key)
-                if fact is None or fact.skipped:
-                    continue
-                for m in ap.regex.finditer(line):
-                    if has_nearby_hedge(line, m.start(), m.end()):
-                        continue
-                    try:
-                        asserted = ap.parser(m.group(1))
-                    except (KeyError, ValueError):
-                        continue
-                    if asserted != fact.value:
-                        findings.append(Finding(
-                            "stale", rel, i + 1,
-                            f"says {asserted} {fact.label.lower()} (computed: {fact.value})",
-                        ))
-
-            if premise_fact is not None and not premise_fact.skipped:
-                for m in PREMISE_GATE_RE.finditer(line):
-                    if has_nearby_hedge(line, m.start(), m.end()):
-                        continue
-                    num, den = int(m.group(1)), int(m.group(2))
-                    if num != premise_fact.value or den != premise_fact.value:
-                        findings.append(Finding(
-                            "stale", rel, i + 1,
-                            f"says premise gate {num} of {den} "
-                            f"(computed: {premise_fact.value} of {premise_fact.value})",
-                        ))
-    return findings
 
 
 def scan_pr_assertions(files: list[Path], facts: dict[str, Fact]) -> list[Finding]:
@@ -1136,38 +1047,6 @@ def check_duplicate_phase_headings(rel: str, lines: list[str], mask: list[bool])
     return findings
 
 
-LAST_UPDATED_RE = re.compile(r"^Last updated:\s*(\d{4}-\d{2}-\d{2})", re.IGNORECASE)
-DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
-
-
-def check_last_updated(rel: str, lines: list[str], mask: list[bool]) -> list[Finding]:
-    findings: list[Finding] = []
-    lu_idx = None
-    lu_date = None
-    for i, line in enumerate(lines):
-        if mask[i]:
-            continue
-        m = LAST_UPDATED_RE.match(line.strip())
-        if m:
-            lu_idx, lu_date = i, m.group(1)
-            break
-    if lu_date is None:
-        return findings
-
-    body_dates: list[str] = []
-    for i, line in enumerate(lines):
-        if i == lu_idx or mask[i]:
-            continue
-        body_dates.extend(DATE_RE.findall(line))
-
-    if body_dates and max(body_dates) > lu_date:
-        findings.append(Finding(
-            "structural", rel, lu_idx + 1,
-            f"'Last updated: {lu_date}' predates a later date in the body ({max(body_dates)})",
-        ))
-    return findings
-
-
 NEXT_PHASE_RE = re.compile(
     r"\bnext(?:\s+up)?\s*:?\s*build phase\s+(\d+\.\d+)\b"
     r"|\bbuild phase\s+(\d+\.\d+)\b[^.\n]{0,40}?\(?\s*next\b",
@@ -1215,12 +1094,11 @@ def scan_structural(files: list[Path], facts: dict[str, Fact]) -> list[Finding]:
 
         findings.extend(check_toc(rel, lines, mask))
         findings.extend(check_duplicate_phase_headings(rel, lines, mask))
-        findings.extend(check_last_updated(rel, lines, mask))
         findings.extend(check_append_only_table(rel, lines, mask))
         # "next phase" is a currency claim; a dated session/meeting capture
-        # narrating what was next AT THE TIME is not one. TOC, duplicate
-        # heading, and last-updated staleness are structural hygiene checks
-        # that still apply to a capture file, so only this one is skipped.
+        # narrating what was next AT THE TIME is not one. The TOC, duplicate
+        # heading, and append-only table checks are structural hygiene that
+        # still applies to a capture file, so only this one is skipped.
         if not is_historical_file(rel):
             findings.extend(check_next_phase(rel, lines, headings, phase_statuses, mask))
 
@@ -1230,18 +1108,21 @@ def scan_structural(files: list[Path], facts: dict[str, Fact]) -> list[Finding]:
 # --------------------------------------------------------------------------
 # Self-test: proves the historical-versus-current classifier itself, not
 # just that the script runs. See `--self-test` in Usage and the "WHAT THIS
-# SCRIPT DOES NOT CHECK" section of the module docstring.
+# SCRIPT DOES NOT CHECK" section of the module docstring. The fixture lines
+# still read as count sentences because that is where the classifier's
+# measured cases came from; the classifier is agnostic about what it is
+# classifying, and it now guards the phase and pull request reference checks.
 # --------------------------------------------------------------------------
 
 
 def _classify(lines: list[str], idx: int, match_start: int, match_end: int) -> str:
-    """Classify one matched number as "historical" (skip) or "current"
-    (flag if it disagrees with the computed fact), replicating the exact
-    decision sequence `scan_stale_facts` applies to a real match: fence
-    membership, then the whole-line/whole-section rules, then the
-    proximity-windowed hedge check. This calls the production functions
-    directly rather than re-implementing the rule, so a self-test pass
-    proves those functions, not a parallel copy of them.
+    """Classify one match as "historical" (skip) or "current" (flag if it
+    disagrees with git or the board), replicating the exact decision sequence
+    `scan_pr_assertions` applies to a real match: fence membership, then the
+    whole-line/whole-section rules, then the proximity-windowed hedge check.
+    This calls the production functions directly rather than re-implementing
+    the rule, so a self-test pass proves those functions, not a parallel copy
+    of them.
     """
     mask = fenced_line_mask(lines)
     if mask[idx]:
@@ -1259,14 +1140,14 @@ class SelfTestCase:
     name: str
     lines: list[str]
     idx: int
-    needle: str            # the exact substring whose span is the "number" under test
+    needle: str            # the exact substring whose span is the match under test
     expected: str           # "historical" | "current"
 
 
 def _self_test_cases() -> list[SelfTestCase]:
     # Case C, the CLAUDE.md regression: a hedge word roughly 300 characters
-    # before the number under test, well outside the 50-character window,
-    # so the number must NOT be exempted.
+    # before the match under test, well outside the 50-character window,
+    # so the match must NOT be exempted.
     filler = "x" * 260
     claude_md_case_line = (
         f"Build phase 2.1 closed after five reviews. {filler} "
@@ -1316,7 +1197,7 @@ def _self_test_cases() -> list[SelfTestCase]:
             expected="current",
         ),
         SelfTestCase(
-            name="a number inside a fenced code block is historical",
+            name="a match inside a fenced code block is historical",
             lines=[
                 "Here is an example status line:",
                 "```markdown",
@@ -1329,7 +1210,7 @@ def _self_test_cases() -> list[SelfTestCase]:
             expected="historical",
         ),
         SelfTestCase(
-            name="a number inside an UNCLOSED fence is historical",
+            name="a match inside an UNCLOSED fence is historical",
             lines=[
                 "Here is an example with no closing fence:",
                 "```markdown",
@@ -1339,196 +1220,30 @@ def _self_test_cases() -> list[SelfTestCase]:
             needle="968",
             expected="historical",
         ),
-        # The two cases below use the NEW label-then-number phrasing (the
-        # exact shape that missed the real Continuation_prompt.md
-        # regression) to prove the historical exemptions still hold now
-        # that a label-first sentence is a live assertion candidate too.
-        # Widening WHICH phrasings can be flagged must not weaken WHEN a
-        # flagged phrasing gets exempted.
         SelfTestCase(
-            name="label-then-number phrasing in a dated table row is historical",
+            name="a phase and pull request reference in a dated table row is historical",
             lines=[
                 "## Lessons",
-                "| 2026-07-26 | some topic | Learnings entries: 99 that day | fixed by X |",
+                "| 2026-07-26 | some topic | build phase 3.1 merged as PR #22 that day | fixed by X |",
             ],
             idx=1,
-            needle="99",
+            needle="PR #22",
             expected="historical",
         ),
         SelfTestCase(
-            name="label-then-number phrasing inside a fenced code block is historical",
+            name="a phase and pull request reference inside a fenced code block is historical",
             lines=[
                 "Here is an example status line:",
                 "```markdown",
-                "Python tests: 999",
+                "Build phase 3.1 merged as PR #22.",
                 "```",
                 "That was only an example.",
             ],
             idx=2,
-            needle="999",
+            needle="PR #22",
             expected="historical",
         ),
     ]
-
-
-# --------------------------------------------------------------------------
-# Pattern-coverage self-test: proves each fact's ASSERTION_PATTERNS (and
-# PREMISE_GATE_RE) actually match BOTH the number-then-label and the
-# label-then-number phrasing this repo uses, across the separators
-# `LABEL_NUM_SEP` claims to cover. The historical-versus-current classifier
-# above answers "does an exemption still fire correctly"; this answers "does
-# a pattern fire AT ALL for this phrasing". Both have to hold: the real
-# regression this script follows needed a pattern that matched the sentence
-# shape in the first place, no exemption logic was involved.
-#
-# This calls the ASSERTION_PATTERNS / PREMISE_GATE_RE regex objects
-# directly, on a single synthetic line, with no dependency on
-# compute_all_facts() (no pytest, no vitest, no git), matching the existing
-# `--self-test` contract of touching no source facts.
-# --------------------------------------------------------------------------
-
-
-def _first_match_value(fact_key: str, line: str) -> int | None:
-    """Run every ASSERTION_PATTERN registered for `fact_key` against `line`
-    and return the first parsed numeric value found, or None if none match.
-    Self-test only; production scanning always goes through
-    `scan_stale_facts`, which additionally applies the historical exemption.
-    """
-    for ap in ASSERTION_PATTERNS:
-        if ap.fact_key != fact_key:
-            continue
-        m = ap.regex.search(line)
-        if m:
-            try:
-                return ap.parser(m.group(1))
-            except (KeyError, ValueError):
-                continue
-    return None
-
-
-@dataclass
-class PatternCoverageCase:
-    name: str
-    fact_key: str           # ASSERTION_PATTERNS fact_key, or "premise_gate"
-    line: str
-    expected: object         # int, or (int, int) for premise_gate
-
-
-def _pattern_coverage_cases() -> list[PatternCoverageCase]:
-    return [
-        # Python tests: number-then-label, then label-then-number across
-        # colon, table-pipe, and equals-sign separators.
-        PatternCoverageCase("python_tests number-then-label", "python_tests",
-                             "977 Python tests plus 120 frontend tests passing.", 977),
-        PatternCoverageCase("python_tests label-then-number, colon", "python_tests",
-                             "Python tests: 977", 977),
-        PatternCoverageCase("python_tests label-then-number, table pipe", "python_tests",
-                             "| Python tests | 977 |", 977),
-        PatternCoverageCase("python_tests label-then-number, equals sign", "python_tests",
-                             "Python tests = 977", 977),
-
-        # Frontend tests: number-then-label, then label-then-number.
-        PatternCoverageCase("frontend_tests number-then-label", "frontend_tests",
-                             "120 frontend tests passing.", 120),
-        PatternCoverageCase("frontend_tests label-then-number, colon", "frontend_tests",
-                             "Frontend tests: 120", 120),
-
-        # Playwright end-to-end tests: number-then-label, then
-        # label-then-number, both with the optional "end-to-end" span.
-        PatternCoverageCase("playwright_tests number-then-label", "playwright_tests",
-                             "3 Playwright end-to-end tests passing.", 3),
-        PatternCoverageCase("playwright_tests label-then-number, colon", "playwright_tests",
-                             "Playwright end-to-end tests: 3", 3),
-
-        # DECISIONS.md rows: all three number-then-label anchor phrasings,
-        # then label-then-number across colon, table-pipe, and a bulleted
-        # hyphen separator.
-        PatternCoverageCase("decisions_rows number-then-label, decisions logged", "decisions_rows",
-                             "183 decisions logged (DECISIONS.md)", 183),
-        # The phrasing CLAUDE.md and AGENTS.md actually use, with no "logged".
-        # Its absence from this list is the whole reason the gap existed: the
-        # suite proved the patterns match six phrasings someone thought of, and
-        # the one the repository's own most-read file uses was not among them.
-        # A coverage self-test written from imagination rather than from the
-        # documents it guards will always have this shape of hole.
-        PatternCoverageCase("decisions_rows number-then-label, bare decisions", "decisions_rows",
-                             "183 decisions (DECISIONS.md)", 183),
-        PatternCoverageCase("decisions_rows number-then-label, decision rows", "decisions_rows",
-                             "183 decision rows", 183),
-        PatternCoverageCase("decisions_rows number-then-label, DECISIONS.md rows", "decisions_rows",
-                             "183 DECISIONS.md rows", 183),
-        PatternCoverageCase("decisions_rows label-then-number, colon", "decisions_rows",
-                             "Decisions logged: 183", 183),
-        PatternCoverageCase("decisions_rows label-then-number, table pipe", "decisions_rows",
-                             "| DECISIONS.md rows | 183 |", 183),
-        PatternCoverageCase("decisions_rows label-then-number, hyphen bullet", "decisions_rows",
-                             "- Decisions logged - 183", 183),
-
-        # LEARNINGS.md entries: the real Continuation_prompt.md regression
-        # case is the third one below.
-        PatternCoverageCase("learnings_entries number-then-label, plus a retrospective", "learnings_entries",
-                             "36 learnings plus a retrospective", 36),
-        PatternCoverageCase("learnings_entries number-then-label, LEARNINGS.md entries", "learnings_entries",
-                             "36 LEARNINGS.md entries", 36),
-        PatternCoverageCase("learnings_entries label-then-number, colon (the real regression)", "learnings_entries",
-                             "Learnings entries: 37, plus a retrospective", 37),
-        PatternCoverageCase("learnings_entries label-then-number, table pipe", "learnings_entries",
-                             "| LEARNINGS.md entries | 36 |", 36),
-
-        # Open flags: digit and word-number forms, both orderings.
-        PatternCoverageCase("open_flags number-then-label, digit", "open_flags",
-                             "2 open flags", 2),
-        PatternCoverageCase("open_flags number-then-label, word", "open_flags",
-                             "two open flags", 2),
-        PatternCoverageCase("open_flags label-then-number, colon", "open_flags",
-                             "Open flags: 2", 2),
-
-        # A case that must NOT match anything: "test files" is a different,
-        # deliberately unpatterned fact (frontend_test_files), and a bare
-        # "N tests" with no qualifying label must not be mistaken for any
-        # of the facts above.
-        PatternCoverageCase("bare test-file count matches no ASSERTION_PATTERN", "frontend_tests",
-                             "15 test files, 121 tests, all passing", None),
-    ]
-
-
-def _premise_gate_coverage_cases() -> list[tuple[str, str, tuple[int, int] | None]]:
-    return [
-        ("premise_gate number-then-label, bare", "premise gate 9 of 9", (9, 9)),
-        ("premise_gate number-then-label, 'at'", "premise gate at 9 of 9", (9, 9)),
-        ("premise_gate label-then-number, colon (the real regression)", "Premise gate: 9 of 9", (9, 9)),
-        ("premise_gate label-then-number, table pipe", "| Premise gate | 9 of 9 |", (9, 9)),
-        ("premise_gate label-then-number, hyphen bullet", "- Premise gate - 9 of 9", (9, 9)),
-    ]
-
-
-def run_pattern_coverage_self_test() -> int:
-    """Run every fixture in `_pattern_coverage_cases` and
-    `_premise_gate_coverage_cases` directly against the production regex
-    objects, print PASS/FAIL per case, and return the number of failures.
-    A regression to single-ordering matching on any fact shows up here as a
-    FAIL on that fact's label-then-number case, not as a silent pass.
-    """
-    failures = 0
-    for case in _pattern_coverage_cases():
-        actual = _first_match_value(case.fact_key, case.line)
-        ok = actual == case.expected
-        print(f"{'PASS' if ok else 'FAIL'}  {case.name} (expected {case.expected!r}, got {actual!r})")
-        if not ok:
-            failures += 1
-
-    for name, line, expected in _premise_gate_coverage_cases():
-        m = PREMISE_GATE_RE.search(line)
-        actual = (int(m.group(1)), int(m.group(2))) if m else None
-        ok = actual == expected
-        print(f"{'PASS' if ok else 'FAIL'}  {name} (expected {expected!r}, got {actual!r})")
-        if not ok:
-            failures += 1
-
-    total = len(_pattern_coverage_cases()) + len(_premise_gate_coverage_cases())
-    print()
-    print(f"{'ok' if failures == 0 else 'error'}: {total} pattern-coverage cases, {failures} failed")
-    return failures
 
 
 def run_self_test() -> int:
@@ -1558,34 +1273,69 @@ def run_self_test() -> int:
 # --------------------------------------------------------------------------
 
 
+def run_counts() -> int:
+    """`--counts`: print every count computed from source. Print-only: no
+    document is read for a stated count and none is compared with anything.
+    Exits 1 when a count could not be computed, including a pytest
+    collection that reported errors, and says why for each one.
+    """
+    facts = compute_count_facts()
+    print("Counts computed from source (print-only, no document is checked against them):")
+    for fact in facts.values():
+        status = "could not compute, see below" if fact.skipped else fact.display
+        print(f"  {fact.label}: {status}")
+        print(f"    via: {fact.source}")
+    failures = unmeasured_findings(facts)
+    computed_count = len(facts) - len(failures)
+    print()
+    for failure in failures:
+        print(failure.format())
+    if failures:
+        print(f"error: {computed_count} counts computed | {len(failures)} could not be computed")
+        return 1
+    print(f"ok: {computed_count} counts computed")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if "--self-test" in argv:
-        classifier_failures = run_self_test()
-        print()
-        pattern_failures = run_pattern_coverage_self_test()
-        return 1 if (classifier_failures or pattern_failures) else 0
+        return 1 if run_self_test() else 0
+    if "--counts" in argv:
+        return run_counts()
 
     check_only = "--check" in argv
     verbose = "--verbose" in argv
 
-    facts = compute_all_facts()
-    files = tracked_markdown_files()
+    facts = compute_check_facts()
+    listed = tracked_markdown_files()
+    files = listed if listed is not None else []
 
-    findings: list[Finding] = []
-    findings.extend(scan_stale_facts(files, facts))
+    findings: list[Finding] = unmeasured_findings(facts)
+    if listed is None:
+        findings.append(Finding(
+            "unmeasured", "", 0,
+            "could not list the tracked markdown files: `git ls-files '*.md'` failed or timed "
+            "out, so no document was checked",
+        ))
     findings.extend(scan_pr_assertions(files, facts))
     findings.extend(scan_structural(files, facts))
 
     computed_count = sum(1 for f in facts.values() if not f.skipped)
-    skipped_count = sum(1 for f in facts.values() if f.skipped)
+    unmeasured_count = sum(1 for f in findings if f.kind == "unmeasured")
     stale_count = sum(1 for f in findings if f.kind == "stale")
     structural_count = sum(1 for f in findings if f.kind == "structural")
 
+    status_word = "ok" if not findings else "error"
+    summary = (
+        f"{status_word}: {computed_count} facts computed | {unmeasured_count} could not be "
+        f"computed | {stale_count} stale | {structural_count} structural"
+    )
+
     if verbose:
-        print(f"Computed facts ({len(files)} tracked markdown files scanned, "
+        print(f"Facts the checks read ({len(files)} tracked markdown files scanned, "
               f"{len(SKIP_FILES)} locked file(s) excluded):")
         for fact in facts.values():
-            status = f"SKIPPED ({fact.skip_reason})" if fact.skipped else fact.display
+            status = "could not compute, see the findings" if fact.skipped else fact.display
             print(f"  {fact.label}: {status}")
             print(f"    via: {fact.source}")
         print()
@@ -1593,15 +1343,12 @@ def main(argv: list[str]) -> int:
     if check_only:
         for finding in findings:
             print(finding.format())
-        status_word = "ok" if not findings else "error"
-        skipped_note = f" ({skipped_count} skipped)" if skipped_count else ""
-        print(f"{status_word}: {computed_count} facts computed{skipped_note} | "
-              f"{stale_count} stale | {structural_count} structural")
+        print(summary)
         return 1 if findings else 0
 
-    print("Canonical facts computed from source:")
+    print("Facts the checks read, computed from source:")
     for fact in facts.values():
-        status = f"SKIPPED ({fact.skip_reason})" if fact.skipped else fact.display
+        status = "could not compute, see the findings" if fact.skipped else fact.display
         print(f"  {fact.label}: {status}")
     print()
 
@@ -1613,10 +1360,7 @@ def main(argv: list[str]) -> int:
         print("No drift found.")
     print()
 
-    status_word = "ok" if not findings else "error"
-    skipped_note = f" ({skipped_count} skipped)" if skipped_count else ""
-    print(f"{status_word}: {computed_count} facts computed{skipped_note} | "
-          f"{stale_count} stale | {structural_count} structural")
+    print(summary)
     return 1 if findings else 0
 
 
