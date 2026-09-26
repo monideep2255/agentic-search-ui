@@ -4,8 +4,9 @@
 # depended_by: [.claude/settings.json, tests/ci/test_claude_hooks.py]
 # PreToolUse (Bash) guard: block file deletion via rm/rmdir and writes to a disk
 # device, including when smuggled inside a quoted argument of an execution
-# wrapper (ssh, python -c, bash -c). Makes the file-protection rule structurally
-# enforced rather than only model-obeyed. jq-free, fails closed on parse failure.
+# wrapper (ssh, python -c, bash -c, a pipe or here-document into a shell). Makes
+# the file-protection rule structurally enforced rather than only model-obeyed.
+# jq-free, fails closed on parse failure.
 #
 # rm and rmdir are matched as whole words, so "perform" or "platform" never
 # reads as rm, and a redirect to /dev/null is dropped before any check, since
@@ -14,8 +15,23 @@
 # also ends the word, because the wrapper decodes it into a newline or a
 # separator. Approved item by item by the product owner on 2026-09-25
 # (DECISIONS.md, "Four security-layer changes approved item by item", item 1),
-# on the condition that rm -rf stays blocked. tests/ci/test_claude_hooks.py
-# pins every case both ways.
+# on the condition that rm -rf stays blocked.
+#
+# rm and rmdir match in any letter case, since the disk is case-insensitive on
+# macOS and RM, Rm or /bin/RM runs rm. The whole-word edges stay, so "ARM64",
+# "RMS" and "perform" are not rm. A pipe into a shell (echo '...' | bash, curl
+# ... | sh, | sudo bash) and a here-string or here-document into a shell
+# (bash <<< '...', sh <<EOF) run their text as commands, so each counts as an
+# execution wrapper, an output redirect such as 2>&1 before the << included.
+# Approved item by item by the product owner on 2026-09-26 ("Also close the
+# hook gaps"). tests/ci/test_claude_hooks.py pins every case both ways.
+#
+# Not covered, named here and not closed because the owner approved only those
+# four gaps: a pipe whose shell is not the word right after it (the shell on
+# the next line or after | and a backslash-newline, | (bash), | { bash; },
+# | tee >(bash), | $SHELL, | busybox sh, | ssh-agent bash, | mksh), and
+# destructive text the command encodes or splits so no whole-word rm is
+# written (base64 -d | bash, printf '\x72\x6d', 'r''m').
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/lib/_json.sh"
@@ -51,9 +67,13 @@ RUNNER='(sudo|doas|env|exec|nice|nohup|time|timeout|xargs)([[:space:]]+[^[:space
 PREFIX="($KEYWORD|$RUNNER)*"
 CMDWORD="$QUOTE?"'(\\|/([[:alnum:]_.-]+/)*)?'
 
-# 1) rm / rmdir as a command word, as a whole word. `git rm` is a git
-#    subcommand, not in command position, and stays allowed as before.
-if printf '%s' "$SCAN" | grep -qE "$LEAD$PREFIX$CMDWORD(rm|rmdir)$QUOTE?$WORD_END"; then
+# rm and rmdir in any letter case: on a case-insensitive disk RM and Rm run rm.
+RM='[Rr][Mm]'
+RMDIR='[Rr][Mm][Dd][Ii][Rr]'
+
+# 1) rm / rmdir as a command word, as a whole word, in any letter case. `git rm`
+#    is a git subcommand, not in command position, and stays allowed as before.
+if printf '%s' "$SCAN" | grep -qE "$LEAD$PREFIX$CMDWORD($RM|$RMDIR)$QUOTE?$WORD_END"; then
   echo 'Blocked: file deletion via bash (rm/rmdir). Ask user first.' >&2
   exit 2
 fi
@@ -70,12 +90,28 @@ fi
 #    closed. rmdir, rmtree, dd if= and mkfs stay substring matches, as before,
 #    because a whole-word rmdir would let fs.rmdirSync(...) through. Any write
 #    into /dev other than /dev/null stays blocked inside a wrapper, as before.
-WRAPPER='(ssh[[:space:]]|python3?[[:space:]]+-c|perl[[:space:]]+-e|ruby[[:space:]]+-e|node[[:space:]]+-e|bash[[:space:]]+-c|sh[[:space:]]+-c|zsh[[:space:]]+-c|eval[[:space:]])'
+#    rm and rmdir match in any letter case here too.
+#
+#    A pipe into a shell and a here-string or here-document into a shell are
+#    wrappers as well: the shell runs the text it reads as commands. A pipe
+#    counts when the shell is the command word right after the pipe, maybe
+#    behind a runner such as sudo, a quote or a path such as /bin/sh, so
+#    | shasum, | shellcheck and | grep bash never count. A here-string or
+#    here-document counts when a shell word (not a script such as install.sh)
+#    is followed on its line by its arguments, any output redirects with their
+#    targets (2>&1, >out.txt, 2> err.log, >&2, &>log) and <<. The shells are
+#    bash, sh, zsh, dash, ksh, csh, tcsh and fish.
+SHELLS='((ba|da|k|z|c|tc)?sh|fish)'
+SHELL_END='([[:space:];&|)<>`"'"'"']|$)'   # what may follow a shell's name
+PIPE_SHELL='[|]&?[[:space:]]*('"$RUNNER"')*'"$CMDWORD$SHELLS$SHELL_END"
+SHELL_REDIR='[0-9]*(&>>?|>[>|&]?)[[:space:]]*[^[:space:];&|<>]+'   # 2>&1, >out, &>log
+HERE_SHELL='(^|[^[:alnum:]_.-])'"$SHELLS"'([[:space:]]+[^[:space:];&|<>]+|[[:space:]]*'"$SHELL_REDIR"')*[[:space:]]*<<'
+WRAPPER='(ssh[[:space:]]|python3?[[:space:]]+-c|perl[[:space:]]+-e|ruby[[:space:]]+-e|node[[:space:]]+-e|bash[[:space:]]+-c|sh[[:space:]]+-c|zsh[[:space:]]+-c|eval[[:space:]]'"|$PIPE_SHELL|$HERE_SHELL)"
 ESCAPE='\\[[:alnum:]]+|\\[CM]-[[:alnum:]]'  # \n, \012, \x3b, \u000a; Ruby's \C-j
-INSIDE="(^|[^[:alnum:]_]|$ESCAPE)rm$WORD_END|rmdir|rmtree|dd[[:space:]]+if=|mkfs|$DEVICE_WRITE"
+INSIDE="(^|[^[:alnum:]_]|$ESCAPE)$RM$WORD_END|$RMDIR|rmtree|dd[[:space:]]+if=|mkfs|$DEVICE_WRITE"
 if printf '%s' "$SCAN" | grep -qE "$WRAPPER" \
    && printf '%s' "$SCAN" | grep -qE "$INSIDE"; then
-  echo 'Blocked: destructive command inside an execution wrapper (ssh/python -c/bash -c). Ask user first.' >&2
+  echo 'Blocked: destructive command inside an execution wrapper (ssh, python -c, bash -c, or a pipe, here-string or here-document into a shell). Ask user first.' >&2
   exit 2
 fi
 
