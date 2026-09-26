@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Analyze stage-by-stage timing shift between the phase 8.1 and phase 8.2
 golden consistency runs. Read-only: writes only findings.md and this script's
 own output artifacts under the report directory passed as argv, or the
@@ -6,11 +5,11 @@ default report directory this script computes from its own path.
 
 No network calls, no git, no writes outside the report directory.
 """
-import json
 import glob
+import json
 import os
 import statistics as st
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -174,7 +173,7 @@ def p90(vals):
     if not vals:
         return None
     vals_sorted = sorted(vals)
-    idx = int(round(0.9 * (len(vals_sorted) - 1)))
+    idx = round(0.9 * (len(vals_sorted) - 1))
     return vals_sorted[idx]
 
 
