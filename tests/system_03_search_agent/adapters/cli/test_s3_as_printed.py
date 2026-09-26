@@ -362,8 +362,8 @@ class TestAskJson:
         document = json.loads(out)
         assert document["clarifying_question"] == _QUESTION_BACK
         assert document["clarifying_options"] == _OPTIONS
-        assert document["trust_outcome"] == "refuse"
-        assert exit_code == 1
+        assert document["trust_outcome"] == "ask"
+        assert exit_code == 0
 
     @pytest.mark.asyncio
     async def test_stdout_is_exactly_one_json_object_and_nothing_else(
@@ -438,7 +438,7 @@ class TestABareTopicShowsNumberedOptions:
         _, out, err, _ = await _s3(["ask", "--session-id", "s-7", "GERD"], _question_back_frames())
         expected = "".join(f"  {n}. {o}\n" for n, o in enumerate(_OPTIONS, start=1))
         assert expected in out
-        assert out.index(_QUESTION_BACK) < out.index("  1. ") < out.index("[refuse]")
+        assert out.index(_QUESTION_BACK) < out.index("  1. ") < out.index("[ask]")
         assert 's3 ask --session-id s-7 "<the question you pick>"' in err
 
     @pytest.mark.asyncio
@@ -464,6 +464,99 @@ class TestABareTopicShowsNumberedOptions:
             ["ask", "--session-id", "my session", "GERD"], _question_back_frames()
         )
         assert "s3 ask --session-id 'my session' " in err
+
+
+# ---------------------------------------------------------------------------
+# A question back is labelled `ask`, a refusal `refuse`, as over MCP.
+# ---------------------------------------------------------------------------
+
+
+def _refusal_frames(text: str) -> list[dict]:
+    """A real refusal: no clarifying question on any `think` event."""
+    return [
+        _envelope("guard", 0, {"passed": True, "category": "ok", "reason": None}),
+        _envelope(
+            "think",
+            1,
+            {"narrative": "nothing resolved", "query_class": "lookup", "resolved_entities": []},
+        ),
+        _envelope("token", 2, {"text": text, "marker_ids": []}),
+        _envelope(
+            "trust_signal",
+            3,
+            {"outcome": "refuse", "risk_tier": "unknown", "grounded": False, "scope": "answer"},
+        ),
+        _envelope(
+            "done",
+            4,
+            {"total_cost_usd": 0.0, "total_tool_calls": 0, "elapsed_ms": 5, "trust_outcome": "refuse"},
+        ),
+    ]
+
+
+class TestAQuestionBackIsLabelledAsk:
+    """Build phase 8.10, the lead's follow-up: builder Q's MCP fold reports a
+    question back as `ask`, so `s3` does too. The stream itself says
+    `refuse` for both, and the only difference is the `think` event's
+    clarifying question, which is what these tests vary.
+
+    Mutation: make `_shown_outcome` return the stream's outcome unchanged
+    (the pre-follow-up behaviour) -> the question back reads `[refuse]` and
+    exits 1, and these fail."""
+
+    @pytest.mark.asyncio
+    async def test_a_question_back_reads_ask_and_exits_zero(self, credential_file) -> None:
+        _signed_in()
+        exit_code, out, _, _ = await _s3(["ask", "GERD"], _question_back_frames())
+        assert "\n[ask]\n" in out
+        assert "[refuse]" not in out
+        assert exit_code == 0
+
+    @pytest.mark.asyncio
+    async def test_a_refusal_worded_as_a_question_still_reads_refuse(
+        self, credential_file
+    ) -> None:
+        """Same wording as the question back, but no clarifying question on
+        `think`: the label comes from the event, never from the words."""
+        _signed_in()
+        exit_code, out, _, _ = await _s3(["ask", "GERD"], _refusal_frames(_QUESTION_BACK))
+        assert "\n[refuse]\n" in out
+        assert "[ask]" not in out
+        assert exit_code == 1
+
+    @pytest.mark.asyncio
+    async def test_json_agrees_both_ways(self, credential_file) -> None:
+        _signed_in()
+        code_back, out_back, _, _ = await _s3(["ask", "--json", "GERD"], _question_back_frames())
+        code_refused, out_refused, _, _ = await _s3(
+            ["ask", "--json", "GERD"], _refusal_frames(_QUESTION_BACK)
+        )
+        back, refused = json.loads(out_back), json.loads(out_refused)
+        assert (back["trust_outcome"], code_back) == ("ask", 0)
+        assert (refused["trust_outcome"], code_refused) == ("refuse", 1)
+        assert refused["clarifying_question"] is None
+        assert refused["clarifying_options"] == []
+
+    @pytest.mark.asyncio
+    async def test_a_question_with_a_citation_is_not_relabelled(self, credential_file) -> None:
+        """No citation may arrive in a question back, so a run that cited
+        something keeps the outcome it was given, and shows no options."""
+        _signed_in()
+        frames = _question_back_frames()
+        frames.insert(3, _envelope("citation", 9, _citation()))
+        exit_code, out, _, _ = await _s3(["ask", "GERD"], frames)
+        assert "\n[refuse]\n" in out
+        assert "  1. " not in out
+        assert exit_code == 1
+
+    @pytest.mark.asyncio
+    async def test_a_blank_question_on_think_is_no_question(self, credential_file) -> None:
+        _signed_in()
+        frames = _question_back_frames()
+        frames[1]["payload"]["clarifying_question"] = "   "
+        exit_code, out, _, _ = await _s3(["ask", "GERD"], frames)
+        assert "\n[refuse]\n" in out
+        assert exit_code == 1
 
 
 # ---------------------------------------------------------------------------
