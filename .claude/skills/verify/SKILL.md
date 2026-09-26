@@ -216,15 +216,19 @@ venv/bin/python .claude/skills/verify/scripts/check_facts.py
 
 After the merge, check the merged develop commit itself, then confirm develop serves it. The branch-head run above proved the branch, not what landed.
 
-1. Fetch and export the merged commit, then rerun the check on it:
+1. Fetch and export the merged commit, then rerun the check on it with the checker and registry from that export. Run it from the main checkout, for its `venv/bin/python` alone: whatever branch the main checkout has out, and whatever its own `scripts/` folder holds, plays no part.
 
 ```bash
 git fetch origin develop
-mkdir -p <scratch>/develop_$(git rev-parse --short origin/develop)
-git archive origin/develop | tar -x -C <scratch>/develop_$(git rev-parse --short origin/develop)
-venv/bin/python .claude/skills/verify/scripts/check_facts.py \
-  --root <scratch>/develop_<commit> --reference <repo-root>/reference/agentic-search-data-engineering
+C=$(git rev-parse --short origin/develop)
+mkdir <scratch>/develop_$C
+git archive origin/develop | tar -x -C <scratch>/develop_$C
+venv/bin/python <scratch>/develop_$C/.claude/skills/verify/scripts/check_facts.py \
+  --root <scratch>/develop_$C --reference <repo-root>/reference/agentic-search-data-engineering
 ```
+
+- `mkdir` without `-p` refuses a folder that already exists, so an older export is never checked by mistake. Pick a new folder name instead.
+- If the export has no `check_facts.py`, Python refuses to open it. The merge did not land the checker, and nothing else is run in its place.
 
 2. Confirm the deployed version is that commit. `/health` cannot say: its response model, `HealthResponse` in `adapters/web_sse/app.py`, carries `status` and `app_env` only, and the web bundle carries no commit either.
    - The API service: read its latest deployment the way `/ship` does, which must show SUCCESS and the commit `git rev-parse origin/develop` names.
