@@ -21,8 +21,10 @@ measured live, in `testing/Developer/reports/2026-09-23_synthesis/`.
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace as replace_finding
 
+import httpx
 import pytest
 
 from system_03_search_agent.core import graph as graph_module
@@ -392,15 +394,24 @@ def test_the_opening_sentence_counts_a_paper_cited_twice_once() -> None:
 # - G3 Jev mode is one Jev call for the whole answer, one yes-or-no question
 #   per sentence, and the guard is not asked when Jev answers.
 # - G4 only "no, it says nothing more" approves, and only that sentence.
-# - G5 fails closed: the cost cap, a failed guard after a failed Jev, an
-#   unreadable reply and too little time left all approve nothing.
-# - G6 a Jev failure with time left falls back to today's guard check.
+# - G5 fails closed: the cost cap, an unreadable reply, a late reply and
+#   every other Jev failure approve nothing.
+# - G6 no second chance (fix round, F-8.6-A01 and J14): in Jev mode a Jev
+#   failure never asks the guard tier, whatever time is left, even when the
+#   guard would approve every sentence.
 # - G7 bounds: items past MAX_CANDIDATES or past the state cap are not sent
 #   and not approved; the data travels only in the state.
+# - G8 Jev's own probabilities must back its pick (fix round, F-8.6-A01 and
+#   A16): a "no" approves only when p(no) is strictly higher than p(yes);
+#   even odds, a contradicted pick or a missing probability approve that
+#   sentence nothing, and `confidence` is never read. Exercised through the
+#   real `call_jev_batch` with only its HTTP seam stubbed, in the adversary's
+#   own probe shapes.
 #
 # WHAT IT DELIBERATELY OMITS: whether the real Jev judges well. That was
-# measured live (builder K's report, finding K-04), and `core.graph`'s
-# wiring of this function, which is outside this builder's fence (K-01).
+# measured live (builder K's report, finding K-04; builder F2's report for
+# the fix round's before and after), and `core.graph`'s wiring beyond
+# `_ground_with_sentence_check`.
 # ---------------------------------------------------------------------------
 
 
@@ -419,11 +430,22 @@ def _made_up_candidates(count: int = 3) -> list[SynthesisCandidate]:
     ]
 
 
+def _probabilities_backing(choice: str) -> dict[str, float]:
+    """Probabilities that agree with `choice`, the shape Jev returns (A16)."""
+    if choice == "no":
+        return {"yes": 0.1, "no": 0.9}
+    if choice == "yes":
+        return {"yes": 0.9, "no": 0.1}
+    return {"yes": 0.5, "no": 0.5}
+
+
 def _batch_result(choices: dict[str, str], *, cost: float = 5e-05) -> jev_client_module.JevBatchResult:
     return jev_client_module.JevBatchResult(
         resolved_model="typesafe/jev-1.13-20260917",
         answers={
-            key: jev_client_module.JevAnswer(choice=choice, confidence=0.8, probabilities={"yes": 0.1, "no": 0.9})
+            key: jev_client_module.JevAnswer(
+                choice=choice, confidence=0.8, probabilities=_probabilities_backing(choice)
+            )
             for key, choice in choices.items()
         },
         input_tokens=1267,
@@ -612,34 +634,24 @@ async def test_the_cost_cap_approves_nothing_and_asks_nobody(monkeypatch) -> Non
 
 
 @pytest.mark.asyncio
-async def test_a_failed_jev_then_a_failed_guard_approves_nothing(monkeypatch) -> None:
-    _jev_on(monkeypatch, _FakeJev(raises=jev_client_module.JevCallError("down", reason="http_error")))
-    guard = _FakeGuard(raises=HarnessCallError("timed out", error_class="transient"))
-    with pytest.raises(HarnessCallError):
-        await _check(_made_up_candidates(), guard=guard)
-    assert len(guard.calls) == 1
+async def test_a_late_jev_reply_approves_nothing_and_asks_no_one_else(monkeypatch) -> None:
+    """Through the REAL `call_jev_batch`: a reply still on its way when the
+    check's budget runs out is a timeout, and a timeout approves nothing."""
+    import asyncio
 
+    monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
 
-@pytest.mark.asyncio
-async def test_a_failed_jev_then_an_unreadable_guard_approves_nothing(monkeypatch) -> None:
-    _jev_on(monkeypatch, _FakeJev(raises=jev_client_module.JevCallError("down", reason="timeout")))
-    with pytest.raises(SentenceCheckUnreadable):
-        await _check(_made_up_candidates(), guard=_FakeGuard("yes, all of them"))
+    async def slow_post(_headers, body):
+        await asyncio.sleep(2.0)
+        return _jev_http_reply({key: _jev_answer("no") for key in body["questions"]})
 
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(("budget_s", "jev_delay_s"), [(1.0, 0.0), (2.5, 0.6)])
-async def test_too_little_time_after_jev_fails_approves_nothing_and_skips_the_guard(
-    monkeypatch, budget_s, jev_delay_s
-) -> None:
-    _jev_on(
-        monkeypatch,
-        _FakeJev(raises=jev_client_module.JevCallError("slow", reason="timeout"), delay_s=jev_delay_s),
-    )
+    monkeypatch.setattr(jev_client_module, "_post", slow_post)
     guard = _FakeGuard('{"supported": [1, 2, 3]}')
-    with pytest.raises(SentenceCheckUnreadable, match="too little"):
-        await _check(_made_up_candidates(), guard=guard, budget_s=budget_s)
-    assert guard.calls == [], "a guard call that would likely time out is never started"
+    with pytest.raises(SentenceCheckUnreadable, match=r"Jev made no verdict \(timeout\)"):
+        await _check(_made_up_candidates(), guard=guard, budget_s=0.3)
+    assert guard.calls == [], "no second model is asked"
 
 
 @pytest.mark.asyncio
@@ -660,7 +672,7 @@ async def test_no_budget_at_all_sends_nothing_to_jev(monkeypatch) -> None:
     assert guard.calls == []
 
 
-# ------------------------------------------------ G6: a Jev failure with time left falls back
+# ------------------------------------------------ G6: no second chance from the guard tier
 
 
 @pytest.mark.asyncio
@@ -675,26 +687,44 @@ async def test_no_budget_at_all_sends_nothing_to_jev(monkeypatch) -> None:
     ],
     ids=["timeout", "http_error", "malformed_reply", "invalid_option", "unexpected_error"],
 )
-async def test_a_jev_failure_with_time_left_asks_todays_guard_check(monkeypatch, failure) -> None:
+async def test_every_jev_failure_approves_nothing_and_never_asks_the_guard(
+    monkeypatch, caplog, failure
+) -> None:
+    """F-8.6-A01 and J14: the guard tier approved 15 of 45 unfaithful
+    sentences where Jev approved 7 of 113, so it is never Jev's second
+    chance, however much time is left and however willing it is."""
     _jev_on(monkeypatch, _FakeJev(raises=failure))
-    candidates = _made_up_candidates()
-    guard = _FakeGuard('{"supported": [2]}')
+    guard = _FakeGuard('{"supported": [1, 2, 3]}')
 
-    approved = await _check(candidates, guard=guard, budget_s=11.0)
+    with (
+        caplog.at_level("WARNING", logger=sentence_check_module.__name__),
+        pytest.raises(SentenceCheckUnreadable, match="Jev made no verdict"),
+    ):
+        await _check(_made_up_candidates(), guard=guard, budget_s=11.0)
 
-    assert len(guard.calls) == 1
-    messages, budget_s = guard.calls[0]
-    assert messages == build_sentence_check_messages(candidates)
-    assert 10.5 < budget_s <= 11.0, "the guard gets what is left of the same budget"
-    assert approved == frozenset({candidates[1].key})
+    assert guard.calls == [], "a guard that would approve every sentence is never asked"
+    assert any("no other model is asked" in record.getMessage() for record in caplog.records)
 
 
 @pytest.mark.asyncio
-async def test_an_unreadable_jev_verdict_with_time_left_asks_the_guard(monkeypatch) -> None:
+async def test_an_unreadable_jev_verdict_approves_nothing_and_never_asks_the_guard(monkeypatch) -> None:
     _jev_on(monkeypatch, _FakeJev({"item_1": "no"}))  # two of three items unanswered
-    guard = _FakeGuard('{"supported": []}')
-    assert await _check(_made_up_candidates(), guard=guard) == frozenset()
-    assert len(guard.calls) == 1
+    guard = _FakeGuard('{"supported": [1, 2, 3]}')
+    with pytest.raises(SentenceCheckUnreadable):
+        await _check(_made_up_candidates(), guard=guard)
+    assert guard.calls == []
+
+
+@pytest.mark.asyncio
+async def test_a_failed_jev_leaves_the_harness_error_to_guard_mode_alone(monkeypatch) -> None:
+    """In Jev mode the only errors out of the check are the cost cap and
+    SentenceCheckUnreadable: a guard failure cannot happen, since the guard
+    is never called. `core.graph` catches both."""
+    _jev_on(monkeypatch, _FakeJev(raises=jev_client_module.JevCallError("down", reason="http_error")))
+    guard = _FakeGuard(raises=HarnessCallError("timed out", error_class="transient"))
+    with pytest.raises(SentenceCheckUnreadable):
+        await _check(_made_up_candidates(), guard=guard)
+    assert guard.calls == []
 
 
 # ------------------------------------------------ G1: the exact checks stay in front
@@ -786,6 +816,119 @@ def test_every_question_fits_the_endpoints_own_bounds() -> None:
     assert len(questions) == jev_client_module.MAX_BATCH_QUESTIONS
 
 
+# ------------------------------------------------ G8: Jev's own probabilities back its pick
+
+
+def _jev_answer(choice: str, probabilities: dict[str, float] | None = None, confidence: float = 0.8) -> dict:
+    """One answer as the endpoint sends it; probabilities agree with the
+    pick unless the test says otherwise."""
+    return {
+        "type": "choice",
+        "choice": choice,
+        "probabilities": _probabilities_backing(choice) if probabilities is None else probabilities,
+        "confidence": confidence,
+    }
+
+
+def _jev_http_reply(answers: dict[str, dict], *, cost: float = 5e-05) -> httpx.Response:
+    body = {
+        "model": "typesafe/jev-1.13-20260917",
+        "answers": answers,
+        "usage": {"input_tokens": 100, "output_tokens": 10, "cost": cost},
+        "id": "gen-dec-test",
+        "provider": "TypeSafe",
+    }
+    return httpx.Response(200, content=json.dumps(body).encode())
+
+
+def _jev_replies_with(monkeypatch, answers: dict[str, dict], *, cost: float = 5e-05) -> list[dict]:
+    """Jev mode through the REAL `call_jev_batch`: only its HTTP seam is
+    stubbed, so parsing and validation run exactly as live."""
+    monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
+    bodies: list[dict] = []
+
+    async def fake_post(_headers, body):
+        bodies.append(body)
+        return _jev_http_reply(answers, cost=cost)
+
+    monkeypatch.setattr(jev_client_module, "_post", fake_post)
+    return bodies
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("answer", "approved"),
+    [
+        (_jev_answer("no", {"yes": 0.6, "no": 0.4}, 0.4), False),
+        (_jev_answer("no", {"yes": 0.5, "no": 0.5}, 0.5), False),
+        (_jev_answer("no", {"yes": 0.5, "no": 0.5}, 0.0), False),
+        (_jev_answer("no", {"yes": 0.49, "no": 0.51}, 0.02), True),
+        (_jev_answer("no", {"yes": 0.2, "no": 0.8}, 0.0), True),
+        (_jev_answer("no", {}, 0.9), False),
+        (_jev_answer("no", {"no": 0.9}, 0.8), False),
+        (_jev_answer("yes", {"yes": 0.3, "no": 0.7}, 0.4), False),
+    ],
+    ids=[
+        "no picked, probabilities favour yes",
+        "no picked at even odds",
+        "no picked at even odds, zero margin",
+        "no picked, p(no) higher by a hair",
+        "no picked, confidence never read",
+        "no picked, no probabilities",
+        "no picked, p(yes) missing",
+        "yes picked never approves",
+    ],
+)
+async def test_jevs_own_probabilities_must_back_its_no(monkeypatch, answer, approved) -> None:
+    _jev_replies_with(monkeypatch, {"item_1": answer})
+    candidates = _made_up_candidates(1)
+    guard = _FakeGuard('{"supported": [1]}')
+
+    result = await _check(candidates, guard=guard)
+
+    assert result == (frozenset({candidates[0].key}) if approved else frozenset())
+    assert guard.calls == []
+
+
+# The adversary's own replies (F-8.6-A01, scratchpad probe
+# `probe_a_jev_reply_edges.py`): items 2 and 3 carry its `ans("yes")` shape.
+_A01_YES = {"type": "choice", "choice": "yes", "probabilities": {"yes": 0.1, "no": 0.9}, "confidence": 0.9}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "first",
+    [
+        {"type": "choice", "choice": "no", "probabilities": {"yes": 0.6, "no": 0.4}, "confidence": 0.4},
+        {"type": "choice", "choice": "no", "probabilities": {"yes": 0.5, "no": 0.5}, "confidence": 0.5},
+    ],
+    ids=["choice_no_but_probs_favour_yes", "choice_at_exact_0.5"],
+)
+async def test_the_adversarys_a01_replies_now_approve_nothing(monkeypatch, first) -> None:
+    """Before the fix both replies approved item 1."""
+    _jev_replies_with(monkeypatch, {"item_1": first, "item_2": _A01_YES, "item_3": _A01_YES})
+    guard = _FakeGuard('{"supported": [1, 2, 3]}')
+    assert await _check(_made_up_candidates(), guard=guard, budget_s=10.0) == frozenset()
+    assert guard.calls == []
+
+
+@pytest.mark.asyncio
+async def test_one_undecided_sentence_leaves_the_others_approved(monkeypatch) -> None:
+    """Even odds withholds that one sentence, not the whole answer."""
+    _jev_replies_with(
+        monkeypatch,
+        {
+            "item_1": _jev_answer("no"),
+            "item_2": _jev_answer("no", {"yes": 0.5, "no": 0.5}, 0.0),
+            "item_3": _jev_answer("no"),
+        },
+    )
+    candidates = _made_up_candidates()
+    assert await _check(candidates, guard=_FakeGuard()) == frozenset({candidates[0].key, candidates[2].key})
+
+
 # ------------------------------------------------ the write step, wired (T-8.6-02)
 
 
@@ -815,7 +958,10 @@ async def test_the_write_step_asks_jev_and_not_the_guard_when_jev_decides(monkey
 
 
 @pytest.mark.asyncio
-async def test_the_write_step_falls_back_to_todays_guard_call_when_jev_fails(monkeypatch) -> None:
+async def test_the_write_step_in_jev_mode_asks_no_guard_when_jev_fails(monkeypatch) -> None:
+    """F-8.6-A01 and J14, end to end through `core.graph`: a failed Jev
+    leaves the answer to what code alone accepts, and no guard-tier call is
+    dispatched, even with a guard that would approve the sentence."""
     _jev_on(monkeypatch, _FakeJev(raises=jev_client_module.JevCallError("down", reason="http_error")))
     calls: list[tuple[tuple, dict]] = []
 
@@ -834,11 +980,39 @@ async def test_the_write_step_falls_back_to_todays_guard_call_when_jev_fails(mon
         trace_id="t-wire-2",
         budget_s=30.0,
     )
+    assert calls == [], "no guard-tier call is dispatched in Jev mode"
+    assert not result.grounded, "nothing approved, and code alone rejects the rewording"
+
+
+@pytest.mark.asyncio
+async def test_the_write_step_in_guard_mode_still_makes_todays_guard_call(monkeypatch) -> None:
+    """The guard provider's path is develop's, byte for byte."""
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    fake_jev = _FakeJev({"item_1": "yes"})
+    monkeypatch.setattr(sentence_check_module, "call_jev_batch", fake_jev)
+    calls: list[tuple[tuple, dict]] = []
+
+    async def fake_dispatch(*args, **kwargs):
+        calls.append((args, kwargs))
+        return _Reply('{"supported": [1]}')
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
+    narrative, quotes = extract_evidence_quotes(REWORDED)
+    result = await graph_module._ground_with_sentence_check(
+        narrative,
+        [PAPER, PAPER_TITLE],
+        question=QUESTION,
+        evidence_quotes=quotes,
+        harness=Harness(trace_id="t-wire-4"),
+        trace_id="t-wire-4",
+        budget_s=30.0,
+    )
+    assert fake_jev.calls == []
     assert len(calls) == 1
     args, kwargs = calls[0]
     assert args[2:4] == ("guard", "write")
     assert kwargs["max_tokens"] == 256 and kwargs["cache_prefix"] is None
-    assert 11.0 < kwargs["budget_s"] <= 12.0, "what is left of the capped 12-second check budget"
+    assert kwargs["budget_s"] == 12.0, "the whole capped 12-second check budget"
     assert result.grounded
 
 
