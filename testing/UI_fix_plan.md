@@ -24,7 +24,7 @@ In priority order.
 | 5 | Models chosen per task by tier: open source where an equivalent is available, frontier models where they are needed | [direction, point d](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Your decision, after phase 8.9: the second bench (`testing/Developer/reports/2026-09-26_writer_bench_2/results.md`) favours Kimi K2.5 on cost, but its Opus rows measured a request bug, and the writer is not the constraint while its input lacks the answer |
 | 6 | The agentic loop: interpret the objective, make a plan, use tools, check intermediate results, adjust when something fails, produce or apply the final result | [the agentic loop](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Nobody on it |
 | 7 | Hard and soft edges over a fuller graph, "connecting the dots" | [11.29](#detail-1129) | Nobody on it |
-| 8 | The trust-line wording | 9.9; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Your decision |
+| 8 | The trust-line wording | 9.9; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | You chose, 2026-09-25: say what was checked. Planned: phase 8.9, from the parked 8.4 commit with "which differ" corrected |
 | 9 | Judge answer quality once answering is reliable | 10.4 | Nobody on it |
 | 10 | A lock file for the Python build | the lock file; decided 2026-09-25, not built | Nobody on it |
 | 11 | The same question does not always return the same papers: six identical PubMed searches returned two different sets, and `reflux disease` found nothing on one run in six | Where we stopped, notes carried over from the old tracker; tried 2026-09-25, not reproducible, fix reverted: `tracker/phase_8.1.md` F-8.1-03 | Nobody on it |

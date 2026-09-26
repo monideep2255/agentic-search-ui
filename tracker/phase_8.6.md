@@ -66,6 +66,9 @@ Builder K. `testing/Developer/reports/2026-09-22_10.3_consistency/run_consistenc
 - 2026-09-25: phase opened by the lead on the product owner's yes ("Yes, same rules"); builders K and L dispatched in parallel.
 - 2026-09-25: T-8.6-07 to T-8.6-09 added by the lead from the product harness review, under the product owner's delegation of the same day ("you take charge and implement the improvement"), handed to builders L and K after their own tickets rather than to new dispatches, so the phase keeps its dispatch budget and needs one golden run. Rationale: the repair call is the largest share of the wait the golden run's median measures.
 
+- 2026-09-25: builders K and L finished; the lead merged both into the phase branch after each round of work. Builder K's comparison test left the product's `decide` swapped in every loaded module and broke four graph tests run after it; bisected by the lead, fixed by builder K (`37bf575`), the combined suites 3,060 passed.
+- 2026-09-26: T-8.6-07's live acceptance is not met as written. The gate fix works where it applies (the Marfan features question now makes one writing call instead of two), but G-012, G-013, G-021 and G-024 still make two, because their first reply grounded nothing and the repair runs through the clause the ticket kept on purpose. Lead decision from the user's chair: keep the repair when nothing grounded, since on G-013, the flagship question, the repair's reply is the whole written answer; the cause is the writer's input, which phase 8.9 changes, and the clause is measured again after it. Builder L's report, L-09 to L-14.
+
 ## Findings
 
 Written the moment a finding is established.
