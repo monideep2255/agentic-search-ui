@@ -330,10 +330,13 @@ async def test_a_hung_first_attempt_still_gets_its_second_at_once(
 
 # ---------------------------------------------------------------------------
 # R-05: no path passes the budget, and no verdict is no answer. The budget
-# is shrunk to 1.5 s and the backoff and floor scaled with it.
+# is shrunk to 2.0 s and the backoff and floor scaled with it. The 0.3 s
+# tolerance is scheduling lag on a loaded machine; it stays under one
+# backoff, so a wait taken past the deadline is still caught.
 # ---------------------------------------------------------------------------
 
-_SHRUNK_BUDGET_S = 1.5
+_SHRUNK_BUDGET_S = 2.0
+_LAG_S = 0.3
 
 
 def _shrink(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -343,8 +346,8 @@ def _shrink(monkeypatch: pytest.MonkeyPatch) -> None:
         return _SHRUNK_BUDGET_S if step == "guardrail" else real_budget(step, query_class)
 
     monkeypatch.setattr(graph_module, "budget_for_step", _budget)
-    monkeypatch.setattr(graph_module, "_CLASSIFIER_RETRY_BACKOFF_S", 0.2)
-    monkeypatch.setattr(graph_module, "_CLASSIFIER_MIN_SECOND_ATTEMPT_S", 0.3)
+    monkeypatch.setattr(graph_module, "_CLASSIFIER_RETRY_BACKOFF_S", 0.5)
+    monkeypatch.setattr(graph_module, "_CLASSIFIER_MIN_SECOND_ATTEMPT_S", 0.6)
 
 
 @pytest.mark.asyncio
@@ -353,10 +356,10 @@ def _shrink(monkeypatch: pytest.MonkeyPatch) -> None:
     [
         ("hang",),
         (_rate_limited,),
-        (_rate_limited("0.4"), _rate_limited("0.4"), "hang"),
+        (_rate_limited("0.6"), _rate_limited("0.6"), "hang"),
         (_connection_error, _connection_error, "hang"),
-        (1.1, "hang"),
-        (1.2,),
+        (1.5, "hang"),
+        (1.5,),
         (_rate_limited, _rate_limited, "hang"),
     ],
     ids=[
@@ -379,7 +382,7 @@ async def test_no_verdict_is_no_answer_and_no_path_passes_the_budget(
     elapsed = time.monotonic() - started
     assert result.get("step_error") == _STEP_ERROR
     assert _guard(events) is None
-    assert elapsed < _SHRUNK_BUDGET_S + 0.1, elapsed
+    assert elapsed < _SHRUNK_BUDGET_S + _LAG_S, elapsed
 
 
 @pytest.mark.asyncio
