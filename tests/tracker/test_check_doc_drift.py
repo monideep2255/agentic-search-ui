@@ -18,6 +18,19 @@ What this file pins down, one claim per test:
   phase-to-pull-request reference.
 - `--counts` still computes the counts, prints them, and reads no document.
 
+Build harness review item S3, same delegation: the check never prints "ok"
+over something it could not compute. It used to skip the Python test count in
+any worktree with no `venv/bin/python` and still say "ok" (F-8.5-J04 and
+F-8.5-V05, `tracker/phase_8.5.md`), and it read pytest's "N tests collected"
+without the error count beside it, so a module that failed to import lowered
+the count instead of failing the run. The tests below pin down:
+
+- `--check` fails, naming the reason, when a fact it reads could not be
+  computed or the tracked files could not be listed.
+- `--counts` fails, naming the reason, when a count could not be computed.
+- The pytest summary parser reads the error count from pytest's own output,
+  and a collection with errors never yields a count.
+
 Every test builds its own documents under `tmp_path` and stubs the facts, so
 none of them depends on the state of this repository's real documents.
 """
@@ -225,3 +238,153 @@ def test_counts_computes_decision_rows_from_the_file(tmp_path, monkeypatch):
 
 def test_self_test_passes():
     assert drift.run_self_test() == 0
+
+
+# ---------------------------------------------------------------------------
+# S3: never a silent ok
+# ---------------------------------------------------------------------------
+
+#: The last lines of `pytest --collect-only -q` as pytest 9.1.1 printed them on
+#: 2026-09-25, for a directory holding one importable test module (two tests)
+#: and, in the first two cases, one or two modules importing a missing name.
+PYTEST_TWO_ERRORS = (
+    "E   ModuleNotFoundError: No module named 'also_missing_abc'\n"
+    "=========================== short test summary info ============================\n"
+    "ERROR tests/test_bad.py\n"
+    "ERROR tests/test_bad2.py\n"
+    "!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!\n"
+    "2 tests collected, 2 errors in 0.12s"
+)
+PYTEST_ONE_ERROR = (
+    "E   ModuleNotFoundError: No module named 'no_such_module_xyz'\n"
+    "=========================== short test summary info ============================\n"
+    "ERROR tests/test_bad.py\n"
+    "!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n"
+    "2 tests collected, 1 error in 0.11s"
+)
+PYTEST_CLEAN = (
+    "tests/test_good.py::test_a\n"
+    "tests/test_good.py::test_b\n"
+    "\n"
+    "2 tests collected in 0.00s"
+)
+
+
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        # Measured with pytest 9.1.1 on 2026-09-25.
+        pytest.param(PYTEST_CLEAN, (2, 0), id="clean"),
+        pytest.param(PYTEST_ONE_ERROR, (2, 1), id="one-error"),
+        pytest.param(PYTEST_TWO_ERRORS, (2, 2), id="two-errors"),
+        pytest.param("1 test collected in 0.02s", (1, 0), id="one-test"),
+        pytest.param("no tests collected in 0.01s", (0, 0), id="no-tests"),
+        pytest.param("no tests collected, 1 error in 0.24s", (0, 1), id="no-tests-one-error"),
+        # Synthetic, not measured: a warning is not an error, and the
+        # interrupted line alone still counts, so an error is never missed
+        # because the summary line is absent or cut off.
+        pytest.param("5704 tests collected, 3 warnings in 12.00s", (5704, 0), id="warnings"),
+        pytest.param(
+            "!!!! Interrupted: 3 errors during collection !!!!", (None, 3), id="interrupted-only"
+        ),
+        pytest.param("something that is not pytest output", (None, 0), id="not-pytest"),
+    ],
+)
+def test_collection_summary_reads_the_count_and_the_errors(output, expected):
+    assert drift.parse_collection_summary(output) == expected
+
+
+def test_a_test_id_that_quotes_pytest_is_not_read_as_an_error():
+    """The measured false positive, 2026-09-25: `--collect-only -q` lists every
+    test id before the summary, and this file's own parametrized ids once
+    carried the fixture text above, so a clean collection of this repository
+    read as "1 collection error". The ids are plain now, and the parser only
+    reads lines that start the way pytest's own lines do.
+    """
+    output = (
+        "tests/tracker/test_x.py::test_y[!!!! Interrupted: 1 error during collection !!!!]\n"
+        "tests/tracker/test_x.py::test_y[2 tests collected, 1 error in 0.11s]\n"
+        "\n"
+        "5730 tests collected in 8.84s"
+    )
+    assert drift.parse_collection_summary(output) == (5730, 0)
+
+
+def _stub_pytest(monkeypatch, tmp_path, output: str, returncode: int) -> None:
+    python = tmp_path / "python"
+    python.write_text("", encoding="utf-8")
+    monkeypatch.setattr(drift, "VENV_PYTHON", python)
+
+    def fake_run(cmd, cwd, timeout):
+        return drift.subprocess.CompletedProcess(cmd, returncode, stdout=output, stderr="")
+
+    monkeypatch.setattr(drift, "_run", fake_run)
+
+
+def test_a_collection_with_errors_yields_no_python_test_count(monkeypatch, tmp_path):
+    _stub_pytest(monkeypatch, tmp_path, PYTEST_TWO_ERRORS, returncode=2)
+    fact = drift.compute_python_test_count()
+    assert fact.skipped
+    assert fact.value is None
+    assert "pytest reported 2 collection errors" in fact.skip_reason
+
+
+def test_a_clean_collection_yields_the_count(monkeypatch, tmp_path):
+    _stub_pytest(monkeypatch, tmp_path, PYTEST_CLEAN, returncode=0)
+    fact = drift.compute_python_test_count()
+    assert (fact.skipped, fact.value) == (False, 2)
+
+
+def test_a_nonzero_pytest_exit_without_an_error_count_yields_no_count(monkeypatch, tmp_path):
+    _stub_pytest(monkeypatch, tmp_path, PYTEST_CLEAN, returncode=3)
+    fact = drift.compute_python_test_count()
+    assert fact.skipped
+    assert "pytest exited 3" in fact.skip_reason
+
+
+def test_no_venv_is_a_named_reason(monkeypatch, tmp_path):
+    monkeypatch.setattr(drift, "VENV_PYTHON", tmp_path / "venv" / "bin" / "python")
+    fact = drift.compute_python_test_count()
+    assert fact.skipped
+    assert "not found, so pytest could not run" in fact.skip_reason
+
+
+def test_check_fails_when_a_fact_it_reads_could_not_be_computed(repo, capsys, monkeypatch):
+    def facts_with_a_gap() -> dict:
+        facts = _good_check_facts()
+        facts["merged_prs"] = drift.Fact(
+            "merged_prs", "Merged PR numbers per phase", None, "SKIPPED", "stub",
+            True, "git log exited non-zero",
+        )
+        return facts
+
+    monkeypatch.setattr(drift, "compute_check_facts", facts_with_a_gap)
+    repo.write("README.md", "# Readme\n\nNothing wrong here.\n")
+    rc, out = _check(capsys)
+    assert rc == 1
+    assert "could not compute Merged PR numbers per phase: git log exited non-zero" in out
+    assert out.strip().splitlines()[-1].startswith("error:")
+
+
+def test_check_fails_when_the_tracked_files_cannot_be_listed(repo, capsys, monkeypatch):
+    monkeypatch.setattr(drift, "tracked_markdown_files", lambda: None)
+    rc, out = _check(capsys)
+    assert rc == 1
+    assert "could not list the tracked markdown files" in out
+
+
+def test_counts_fails_when_a_count_could_not_be_computed(monkeypatch, capsys):
+    def counts_with_a_gap() -> dict:
+        facts = _count_facts()
+        facts["python_tests"] = drift.Fact(
+            "python_tests", "Python tests", None, "SKIPPED", "stub", True,
+            "pytest reported 2 collection errors",
+        )
+        return facts
+
+    monkeypatch.setattr(drift, "compute_count_facts", counts_with_a_gap)
+    rc = drift.main(["--counts"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "could not compute Python tests: pytest reported 2 collection errors" in out
+    assert out.strip().splitlines()[-1].startswith("error:")

@@ -36,6 +36,24 @@ check stopped comparing them.
 The counts are still computed, on demand, by `--counts`, which prints them
 and checks no document against them.
 
+NEVER A SILENT OK
+
+A run that could not compute what it needs says so and exits 1; it never
+prints "ok" over a gap (build harness review item S3). The measured failure:
+in an agent worktree with no `venv/bin/python`, this script skipped the
+Python test count, still printed "ok" and exited 0, while the count it
+tracked was stale (F-8.5-J04 and F-8.5-V05, `tracker/phase_8.5.md`). So:
+
+  - `--check`: a fact the checks read that could not be computed (the
+    board's phase statuses, the merged pull request per phase) is a failure
+    line naming the reason, and so is a failure to list the tracked files.
+  - `--counts`: a count that could not be computed is a failure line naming
+    the reason, and so is a pytest collection that reports errors. When a
+    test module fails to import, pytest prints "N tests collected, M errors"
+    and N silently leaves out that module's tests, so N reads as a smaller
+    true count. Pytest 9 prints exactly that line, and exits 2, measured on
+    2026-09-25 with two modules that import a missing name.
+
 THE HISTORICAL-VERSUS-CURRENT RULE
 
 A reference in a document is only wrong if it is being asserted as CURRENT. A
@@ -140,7 +158,8 @@ Usage:
     python3 tracker/check_doc_drift.py             print a full report
     python3 tracker/check_doc_drift.py --check     exit 0 clean / 1 on any
                                                     finding, one line per
-                                                    finding
+                                                    finding, a fact it could
+                                                    not compute included
     python3 tracker/check_doc_drift.py --verbose   also print every fact the
                                                     checks read and how it
                                                     was computed
@@ -149,7 +168,10 @@ Usage:
                                                     premise gate and
                                                     Playwright counts computed
                                                     from source. Checks no
-                                                    document against them
+                                                    document against them.
+                                                    Exit 1 when a count could
+                                                    not be computed or pytest
+                                                    reported collection errors
     python3 tracker/check_doc_drift.py --self-test run the historical-versus-
                                                     current classifier's
                                                     fixtures; exit 0 only if
@@ -212,13 +234,27 @@ class Fact:
 
 @dataclass
 class Finding:
-    kind: str               # "stale" | "structural"
-    path: str
+    kind: str               # "stale" | "structural" | "unmeasured"
+    path: str               # "" for an unmeasured finding: it is about the run, not a file
     line: int
     message: str
 
     def format(self) -> str:
+        if not self.path:
+            return self.message
         return f"{self.path}:{self.line}: {self.message}"
+
+
+def unmeasured_findings(facts: dict[str, Fact]) -> list[Finding]:
+    """One failure line per fact that could not be computed. A skipped fact
+    means every check that reads it checked nothing, so the run cannot say
+    ok; see "NEVER A SILENT OK" in the module docstring.
+    """
+    return [
+        Finding("unmeasured", "", 0, f"could not compute {fact.label}: {fact.skip_reason}")
+        for fact in facts.values()
+        if fact.skipped
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -235,13 +271,71 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProcess
         return None
 
 
+# The summary line `pytest --collect-only -q` ends with. Measured with pytest
+# 9.1.1 on 2026-09-25: "2 tests collected in 0.00s" when every module imports,
+# "2 tests collected, 1 error in 0.11s" and "2 tests collected, 2 errors in
+# 0.12s" when one or two modules fail to import (exit 2, after a line reading
+# "Interrupted: N errors during collection"), and "no tests collected" when
+# nothing is found. "N/M tests collected (K deselected)" appears only under a
+# marker filter, which this script never passes, and is accepted anyway.
+#
+# Both patterns are anchored to the START of a line, and that is load-bearing:
+# `--collect-only -q` lists every test id first, and a parametrized id can
+# carry any text. Measured on 2026-09-25: this script's own tests have ids
+# containing "Interrupted: 1 error during collection", and an unanchored
+# search read that id as a collection error in a clean run. A test id starts
+# with its file path, never with a digit, "no" or "!", so anchoring excludes
+# every id while still matching pytest's own lines.
+COLLECTED_RE = re.compile(
+    r"^=*[ \t]*(?P<collected>\d+|no)(?:/\d+)?[ \t]+tests?[ \t]+collected\b(?P<rest>.*)$",
+    re.MULTILINE,
+)
+COLLECTION_ERRORS_RE = re.compile(r"\b(\d+)[ \t]+errors?\b")
+INTERRUPTED_RE = re.compile(
+    r"^!+[ \t]*Interrupted:[ \t]+(\d+)[ \t]+errors?[ \t]+during collection\b",
+    re.MULTILINE,
+)
+
+
+def parse_collection_summary(output: str) -> tuple[int | None, int]:
+    """Return (tests collected, collection errors) from `pytest
+    --collect-only -q` output. The collected count is None when no summary
+    line is present. The error count is read from the summary line itself
+    and from pytest's "Interrupted: N errors during collection" line, taking
+    the larger, so an error is never missed because one of the two lines is
+    absent. It is 0 only when neither line reports an error.
+    """
+    errors = 0
+    interrupted = INTERRUPTED_RE.search(output)
+    if interrupted:
+        errors = int(interrupted.group(1))
+    summaries = list(COLLECTED_RE.finditer(output))
+    if not summaries:
+        return None, errors
+    last = summaries[-1]
+    collected = 0 if last.group("collected") == "no" else int(last.group("collected"))
+    on_summary = COLLECTION_ERRORS_RE.search(last.group("rest"))
+    if on_summary:
+        errors = max(errors, int(on_summary.group(1)))
+    return collected, errors
+
+
 def _pytest_collected_count(target: str | None) -> tuple[int | None, str]:
     """Run `pytest --collect-only -q` (optionally scoped to one file) and
-    parse the trailing "N tests collected" line. Returns (count, reason);
-    count is None and reason explains why when it could not be measured.
+    parse its summary line. Returns (count, reason); count is None and reason
+    explains why when it could not be measured honestly, which includes a
+    collection that reported errors: its count leaves out every test in the
+    modules that failed to import.
     """
     if not VENV_PYTHON.exists():
-        return None, f"{VENV_PYTHON.relative_to(REPO_ROOT)} not found"
+        try:
+            shown = VENV_PYTHON.relative_to(REPO_ROOT)
+        except ValueError:
+            shown = VENV_PYTHON
+        return None, (
+            f"{shown} not found, so pytest could not run. Run this from a checkout "
+            "that has the repository venv, or create it there"
+        )
     cmd = [str(VENV_PYTHON), "-m", "pytest", "--collect-only", "-q"]
     if target:
         cmd.append(target)
@@ -249,10 +343,25 @@ def _pytest_collected_count(target: str | None) -> tuple[int | None, str]:
     if proc is None:
         return None, "pytest invocation failed or timed out"
     combined = proc.stdout + "\n" + proc.stderr
-    m = re.search(r"^(\d+)\s+tests? collected", combined, re.MULTILINE)
-    if not m:
-        return None, "could not parse a 'N tests collected' line from pytest output"
-    return int(m.group(1)), ""
+    collected, errors = parse_collection_summary(combined)
+    if errors:
+        return None, (
+            f"pytest reported {errors} collection error{'s' if errors != 1 else ''}, so the "
+            f"{collected if collected is not None else 'unknown number of'} tests it did collect "
+            "leave out every test in the modules that failed to import. Run "
+            "`python -m pytest --collect-only -q` to see which modules failed"
+        )
+    if collected is None:
+        return None, (
+            "could not parse a 'N tests collected' line from pytest output "
+            f"(pytest exited {proc.returncode})"
+        )
+    if proc.returncode not in (0, 5):
+        return None, (
+            f"pytest exited {proc.returncode} while collecting, which is not a clean "
+            "collection even though it reported no error count"
+        )
+    return collected, ""
 
 
 def compute_python_test_count() -> Fact:
@@ -657,10 +766,14 @@ PHASE_THEN_PR_RE = re.compile(r"\bphase\s+(\d+\.\d+)\b[^.\n|]{0,120}?\bPR\s*#(\d
 # --------------------------------------------------------------------------
 
 
-def tracked_markdown_files() -> list[Path]:
+def tracked_markdown_files() -> list[Path] | None:
+    """Every tracked markdown file except the locked documents, or None when
+    git could not list them. None is not an empty list: an empty list checks
+    nothing and would print "ok", which is the silent pass `main` refuses.
+    """
     proc = _run(["git", "ls-files", "*.md"], cwd=REPO_ROOT, timeout=GIT_TIMEOUT_S)
     if proc is None or proc.returncode != 0:
-        return []
+        return None
     paths = []
     for rel in proc.stdout.splitlines():
         rel = rel.strip()
@@ -1163,18 +1276,24 @@ def run_self_test() -> int:
 def run_counts() -> int:
     """`--counts`: print every count computed from source. Print-only: no
     document is read for a stated count and none is compared with anything.
+    Exits 1 when a count could not be computed, including a pytest
+    collection that reported errors, and says why for each one.
     """
     facts = compute_count_facts()
     print("Counts computed from source (print-only, no document is checked against them):")
     for fact in facts.values():
-        status = f"SKIPPED ({fact.skip_reason})" if fact.skipped else fact.display
+        status = "could not compute, see below" if fact.skipped else fact.display
         print(f"  {fact.label}: {status}")
         print(f"    via: {fact.source}")
-    computed_count = sum(1 for f in facts.values() if not f.skipped)
-    skipped_count = sum(1 for f in facts.values() if f.skipped)
-    skipped_note = f" ({skipped_count} skipped)" if skipped_count else ""
+    failures = unmeasured_findings(facts)
+    computed_count = len(facts) - len(failures)
     print()
-    print(f"ok: {computed_count} counts computed{skipped_note}")
+    for failure in failures:
+        print(failure.format())
+    if failures:
+        print(f"error: {computed_count} counts computed | {len(failures)} could not be computed")
+        return 1
+    print(f"ok: {computed_count} counts computed")
     return 0
 
 
@@ -1188,22 +1307,35 @@ def main(argv: list[str]) -> int:
     verbose = "--verbose" in argv
 
     facts = compute_check_facts()
-    files = tracked_markdown_files()
+    listed = tracked_markdown_files()
+    files = listed if listed is not None else []
 
-    findings: list[Finding] = []
+    findings: list[Finding] = unmeasured_findings(facts)
+    if listed is None:
+        findings.append(Finding(
+            "unmeasured", "", 0,
+            "could not list the tracked markdown files: `git ls-files '*.md'` failed or timed "
+            "out, so no document was checked",
+        ))
     findings.extend(scan_pr_assertions(files, facts))
     findings.extend(scan_structural(files, facts))
 
     computed_count = sum(1 for f in facts.values() if not f.skipped)
-    skipped_count = sum(1 for f in facts.values() if f.skipped)
+    unmeasured_count = sum(1 for f in findings if f.kind == "unmeasured")
     stale_count = sum(1 for f in findings if f.kind == "stale")
     structural_count = sum(1 for f in findings if f.kind == "structural")
+
+    status_word = "ok" if not findings else "error"
+    summary = (
+        f"{status_word}: {computed_count} facts computed | {unmeasured_count} could not be "
+        f"computed | {stale_count} stale | {structural_count} structural"
+    )
 
     if verbose:
         print(f"Facts the checks read ({len(files)} tracked markdown files scanned, "
               f"{len(SKIP_FILES)} locked file(s) excluded):")
         for fact in facts.values():
-            status = f"SKIPPED ({fact.skip_reason})" if fact.skipped else fact.display
+            status = "could not compute, see the findings" if fact.skipped else fact.display
             print(f"  {fact.label}: {status}")
             print(f"    via: {fact.source}")
         print()
@@ -1211,15 +1343,12 @@ def main(argv: list[str]) -> int:
     if check_only:
         for finding in findings:
             print(finding.format())
-        status_word = "ok" if not findings else "error"
-        skipped_note = f" ({skipped_count} skipped)" if skipped_count else ""
-        print(f"{status_word}: {computed_count} facts computed{skipped_note} | "
-              f"{stale_count} stale | {structural_count} structural")
+        print(summary)
         return 1 if findings else 0
 
     print("Facts the checks read, computed from source:")
     for fact in facts.values():
-        status = f"SKIPPED ({fact.skip_reason})" if fact.skipped else fact.display
+        status = "could not compute, see the findings" if fact.skipped else fact.display
         print(f"  {fact.label}: {status}")
     print()
 
@@ -1231,10 +1360,7 @@ def main(argv: list[str]) -> int:
         print("No drift found.")
     print()
 
-    status_word = "ok" if not findings else "error"
-    skipped_note = f" ({skipped_count} skipped)" if skipped_count else ""
-    print(f"{status_word}: {computed_count} facts computed{skipped_note} | "
-          f"{stale_count} stale | {structural_count} structural")
+    print(summary)
     return 1 if findings else 0
 
 
