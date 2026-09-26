@@ -38,12 +38,13 @@ supplies, which is the difference between testing the rule and restating it
   shared budget, the cap disclosure) now make the tail unable to ground
   first, since that is the only remaining way to reach the repair with a
   grounded first answer.
-- Exercised since build phase 8.6 (T-8.6-07): what the gate counts as
-  cited. A view the listing folds into its record's cited row (a paper's
-  abstract and PMID beneath its title) counts as cited, the rule
-  `unreported_findings` applies; a row of its own, including every clinical
-  feature, must be cited itself. Also that `done.elapsed_ms` covers the
-  writing step. Each at both listing modes where the mode matters.
+- Exercised since build phase 8.6's fix round (F-8.6-J01, J02, A04): the
+  gate counts a finding as cited only by its own citation id. A gene's
+  summary, a paper's abstract and a sibling record on the same page that
+  the prose left out each get the repair, at both listing modes where the
+  mode matters, and the abstract's figure reaches the answer end to end.
+  Also that `done.elapsed_ms` covers the writing step (T-8.6-07's W3 half,
+  kept).
 - NOT exercised: the `ask` floor's trigger beyond the cases above.
 - NOT exercised: the repair's `HarnessCallError` path beyond the fact that
   it is a separate handler from the cap path. The swallow is deliberate and
@@ -1151,29 +1152,36 @@ async def test_an_ordinary_turn_keeps_the_tools_own_order(synth_pair) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Build phase 8.6, T-8.6-07 (product harness review W1 and C1): the repair
-# gate and the listing agree about what "cited" means.
+# Build phase 8.6 fix round (F-8.6-J01, J02, A04): the repair gate compares
+# citation ids again, exactly as before the phase. T-8.6-07 had counted a
+# view as cited when the listing folds it into its record's cited row; the
+# view was then shown nowhere, the second writing call was skipped and the
+# omission count said 0, so the fact simply vanished. These arms pin the
+# three shapes the reviewers measured, each getting the repair again.
 #
-# The listing keeps ONE row per record (`one_finding_per_record`): a paper
-# that reached the prompt as its title, its abstract and its PMID is listed
-# once, by its title. `unreported_findings` counts the other two views as
-# reported once that row is cited, because the reader is looking at the
-# paper. The gate compared citation ids instead, so the two uncited views
-# kept the second writing call firing on nearly every question, and its
-# reply reached nothing in 4 of 5 traced questions.
+# Kept from T-8.6-07: `done.elapsed_ms` covers the writing step (W3).
 #
 # What these arms do not cover: whether the writing model obeys the
-# completeness directive (a live property), and the live firing rate, which
-# the builder's report measures on four golden questions.
+# completeness directive (a live property), and how often live rows share
+# one page under one field name (F-8.6-J02's addendum).
 # ---------------------------------------------------------------------------
 
-_PAPER_URL = "https://pubmed.ncbi.nlm.nih.gov/38000001/"
-_PAPER_TITLE = "Glucokinase and the threshold for insulin release"
-_PAPER_ABSTRACT = (
-    "Glucokinase sets the glucose threshold for insulin release. Its variants "
-    "cause a mild fasting hyperglycaemia."
+_GENE_URL = "https://www.ncbi.nlm.nih.gov/gene/672"
+_MEDGEN_URL = "https://www.ncbi.nlm.nih.gov/medgen/2716"
+_GENE_SUMMARY = (
+    "This gene encodes a nuclear phosphoprotein that plays a role in maintaining "
+    "genomic stability, and it also acts as a tumor suppressor."
 )
-_MEDGEN_URL = "https://www.ncbi.nlm.nih.gov/medgen/44287"
+_PAPER_URL = "https://pubmed.ncbi.nlm.nih.gov/38000001/"
+_PAPER_TITLE = (
+    "Risks of breast, ovarian, and contralateral breast cancer for BRCA1 and BRCA2 "
+    "mutation carriers"
+)
+#: No closing full stop: the stand-in writer below appends each finding's
+#: marker after its text, and "years. [4]" would leave the sentence uncited.
+_PAPER_ABSTRACT = (
+    "Female BRCA1 carriers had a cumulative breast cancer risk of 72% by age 80 years"
+)
 
 
 def _view(
@@ -1191,36 +1199,17 @@ def _view(
     )
 
 
-def _two_diseases() -> list[SynthFinding]:
-    return [
-        _view(ref, "cq", "cypher_query", "layer_1_graph", "name", f"disease name number {ref}", row["source_url"])
-        for ref, row in ((1, _ROWS[0]), (2, _ROWS[1]))
-    ]
-
-
-def _paper_three_views(start: int = 3) -> list[SynthFinding]:
-    """One paper as the three views it reaches the prompt as: its title and
-    abstract from EFetch and its PMID from PubTator, all on its own page."""
-    return [
-        _view(start, "ne", "ncbi_efetch", "layer_2_api", "title", _PAPER_TITLE, _PAPER_URL),
-        _view(start + 1, "pt", "pubtator_annotate", "layer_3_enrichment", "pmid", "38000001", _PAPER_URL),
-        _view(start + 2, "ne", "ncbi_efetch", "layer_2_api", "abstract", _PAPER_ABSTRACT, _PAPER_URL),
-    ]
-
-
 def _gate(
     omitted: list[SynthFinding],
     findings: list[SynthFinding],
     *,
-    tool_outcome: str = "ok",
-    model_grounded: bool = True,
     lists_every_finding: bool = True,
 ) -> bool:
     return graph_module._code_built_lines_will_cite(
         omitted,
         findings,
-        tool_outcome=tool_outcome,
-        model_grounded=model_grounded,
+        tool_outcome="ok",
+        model_grounded=True,
         lists_every_finding=lists_every_finding,
         question="",
     )
@@ -1235,83 +1224,75 @@ def _omitted_after_prose(findings: list[SynthFinding], prose_cited: set[str]) ->
 
 
 @pytest.mark.parametrize("lists_every_finding", [True, False])
-def test_a_three_view_paper_the_listing_shows_skips_the_repair(lists_every_finding: bool) -> None:
-    """The prose cited both diseases and not the paper, so the paper's three
-    views are omitted. The listing shows the paper as one cited row, which
-    is all the reader can be shown of it, so the repair has nothing to add.
+def test_a_genes_summary_the_prose_left_out_gets_the_repair(lists_every_finding: bool) -> None:
+    """F-8.6-J01: the gene reached the prompt as its name and its summary
+    (item 11.31's explanatory second finding, same page, another field),
+    and the prose cited only the disease. The listing shows the gene by its
+    name alone, so the summary is on no line the reader gets: only the
+    repair can still say it.
 
-    MUTATION PROOF: restoring the citation-id comparison
-    (`all(finding.citation_id in cited for finding in omitted_findings)`)
-    turns both cases red.
+    MUTATION PROOF: restoring T-8.6-07's rule (a view counts as cited when
+    its record's row is) turns both cases red.
     """
-    findings = _two_diseases() + _paper_three_views()
-    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
-    # Populate check: all three views of the paper are what the prose left out.
-    assert sorted(f.field for f in omitted) == ["abstract", "pmid", "title"]
-    assert _gate(omitted, findings, lists_every_finding=lists_every_finding)
-
-
-def test_a_one_view_record_behaves_as_before() -> None:
-    """The control: a paper that reached the prompt as its title alone is
-    cited by its own row, and skips the repair exactly as before; when that
-    one row fails the pass, the repair still runs."""
-    findings = _two_diseases() + _paper_three_views()[:1]
-    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
-    assert [f.field for f in omitted] == ["title"]
-    assert _gate(omitted, findings)
-
-
-def test_a_three_view_paper_whose_row_fails_the_pass_still_gets_the_repair(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The listing's one row for the paper is its title. When that row
-    cannot ground, nothing on the page shows the paper, so only the model's
-    own phrasing can, and the repair runs."""
-    findings = _two_diseases() + _paper_three_views()
-    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
-    monkeypatch.setattr(
-        graph_module,
-        "build_structured_fallback_narrative",
-        lambda rendered: _ORIGINAL_FALLBACK_BUILDER([f for f in rendered if f.field != "title"]),
-    )
-    assert not _gate(omitted, findings)
-
-
-def test_a_clinical_feature_whose_row_fails_the_pass_still_gets_the_repair(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A clinical feature is a row of its own beneath its disease, never a
-    view folded into the disease's row, so it must be cited itself: its
-    disease being listed does not show the reader that feature."""
-    medgen = [
-        _view(3, "mg", "ncbi_efetch", "layer_2_api", "title", "Marfan syndrome", _MEDGEN_URL),
-        _view(4, "mg", "ncbi_efetch", "layer_2_api", "clinical_features", "Ectopia lentis", _MEDGEN_URL),
-        _view(5, "mg", "ncbi_efetch", "layer_2_api", "clinical_features", "Arachnodactyly", _MEDGEN_URL),
+    findings = [
+        _view(1, "cq", "cypher_query", "layer_1_graph", "name", "BRCA1 DNA repair associated", _GENE_URL),
+        _view(2, "cq", "cypher_query", "layer_1_graph", "summary", _GENE_SUMMARY, _GENE_URL),
+        _view(3, "mg", "ncbi_efetch", "layer_2_api", "title", "Breast-ovarian cancer, familial 1", _MEDGEN_URL),
     ]
-    findings = _two_diseases() + medgen
-    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
+    omitted = _omitted_after_prose(findings, {"mg-3"})
+    # Populate check: the prose left out the gene, summary included.
+    assert sorted(f.field for f in omitted) == ["name", "summary"]
+    # The premise: the listing folds the summary away, so it is shown nowhere.
+    assert "tumor suppressor" not in _ORIGINAL_FALLBACK_BUILDER(findings)
+    assert not _gate(omitted, findings, lists_every_finding=lists_every_finding)
+
+
+@pytest.mark.parametrize("lists_every_finding", [True, False])
+def test_a_papers_abstract_the_prose_left_out_gets_the_repair(lists_every_finding: bool) -> None:
+    """F-8.6-A04: the paper reached the prompt as its title, its abstract and
+    its PMID, and the prose cited the gene alone. The listing shows the
+    paper by its title, so the abstract's 72% is on no line the reader gets.
+
+    MUTATION PROOF: restoring T-8.6-07's rule turns both cases red.
+    """
+    findings = [
+        _view(1, "cq", "cypher_query", "layer_1_graph", "name", "BRCA1 DNA repair associated", _GENE_URL),
+        _view(2, "ne", "ncbi_efetch", "layer_2_api", "title", _PAPER_TITLE, _PAPER_URL),
+        _view(3, "ne", "ncbi_efetch", "layer_2_api", "abstract", _PAPER_ABSTRACT, _PAPER_URL),
+        _view(4, "pt", "pubtator_annotate", "layer_3_enrichment", "pmid", "38000001", _PAPER_URL),
+    ]
+    omitted = _omitted_after_prose(findings, {"cq-1"})
+    assert sorted(f.field for f in omitted) == ["abstract", "pmid", "title"]
+    assert "72%" not in _ORIGINAL_FALLBACK_BUILDER(findings)
+    assert not _gate(omitted, findings, lists_every_finding=lists_every_finding)
+
+
+def test_a_sibling_record_whose_row_fails_the_pass_gets_the_repair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.6-J02: three genes share one page under one field, so they are
+    three records and three rows. When BRCA1's row cannot ground, nothing
+    on the page shows BRCA1, and the repair runs.
+
+    MUTATION PROOF: restoring T-8.6-07's rule turns this red, since the rule
+    read BRCA1 as reported through a sibling's row.
+    """
+    findings = [
+        _view(1, "cq", "cypher_query", "layer_1_graph", "name", "BRCA1", _GENE_URL),
+        _view(2, "cq", "cypher_query", "layer_1_graph", "name", "BRCA2", _GENE_URL),
+        _view(3, "cq", "cypher_query", "layer_1_graph", "name", "BARD1", _GENE_URL),
+        _view(4, "mg", "ncbi_efetch", "layer_2_api", "title", "Breast-ovarian cancer, familial 1", _MEDGEN_URL),
+    ]
+    omitted = _omitted_after_prose(findings, {"mg-4"})
     assert len(omitted) == 3
-    # Control: every row grounds, so the listing shows all three.
+    # Control: every row grounds, so the listing shows all three genes.
     assert _gate(omitted, findings)
     monkeypatch.setattr(
         graph_module,
         "build_structured_fallback_narrative",
-        lambda rendered: _ORIGINAL_FALLBACK_BUILDER(
-            [f for f in rendered if f.field_value != "Arachnodactyly"]
-        ),
+        lambda rendered: _ORIGINAL_FALLBACK_BUILDER([f for f in rendered if f.field_value != "BRCA1"]),
     )
     assert not _gate(omitted, findings)
-
-
-@pytest.mark.parametrize(
-    ("tool_outcome", "model_grounded"), [("error", True), ("empty", True), ("ok", False)]
-)
-def test_the_repair_still_runs_off_the_ok_path_and_when_the_prose_grounded_nothing(
-    tool_outcome: str, model_grounded: bool
-) -> None:
-    findings = _two_diseases() + _paper_three_views()
-    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
-    assert not _gate(omitted, findings, tool_outcome=tool_outcome, model_grounded=model_grounded)
 
 
 def _paper_write_state(audience_depth: str = "researcher") -> dict[str, object]:
@@ -1415,46 +1396,24 @@ def _synth_covering(monkeypatch: pytest.MonkeyPatch, *, first_covers: str, delay
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("audience_depth", ["researcher", "plain_language"])
-async def test_a_three_view_paper_the_listing_shows_makes_one_writing_call(
+async def test_a_papers_abstract_the_prose_left_out_makes_the_repair(
     monkeypatch: pytest.MonkeyPatch, audience_depth: str
 ) -> None:
-    """End to end through the real `write_node`: the prose reports the two
-    diseases, the listing shows the paper by its title, and the answer is
-    made with one writing call. Before T-8.6-07 this made two.
+    """F-8.6-A04 end to end through the real `write_node`: the prose reports
+    the two diseases and leaves out the paper, whose abstract carries the
+    figure. The second writing call runs, as before the phase, and its
+    reply puts the abstract's 72% in front of the reader.
 
-    MUTATION PROOF: restoring the citation-id comparison in
-    `_code_built_lines_will_cite` turns both cases red with `[False, True]`.
+    MUTATION PROOF: restoring T-8.6-07's gate (its rule and
+    `lists_every_finding=True`) turns both cases red with `[False]`.
     """
     _synth_covering(monkeypatch, first_covers="disease name number")
     dispatched = _record_synth_dispatches(monkeypatch)
 
     result = await graph_module.write_node(_paper_write_state(audience_depth))
-    events = result["events"]
-
-    assert dispatched == [False], dispatched
-    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
-    assert _PAPER_URL in cited, cited
-    assert _PAPER_TITLE in _narrative(events)
-    assert "further" not in _narrative(events), "nothing the model was shown is left unreported"
-
-
-@pytest.mark.asyncio
-async def test_a_three_view_paper_whose_row_fails_the_pass_still_makes_the_repair(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The write-level control: with the paper's one listing row unable to
-    ground, the repair is the only way to show it, and it runs."""
-    _synth_covering(monkeypatch, first_covers="disease name number")
-    monkeypatch.setattr(
-        graph_module,
-        "build_structured_fallback_narrative",
-        lambda rendered: _ORIGINAL_FALLBACK_BUILDER([f for f in rendered if f.source_url != _PAPER_URL]),
-    )
-    dispatched = _record_synth_dispatches(monkeypatch)
-
-    await graph_module.write_node(_paper_write_state())
 
     assert dispatched == [False, True], dispatched
+    assert "72%" in _narrative(result["events"])
 
 
 @pytest.mark.asyncio

@@ -8342,30 +8342,18 @@ def _code_built_lines_will_cite(
       boundary, or one that fails the number check), because only the
       model's own phrasing can still cite that finding.
 
-    `lists_every_finding` selects the listing, which renders every prepared
-    finding, over the tail, which renders only the omitted ones, so the probe
-    grounds exactly the narrative the answer will carry. Every depth has
-    rendered the listing since 2026-09-14 (`tail_is_listing` in
-    `write_node`), and `write_node` passes True.
+    `lists_every_finding` selects the Researcher listing, which renders every
+    prepared finding, over the tail, which renders only the omitted ones, so
+    the probe grounds exactly the narrative the answer will carry.
 
-    WHAT "CITED" MEANS, build phase 8.6, T-8.6-07 (the product harness
-    review's W1 and C1). The listing keeps ONE row per record
-    (`one_finding_per_record`): a paper that reached the prompt as its
-    title, its abstract and its PMID is listed once, by its title. This
-    compared citation ids, so the two views the listing folds into that row
-    were always "uncited", and the repair fired whenever the prose left out
-    a paper that arrived as several views, although the listing showed it.
-    Measured live on 2026-09-26 on a phenotype question: 7 of 19 omitted
-    findings were such views, and the old rule made a second writing call
-    the new one skips. (A question whose prose grounds nothing still gets
-    the repair: that is the second case listed above, and this rule is
-    never reached for it.)
-    The rule is now `unreported_findings`', the one the answer's own
-    omission count already applies after the listing: a folded view counts
-    as cited when its record's row is. A finding the listing renders as a
-    row of its own must be cited itself, and that includes every clinical
-    feature, which sits beneath its disease as its own row rather than
-    being folded into the disease's.
+    A finding counts as cited only when the probe cites its own citation
+    id. Build phase 8.6 (T-8.6-07) tried counting a view as cited when the
+    listing folds it into its record's cited row, and reverted it in the
+    fix round (F-8.6-J01, J02, A04): the folded view is shown nowhere, so a
+    gene's summary, a sibling record on the same page, or the figure in a
+    paper's abstract left the answer with no repair and no omission note.
+    A second writing call costs seconds; a fact that vanishes costs the
+    reader the answer.
     """
     if tool_outcome != "ok" or not model_grounded or not omitted_findings:
         return False
@@ -8377,16 +8365,7 @@ def _code_built_lines_will_cite(
         question=question,
     )
     cited = {claim.finding.citation_id for claim in probe.claims}
-    unreported = {finding.citation_id for finding in unreported_findings(cited, rendered)}
-    reported_by_its_row = {finding.citation_id for finding in rendered} - unreported
-    return all(
-        finding.citation_id in cited
-        or (
-            finding.field != CLINICAL_FEATURES_FIELD
-            and finding.citation_id in reported_by_its_row
-        )
-        for finding in omitted_findings
-    )
+    return all(finding.citation_id in cited for finding in omitted_findings)
 
 
 def _build_repair_cap_note(omission_remains: bool = True) -> str:
@@ -11393,12 +11372,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 synth_findings,
                 tool_outcome=tool_outcome,
                 model_grounded=bool(grounding.claims),
-                # Every depth lists every prepared finding (`tail_is_listing`
-                # below, since 2026-09-14), so the probe renders the same
-                # list at every depth (build phase 8.6, T-8.6-07). It used to
-                # render only the omitted findings below Researcher depth,
-                # a narrative no answer carries.
-                lists_every_finding=True,
+                lists_every_finding=query.audience_depth == "researcher",
                 question=query.text,
             )
         ):
