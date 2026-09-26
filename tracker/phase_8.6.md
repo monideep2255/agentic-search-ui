@@ -207,6 +207,7 @@ Branch: `phase/8.6-reland`, cut from develop at d042860 on 2026-09-26 at 18:50 U
 | judge | Opus 5.5 | default | 19:50 | 20:31 | 334,011 |
 | adversary | Fable 5.1 | default | 19:50 | 20:11 | 237,412 |
 | product reviewer, after the merge | Opus 5.5 | default | 21:02 | 21:16 | 258,928 |
+| builder C, R-05 to R-09 | Opus 5.5 | default | 21:02 | 22:38 | 548,501 |
 
 ### Re-land tickets
 
@@ -303,7 +304,7 @@ The trigger the owner's "Merge, named" set: once the golden run held (102 of 150
 
 #### R-05: One brief error in the guard model no longer fails the question, and a rate-limited provider is not hammered (RJ01, RJ08, RA02)
 
-- Builder: C. Answer path: yes. Status: todo.
+- Builder: C. Answer path: yes. Status: in-review.
 - Acceptance:
   - An error lasting about a second no longer ends the question: the second attempt waits a short backoff first, inside the unchanged 15 s step budget.
   - A rate-limited provider receives fewer requests than today's four back-to-back ones, with a gap between them.
@@ -313,7 +314,7 @@ The trigger the owner's "Merge, named" set: once the golden run held (102 of 150
 
 #### R-06: A refusal is not held up by a failing Jev decision that cannot change it (RJ03, RJ09)
 
-- Builder: C. Answer path: yes. Status: todo.
+- Builder: C. Answer path: yes. Status: in-review.
 - Acceptance:
   - In Jev mode, when the classifier's off-topic verdict can only be set aside by Jev's own on-topic pick and Jev has failed, the refusal returns at once. It does not wait for the guard tier's fallback pick.
   - When Jev's injection pick already refuses, the refusal does not wait on the relevancy decision.
@@ -322,7 +323,7 @@ The trigger the owner's "Merge, named" set: once the golden run held (102 of 150
 
 #### R-07: Every Jev reply that reached the provider is charged inside its ceiling, and the log says what was charged (RA01, RJ04, RJ05)
 
-- Builder: C. Answer path: yes, since a charge counts against the cost caps. Status: todo.
+- Builder: C. Answer path: yes, since a charge counts against the cost caps. Status: in-review.
 - Acceptance:
   - A reply whose cost or confidence is an integer too large for a float, and a 200 reply whose body is empty or not JSON, are charged at `MAX_JEV_COST_USD` at every charge site.
   - The log line names the amount actually charged.
@@ -330,7 +331,7 @@ The trigger the owner's "Merge, named" set: once the golden run held (102 of 150
 
 #### R-08: The documents say what the code does (RJ06, RJ07, RJ10)
 
-- Builder: C. Answer path: no. Status: todo.
+- Builder: C. Answer path: no. Status: in-review.
 - Acceptance:
   - The comments and docstrings that still say an unusable reply is charged "its reported cost" say it is charged within the ceiling.
   - The `DecisionRecord` docstring's claim about `agreed` holds when Jev made no pick.
@@ -340,7 +341,7 @@ The trigger the owner's "Merge, named" set: once the golden run held (102 of 150
 
 #### R-09: A graph search that cannot finish gives up after 30 seconds, not 90 (card 45)
 
-- Builder: C, added to its brief at the owner's decision "Back to 30 seconds" (`DECISIONS.md`, 2026-09-26). Answer path: yes. Status: todo.
+- Builder: C, added to its brief at the owner's decision "Back to 30 seconds" (`DECISIONS.md`, 2026-09-26). Answer path: yes. Status: in-review.
 - Acceptance:
   - `CYPHER_QUERY_TIMEOUT_SECONDS` is 30, as the tool-call budget rule and the specification say.
   - A graph search that used to run to 90 s and then error stops at 30 s, so the person waits about a minute less for the refusal or the rest of the answer.
@@ -366,6 +367,13 @@ The trigger the owner's "Merge, named" set: once the golden run held (102 of 150
   - The phase holds its floor and stays on develop.
 - 2026-09-26 21:02: builder C dispatched for R-05 to R-08 from a5c89bb, in the worktree `.claude/worktrees/followup-c`; R-09 added to its brief minutes later. The product reviewer dispatched against develop at c0bf50b.
 - 2026-09-26 21:16: the product reviewer returned F-8.6-P01 to P12 (Findings). The golden run is not blocked, 102 of 150, but answered well is 1 of the fixed ten. The summary was replaced by a bare record list on 42 of 102 answered runs, against 30 at the floor (P01, undiagnosed). A diagnosis of P01 is folded into the answer speed diagnosis for card 50, because the speed gain may come from the same cause (P11).
+- 2026-09-26 22:38: builder C finished R-05 to R-09 on `feat/8.6f-c` (report `testing/Developer/reports/2026-09-26_phase_8.6_reland/builder_C.md`). One file outside its fence: `tests/system_03_search_agent/harness/test_jev_client.py`, one pinned value that R-07's clamp makes $0.01 instead of $0, in its own commit a73f89f. Accepted by the lead, the same shape as builder B's accepted change. What the builder left outside its fence, for the reviewers:
+  - "charged its reported cost" still stands in `decide.py` and `sentence_check.py`.
+  - 90 s still stands in two visualizations and an `export/traversal.py` comment.
+  - R-06 refuses as injection, not off topic, when Jev's relevancy failed and the guard fallback later says off topic. Still refused.
+  - The acceptance's "at once" is 3.76 s, Jev's own bound, because nothing signals a Jev failure earlier.
+- 2026-09-26 22:45: merged into `phase/8.6-followup` as 3b57b2c. Gates: `ruff check` clean, `isort` clean, `check_doc_drift --check` clean, `gate04_unit_suite.sh` 6224 passed, 143 skipped, 24 deselected, 1 xfailed. R-05 to R-09 set to in-review.
+- 2026-09-26 22:40: the answer speed diagnosis found P01 is not the speed gain. Withdrawn and kept summaries take the same time, and Jev rejects sentences the old judge accepted, mostly rightly (`testing/Developer/reports/2026-09-26_answer_speed/report.md`, "P01"). The writer's input is phase 8.9's scope.
 
 ## Findings
 
