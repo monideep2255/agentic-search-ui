@@ -41,14 +41,18 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from email.utils import format_datetime
 from typing import Any
+from unittest.mock import AsyncMock
 
 import httpx
 import litellm
 import pytest
 
+from system_03_search_agent.contracts.events import DecisionRecord
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import decide as decide_module
 from system_03_search_agent.harness import harness as harness_module
+from system_03_search_agent.harness import jev_client as jev_client_module
 from system_03_search_agent.harness.harness import HarnessCallError
 from tests.system_03_search_agent.model_stub import (
     COMPLIANT_GUARD_CLASSIFICATION,
@@ -399,6 +403,211 @@ async def test_with_jev_a_classifier_that_never_answers_is_never_an_admission(
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
     assert result.get("step_error") == _STEP_ERROR
     assert _guard(events) is None
+
+
+# ---------------------------------------------------------------------------
+# R-06: a refusal only Jev's own pick could change is not held for the guard
+# tier's fallback.
+# ---------------------------------------------------------------------------
+
+
+def test_jevs_window_covers_decides_own_wait_for_jev() -> None:
+    """If `decide()` ever waited longer for Jev than this window, a late
+    Jev pick could be cut off here and a refusal made where it set one
+    aside before. This keeps the two in step."""
+    assert graph_module._JEV_OWN_PICK_WINDOW_S > decide_module._JEV_WAIT_S
+    assert graph_module._JEV_OWN_PICK_WINDOW_S < graph_module.budget_for_step("guardrail", "lookup")
+
+
+def _relevancy(
+    monkeypatch: pytest.MonkeyPatch, *, after_s: float, pick: str, by: str
+) -> list[str]:
+    """Stub `decide()` for `guardrail.relevancy`: a record after `after_s`,
+    Jev's own pick (`by` "jev") or the guard tier's after Jev failed."""
+    asked: list[str] = []
+
+    async def _decide(
+        harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any
+    ) -> DecisionRecord:
+        asked.append(point)
+        await asyncio.sleep(after_s)
+        if by == "jev":
+            return DecisionRecord(
+                name=point, options=list(options), chosen=pick, decided_by="jev",
+                jev_choice=pick, jev_confidence=0.88, jev_latency_ms=140,
+            )
+        return DecisionRecord(
+            name=point, options=list(options), chosen=pick, decided_by="guard",
+            guard_choice=pick, fallback_reason="timeout",
+        )
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    return asked
+
+
+def _jev_injection(monkeypatch: pytest.MonkeyPatch, pick: str) -> None:
+    from system_03_search_agent.harness.jev_client import JevResult
+
+    other = "not_injection" if pick == "injection" else "injection"
+
+    async def _call_jev(**_kwargs: Any) -> Any:
+        await asyncio.sleep(0.05)
+        return JevResult(
+            resolved_model="jev-test", choice=pick, confidence=0.7,
+            probabilities={pick: 0.85, other: 0.15},
+            input_tokens=1, output_tokens=1, cost_usd=0.00002, latency_ms=50,
+        )
+
+    monkeypatch.setattr(graph_module, "call_jev", _call_jev)
+
+
+_FAST_WINDOW_S = 0.4
+_SLOW_FALLBACK_S = 3.0
+
+
+def _fast_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Jev's window shrunk so the arms run fast; the step budget stays real."""
+    monkeypatch.setattr(graph_module, "_JEV_OWN_PICK_WINDOW_S", _FAST_WINDOW_S)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fallback_pick", ["on_topic", "off_topic"])
+async def test_with_jev_failing_an_off_topic_refusal_is_not_held_for_the_fallback(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None, fallback_pick: str
+) -> None:
+    """RJ03: the classifier says off topic at once and Jev's relevancy pick
+    fails, so only the guard tier's fallback is left, and its pick never
+    sets the refusal aside. The refusal comes at the end of Jev's window,
+    not after the fallback, and it is the same off-topic refusal.
+
+    MUTATION PROOF: reading the R-03 branch against `step_deadline` again
+    turns this red on the elapsed time.
+    """
+    _fast_window(monkeypatch)
+    _classifier(monkeypatch, _OFF_TOPIC)
+    _jev_injection(monkeypatch, "not_injection")
+    _relevancy(monkeypatch, after_s=_SLOW_FALLBACK_S, pick=fallback_pick, by="guard")
+
+    started = time.monotonic()
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    elapsed = time.monotonic() - started
+
+    guard = _guard(events)
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+    assert elapsed < _FAST_WINDOW_S + 0.4, elapsed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("pick", "by", "passed", "category"),
+    [
+        ("on_topic", "jev", True, "ok"),
+        ("off_topic", "jev", False, "off_topic"),
+        ("on_topic", "guard", False, "off_topic"),
+    ],
+    ids=["Jev's own on_topic sets it aside", "Jev's own off_topic", "a fast fallback never sets it aside"],
+)
+async def test_with_jev_a_pick_inside_the_window_decides_as_before(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None, pick: str, by: str, passed: bool, category: str
+) -> None:
+    _fast_window(monkeypatch)
+    _classifier(monkeypatch, _OFF_TOPIC)
+    _jev_injection(monkeypatch, "not_injection")
+    _relevancy(monkeypatch, after_s=0.1, pick=pick, by=by)
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    guard = _guard(events)
+    assert guard is not None and guard["passed"] is passed and guard["category"] == category
+
+
+@pytest.mark.asyncio
+async def test_with_jev_a_late_jev_pick_through_the_real_decide_still_sets_the_refusal_aside(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None
+) -> None:
+    """The window is not a guess about Jev's speed: through the REAL
+    `decide()` and the real constants, a Jev relevancy reply that comes back
+    just inside Jev's own 3-second bound is still read and still sets the
+    classifier's off-topic refusal aside, the tree-of-life admission R-03
+    made, and no guard fallback is asked."""
+    _classifier(monkeypatch, _OFF_TOPIC)
+    _jev_injection(monkeypatch, "not_injection")
+    fallback = AsyncMock(side_effect=AssertionError("the guard fallback is never asked"))
+    monkeypatch.setattr(decide_module, "_guard_fallback_pick", fallback)
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        key = next(iter(body["questions"]))
+        await asyncio.sleep(jev_client_module.JEV_TOTAL_TIMEOUT_S - 0.2)
+        return httpx.Response(
+            200,
+            json={
+                "model": "jev-test",
+                "answers": {key: {"choice": "on_topic", "confidence": 0.8,
+                                  "probabilities": {"on_topic": 0.9, "off_topic": 0.1}}},
+                "usage": {"input_tokens": 1, "output_tokens": 1, "cost": 0.00002},
+            },
+        )
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+    events, _, harness = await _run_guardrail(_TREE_OF_LIFE)
+    assert _guard(events) == {"passed": True, "category": "ok", "reason": None}
+    record = next(r for r in graph_module._done_decisions(harness) or [] if r.name == "guardrail.relevancy")
+    assert record.decided_by == "jev" and record.chosen == "on_topic"
+    fallback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_with_jev_an_injection_refusal_is_not_held_for_the_relevancy_fallback(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None
+) -> None:
+    """RJ09: the classifier admits, Jev calls the text injection, and Jev's
+    relevancy pick fails. The injection refusal comes at the end of Jev's
+    window, not after the guard tier's fallback."""
+    _fast_window(monkeypatch)
+    _classifier(monkeypatch, _ADMIT)
+    _jev_injection(monkeypatch, "injection")
+    _relevancy(monkeypatch, after_s=_SLOW_FALLBACK_S, pick="on_topic", by="guard")
+
+    started = time.monotonic()
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    elapsed = time.monotonic() - started
+
+    guard = _guard(events)
+    assert guard is not None and guard["passed"] is False and guard["category"] == "injection"
+    assert elapsed < _FAST_WINDOW_S + 0.4, elapsed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("pick", "category"),
+    [("off_topic", "off_topic"), ("on_topic", "injection")],
+)
+async def test_with_jev_an_injection_refusal_keeps_the_category_jevs_own_relevancy_gives(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None, pick: str, category: str
+) -> None:
+    """Inside Jev's window its own relevancy pick decides the category, as
+    before: off topic when it says so, injection otherwise."""
+    _fast_window(monkeypatch)
+    _classifier(monkeypatch, _ADMIT)
+    _jev_injection(monkeypatch, "injection")
+    _relevancy(monkeypatch, after_s=0.1, pick=pick, by="jev")
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    guard = _guard(events)
+    assert guard is not None and guard["passed"] is False and guard["category"] == category
+
+
+@pytest.mark.asyncio
+async def test_with_the_default_provider_the_window_changes_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Production's setting: the guard tier's relevancy pick is the only
+    one, and it is waited for within the step's budget exactly as before,
+    past any Jev window."""
+    _fast_window(monkeypatch)
+    _classifier(monkeypatch, _ADMIT)
+    asked = _relevancy(monkeypatch, after_s=_FAST_WINDOW_S + 0.4, pick="off_topic", by="guard")
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    guard = _guard(events)
+    assert asked == ["guardrail.relevancy"]
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
 
 
 def test_the_stub_classifier_replies_parse() -> None:
