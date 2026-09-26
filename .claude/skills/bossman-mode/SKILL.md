@@ -118,6 +118,11 @@ Why these tiers, one line each:
 - Adversary: it found criticals in nearly every phase it ran, including the UI phases.
 - Product reviewer: it does the owner's kind of judgement, so it gets the strong tier; a capture is a script, so the model only judges.
 
+Two more lines on why the judge and the adversary kept depth and high when most roles moved down on 2026-08-02:
+
+- Reasoning effort measurably changed neither the pass rate nor the citations on a bounded lookup task.
+- It has not been measured against a review role's job, which is finding what a prior pass missed.
+
 Two notes on the tiers:
 
 - These are build-time capability tiers, assigned to the agents that write System 3 itself. The product's own guard, plan and synth tiers route models per user query at serve time. Both are called tiers and they name different things.

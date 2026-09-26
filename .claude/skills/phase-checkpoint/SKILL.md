@@ -234,7 +234,7 @@ Before the exit checklist, verify the structure of every document this checkpoin
 
 ### Step 7: the two checks (all modes)
 
-- `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
+- `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, a "Last updated" line older than a date in its own body, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
 - `python3 tracker/check_living_docs.py --shape`: every registered anchor exists.
 
 A nonzero exit from either blocks the checkpoint: fix the document the script names, then rerun. Never declare the checkpoint done on a failing or unrun check, and never edit a checker so it passes.
@@ -265,7 +265,7 @@ Before declaring the checkpoint done, verify:
 - [ ] UI-fix-loop mode: the done file's session history has a table for this session, one row per item touched, and no `testing/Shipped_<date>.md` was created.
 - [ ] UI-fix-loop mode: every item whose state changed says the same thing in the places that carry it: its card's column, its detail section, and its query in `testing/Test_queries_and_workflows.md`. Measured 2026-09-24: seven statuses had gone stale in the items' own detail because only a derived summary was updated.
 - [ ] UI-fix-loop mode: `requirements/Plan.md` has a Revision history entry for the session, and its Phase 6 status row was NOT bumped to name a fix set.
-- [ ] `PROGRESS.md` refreshed: the sprint table has a row for the phase that just merged, "what works today" and "what does not work yet" reflect the current state, item 1 of "what is next" is genuinely next, and the known-problems table matches the open flags on `tracker/BOARD.md`. Written in plain English with no internal finding identifiers in the body.
+- [ ] `PROGRESS.md` refreshed: the sprint table has a row for the phase that just merged, "what works today" and "what does not work yet" reflect the current state, item 1 of "what is next" is genuinely next, and the known-problems table matches the open findings in the ledger `tracker/phase_N.M.md` of each numbered phase, since `tracker/BOARD.md` holds open flags for build phases 1.0 through 6.2 only, frozen on 2026-09-25. Written in plain English with no internal finding identifiers in the body.
 - [ ] Planning-phase mode, phase-end: the phase synthesis is updated.
 - [ ] Build-phase mode: `requirements/Plan.md`'s status table and Revision history are both updated to name the merged build phase.
 - [ ] No existing content in DECISIONS.md or a session doc was deleted or rewritten. Every other document this checkpoint touched was corrected in place: a superseded section was deleted, not left below the new one.

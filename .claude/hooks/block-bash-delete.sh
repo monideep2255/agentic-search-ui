@@ -9,9 +9,13 @@
 #
 # rm and rmdir are matched as whole words, so "perform" or "platform" never
 # reads as rm, and a redirect to /dev/null is dropped before any check, since
-# discarding output deletes nothing. Approved item by item by the product owner
-# on 2026-09-25 (DECISIONS.md, "Four security-layer changes approved item by
-# item", item 1). tests/ci/test_claude_hooks.py pins every case both ways.
+# discarding output deletes nothing. Inside an execution wrapper, an escape
+# sequence that ends in a letter or digit (\n, \012, \x3b, \u000a, Ruby's \C-j)
+# also ends the word, because the wrapper decodes it into a newline or a
+# separator. Approved item by item by the product owner on 2026-09-25
+# (DECISIONS.md, "Four security-layer changes approved item by item", item 1),
+# on the condition that rm -rf stays blocked. tests/ci/test_claude_hooks.py
+# pins every case both ways.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/lib/_json.sh"
@@ -57,12 +61,18 @@ fi
 # 2) Destructive command smuggled inside an execution wrapper's quoted argument,
 #    e.g. ssh host "rm -rf /", python -c "os.system('rm -rf ~')", bash -c "...".
 #    Check 1 never sees these because the rm sits inside quotes; catch them by
-#    pairing a wrapper with a destructive word. rm is a whole word here too.
-#    rmdir, rmtree, dd if= and mkfs stay substring matches, as before, because
-#    a whole-word rmdir would let fs.rmdirSync(...) through. Any write into
-#    /dev other than /dev/null stays blocked inside a wrapper, as before.
+#    pairing a wrapper with a destructive word. rm is a whole word here too,
+#    and an escape sequence ending in a letter or digit right before it ends
+#    the word the way a separator would: os.system('true\nrm -rf ~'),
+#    $'true\x3brm -rf x' and Ruby's "true\C-jrm -rf x" each run rm as its own
+#    command once decoded. The guard cannot tell that from an escape before a
+#    word that ends in rm, such as "\nperform", so it blocks both and fails
+#    closed. rmdir, rmtree, dd if= and mkfs stay substring matches, as before,
+#    because a whole-word rmdir would let fs.rmdirSync(...) through. Any write
+#    into /dev other than /dev/null stays blocked inside a wrapper, as before.
 WRAPPER='(ssh[[:space:]]|python3?[[:space:]]+-c|perl[[:space:]]+-e|ruby[[:space:]]+-e|node[[:space:]]+-e|bash[[:space:]]+-c|sh[[:space:]]+-c|zsh[[:space:]]+-c|eval[[:space:]])'
-INSIDE="(^|[^[:alnum:]_])rm$WORD_END|rmdir|rmtree|dd[[:space:]]+if=|mkfs|$DEVICE_WRITE"
+ESCAPE='\\[[:alnum:]]+|\\[CM]-[[:alnum:]]'  # \n, \012, \x3b, \u000a; Ruby's \C-j
+INSIDE="(^|[^[:alnum:]_]|$ESCAPE)rm$WORD_END|rmdir|rmtree|dd[[:space:]]+if=|mkfs|$DEVICE_WRITE"
 if printf '%s' "$SCAN" | grep -qE "$WRAPPER" \
    && printf '%s' "$SCAN" | grep -qE "$INSIDE"; then
   echo 'Blocked: destructive command inside an execution wrapper (ssh/python -c/bash -c). Ask user first.' >&2

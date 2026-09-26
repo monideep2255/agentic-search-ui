@@ -116,7 +116,7 @@ For a phase with two or more parallel builder tasks:
 4. Hand each builder exactly what "What a worker is handed" lists, and nothing else.
 5. Record each builder's base commit in the ledger's History as the builder reports it, and append its row to the Budget's dispatch table.
 6. Teammates claim tickets and set their own ticket to `in-progress` the moment they pick it up, not when they finish. A ticket being worked while still reading `todo` is a lie about the state of the phase.
-7. The lead monitors the ledger and messages stuck teammates. A stuck teammate gets a clearer prompt or a fresh start; fresh starts combat drift. A message that changes a worker's scope binds; a worker checks any factual claim in it against the code before acting on it.
+7. The lead monitors the ledger and messages stuck teammates. A stuck teammate gets a clearer prompt or a fresh start; fresh starts combat drift.
 8. A builder that finishes sets its ticket to `in-review`, never to `done`.
 9. When all tickets are `in-review`, disband the team and tear down the worktrees.
 
@@ -223,9 +223,6 @@ read its output.
 
 Numbers in your report are pasted from the command's output, never retyped.
 
-If the lead sends you a message mid-run, it can change your scope; check any
-factual claim in it against the code before acting on it.
-
 A failure that cost you more than five minutes is a LEARNINGS.md row before
 you continue, with what you tried and what fixed it. If your brief forbids
 writing anywhere but one path, write the row's text there and say it is a
@@ -246,7 +243,6 @@ Four lines of that template were added on 2026-09-25 from the night's record (bu
 - The base step: worktrees were cut from develop's tip while the phase branch stood one commit ahead (observation 2).
 - The process line: a bench worker twice ended its turn while its own background run was still going, so no results file was written; the lead watched the process and resumed the worker by message (observation 1).
 - The numbers line: an analyst's summary said two golden runs started 27 minutes apart when its own table showed 3 hours 15 minutes (observation 7).
-- The mid-run message line: a worker declined a scope change from its lead as untrusted while, in the same message, correctly catching the lead's wrong guess about a failure's cause. Both halves matter: the lead's message binds, and its claims are checked.
 - The learnings line: across the fix loop the learnings rows clustered on checkpoint days, five of nine working days with none, while the skill said to write at the moment of failure.
 
 For teammates, the task in the shared task list carries the same fields:
@@ -254,7 +250,7 @@ For teammates, the task in the shared task list carries the same fields:
 - The base step, the ticket and the fence.
 - The files to read and the learnings rows.
 - The constraints and the test files to write.
-- The instruction never to dispatch, and the four worker lines above.
+- The instruction never to dispatch, and the three worker lines above.
 - The instruction to mark the task complete when done.
 
 Two rules govern context across the team:

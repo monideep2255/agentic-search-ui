@@ -10,6 +10,9 @@ the build board can settle:
   - Table of contents: the list under "## Table of contents" matches the
     file's `##` headings, in body order.
   - Duplicate phase headings: no two `##` headings name the same build phase.
+  - Stale "Last updated" lines: a file's first "Last updated:" date is not
+    older than the latest date written anywhere else in the file, outside
+    fenced code.
   - The two append-only tables, DECISIONS.md and LEARNINGS.md: no blank line
     inside the table (markdown ends a table there), every dated row has the
     header's column count, and every row carries its `<details>` wrappers.
@@ -18,13 +21,12 @@ the build board can settle:
   - "Next" references: no document calls a build phase "next" when
     `tracker/BOARD.md` marks it done.
 
-WHAT IT STOPPED CHECKING ON 2026-09-25: COUNTS AND DATES
+WHAT IT STOPPED CHECKING ON 2026-09-25: COUNTS
 
 Until 2026-09-25 this script computed the test, decision, learning, premise
 gate and Playwright counts from source, running the whole pytest collection
 and the vitest suite to do it, and failed whenever a document stated a stale
-copy. It also failed when a "Last updated:" line predated a date in its own
-body. Both made the check go red because time passed rather than because a
+copy. That made the check go red because time passed rather than because a
 document was wrong, and the fix each time was an edit that only moved a
 number or a date: 87 of the 92 commits to CLAUDE.md in the two weeks before
 changed nothing else (`testing/Developer/reports/2026-09-25_harness_review/
@@ -35,6 +37,12 @@ check stopped comparing them.
 
 The counts are still computed, on demand, by `--counts`, which prints them
 and checks no document against them.
+
+The "Last updated:" check was removed with the counts on 2026-09-25 and
+restored on 2026-09-26, because review item D1 keeps stale dates among the
+structural checks. It compares a file with itself, never with the calendar:
+an edit that adds a dated line without moving the file's "Last updated:"
+line fails it, and time passing never does.
 
 NEVER A SILENT OK
 
@@ -108,8 +116,10 @@ a certification that the documentation is correct. Per this repository's own
     count and this script will not compare it with anything. The documents
     that used to carry counts (CLAUDE.md, AGENTS.md, requirements/Plan.md)
     point at `--counts` instead.
-  - No date. A "Last updated:" line older than its own body is not a
-    finding, and nothing requires any document to carry today's date.
+  - No date against the calendar. Nothing requires any document to carry
+    today's date or a "Last updated:" line at all. The one date check reads
+    a file's "Last updated:" line against the dates in the same file, and a
+    future date written in the body, such as a planned one, counts as later.
   - No prose. A narrative claim, an architectural description, or a "why"
     explanation can be entirely wrong and this script will not notice,
     because it never reads for meaning, only for the anchored patterns above.
@@ -1047,6 +1057,38 @@ def check_duplicate_phase_headings(rel: str, lines: list[str], mask: list[bool])
     return findings
 
 
+LAST_UPDATED_RE = re.compile(r"^Last updated:\s*(\d{4}-\d{2}-\d{2})", re.IGNORECASE)
+DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
+
+
+def check_last_updated(rel: str, lines: list[str], mask: list[bool]) -> list[Finding]:
+    findings: list[Finding] = []
+    lu_idx = None
+    lu_date = None
+    for i, line in enumerate(lines):
+        if mask[i]:
+            continue
+        m = LAST_UPDATED_RE.match(line.strip())
+        if m:
+            lu_idx, lu_date = i, m.group(1)
+            break
+    if lu_date is None:
+        return findings
+
+    body_dates: list[str] = []
+    for i, line in enumerate(lines):
+        if i == lu_idx or mask[i]:
+            continue
+        body_dates.extend(DATE_RE.findall(line))
+
+    if body_dates and max(body_dates) > lu_date:
+        findings.append(Finding(
+            "structural", rel, lu_idx + 1,
+            f"'Last updated: {lu_date}' predates a later date in the body ({max(body_dates)})",
+        ))
+    return findings
+
+
 NEXT_PHASE_RE = re.compile(
     r"\bnext(?:\s+up)?\s*:?\s*build phase\s+(\d+\.\d+)\b"
     r"|\bbuild phase\s+(\d+\.\d+)\b[^.\n]{0,40}?\(?\s*next\b",
@@ -1094,11 +1136,13 @@ def scan_structural(files: list[Path], facts: dict[str, Fact]) -> list[Finding]:
 
         findings.extend(check_toc(rel, lines, mask))
         findings.extend(check_duplicate_phase_headings(rel, lines, mask))
+        findings.extend(check_last_updated(rel, lines, mask))
         findings.extend(check_append_only_table(rel, lines, mask))
         # "next phase" is a currency claim; a dated session/meeting capture
         # narrating what was next AT THE TIME is not one. The TOC, duplicate
-        # heading, and append-only table checks are structural hygiene that
-        # still applies to a capture file, so only this one is skipped.
+        # heading, last-updated staleness and append-only table checks are
+        # structural hygiene that still applies to a capture file, so only
+        # this one is skipped.
         if not is_historical_file(rel):
             findings.extend(check_next_phase(rel, lines, headings, phase_statuses, mask))
 
