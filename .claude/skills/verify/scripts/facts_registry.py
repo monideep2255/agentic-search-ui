@@ -170,15 +170,19 @@ SURFACE_NAMES: dict[str, tuple[str, ...]] = {
     "cli": ("command line", "Command line", "the export"),
 }
 
-# How the Integrations page names the fields every citation carries, mapped
-# to `CitationPayload`'s field names. A phrase mapped to a field the payload
-# does not have fails.
-CITATION_FIELD_NAMES: dict[str, str] = {
-    "the layer": "layer",
-    "the tool": "tool",
-    "evidence type": "evidence_kind",
-    "confidence": "assertion_confidence",
-    "licence": "license",
+# How the Integrations page names the fields every citation carries: for
+# each field, the whole phrases that name it. An item of the sentence maps to
+# a field only when it IS one of these phrases, normalised for case and
+# spacing, never when it merely contains a key word, so "the reviewer who
+# approved its confidence" names no field (PR118-V02). "tool" is not a
+# `CitationPayload` field; its phrase is here so that sentence reads as the
+# FAIL it is, not as an unknown item. An item in no tuple is an ERROR.
+CITATION_FIELD_PHRASES: dict[str, tuple[str, ...]] = {
+    "layer": ("the layer that produced it",),
+    "tool": ("the tool that fetched it",),
+    "evidence_kind": ("its evidence type",),
+    "assertion_confidence": ("its confidence",),
+    "license": ("its licence", "its license"),
 }
 
 # The answer mode labels a sentence may name. The labels themselves come
@@ -255,17 +259,23 @@ def layer_calls(layer: int):
 
 
 def citation_fields_named(match: re.Match[str]) -> frozenset[str]:
-    """Every item the sentence lists must map to a field name, or to a
-    phrase the registry knows is not a field. An item the registry has
-    never seen cannot be judged, so it raises, which reports an ERROR
-    rather than letting the rest of the list pass (PR118-03)."""
+    """Every item the sentence lists must be, whole, one of the phrases in
+    `CITATION_FIELD_PHRASES`. An item the registry has never seen cannot be
+    judged, so it raises, which reports an ERROR rather than letting the rest
+    of the list pass (PR118-03). Matching is by the whole phrase, never by a
+    key word inside the item (PR118-V02)."""
+    by_phrase = {
+        " ".join(phrase.lower().split()): field
+        for field, phrases in CITATION_FIELD_PHRASES.items()
+        for phrase in phrases
+    }
     items = words_list(re.sub(r"^with\s+", "", match.group(1)))
     named = set()
     for item in items:
-        fields = [v for k, v in CITATION_FIELD_NAMES.items() if k in item]
-        if not fields:
-            raise ValueError(f"the item {item!r} maps to no CitationPayload field in the registry")
-        named.update(fields)
+        field = by_phrase.get(" ".join(item.lower().split()))
+        if field is None:
+            raise ValueError(f"the item {item!r} is no phrase CITATION_FIELD_PHRASES names")
+        named.add(field)
     return frozenset(named)
 
 
