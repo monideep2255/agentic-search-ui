@@ -450,7 +450,6 @@ import asyncio
 import dataclasses
 import json
 import logging
-import os
 import re
 import secrets
 import time
@@ -510,7 +509,7 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
-from system_03_search_agent.harness.decide import decide
+from system_03_search_agent.harness.decide import decide, jev_decides
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -1231,9 +1230,9 @@ def _usable_choice(record: DecisionRecord | None) -> str | None:
 
 
 def _jev_decides() -> bool:
-    """Whether the classifier seam is switched to Jev, read exactly as
-    `harness.decide.decide` reads it (`CLASSIFIER_PROVIDER`, code default
-    "guard").
+    """Whether the classifier seam is switched to Jev: `harness.decide.
+    jev_decides`, the one reading of `CLASSIFIER_PROVIDER` that `decide()`
+    and the reworded-sentence check share, so the three can never disagree.
 
     Build phase 8.6, T-8.6-04: the one place the loop itself asks. With the
     provider at its default, the guard tier decides every point alone, and
@@ -1245,7 +1244,7 @@ def _jev_decides() -> bool:
     production. So `guardrail.injection` goes through the seam only when
     Jev is the classifier.
     """
-    return os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower() == "jev"
+    return jev_decides()
 
 
 def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
