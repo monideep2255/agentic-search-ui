@@ -154,7 +154,7 @@ The decisions it makes on develop:
 - Whether a question asks for papers (`plan.literature`), replacing a word list.
 - Whether a question asks for recent work without saying how recent (`think.recent_years`), which asks "How far back should I search?".
 - Which resource to pull (`plan.resource`) is NOT wired: the plan makes no runtime choice between tools today. The closed option list it would use is `tools/catalogue.py`.
-- Whether each reworded answer sentence says anything its quoted record words do not (the Write step's sentence check, build phase 8.6). Built in `synthesis/sentence_check.py`'s `check_reworded_sentences`: one call per answer carrying one yes-or-no question per sentence, which the endpoint accepts (thirty questions measured at 340 to 450 ms for $0.00033), with the guard tier only when Jev fails. The loop starts using it when `core/graph.py` calls that function, a one-hunk patch in builder K's report, which another builder's file fence held back; until then the guard tier makes this check.
+- Whether each reworded answer sentence says anything its quoted record words do not (the Write step's sentence check, build phase 8.6). Built in `synthesis/sentence_check.py`'s `check_reworded_sentences`: one call per answer carrying one yes-or-no question per sentence, which the endpoint accepts (thirty questions measured at 343 to 611 ms for $0.00033), with the guard tier only when Jev fails. The loop starts using it when `core/graph.py` calls that function, a one-hunk patch in builder K's report, which another builder's file fence held back; until then the guard tier makes this check.
 
 How each decision is made, since build phase 8.6 (DECISIONS.md 2026-09-25, "Jev decides; the guard tier (DeepSeek) is Jev's fallback on failure only"):
 
@@ -172,6 +172,15 @@ flowchart LR
     F -->|picks| G[Use the guard's choice]
     F -->|no pick| O[Use the fail-open option]
 ```
+
+How the two models are compared now, off the live path (build phase 8.6):
+
+- `testing/Developer/scripts/compare_classifiers.py` takes golden question ids and runs the loop's own Guardrail, Think and Plan steps for each, never Act or Write.
+- Every decision the loop asks there goes to both Jev and the guard tier at once, through `compare_models` in `harness/decide.py`; the loop carries on with the pick the live seam would use. No live path calls either.
+- It writes an agreement table per decision point and every disagreement with Jev's confidence, and it cannot spend past its budget, which it enforces as a per-question cost cap.
+- The committed run, 10 golden questions and 18 decisions: all 18 agreed, Jev's median time per decision was 266 to 314 ms against the guard tier's 947 to 1334 ms, and the run cost $0.0097 (`testing/Developer/reports/2026-09-26_phase_8.6/classifier_comparison.md`).
+- A first run minutes earlier disagreed once, on the one-word question "the": the guard tier said on topic and Jev said off topic at 0.84. In the committed run the guard tier changed its answer and Jev did not.
+- It does not compare the Write step's sentence check, which needs a full answer, and no golden question reaches the ask-back decision, since the only two short ones are refused at the guardrail first.
 
 ## Where to change a model
 

@@ -43,8 +43,9 @@ the cost cap, or anything unexpected. The reason is recorded on the
 build phase 8.2 design asked the guard tier every decision concurrently and
 waited up to a one-second grace for its pick, only to record it, which
 doubled the classifier calls on every question for a table that read "not
-ready" in most rows. The comparison of the two models moves off the live
-path, to a script run over the golden questions (ticket T-8.6-03).
+ready" in most rows. The comparison of the two models now runs offline,
+through `compare_models` at the end of this module, which no live path calls;
+its one caller is `testing/Developer/scripts/compare_classifiers.py`.
 
 `ai-security-standards.md`'s prompt-injection defense applies directly
 here: `state` is bounded (see `_STATE_MAX_CHARS`) and is the only free
@@ -59,7 +60,9 @@ import asyncio
 import logging
 import os
 import re
+import time
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Final
 
 from system_03_search_agent.contracts.events import DecisionRecord
@@ -291,7 +294,6 @@ async def _run_jev_pick(
     return result
 
 
-
 def jev_decides() -> bool:
     """Whether Jev is the classifier: `CLASSIFIER_PROVIDER=jev`, read on
     every call so a deployment's setting is the only switch.
@@ -350,7 +352,8 @@ async def _guard_fallback_pick(
     instructions: str | None,
     criteria: Mapping[str, str] | None,
 ) -> str | None:
-    """The guard tier's pick once Jev has failed, or None.
+    """The guard tier's pick, or None. `decide()` asks it only once Jev has
+    failed; `compare_models` asks it beside Jev, offline.
 
     `_run_guard_pick` already returns None on the cost cap, a timeout of its
     own step budget and a failed call; the outer wait and the broad catch
@@ -453,6 +456,41 @@ async def decide(
         harness, trace_id, point, bounded_state, options, model, api_key, instructions, criteria
     )
     if isinstance(jev, JevResult):
+        return _jev_mode_record(point, options, jev, None, fallback_default)
+
+    logger.warning(
+        "Jev made no pick for decision %s (trace %s, %s); asking the guard tier",
+        point,
+        trace_id,
+        jev,
+    )
+    guard_choice = await _guard_fallback_pick(
+        harness, trace_id, bounded_state, options, instructions, criteria
+    )
+    return _jev_mode_record(point, options, jev, guard_choice, fallback_default)
+
+
+def _jev_mode_record(
+    point: str,
+    options: Sequence[str],
+    jev: JevResult | str,
+    guard_choice: str | None,
+    fallback_default: str,
+) -> DecisionRecord:
+    """The record `decide()` returns in Jev mode, built in one place so the
+    offline comparison hands the loop exactly the record the live seam would.
+
+    - Jev made a pick: it decides, and no guard pick is recorded, since the
+      live seam never asks the guard then.
+    - Jev failed (`jev` is its reason) and the guard made a pick: the guard
+      decides and the reason is recorded.
+    - Neither made a pick (F-8.2-A04, F-8.2-J13): the record names no pick
+      nobody made. Both picks stay None, the reason starts with
+      "no_usable_pick" and keeps Jev's own failure after the colon, and
+      `chosen` is the caller's fail-open default, which is what the loop
+      actually does.
+    """
+    if isinstance(jev, JevResult):
         return DecisionRecord(
             name=point,
             options=list(options),
@@ -462,17 +500,6 @@ async def decide(
             jev_confidence=jev.confidence,
             jev_latency_ms=jev.latency_ms,
         )
-
-    reason = jev
-    logger.warning(
-        "Jev made no pick for decision %s (trace %s, %s); asking the guard tier",
-        point,
-        trace_id,
-        reason,
-    )
-    guard_choice = await _guard_fallback_pick(
-        harness, trace_id, bounded_state, options, instructions, criteria
-    )
     if guard_choice is not None:
         return DecisionRecord(
             name=point,
@@ -480,17 +507,134 @@ async def decide(
             chosen=guard_choice,
             decided_by="guard",
             guard_choice=guard_choice,
-            fallback_reason=reason,
+            fallback_reason=jev,
         )
-    # Neither model made a pick (F-8.2-A04, F-8.2-J13). The record says so,
-    # and names no pick nobody made: both picks stay None, the reason starts
-    # with "no_usable_pick" and keeps Jev's own failure after the colon, and
-    # `chosen` is the caller's fail-open default, which is what the loop
-    # actually does.
     return DecisionRecord(
         name=point,
         options=list(options),
         chosen=fallback_default,
         decided_by="guard",
-        fallback_reason=f"{NO_USABLE_PICK}:{reason}",
+        fallback_reason=f"{NO_USABLE_PICK}:{jev}",
+    )
+
+
+# ---------------------------------------------------------------------------
+# The offline comparison (build phase 8.6, T-8.6-03). No live path calls
+# anything below; `tests/system_03_search_agent/harness/test_decide.py`
+# asserts that nothing else under `src/` names `compare_models`.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ModelComparison:
+    """Jev's and the guard tier's answers to one decision, asked side by side.
+
+    `jev` is Jev's validated result, or the reason it made no pick, exactly
+    as `decide()` sees it. Built only by `compare_models`.
+    """
+
+    point: str
+    options: tuple[str, ...]
+    jev: JevResult | str
+    guard_choice: str | None
+    guard_latency_ms: int
+
+    @property
+    def jev_choice(self) -> str | None:
+        return self.jev.choice if isinstance(self.jev, JevResult) else None
+
+    @property
+    def jev_confidence(self) -> float | None:
+        return self.jev.confidence if isinstance(self.jev, JevResult) else None
+
+    @property
+    def jev_probabilities(self) -> dict[str, float] | None:
+        return dict(self.jev.probabilities) if isinstance(self.jev, JevResult) else None
+
+    @property
+    def jev_latency_ms(self) -> int | None:
+        return self.jev.latency_ms if isinstance(self.jev, JevResult) else None
+
+    @property
+    def jev_failure(self) -> str | None:
+        return None if isinstance(self.jev, JevResult) else self.jev
+
+    @property
+    def agreed(self) -> bool | None:
+        """True or False only when both models made a pick."""
+        if self.jev_choice is None or self.guard_choice is None:
+            return None
+        return self.jev_choice == self.guard_choice
+
+    def live_record(self, default: str | None = None) -> DecisionRecord:
+        """The record Jev-mode `decide()` returns for these picks, so a loop
+        run under the comparison takes the path it takes on develop.
+
+        Raises:
+            ValueError: if `default` is not one of the offered options.
+        """
+        if default is not None and default not in self.options:
+            raise ValueError(
+                f"live_record() for {self.point!r}: default {default!r} is not an offered option"
+            )
+        fallback_default = default if default is not None else self.options[0]
+        guard_choice = None if isinstance(self.jev, JevResult) else self.guard_choice
+        return _jev_mode_record(self.point, self.options, self.jev, guard_choice, fallback_default)
+
+
+async def compare_models(
+    harness: Harness,
+    trace_id: str,
+    point: str,
+    state: str,
+    options: Sequence[str],
+    *,
+    instructions: str | None = None,
+    criteria: Mapping[str, str] | None = None,
+) -> ModelComparison:
+    """OFFLINE ONLY: ask Jev and the guard tier the same decision at once.
+
+    Its one caller is `testing/Developer/scripts/compare_classifiers.py`.
+    Both models get exactly what `decide()` gives them: the same bounded
+    state, the same description, the same cost-cap checks, Jev's 3-second
+    total bound and the guard's own budget. Both are asked whatever
+    `CLASSIFIER_PROVIDER` says. A model's failure is recorded, never
+    raised: Jev's as its reason, the guard's as no pick.
+
+    Raises:
+        ValueError: as `decide()` does, for empty options or a description
+            that does not fit them.
+    """
+    if not options:
+        raise ValueError(f"compare_models() for {point!r} was given an empty options list")
+    _check_description(point, options, instructions, criteria)
+    bounded_state = state[:_STATE_MAX_CHARS]
+
+    async def _timed_guard_pick() -> tuple[str | None, int]:
+        started = time.monotonic()
+        choice = await _guard_fallback_pick(
+            harness, trace_id, bounded_state, options, instructions, criteria
+        )
+        return choice, int((time.monotonic() - started) * 1000)
+
+    jev, (guard_choice, guard_latency_ms) = await asyncio.gather(
+        _jev_attempt(
+            harness,
+            trace_id,
+            point,
+            bounded_state,
+            options,
+            resolve_jev_model(),
+            os.environ.get("OPENROUTER_API_KEY", ""),
+            instructions,
+            criteria,
+        ),
+        _timed_guard_pick(),
+    )
+    return ModelComparison(
+        point=point,
+        options=tuple(options),
+        jev=jev,
+        guard_choice=guard_choice,
+        guard_latency_ms=guard_latency_ms,
     )

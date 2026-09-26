@@ -84,7 +84,7 @@ T-8.6-02), pinned live on 2026-09-26 (report:
 K-02 to K-04). The endpoint takes any number of questions under
 `questions`, each with its own options, instructions and criteria, over
 one shared `state`, and answers each under its own key: thirty two-option
-questions came back in 340 to 450 ms for $0.00033. The endpoint has no
+questions came back in 343 to 611 ms for $0.00033. The endpoint has no
 `bool` question type (a `"type": "bool"` question is refused with HTTP 400
 naming `noul`, `choice` and `score`); a yes-or-no question is a `choice`
 between two options.
@@ -374,7 +374,7 @@ async def call_jev(
 # ---------------------------------------------------------------------------
 
 #: The most questions one batch call may carry: the sentence check's own
-#: `MAX_CANDIDATES`, and the size pinned live (thirty in 340 to 450 ms).
+#: `MAX_CANDIDATES`, and the size pinned live (thirty in 343 to 611 ms).
 MAX_BATCH_QUESTIONS = 30
 
 #: A ceiling on one question's code-authored text, the same bound

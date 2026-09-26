@@ -787,3 +787,123 @@ async def test_cancelling_a_decision_leaves_no_unretrieved_asyncio_error(
     gc.collect()
     await asyncio.sleep(0)
     assert not [r for r in caplog.records if "never retrieved" in r.getMessage()]
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6, T-8.6-03: the offline comparison. `compare_models` asks
+# both models side by side, and its `live_record` is the record Jev-mode
+# `decide()` returns, so a loop run under the comparison takes develop's path.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", [None, "guard", "jev"])
+async def test_compare_models_asks_both_whatever_the_provider(monkeypatch: pytest.MonkeyPatch, provider) -> None:
+    if provider is None:
+        monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    else:
+        monkeypatch.setenv("CLASSIFIER_PROVIDER", provider)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    _patch_cap(monkeypatch)
+    mock_guard = _patch_guard(monkeypatch, reply="not_relevant")
+    mock_jev = AsyncMock(return_value=_jev_result(choice="relevant", confidence=0.7))
+    monkeypatch.setattr(decide_module, "call_jev", mock_jev)
+
+    comparison = await decide_module.compare_models(
+        Harness(trace_id="c1"), "c1", "guardrail.relevancy", "x", _OPTIONS,
+        instructions=_INSTRUCTIONS, criteria=_CRITERIA,
+    )
+
+    mock_jev.assert_awaited_once()
+    assert mock_guard.call_count == 1
+    assert comparison.jev_choice == "relevant" and comparison.jev_confidence == pytest.approx(0.7)
+    assert comparison.jev_probabilities == {"relevant": 0.7, "not_relevant": pytest.approx(0.3)}
+    assert comparison.guard_choice == "not_relevant"
+    assert comparison.agreed is False and comparison.jev_failure is None
+    assert comparison.guard_latency_ms >= 0 and comparison.jev_latency_ms == 285
+    # Both got the same description and the same state.
+    assert mock_jev.await_args.kwargs["instructions"] == _INSTRUCTIONS
+    system = next(m["content"] for m in mock_guard.call_args.kwargs["messages"] if m["role"] == "system")
+    assert _INSTRUCTIONS in system
+
+
+@pytest.mark.asyncio
+async def test_compare_models_asks_the_two_at_the_same_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    _jev_mode(monkeypatch)
+    _patch_slow_guard(monkeypatch, delay_s=0.4, reply="relevant")
+
+    async def _slow_jev(**_kwargs: object) -> JevResult:
+        await asyncio.sleep(0.4)
+        return _jev_result(choice="relevant")
+
+    monkeypatch.setattr(decide_module, "call_jev", _slow_jev)
+    started = time.monotonic()
+    comparison = await decide_module.compare_models(Harness(trace_id="c2"), "c2", "guardrail.relevancy", "x", _OPTIONS)
+    elapsed = time.monotonic() - started
+    assert elapsed < 0.7, f"side by side, not one after the other: {elapsed}"
+    assert comparison.agreed is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("jev_side", "guard_reply", "default"),
+    [
+        ("answers", "not_relevant", None),
+        ("answers", "", "not_relevant"),
+        (JevCallError("down", reason="http_error"), "not_relevant", None),
+        (JevCallError("slow", reason="timeout"), "I cannot tell.", "not_relevant"),
+        (JevCallError("bad", reason="malformed_reply"), "I cannot tell.", None),
+    ],
+    ids=["jev picks", "jev picks, guard none", "jev fails, guard picks", "both fail, a default", "both fail"],
+)
+async def test_the_live_record_is_the_record_decide_returns(
+    monkeypatch: pytest.MonkeyPatch, jev_side, guard_reply: str, default: str | None
+) -> None:
+    """The script hands the loop `live_record(default)`; it must be exactly
+    what `decide()` returns in Jev mode for the same two model behaviours."""
+    _jev_mode(monkeypatch)
+    _patch_guard(monkeypatch, reply=guard_reply)
+    if jev_side == "answers":
+        monkeypatch.setattr(decide_module, "call_jev", AsyncMock(return_value=_jev_result(choice="relevant")))
+    else:
+        monkeypatch.setattr(decide_module, "call_jev", AsyncMock(side_effect=jev_side))
+
+    comparison = await decide_module.compare_models(Harness(trace_id="c3"), "c3", "guardrail.relevancy", "x", _OPTIONS)
+    live = await decide(Harness(trace_id="c4"), "c4", "guardrail.relevancy", "x", _OPTIONS, default=default)
+
+    assert comparison.live_record(default) == live
+
+
+def test_a_live_record_default_outside_the_options_is_refused() -> None:
+    comparison = decide_module.ModelComparison(
+        point="p", options=("a", "b"), jev="timeout", guard_choice=None, guard_latency_ms=0
+    )
+    with pytest.raises(ValueError, match="default"):
+        comparison.live_record("c")
+
+
+@pytest.mark.asyncio
+async def test_compare_models_refuses_what_decide_refuses() -> None:
+    with pytest.raises(ValueError, match="empty options"):
+        await decide_module.compare_models(Harness(trace_id="c5"), "c5", "p", "x", [])
+    with pytest.raises(ValueError, match="criteria must name exactly"):
+        await decide_module.compare_models(
+            Harness(trace_id="c6"), "c6", "p", "x", _OPTIONS, criteria={"relevant": "only one"}
+        )
+
+
+def test_no_live_path_names_the_offline_comparison() -> None:
+    """T-8.6-03's acceptance: the comparison runs offline only. Nothing under
+    `src/` but `decide.py` itself may name `compare_models`, `ModelComparison`
+    or the script that calls them."""
+    from pathlib import Path
+
+    src = Path(decide_module.__file__).resolve().parents[1]
+    assert src.name == "system_03_search_agent"
+    offenders = [
+        str(path.relative_to(src))
+        for path in src.rglob("*.py")
+        if path.name != "decide.py"
+        and any(name in path.read_text() for name in ("compare_models", "ModelComparison", "compare_classifiers"))
+    ]
+    assert offenders == []

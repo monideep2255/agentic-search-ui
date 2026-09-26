@@ -9,6 +9,7 @@ Tickets T-8.6-01, T-8.6-02 and T-8.6-03 (`tracker/phase_8.6.md`). Each finding i
 - [T-8.6-02](#t-86-02)
 - [T-8.6-03](#t-86-03)
 - [Tests and gates](#tests-and-gates)
+- [Follow-ups for the lead](#follow-ups-for-the-lead)
 - [Debugging guide rows for the lead](#debugging-guide-rows-for-the-lead)
 
 ## Findings
@@ -32,7 +33,7 @@ Tickets T-8.6-01, T-8.6-02 and T-8.6-03 (`tracker/phase_8.6.md`). Each finding i
 
   | Checker | Calls | Unfaithful sentences approved | Faithful sentences refused | Time, cost per call |
   | --- | --- | --- | --- | --- |
-  | Jev, one call, 30 two-option questions | 4 | 5 of 60, all "in children" rows, four at 0.51 to 0.54 and one at 0.79 | 0 of 60 | 340 to 450 ms, $0.00033 |
+  | Jev, one call, 30 two-option questions | 4 | 5 of 60, all "in children" rows, four at 0.51 to 0.54 and one at 0.79 | 0 of 60 | 343 to 611 ms over five calls, $0.00033 |
   | Guard tier today (deepseek/deepseek-v4-flash, today's exact prompt and parser) | 3 | 15 of 45: one call approved every item | 7 of 45: one call refused every hand-washing row | not timed, about $0.00007 |
 
   What the person reading an answer would notice:
@@ -60,7 +61,7 @@ What changed, `harness/decide.py` only; `decide()`'s signature is unchanged:
 - `CLASSIFIER_PROVIDER=jev`: Jev is asked alone, through `_jev_attempt`, inside the same outer net as before (`_JEV_WAIT_S`, Jev's 3-second total bound plus 0.5 s). A valid pick returns at once with `decided_by="jev"`, `guard_choice` None, `agreed` None, `fallback_reason` None and Jev's latency.
 - The guard tier is asked only after Jev failed, through `_guard_fallback_pick`, within its own 15-second step budget. The record names Jev's reason: `timeout`, `http_error`, `malformed_reply`, `invalid_option`, `cost_cap` or `unexpected_error`. Both failing still records `no_usable_pick:<reason>` with the caller's fail-open default, exactly as in build phase 8.2.
 - Removed: the concurrent guard task, `GUARD_COMPARISON_GRACE_S`, `GUARD_NOT_READY` and the three task-reading helpers. `asyncio.wait_for` replaces the two tasks, so a caller that cancels a decision cancels Jev's call with it and nothing is left running.
-- `CLASSIFIER_PROVIDER=guard`, the code default: the code path is byte for byte the one before this ticket.
+- `CLASSIFIER_PROVIDER=guard`, the code default: the guard-only branch is unchanged, and so are its tests. T-8.6-02 later moved its one condition into `jev_decides()`, the same expression.
 - One `logger.warning` per Jev failure names the decision point, the trace and the reason, never the state.
 
 Measured wall time of `decide()`, `pytest --durations=0` on the tests in `tests/system_03_search_agent/harness/test_decide.py`:
@@ -76,7 +77,7 @@ Measured wall time of `decide()`, `pytest --durations=0` on the tests in `tests/
 
 The first three rows are the acceptance: the decision takes Jev's time, not Jev's time plus a grace. Build phase 8.2's design took 1.00 s in the same "Jev in time, guard slow" case.
 
-Tests, all in `test_decide.py`, 53 in the file:
+Tests, all in `test_decide.py`, 53 in the file at this ticket's commit:
 
 - New: Jev alone with the guard never called, even in the background; the three wall-time arms above; every failure path raised from the Jev pick itself, six arms including `cost_cap` refused for Jev while the guard's own check passes, and `unexpected_error`; an option outside the set and a reply missing its fields through the real `call_jev`; the guard asked after Jev (its start time is at least 2.9 s into a Jev timeout); the removed constants stay removed.
 - Changed: each of the four `JevCallError` fallback arms now also asserts the guard was called exactly once; the state-cap arm reaches the guard through a Jev failure, since a Jev success no longer calls it; the cost arm asserts Jev's charge exactly.
@@ -145,7 +146,66 @@ The wiring patch, applied to a scratch copy:
 
 ## T-8.6-03
 
+What the product owner gets, at no cost to anyone asking a question, since no live path runs it:
+
+- For each decision point, how often Jev and the guard tier agree on this product's own questions.
+- How fast each model answered.
+- Every case where they differ, with Jev's confidence.
+
+What was built:
+
+- `harness/decide.py`: `compare_models(harness, trace_id, point, state, options, *, instructions, criteria)` asks Jev and the guard tier the same decision at the same time, through the same bounded state, description, cost-cap checks and time bounds `decide()` uses, whatever `CLASSIFIER_PROVIDER` says. It returns a `ModelComparison`, whose `live_record(default)` is the record Jev-mode `decide()` returns for those picks. Both paths build that record through one helper, `_jev_mode_record`, so they cannot drift apart.
+- `testing/Developer/scripts/compare_classifiers.py`: given golden ids (or `--all`), it runs the loop's own Guardrail, Think and Plan steps per question, never Act or Write, with every module-level `decide` the loop imported swapped for a recorder. The recorder asks `compare_models`, records both picks, and hands the loop the live record, so the loop takes develop's path. A comparison the loop stops waiting for, such as the literature decision cancelled once a gene resolves or a relevancy decision the refusal made moot, still finishes and is recorded, marked "the loop had moved on".
+- Spend bound in code: the budget (`--budget-usd`, default $0.50) divided by the number of questions becomes the per-query cost cap the harness checks before every model call. Below $0.02 per question the script refuses before reading any credential, since Think's own call would be refused.
+- It finds the repository from its own path and reads `.env` from this checkout's root, or for a worktree from the main checkout's root, through `git rev-parse --git-common-dir`, never printing a value. It names no absolute path.
+- Its docstring and every report it writes state what it does not compare.
+
+The live run, `classifier_comparison.md` in this folder, 10 golden questions chosen to reach every decision point (G-003, G-008, G-009, G-013, G-021, G-022, G-030, G-038, G-042, G-050):
+
+| Decision point | Asked | Agreed | Jev median ms | Guard median ms |
+| --- | --- | --- | --- | --- |
+| `guardrail.relevancy` | 4 | 4 | 314 | 1234 |
+| `plan.literature` | 7 | 7 | 266 | 1334 |
+| `think.recent_years` | 7 | 7 | 270 | 947 |
+
+- K-07: 18 of 18 decisions agreed, $0.0097 spent under the $0.50 budget, 46 s.
+- K-08: the script ran twice, because the first report's opening paragraph failed the house style check (a four-item comma chain) and the committed file had to be the script's own output. The first run, minutes earlier, also cost $0.0097, so about $0.02 was spent in all. It disagreed once, on G-009, "the": Jev off_topic at 0.84 (probabilities 0.92 and 0.08), the guard tier on_topic. In the second run the guard tier said off_topic and Jev said the same as before. On this one question Jev was the steadier of the two.
+- K-09: Jev answered each decision three to five times faster than the guard tier (median 266 to 314 ms against 947 to 1334 ms), which is what T-8.6-01 now gives every question.
+- K-10 (coverage): no golden question reaches `think.ask_back`. It is asked only for a first message of one to three words, and the golden set's only two, G-008 "334" and G-009 "the", are refused at the guardrail before Think runs. `guardrail.relevancy` was asked for 4 of the 10, since the biomedical word list admits the rest without a model. Comparing ask-back needs short questions the guardrail admits, which the golden set does not have.
+- K-11: the plan tier in this local run was the code default, `moonshotai/kimi-k2.6`, because the main checkout's `.env` does not set `PLAN_MODEL`, while develop overrides it to `deepseek/deepseek-v4-flash`. That model runs Think's own classification, which is not compared; the report states it. The script does not pin a model id, since model identity belongs to the environment (`system-design-patterns` pattern 11).
+
+Tests:
+
+- `test_decide.py`, 12 new: `compare_models` asks both models whatever the provider, with the same description; it asks them at the same time (two 0.4-second models finish under 0.7 s); for five combinations of Jev and guard behaviour, its `live_record` equals what `decide()` returns in Jev mode; a bad default and bad options are refused as `decide()` refuses them; nothing under `src/` but `decide.py` names `compare_models`, `ModelComparison` or the script.
+- `test_compare_classifiers_script.py`, 7: the repository is found from the script's own path and the source names no absolute path; a budget below $0.02 per question refuses before credentials are read; an unknown golden id stops the run; ids come back in order; the recorder hands back the live record and a cancelled wait still records the finished comparison; the report's agreement row, disagreement row and failure row, and the "None" line when nothing disagreed.
+
 ## Tests and gates
+
+Run after the last commit's changes, on this worktree:
+
+| Gate | Result |
+| --- | --- |
+| `python3 -m pytest -m "not integration" -q -p no:cacheprovider tests/system_03_search_agent/harness tests/system_03_search_agent/synthesis` | 820 passed, 10 skipped, 1 xfailed |
+| The same over `tests/system_03_search_agent/core` and `guardrail`, the callers of `decide()`, outside the fence | 1391 passed, 56 skipped, 1 deselected |
+| `ruff check .` over the whole repository | All checks passed |
+| `isort --check-only` on every changed Python file | clean |
+| `check_style.py` on `docs/architecture/Model_architecture.md` | 0 hard, 0 advisory |
+| `check_style.py` on this report and on `classifier_comparison.md` | 0 hard, 1 advisory each (no Mermaid diagram) |
+| `tests/system_03_search_agent/test_debugging_guide_coverage.py` | red on `harness/decide.py`, by design until the lead applies the rows below (K-05) |
+
+Live spend by this builder, all metered: probes $0.0019 (K-02 to K-04), the final sentence check $0.0014 (K-06), the comparison script $0.0194 over two runs (K-07, K-08). About $0.023 in total.
+
+## Follow-ups for the lead
+
+Each is outside this builder's fence:
+
+- Apply `sentence_check_wiring.patch` (this folder) once builder L's `core/graph.py` has merged: `git apply testing/Developer/reports/2026-09-26_phase_8.6/sentence_check_wiring.patch`, or the one hunk by hand if the context moved. Until then the reworded-sentence check stays on the guard tier. After it lands, `docs/architecture/Model_architecture.md`'s sentence-check row and Jev bullet can drop their "until then" clauses.
+- Paste the three rows below into `docs/build/Debugging_guide.md`, then regenerate the manifest once for both builders' changes (K-05).
+- `contracts/events.py`: `DecisionRecord`'s docstring still says the guard tier decides "alongside" Jev "purely for this record". Since T-8.6-01 the live seam fills `guard_choice` only on a fallback and `agreed` never; the comparison lives in the script's report now.
+- `harness/task_tiers.py`: the comment on the "classifier" tier still says `decide` dispatches the guard tier and Jev concurrently, and the `write.sentence_check` row names the guard tier; it becomes Jev-first once the wiring patch lands.
+- `docs/architecture/Model_architecture.md` outside the Jev section and table rows: the sequence diagram's participant "Sentence check: guard" and the guard tier's list of jobs still name the sentence check as guard-only.
+- For the product owner (K-04, K-06): whether a Jev approval of a reworded sentence should need more than even odds. Measured across the Jev probes (K-03, K-04, K-06): 7 of 113 unfaithful sentences approved, most near even odds, and none of 113 faithful ones refused.
+- For the product owner (K-10): the golden set cannot exercise `think.ask_back`; comparing it needs short opening questions the guardrail admits.
 
 ## Debugging guide rows for the lead
 
@@ -154,7 +214,7 @@ Replacements for the rows in `docs/build/Debugging_guide.md`, outside this build
 `harness/decide.py`:
 
 ```text
-| `src/system_03_search_agent/harness/decide.py` | The classifier seam: `decide()` answers one closed-option question and returns a `DecisionRecord`. With `CLASSIFIER_PROVIDER=jev` Jev is asked alone and the guard tier only when Jev fails (timeout, HTTP error, malformed reply, an option outside the set, the cost cap), with Jev's reason in `fallback_reason` (build phase 8.6); with the code default `guard` the guard tier decides alone. Each caller passes a fixed description of the decision (`instructions`, `criteria`) that either model receives. Wired in `core/graph.py`'s "classifier seam, wired" section, which lists every decision point. | A decision point's chosen option looks wrong (check that its description in `core/graph.py` says what is being decided), a fallback fired when it should not have (read `fallback_reason` on the `done` event's `decisions`), or the cost cap did not stop a decision call |
+| `src/system_03_search_agent/harness/decide.py` | The classifier seam: `decide()` answers one closed-option question and returns a `DecisionRecord`. With `CLASSIFIER_PROVIDER=jev` Jev is asked alone and the guard tier only when Jev fails (timeout, HTTP error, malformed reply, an option outside the set, the cost cap), with Jev's reason in `fallback_reason` (build phase 8.6); with the code default `guard` the guard tier decides alone. Each caller passes a fixed description of the decision (`instructions`, `criteria`) that either model receives. Wired in `core/graph.py`'s "classifier seam, wired" section, which lists every decision point. Also holds `compare_models`, the offline side-by-side comparison, which no live path calls (its caller is `testing/Developer/scripts/compare_classifiers.py`). | A decision point's chosen option looks wrong (check that its description in `core/graph.py` says what is being decided), a fallback fired when it should not have (read `fallback_reason` on the `done` event's `decisions`), or the cost cap did not stop a decision call |
 ```
 
 `harness/jev_client.py`, whose summary line did not change, so the coverage test does not flag it; the row no longer mentions the batch call:
