@@ -1,0 +1,150 @@
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -585,8 +585,7 @@
+ )
+ from system_03_search_agent.synthesis.sentence_check import (
+     SentenceCheckUnreadable,
+-    approved_keys,
+-    build_sentence_check_messages,
++    check_reworded_sentences,
+ )
+ from system_03_search_agent.synthesis.trust import (
+     ClaimTrust,
+@@ -8044,7 +8043,7 @@
+     trace_id: str,
+     budget_s: float,
+ ) -> GroundingResult:
+-    """Ground a reply, asking the guard-tier model about reworded sentences.
++    """Ground a reply, asking a model about reworded sentences.
+ 
+     Decided by the product owner on 2026-09-23 (items 12.9 and 12.10; the
+     reasoning is in `synthesis/sentence_check.py`). Two grounding passes over
+@@ -8053,9 +8052,12 @@
+     1. The ordinary pass, collecting every reworded sentence that passed all
+        of code's exact checks (quote in the record, numbers, negation) and
+        failed only the word check.
+-    2. When there are any, ONE guard-tier call about all of them, then the
++    2. When there are any, ONE model check about all of them, then the
+        pass again, accepting exactly the sentences the model approved with
+-       exactly those quotes.
++       exactly those quotes. Which model is `sentence_check.
++       check_reworded_sentences`' job (build phase 8.6, T-8.6-02): Jev
++       when CLASSIFIER_PROVIDER=jev, with the guard tier only when Jev
++       fails; the guard tier alone, exactly as before, otherwise.
+ 
+     Fails closed at every step: no candidates, too little budget, the cost
+     cap, a failed or timed-out call, or an unreadable reply all return the
+@@ -8072,20 +8074,30 @@
+     )
+     if not candidates or budget_s < _SENTENCE_CHECK_MIN_BUDGET_S:
+         return first
+-    try:
++
++    async def _ask_guard_tier(messages: list[dict[str, str]], guard_budget_s: float) -> str:
+         response = await _dispatch_tier_call(
+             harness,
+             trace_id,
+             "guard",
+             "write",
+-            build_sentence_check_messages(candidates),
+-            budget_s=min(budget_s - 1.0, _SENTENCE_CHECK_MAX_BUDGET_S),
++            messages,
++            budget_s=guard_budget_s,
+             max_tokens=256,
+             # A checker must not read the answering agent's prefix, for the
+             # same measured reason the guardrail's classifier does not.
+             cache_prefix=None,
+         )
+-        approved = approved_keys(_response_text(response), candidates)
++        return _response_text(response)
++
++    try:
++        approved = await check_reworded_sentences(
++            candidates,
++            harness=harness,
++            trace_id=trace_id,
++            budget_s=min(budget_s - 1.0, _SENTENCE_CHECK_MAX_BUDGET_S),
++            ask_guard=_ask_guard_tier,
++        )
+     except (cost_control.QueryCapExceededError, HarnessCallError, SentenceCheckUnreadable) as exc:
+         logger.warning(
+             "sentence check approved nothing (trace %s): %s", trace_id, type(exc).__name__
+--- a/tests/system_03_search_agent/synthesis/test_sentence_check.py
++++ b/tests/system_03_search_agent/synthesis/test_sentence_check.py
+@@ -784,3 +784,76 @@
+     questions = sentence_check_module.build_jev_questions(MAX_CANDIDATES)
+     jev_client_module._check_batch_questions(questions)  # raises on any bound broken
+     assert len(questions) == jev_client_module.MAX_BATCH_QUESTIONS
++
++
++# ------------------------------------------------ the write step, wired (T-8.6-02)
++
++
++@pytest.mark.asyncio
++async def test_the_write_step_asks_jev_and_not_the_guard_when_jev_decides(monkeypatch) -> None:
++    fake_jev = _FakeJev({"item_1": "no"})
++    _jev_on(monkeypatch, fake_jev)
++    calls: list[object] = []
++
++    async def fake_dispatch(*args, **kwargs):
++        calls.append(args)
++        return _Reply('{"supported": []}')
++
++    monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
++    narrative, quotes = extract_evidence_quotes(REWORDED)
++    result = await graph_module._ground_with_sentence_check(
++        narrative,
++        [PAPER, PAPER_TITLE],
++        question=QUESTION,
++        evidence_quotes=quotes,
++        harness=Harness(trace_id="t-wire-1"),
++        trace_id="t-wire-1",
++        budget_s=30.0,
++    )
++    assert len(fake_jev.calls) == 1 and calls == []
++    assert result.grounded, "Jev's no approved the faithful rewording"
++
++
++@pytest.mark.asyncio
++async def test_the_write_step_falls_back_to_todays_guard_call_when_jev_fails(monkeypatch) -> None:
++    _jev_on(monkeypatch, _FakeJev(raises=jev_client_module.JevCallError("down", reason="http_error")))
++    calls: list[tuple[tuple, dict]] = []
++
++    async def fake_dispatch(*args, **kwargs):
++        calls.append((args, kwargs))
++        return _Reply('{"supported": [1]}')
++
++    monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
++    narrative, quotes = extract_evidence_quotes(REWORDED)
++    result = await graph_module._ground_with_sentence_check(
++        narrative,
++        [PAPER, PAPER_TITLE],
++        question=QUESTION,
++        evidence_quotes=quotes,
++        harness=Harness(trace_id="t-wire-2"),
++        trace_id="t-wire-2",
++        budget_s=30.0,
++    )
++    assert len(calls) == 1
++    args, kwargs = calls[0]
++    assert args[2:4] == ("guard", "write")
++    assert kwargs["max_tokens"] == 256 and kwargs["cache_prefix"] is None
++    assert 11.0 < kwargs["budget_s"] <= 12.0, "what is left of the capped 12-second check budget"
++    assert result.grounded
++
++
++@pytest.mark.asyncio
++async def test_the_write_step_in_jev_mode_still_fails_closed(monkeypatch) -> None:
++    _jev_on(monkeypatch, _FakeJev({"item_1": "yes"}))
++    monkeypatch.setattr(graph_module, "_dispatch_tier_call", None)  # must never be reached
++    narrative, quotes = extract_evidence_quotes(REWORDED)
++    result = await graph_module._ground_with_sentence_check(
++        narrative,
++        [PAPER, PAPER_TITLE],
++        question=QUESTION,
++        evidence_quotes=quotes,
++        harness=Harness(trace_id="t-wire-3"),
++        trace_id="t-wire-3",
++        budget_s=30.0,
++    )
++    assert not result.grounded, "a yes approves nothing, and code alone rejects the rewording"

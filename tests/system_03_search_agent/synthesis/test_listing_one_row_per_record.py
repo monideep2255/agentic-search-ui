@@ -360,6 +360,44 @@ def test_the_features_directive_never_enters_the_system_block() -> None:
     assert "CLINICAL FEATURES" not in messages[0]["content"]
 
 
+def test_a_question_not_about_features_gets_no_features_directive() -> None:
+    """Build phase 8.6, T-8.6-06: with `clinical_features_asked=False` the
+    feature findings may still be in the prompt, but the model is not told
+    to list them. The system block is byte-identical either way."""
+    asked = build_synth_messages("Q", _feature_prompt(), clinical_features_asked=True)
+    not_asked = build_synth_messages("Q", _feature_prompt(), clinical_features_asked=False)
+    assert "CLINICAL FEATURES" in asked[-1]["content"]
+    assert "CLINICAL FEATURES" not in not_asked[-1]["content"]
+    assert asked[0] == not_asked[0]
+
+
+def test_the_no_features_statement_is_dropped_and_the_rest_renumbered() -> None:
+    """Build phase 8.6, T-8.6-06: `drop_no_clinical_features_findings` removes
+    only the code-built "lists none" statement and renumbers densely, the
+    `ref_index` and the `citation_id` suffix together."""
+    from dataclasses import replace
+
+    from system_03_search_agent.synthesis.findings import drop_no_clinical_features_findings
+
+    findings = [
+        replace(f, call_id="ne", citation_id=f"ne-{f.ref_index}")
+        for f in (
+            _finding(1, "title", "Condition A", _MEDGEN_URL),
+            _finding(2, "clinical_features", "MedGen lists no clinical features for Condition A", _MEDGEN_URL),
+            _finding(3, "clinical_features", "Aortic regurgitation", _MEDGEN_URL),
+            _finding(4, "title", "Paper", _url(1)),
+        )
+    ]
+    kept = drop_no_clinical_features_findings(findings)
+    assert [(f.ref_index, f.citation_id, f.field_value) for f in kept] == [
+        (1, "ne-1", "Condition A"),
+        (2, "ne-2", "Aortic regurgitation"),
+        (3, "ne-3", "Paper"),
+    ]
+    # Nothing to drop: the very same list comes back, numbering untouched.
+    assert drop_no_clinical_features_findings(kept) is kept
+
+
 def test_a_record_with_only_a_title_is_unchanged() -> None:
     """A record with no `clinical_features` finding at all must still be
     represented by its title, exactly as before this ticket.

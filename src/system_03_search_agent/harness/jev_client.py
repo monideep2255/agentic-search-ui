@@ -15,8 +15,10 @@ Reads:
 
 Writes:
     - Nothing. Jev's own `usage.cost` is returned on `JevResult` for the
-      caller to charge through `Harness.track_cost`; this module never
-      touches a `Harness` instance.
+      caller to charge through `Harness.track_cost`, and, for a reply that
+      came back but could not be used, on `JevCallError.billed_cost_usd`
+      (build phase 8.6 fix round, F-8.6-J10); this module never touches a
+      `Harness` instance.
 
 THE ENDPOINT'S SHAPE IS NOT PUBLICLY DOCUMENTED. Everything below was
 pinned live on 2026-09-25 against the real endpoint, `POST
@@ -29,8 +31,8 @@ and received). The shape below was reverse-engineered from a sequence of
 400 validation errors, each one naming the next missing or mistyped
 field, not read from documentation, because none exists yet.
 
-Confirmed request shape, exactly one question per call (`decide()` calls
-this once per decision point, never batched):
+Confirmed request shape for `call_jev`, one question per call (`decide()`
+calls it once per decision point; `call_jev_batch` below sends several):
 
     POST https://openrouter.ai/api/alpha/decisions
     Authorization: Bearer <OPENROUTER_API_KEY>
@@ -75,8 +77,19 @@ Confirmed response shape on success (200):
     }
 
 `answers` is a record keyed the same way as the request's `questions`;
-since exactly one question is ever sent, `answers[question_key]` is read
+`call_jev` sends exactly one question and reads `answers[question_key]`
 back directly.
+
+SEVERAL QUESTIONS IN ONE CALL, `call_jev_batch` (build phase 8.6,
+T-8.6-02), pinned live on 2026-09-26 (report:
+`testing/Developer/reports/2026-09-26_phase_8.6/builder_K.md`, findings
+K-02 to K-04). The endpoint takes any number of questions under
+`questions`, each with its own options, instructions and criteria, over
+one shared `state`, and answers each under its own key: thirty two-option
+questions came back in 343 to 611 ms for $0.00033. The endpoint has no
+`bool` question type (a `"type": "bool"` question is refused with HTTP 400
+naming `noul`, `choice` and `score`); a yes-or-no question is a `choice`
+between two options.
 
 No retries inside this module (ai-security-standards, tool-call-budgets):
 the caller's fallback to the guard tier's own pick IS the retry, per this
@@ -90,12 +103,17 @@ pipeline gate.
 from __future__ import annotations
 
 import asyncio
+import logging
+import math
 import time
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Annotated, Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+logger = logging.getLogger(__name__)
 
 JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
 
@@ -120,10 +138,18 @@ JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invali
 #: the real price. Jev's cost is the one model cost in the loop the loop does
 #: not compute itself: it is whatever the undocumented endpoint says, and it
 #: is charged straight into the per-query, per-user and system-wide caps.
-#: A reply of `Infinity` stopped every later model call in the question and
-#: turned the done event's cost into null; a reply of 0.5 would have pushed
-#: every question past its $0.10 cap (fix round, F-8.2-J15). A reply above
-#: this is malformed, so the guard's pick decides and nothing is charged.
+#:
+#: A reply reporting more than this is not used: it is malformed, so the
+#: guard's pick decides or, for the sentence check, nothing is approved. Its
+#: reported cost IS charged, in full, whether or not the reply is otherwise
+#: usable (build phase 8.6 fix round, F-8.6-J10): the money was spent either
+#: way, and a reply the caps never see is exactly the expensive one. The
+#: cost cap then applies to the rest of the question as to any charge.
+#:
+#: A figure that is not an amount is never charged (`_reported_cost_usd`):
+#: `Infinity` stopped every later model call in the question and turned the
+#: done event's cost into null (F-8.2-J15), and `NaN` would switch the
+#: per-query cap off, since no comparison with it is ever true.
 MAX_JEV_COST_USD = 0.01
 
 #: At most one probability per offered option; `DecisionRecord.options`
@@ -166,11 +192,72 @@ class JevCallError(RuntimeError):
     catches this and falls back to the guard tier's own pick, recording
     `reason` on the `DecisionRecord.fallback_reason` field; no retry
     happens inside this module.
+
+    `billed_cost_usd` is what a reply that came back but could not be used
+    says the call cost, in US dollars, for the caller to charge to the
+    question (fix round, F-8.6-J10): a malformed reply, an option outside
+    the set and a cost above `MAX_JEV_COST_USD` were all billed. 0.0 when
+    no reply came back, or when it named no amount (`_reported_cost_usd`).
     """
 
-    def __init__(self, message: str, *, reason: str) -> None:
+    def __init__(self, message: str, *, reason: str, billed_cost_usd: float = 0.0) -> None:
         super().__init__(message)
         self.reason = reason
+        self.billed_cost_usd = billed_cost_usd
+
+
+def _reported_cost_usd(payload: object, subject: str) -> float:
+    """What a 200 reply says the call cost, in US dollars, for the caller
+    to charge; 0.0, logged, when the reply states no amount.
+
+    A real amount only: a finite number, zero or more, read the way a
+    usable reply's `usage.cost` is read. A reply that states no cost, or a
+    cost that is not a number, is negative, or is not finite (`Infinity`
+    and `NaN` both parse from JSON) charges nothing, because no amount was
+    stated that could be charged: charging infinity stops every later
+    model call in the question (F-8.2-J15), charging NaN switches the
+    per-query cap off, and a negative charge would give money back to the
+    caps. The warning says so, so the zero is never silent.
+    """
+    try:
+        raw = payload["usage"]["cost"]  # type: ignore[index]
+    except (KeyError, TypeError, IndexError):
+        logger.warning("Jev's reply for %s states no cost, so nothing is charged for it", subject)
+        return 0.0
+    try:
+        cost = None if isinstance(raw, bool) else float(raw)
+    except (TypeError, ValueError):
+        cost = None
+    if cost is None or not math.isfinite(cost) or cost < 0:
+        logger.warning(
+            "Jev's reply for %s states a cost that is not an amount of money (%s), "
+            "so nothing is charged for it",
+            subject,
+            repr(raw)[:40],
+        )
+        return 0.0
+    return cost
+
+
+def _cost_ceiling_error(
+    subject: str, cost_usd: float, next_step: str
+) -> JevCallError:
+    """The error for a reply that reports more than any one call should
+    cost: not used, and charged in full (F-8.6-J10)."""
+    logger.warning(
+        "Jev's reply for %s reported a cost of $%.6f, above the $%.2f ceiling; "
+        "the reply is not used and its cost is charged to the question",
+        subject,
+        cost_usd,
+        MAX_JEV_COST_USD,
+    )
+    return JevCallError(
+        f"Jev's reply for {subject} reported a cost of ${cost_usd:.6f}, above the "
+        f"${MAX_JEV_COST_USD:.2f} any one call should cost, so it is not used and its cost is "
+        f"charged to the question; {next_step}",
+        reason="malformed_reply",
+        billed_cost_usd=cost_usd,
+    )
 
 
 _GENERIC_INSTRUCTIONS = "Read the state and answer with exactly one of the offered options."
@@ -226,6 +313,60 @@ async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response
         return await client.post(JEV_DECISIONS_URL, headers=headers, json=body)
 
 
+async def _send(
+    body: dict[str, Any],
+    *,
+    api_key: str,
+    subject: str,
+    next_step: str,
+    timeout_s: float,
+) -> tuple[httpx.Response, int]:
+    """POST `body` under the TOTAL bound and return the 200 response and
+    its latency in milliseconds.
+
+    Shared by `call_jev` and `call_jev_batch`, so both carry the same
+    timeout and error classes. `subject` names what was asked ("decision
+    'x'", "3 questions") and `next_step` what the caller should do instead;
+    both go into every error message, so an error says what to do next
+    (production-standards.md's retry-safety gate). The key travels in the
+    header only and is never put in a message.
+
+    Raises:
+        JevCallError: reason="timeout" when the call does not complete
+            within `timeout_s` in total, body included; reason="http_error"
+            on a transport failure or a non-200 status.
+    """
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    start = time.monotonic()
+    try:
+        # The TOTAL bound (F-8.2-J03): connect, send, and the whole body
+        # read, however it trickles in. `_post` finishes reading the body
+        # before it returns, so nothing slow is left outside this wait.
+        response = await asyncio.wait_for(_post(headers, body), timeout=timeout_s)
+    except (TimeoutError, httpx.TimeoutException) as exc:
+        raise JevCallError(
+            f"Jev did not answer within {timeout_s}s in total for {subject}; {next_step}",
+            reason="timeout",
+        ) from exc
+    except httpx.HTTPError as exc:
+        raise JevCallError(
+            f"Jev transport failure for {subject} ({type(exc).__name__}: {exc}); {next_step}",
+            reason="http_error",
+        ) from exc
+    latency_ms = int((time.monotonic() - start) * 1000)
+
+    if response.status_code != 200:
+        raise JevCallError(
+            f"Jev returned HTTP {response.status_code} for {subject} "
+            f"({response.text[:200]!r}); {next_step}",
+            reason="http_error",
+        )
+    return response, latency_ms
+
+
 async def call_jev(
     *,
     model: str,
@@ -256,10 +397,6 @@ async def call_jev(
             names what happened and that the caller should fall back to
             the guard tier's pick for this decision.
     """
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
     body = _build_body(
         model=model,
         question_key=question_key,
@@ -268,36 +405,22 @@ async def call_jev(
         instructions=instructions,
         criteria=criteria,
     )
+    subject = f"decision {question_key!r}"
+    next_step = "fall back to the guard tier's pick for this decision"
+    response, latency_ms = await _send(
+        body,
+        api_key=api_key,
+        subject=subject,
+        next_step=next_step,
+        timeout_s=_TIMEOUT_S,
+    )
 
-    start = time.monotonic()
-    try:
-        # The TOTAL bound (F-8.2-J03): connect, send, and the whole body
-        # read, however it trickles in. `_post` finishes reading the body
-        # before it returns, so nothing slow is left outside this wait.
-        response = await asyncio.wait_for(_post(headers, body), timeout=_TIMEOUT_S)
-    except (TimeoutError, httpx.TimeoutException) as exc:
-        raise JevCallError(
-            f"Jev did not answer within {_TIMEOUT_S}s in total for decision {question_key!r}; "
-            "fall back to the guard tier's pick for this decision",
-            reason="timeout",
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise JevCallError(
-            f"Jev transport failure for decision {question_key!r} ({type(exc).__name__}: {exc}); "
-            "fall back to the guard tier's pick for this decision",
-            reason="http_error",
-        ) from exc
-    latency_ms = int((time.monotonic() - start) * 1000)
-
-    if response.status_code != 200:
-        raise JevCallError(
-            f"Jev returned HTTP {response.status_code} for decision {question_key!r} "
-            f"({response.text[:200]!r}); fall back to the guard tier's pick for this decision",
-            reason="http_error",
-        )
-
+    billed_usd = 0.0
     try:
         payload = response.json()
+        billed_usd = _reported_cost_usd(payload, subject)
+        if billed_usd > MAX_JEV_COST_USD:
+            raise _cost_ceiling_error(subject, billed_usd, next_step)
         answer = payload["answers"][question_key]
         usage = payload["usage"]
         parsed = JevResult(
@@ -315,6 +438,7 @@ async def call_jev(
             f"Jev's reply for decision {question_key!r} did not match the confirmed response "
             f"shape ({type(exc).__name__}: {exc}); fall back to the guard tier's pick for this decision",
             reason="malformed_reply",
+            billed_cost_usd=billed_usd,
         ) from exc
 
     if parsed.choice not in options:
@@ -322,6 +446,180 @@ async def call_jev(
             f"Jev chose {parsed.choice!r} for decision {question_key!r}, which is not one of "
             f"the offered options {list(options)!r}; fall back to the guard tier's pick for this decision",
             reason="invalid_option",
+            billed_cost_usd=parsed.cost_usd,
         )
 
+    return parsed
+
+
+# ---------------------------------------------------------------------------
+# Several questions in one call (build phase 8.6, T-8.6-02).
+# ---------------------------------------------------------------------------
+
+#: The most questions one batch call may carry: the sentence check's own
+#: `MAX_CANDIDATES`, and the size pinned live (thirty in 343 to 611 ms).
+MAX_BATCH_QUESTIONS = 30
+
+#: A ceiling on one question's code-authored text, the same bound
+#: `harness.decide` puts on a decision's description.
+_QUESTION_TEXT_MAX_CHARS = 1000
+
+
+@dataclass(frozen=True)
+class JevChoiceQuestion:
+    """One closed-option question in a batch call.
+
+    `instructions` and `criteria` are code-authored and fixed, never user
+    content: the data every question judges travels once, in the call's
+    shared `state`.
+    """
+
+    options: tuple[str, ...]
+    instructions: str
+    criteria: Mapping[str, str]
+
+
+class JevAnswer(BaseModel):
+    """One question's validated answer inside a batch reply."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    choice: Annotated[str, Field(max_length=200)]
+    confidence: Annotated[float, Field(ge=0.0, le=1.0)]
+    probabilities: Annotated[
+        dict[Annotated[str, Field(max_length=200)], Annotated[float, Field(ge=0.0, le=1.0)]],
+        Field(max_length=_MAX_PROBABILITIES),
+    ]
+
+
+class JevBatchResult(BaseModel):
+    """A batch call's parsed, schema-validated result: one answer per
+    question asked, keyed as asked, and the call's usage.
+
+    The same discipline as `JevResult` (`extra="forbid"`, every string and
+    map bounded, and a reply reporting more than `MAX_JEV_COST_USD` for the
+    whole call, about 30 times the $0.00033 measured for thirty questions,
+    not used, though its reported cost is still charged; see
+    `MAX_JEV_COST_USD`).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    resolved_model: Annotated[str, Field(max_length=200)]
+    answers: Annotated[dict[Annotated[str, Field(max_length=64)], JevAnswer], Field(max_length=MAX_BATCH_QUESTIONS)]
+    input_tokens: Annotated[int, Field(ge=0)]
+    output_tokens: Annotated[int, Field(ge=0)]
+    cost_usd: Annotated[float, Field(ge=0.0, le=MAX_JEV_COST_USD)]
+    latency_ms: Annotated[int, Field(ge=0)]
+
+
+def _check_batch_questions(questions: Mapping[str, JevChoiceQuestion]) -> None:
+    """Refuse a batch the endpoint should never be sent: a programming
+    error in the caller, raised rather than sent."""
+    if not questions:
+        raise ValueError("call_jev_batch() was given no questions")
+    if len(questions) > MAX_BATCH_QUESTIONS:
+        raise ValueError(f"call_jev_batch() takes at most {MAX_BATCH_QUESTIONS} questions")
+    for key, question in questions.items():
+        if not key or len(key) > 64:
+            raise ValueError(f"call_jev_batch(): question key {key!r} must be 1 to 64 characters")
+        if len(question.options) < 2:
+            raise ValueError(f"call_jev_batch(): question {key!r} offers fewer than two options")
+        if set(question.criteria) != set(question.options):
+            raise ValueError(f"call_jev_batch(): question {key!r} needs one criterion per option")
+        texts = [question.instructions, *question.criteria.values()]
+        if any(len(text) > _QUESTION_TEXT_MAX_CHARS for text in texts):
+            raise ValueError(f"call_jev_batch(): question {key!r} has a description that is too long")
+
+
+async def call_jev_batch(
+    *,
+    model: str,
+    state: str,
+    questions: Mapping[str, JevChoiceQuestion],
+    api_key: str,
+    timeout_s: float = _TIMEOUT_S,
+) -> JevBatchResult:
+    """Ask Jev every question in `questions` over one shared `state`, in ONE call.
+
+    `state` is sent exactly as given; the caller owns bounding it, as for
+    `call_jev`. `timeout_s` may shorten the 3-second total bound, never
+    lengthen it: a caller with less time left passes what it has.
+
+    Strict, so a reply the caller cannot trust is never half-used: every
+    question asked must be answered under its own key and no other key may
+    appear, or the whole reply is malformed; any answer outside its own
+    question's options makes the whole reply an invalid option.
+
+    Raises:
+        ValueError: on a batch that is empty, too large, or whose questions
+            do not fit their options (a programming error, see
+            `_check_batch_questions`).
+        JevCallError: reason="timeout", "http_error", "malformed_reply" or
+            "invalid_option", each message ending in what to do next.
+    """
+    _check_batch_questions(questions)
+    subject = f"{len(questions)} questions"
+    next_step = "fall back to the guard tier for these questions"
+    bound_s = min(timeout_s, _TIMEOUT_S)
+    if bound_s <= 0:
+        raise JevCallError(f"No time left to ask Jev {subject}; {next_step}", reason="timeout")
+    body = {
+        "model": model,
+        "state": state,
+        "questions": {
+            key: {
+                "type": "choice",
+                "options": list(question.options),
+                "instructions": question.instructions,
+                "criteria": {opt: question.criteria[opt] for opt in question.options},
+            }
+            for key, question in questions.items()
+        },
+    }
+    response, latency_ms = await _send(
+        body, api_key=api_key, subject=subject, next_step=next_step, timeout_s=bound_s
+    )
+
+    billed_usd = 0.0
+    try:
+        payload = response.json()
+        billed_usd = _reported_cost_usd(payload, subject)
+        if billed_usd > MAX_JEV_COST_USD:
+            raise _cost_ceiling_error(subject, billed_usd, next_step)
+        raw_answers = payload["answers"]
+        if not isinstance(raw_answers, dict) or set(raw_answers) != set(questions):
+            raise KeyError("the reply's answers do not match the questions asked, key for key")
+        usage = payload["usage"]
+        parsed = JevBatchResult(
+            resolved_model=str(payload["model"]),
+            answers={
+                str(key): JevAnswer(
+                    choice=str(answer["choice"]),
+                    confidence=float(answer["confidence"]),
+                    probabilities={str(k): float(v) for k, v in answer.get("probabilities", {}).items()},
+                )
+                for key, answer in raw_answers.items()
+            },
+            input_tokens=int(usage["input_tokens"]),
+            output_tokens=int(usage["output_tokens"]),
+            cost_usd=float(usage["cost"]),
+            latency_ms=latency_ms,
+        )
+    except (KeyError, TypeError, ValueError, AttributeError, ValidationError) as exc:
+        raise JevCallError(
+            f"Jev's reply for {subject} did not match the confirmed response shape "
+            f"({type(exc).__name__}); {next_step}",
+            reason="malformed_reply",
+            billed_cost_usd=billed_usd,
+        ) from exc
+
+    for key, answer in parsed.answers.items():
+        if answer.choice not in questions[key].options:
+            raise JevCallError(
+                f"Jev chose {answer.choice!r} for question {key!r}, which is not one of its "
+                f"offered options; {next_step}",
+                reason="invalid_option",
+                billed_cost_usd=parsed.cost_usd,
+            )
     return parsed

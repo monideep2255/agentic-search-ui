@@ -347,3 +347,67 @@ Appended during the run, newest last.
 - 13:34 UTC: golden run 102 of 150 with Jev deciding; median time to answer 21.9 seconds, from 17.1.
 - Spend: $6.00 of the $12 OpenRouter limit, read from the credits endpoint before and after each run.
 - Not done tonight: phase 8.4's `core/graph.py` wiring, its reviews and golden run; phase 8.3; cards 18, 35 and 39.
+
+### The second night, from 2026-09-25 evening
+
+Times in UTC. The order and rules are the product owner's "Yes, same rules" of 2026-09-25, reordered once by the harness reviews (DECISIONS.md, 2026-09-25, "After the two harness reviews, the work runs in this order").
+
+- 02:17: phase 8.6 opened (Jev makes every choice); builders K and L in parallel; design, slowdown and writer-bench work started beside it.
+- 03:26: the Answer modes card went live on develop, its wording changed to say what each mode gives, never who the reader is (item 13.2, query 86).
+- 03:30 to 04:30: both harness reviews landed. The product review found the writer is often not given the fact a question asks for; the build review found the build spends more on its own bookkeeping, and on the product owner's attention, than on the product.
+- 04:00 to 05:00: the product owner approved four security-layer changes, the seven-day close for wording and layout cards, the trust line that says what was checked, and two rule edits. Builders H1 to H3 built the build-harness fixes on a local branch; H4 is finishing the lighter rulebook.
+- 04:00: phase 8.6 pull request #108; the judge and the adversary both returned FAIL. The blocking finding: in Jev mode a question disguised as a forged chat transcript was answered. Nothing of it had reached develop. The lead's triage is in `tracker/phase_8.6.md`; two fix builders are working.
+- Spend so far: $1.52 of the $8 cap, read from the credits endpoint.
+- 05:05: the product owner delegated every remaining merge tonight to the lead, each gated by automatic checks, and said to finish the job (DECISIONS.md, 2026-09-26). That covers the two pull requests the lead had left for the morning and phase 8.9's golden run, with the night's spend now stopping at $11.
+- 05:39: card 41 merged (#109). The address is gone from every tracked file except two decision rows, which phase 8.6 removes, and the Caddyfile's public web name, kept on purpose. The lead fixed a bug in the builder's deploy-script change before merging: a `.env` without the setting stopped the scripts silently.
+- 06:00: phase 8.6's two fix builders finished and merged into its branch. The forged-transcript question is now refused in Jev mode.
+- 06:15: the build-harness checker returned HOLD.
+  - The narrowed delete guard lets an escaped recursive delete through inside a wrapper, which breaks the approval's own "still blocking rm -rf".
+  - A search-led chained command skips the secret scan's field check.
+  - The reworded grounding-gate bullet reads weaker than before.
+  - One of the lead's own decision rows, which two deletions rest on, carries no words of the product owner.
+  - By the rule above, that pull request does not merge without the product owner. Builder H5 is fixing the findings on the branch so the morning decision is one yes or no.
+
+What the product owner will find in the morning, if every check passes:
+
+- Phase 8.6 merged, with its golden run and product review.
+- The build-harness fixes as a pull request waiting for the product owner. Its automatic check failed, so it does not merge on the delegation. It will carry the checker's findings fixed and checked again.
+- Card 41's clean-up of the server address merged (#109).
+- Card 39's visualization deep dive in `visualizations/`.
+- Phase 8.9 merged with its golden run. If its checks have not all run by morning, it stays an open pull request that names the check still to run.
+
+A merge whose check fails does not happen. It waits for the product owner, named in the morning summary with the failed check.
+
+Waiting for the product owner in the morning, each a yes or no:
+
+- The secret scan misses keys shaped like the product's own model-provider key, where a hyphen follows `sk-` straight away. The lead's hook check found it at 05:20. The gap is the same on develop, so the harness fixes did not cause it. Tighten the pattern to catch that shape? Recommendation: yes. It is a change to a hook, so it needs your item-by-item yes.
+- Merge the build-harness pull request, with the checker's findings fixed and checked again? Recommendation: yes, once the second check passes.
+- Does "nothing weakens a gate or threshold" in your delegation leave the doc drift check's count checks free to remove? The lead wrote a row on 2026-09-26 saying they are bookkeeping, not gates, and the harness branch removed them on that reading. The checker rightly noted the row has no words of yours behind it. Recommendation: yes. They only check whether documents restate counts. The product's gates, the golden run and CI's tests are untouched.
+- Check that the graph server accepts only SSH keys, with password login off. Only you can check this.
+- Rewrite git history to remove the server address from old commits? Recommendation: no. The address is public, and the fix is that no file pairs it with a login command any more.
+
+Not tonight: phases 8.7, 8.3, 8.4's remainder and the paper-sentence wiring (8.8).
+
+#### Automatic checks for each merge
+
+Every check on a line must pass before that merge happens.
+
+- Phase 8.6, pull request #108:
+  - CI green on the pull request.
+  - The fresh verifier finds nothing blocking after the fix round.
+  - After the merge, the golden run on develop answers at least 102 of 150. Below that, the bin script undoes the merge.
+- The build-harness pull request:
+  - CI green.
+  - A fresh-context checker passes the combined diff.
+  - Every changed file maps to an approved item. A file that maps to none holds the merge.
+  - Each changed hook, fed sample commands, still blocks `rm -rf` and a planted fake key, and lets through what its fix was meant to let through.
+- Card 41's pull request:
+  - CI green, with the pre-commit hook run, never skipped.
+  - The server address is in no tracked file.
+  - The deploy scripts stop with a plain message when the host setting is missing, checked without connecting anywhere.
+- Phase 8.9:
+  - The judge, the adversary and one fix-and-verify leave nothing blocking.
+  - CI green.
+  - After the merge, the golden run answers no fewer than 8.6's run did. A drop undoes the merge, since only the product owner may accept one.
+- Spend: read from the credits endpoint before each golden run. Nothing runs that would take the night past $11.
+- A permission refusal from the harness itself: the merge waits for the product owner. The lead does not route around it.

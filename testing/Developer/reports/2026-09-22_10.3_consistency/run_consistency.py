@@ -34,6 +34,18 @@ Design, each line a measured constraint rather than a preference:
 - WRITE FIRST: every record is appended to runs.jsonl the moment its run ends,
   before the next run starts, so an interrupted process loses at most the run
   in flight. Re-running with the same output directory resumes.
+- TIME TO THE FIRST WORD (build phase 8.6, T-8.6-09): `first_word_s` is
+  measured on this client's clock alone, from submitting the question to the
+  first `token` event arriving, because the server's event timestamps and the
+  client's clock disagree (81 seconds on 2026-09-22's G-013 run). The first
+  token event is kept in the saved raw events, so its own server `ts` is kept
+  too, as `first_token_ts` on the record; the other token events are still
+  dropped, since `answer_text` already holds their text.
+  It is the time until the first text a person sees, an answer, a refusal or
+  a question asked back alike (fix round, F-8.6-J07): the Write step sends a
+  refusal it writes, and Think a question it asks back, as `token` events
+  too. It is None only when no text arrived at all: a guardrail refusal,
+  which sends none, a cap decline, an error, or a timeout before any text.
 
 Outcome labels keep the 2026-09-12 baseline's meanings so the two can be set
 side by side: `answered` is at least one citation with a non-refuse trust
@@ -92,8 +104,12 @@ def sign_in(base, account):
     return _post(base, "/auth/login", account)["access_token"]
 
 
-def stream(base, run_id, bearer, deadline_at):
-    """Return (events, timed_out). Stops at the deadline or when the socket stalls."""
+def stream(base, run_id, bearer, deadline_at, timings=None):
+    """Return (events, timed_out). Stops at the deadline or when the socket stalls.
+
+    `timings`, when given, gets `first_token_at`: this client's `time.time()`
+    the moment the first `token` event was read (T-8.6-09).
+    """
     req = urllib.request.Request(base + f"/v1/query/{run_id}/events")
     req.add_header("Accept", "text/event-stream")
     req.add_header("Authorization", "Bearer " + bearer)
@@ -108,6 +124,15 @@ def stream(base, run_id, bearer, deadline_at):
                         out.append(json.loads(line[5:].strip()))
                     except json.JSONDecodeError:
                         pass
+                    else:
+                        last = out[-1]
+                        if (
+                            timings is not None
+                            and "first_token_at" not in timings
+                            and isinstance(last, dict)
+                            and last.get("type") == "token"
+                        ):
+                            timings["first_token_at"] = time.time()
                 if time.time() > deadline_at:
                     timed_out = True
                     break
@@ -177,6 +202,7 @@ def run_once(base, account, row, pass_index, worker, commit):
         bearer = sign_in(base, account)
     except Exception as exc:  # noqa: BLE001
         return _fail(record, t0, "transport_error", "sign_in", exc), raw
+    submitted_at = time.time()  # the question is asked now; time to the first word counts from here
     try:
         created = _post(
             base, "/v1/query", {"text": row["question"], "session_id": session_id}, bearer
@@ -188,8 +214,9 @@ def run_once(base, account, row, pass_index, worker, commit):
         return _fail(record, t0, "transport_error", "create", exc), raw
     run_id = created.get("run_id")
     record["run_id"] = run_id
+    timings = {}
     try:
-        events, timed_out = stream(base, run_id, bearer, t0 + RUN_DEADLINE_S)
+        events, timed_out = stream(base, run_id, bearer, t0 + RUN_DEADLINE_S, timings=timings)
     except Exception as exc:  # noqa: BLE001
         return _fail(record, t0, "transport_error", "stream", exc), raw
     if timed_out:
@@ -207,6 +234,8 @@ def run_once(base, account, row, pass_index, worker, commit):
     citations = _events_of(events, "citation")
     text = "".join(p.get("text", "") for p in _events_of(events, "token"))
     words = text.split()
+    first_token = next((e for e in events if e.get("type") == "token"), None)
+    first_token_at = timings.get("first_token_at")
 
     tool_calls = [
         {k: tr.get(k) for k in ("tool", "layer", "status", "result_count", "truncated")}
@@ -265,6 +294,12 @@ def run_once(base, account, row, pass_index, worker, commit):
         server_elapsed_s=None if done is None else round((done.get("elapsed_ms") or 0) / 1000, 3),
         seconds=seconds,
         event_types=dict(Counter(e.get("type") for e in events)),
+        # T-8.6-09: client clock only, submit to the first token's arrival,
+        # the first text a person sees: answer, refusal or question alike
+        # (F-8.6-J07). None when no text arrived (a guardrail refusal, an
+        # error, a timeout).
+        first_word_s=None if first_token_at is None else round(first_token_at - submitted_at, 3),
+        first_token_ts=None if first_token is None else first_token.get("ts"),
     )
     raw["events"] = [
         e
@@ -274,7 +309,8 @@ def run_once(base, account, row, pass_index, worker, commit):
             "payload": {k: (e.get("payload") or {}).get(k) for k in KEPT_CITATION_FIELDS},
         }
         for e in events
-        if e.get("type") not in ("token", "trust_signal")
+        # Every token event but the first is still dropped (T-8.6-09).
+        if e.get("type") not in ("token", "trust_signal") or e is first_token
     ]
     raw["answer_text"] = text
     return record, raw

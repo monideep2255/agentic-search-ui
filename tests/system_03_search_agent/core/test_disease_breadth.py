@@ -491,6 +491,60 @@ def test_a_record_read_with_no_features_says_so_naming_the_disease() -> None:
     assert statement_row["source_url"] == title_row["source_url"]
 
 
+def _record_of_type(uid: str, title: str, semantic_type: object) -> NcbiEfetchRecord:
+    """A MedGen record read with no features, typed as ESummary types it:
+    `{"value": ...}` live, a list in the tool's own fixtures, or absent."""
+    fields: dict[str, Any] = {"title": title, "clinical_features": [], "clinical_features_total": 0}
+    if semantic_type is not None:
+        fields["semantictype"] = semantic_type
+    return NcbiEfetchRecord(
+        id=uid, db="medgen", fields=fields, source_url=f"https://www.ncbi.nlm.nih.gov/medgen/{uid}"
+    )
+
+
+@pytest.mark.parametrize(
+    "semantic_type",
+    [{"value": "Finding"}, {"value": "Sign or Symptom"}, ["Finding"], {"value": "Gene or Genome"}, None],
+)
+def test_a_record_that_is_not_a_disease_is_never_said_to_list_no_features(
+    semantic_type: object,
+) -> None:
+    """F-8.6-A11: MedGen's Arachnodactyly record (C0003706) is a clinical
+    feature concept typed "Finding", and like every feature concept it lists
+    no features of its own. Only a disease record may be said to list none;
+    a record typed as an observation, as something else, or not typed at
+    all gets its title row and nothing about features.
+
+    MUTATION PROOF: dropping `_is_medgen_disease_record` from the rule turns
+    every case red.
+    """
+    output = _medgen_output(_record_of_type("2047", "Arachnodactyly", semantic_type))
+    rows = graph_module._ncbi_efetch_output_to_structured_fields(output, "medgen_summary")["rows"]
+    assert len(rows) == 1, rows
+    assert rows[0]["fields"]["title"] == "Arachnodactyly"
+    assert "clinical_features" not in rows[0]["fields"]
+
+
+@pytest.mark.parametrize(
+    "semantic_type",
+    [
+        {"value": "Disease or Syndrome"},
+        {"value": "Neoplastic Process"},
+        {"value": "Congenital Abnormality"},
+        ["Finding", "Disease or Syndrome"],
+    ],
+)
+def test_a_disease_record_that_lists_none_is_still_said_to(semantic_type: object) -> None:
+    """The control: a disease record read with no features keeps its one
+    statement, the honest answer to a features question about it."""
+    output = _medgen_output(_record_of_type("651", "Malignant tumor of breast", semantic_type))
+    rows = graph_module._ncbi_efetch_output_to_structured_fields(output, "medgen_summary")["rows"]
+    assert [row["fields"].get("clinical_features") for row in rows] == [
+        None,
+        "MedGen lists no clinical features for Malignant tumor of breast",
+    ]
+
+
 def test_an_unreadable_record_says_nothing_about_features() -> None:
     """F-8.1-J11: the tool sets neither key when `conceptmeta` could not be
     read. No feature row and, above all, no "lists none" sentence: the
