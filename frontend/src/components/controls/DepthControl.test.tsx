@@ -8,10 +8,10 @@
  * turns the legacy-value arm red.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ANSWER_MODE_EXPLAINER, DepthControl, displayedMode } from "./DepthControl";
+import { DepthControl, displayedMode } from "./DepthControl";
 
 describe("DepthControl, set 9", () => {
   it("offers exactly Plain language and Researcher, Plain language by default", () => {
@@ -30,10 +30,35 @@ describe("DepthControl, set 9", () => {
     expect(onChange).toHaveBeenCalledWith("researcher");
   });
 
-  it("explains the two modes behind an info button", () => {
+  it("shows each mode as its own block, label set apart, closing line last", () => {
     render(<DepthControl variant="onLight" />);
     fireEvent.click(screen.getByRole("button", { name: /about answer modes/i }));
-    expect(screen.getByRole("dialog")).toHaveTextContent(ANSWER_MODE_EXPLAINER);
+    const dialog = screen.getByRole("dialog");
+
+    const blocks = Array.from(
+      dialog.querySelectorAll<HTMLElement>("[data-testid^='answer-mode-']"),
+    );
+    expect(blocks.map((block) => block.dataset.testid)).toEqual([
+      "answer-mode-plain_language",
+      "answer-mode-researcher",
+      "answer-mode-closing",
+    ]);
+
+    expect(blocks[0]).toHaveTextContent(
+      "Plain language: the answer in simple terms, easy to understand.",
+    );
+    expect(blocks[1]).toHaveTextContent(
+      "Researcher: the answer in technical terms, with the specifics and the records listed or in tables.",
+    );
+    expect(blocks[2]).toHaveTextContent(
+      "Both modes cite every claim. A change applies to your next question.",
+    );
+
+    // The label is visibly set apart from its description: a bold element
+    // inside the same block, not merely a stylistic difference a test
+    // cannot see.
+    expect(within(blocks[0]).getByText("Plain language:").tagName).toBe("B");
+    expect(within(blocks[1]).getByText("Researcher:").tagName).toBe("B");
   });
 
   it("is locked while a search runs, and says so", () => {

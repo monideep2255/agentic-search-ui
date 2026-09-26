@@ -46,15 +46,78 @@ const OPTIONS: { value: "plain_language" | "researcher"; label: string }[] = [
  * product cannot keep, since the same question at the same mode measured 66,
  * 101 and 113 words on three consecutive runs.
  *
- * So this now describes WHO EACH MODE IS FOR, which is the thing that
- * actually differs and the thing a reader is choosing between.
+ * REWRITTEN AGAIN 2026-09-25 for item 13.2, two problems with one fix. The
+ * card was a single run-on paragraph, "hard to read" in the product owner's
+ * own words, and the same day the product owner separately ruled out the
+ * wording it used to describe who each mode was for: "do not belittle the
+ * user... do not target a persona... we do not belittle our users." So this
+ * now describes WHAT EACH MODE GIVES, never who is reading it, split into
+ * one block per mode with the label set apart from its description and the
+ * closing line last. `ANSWER_MODE_BLOCKS` is the structured source of
+ * truth; `ANSWER_MODE_EXPLAINER` below stays exported as the flat string,
+ * rebuilt from the same blocks, for any caller that still wants plain text.
  */
+export const ANSWER_MODE_BLOCKS: { testId: string; label: string; description: string }[] = [
+  {
+    testId: "answer-mode-plain_language",
+    label: "Plain language:",
+    description: "the answer in simple terms, easy to understand.",
+  },
+  {
+    testId: "answer-mode-researcher",
+    label: "Researcher:",
+    description:
+      "the answer in technical terms, with the specifics and the records listed or in tables.",
+  },
+];
+
+/** The closing block, unlabeled, always last. */
+export const ANSWER_MODE_CLOSING =
+  "Both modes cite every claim. A change applies to your next question.";
+
 export const ANSWER_MODE_EXPLAINER =
-  "Plain language: for a reader with no biology background, in everyday words, " +
-  "covering everything the sources show with every sentence tied to its source. " +
-  "Researcher: for someone who knows the field and NCBI, with the specifics, " +
-  "the detail and the records listed or tabled, every claim cited. " +
-  "A change applies to your next question.";
+  ANSWER_MODE_BLOCKS.map((block) => `${block.label} ${block.description}`).join(" ") +
+  " " +
+  ANSWER_MODE_CLOSING;
+
+/**
+ * The info card's body: each mode as its own block, its label set apart
+ * from its description, reusing the exact bold-`ink`-label,
+ * muted-`inkMuted`-body, 13.5px, 1.45 line-height treatment `PersonaInfo`'s
+ * own name-and-about pair already uses below in `shell/PersonaChip.tsx`,
+ * and the same "8px" gap that card already uses between its about
+ * paragraph and its Wikipedia link. Closing line last. Passed as
+ * `PersonaInfo`'s `about` in place of a plain string, which `PersonaInfo`
+ * now accepts additively (`React.ReactNode`) precisely so this card can be
+ * structured while the persona chip's own plain-string call keeps
+ * rendering exactly as before.
+ */
+function AnswerModesExplainer() {
+  return (
+    <>
+      {ANSWER_MODE_BLOCKS.map(({ testId, label, description }) => (
+        <Typography
+          key={testId}
+          component="p"
+          data-testid={testId}
+          sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, mb: "8px", lineHeight: 1.45 }}
+        >
+          <Box component="b" sx={{ fontWeight: 700, color: designTokens.ink }}>
+            {label}
+          </Box>{" "}
+          {description}
+        </Typography>
+      ))}
+      <Typography
+        component="p"
+        data-testid="answer-mode-closing"
+        sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, lineHeight: 1.45 }}
+      >
+        {ANSWER_MODE_CLOSING}
+      </Typography>
+    </>
+  );
+}
 
 /** The button a stored or wire value lights up. */
 export function displayedMode(value: AudienceDepth): "plain_language" | "researcher" {
@@ -144,12 +207,22 @@ export function DepthControl({
       </Box>
 
       <Box component="span" sx={{ position: "relative", display: "inline-flex" }}>
+        {/*
+          `align="right"`, not "left" as this card first shipped with the item
+          9.2 explainer (a plain string then). Measured live at 390px for
+          item 13.2: this control is CENTERED, so the "i" sits at roughly
+          x=345 of 390, and a left-aligned 358px card (`calc(100vw - 32px)`)
+          spans 345 to 703, off the right edge entirely. Anchoring the card's
+          right edge to the icon instead, the same align PersonaChip's own
+          app-bar chip already uses because its icon also sits toward a
+          screen edge, spans 5 to 363: on-screen with margin either side.
+        */}
         <PersonaInfo
           name="Answer modes"
-          about={ANSWER_MODE_EXPLAINER}
+          about={<AnswerModesExplainer />}
           wikipedia={null}
           variant={variant}
-          align="left"
+          align="right"
         />
       </Box>
 

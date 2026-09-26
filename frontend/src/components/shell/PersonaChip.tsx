@@ -44,6 +44,7 @@
  */
 
 import { useEffect, useId, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Box, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
@@ -109,7 +110,15 @@ export interface PersonaChipProps {
 
 export interface PersonaInfoProps {
   name: string;
-  about: string | null;
+  /**
+   * A plain string renders exactly as before: one muted paragraph. A caller
+   * that needs more structure (`DepthControl`'s "Answer modes" card, item
+   * 13.2) passes a `ReactNode` instead, which renders as given rather than
+   * being wrapped in that paragraph, so it can build its own labeled
+   * blocks. Widened additively so the persona chip's own plain-string call
+   * below keeps rendering byte-for-byte the same.
+   */
+  about: ReactNode | null;
   wikipedia: string | null;
   variant: "onLight" | "onNavy";
   /** Which edge of the anchor the card hangs from. */
@@ -224,12 +233,16 @@ export function PersonaInfo({ name, about, wikipedia, variant, align }: PersonaI
           >
             {name}
           </Typography>
-          <Typography
-            component="p"
-            sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, lineHeight: 1.45 }}
-          >
-            {about}
-          </Typography>
+          {typeof about === "string" ? (
+            <Typography
+              component="p"
+              sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, lineHeight: 1.45 }}
+            >
+              {about}
+            </Typography>
+          ) : (
+            about
+          )}
           {showLink ? (
             <Typography
               component="a"
