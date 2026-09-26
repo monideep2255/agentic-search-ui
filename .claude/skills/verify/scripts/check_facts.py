@@ -491,6 +491,26 @@ EVERY = Cmp(
     lambda t: tuple(t) + ((MUTANT, False),),
 )
 SET = Cmp("set", lambda s, t: set(s) == set(t), _set_describe, lambda s: frozenset(s))
+
+
+def set_allowing_omitted(omitted: Iterable[str]) -> Cmp:
+    """SET, where the place may leave out the named members, but only while
+    the truth still has them. A member the truth has dropped is not added
+    back to what the place says, so a place that is right is never failed
+    for it (the side note on PR118-15)."""
+    allowed = frozenset(omitted)
+
+    def completed(stated: Any, truth: Any) -> frozenset[Any]:
+        return frozenset(stated) | (allowed & frozenset(truth))
+
+    return Cmp(
+        "set, less declared omissions",
+        lambda s, t: completed(s, t) == set(t),
+        lambda s, t: _set_describe(completed(s, t), t),
+        lambda s: frozenset(s),
+    )
+
+
 SUBSET = Cmp(
     "subset",
     lambda s, t: set(s) <= set(t),

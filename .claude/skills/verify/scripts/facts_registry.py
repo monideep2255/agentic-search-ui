@@ -69,6 +69,7 @@ from check_facts import (
     parse_python,
     present,
     quoted,
+    set_allowing_omitted,
     step_calls_no_model,
     step_names,
     step_uses_tier,
@@ -192,7 +193,8 @@ MODE_NAMES = ("Plain language", "Researcher")
 # Event types the web client leaves out of KNOWN_EVENT_TYPES on purpose, each
 # named in that file's own docstring: `cost` never reaches a non-operator
 # client (frontend/src/lib/events.ts). Any other type missing from the list
-# is a client that does not know the event.
+# is a client that does not know the event. An omission counts only while
+# the backend still declares the type (`set_allowing_omitted`).
 CLIENT_OMITS_ON_PURPOSE = ("cost",)
 
 # ------------------------------------------------------------------ parsers
@@ -1206,8 +1208,8 @@ FACTS: tuple[Fact, ...] = (
                 CODE,
                 EVENTS_TS,
                 r"export const KNOWN_EVENT_TYPES[^=]*= \[(.*?)\];",
-                SET,
-                lambda m: frozenset(quoted(m.group(1))) | set(CLIENT_OMITS_ON_PURPOSE),
+                set_allowing_omitted(CLIENT_OMITS_ON_PURPOSE),
+                lambda m: frozenset(quoted(m.group(1))),
                 flags=S,
             ),
         ),
