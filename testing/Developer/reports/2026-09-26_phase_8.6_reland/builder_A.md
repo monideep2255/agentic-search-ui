@@ -515,7 +515,13 @@ Whole suite after the fix, polled until it exited. The first run failed one timi
 exit=1
 ```
 
-The failing test was `test_streaming_endpoints.py::TestCreateRun::test_returns_before_the_graph_has_finished`: "POST /v1/query took 0.330s to respond, expected well under the mocked model call's 0.5s delay". It asserts the response time only, and the POST returns before the guardrail runs. Run alone five times, it passed five of five, and the whole suite re-run with nothing beside it passed:
+The failing test, and why it is not this fix:
+
+- `test_streaming_endpoints.py::TestCreateRun::test_returns_before_the_graph_has_finished` failed with "POST /v1/query took 0.330s to respond, expected well under the mocked model call's 0.5s delay".
+- It asserts the response time only, and the POST returns before the guardrail runs.
+- Run alone five times, it passed five of five.
+
+The whole suite, re-run with nothing beside it:
 
 ```text
 5656 passed, 166 skipped, 1 xfailed, 7 warnings in 214.36s (0:03:34)
