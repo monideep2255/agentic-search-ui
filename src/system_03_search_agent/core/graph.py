@@ -6568,6 +6568,60 @@ def _medgen_no_clinical_features_text(disease_title: str) -> str:
     return f"{NO_CLINICAL_FEATURES_PREFIX}{disease_title}"
 
 
+#: F-8.6-A11 (build phase 8.6 fix round). The MedGen semantic types that
+#: mark a DISEASE record, the only kind of record "MedGen lists no clinical
+#: features for <title>" may be said of: the UMLS "Disorders" semantic
+#: group, the vocabulary MedGen's own `semantictype` comes from, without its
+#: two observation types, "Finding" and "Sign or Symptom". A record typed
+#: anything else, or carrying no type, is not known to be a disease, so the
+#: sentence is not said, whatever the features decision picked.
+#:
+#: Measured live on 2026-09-26 through MedGen ESummary, by concept id. The
+#: A11 anchor Arachnodactyly (C0003706) and card 1's "Seen by breast cancer
+#: nurse" (C1320450) are "Finding", as are Tall stature; Seizure is "Sign or
+#: Symptom"; each lists no clinical features, since a feature concept never
+#: does. Diseases: Marfan syndrome, cystic fibrosis, Down syndrome and
+#: Huntington disease are "Disease or Syndrome", breast cancer (C0006142,
+#: none listed) "Neoplastic Process", schizophrenia "Mental or Behavioral
+#: Dysfunction", congenital contractural arachnodactyly "Congenital
+#: Abnormality".
+#:
+#: WHAT THIS DOES NOT CATCH, measured the same day: MedGen also gives some
+#: clinical feature concepts a disease type, Scoliosis and Aortic
+#: regurgitation "Disease or Syndrome", Polydactyly, Ectopia lentis and
+#: Syndactyly "Congenital Abnormality", Intellectual disability "Mental or
+#: Behavioral Dysfunction". The record's type cannot tell those apart from a
+#: disease; the concept's own HPO source can, and the MedGen tool does not
+#: carry it today.
+_MEDGEN_DISEASE_SEMANTIC_TYPES: Final[frozenset[str]] = frozenset(
+    {
+        "Acquired Abnormality",
+        "Anatomical Abnormality",
+        "Cell or Molecular Dysfunction",
+        "Congenital Abnormality",
+        "Disease or Syndrome",
+        "Experimental Model of Disease",
+        "Injury or Poisoning",
+        "Mental or Behavioral Dysfunction",
+        "Neoplastic Process",
+        "Pathologic Function",
+    }
+)
+
+
+def _is_medgen_disease_record(title_row: dict[str, Any]) -> bool:
+    """Whether the MedGen record behind `title_row` is a disease record, read
+    from the record's own `semantictype` (F-8.6-A11), never from the
+    question. The title row carries it unwrapped (`_unwrap_medgen_fields`);
+    a list of types counts when any of them is a disease type."""
+    value = title_row["fields"].get("semantictype")
+    types = [value] if isinstance(value, str) else value if isinstance(value, list) else []
+    return any(
+        isinstance(item, str) and item.strip() in _MEDGEN_DISEASE_SEMANTIC_TYPES
+        for item in types
+    )
+
+
 def _feature_disease_title(title_row: dict[str, Any]) -> str:
     """The record's own title as one printable line, or "" when absent."""
     title = title_row["fields"].get("title")
@@ -6609,7 +6663,13 @@ def _with_medgen_clinical_feature_rows(
     - The record lists features: one row each, at most
       `ncbi_eutils_actions.MAX_CLINICAL_FEATURES`.
     - The record was read and lists none (`clinical_features == []`, total
-      0): one row saying so, naming the disease.
+      0): one row saying so, naming the disease, and only when the record
+      is a disease record by its own semantic type
+      (`_is_medgen_disease_record`, F-8.6-A11). A clinical feature concept
+      such as Arachnodactyly never lists features of its own, and "MedGen
+      lists no clinical features for Arachnodactyly" answered "Which
+      syndromes feature arachnodactyly?" with a sentence about nothing the
+      person asked.
     - The record could not be read (neither key present, the tool's signal
       for an unreadable `conceptmeta`): no row at all. Nothing is said
       about its features, because nothing is known.
@@ -6651,7 +6711,7 @@ def _with_medgen_clinical_feature_rows(
                     "source_url": row["source_url"],
                 }
             )
-        if not features and total == 0 and disease_title:
+        if not features and total == 0 and disease_title and _is_medgen_disease_record(row):
             feature_rows.append(
                 {
                     "curie": "",

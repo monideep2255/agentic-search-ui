@@ -1902,9 +1902,15 @@ def _synth_prompt(mock: AsyncMock) -> str:
     return "\n".join(m.get("content") or "" for m in synth_calls[0].kwargs["messages"])
 
 
-async def _no_features_findings() -> tuple[list[object], list[object]]:
+async def _no_features_findings(
+    title: str = _NO_FEATURES_TITLE, semantic_type: str = "Disease or Syndrome"
+) -> tuple[list[object], list[object]]:
     """A question's graph answer beside a MedGen record that was read and
-    lists no clinical features, the shape behind the stray sentence."""
+    lists no clinical features, the shape behind the stray sentence.
+
+    `semantic_type` is the record's own MedGen type, wrapped as ESummary
+    returns it; a disease record by default, since only a disease record
+    may be said to list no clinical features (F-8.6-A11)."""
     from system_03_search_agent.tools.ncbi_efetch_schemas import (
         NcbiEfetchOutput,
         NcbiEfetchRecord,
@@ -1928,7 +1934,8 @@ async def _no_features_findings() -> tuple[list[object], list[object]]:
                 id="1633554",
                 db="medgen",
                 fields={
-                    "title": _NO_FEATURES_TITLE,
+                    "title": title,
+                    "semantictype": {"value": semantic_type},
                     "clinical_features": [],
                     "clinical_features_total": 0,
                 },
@@ -2052,11 +2059,14 @@ async def test_a_record_with_no_features_is_never_spoken_of_unless_the_question_
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("semantic_type", ["Disease or Syndrome", "Neoplastic Process"])
 async def test_a_features_question_about_a_record_with_none_is_told_so(
-    _mock_litellm: AsyncMock,
+    _mock_litellm: AsyncMock, semantic_type: str
 ) -> None:
-    """Asked, the statement is the honest answer, and it stays."""
-    findings, planned = await _no_features_findings()
+    """Asked about a disease record that lists none, the statement is the
+    honest answer, and it stays (F-8.6-A11 keeps it for a disease record:
+    breast cancer's MedGen record, "Neoplastic Process", lists none)."""
+    findings, planned = await _no_features_findings(semantic_type=semantic_type)
     query = _valid_query(text="Which features does this condition show?", audience_depth="researcher")
     state = _write_state(query, findings)
     state["tool_calls"] = planned
@@ -2065,6 +2075,35 @@ async def test_a_features_question_about_a_record_with_none_is_told_so(
 
     seen = _everything_the_reader_sees(result["events"])
     assert f"MedGen lists no clinical features for {_NO_FEATURES_TITLE}" in seen, seen
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("semantic_type", ["Finding", "Sign or Symptom"])
+async def test_a_clinical_feature_record_is_never_said_to_list_no_features(
+    _mock_litellm: AsyncMock, semantic_type: str
+) -> None:
+    """F-8.6-A11, the reverse lookup: "Which syndromes feature
+    arachnodactyly?" resolved to MedGen's Arachnodactyly record, a clinical
+    feature concept typed "Finding" (C0003706, read live on 2026-09-26),
+    and with the features decision picking asks_features the answer said
+    "MedGen lists no clinical features for Arachnodactyly". The record's
+    own type decides now, whatever the decision picked: a feature concept
+    is never said to list no features. The record itself is still listed.
+
+    MUTATION PROOF: dropping `_is_medgen_disease_record` from the rule
+    turns both cases red.
+    """
+    findings, planned = await _no_features_findings("Arachnodactyly", semantic_type)
+    query = _valid_query(text="Which syndromes feature arachnodactyly?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, "asks_features")
+    result = await graph_module.write_node(state)
+
+    seen = _everything_the_reader_sees(result["events"])
+    assert "MedGen lists no clinical features" not in seen, seen
+    assert "MedGen lists no clinical features" not in _synth_prompt(_mock_litellm)
+    assert "Arachnodactyly" in seen
 
 
 @pytest.mark.asyncio
