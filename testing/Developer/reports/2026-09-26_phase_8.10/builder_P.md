@@ -173,7 +173,12 @@ That live run was taken before the lead's follow-up, which made a question back 
 - no fatal error ended the run;
 - no citation arrived.
 
-The refusal's wording is never read. `TestAQuestionBackIsLabelledAsk` in `test_s3_as_printed.py` proves both directions, in the human output and in `--json`: a question back reads `ask`, and a refusal worded exactly like the question still reads `refuse`. It was not rerun live, to keep this brief's question budget.
+The refusal's wording is never read. `TestAQuestionBackIsLabelledAsk` in `test_s3_as_printed.py` proves both directions, in the human output and in `--json`:
+
+- A question back reads `ask` and exits 0.
+- A refusal worded exactly like the question still reads `refuse` and exits 1.
+
+It was not rerun live, to keep this brief's question budget.
 
 Each option goes through `_sanitize_untrusted` like any answer token, and a test with an OSC sequence and a forged `[answer]` inside an option proves it. A session id with spaces is shell-quoted in the hint.
 
