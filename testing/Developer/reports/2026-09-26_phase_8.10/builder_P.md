@@ -30,7 +30,7 @@ Paths are written as `<repo-root>` and `<scratch>`. No email, password or token 
 |---|---|---|
 | T-8.10-01, the tools install and start from a built package | Done | `e607adb5`, with a fix to the check in `42a8f318` |
 | T-8.10-02, a client reads tomorrow's stream | Done | `711796e1` |
-| T-8.10-03, `s3` works as the page prints it | Done | `f185621c` |
+| T-8.10-03, `s3` works as the page prints it | Done | `f185621c`, with the `[ask]` label for a question back in `2c4db98d` |
 | T-8.10-04, `system3-cli` with `s3` and `s3 mcp` | Done | `012af833`, with a test fix in `0e565d2d` |
 
 ```mermaid
@@ -166,6 +166,15 @@ What would you like to know about GERD?
 
 stderr: `s3: to ask one of these, run: s3 ask --session-id p810p-live-3 "<the question you pick>"`.
 
+That live run was taken before the lead's follow-up, which made a question back read `[ask]` and exit 0 instead of `[refuse]` and exit 1 (`2c4db98d`). The follow-up used the same rule as builder Q's MCP fold (`adapters/mcp/server.py`, `_is_ask_back`), which says it mirrors the web's. A run is a question back when all four hold:
+
+- the first `think` event carries a non-empty clarifying question;
+- the guardrail did not refuse;
+- no fatal error ended the run;
+- no citation arrived.
+
+The refusal's wording is never read. `TestAQuestionBackIsLabelledAsk` in `test_s3_as_printed.py` proves both directions, in the human output and in `--json`: a question back reads `ask`, and a refusal worded exactly like the question still reads `refuse`. It was not rerun live, to keep this brief's question budget.
+
 Each option goes through `_sanitize_untrusted` like any answer token, and a test with an OSC sequence and a forged `[answer]` inside an option proves it. A session id with spaces is shell-quoted in the hint.
 
 ## T-8.10-04: system3-cli, s3 and a local MCP server
@@ -299,7 +308,7 @@ none
 | Bare `s3 login --base-url <develop>` | exit 0, 1s, `logged in to <develop>`, credential file mode 0o600 |
 | `s3 ask` BRCA1 | exit 0, 17s, first line "Found 4 disease records for BRCA1: Familial cancer of breast [1], ...", `[ask]`, 26 reference lines |
 | `s3 ask --json` BRCA1 | exit 0, 12s, one JSON object, 22 citations, first URL `https://www.ncbi.nlm.nih.gov/medgen/C0346153` |
-| `s3 ask GERD` | exit 1, 3s, the four numbered options and the pick-one hint |
+| `s3 ask GERD` | exit 1, 3s, the four numbered options and the pick-one hint (before `2c4db98d`, which makes it `[ask]` and exit 0) |
 | `s3 mcp`, SDK client, `ask_biomedical_question` | 23 citations, 14s, 0 transport faults |
 | Secrets in any captured output | none |
 
@@ -307,16 +316,16 @@ The 26 and 22 differ because they are two runs of the same question; the audit a
 
 ## Gates
 
-Run at `42a8f318` as CI runs them, each with its own exit code. The environment was CI's placeholder values (`<scratch>/ci_placeholder_env.sh`, copied from `ci.yml`, no credential), with `PYTHONPATH=src` exported as CI's job does:
+Run at `2c4db98d`, the last code commit, as CI runs them, each with its own exit code. The environment was CI's placeholder values (`<scratch>/ci_placeholder_env.sh`, copied from `ci.yml`, no credential), with `PYTHONPATH=src` exported as CI's job does:
 
 ```text
-HEAD 42a8f318
+HEAD 2c4db98d
 ruff check exit 0
 All checks passed!
 isort exit 0
 Skipped 2 files
 gate04 exit 1
-6 failed, 5921 passed, 212 skipped, 24 deselected, 1 xfailed, 7 warnings in 306.95s (0:05:06)
+6 failed, 5926 passed, 212 skipped, 24 deselected, 1 xfailed, 7 warnings in 243.15s (0:04:03)
 gate_packages_install exit 0
 PASS . (agentic_search_ui-0.1.0-py3-none-any.whl): installs cleanly, every module imports, every command's --help works
 PASS clients/system3-cli (system3_cli-0.1.0-py3-none-any.whl): installs cleanly, every module imports, every command's --help works
@@ -376,6 +385,10 @@ Each mutation was applied by `<scratch>/mutate.py`, which edits one line, runs t
 | 01 | the orchestrator data file undeclared | 1 failed |
 | 01 | the check's subprocesses inherit `PYTHONPATH` again | 2 failed, including the egg-info regression test |
 | 01 | the whole gate against the pre-fix tree | exit 1, 16 files left out, `s3-kgx-export --help` exited 1 |
+| 03 follow-up | `_shown_outcome` shows the stream's `refuse` unchanged | 1 failed, the question back |
+| 03 follow-up | every `refuse` relabelled `ask`, the rule ignored | 4 failed, including the refusal worded as a question |
+| 03 follow-up | the rule ignores citations | 1 failed |
+| 03 follow-up | `--json` keeps the stream's `refuse` | 1 failed |
 | test_tiers | a real `_DEFAULT_MODELS` value added to the exemption set | the collision test failed |
 | test_tiers | `"notifications/cancelled"` removed from the set | the scan test failed |
 
@@ -391,7 +404,7 @@ Three first attempts proved nothing, and each was fixed rather than counted:
 - Every package the install pulls is pinned, not only the two named ones, so `pip install` can never fetch a release nobody reviewed.
 - An expired sign-in stops a request with "run `s3 login`" rather than sending it anyway: a clear stop is better than a confusing refusal.
 - `--json` writes nothing until the run ends, so a script parsing stdout always gets one whole object.
-- The ask-back keeps the server's `[refuse]` tag and exit code 1, because that is what the server decided. The options sit above the tag, and the hint says how to pick one.
+- A question back reads `[ask]` and exits 0, as over MCP (the lead's follow-up). The exit code follows the label shown, so a script sees a question back the way it sees any other `[ask]`: the system worked and wants a choice. A real refusal still exits 1. The options sit above the tag, and the hint says how to pick one.
 - `s3 login` names the server it signed in to, now that the default is production rather than a local address.
 
 ## For the lead
@@ -403,7 +416,7 @@ Three first attempts proved nothing, and each was fixed rather than counted:
    - The stdio MCP config is `{"mcpServers": {"system3": {"command": "s3", "args": ["mcp"]}}}`, after `s3 login`.
    - The `s3` default server is now production.
 4. The audit smoke script's `page` check treats a printed bare `s3 login` as broken whenever `s3 login --help` mentions "email". It now does, as the optional `[email]`. Either R prints `s3 login you@example.org`, which works, or the smoke check should read `[email]` as optional.
-5. The ask-back still says `[refuse]` on `s3`, because `write_node` emits `refuse` on the stream. Builder Q changes the label MCP reports; `s3` can follow once that label is chosen.
+5. Done in `2c4db98d`: `s3` now reads `[ask]` for a question back, by Q's rule, in both outputs. It exits 0; if you want a question back to exit non-zero for scripts, that is one line in each renderer.
 6. Installing `system3-cli` and `agentic-search-ui` into one environment makes both own the same `system_03_search_agent` files, and uninstalling one removes them from the other. The page should suggest installing `system3-cli` on its own, for example with `pipx` or `uv tool`.
 7. The Debugging guide gained the `mcp_bridge.py` row. Its `main.py`, `render.py` and `S3_BASE_URL` rows were updated. The manifest was regenerated with `PYTHONPATH=src python tests/system_03_search_agent/test_debugging_guide_coverage.py`, which changed only the `main.py` and `mcp_bridge.py` entries.
 8. The in-place builds used for the clean-install proof left `build/`, `src/agentic_search_ui.egg-info` and `src/system3_cli.egg-info` in this worktree. All three are gitignored and none is committed. The check itself builds from a staged copy and leaves nothing behind.
