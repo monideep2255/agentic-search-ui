@@ -178,7 +178,7 @@ The refusal's wording is never read. `TestAQuestionBackIsLabelledAsk` in `test_s
 - A question back reads `ask` and exits 0.
 - A refusal worded exactly like the question still reads `refuse` and exits 1.
 
-It was not rerun live, to keep this brief's question budget.
+It was not rerun live: the brief's question budget was nearly spent, and a golden run on develop then held all live questions. The one live check left for the lead, after the golden run ends, is `s3 ask GERD` from a build of this branch, which should print the four options, then `[ask]`, and exit 0.
 
 Each option goes through `_sanitize_untrusted` like any answer token, and a test with an OSC sequence and a forged `[answer]` inside an option proves it. A session id with spaces is shell-quoted in the hint.
 
