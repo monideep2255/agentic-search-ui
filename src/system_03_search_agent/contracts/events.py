@@ -53,29 +53,37 @@ class DecisionRecord(BaseModel):
     cards 8, 9, 10 and 13; build phase 8.6): which closed option was chosen
     at one decision point, and which model chose it.
 
-    Built by `harness.decide.decide`; the loop attaches one per decision it
-    made to the `done` event's `decisions` (`core/graph.py`, "classifier
-    seam, wired"). Who decides, since build phase 8.6 (DECISIONS.md
-    2026-09-25, "Jev decides; the guard tier is Jev's fallback on failure
-    only"):
+    Built by `harness.decide.decide` for every point except
+    "guardrail.injection", which `core/graph.py`'s `_injection_record`
+    builds itself, calling `call_jev` directly; the loop attaches one
+    record per decision it made to the `done` event's `decisions`
+    (`core/graph.py`, "classifier seam, wired"). Who decides, since build
+    phase 8.6 (DECISIONS.md 2026-09-25, "Jev decides; the guard tier is
+    Jev's fallback on failure only"):
 
     - `CLASSIFIER_PROVIDER=jev`: Jev, reached over OpenRouter's
       `/api/alpha/decisions` endpoint, decides alone. `decided_by` is "jev",
       and the guard fields stay empty, since the guard tier is not asked.
-    - Only when Jev fails is the guard tier asked the same question:
-      `decided_by` is "guard", `guard_choice` holds its pick and
-      `fallback_reason` names Jev's failure.
+      The one exception is "guardrail.injection": there the guard
+      classifier is asked beside Jev on every question, never only on
+      failure, so `agreed` is set (`jev.choice == guard_choice`) and a
+      `decided_by` of "guard" on that point means the guard tier's answer
+      was used, not that Jev failed (F-8.6-V05).
+    - For every other point, only when Jev fails is the guard tier asked
+      the same question: `decided_by` is "guard", `guard_choice` holds its
+      pick and `fallback_reason` names Jev's failure.
     - With the code default, `guard`, the guard tier decides alone and Jev
       is never asked.
     - When no model made a usable pick, both picks are None,
       `fallback_reason` starts with "no_usable_pick" and `chosen` is the
       caller's fail-open default.
 
-    Nothing runs a second model beside the first on the live path, so
-    `agreed` stays None on every live record; the side-by-side comparison
-    of the two models runs offline only (T-8.6-03). `jev_confidence` is
-    Jev's own `confidence`, the margin between the options, not the
-    probability of the pick (F-8.6-A16).
+    Outside "guardrail.injection", nothing runs a second model beside the
+    first on the live path, so `agreed` stays None on every live record for
+    every other point; the side-by-side comparison of the two models runs
+    offline only (T-8.6-03). `jev_confidence` is Jev's own `confidence`,
+    the margin between the options, not the probability of the pick
+    (F-8.6-A16).
 
     `extra="forbid"` and a `max_length` on every string field, per
     `production-standards.md`'s multi-agent pipeline gate: this record

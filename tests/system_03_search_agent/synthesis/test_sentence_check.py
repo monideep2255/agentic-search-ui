@@ -918,17 +918,22 @@ async def test_the_adversarys_a01_replies_now_approve_nothing(monkeypatch, first
 @pytest.mark.parametrize(
     ("answers", "cost", "charged"),
     [
-        ({"item_1": _jev_answer("no")}, 0.02, 0.02),
+        ({"item_1": _jev_answer("no")}, 0.02, jev_client_module.MAX_JEV_COST_USD),
         ({"item_1": _jev_answer("maybe")}, 0.004, 0.004),
-        ({"item_1": _jev_answer("no")}, float("inf"), 0.0),
+        ({"item_1": _jev_answer("no")}, float("inf"), jev_client_module.MAX_JEV_COST_USD),
     ],
-    ids=["above the ceiling, charged in full", "an option outside the set, charged", "infinite, not an amount"],
+    ids=["above the ceiling, charged at the ceiling", "an option outside the set, charged", "infinite, not an amount"],
 )
 async def test_an_unusable_jev_reply_approves_nothing_and_is_charged_its_reported_cost(
     monkeypatch, answers, cost, charged
 ) -> None:
     """F-8.6-J10's own probe shape: a reply reporting $0.02 approved
-    nothing after a guard fallback and charged $0.0000. Now it approves
+    nothing after a guard fallback and, since F-8.6-V01 and V03, is charged
+    the $0.01 ceiling rather than the reported figure or $0.0. Discovered
+    outside R-04's declared test fence while proving the whole suite green
+    after the source fix in `harness/jev_client.py`; this source file,
+    `synthesis/sentence_check.py`, stays untouched (`git diff` against
+    develop confirms it). Now it approves
     nothing, asks no other model, and is charged what it reported."""
     _jev_replies_with(monkeypatch, answers, cost=cost)
     harness = Harness(trace_id="j10-s")

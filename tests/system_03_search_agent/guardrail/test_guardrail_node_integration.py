@@ -1007,13 +1007,22 @@ async def test_with_jev_an_unusable_reply_is_charged_at_its_billed_cost(
     be used was still billed, so the run pays its reported cost, exactly as
     `decide()`'s own Jev call does, and the classifier's verdict stands.
 
+    F-8.6-V01: this charge site (`_jev_injection_pick`) reads
+    `JevCallError.billed_cost_usd` as given and does not itself clamp it,
+    which is correct, since `jev_client.py` is the one place the value is
+    computed and it now never emits a `billed_cost_usd` above
+    `MAX_JEV_COST_USD`. The fixture below bills exactly the ceiling, the
+    highest a real reply can now produce, in place of the old 0.0125,
+    which was above the ceiling and so no longer a value `jev_client.py`
+    can actually hand this call site.
+
     MUTATION PROOF: dropping the charge in `_jev_injection_pick`'s
     `JevCallError` arm turns this red.
     """
-    from system_03_search_agent.harness.jev_client import JevCallError
+    from system_03_search_agent.harness.jev_client import MAX_JEV_COST_USD, JevCallError
 
     costs: list[float] = []
-    for billed in (0.0, 0.0125):
+    for billed in (0.0, MAX_JEV_COST_USD):
         _install_jev(
             monkeypatch,
             JevCallError("unusable", reason="malformed_reply", billed_cost_usd=billed),
@@ -1023,7 +1032,7 @@ async def test_with_jev_an_unusable_reply_is_charged_at_its_billed_cost(
         assert _done_record(events)["fallback_reason"] == "malformed_reply"
         harness = _RUN_HARNESSES[-1]
         costs.append(harness.get_query_cost_usd(harness.trace_id))
-    assert costs[1] - costs[0] == pytest.approx(0.0125), "the billed cost was not charged"
+    assert costs[1] - costs[0] == pytest.approx(MAX_JEV_COST_USD), "the billed cost was not charged"
 
 
 @pytest.mark.asyncio

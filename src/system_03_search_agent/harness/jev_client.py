@@ -140,16 +140,21 @@ JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invali
 #: is charged straight into the per-query, per-user and system-wide caps.
 #:
 #: A reply reporting more than this is not used: it is malformed, so the
-#: guard's pick decides or, for the sentence check, nothing is approved. Its
-#: reported cost IS charged, in full, whether or not the reply is otherwise
-#: usable (build phase 8.6 fix round, F-8.6-J10): the money was spent either
-#: way, and a reply the caps never see is exactly the expensive one. The
-#: cost cap then applies to the rest of the question as to any charge.
+#: guard's pick decides or, for the sentence check, nothing is approved. It
+#: IS charged (build phase 8.6 fix round, F-8.6-J10), because the money was
+#: spent either way and a reply the caps never see is exactly the expensive
+#: one, but at this ceiling, never in full (F-8.6-V01): a reply once reported
+#: 12.5 for a call that actually cost $0.0000125, and charging the full
+#: figure would have paused every person's questions for the rest of the
+#: day on one units slip from the undocumented alpha endpoint. The cost cap
+#: then applies to the rest of the question as to any charge.
 #:
-#: A figure that is not an amount is never charged (`_reported_cost_usd`):
-#: `Infinity` stopped every later model call in the question and turned the
-#: done event's cost into null (F-8.2-J15), and `NaN` would switch the
-#: per-query cap off, since no comparison with it is ever true.
+#: A figure that is not a finite, non-negative amount is charged this same
+#: ceiling too, never $0.0 (`_reported_cost_usd`, F-8.6-V03): `Infinity`
+#: stopped every later model call in the question and turned the done
+#: event's cost into null (F-8.2-J15), `NaN` would switch the per-query cap
+#: off since no comparison with it is ever true, and a $0.0 charge for a
+#: call that reached the provider and was billed left the cap blind to it.
 MAX_JEV_COST_USD = 0.01
 
 #: At most one probability per offered option; `DecisionRecord.options`
@@ -194,10 +199,16 @@ class JevCallError(RuntimeError):
     happens inside this module.
 
     `billed_cost_usd` is what a reply that came back but could not be used
-    says the call cost, in US dollars, for the caller to charge to the
-    question (fix round, F-8.6-J10): a malformed reply, an option outside
-    the set and a cost above `MAX_JEV_COST_USD` were all billed. 0.0 when
-    no reply came back, or when it named no amount (`_reported_cost_usd`).
+    is charged, in US dollars, on the question (fix round, F-8.6-J10, then
+    clamped to the ceiling by F-8.6-V01 and V03): a malformed reply, an
+    option outside the set and a reply reporting a cost above
+    `MAX_JEV_COST_USD` are all billed, but never above the ceiling. A
+    well-formed cost at or under `MAX_JEV_COST_USD` is billed exactly as
+    reported; anything else, a cost above the ceiling or a reply that
+    states no amount, or one that is not a finite, non-negative number, is
+    billed the ceiling itself, never the reported figure and never $0.0
+    (`_reported_cost_usd`, `_cost_ceiling_error`). 0.0 only when no reply
+    came back at all, for example a timeout or a transport error.
     """
 
     def __init__(self, message: str, *, reason: str, billed_cost_usd: float = 0.0) -> None:
@@ -208,34 +219,47 @@ class JevCallError(RuntimeError):
 
 def _reported_cost_usd(payload: object, subject: str) -> float:
     """What a 200 reply says the call cost, in US dollars, for the caller
-    to charge; 0.0, logged, when the reply states no amount.
+    to charge; `MAX_JEV_COST_USD`, the ceiling, logged, when the reply
+    states no usable amount (F-8.6-V03).
 
     A real amount only: a finite number, zero or more, read the way a
     usable reply's `usage.cost` is read. A reply that states no cost, or a
-    cost that is not a number, is negative, or is not finite (`Infinity`
-    and `NaN` both parse from JSON) charges nothing, because no amount was
-    stated that could be charged: charging infinity stops every later
-    model call in the question (F-8.2-J15), charging NaN switches the
-    per-query cap off, and a negative charge would give money back to the
-    caps. The warning says so, so the zero is never silent.
+    cost that is not a number, is negative, is not finite (`Infinity` and
+    `NaN` both parse from JSON), or is an integer too large to become a
+    float at all (`float()` raises `OverflowError`), charges the ceiling
+    instead of the stated amount, because no trustworthy amount was
+    stated: `harness.py`'s rule is that a cost cap which guesses must guess
+    toward stopping (F-2.1-B02), and a conservative finite charge is safer
+    than the $0.0 this used to charge, which left the per-query cap blind
+    to a call that reached the provider and was billed. The warning says
+    so, so the ceiling charge is never silent. A finite, non-negative
+    amount at or under the ceiling is returned exactly as reported; a
+    finite amount above the ceiling is returned as reported too, since the
+    caller (`_cost_ceiling_error`) is the one that clamps it, not this
+    function.
     """
     try:
         raw = payload["usage"]["cost"]  # type: ignore[index]
     except (KeyError, TypeError, IndexError):
-        logger.warning("Jev's reply for %s states no cost, so nothing is charged for it", subject)
-        return 0.0
+        logger.warning(
+            "Jev's reply for %s states no cost, so it is charged the $%.2f ceiling",
+            subject,
+            MAX_JEV_COST_USD,
+        )
+        return MAX_JEV_COST_USD
     try:
         cost = None if isinstance(raw, bool) else float(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         cost = None
     if cost is None or not math.isfinite(cost) or cost < 0:
         logger.warning(
             "Jev's reply for %s states a cost that is not an amount of money (%s), "
-            "so nothing is charged for it",
+            "so it is charged the $%.2f ceiling",
             subject,
             repr(raw)[:40],
+            MAX_JEV_COST_USD,
         )
-        return 0.0
+        return MAX_JEV_COST_USD
     return cost
 
 
@@ -243,20 +267,22 @@ def _cost_ceiling_error(
     subject: str, cost_usd: float, next_step: str
 ) -> JevCallError:
     """The error for a reply that reports more than any one call should
-    cost: not used, and charged in full (F-8.6-J10)."""
+    cost: not used, and charged at the ceiling instead of the reported
+    figure (F-8.6-V01)."""
     logger.warning(
         "Jev's reply for %s reported a cost of $%.6f, above the $%.2f ceiling; "
-        "the reply is not used and its cost is charged to the question",
+        "the reply is not used and it is charged the $%.2f ceiling, not the reported figure",
         subject,
         cost_usd,
+        MAX_JEV_COST_USD,
         MAX_JEV_COST_USD,
     )
     return JevCallError(
         f"Jev's reply for {subject} reported a cost of ${cost_usd:.6f}, above the "
-        f"${MAX_JEV_COST_USD:.2f} any one call should cost, so it is not used and its cost is "
-        f"charged to the question; {next_step}",
+        f"${MAX_JEV_COST_USD:.2f} any one call should cost, so it is not used and it is "
+        f"charged the ${MAX_JEV_COST_USD:.2f} ceiling, not the reported figure; {next_step}",
         reason="malformed_reply",
-        billed_cost_usd=cost_usd,
+        billed_cost_usd=MAX_JEV_COST_USD,
     )
 
 

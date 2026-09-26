@@ -20,7 +20,12 @@ import httpx
 import pytest
 
 from system_03_search_agent.harness import jev_client as jev_client_module
-from system_03_search_agent.harness.jev_client import JevCallError, JevResult, call_jev
+from system_03_search_agent.harness.jev_client import (
+    MAX_JEV_COST_USD,
+    JevCallError,
+    JevResult,
+    call_jev,
+)
 
 
 def _response(body: dict[str, Any], *, status_code: int = 200) -> httpx.Response:
@@ -238,7 +243,14 @@ async def test_call_jev_sends_the_callers_description(monkeypatch: pytest.Monkey
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("cost", "billed"),
-    [("Infinity", 0.0), ("NaN", 0.0), ("-0.1", 0.0), ("0.5", 0.5), ("0.02", 0.02), ("true", 0.0)],
+    [
+        ("Infinity", MAX_JEV_COST_USD),
+        ("NaN", MAX_JEV_COST_USD),
+        ("-0.1", MAX_JEV_COST_USD),
+        ("0.5", MAX_JEV_COST_USD),
+        ("0.02", MAX_JEV_COST_USD),
+        ("true", MAX_JEV_COST_USD),
+    ],
 )
 async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
     monkeypatch: pytest.MonkeyPatch, cost: str, billed: float
@@ -248,9 +260,10 @@ async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
     every later model call in the question. Such a reply is malformed, so
     the guard's pick decides.
 
-    Fix round, F-8.6-J10: a real amount above the ceiling was still billed,
-    so the error carries it for the caller to charge; a figure that is not
-    an amount (infinite, not a number, negative, a boolean) carries 0.0."""
+    Fix round, F-8.6-J10, then clamped by F-8.6-V01 and V03: a real amount
+    above the ceiling, or a figure that is not a finite, non-negative
+    number (infinite, not a number, negative, a boolean), is billed the
+    ceiling itself, never the reported figure and never $0.0."""
     raw = json.dumps(_success_body()).replace('"cost": 1.4784e-05', f'"cost": {cost}')
     assert f'"cost": {cost}' in raw
     monkeypatch.setattr(
@@ -283,7 +296,11 @@ def _with_cost(body: dict[str, Any], cost: float) -> dict[str, Any]:
             0.004,
         ),
         (httpx.Response(200, content=b"not json at all"), "malformed_reply", 0.0),
-        (_response({"model": "m", "answers": {}, "usage": {"input_tokens": 1}}), "malformed_reply", 0.0),
+        (
+            _response({"model": "m", "answers": {}, "usage": {"input_tokens": 1}}),
+            "malformed_reply",
+            MAX_JEV_COST_USD,
+        ),
         (httpx.Response(503, content=b"unavailable"), "http_error", 0.0),
     ],
     ids=["an option outside the set", "the wrong question key", "not JSON", "no cost stated", "HTTP 503"],
@@ -291,8 +308,12 @@ def _with_cost(body: dict[str, Any], cost: float) -> dict[str, Any]:
 async def test_an_unusable_reply_still_reports_what_it_cost(
     monkeypatch: pytest.MonkeyPatch, reply: httpx.Response, reason: str, billed: float
 ) -> None:
-    """Fix round, F-8.6-J10: a reply that came back but cannot be used was
-    billed all the same, so its reported cost rides on the error."""
+    """Fix round, F-8.6-J10, then clamped by F-8.6-V01 and V03: a reply
+    that came back but cannot be used was billed all the same. A reply
+    that states no cost at all is billed the ceiling (V03), never $0.0,
+    since a call that reached the provider and was billed should not be
+    invisible to the cost caps; "not JSON" and "HTTP 503" never got far
+    enough to state a cost at all, so those stay $0.0."""
     monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=reply))
     with pytest.raises(JevCallError) as excinfo:
         await _call_once()
@@ -473,13 +494,21 @@ async def test_a_batch_answer_outside_its_options_is_an_invalid_option(monkeypat
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("cost", "billed"),
-    [("Infinity", 0.0), ("NaN", 0.0), ("-0.1", 0.0), ("0.5", 0.5), ("0.02", 0.02)],
+    [
+        ("Infinity", MAX_JEV_COST_USD),
+        ("NaN", MAX_JEV_COST_USD),
+        ("-0.1", MAX_JEV_COST_USD),
+        ("0.5", MAX_JEV_COST_USD),
+        ("0.02", MAX_JEV_COST_USD),
+    ],
 )
 async def test_a_batch_cost_no_call_could_have_is_malformed(
     monkeypatch: pytest.MonkeyPatch, cost: str, billed: float
 ) -> None:
     """Malformed, so nothing in the reply is used; a real amount above the
-    ceiling still rides on the error to be charged (F-8.6-J10)."""
+    ceiling, or a figure that is not a finite, non-negative number, is
+    billed the ceiling itself, never the reported figure and never $0.0
+    (F-8.6-J10, clamped by F-8.6-V01 and V03)."""
     raw = json.dumps(_batch_body({"item_1": "no", "item_2": "no"})).replace('"cost": 5.3e-05', f'"cost": {cost}')
     assert f'"cost": {cost}' in raw
     monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=httpx.Response(200, content=raw.encode())))

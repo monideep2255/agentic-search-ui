@@ -31,8 +31,11 @@ holds each decision point's fixed description and the list of points.
 
 What this decides, and what it never decides: `decide()` answers exactly
 one closed-option question at a time (`point`, e.g. "guardrail.relevancy",
-"guardrail.injection", "think.ask_back", "think.recent_years",
-"think.asks_features", "plan.literature"), never free text.
+"think.ask_back", "think.recent_years", "think.asks_features",
+"plan.literature"), never free text. "guardrail.injection" is not one of
+`decide()`'s points: it is built by `core/graph.py`'s `_injection_record`,
+which calls `call_jev` directly and asks the guard classifier beside it on
+every Jev-mode question, never through this function (F-8.6-V05).
 
 Who decides, since build phase 8.6. With `CLASSIFIER_PROVIDER=jev`, Jev is
 asked alone. The guard tier is asked the same question over the same
