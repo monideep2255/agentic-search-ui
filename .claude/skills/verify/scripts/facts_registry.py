@@ -1,7 +1,12 @@
 """The registry of facts System 3's web app states about itself.
 
-Read by `check_facts.py` in this directory, which holds every computation;
-this file only declares. One `Fact` per claim:
+Read by `check_facts.py` in this directory, which holds the engine: the
+readers, the comparisons, the call graph, the verdicts and the self-test.
+This file holds the fact declarations and, beside them, the small functions
+that compute a particular fact's truth or parse what a particular place
+says. An edit here can therefore change how a fact is decided: it gets the
+same review as an edit to the engine, and `--self-test` must pass after it.
+One `Fact` per claim:
 
   - `truth`: how the true value is computed from its ONE source.
   - `stated`: every place a screen states it (a file and a pattern).
@@ -243,7 +248,18 @@ def layer_calls(layer: int):
 
 
 def citation_fields_named(match: re.Match[str]) -> frozenset[str]:
-    return frozenset(v for k, v in CITATION_FIELD_NAMES.items() if k in match.group(1))
+    """Every item the sentence lists must map to a field name, or to a
+    phrase the registry knows is not a field. An item the registry has
+    never seen cannot be judged, so it raises, which reports an ERROR
+    rather than letting the rest of the list pass (PR118-03)."""
+    items = words_list(re.sub(r"^with\s+", "", match.group(1)))
+    named = set()
+    for item in items:
+        fields = [v for k, v in CITATION_FIELD_NAMES.items() if k in item]
+        if not fields:
+            raise ValueError(f"the item {item!r} maps to no CitationPayload field in the registry")
+        named.update(fields)
+    return frozenset(named)
 
 
 def modes_named(match: re.Match[str]) -> frozenset[str]:
@@ -362,10 +378,13 @@ def api_families(layer: int):
         table = PyConst(TRANSPORT, "_LAYER_BY_FAMILY").read(repo)
         families = dict(table.value)
         if "PATHOGEN_FTP_BASE" in repo.text(PATHOGEN_FTP):
-            pathogen_layer = next(
-                n for n, tools in tool_layers(repo).value.items() if "pathogen_detection" in tools
-            )
-            families["pathogen_ftp"] = pathogen_layer
+            # Read from pathogen_detection's own declaration, not through the
+            # whole tool-layer map, so an unrelated tool rename cannot turn
+            # this fact into an ERROR and hide its FAIL lines (PR118-02).
+            declared = re.search(r'\blayer="layer_(\d)_\w+"', repo.text(PATHOGEN))
+            if declared is None:
+                raise RegistryError(f"{PATHOGEN}: no layer declaration")
+            families["pathogen_ftp"] = int(declared.group(1))
         unnamed = set(families) - set(FAMILY_NAMES)
         if unnamed:
             raise RegistryError(
