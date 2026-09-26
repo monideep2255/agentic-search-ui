@@ -234,7 +234,7 @@ Before the exit checklist, verify the structure of every document this checkpoin
 
 ### Step 7: the two checks (all modes)
 
-- `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
+- `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, a "Last updated" line older than a date in its own body, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
 - `python3 tracker/check_living_docs.py --shape`: every registered anchor exists.
 
 A nonzero exit from either blocks the checkpoint: fix the document the script names, then rerun. Never declare the checkpoint done on a failing or unrun check, and never edit a checker so it passes.

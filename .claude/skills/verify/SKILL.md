@@ -99,11 +99,12 @@ Checks the structure of every tracked markdown file, and two kinds of reference 
 
 - A table of contents that does not match its body.
 - Two sections describing the same build phase.
+- A last-updated date older than the file's newest dated content.
 - The integrity of the two append-only tables in DECISIONS.md and LEARNINGS.md: a blank line inside a table, which silently truncates it when rendered; a row missing the `<details>` wrapper its format requires; a row whose column count does not match the header.
 - A phase-to-pull-request reference that names a pull request other than the one that merged the phase.
 - A phase called "next" that `tracker/BOARD.md`, frozen at build phase 6.2, marks done.
 
-Since 2026-09-25 it compares no count and no date (build harness review items D1 and D2). It no longer computes counts from source to fail a document that states a stale value, and a last-updated date older than the file's newest content is no longer a finding. A fact `--check` could not compute is a failure line naming why, never an "ok".
+Since 2026-09-25 it compares no count (build harness review item D1): it no longer computes counts from source to fail a document that states a stale value. The last-updated check, which D1 keeps among the structural checks, compares a file with itself and never with today's date. A fact `--check` could not compute is a failure line naming why, never an "ok".
 
 `python3 tracker/check_doc_drift.py --counts` still computes the counts it used to compare (Python tests, frontend tests, Playwright tests, the premise gate, DECISIONS.md rows, LEARNINGS.md entries, open flags) and prints them, checking no document against them.
 

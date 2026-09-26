@@ -1,21 +1,25 @@
-"""Is the drift check quiet about counts and dates, and still loud about structure?
+"""Is the drift check quiet about counts, and still loud about structure?
 
 Build harness review item D1, delegated by the product owner on 2026-09-25
 (DECISIONS.md, "The lead implements both harness reviews' takeaways"): the
 documents stop stating test, decision and learning counts, and
-`tracker/check_doc_drift.py --check` stops failing because a count or a date
-moved. Before, 87 of the 92 commits to CLAUDE.md in two weeks changed only a
-count or a date, and every checkpoint ran the whole pytest collection twice to
-compute counts nobody acted on
+`tracker/check_doc_drift.py --check` stops failing because a count moved.
+Before, 87 of the 92 commits to CLAUDE.md in two weeks changed only a count or
+a date, and every checkpoint ran the whole pytest collection twice to compute
+counts nobody acted on
 (`testing/Developer/reports/2026-09-25_harness_review/build_harness.md`).
+D1 keeps stale dates among the structural checks, so the "Last updated:"
+check, removed with the counts on 2026-09-25, was restored on 2026-09-26.
 
 What this file pins down, one claim per test:
 
-- `--check` passes a document that states a stale count or an old "Last
-  updated" line, and never calls the counting code, so it runs no tests.
+- `--check` passes a document that states a stale count, and never calls the
+  counting code, so it runs no tests.
 - The checks that stayed still fail: a table of contents that does not match
   its headings, a blank line inside an append-only table, a wrong
-  phase-to-pull-request reference.
+  phase-to-pull-request reference, a "Last updated:" line older than a date
+  in its own body.
+- A "Last updated:" line as new as its body passes, whatever today's date.
 - `--counts` still computes the counts, prints them, and reads no document.
 
 Build harness review item S3, same delegation: the check never prints "ok"
@@ -118,7 +122,7 @@ def _check(capsys) -> tuple[int, str]:
 
 
 # ---------------------------------------------------------------------------
-# D1: a count or a date moving no longer turns the check red
+# D1: a count moving no longer turns the check red
 # ---------------------------------------------------------------------------
 
 
@@ -136,11 +140,14 @@ def test_check_passes_a_document_that_states_stale_counts(repo, capsys):
     assert out.startswith("ok:")
 
 
-def test_check_passes_a_last_updated_line_older_than_its_body(repo, capsys):
+def test_check_passes_a_last_updated_line_as_new_as_its_body(repo, capsys):
+    """An old date is not stale on its own: the check compares the file with
+    itself, never with the calendar, so a document edited long ago passes."""
     repo.write(
         "PROGRESS.md",
-        "# Progress\n\nLast updated: 2020-01-01.\n\n"
-        "- 2026-09-25: something happened long after the date above.\n",
+        "# Progress\n\nLast updated: 2020-01-02.\n\n"
+        "- 2020-01-02: the latest thing that happened.\n"
+        "- 2020-01-01: something before it.\n",
     )
     rc, out = _check(capsys)
     assert rc == 0, out
@@ -190,6 +197,20 @@ def test_check_still_fails_on_a_wrong_pull_request_reference(repo, capsys):
     rc, out = _check(capsys)
     assert rc == 1
     assert "says build phase 3.1 merged as PR #99 (computed: PR #23)" in out
+
+
+def test_check_still_fails_on_a_last_updated_line_older_than_its_body(repo, capsys):
+    repo.write(
+        "PROGRESS.md",
+        "# Progress\n\nLast updated: 2020-01-01.\n\n"
+        "- 2026-09-25: something happened long after the date above.\n",
+    )
+    rc, out = _check(capsys)
+    assert rc == 1
+    assert (
+        "PROGRESS.md:3: 'Last updated: 2020-01-01' predates a later date in the body "
+        "(2026-09-25)" in out
+    )
 
 
 def test_check_still_fails_when_a_done_phase_is_called_next(repo, capsys):
