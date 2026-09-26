@@ -149,13 +149,28 @@ A builder stops and reports, rather than guessing, when:
   - `/verify` at 1280 and 390 passes. The smoke script's `page` line passes.
 - Fence: `frontend/src/components/screens/InfoScreens.tsx` and `IntegrationsScreen.test.tsx`.
 
+### T-8.10-08: The About, Architecture and tour pages say what is true (card 51's first run)
+
+- Builder: R, with T-8.10-07, since About and Integrations share `InfoScreens.tsx`. Status: todo.
+- Source: the stale facts on a screen in `testing/Developer/reports/2026-09-26_ui_facts/report.md`, found by the facts checker of pull request #118.
+- Acceptance, each in the words a person reads:
+  - "The tour names all four ways in, the MCP server included."
+  - "The tour does not claim every example question comes from the evaluation set." Reword it; do not change the questions.
+  - "About says what the Plan step does today": it picks the tools in code, and the graph query is written in Act.
+  - "About says every step can ask a model," not four of five.
+  - "About says a reworded sentence is judged by a model after the exact checks, and can be kept."
+  - "About and Architecture name every live service layer 2 calls, PubChem and Pathogen Detection included."
+  - "Architecture does not say the graph is read first." All three layers are read at once.
+  - `check_facts.py` reports no FAIL on any screen. The document-only facts are the lead's, card 53.
+- Fence: `frontend/src/components/screens/InfoScreens.tsx`, `ArchitectureScreen.tsx`, `frontend/src/lib/architectureFacts.ts`, `frontend/src/components/tour/OnboardingTour.tsx`, and their tests.
+
 ## Builder split
 
 | Builder | Model | Tickets | Fence |
 |---|---|---|---|
 | P | Opus | T-8.10-01 to 04 | `pyproject.toml`, `.github/gates/`, `.github/workflows/ci.yml`, `src/system_03_search_agent/adapters/cli/`, `clients/system3-cli/`, their tests |
 | Q | Opus | T-8.10-05 and 06 | `src/system_03_search_agent/adapters/mcp/`, `src/system_03_search_agent/adapters/graphql/`, their tests, `tests/system_03_search_agent/adapters/test_audience_depth_values.py` |
-| R | Sonnet | T-8.10-07 | `frontend/src/components/screens/InfoScreens.tsx`, `IntegrationsScreen.test.tsx` |
+| R | Sonnet | T-8.10-07 and 08 | `InfoScreens.tsx`, `ArchitectureScreen.tsx`, `lib/architectureFacts.ts`, `tour/OnboardingTour.tsx`, and their tests |
 
 P and Q share no file. The one contract between them: `s3 mcp` forwards whatever tools the remote server lists, so P never hard-codes Q's tool names.
 
@@ -197,5 +212,7 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
 ## History
 
 - 2026-09-26 22:08: branch cut from develop at 00f45e8, ledger written.
+- 2026-09-26 22:10: builders P and Q dispatched from 8cd197d, in the worktrees `.claude/worktrees/p810p` and `p810q`.
+- 2026-09-26 23:05: T-8.10-08 added for builder R, the screen facts the checker of pull request #118 found stale.
 
 ## Findings
