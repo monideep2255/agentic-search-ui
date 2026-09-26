@@ -239,7 +239,7 @@ The connection is a normal PostgreSQL client session. Apache AGE is a Postgres e
 import psycopg2
 
 conn = psycopg2.connect(
-    host="46.225.128.133",
+    host="<server-ip>",
     dbname="ncbi_kg",
     user="kg_reader",
     password="...",

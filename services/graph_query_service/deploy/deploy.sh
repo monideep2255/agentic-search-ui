@@ -12,12 +12,25 @@
 # once-only step run on the box itself, because a credential generated on a
 # laptop has already travelled further than it should.
 #
+# The box to deploy to is named by the GRAPH_BOX_HOST setting (see
+# env.example for its format, root@<the box's address>): the GRAPH_BOX_HOST
+# environment variable if set, otherwise the GRAPH_BOX_HOST= line in .env at
+# the repository root. Refuses to run with a plain message, never a stack
+# trace, when neither is set.
+#
 # depends_on: [services/graph_query_service/app.py, services/graph_query_service/deploy/Caddyfile, services/graph_query_service/deploy/graph-query-service.service]
 # depended_by: [docs/data-engineering/Graph_query_service_runbook.md, services/graph_query_service/deploy/check_drift.sh]
 
 set -euo pipefail
 
-HOST="${GRAPH_BOX_HOST:-root@46.225.128.133}"
+HOST="${GRAPH_BOX_HOST:-}"
+if [ -z "$HOST" ] && [ -f .env ]; then
+    HOST="$(grep -m1 '^GRAPH_BOX_HOST=' .env | cut -d= -f2-)"
+fi
+if [ -z "$HOST" ]; then
+    echo "GRAPH_BOX_HOST is not set. Set it in the environment, or add a GRAPH_BOX_HOST= line to .env at the repository root; env.example shows its format." >&2
+    exit 1
+fi
 TARGET=/opt/graph-query-service
 
 # The four modules the service imports out of the agent package. Copied

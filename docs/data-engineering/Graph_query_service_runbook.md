@@ -40,7 +40,7 @@ The operational reason: before this service, every live test in this repository 
 
 The hop from the service to Postgres never leaves the machine. The only network hop is a caller to Caddy over HTTPS.
 
-Host: `46.225.128.133`, reverse-DNS name `static.133.128.225.46.clients.your-server.de`, which forward-resolves to the same address. That name is what the certificate is issued for, and it is why no domain had to be bought.
+Host: `<server-ip>`, reverse-DNS name `static.<server-ip>.clients.your-server.de`, which forward-resolves to the same address. That name is what the certificate is issued for, and it is why no domain had to be bought.
 
 ## Install from nothing
 

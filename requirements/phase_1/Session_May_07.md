@@ -486,7 +486,7 @@ What System 3 inherits:
 - Plus ~81K NamedThing stubs (dangling endpoint fill from merger, 0.07% of total nodes)
 - 14 edge predicates: gene_associated_with_condition, is_sequence_variant_of, has_phenotype, participates_in, actively_involved_in, located_in, mentioned_in, has_mesh_annotation, in_taxon, subclass_of, close_match, exact_match, orthologous_to, cited_in
 - 9 CURIE prefixes: NCBIGene, ClinVar, MedGen, PMID, NCBITaxon, GO, MeSH, HP, MONDO (most diseases use MedGen prefix, not MONDO)
-- Connection: `postgresql://kg_reader@46.225.128.133:5432/ncbi_kg` with AGE prelude (`LOAD 'age'; SET search_path = ag_catalog, "$user", public;`)
+- Connection: `postgresql://kg_reader@<server-ip>:5432/ncbi_kg` with AGE prelude (`LOAD 'age'; SET search_path = ag_catalog, "$user", public;`)
 - Provenance: every node/edge has `source` + `source_url` (required in schema). BioLink 4.x compliant with knowledge_level and agent_type on edges.
 - Indexes: GIN on 4 largest vertex labels (Gene, Disease, BiologicalProcess, SequenceVariant); B-tree on start_id/end_id for all 14 edge tables
 - Three Cypher performance rules: always specify edge labels (never untyped `[r]`), match by `id` property, keep regex narrow on large labels
