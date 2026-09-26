@@ -784,3 +784,76 @@ def test_every_question_fits_the_endpoints_own_bounds() -> None:
     questions = sentence_check_module.build_jev_questions(MAX_CANDIDATES)
     jev_client_module._check_batch_questions(questions)  # raises on any bound broken
     assert len(questions) == jev_client_module.MAX_BATCH_QUESTIONS
+
+
+# ------------------------------------------------ the write step, wired (T-8.6-02)
+
+
+@pytest.mark.asyncio
+async def test_the_write_step_asks_jev_and_not_the_guard_when_jev_decides(monkeypatch) -> None:
+    fake_jev = _FakeJev({"item_1": "no"})
+    _jev_on(monkeypatch, fake_jev)
+    calls: list[object] = []
+
+    async def fake_dispatch(*args, **kwargs):
+        calls.append(args)
+        return _Reply('{"supported": []}')
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
+    narrative, quotes = extract_evidence_quotes(REWORDED)
+    result = await graph_module._ground_with_sentence_check(
+        narrative,
+        [PAPER, PAPER_TITLE],
+        question=QUESTION,
+        evidence_quotes=quotes,
+        harness=Harness(trace_id="t-wire-1"),
+        trace_id="t-wire-1",
+        budget_s=30.0,
+    )
+    assert len(fake_jev.calls) == 1 and calls == []
+    assert result.grounded, "Jev's no approved the faithful rewording"
+
+
+@pytest.mark.asyncio
+async def test_the_write_step_falls_back_to_todays_guard_call_when_jev_fails(monkeypatch) -> None:
+    _jev_on(monkeypatch, _FakeJev(raises=jev_client_module.JevCallError("down", reason="http_error")))
+    calls: list[tuple[tuple, dict]] = []
+
+    async def fake_dispatch(*args, **kwargs):
+        calls.append((args, kwargs))
+        return _Reply('{"supported": [1]}')
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
+    narrative, quotes = extract_evidence_quotes(REWORDED)
+    result = await graph_module._ground_with_sentence_check(
+        narrative,
+        [PAPER, PAPER_TITLE],
+        question=QUESTION,
+        evidence_quotes=quotes,
+        harness=Harness(trace_id="t-wire-2"),
+        trace_id="t-wire-2",
+        budget_s=30.0,
+    )
+    assert len(calls) == 1
+    args, kwargs = calls[0]
+    assert args[2:4] == ("guard", "write")
+    assert kwargs["max_tokens"] == 256 and kwargs["cache_prefix"] is None
+    assert 11.0 < kwargs["budget_s"] <= 12.0, "what is left of the capped 12-second check budget"
+    assert result.grounded
+
+
+@pytest.mark.asyncio
+async def test_the_write_step_in_jev_mode_still_fails_closed(monkeypatch) -> None:
+    _jev_on(monkeypatch, _FakeJev({"item_1": "yes"}))
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", None)  # must never be reached
+    narrative, quotes = extract_evidence_quotes(REWORDED)
+    result = await graph_module._ground_with_sentence_check(
+        narrative,
+        [PAPER, PAPER_TITLE],
+        question=QUESTION,
+        evidence_quotes=quotes,
+        harness=Harness(trace_id="t-wire-3"),
+        trace_id="t-wire-3",
+        budget_s=30.0,
+    )
+    assert not result.grounded, "a yes approves nothing, and code alone rejects the rewording"

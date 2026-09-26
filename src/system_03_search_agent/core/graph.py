@@ -588,8 +588,7 @@ from system_03_search_agent.synthesis.refuse import (
 )
 from system_03_search_agent.synthesis.sentence_check import (
     SentenceCheckUnreadable,
-    approved_keys,
-    build_sentence_check_messages,
+    check_reworded_sentences,
 )
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
@@ -8339,7 +8338,7 @@ async def _ground_with_sentence_check(
     trace_id: str,
     budget_s: float,
 ) -> GroundingResult:
-    """Ground a reply, asking the guard-tier model about reworded sentences.
+    """Ground a reply, asking a model about reworded sentences.
 
     Decided by the product owner on 2026-09-23 (items 12.9 and 12.10; the
     reasoning is in `synthesis/sentence_check.py`). Two grounding passes over
@@ -8348,9 +8347,12 @@ async def _ground_with_sentence_check(
     1. The ordinary pass, collecting every reworded sentence that passed all
        of code's exact checks (quote in the record, numbers, negation) and
        failed only the word check.
-    2. When there are any, ONE guard-tier call about all of them, then the
+    2. When there are any, ONE model check about all of them, then the
        pass again, accepting exactly the sentences the model approved with
-       exactly those quotes.
+       exactly those quotes. Which model is `sentence_check.
+       check_reworded_sentences`' job (build phase 8.6, T-8.6-02): Jev
+       when CLASSIFIER_PROVIDER=jev, with the guard tier only when Jev
+       fails; the guard tier alone, exactly as before, otherwise.
 
     Fails closed at every step: no candidates, too little budget, the cost
     cap, a failed or timed-out call, or an unreadable reply all return the
@@ -8367,20 +8369,30 @@ async def _ground_with_sentence_check(
     )
     if not candidates or budget_s < _SENTENCE_CHECK_MIN_BUDGET_S:
         return first
-    try:
+
+    async def _ask_guard_tier(messages: list[dict[str, str]], guard_budget_s: float) -> str:
         response = await _dispatch_tier_call(
             harness,
             trace_id,
             "guard",
             "write",
-            build_sentence_check_messages(candidates),
-            budget_s=min(budget_s - 1.0, _SENTENCE_CHECK_MAX_BUDGET_S),
+            messages,
+            budget_s=guard_budget_s,
             max_tokens=256,
             # A checker must not read the answering agent's prefix, for the
             # same measured reason the guardrail's classifier does not.
             cache_prefix=None,
         )
-        approved = approved_keys(_response_text(response), candidates)
+        return _response_text(response)
+
+    try:
+        approved = await check_reworded_sentences(
+            candidates,
+            harness=harness,
+            trace_id=trace_id,
+            budget_s=min(budget_s - 1.0, _SENTENCE_CHECK_MAX_BUDGET_S),
+            ask_guard=_ask_guard_tier,
+        )
     except (cost_control.QueryCapExceededError, HarnessCallError, SentenceCheckUnreadable) as exc:
         logger.warning(
             "sentence check approved nothing (trace %s): %s", trace_id, type(exc).__name__
