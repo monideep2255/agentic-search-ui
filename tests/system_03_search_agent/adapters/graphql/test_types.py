@@ -241,11 +241,24 @@ class TestRemainingTypesConstruct:
         # Mutation that turns this red: add persona_name to RunResult,
         # which the locked operation set (tracker/phase_4.3.md) never asks
         # for on the `run` query.
+        #
+        # The exact set gained three optional fields in build phase 8.10
+        # (T-8.10-06): `trust_line`, `clarifying_question` and
+        # `clarifying_options`, additive, on `AskResult` too. Still an EXACT
+        # set, so any other added field turns this red.
         field_names = {f.python_name for f in types_module.RunResult.__strawberry_definition__.fields}
         assert "persona_name" not in field_names
-        assert {"run_id", "finished", "answer", "trust_signal", "citations", "disclosures"} == (
-            field_names
-        )
+        assert {
+            "run_id",
+            "finished",
+            "answer",
+            "trust_signal",
+            "citations",
+            "disclosures",
+            "trust_line",
+            "clarifying_question",
+            "clarifying_options",
+        } == field_names
 
     def test_citations_export_carries_its_five_fields(self) -> None:
         # Mutation that turns this red: drop export_truncated or
