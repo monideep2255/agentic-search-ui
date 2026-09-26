@@ -286,7 +286,32 @@ def _cost_ceiling_error(
     )
 
 
-_GENERIC_INSTRUCTIONS = "Read the state and answer with exactly one of the offered options."
+def _json_payload(response: httpx.Response, subject: str, next_step: str) -> object:
+    """The 200 reply's body read as JSON, or a malformed-reply error
+    charged the ceiling (F-8.6-RJ05).
+
+    A 200 came back from the provider, so the call was billed, but a body
+    that is empty or not JSON states no amount at all. It is charged
+    `MAX_JEV_COST_USD`, the same as a JSON body that states no cost, and
+    the warning names that amount, so two unreadable replies are never
+    priced differently and the ceiling charge is never silent.
+    """
+    try:
+        return response.json()
+    except ValueError as exc:  # json.JSONDecodeError and UnicodeDecodeError are both ValueError
+        logger.warning(
+            "Jev's reply for %s is not JSON, so it is charged the $%.2f ceiling",
+            subject,
+            MAX_JEV_COST_USD,
+        )
+        raise JevCallError(
+            f"Jev's reply for {subject} was not JSON ({type(exc).__name__}); {next_step}",
+            reason="malformed_reply",
+            billed_cost_usd=MAX_JEV_COST_USD,
+        ) from exc
+
+
+_GENERIC_INSTRUCTIONS ="Read the state and answer with exactly one of the offered options."
 
 
 def _build_body(
@@ -441,9 +466,9 @@ async def call_jev(
         timeout_s=_TIMEOUT_S,
     )
 
-    billed_usd = 0.0
+    payload = _json_payload(response, subject, next_step)
+    billed_usd = MAX_JEV_COST_USD
     try:
-        payload = response.json()
         billed_usd = _reported_cost_usd(payload, subject)
         if billed_usd > MAX_JEV_COST_USD:
             raise _cost_ceiling_error(subject, billed_usd, next_step)
@@ -459,7 +484,10 @@ async def call_jev(
             cost_usd=float(usage["cost"]),
             latency_ms=latency_ms,
         )
-    except (KeyError, TypeError, ValueError, ValidationError) as exc:
+    except (KeyError, TypeError, ValueError, OverflowError, ValidationError) as exc:
+        # `OverflowError` (F-8.6-RA01, RJ04): an integer too large for a
+        # float, in `cost`, `confidence` or a probability, is a malformed
+        # reply like any other, charged what `_reported_cost_usd` read above.
         raise JevCallError(
             f"Jev's reply for decision {question_key!r} did not match the confirmed response "
             f"shape ({type(exc).__name__}: {exc}); fall back to the guard tier's pick for this decision",
@@ -525,8 +553,8 @@ class JevBatchResult(BaseModel):
     The same discipline as `JevResult` (`extra="forbid"`, every string and
     map bounded, and a reply reporting more than `MAX_JEV_COST_USD` for the
     whole call, about 30 times the $0.00033 measured for thirty questions,
-    not used, though its reported cost is still charged; see
-    `MAX_JEV_COST_USD`).
+    not used, and charged the `MAX_JEV_COST_USD` ceiling rather than the
+    figure it reported; see `MAX_JEV_COST_USD`).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -607,9 +635,9 @@ async def call_jev_batch(
         body, api_key=api_key, subject=subject, next_step=next_step, timeout_s=bound_s
     )
 
-    billed_usd = 0.0
+    payload = _json_payload(response, subject, next_step)
+    billed_usd = MAX_JEV_COST_USD
     try:
-        payload = response.json()
         billed_usd = _reported_cost_usd(payload, subject)
         if billed_usd > MAX_JEV_COST_USD:
             raise _cost_ceiling_error(subject, billed_usd, next_step)
@@ -632,7 +660,7 @@ async def call_jev_batch(
             cost_usd=float(usage["cost"]),
             latency_ms=latency_ms,
         )
-    except (KeyError, TypeError, ValueError, AttributeError, ValidationError) as exc:
+    except (KeyError, TypeError, ValueError, AttributeError, OverflowError, ValidationError) as exc:
         raise JevCallError(
             f"Jev's reply for {subject} did not match the confirmed response shape "
             f"({type(exc).__name__}); {next_step}",

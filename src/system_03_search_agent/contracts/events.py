@@ -54,8 +54,9 @@ class DecisionRecord(BaseModel):
     at one decision point, and which model chose it.
 
     Built by `harness.decide.decide` for every point except
-    "guardrail.injection", which `core/graph.py`'s `_injection_record`
-    builds itself, calling `call_jev` directly; the loop attaches one
+    "guardrail.injection", which `core/graph.py` builds itself:
+    `_jev_injection_pick` calls `call_jev` directly and `_injection_record`
+    builds the record from its result. The loop attaches one
     record per decision it made to the `done` event's `decisions`
     (`core/graph.py`, "classifier seam, wired"). Who decides, since build
     phase 8.6 (DECISIONS.md 2026-09-25, "Jev decides; the guard tier is
@@ -66,9 +67,13 @@ class DecisionRecord(BaseModel):
       and the guard fields stay empty, since the guard tier is not asked.
       The one exception is "guardrail.injection": there the guard
       classifier is asked beside Jev on every question, never only on
-      failure, so `agreed` is set (`jev.choice == guard_choice`) and a
-      `decided_by` of "guard" on that point means the guard tier's answer
-      was used, not that Jev failed (F-8.6-V05).
+      failure. When Jev made a pick, `agreed` is set
+      (`jev.choice == guard_choice`) and a `decided_by` of "guard" on that
+      point means the guard tier's answer was the verdict reached, not that
+      Jev failed (F-8.6-V05). When Jev made no pick (a timeout, an HTTP
+      error, an unusable reply, the cost cap), `agreed` stays None,
+      `decided_by` is "guard" because Jev failed, and `fallback_reason`
+      names Jev's failure, as on every other point (F-8.6-RJ07).
     - For every other point, only when Jev fails is the guard tier asked
       the same question: `decided_by` is "guard", `guard_choice` holds its
       pick and `fallback_reason` names Jev's failure.
@@ -78,9 +83,9 @@ class DecisionRecord(BaseModel):
       `fallback_reason` starts with "no_usable_pick" and `chosen` is the
       caller's fail-open default.
 
-    Outside "guardrail.injection", nothing runs a second model beside the
-    first on the live path, so `agreed` stays None on every live record for
-    every other point; the side-by-side comparison of the two models runs
+    Outside "guardrail.injection" with a Jev pick, nothing runs a second
+    model beside the first on the live path, so `agreed` stays None on every
+    other live record; the side-by-side comparison of the two models runs
     offline only (T-8.6-03). `jev_confidence` is Jev's own `confidence`,
     the margin between the options, not the probability of the pick
     (F-8.6-A16).
