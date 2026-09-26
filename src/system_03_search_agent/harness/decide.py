@@ -1,6 +1,7 @@
-"""The one classifier seam: Jev, with the guard tier as a live-recorded
-comparison and fallback (build phase 8.2, DECISIONS.md 2026-09-25, cards
-8, 9, 10 and 13).
+"""The one classifier seam: Jev decides, and the guard tier steps in only
+when Jev fails (build phase 8.2, cards 8, 9, 10 and 13; build phase 8.6,
+DECISIONS.md 2026-09-25, "Jev decides; the guard tier (DeepSeek) is Jev's
+fallback on failure only").
 
 Depends on:
     - system_03_search_agent.harness.harness (Harness, HarnessCallError,
@@ -31,13 +32,19 @@ holds each decision point's fixed description and the list of points.
 What this decides, and what it never decides: `decide()` answers exactly
 one closed-option question at a time (`point`, e.g. "think.ask_back",
 "guardrail.relevancy", "plan.literature", "plan.resource",
-"think.recent_years"), never free text. Both Jev and the guard tier are
-asked the SAME question over the SAME bounded `state`, concurrently. Per
-the product owner's decision: Jev's answer is what a caller would actually
-use; the guard tier's answer is recorded for a comparison table and used
-only as the fallback when Jev cannot answer. Since the fix round, once Jev
-has answered the comparison waits at most `GUARD_COMPARISON_GRACE_S` for
-the guard, so the person never waits on a pick that is only recorded.
+"think.recent_years"), never free text.
+
+Who decides, since build phase 8.6. With `CLASSIFIER_PROVIDER=jev`, Jev is
+asked alone. The guard tier is asked the same question over the same
+bounded `state` only when Jev fails: a timeout at Jev's 3-second total
+bound, an HTTP error, a malformed reply, an option outside the offered set,
+the cost cap, or anything unexpected. The reason is recorded on the
+`DecisionRecord`. Nothing runs beside Jev on the live path any more: the
+build phase 8.2 design asked the guard tier every decision concurrently and
+waited up to a one-second grace for its pick, only to record it, which
+doubled the classifier calls on every question for a table that read "not
+ready" in most rows. The comparison of the two models moves off the live
+path, to a script run over the golden questions (ticket T-8.6-03).
 
 `ai-security-standards.md`'s prompt-injection defense applies directly
 here: `state` is bounded (see `_STATE_MAX_CHARS`) and is the only free
@@ -49,10 +56,11 @@ multiple-choice question over a capped string.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any, Final
+from typing import Final
 
 from system_03_search_agent.contracts.events import DecisionRecord
 from system_03_search_agent.harness import cost_control
@@ -65,6 +73,8 @@ from system_03_search_agent.harness.jev_client import (
     call_jev,
 )
 from system_03_search_agent.harness.tiers import resolve_jev_model
+
+logger = logging.getLogger(__name__)
 
 # Bounded per ai-security-standards.md: only bounded state, never raw
 # unbounded content, reaches an external model through this seam.
@@ -86,25 +96,9 @@ _JEV_WAIT_S = JEV_TOTAL_TIMEOUT_S + 0.5
 
 #: How long `decide()` waits for the guard tier's pick once Jev has failed
 #: and the guard's pick is the one that decides: the guard call's own
-#: step budget plus a margin. A guard pick that ARRIVES within it is always
-#: used, however long Jev took to fail (F-8.2-J04).
+#: step budget plus a margin. The guard call enforces its own budget first;
+#: this is the outer net, the same shape as `_JEV_WAIT_S`.
 _GUARD_FALLBACK_WAIT_S = _GUARD_BUDGET_S + 1.0
-
-#: How long `decide()` waits for the guard tier's COMPARISON pick after Jev
-#: has already decided, in seconds. At most one second, by the fix round's
-#: brief (F-8.2-A12): the guard's pick is recorded beside Jev's for the
-#: comparison table and used only when Jev fails, so once Jev has answered
-#: nobody should wait up to the guard's 15-second budget for a number the
-#: person never sees. The decisions that sit on the person's path run
-#: beside a longer call (the injection classifier, Think's own
-#: classification, the choices writer), so this second is usually hidden.
-GUARD_COMPARISON_GRACE_S: Final[float] = 1.0
-
-#: `DecisionRecord.fallback_reason` when Jev decided and the guard tier's
-#: comparison pick had not arrived within `GUARD_COMPARISON_GRACE_S`. The
-#: guard call is then stopped; `guard_choice` is None because no pick was
-#: made in time, not because the guard failed to make one.
-GUARD_NOT_READY: Final[str] = "guard_not_ready"
 
 #: How `DecisionRecord.fallback_reason` starts when NEITHER model made a
 #: usable pick (fix round, F-8.2-A04). In Jev mode it is followed by a colon
@@ -235,9 +229,10 @@ async def _run_guard_pick(
     Checks the per-query cost cap first, exactly like
     `core/graph.py`'s `_dispatch_tier_call` does for every other guard-tier
     call in the loop. Returns None (never raises) when the cap is
-    exceeded, the call times out, or the call fails: this seam's `decide()`
-    caller records a None guard pick as no pick, and when Jev made none
-    either, fills `chosen` with the caller's fail-open default.
+    exceeded, the call times out, or the call fails: `decide()` records a
+    None guard pick as no pick, and when Jev made none either, fills
+    `chosen` with the caller's fail-open default. In Jev mode this runs
+    only after Jev has failed.
     """
     try:
         cost_control.check_per_query_cap(harness, trace_id, "guard")
@@ -267,8 +262,8 @@ async def _run_jev_pick(
     """Jev's pick, cap-checked first exactly like the guard call above.
 
     Raises JevCallError (from `jev_client.call_jev`) or
-    `cost_control.QueryCapExceededError` on any failure; `decide()` is the
-    only caller and it catches both.
+    `cost_control.QueryCapExceededError` on any failure; `_jev_attempt`
+    catches both.
     """
     # Jev has no tier of its own to draw a token-profile estimate from
     # (estimate_call_cost_usd is keyed strictly to {"guard", "plan",
@@ -296,47 +291,68 @@ async def _run_jev_pick(
     return result
 
 
-def _retrieve_outcome(task: asyncio.Task[Any]) -> None:
-    """Mark a finished task's exception as read, so asyncio never logs
-    "exception was never retrieved" for a pick `decide()` stopped reading
-    (a caller cancelled the decision, or the guard's comparison was dropped).
-    `decide()` still reads every outcome it uses through the two helpers
-    below."""
-    if not task.cancelled():
-        task.exception()
 
+async def _jev_attempt(
+    harness: Harness,
+    trace_id: str,
+    point: str,
+    state: str,
+    options: Sequence[str],
+    model: str,
+    api_key: str,
+    instructions: str | None,
+    criteria: Mapping[str, str] | None,
+) -> JevResult | str:
+    """Jev's pick, or the reason it made none.
 
-def _jev_outcome(task: asyncio.Task[JevResult], point: str) -> JevResult | BaseException:
-    """Jev's result, its failure, or a timeout when it has not finished.
-
-    Not finished within `_JEV_WAIT_S` means Jev's own total bound did not
-    fire, which should not happen; it is treated as the timeout it is.
+    The reason is what `DecisionRecord.fallback_reason` records:
+    `JevCallError.reason` ("timeout", "http_error", "malformed_reply",
+    "invalid_option"), "cost_cap", "timeout" again when Jev's own bound did
+    not fire and `_JEV_WAIT_S` did, or "unexpected_error". Never raises,
+    except for cancellation: a caller that cancels the decision stops Jev's
+    call with it, since `asyncio.wait_for` cancels what it waits on.
     """
-    if not task.done():
-        return JevCallError(
-            f"Jev did not answer decision {point!r} within {_JEV_WAIT_S}s; "
-            "fall back to the guard tier's pick for this decision",
-            reason="timeout",
+    try:
+        return await asyncio.wait_for(
+            _run_jev_pick(
+                harness, trace_id, point, state, options, model, api_key, instructions, criteria
+            ),
+            timeout=_JEV_WAIT_S,
         )
-    if task.cancelled():
-        return JevCallError(
-            f"Jev's call for decision {point!r} was cancelled; fall back to the guard "
-            "tier's pick for this decision",
-            reason="timeout",
-        )
-    exc = task.exception()
-    return exc if exc is not None else task.result()
+    except JevCallError as exc:
+        return exc.reason
+    except QueryCapExceededError:
+        return "cost_cap"
+    except TimeoutError:
+        return "timeout"
+    except Exception:  # noqa: BLE001 - a broken Jev call falls back, it never breaks the decision
+        return "unexpected_error"
 
 
-def _guard_outcome(task: asyncio.Task[str | None]) -> str | None:
-    """The guard tier's pick if it has ARRIVED, else None.
+async def _guard_fallback_pick(
+    harness: Harness,
+    trace_id: str,
+    state: str,
+    options: Sequence[str],
+    instructions: str | None,
+    criteria: Mapping[str, str] | None,
+) -> str | None:
+    """The guard tier's pick once Jev has failed, or None.
 
-    Read from the task itself rather than from any outer wait, so a pick
-    that arrived is used however long the other call took (F-8.2-J04).
+    `_run_guard_pick` already returns None on the cost cap, a timeout of its
+    own step budget and a failed call; the outer wait and the broad catch
+    are nets for anything that slips past those, so a failed fallback reads
+    as "no usable pick", never as an exception out of `decide()`.
     """
-    if not task.done() or task.cancelled() or task.exception() is not None:
+    try:
+        return await asyncio.wait_for(
+            _run_guard_pick(harness, trace_id, state, options, instructions, criteria),
+            timeout=_GUARD_FALLBACK_WAIT_S,
+        )
+    except TimeoutError:
         return None
-    return task.result()
+    except Exception:  # noqa: BLE001 - see the docstring
+        return None
 
 
 async def decide(
@@ -354,32 +370,30 @@ async def decide(
 
     `instructions` (one line saying what is being decided) and `criteria`
     (one line per option saying when to choose it) are the caller's fixed,
-    code-authored description of the decision. Both models receive the
-    same description: the guard tier in its system message, Jev in the
-    endpoint's own `instructions` and `criteria` fields. `state` stays the
-    person's bounded text only. Every wired decision point passes both;
-    without them the models see only option names, which measured wrong on
-    three of the five decision shapes (builder J, F-J-03).
+    code-authored description of the decision. Whichever model answers
+    receives the same description: the guard tier in its system message,
+    Jev in the endpoint's own `instructions` and `criteria` fields. `state`
+    stays the person's bounded text only. Every wired decision point passes
+    both; without them the models see only option names, which measured
+    wrong on three of the five decision shapes (builder J, F-J-03).
 
     With `CLASSIFIER_PROVIDER` unset or anything other than `"jev"` (the
     code default, `"guard"`): Jev is never called. The guard tier decides
     alone and its pick is used. This is what keeps production untouched
     until the product owner flips the switch.
 
-    With `CLASSIFIER_PROVIDER=jev`: Jev and the guard tier are dispatched
-    CONCURRENTLY over the same `state` and `options`, as two tasks.
+    With `CLASSIFIER_PROVIDER=jev` (build phase 8.6):
 
-    - Jev's choice is used when it answers within its 3-second TOTAL bound
-      with one of the offered `options`. `decide()` then waits at most
-      `GUARD_COMPARISON_GRACE_S` for the guard's comparison pick; one that
-      has not arrived by then is stopped and recorded as not ready
-      (`fallback_reason == GUARD_NOT_READY`, `guard_choice` None).
-    - When Jev fails, the guard tier's choice is used, waited for within
-      the guard's own step budget, and `fallback_reason` names Jev's
-      failure (`JevCallError.reason`, `"cost_cap"`, `"unexpected_error"`).
-      A guard pick that has arrived is always read, never discarded by an
-      outer limit.
-    - When neither side produced a valid answer (either provider),
+    - Jev is asked alone. When it answers within its 3-second TOTAL bound
+      with one of the offered `options`, its choice is used at once:
+      `decided_by == "jev"`, `guard_choice` None, `agreed` None,
+      `fallback_reason` None. The guard tier is not called, so the
+      decision takes Jev's time and nothing more.
+    - When Jev fails, and only then, the guard tier is asked the same
+      question within its own step budget. Its pick is used and
+      `fallback_reason` names Jev's failure (`JevCallError.reason`,
+      `"cost_cap"`, `"unexpected_error"`).
+    - When neither model produced a valid answer (either provider),
       `jev_choice` and `guard_choice` are both None, `fallback_reason`
       starts with `"no_usable_pick"` (in Jev mode followed by a colon and
       Jev's own failure, e.g. `"no_usable_pick:timeout"`), and `chosen` is
@@ -423,97 +437,48 @@ async def decide(
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     model = resolve_jev_model()
 
-    # Two tasks, not one `gather` (fix round, F-8.2-J04, A12 and A05). A
-    # gather returns nothing until BOTH calls finish, so a slow guard held
-    # up a decision Jev had already made, and an outer limit that fired
-    # threw away a guard pick that had arrived long before. Waiting on each
-    # task on its own terms fixes both: Jev is waited for within its own
-    # total bound; once Jev has decided, the guard's comparison pick gets a
-    # short grace; once Jev has failed, the guard's pick is waited for
-    # within the guard's own budget, and a pick that has arrived is always
-    # read. No gather also means no orphaned gathering future to log an
-    # asyncio ERROR when a caller cancels a decision nobody will read.
-    guard_task = asyncio.create_task(
-        _run_guard_pick(harness, trace_id, bounded_state, options, instructions, criteria)
+    jev = await _jev_attempt(
+        harness, trace_id, point, bounded_state, options, model, api_key, instructions, criteria
     )
-    jev_task = asyncio.create_task(
-        _run_jev_pick(
-            harness, trace_id, point, bounded_state, options, model, api_key, instructions, criteria
+    if isinstance(jev, JevResult):
+        return DecisionRecord(
+            name=point,
+            options=list(options),
+            chosen=jev.choice,
+            decided_by="jev",
+            jev_choice=jev.choice,
+            jev_confidence=jev.confidence,
+            jev_latency_ms=jev.latency_ms,
         )
+
+    reason = jev
+    logger.warning(
+        "Jev made no pick for decision %s (trace %s, %s); asking the guard tier",
+        point,
+        trace_id,
+        reason,
     )
-    for task in (guard_task, jev_task):
-        task.add_done_callback(_retrieve_outcome)
-    guard_ready = False
-    try:
-        await asyncio.wait({jev_task}, timeout=_JEV_WAIT_S)
-        jev_outcome = _jev_outcome(jev_task, point)
-        guard_wait_s = (
-            GUARD_COMPARISON_GRACE_S
-            if isinstance(jev_outcome, JevResult)
-            else _GUARD_FALLBACK_WAIT_S
+    guard_choice = await _guard_fallback_pick(
+        harness, trace_id, bounded_state, options, instructions, criteria
+    )
+    if guard_choice is not None:
+        return DecisionRecord(
+            name=point,
+            options=list(options),
+            chosen=guard_choice,
+            decided_by="guard",
+            guard_choice=guard_choice,
+            fallback_reason=reason,
         )
-        await asyncio.wait({guard_task}, timeout=guard_wait_s)
-        guard_ready = guard_task.done()
-    finally:
-        # Whatever is still running is a pick nobody will read: the guard's
-        # comparison past its grace, or both calls when the caller itself
-        # cancelled this decision. Stop them so they spend nothing more.
-        for task in (guard_task, jev_task):
-            if not task.done():
-                task.cancel()
-
-    guard_choice = _guard_outcome(guard_task)
-
-    jev_result: JevResult | None
-    fallback_reason: str | None
-    if isinstance(jev_outcome, JevCallError):
-        jev_result = None
-        fallback_reason = jev_outcome.reason
-    elif isinstance(jev_outcome, QueryCapExceededError):
-        jev_result = None
-        fallback_reason = "cost_cap"
-    elif isinstance(jev_outcome, BaseException):
-        jev_result = None
-        fallback_reason = "unexpected_error"
-    else:
-        jev_result = jev_outcome
-        fallback_reason = None
-
-    if jev_result is not None:
-        chosen = jev_result.choice
-        decided_by: str = "jev"
-        if not guard_ready:
-            fallback_reason = GUARD_NOT_READY
-    elif guard_choice is not None:
-        chosen = guard_choice
-        decided_by = "guard"
-        if fallback_reason is None:
-            fallback_reason = "jev_unavailable"
-    else:
-        # Neither model made a pick (F-8.2-A04, F-8.2-J13). The record says
-        # so, and names no pick nobody made: both picks stay None, the
-        # reason starts with "no_usable_pick" and keeps Jev's own failure
-        # after the colon, and `chosen` is the caller's fail-open default,
-        # which is what the loop actually does.
-        chosen = fallback_default
-        decided_by = "guard"
-        fallback_reason = (
-            f"{NO_USABLE_PICK}:{fallback_reason}" if fallback_reason else NO_USABLE_PICK
-        )
-
-    agreed: bool | None = None
-    if jev_result is not None and guard_choice is not None:
-        agreed = jev_result.choice == guard_choice
-
+    # Neither model made a pick (F-8.2-A04, F-8.2-J13). The record says so,
+    # and names no pick nobody made: both picks stay None, the reason starts
+    # with "no_usable_pick" and keeps Jev's own failure after the colon, and
+    # `chosen` is the caller's fail-open default, which is what the loop
+    # actually does.
     return DecisionRecord(
         name=point,
         options=list(options),
-        chosen=chosen,
-        decided_by=decided_by,  # type: ignore[arg-type]
-        jev_choice=jev_result.choice if jev_result is not None else None,
-        jev_confidence=jev_result.confidence if jev_result is not None else None,
-        guard_choice=guard_choice,
-        agreed=agreed,
-        fallback_reason=fallback_reason,
-        jev_latency_ms=jev_result.latency_ms if jev_result is not None else None,
+        chosen=fallback_default,
+        decided_by="guard",
+        fallback_reason=f"{NO_USABLE_PICK}:{reason}",
     )

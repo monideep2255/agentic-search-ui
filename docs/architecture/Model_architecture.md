@@ -155,21 +155,21 @@ The decisions it makes on develop:
 - Whether a question asks for recent work without saying how recent (`think.recent_years`), which asks "How far back should I search?".
 - Which resource to pull (`plan.resource`) is NOT wired: the plan makes no runtime choice between tools today. The closed option list it would use is `tools/catalogue.py`.
 
-How each decision is made:
+How each decision is made, since build phase 8.6 (DECISIONS.md 2026-09-25, "Jev decides; the guard tier (DeepSeek) is Jev's fallback on failure only"):
 
-- The guard tier makes the same decision alongside Jev, purely for comparison.
-- Jev's answer is used when it arrives within 3 seconds with an offered option; otherwise the guard tier's pick is used and the reason recorded.
-- The guard tier's comparison pick is given one second after Jev answers (`GUARD_COMPARISON_GRACE_S`), so many records read not ready.
-- Every decision rides on the answer's done event in `decisions`. The first comparison table is `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md`.
+- Jev is asked alone. Its answer is used when it arrives within its 3-second total limit with one of the offered options, and the decision then takes Jev's time and nothing more.
+- The guard tier is asked only when Jev fails: a timeout, an HTTP error, a malformed reply, an option outside the set, the cost cap, or an unexpected error. Its pick is used and Jev's reason is recorded in `fallback_reason`.
+- When neither model makes a pick, the loop does what the decision point's fail-open option says, and the record reads `no_usable_pick:<Jev's reason>`.
+- Nothing runs beside Jev any more. Build phase 8.2 asked the guard tier every decision at the same time as Jev and waited up to one second (`GUARD_COMPARISON_GRACE_S`, now removed) for a pick that was only recorded.
+- Every decision rides on the answer's done event in `decisions`. Build phase 8.2's live comparison table is `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md`.
 
 ```mermaid
 flowchart LR
     Q[Loop needs a small choice] --> J[Ask Jev]
     J -->|answers in time| D[Use Jev's choice]
-    J -->|errors or times out| F[Fall back to guard tier]
-    Q -.record only.-> GT[Guard tier also decides]
-    GT -.-> CMP[Comparison table]
-    D --> CMP
+    J -->|fails| F[Ask the guard tier]
+    F -->|picks| G[Use the guard's choice]
+    F -->|no pick| O[Use the fail-open option]
 ```
 
 ## Where to change a model

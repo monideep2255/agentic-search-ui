@@ -5,15 +5,24 @@ No real network call anywhere in this file. `litellm.acompletion` (the
 guard tier's own transport) and `jev_client.call_jev` (Jev's transport)
 are both monkeypatched in every test.
 
-Covers, per the ticket's explicit acceptance criteria:
-    - CLASSIFIER_PROVIDER=guard (or unset): Jev is never called.
-    - CLASSIFIER_PROVIDER=jev: a valid Jev choice is used and the guard
-      choice is recorded.
-    - Each of Jev's four failure paths (timeout, HTTP error, malformed
-      reply, an option outside the offered set) falls back to the guard
-      choice with the reason recorded.
+Covers, per the tickets' explicit acceptance criteria (build phase 8.2,
+card 8; build phase 8.6, T-8.6-01):
+    - CLASSIFIER_PROVIDER=guard (or unset): Jev is never called, and the
+      guard tier decides exactly as before build phase 8.6.
+    - CLASSIFIER_PROVIDER=jev: Jev is asked alone. A valid Jev choice is
+      used and the guard tier is never called, not even in the background.
+    - Every way Jev can fail (timeout at its 3-second total bound, HTTP
+      error, malformed reply, an option outside the offered set, the cost
+      cap, an unexpected error) asks the guard tier once, uses its pick,
+      and records Jev's reason.
+    - The wall time of a decision Jev answers is Jev's time, with no grace
+      for a comparison pick added to it.
     - The cost cap is checked before each call, and Jev's cost is charged
       through Harness.track_cost.
+
+What it deliberately omits: whether either real model decides well. The
+offline comparison script measures that
+(`testing/Developer/scripts/compare_classifiers.py`).
 """
 
 from __future__ import annotations
@@ -21,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import time
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock
 
 import litellm
@@ -28,6 +38,7 @@ import pytest
 
 from system_03_search_agent.harness import decide as decide_module
 from system_03_search_agent.harness import jev_client as jev_client_module
+from system_03_search_agent.harness.cost_control import QueryCapExceededError
 from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.harness.jev_client import JevCallError, JevResult
@@ -102,24 +113,29 @@ async def test_explicit_guard_provider_never_calls_jev(monkeypatch: pytest.Monke
 
 
 @pytest.mark.asyncio
-async def test_jev_provider_uses_jev_choice_and_records_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_jev_provider_uses_jev_alone_and_never_asks_the_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-8.6-01: with Jev answering, the guard tier is not called at all,
+    not beside Jev and not after it."""
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     _patch_cap(monkeypatch)
-    _patch_guard(monkeypatch, reply="not_relevant")
-    monkeypatch.setattr(
-        decide_module, "call_jev", AsyncMock(return_value=_jev_result(choice="relevant", confidence=0.86))
-    )
+    mock_guard = _patch_guard(monkeypatch, reply="not_relevant")
+    mock_jev = AsyncMock(return_value=_jev_result(choice="relevant", confidence=0.86))
+    monkeypatch.setattr(decide_module, "call_jev", mock_jev)
 
     harness = Harness(trace_id="t3")
     record = await decide(harness, "t3", "guardrail.relevancy", "x", _OPTIONS)
+    await asyncio.sleep(0.05)  # anything left running in the background would have started by now
 
+    mock_jev.assert_awaited_once()
+    mock_guard.assert_not_called()
     assert record.decided_by == "jev"
     assert record.chosen == "relevant"
     assert record.jev_choice == "relevant"
     assert record.jev_confidence == pytest.approx(0.86)
-    assert record.guard_choice == "not_relevant"
-    assert record.agreed is False
+    assert record.jev_latency_ms == 285
+    assert record.guard_choice is None
+    assert record.agreed is None
     assert record.fallback_reason is None
 
 
@@ -128,7 +144,7 @@ async def test_jev_timeout_falls_back_to_guard_choice(monkeypatch: pytest.Monkey
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     _patch_cap(monkeypatch)
-    _patch_guard(monkeypatch, reply="relevant")
+    mock_guard = _patch_guard(monkeypatch, reply="relevant")
     monkeypatch.setattr(
         decide_module,
         "call_jev",
@@ -137,6 +153,8 @@ async def test_jev_timeout_falls_back_to_guard_choice(monkeypatch: pytest.Monkey
 
     harness = Harness(trace_id="t4")
     record = await decide(harness, "t4", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert mock_guard.call_count == 1, "the guard tier steps in once, after Jev failed"
 
     assert record.decided_by == "guard"
     assert record.chosen == "relevant"
@@ -149,7 +167,7 @@ async def test_jev_http_error_falls_back_to_guard_choice(monkeypatch: pytest.Mon
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     _patch_cap(monkeypatch)
-    _patch_guard(monkeypatch, reply="relevant")
+    mock_guard = _patch_guard(monkeypatch, reply="relevant")
     monkeypatch.setattr(
         decide_module,
         "call_jev",
@@ -158,6 +176,8 @@ async def test_jev_http_error_falls_back_to_guard_choice(monkeypatch: pytest.Mon
 
     harness = Harness(trace_id="t5")
     record = await decide(harness, "t5", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert mock_guard.call_count == 1, "the guard tier steps in once, after Jev failed"
 
     assert record.decided_by == "guard"
     assert record.fallback_reason == "http_error"
@@ -168,7 +188,7 @@ async def test_jev_malformed_reply_falls_back_to_guard_choice(monkeypatch: pytes
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     _patch_cap(monkeypatch)
-    _patch_guard(monkeypatch, reply="relevant")
+    mock_guard = _patch_guard(monkeypatch, reply="relevant")
     monkeypatch.setattr(
         decide_module,
         "call_jev",
@@ -177,6 +197,8 @@ async def test_jev_malformed_reply_falls_back_to_guard_choice(monkeypatch: pytes
 
     harness = Harness(trace_id="t6")
     record = await decide(harness, "t6", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert mock_guard.call_count == 1, "the guard tier steps in once, after Jev failed"
 
     assert record.decided_by == "guard"
     assert record.fallback_reason == "malformed_reply"
@@ -187,7 +209,7 @@ async def test_jev_invalid_option_falls_back_to_guard_choice(monkeypatch: pytest
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     _patch_cap(monkeypatch)
-    _patch_guard(monkeypatch, reply="relevant")
+    mock_guard = _patch_guard(monkeypatch, reply="relevant")
     monkeypatch.setattr(
         decide_module,
         "call_jev",
@@ -196,6 +218,8 @@ async def test_jev_invalid_option_falls_back_to_guard_choice(monkeypatch: pytest
 
     harness = Harness(trace_id="t7")
     record = await decide(harness, "t7", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert mock_guard.call_count == 1, "the guard tier steps in once, after Jev failed"
 
     assert record.decided_by == "guard"
     assert record.fallback_reason == "invalid_option"
@@ -237,11 +261,10 @@ async def test_jev_cost_is_charged_through_track_cost(monkeypatch: pytest.Monkey
     await decide(harness, "t9", "guardrail.relevancy", "x", _OPTIONS)
     after = harness.get_query_cost_usd("t9")
 
-    # Guard's own real call_tier cost plus Jev's cost_usd both landed on
-    # the same running total. On its own this arm cannot tell the two apart
-    # (F-8.2-J05: deleting Jev's charge left it green, because the guard
-    # call alone costs more than Jev); the arm below isolates Jev's charge.
-    assert after - before >= jev_result.cost_usd
+    # Since build phase 8.6 the guard is not called when Jev answers, so the
+    # only money on the trace is Jev's. The arm below still prices a guard
+    # call at zero, so it holds if a guard call ever came back (F-8.2-J05).
+    assert after - before == pytest.approx(jev_result.cost_usd)
 
 
 @pytest.mark.asyncio
@@ -266,13 +289,16 @@ async def test_jev_cost_reaches_the_query_total_on_its_own(monkeypatch: pytest.M
 @pytest.mark.asyncio
 async def test_both_models_read_at_most_the_state_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     """F-8.2-J06: `_STATE_MAX_CHARS` is the bound on what reaches two
-    external models. A 5000-character state reaches each as 4000."""
+    external models. A 5000-character state reaches each as 4000: Jev when
+    it is asked, and the guard tier when it steps in after Jev failed."""
     _jev_mode(monkeypatch)
     mock_acompletion = _patch_guard(monkeypatch, reply="relevant")
-    mock_jev = AsyncMock(return_value=_jev_result())
+    mock_jev = AsyncMock(side_effect=JevCallError("down", reason="http_error"))
     monkeypatch.setattr(decide_module, "call_jev", mock_jev)
 
-    await decide(Harness(trace_id="t9c"), "t9c", "guardrail.relevancy", "a" * 5000, _OPTIONS)
+    record = await decide(Harness(trace_id="t9c"), "t9c", "guardrail.relevancy", "a" * 5000, _OPTIONS)
+
+    assert record.decided_by == "guard", "populate-check: the guard really was asked"
 
     assert decide_module._STATE_MAX_CHARS == 4000
     assert len(mock_jev.await_args.kwargs["state"]) == 4000
@@ -446,22 +472,24 @@ def test_a_negated_literature_option_is_no_pick_but_the_option_named_not_is_one(
 
 
 # ---------------------------------------------------------------------------
-# Build phase 8.2 fix round, F-8.2-J03, J04 and A12: how long decide() waits.
+# How long decide() takes (build phase 8.2 fix round, F-8.2-J03 and J04;
+# rewritten for build phase 8.6, T-8.6-01).
 #
-# - Jev answered in time: the guard's comparison pick gets at most
-#   GUARD_COMPARISON_GRACE_S, then is recorded as not ready.
+# - Jev answered in time: the decision takes Jev's time. The guard tier is
+#   never called, so no comparison grace is waited for.
 # - Jev failed (its 3-second TOTAL bound, measured through the real
-#   `call_jev` with a 5-second fake Jev): the guard's pick decides, waited
-#   for within the guard's own budget.
-# - A guard pick that has arrived is never discarded by an outer limit.
-# Each arm asserts the wall time; the fix round's report records them.
+#   `call_jev` with a 5-second fake Jev, or a fast failure): the guard tier
+#   is asked AFTER Jev, within the guard's own budget, and its pick decides.
+# Each arm asserts the wall time; builder K's report records them.
 # ---------------------------------------------------------------------------
 
 
-def _patch_slow_guard(monkeypatch: pytest.MonkeyPatch, *, delay_s: float, reply: str) -> dict[str, bool]:
-    seen = {"cancelled": False}
+def _patch_slow_guard(monkeypatch: pytest.MonkeyPatch, *, delay_s: float, reply: str) -> dict[str, Any]:
+    seen: dict[str, Any] = {"cancelled": False, "started": False, "started_at": None}
 
     async def _acompletion(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        seen["started"] = True
+        seen["started_at"] = time.monotonic()
         try:
             await asyncio.sleep(delay_s)
         except asyncio.CancelledError:
@@ -552,58 +580,52 @@ async def test_a_default_outside_the_options_is_refused() -> None:
         await decide(Harness(trace_id="b3"), "b3", "p", "x", _OPTIONS, default="maybe")
 
 
-def test_the_comparison_grace_is_at_most_one_second() -> None:
-    assert 0 < decide_module.GUARD_COMPARISON_GRACE_S <= 1.0
-
-
 @pytest.mark.asyncio
-async def test_jev_in_time_does_not_wait_for_a_slow_guard_comparison(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("jev_delay_s", [0.0, 0.05, 0.4])
+async def test_a_decision_jev_answers_takes_jevs_time_and_no_more(
+    monkeypatch: pytest.MonkeyPatch, jev_delay_s: float
 ) -> None:
+    """T-8.6-01's measured acceptance: with a fast fake Jev the wall time of
+    decide() is Jev's own time. A guard tier that would take 5 seconds is
+    patched in, so any wait on it, a grace included, shows as time; it must
+    not even be started."""
     _jev_mode(monkeypatch)
     seen = _patch_slow_guard(monkeypatch, delay_s=5.0, reply="not_relevant")
-    monkeypatch.setattr(decide_module, "call_jev", AsyncMock(return_value=_jev_result(choice="relevant")))
+
+    async def _fast_jev(**_kwargs: object) -> JevResult:
+        await asyncio.sleep(jev_delay_s)
+        return _jev_result(choice="relevant")
+
+    monkeypatch.setattr(decide_module, "call_jev", _fast_jev)
 
     started = time.monotonic()
     record = await decide(Harness(trace_id="w1"), "w1", "guardrail.relevancy", "x", _OPTIONS)
     elapsed = time.monotonic() - started
-    await asyncio.sleep(0.05)  # let the cancellation reach the call
 
-    assert elapsed < decide_module.GUARD_COMPARISON_GRACE_S + 0.5, elapsed
+    assert elapsed < jev_delay_s + 0.15, elapsed
     assert record.decided_by == "jev" and record.chosen == "relevant"
-    assert record.guard_choice is None and record.agreed is None
-    assert record.fallback_reason == decide_module.GUARD_NOT_READY
-    assert seen["cancelled"], "a comparison nobody will read must stop spending"
+    assert record.guard_choice is None and record.fallback_reason is None
+    assert not seen["started"], "the guard tier must not be called when Jev answers"
 
 
 @pytest.mark.asyncio
-async def test_a_guard_comparison_inside_the_grace_is_recorded(monkeypatch: pytest.MonkeyPatch) -> None:
-    _jev_mode(monkeypatch)
-    _patch_slow_guard(monkeypatch, delay_s=0.3, reply="not_relevant")
-    monkeypatch.setattr(decide_module, "call_jev", AsyncMock(return_value=_jev_result(choice="relevant")))
-
-    record = await decide(Harness(trace_id="w2"), "w2", "guardrail.relevancy", "x", _OPTIONS)
-
-    assert record.decided_by == "jev"
-    assert record.guard_choice == "not_relevant" and record.agreed is False
-    assert record.fallback_reason is None
-
-
-@pytest.mark.asyncio
-async def test_a_slow_jev_times_out_at_three_seconds_and_the_ready_guard_pick_decides(
+async def test_a_slow_jev_times_out_at_three_seconds_then_the_guard_decides(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-8.2-J03 and J04 together: a 5-second Jev is cut off by its own
-    total bound, and the guard pick that arrived at 0.2 s is used."""
+    """F-8.2-J03 with T-8.6-01's order: a 5-second Jev is cut off by its own
+    total bound at 3 s, and only then is the guard asked (0.2 s here)."""
     _jev_mode(monkeypatch)
-    _patch_slow_guard(monkeypatch, delay_s=0.2, reply="not_relevant")
+    seen = _patch_slow_guard(monkeypatch, delay_s=0.2, reply="not_relevant")
     _patch_slow_jev_post(monkeypatch, delay_s=5.0)
 
     started = time.monotonic()
     record = await decide(Harness(trace_id="w3"), "w3", "guardrail.relevancy", "x", _OPTIONS)
     elapsed = time.monotonic() - started
 
-    assert 2.9 <= elapsed < 3.6, elapsed
+    assert 3.1 <= elapsed < 3.8, elapsed
+    assert seen["started_at"] is not None and seen["started_at"] - started >= 2.9, (
+        "the guard is asked after Jev failed, never beside it"
+    )
     assert record.decided_by == "guard"
     assert record.chosen == "not_relevant" and record.guard_choice == "not_relevant"
     assert record.fallback_reason == "timeout"
@@ -613,26 +635,31 @@ async def test_a_slow_jev_times_out_at_three_seconds_and_the_ready_guard_pick_de
 async def test_a_failed_jev_waits_for_a_slow_guard_pick_within_its_budget(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A Jev that fails at once hands over to a guard that takes 1.5 s; the
+    decision takes about the guard's time and uses its pick."""
     _jev_mode(monkeypatch)
-    _patch_slow_guard(monkeypatch, delay_s=4.0, reply="not_relevant")
-    _patch_slow_jev_post(monkeypatch, delay_s=5.0)
+    _patch_slow_guard(monkeypatch, delay_s=1.5, reply="not_relevant")
+    monkeypatch.setattr(
+        decide_module, "call_jev", AsyncMock(side_effect=JevCallError("down", reason="http_error"))
+    )
 
     started = time.monotonic()
     record = await decide(Harness(trace_id="w4"), "w4", "guardrail.relevancy", "x", _OPTIONS)
     elapsed = time.monotonic() - started
 
-    assert 3.9 <= elapsed < 4.6, elapsed
+    assert 1.4 <= elapsed < 2.0, elapsed
     assert record.decided_by == "guard" and record.guard_choice == "not_relevant"
     assert record.chosen == "not_relevant"
+    assert record.fallback_reason == "http_error"
 
 
 @pytest.mark.asyncio
-async def test_a_guard_pick_that_arrived_is_never_discarded_by_the_outer_wait(
+async def test_a_jev_that_ignores_its_own_bound_is_cut_at_the_outer_net(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The judge's F-8.2-J04 shape: a Jev call that ignores its own bound
-    and hangs. decide() stops waiting at its outer net, and the guard pick
-    that arrived at 0.2 s still decides."""
+    and hangs. decide() stops waiting at `_JEV_WAIT_S`, then the guard's
+    0.2-second pick decides."""
     _jev_mode(monkeypatch)
     _patch_slow_guard(monkeypatch, delay_s=0.2, reply="not_relevant")
 
@@ -646,10 +673,91 @@ async def test_a_guard_pick_that_arrived_is_never_discarded_by_the_outer_wait(
     record = await decide(Harness(trace_id="w5"), "w5", "guardrail.relevancy", "x", _OPTIONS)
     elapsed = time.monotonic() - started
 
-    assert elapsed < decide_module._JEV_WAIT_S + 0.5, elapsed
+    assert elapsed < decide_module._JEV_WAIT_S + 0.2 + 0.5, elapsed
     assert record.decided_by == "guard" and record.guard_choice == "not_relevant"
     assert record.chosen == "not_relevant"
     assert record.fallback_reason == "timeout"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("jev_raises", "reason"),
+    [
+        (JevCallError("slow", reason="timeout"), "timeout"),
+        (JevCallError("500", reason="http_error"), "http_error"),
+        (JevCallError("bad shape", reason="malformed_reply"), "malformed_reply"),
+        (JevCallError("maybe", reason="invalid_option"), "invalid_option"),
+        (
+            QueryCapExceededError(
+                "cap", query_cost_usd=0.1, query_cap_usd=0.1, estimated_call_cost_usd=0.01
+            ),
+            "cost_cap",
+        ),
+        (RuntimeError("a bug"), "unexpected_error"),
+    ],
+)
+async def test_every_jev_failure_asks_the_guard_once_and_records_why(
+    monkeypatch: pytest.MonkeyPatch, jev_raises: BaseException, reason: str
+) -> None:
+    """T-8.6-01: each way Jev can fail, raised from the Jev pick itself (so
+    the cost-cap arm refuses Jev alone while the guard's own check passes)."""
+    _jev_mode(monkeypatch)
+    mock_guard = _patch_guard(monkeypatch, reply="not_relevant")
+    monkeypatch.setattr(decide_module, "_run_jev_pick", AsyncMock(side_effect=jev_raises))
+
+    record = await decide(Harness(trace_id="f1"), "f1", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert mock_guard.call_count == 1
+    assert record.decided_by == "guard" and record.chosen == "not_relevant"
+    assert record.guard_choice == "not_relevant" and record.jev_choice is None
+    assert record.fallback_reason == reason
+
+
+_OFFERED_MAYBE = {
+    "model": "typesafe/jev-1.13-20260917",
+    "answers": {
+        "guardrail.relevancy": {
+            "type": "choice",
+            "choice": "maybe",
+            "probabilities": {"maybe": 1.0},
+            "confidence": 1.0,
+        }
+    },
+    "usage": {"input_tokens": 1, "output_tokens": 1, "cost": 1e-05},
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("body", "reason"),
+    [(_OFFERED_MAYBE, "invalid_option"), ({"answers": {}}, "malformed_reply")],
+)
+async def test_a_bad_reply_through_the_real_client_falls_back(
+    monkeypatch: pytest.MonkeyPatch, body: dict[str, object], reason: str
+) -> None:
+    """The same fallback through the REAL `call_jev`: an option outside the
+    offered set, and a reply missing its fields."""
+    import json
+
+    import httpx
+
+    _jev_mode(monkeypatch)
+    mock_guard = _patch_guard(monkeypatch, reply="relevant")
+    reply = httpx.Response(200, content=json.dumps(body).encode())
+    monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=reply))
+
+    record = await decide(Harness(trace_id="f2"), "f2", "guardrail.relevancy", "x", _OPTIONS)
+
+    assert mock_guard.call_count == 1
+    assert record.decided_by == "guard" and record.chosen == "relevant"
+    assert record.fallback_reason == reason
+
+
+def test_nothing_waits_on_a_comparison_pick_any_more() -> None:
+    """T-8.6-01: the comparison grace and its "not ready" marker are gone
+    from the live seam, so no caller can reintroduce the wait by name."""
+    assert not hasattr(decide_module, "GUARD_COMPARISON_GRACE_S")
+    assert not hasattr(decide_module, "GUARD_NOT_READY")
 
 
 @pytest.mark.asyncio
