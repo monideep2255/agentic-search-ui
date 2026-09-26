@@ -1,5 +1,5 @@
 {
-  "source": "/var/log/caddy/graph-query-service.log on 46.225.128.133",
+  "source": "/var/log/caddy/graph-query-service.log on <server-ip>",
   "window_utc": "2026-09-22T16:45:00Z to 2026-09-22T17:35:00Z",
   "note": "Every /v1/cypher request during the develop consistency run. Durations are Caddy figures, server side.",
   "request_count": 189,

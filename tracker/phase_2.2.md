@@ -45,7 +45,7 @@ Three network outages on 2026-08-03 killed two premise-gate runs and three revie
 curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models
 ```
 
-`000` means down and nothing model-dependent will run. `200` means proceed. The graph tunnel is separate and needs its own check, `nc -z 127.0.0.1 15432`, reopened with `ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133`.
+`000` means down and nothing model-dependent will run. `200` means proceed. The graph tunnel is separate and needs its own check, `nc -z 127.0.0.1 15432`, reopened with `ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@<server-ip>`.
 
 How to tell an outage from a real defect, since this cost real time twice: an outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations. No query reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails somewhere later.
 

@@ -528,7 +528,7 @@ def test_dsn_password_in_a_run_error_never_reaches_the_langsmith_error_field(
     message = (
         "connection failed: postgresql://kg_reader:"
         + secret
-        + "@46.225.128.133:5432/ncbi_kg"
+        + "@192.0.2.10:5432/ncbi_kg"
     )
     raw = repr(RuntimeError(message)) + "\n\nTraceback (most recent call last):\n  ..."
     client = _traced_client_pinned_to_loopback(monkeypatch)
@@ -586,7 +586,7 @@ class TestDeferredStringificationUnderAnErrorKeyIsBounded:
                 return (
                     "connection failed: postgresql://kg_reader:"
                     + secret
-                    + "@46.225.128.133:5432/ncbi_kg"
+                    + "@192.0.2.10:5432/ncbi_kg"
                 )
 
         payload = {"error": _Deferred()}
