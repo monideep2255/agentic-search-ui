@@ -52,7 +52,7 @@ Tickets T-8.6-01, T-8.6-02 and T-8.6-03 (`tracker/phase_8.6.md`). Each finding i
   | 4 sentences (2 faithful, 2 not) | 3 | 444 to 976 ms | 0 of 6 | 0 of 6 | $0.000061 |
   | 30 sentences (15 faithful, 15 not) | 3 | 365 to 574 ms | 2 of 45 | 0 of 45 | $0.00039 |
 
-- K-05 (fence, established running `tests/system_03_search_agent/test_debugging_guide_coverage.py`): the coverage test goes red on this branch, `test_no_repurposed_file_keeps_a_stale_row`, naming `harness/decide.py`. It is right to: `decide.py`'s docstring summary changed because the file's job changed, and `docs/build/Debugging_guide.md`'s row still says `decide()` "asks Jev and the guard tier the same closed-option question concurrently". The guide and `tests/system_03_search_agent/fixtures/debugging_guide_manifest.json` are outside this builder's fence, and builder L's docstring changes will need the same two files, so the lead should apply the rows below once both branches are merged, then regenerate the manifest once with `python tests/system_03_search_agent/test_debugging_guide_coverage.py`. Keeping the old summary line to turn the test green would have hidden a stale row, so it was not done. The replacement rows are in [Debugging guide rows for the lead](#debugging-guide-rows-for-the-lead).
+- K-05 (fence, established running `tests/system_03_search_agent/test_debugging_guide_coverage.py`): the coverage test goes red on this branch, `test_no_repurposed_file_keeps_a_stale_row`, naming `harness/decide.py`. It is right to: `decide.py`'s docstring summary changed because the file's job changed, and `docs/build/Debugging_guide.md`'s row still says `decide()` "asks Jev and the guard tier the same closed-option question concurrently". The guide and `tests/system_03_search_agent/fixtures/debugging_guide_manifest.json` are outside this builder's fence, and builder L's docstring changes will need the same two files, so the lead should apply the rows below once both branches are merged, then regenerate the manifest once with `python tests/system_03_search_agent/test_debugging_guide_coverage.py`. Keeping the old summary line to turn the test green would have hidden a stale row, so it was not done. Resolved: the lead then handed the guide to this builder, and commit abf6e5d replaced the rows for the five source files this builder changed and regenerated the manifest, which moved only `decide.py`'s entry. The coverage test passes.
 
 ## T-8.6-01
 
@@ -235,6 +235,29 @@ Break-it checks, each on a scratch copy under `/private/tmp`, restored byte for 
 
 Added by the lead from the same review (C5, the golden client half).
 
+- K-15 (on reading a saved run): the server's event timestamps and the client's clock disagree. In `testing/Developer/reports/2026-09-22_10.3_consistency/raw/G-013_run1.json` the record's client `started_at` is `2026-09-22T16:50:57+00:00`, while the first event the server sent for that same run carries `ts` `2026-09-22T16:49:36.562283Z`, 81 seconds EARLIER than the run it belongs to began. Time to the first word therefore cannot be a server `ts` minus a client time. It is measured on the client clock alone, from the moment the question is submitted to the moment the first `token` event arrives. The first token's own server `ts` is kept beside it, as the ticket asks, but never subtracted from a client time.
+
+What the product owner gets from the next golden run:
+
+- The median time until the person saw the first word of an answer, beside the total time the summary already reports.
+- When the run happened, in UTC.
+- Every line the summary wrote before, still written unchanged.
+
+What changed:
+
+- `run_consistency.py`:
+  - `stream()` takes an optional `timings` dict and notes the client time the first `token` event is read. Its signature and return value are unchanged for the five other scripts that load this client by path, and its handling of every other line is byte for byte the same.
+  - `run_once` notes the moment the question is submitted and adds two fields to each record. `first_word_s` is submit to first token, on the client clock, None when no word arrived. `first_token_ts` is that token event's own server `ts`.
+  - The saved raw events keep the first token event. Every other token event is still dropped, since `answer_text` already holds their text.
+- `summarize.py`: two rows appended to the Summary table, "Run started (UTC)" (the earliest `started_at`, written as UTC) and "Median time to the first word". One line is added to Latency: median / p90 / max, and over how many runs. A `runs.jsonl` from before the field existed says "not recorded" rather than zero.
+- `golden_client_dry_run.py`, new in this folder: the proof below, rerunnable by the lead before the golden run.
+
+Evidence:
+
+- Nothing it already reports changes. The committed and the new `summarize.py` were run with the same arguments over the real 150-run `runs.jsonl` of 2026-09-22: 0 lines removed, 4 added (the two rows, the latency line and its blank line), and the old output is an in-order subsequence of the new.
+- Two-question dry run against a fake event stream, no live call: 13 of 13 checks passed. G-013 recorded `first_word_s` 0.405 against a 0.4-second pause before its first word, kept its first token's `ts`, kept exactly one token event in the saved run, and kept its whole answer text. G-042, refused at the guardrail, recorded no first word. The summary read "0.4 seconds, over 1 of 2 runs" and "2026-09-26 03:57:03 UTC".
+- The same dry run against the committed, pre-ticket scripts: 6 checks fail, exactly the new behaviours, and the 7 unchanged ones pass.
+
 ## Tests and gates
 
 Run after T-8.6-03's commit, on this worktree:
@@ -247,7 +270,18 @@ Run after T-8.6-03's commit, on this worktree:
 | `isort --check-only` on every changed Python file | clean |
 | `check_style.py` on `docs/architecture/Model_architecture.md` | 0 hard, 0 advisory |
 | `check_style.py` on this report and on `classifier_comparison.md` | 0 hard, 1 advisory each (no Mermaid diagram) |
-| `tests/system_03_search_agent/test_debugging_guide_coverage.py` | red on `harness/decide.py`, by design until the lead applies the rows below (K-05) |
+| `tests/system_03_search_agent/test_debugging_guide_coverage.py` | red on `harness/decide.py` at that commit (K-05); green since abf6e5d |
+
+Run after the last change on this branch, T-8.6-09, on this worktree:
+
+| Gate | Result |
+| --- | --- |
+| The brief's command over `harness` and `synthesis` | 834 passed, 10 skipped, 1 xfailed |
+| One process over `harness`, `synthesis`, `core`, `guardrail`, `contracts`, `adapters` and the coverage test, so no test can hide another's leftovers (K-14) | 3060 passed, 66 skipped, 1 deselected, 1 xfailed |
+| The lead's K-14 reproduction command | 11 passed |
+| `ruff check .` over the whole repository | All checks passed |
+| `isort --check-only` on every Python file changed in the phase | clean |
+| `check_style.py` on this report | 0 hard, 1 advisory (no Mermaid diagram) |
 
 Live spend by this builder, all metered: probes $0.0019 (K-02 to K-04), the final sentence check $0.0014 (K-06), the comparison script $0.0194 over two runs (K-07, K-08). About $0.023 in total.
 
@@ -255,8 +289,9 @@ Live spend by this builder, all metered: probes $0.0019 (K-02 to K-04), the fina
 
 Each is outside this builder's fence:
 
-- Apply `sentence_check_wiring.patch` (this folder) once builder L's `core/graph.py` has merged: `git apply testing/Developer/reports/2026-09-26_phase_8.6/sentence_check_wiring.patch`, or the one hunk by hand if the context moved. Until then the reworded-sentence check stays on the guard tier. After it lands, `docs/architecture/Model_architecture.md`'s sentence-check row and Jev bullet can drop their "until then" clauses.
-- Paste the three rows below into `docs/build/Debugging_guide.md`, then regenerate the manifest once for both builders' changes (K-05).
+- `sentence_check_wiring.patch` (this folder) goes to builder L, who owns `core/graph.py` (the lead's decision). Until it lands the reworded-sentence check stays on the guard tier. After it lands, `docs/architecture/Model_architecture.md`'s sentence-check row and Jev bullet can drop their "until then" clauses.
+- `visualizations/Schema_visualization.md`: its `cost` row lists the payload's fields and does not yet name `call_elapsed_s` (T-8.6-08).
+- The review's live proof for C4, re-running the ten frontier-writer rows of the second writer bench, needs a live bench run; T-8.6-08 was proved by replaying the provider's 400 text, as the lead asked. If a reasoning-mandatory model is ever deployed, reading OpenRouter's `supported_parameters` once per process would save its one refused request per call.
 - `contracts/events.py`: `DecisionRecord`'s docstring still says the guard tier decides "alongside" Jev "purely for this record". Since T-8.6-01 the live seam fills `guard_choice` only on a fallback and `agreed` never; the comparison lives in the script's report now.
 - `harness/task_tiers.py`: the comment on the "classifier" tier still says `decide` dispatches the guard tier and Jev concurrently, and the `write.sentence_check` row names the guard tier; it becomes Jev-first once the wiring patch lands.
 - `docs/architecture/Model_architecture.md` outside the Jev section and table rows: the sequence diagram's participant "Sentence check: guard" and the guard tier's list of jobs still name the sentence check as guard-only.
@@ -265,22 +300,12 @@ Each is outside this builder's fence:
 
 ## Debugging guide rows for the lead
 
-Replacements for the rows in `docs/build/Debugging_guide.md`, outside this builder's fence (finding K-05). Paste each over the row with the same path, then regenerate the manifest once after merging.
+Applied by this builder in commit abf6e5d, after the lead handed the guide over, with the manifest regenerated. The rows replaced, one per source file this builder changed in the phase:
 
-`harness/decide.py`:
+- `src/system_03_search_agent/harness/decide.py`
+- `src/system_03_search_agent/harness/jev_client.py`
+- `src/system_03_search_agent/synthesis/sentence_check.py`
+- `src/system_03_search_agent/harness/harness.py`
+- `src/system_03_search_agent/harness/cost_control.py`
 
-```text
-| `src/system_03_search_agent/harness/decide.py` | The classifier seam: `decide()` answers one closed-option question and returns a `DecisionRecord`. With `CLASSIFIER_PROVIDER=jev` Jev is asked alone and the guard tier only when Jev fails (timeout, HTTP error, malformed reply, an option outside the set, the cost cap), with Jev's reason in `fallback_reason` (build phase 8.6); with the code default `guard` the guard tier decides alone. Each caller passes a fixed description of the decision (`instructions`, `criteria`) that either model receives. Wired in `core/graph.py`'s "classifier seam, wired" section, which lists every decision point. Also holds `compare_models`, the offline side-by-side comparison, which no live path calls (its caller is `testing/Developer/scripts/compare_classifiers.py`). | A decision point's chosen option looks wrong (check that its description in `core/graph.py` says what is being decided), a fallback fired when it should not have (read `fallback_reason` on the `done` event's `decisions`), or the cost cap did not stop a decision call |
-```
-
-`harness/jev_client.py`, whose summary line did not change, so the coverage test does not flag it; the row no longer mentions the batch call:
-
-```text
-| `src/system_03_search_agent/harness/jev_client.py` | The HTTP calls to OpenRouter's alpha decisions endpoint (Jev): `call_jev` asks one question, `call_jev_batch` asks up to 30 over one shared state in one call (build phase 8.6). Request and response shapes pinned live on 2026-09-25 and 2026-09-26, a 3-second total timeout a caller may shorten but never lengthen, no retries, strict validation of every answer. The caller's description of a decision rides in the endpoint's own `instructions` and `criteria` fields, never in `state`. | A Jev call raises, times out, or a response fails schema validation |
-```
-
-`synthesis/sentence_check.py`, whose summary line did not change either; the row calls the check guard-tier only:
-
-```text
-| `src/system_03_search_agent/synthesis/sentence_check.py` | 2026-09-23, items 12.9 and 12.10: the model check on REWORDED answer sentences, the one bounded exception to deterministic acceptance, approved by the product owner. `check_reworded_sentences` is the entry point: the guard tier by default, and with `CLASSIFIER_PROVIDER=jev` one Jev call per answer with a yes-or-no question per sentence, falling back to the guard tier only when Jev fails and 2 seconds remain (build phase 8.6). Open it when a reworded sentence ships that says more than its quote (the prompt, or Jev's question text), or when prose that should survive is stripped (look for `sentence check approved nothing` in the logs: an unreadable reply, a failed call, the cost cap or too little budget all fail closed). The exact checks in front of it are `grounding.exact_synthesis_checks_pass`; the two-pass wiring is `core/graph.py`'s `_ground_with_sentence_check` |
-```
+`contracts/events.py`'s row already names `CostPayload` and needed no change.

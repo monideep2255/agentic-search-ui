@@ -18,6 +18,13 @@ A failed-run record (outcome transport_error or http_<code>) carries only
 the header fields plus stage, exception and seconds: no citations, no
 tools, no done-derived fields. Every accessor below tolerates that shape
 with .get(...) and an explicit default, never a bare key lookup.
+
+Build phase 8.6, T-8.6-09: the summary also reports the run's UTC start
+time and the time to the first word, read from each record's
+`first_word_s` (client clock, from submitting the question to the first
+answer word arriving; see run_consistency.py). Both are additions: every
+line the summary wrote before is written exactly as before, and a
+runs.jsonl recorded before the field existed reports it as not recorded.
 """
 from __future__ import annotations
 
@@ -25,6 +32,7 @@ import json
 import math
 import statistics
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -140,6 +148,43 @@ def fmt_seconds(values: list[float]) -> str:
     return f"{round(statistics.median(values), 1)} / {round(percentile(values, 0.9), 1)} / {round(max(values), 1)}"
 
 
+def first_word_seconds(runs: list[dict]) -> list[float]:
+    """Every recorded time to the first word, in seconds (T-8.6-09).
+
+    A run with no first word (a refusal, an error, a timeout) or recorded
+    before the field existed has none, and is left out rather than counted
+    as zero.
+    """
+    values = []
+    for r in runs:
+        value = r.get("first_word_s")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            values.append(float(value))
+    return values
+
+
+def first_word_summary(runs: list[dict]) -> str:
+    values = first_word_seconds(runs)
+    if not values:
+        return "not recorded: no run in this file carries first_word_s"
+    return f"{round(statistics.median(values), 1)} seconds, over {len(values)} of {len(runs)} runs"
+
+
+def run_start_utc(runs: list[dict]) -> str:
+    """The earliest started_at, written as a UTC time (T-8.6-09)."""
+    starts = sorted(r.get("started_at") for r in runs if r.get("started_at"))
+    if not starts:
+        return "n/a"
+    first = starts[0]
+    try:
+        moment = datetime.fromisoformat(first)
+    except ValueError:
+        return first
+    if moment.tzinfo is None:
+        return f"{first} (no time zone recorded)"
+    return moment.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
 def esc(text: str | None) -> str:
     if text is None:
         return ""
@@ -201,6 +246,8 @@ def section1_summary(runs: list[dict]) -> str:
     rows.append(["Deployed commit", commit_str])
     rows.append(["First started_at", first_start])
     rows.append(["Last started_at", last_start])
+    rows.append(["Run started (UTC)", run_start_utc(runs)])
+    rows.append(["Median time to the first word", first_word_summary(runs)])
 
     meaning_lines = []
     for label in sorted(outcome_counts):
@@ -444,12 +491,25 @@ def section7_latency(runs: list[dict]) -> str:
         for r in over_60
     ]
 
+    first_words = first_word_seconds(runs)
+    first_word_line = (
+        "Time to the first word, on the client's clock from submitting the question to the "
+        "first answer word arriving: "
+        + (
+            f"{fmt_seconds(first_words)}, over {len(first_words)} of {len(runs)} runs."
+            if first_words
+            else "not recorded, no run in this file carries first_word_s."
+        )
+    )
+
     out = [
         "## Latency",
         "",
         "Median, p90 and max seconds, formatted as median / p90 / max.",
         "",
         "Overall: " + overall,
+        "",
+        first_word_line,
         "",
         "By outcome:",
         "",
