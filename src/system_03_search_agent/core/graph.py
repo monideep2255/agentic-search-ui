@@ -459,7 +459,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Final, Literal, get_args
+from typing import Any, Final, Literal
 
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -1049,60 +1049,9 @@ _ASKS_FEATURES: Final = _DecisionSpec(
     },
 )
 
-#: The question class (build phase 8.6, T-8.6-05): the five shapes Think's
-#: own classification call has always chosen between (`QueryClass`), each
-#: described from `_THINK_SYSTEM_INSTRUCTION`'s own definitions but without
-#: its example questions. The plan tier still extracts the entities, and its
-#: class is kept whenever this decision has no usable pick, so `fail_open`
-#: is only the record's filler until Think rewrites it to the class the run
-#: actually used (`_record_fallback_class`).
-_QUERY_CLASS: Final = _DecisionSpec(
-    point="think.query_class",
-    options=get_args(QueryClass),
-    fail_open="exploratory",
-    instructions=(
-        "The state is a question a person typed into a biomedical evidence search "
-        "engine that answers from gene, variant and disease records, the links "
-        "between them in a knowledge graph, clinical trial registrations and the "
-        "published literature. Decide the question's shape: what it takes to "
-        "answer it. Judge the shape of what it asks, not which words it contains: "
-        "a question that names several databases but asks one simple fact is "
-        "still a lookup or single_hop, and one that asks for evidence assembled "
-        "across databases is aggregate or exploratory even without the word "
-        "count."
-    ),
-    criteria={
-        "lookup": (
-            "One live lookup of one record answers it directly: a single fact "
-            "about one named thing, such as its identifier, its accession or one "
-            "field of its record."
-        ),
-        "single_hop": (
-            "One or two direct lookups answer it: a fact about one named thing "
-            "that needs its own record and perhaps one record linked directly to "
-            "it."
-        ),
-        "multi_hop": (
-            "It needs a traversal across linked records: following links from one "
-            "record to the records linked to it and on again, across two or more "
-            "steps, to reach the things it asks about."
-        ),
-        "aggregate": (
-            "It asks for a count, a grouping or evidence assembled over many "
-            "records: how many records of some kind exist, or the published "
-            "evidence gathered across several databases for one subject or region."
-        ),
-        "exploratory": (
-            "It is broad and open-ended, asks in general what is known about "
-            "something, or needs several sources with no single obvious path to "
-            "the answer."
-        ),
-    },
-)
-
-#: `DonePayload.decisions`' own `max_length`. A run makes at most seven
+#: `DonePayload.decisions`' own `max_length`. A run makes at most six
 #: decisions today (relevancy, injection, ask_back, recent_years,
-#: literature, asks_features, query_class).
+#: literature, asks_features).
 _MAX_DONE_DECISIONS: Final[int] = 16
 
 #: How long a step waits, at the point it needs a decision started earlier,
@@ -1139,10 +1088,6 @@ class _RunDecisions:
     #: that decides what is said about a condition's clinical features. None
     #: when Think never started it (small talk, or a Write reached directly).
     features_task: asyncio.Task[DecisionRecord | None] | None = None
-    #: `think.query_class` (build phase 8.6, T-8.6-05), started with the
-    #: other Think-step decisions and read by Think itself once its own
-    #: classification call has returned. None when not started.
-    query_class_task: asyncio.Task[DecisionRecord | None] | None = None
 
 
 #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
@@ -1325,30 +1270,6 @@ async def _clinical_features_asked(harness: Harness) -> bool:
     entry = _run_decisions(harness)
     task, entry.features_task = entry.features_task, None
     return _usable_choice(await _read_late_decision(task)) == "asks_features"
-
-
-def _decided_query_class(
-    harness: Any, record: DecisionRecord | None, plan_tier_class: QueryClass
-) -> QueryClass:
-    """The question class the run uses: `think.query_class`'s usable pick,
-    else the plan tier's own class (build phase 8.6, T-8.6-05).
-
-    When the decision made no usable pick, its record on the run's list is
-    rewritten to name the class the run actually used, so the `done` event
-    never shows a class nobody chose (the F-8.2-J13 rule). The rewrite
-    keeps both picks None and the "no_usable_pick" reason, which is what
-    says no classifier decided.
-    """
-    pick = _usable_choice(record)
-    if pick in _QUERY_CLASS.options:
-        return pick  # type: ignore[return-value]
-    if record is not None and record.chosen != plan_tier_class:
-        records = _run_decisions(harness).records
-        for index, existing in enumerate(records):
-            if existing is record:
-                records[index] = record.model_copy(update={"chosen": plan_tier_class})
-                break
-    return plan_tier_class
 
 
 def _drop_features_decision(harness: Any) -> None:
@@ -3138,23 +3059,12 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         decisions.features_task = asyncio.create_task(
             _decide_point(harness, query.trace_id, _ASKS_FEATURES, query.text)
         )
-    # think.query_class (build phase 8.6, T-8.6-05): started with the others
-    # and read by Think once its own classification call returns, so it
-    # overlaps that call rather than following it.
-    if not small_talk and decisions.query_class_task is None:
-        decisions.query_class_task = asyncio.create_task(
-            _decide_point(harness, query.trace_id, _QUERY_CLASS, query.text)
-        )
     result: dict[str, Any] | None = None
     try:
         result = await _think(state, recent_task)
         return result
     finally:
         _cancel_if_pending(recent_task)
-        # Read inside `_think` on the classified path; on any other way out
-        # (a question asked back, a cap hit, a step error) nobody reads it.
-        _cancel_if_pending(decisions.query_class_task)
-        decisions.query_class_task = None
         if result is None or not _search_goes_ahead(result):
             _cancel_if_pending(decisions.literature_task)
             decisions.literature_task = None
@@ -3487,18 +3397,7 @@ async def _think(
         )
     resolved_entities = resolved_entities[:_TARGET_ENTITIES_MAX_ITEMS]
 
-    # think.query_class (build phase 8.6, T-8.6-05): the class is the
-    # classifier seam's pick. The decision started with the node and has
-    # normally finished while the classification call above ran; one still
-    # running is waited for at most `_LATE_DECISION_GRACE_S`, so the Think
-    # step is never held up by it. No usable pick keeps the plan tier's own
-    # class, today's classification. The plan tier's entities are used
-    # either way.
-    run_decisions = _run_decisions(harness)
-    class_task, run_decisions.query_class_task = run_decisions.query_class_task, None
-    query_class: QueryClass = _decided_query_class(
-        harness, await _read_late_decision(class_task), classification.query_class
-    )
+    query_class: QueryClass = classification.query_class
     # T-6.0-02, Section 21.4. The run opened its call-budget scope at
     # `lookup`, the shortest queue wait ceiling, because this line is where
     # the real class first exists. Widened here, at the earliest point it is

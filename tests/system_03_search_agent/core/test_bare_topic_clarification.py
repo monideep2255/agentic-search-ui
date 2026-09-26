@@ -244,9 +244,6 @@ _SAFE_PICKS: dict[str, str] = {
     "think.recent_years": "not_applicable",
     "plan.literature": "not_literature",
     "think.asks_features": "not_applicable",
-    # The class `model_stub.compliant_think_classification` gives, so the
-    # decision agrees with the plan tier and no test's plan moves.
-    "think.query_class": "exploratory",
 }
 
 
@@ -912,145 +909,125 @@ async def test_small_talk_is_never_asked_whether_it_is_about_features(
     assert "think.asks_features" not in asked, asked
 
 
-@pytest.mark.asyncio
-async def test_the_question_class_is_the_classifiers_pick(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Build phase 8.6, T-8.6-05: the plan tier says "exploratory" and still
-    extracts the entities; `think.query_class` picks "aggregate", and that is
-    the class the run uses. The decision is asked with the question as its
-    state, the five existing classes as its options and its description."""
-    _install_tools(monkeypatch)
-    _install_models(monkeypatch, clarify_reply=None)
-    captured: dict[str, Any] = {}
-    asked = _install_decide(monkeypatch, {"think.query_class": "aggregate"})
-    inner = graph_module.decide
+# ---------------------------------------------------------------------------
+# Build phase 8.6 fix round (F-8.6-J03, A07, A17): T-8.6-05 is reverted. The
+# question class is the plan tier's classification with either classifier
+# provider, exactly as before the phase, and no classifier is asked for it.
+#
+# The judge's J03 probe, kept as a test: the real compiled graph and the
+# real `decide()`, the plan tier's reply saying "exploratory", and both
+# classifiers ready to pick another class for any decision that offers the
+# five classes. What this does not cover: which class the plan tier picks
+# for a real question, a live property.
+# ---------------------------------------------------------------------------
 
-    async def _decide(harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any) -> Any:
-        if point == "think.query_class":
-            captured.update(state=state, options=list(options), **kwargs)
-        return await inner(harness, trace_id, point, state, options, **kwargs)
+_QUESTION_CLASSES = ("lookup", "single_hop", "multi_hop", "aggregate", "exploratory")
 
-    monkeypatch.setattr(graph_module, "decide", _decide)
-    events = await _run("which papers discuss statin side effects")
-
-    assert "think.query_class" in asked, asked
-    think = _payload(events, "think")
-    assert think is not None and think["query_class"] == "aggregate"
-    assert captured["state"] == "which papers discuss statin side effects"
-    assert captured["options"] == ["lookup", "single_hop", "multi_hop", "aggregate", "exploratory"]
-    assert set(captured["criteria"]) == set(captured["options"]) and captured["instructions"]
-    done = _payload(events, "done")
-    record = next(d for d in done["decisions"] if d["name"] == "think.query_class")
-    assert record["chosen"] == "aggregate"
+#: The option each decision the loop asks acts on without changing the
+#: question's path, so the probe below moves nothing but the class.
+_SAFE_OPTIONS = frozenset(
+    {"on_topic", "not_injection", "proceed", "not_applicable", "not_literature"}
+)
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("pick", [None, RuntimeError("seam down"), "on_topic"])
-async def test_no_usable_class_pick_keeps_the_plan_tiers_class(
-    monkeypatch: pytest.MonkeyPatch, pick: Any
-) -> None:
-    """Neither model picked, the seam raised, or the pick is not a class:
-    today's classification from the plan tier's reply stands. A decision
-    nobody made is recorded as the class the run actually used, both picks
-    empty."""
-    _install_tools(monkeypatch)
-    _install_models(monkeypatch, clarify_reply=None)
-    _install_decide(monkeypatch, {"think.query_class": pick})
-
-    events = await _run("which papers discuss statin side effects")
-    think = _payload(events, "think")
-    assert think is not None and think["query_class"] == "exploratory"
-    done = _payload(events, "done")
-    records = [d for d in done["decisions"] if d["name"] == "think.query_class"]
-    if isinstance(pick, BaseException):
-        assert records == []
-    elif pick is None:
-        (record,) = records
-        # `_record` fills `chosen` with the first option ("lookup"); the run
-        # used the plan tier's class, and the record now says so.
-        assert record["chosen"] == "exploratory"
-        assert record["jev_choice"] is None and record["guard_choice"] is None
+def _probe_pick(options: list[str], class_pick: str) -> str:
+    if set(options) == set(_QUESTION_CLASSES):
+        return class_pick
+    return next((option for option in options if option in _SAFE_OPTIONS), options[0])
 
 
-@pytest.mark.asyncio
-async def test_the_class_decision_overlaps_thinks_own_classification(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Think's classification call will not answer until the class decision
-    has been asked, and the decision will not answer until that call has
-    started. Run one after the other, one of them times out; run side by
-    side, both answer and the decision's class is used."""
-    think_started = asyncio.Event()
-    decision_asked = asyncio.Event()
-    _install_tools(monkeypatch)
-    _install_models(monkeypatch, clarify_reply=None)
-    real_dispatch = harness_module.litellm.acompletion
+def _install_classifiers_that_pick_a_class(
+    monkeypatch: pytest.MonkeyPatch, class_pick: str
+) -> list[list[str]]:
+    """Both classifiers, real `decide()` in front of them: the guard tier
+    through `litellm.acompletion`, Jev through its one POST. Returns every
+    option list either was offered, in order."""
+    import httpx
 
-    async def _dispatch(*args: Any, **kwargs: Any) -> Any:
-        joined = "\n".join(str(m.get("content") or "") for m in kwargs.get("messages") or [])
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+    from system_03_search_agent.harness import jev_client
+    from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+    offered: list[list[str]] = []
+
+    async def _dispatch(*args: object, **kwargs: object) -> Any:
+        messages = list(kwargs.get("messages") or [])
+        joined = "\n".join(str(message.get("content") or "") for message in messages)
+        if "Answer with exactly one of the offered options" in joined:
+            options_line = joined.split("Options: ", 1)[1].splitlines()[0]
+            options = [part.strip().strip("'") for part in options_line.split(",")]
+            offered.append(options)
+            return fake_response(_probe_pick(options, class_pick))
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return fake_response(COMPLIANT_GUARD_CLASSIFICATION)
         if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
-            think_started.set()
-            await asyncio.wait_for(decision_asked.wait(), timeout=1.0)
-        return await real_dispatch(*args, **kwargs)
+            return fake_response(compliant_think_classification(messages))
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            return fake_response(compliant_synth_narrative(messages))
+        return fake_response("MATCH (g:Gene) RETURN g LIMIT 1")
 
     monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
-    _install_decide(monkeypatch, {"think.query_class": "single_hop"})
-    inner = graph_module.decide
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
 
-    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
-        if point == "think.query_class":
-            decision_asked.set()
-            await asyncio.wait_for(think_started.wait(), timeout=1.0)
-        return await inner(harness, trace_id, point, *args, **kwargs)
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        answers = {}
+        for key, question in body["questions"].items():
+            options = list(question["options"])
+            offered.append(options)
+            choice = _probe_pick(options, class_pick)
+            answers[key] = {
+                "type": "choice",
+                "choice": choice,
+                "probabilities": {option: (0.9 if option == choice else 0.1) for option in options},
+                "confidence": 0.8,
+            }
+        return httpx.Response(
+            200,
+            json={
+                "model": body["model"],
+                "answers": answers,
+                "usage": {"input_tokens": 10, "output_tokens": 1, "cost": 0.00001},
+                "id": "probe",
+                "provider": "TypeSafe",
+            },
+        )
 
-    monkeypatch.setattr(graph_module, "decide", _decide)
-    events = await _run("which papers discuss statin side effects")
-    think = _payload(events, "think")
-    assert think is not None and think["query_class"] == "single_hop"
-
-
-@pytest.mark.asyncio
-async def test_a_slow_class_decision_never_holds_up_think(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A class decision still running when Think's own call returns (Jev
-    failing over to the guard tier) is waited for only the short grace, then
-    stopped, and the plan tier's class is used."""
-    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.05)
-    cancelled = asyncio.Event()
-    _install_tools(monkeypatch)
-    _install_models(monkeypatch, clarify_reply=None)
-    _install_decide(monkeypatch)
-    inner = graph_module.decide
-
-    async def _decide(harness: Any, trace_id: str, point: str, *args: Any, **kwargs: Any) -> Any:
-        if point == "think.query_class":
-            try:
-                await asyncio.sleep(30)
-            except asyncio.CancelledError:
-                cancelled.set()
-                raise
-        return await inner(harness, trace_id, point, *args, **kwargs)
-
-    monkeypatch.setattr(graph_module, "decide", _decide)
-    started = time.monotonic()
-    events = await _run("which papers discuss statin side effects")
-    assert time.monotonic() - started < 5.0
-    think = _payload(events, "think")
-    assert think is not None and think["query_class"] == "exploratory"
-    assert cancelled.is_set()
+    monkeypatch.setattr(jev_client, "_post", _post)
+    return offered
 
 
 @pytest.mark.asyncio
-async def test_small_talk_is_never_asked_its_class(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("provider", ["guard", "jev"])
+@pytest.mark.parametrize("class_pick", ["aggregate", "lookup"])
+async def test_the_question_class_is_the_plan_tiers_with_either_provider(
+    monkeypatch: pytest.MonkeyPatch, provider: str, class_pick: str
 ) -> None:
+    """F-8.6-J03: on the phase branch the guard provider's pick replaced the
+    plan tier's class ("aggregate", then "lookup"); develop keeps
+    "exploratory" for both. The class is the plan tier's again, whichever
+    classifier is switched on, and neither is offered the five classes.
+
+    MUTATION PROOF: re-applying 4259787 turns the "guard" and "jev" arms red
+    on the think event's class.
+    """
+    monkeypatch.setenv("CLASSIFIER_PROVIDER", provider)
     _install_tools(monkeypatch)
-    _install_models(monkeypatch, clarify_reply=None)
-    asked = _install_decide(monkeypatch)
-    await _run("what can you do")
-    assert "think.query_class" not in asked, asked
+    offered = _install_classifiers_that_pick_a_class(monkeypatch, class_pick)
+
+    events = await _run("which papers discuss statin side effects")
+
+    think = _payload(events, "think")
+    assert think is not None and think["query_class"] == "exploratory", think
+    # Populate check: the classifiers really were asked this run's decisions.
+    assert offered, "no decision reached either classifier"
+    assert all(set(options) != set(_QUESTION_CLASSES) for options in offered), offered
+    done = _payload(events, "done")
+    assert done is not None
+    assert "think.query_class" not in [d["name"] for d in done["decisions"] or []]
 
 
 @pytest.mark.asyncio
