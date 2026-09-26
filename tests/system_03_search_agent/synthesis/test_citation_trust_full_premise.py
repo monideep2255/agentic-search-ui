@@ -132,8 +132,16 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
+# Built from GRAPH_BOX_HOST (see env.example) rather than a hardcoded
+# address. GRAPH_BOX_HOST is stored as "user@host"; only the bare host is
+# needed after the literal "root@" below, so any "user@" prefix is stripped.
+# Unused by any test in this file today, since build phase 4.11 replaced
+# this tunnel transport with the HTTPS graph query service; kept only so a
+# future consumer never has to hardcode the box's address again.
+_GRAPH_BOX_HOST_BARE = os.environ.get("GRAPH_BOX_HOST", "").split("@")[-1]
 _REOPEN_TUNNEL_CMD = (
-    "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133"
+    "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@"
+    + (_GRAPH_BOX_HOST_BARE or "<server-ip>")
 )
 
 # Ground truth, live graph and live NCBI, read 2026-08-09. Reused from build

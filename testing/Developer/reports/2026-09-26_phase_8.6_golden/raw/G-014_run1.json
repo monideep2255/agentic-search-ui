@@ -1,0 +1,190 @@
+{
+ "record": {
+  "id": "G-014",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86b@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "refuse",
+  "question": "Which diseases are associated with BRCA3?",
+  "session_id": "c103-35a348be5298",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:04:11+00:00",
+  "run_id": "e4c347a1-2d26-491d-838f-927c8c3cc8ac",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 46,
+  "answer_start": "I did not answer this question. BRCA3 is a discontinued NCBI gene record (NCBIGene:60500), replaced by NCBIGene:675. No graph query was attempted, and I have no",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 7.662,
+  "seconds": 8.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  },
+  "first_word_s": 7.822,
+  "first_token_ts": "2026-09-26T17:02:40.276952Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "e4c347a1-2d26-491d-838f-927c8c3cc8ac",
+   "seq": 0,
+   "ts": "2026-09-26T17:02:37.094386Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "e4c347a1-2d26-491d-838f-927c8c3cc8ac",
+   "seq": 2,
+   "ts": "2026-09-26T17:02:40.273774Z",
+   "payload": {
+    "narrative": "Asking for diseases associated with a single gene symbol, which requires one API call to a gene-disease association database.",
+    "query_class": "single_hop",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "e4c347a1-2d26-491d-838f-927c8c3cc8ac",
+   "seq": 4,
+   "ts": "2026-09-26T17:02:40.275364Z",
+   "payload": {
+    "narrative": "no tool selected; unresolved gene symbol candidate(s): BRCA3",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "e4c347a1-2d26-491d-838f-927c8c3cc8ac",
+   "seq": 6,
+   "ts": "2026-09-26T17:02:40.276952Z",
+   "payload": {
+    "text": "I did not answer this question. BRCA3 is a discontinued NCBI gene record (NCBIGene:60500), replaced by NCBIGene:675. No graph query was attempted, and I have not substituted the replacement record for what you asked about. Re-ask naming the replacement if that is what you want. https://www.ncbi.nlm.nih.gov/search/all/?term=BRCA3",
+    "marker_ids": [],
+    "kind": null,
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "e4c347a1-2d26-491d-838f-927c8c3cc8ac",
+   "seq": 8,
+   "ts": "2026-09-26T17:02:40.277091Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 7662,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 4,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.94,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 176
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 110
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.98,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 163
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "I did not answer this question. BRCA3 is a discontinued NCBI gene record (NCBIGene:60500), replaced by NCBIGene:675. No graph query was attempted, and I have not substituted the replacement record for what you asked about. Re-ask naming the replacement if that is what you want. https://www.ncbi.nlm.nih.gov/search/all/?term=BRCA3"
+}

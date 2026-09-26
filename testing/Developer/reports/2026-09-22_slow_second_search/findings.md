@@ -204,7 +204,7 @@ Read-only throughout. No file under `src/`, `frontend/` or `tests/` was touched,
 |---|---|
 | `testing/Developer/reports/2026-09-22_10.3_consistency/raw/G-0{39,33,37}_run{1,2,3}.json` | The `plan` event's `tool_calls` in order, both `cypher_query` `tool_result` events in emission order, and the citation diff that identified pass 3's single extra row |
 | `testing/Developer/reports/2026-09-22_L01_cause/raw/G-039_run{1,2,3}.json` | The local reproduction, whose primary call returned 8 rows once (five non-human orthologs, the gene, one PMID) and 1 row once |
-| `/var/log/caddy/graph-query-service.log` on 46.225.128.133 | Per-request `duration`, status and body size for all 189 graph requests in the run window. This is where every timing in this report comes from |
+| `/var/log/caddy/graph-query-service.log` on <server-ip> | Per-request `duration`, status and body size for all 189 graph requests in the run window. This is where every timing in this report comes from |
 | `journalctl -u graph-query-service` | The 504 on the two lost G-039 calls, and confirmation that the deployed service logs no Cypher |
 | `/var/log/postgresql/postgresql-15-main.log` | The `canceling statement due to statement timeout` lines and their `STATEMENT` text, which gave the bound parameter |
 | `psql` as `postgres`, `SELECT` and `EXPLAIN` only | `kg_reader`'s `statement_timeout=30s`, the full index inventory, `pg_class.reltuples`, and eleven query plans |

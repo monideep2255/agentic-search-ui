@@ -60,7 +60,7 @@ Also carried forward, not fixed as of 2026-08-01: F-06 (2 of 6 model calls bypas
 
 Established during phase open, before any ticket was scoped:
 
-- Transport: SSH local port-forward, `ssh -N -L 15432:127.0.0.1:5432 root@46.225.128.133`. This is Decision D phase one. Postgres listens on 127.0.0.1 only; port 5432 is refused from outside, so there is no direct-connect option.
+- Transport: SSH local port-forward, `ssh -N -L 15432:127.0.0.1:5432 root@<server-ip>`. This is Decision D phase one. Postgres listens on 127.0.0.1 only; port 5432 is refused from outside, so there is no direct-connect option.
 - Credential: role `kg_reader`, created 2026-07-29 with product-owner approval. Non-superuser, `LOGIN`, `pg_read_all_data`, `default_transaction_read_only = on`, `statement_timeout = 30s`, `session_preload_libraries = age`.
 - Why `session_preload_libraries`: a non-superuser cannot run `LOAD 'age'` (`InsufficientPrivilege: access to library "age" is not allowed`). Setting the preload per role makes AGE available at session start without adding `age` to `shared_preload_libraries`, which would have required restarting the production database.
 - Proven read: `MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: 'NCBIGene:672'})` returned 3 real ClinVar rows in 133 ms as `kg_reader`.

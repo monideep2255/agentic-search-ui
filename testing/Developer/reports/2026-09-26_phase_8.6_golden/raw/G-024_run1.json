@@ -1,0 +1,456 @@
+{
+ "record": {
+  "id": "G-024",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86b@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "What is rs334 and what condition is it associated with?",
+  "session_id": "c103-aa1ecf363657",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:06:00+00:00",
+  "run_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "dbSNP:rs334"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "citations": 5,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 1,
+   "layer_3_enrichment": 4
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 1,
+  "tools": [
+   "litvar2_lookup",
+   "ncbi_dbsnp",
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 85,
+  "answer_start": "Found 1 variant record record and 4 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], rs334348 [2], rs334353",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 3,
+  "server_elapsed_s": 8.121,
+  "seconds": 8.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 14,
+   "citation": 5,
+   "trust_signal": 6,
+   "done": 1
+  },
+  "first_word_s": 8.294,
+  "first_token_ts": "2026-09-26T17:04:29.640948Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 0,
+   "ts": "2026-09-26T17:04:22.677525Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 2,
+   "ts": "2026-09-26T17:04:24.135085Z",
+   "payload": {
+    "narrative": "rs334 is a dbSNP identifier; the question asks for its definition and associated condition, which can be answered with one or two direct API calls.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 4,
+   "ts": "2026-09-26T17:04:24.138461Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-04211ac71cf9",
+      "layer": "layer_1_graph",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "ncbi_dbsnp",
+      "call_id": "db-f6bd462fd606",
+      "layer": "layer_2_api",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "litvar2_lookup",
+      "call_id": "lv-5d358e32f9ec",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 6,
+   "ts": "2026-09-26T17:04:24.139664Z",
+   "payload": {
+    "call_id": "cq-04211ac71cf9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 7,
+   "ts": "2026-09-26T17:04:24.139699Z",
+   "payload": {
+    "call_id": "db-f6bd462fd606",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 8,
+   "ts": "2026-09-26T17:04:24.139710Z",
+   "payload": {
+    "call_id": "lv-5d358e32f9ec",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 9,
+   "ts": "2026-09-26T17:04:24.331084Z",
+   "payload": {
+    "call_id": "lv-5d358e32f9ec",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 10,
+   "ts": "2026-09-26T17:04:24.623052Z",
+   "payload": {
+    "call_id": "db-f6bd462fd606",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 11,
+   "ts": "2026-09-26T17:04:25.604277Z",
+   "payload": {
+    "call_id": "cq-04211ac71cf9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 12,
+   "ts": "2026-09-26T17:04:25.605648Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 13,
+   "ts": "2026-09-26T17:04:29.640948Z",
+   "payload": {
+    "text": "Found 1 variant record record and 4 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], rs334348 [2], rs334353 [3], c.-50T>C [4] and rs334773 [5]. ",
+    "marker_ids": [
+     "db-f6bd462fd606-1",
+     "lv-5d358e32f9ec-3",
+     "lv-5d358e32f9ec-4",
+     "lv-5d358e32f9ec-5",
+     "lv-5d358e32f9ec-6"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "rs334348",
+     "rs334353",
+     "c.-50T>C",
+     "rs334773",
+     "rs334"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_2_api",
+    "source": "dbsnp",
+    "field": "clinical_significance",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334348",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334353",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334353",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334558",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334558",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334773",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334773",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "8211712c-925f-4a39-90b3-c462276ee3c3",
+   "seq": 39,
+   "ts": "2026-09-26T17:04:29.641426Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 3,
+    "elapsed_ms": 8121,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 5 sources, not yet confirmed",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 151
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 147
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 203
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 variant record record and 4 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], rs334348 [2], rs334353 [3], c.-50T>C [4] and rs334773 [5]. \n\nVariant record records found\n\nVariant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [1]. \n\nLiterature variant records found\n\nLiterature variant name: rs334348 [2]. Literature variant name: rs334353 [3]. Literature variant name: c.-50T>C [4]. Literature variant name: rs334773 [5]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

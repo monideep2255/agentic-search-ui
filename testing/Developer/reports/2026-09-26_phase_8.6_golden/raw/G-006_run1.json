@@ -1,0 +1,295 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-5a04cf709f15",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:03:05+00:00",
+  "run_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 37,
+  "answer_start": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. \n\nArticle records found\n\nArticle record PMID:11237011 [1]. \n\nNote: the written summary of these rec",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 13.537,
+  "seconds": 14.0,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 7,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  },
+  "first_word_s": 13.727,
+  "first_token_ts": "2026-09-26T17:01:39.945091Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 0,
+   "ts": "2026-09-26T17:01:27.882246Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 2,
+   "ts": "2026-09-26T17:01:33.457731Z",
+   "payload": {
+    "narrative": "The query asks for specific linked data types for one PMID, which is a direct lookup for associated records.",
+    "query_class": "lookup",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 4,
+   "ts": "2026-09-26T17:01:33.459845Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-b56c7ac6cdfc",
+      "layer": "layer_1_graph",
+      "persona": "Ochoa",
+      "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 6,
+   "ts": "2026-09-26T17:01:33.461058Z",
+   "payload": {
+    "call_id": "cq-b56c7ac6cdfc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ochoa",
+    "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 7,
+   "ts": "2026-09-26T17:01:33.940115Z",
+   "payload": {
+    "call_id": "cq-b56c7ac6cdfc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ochoa",
+    "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 8,
+   "ts": "2026-09-26T17:01:36.416030Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 9,
+   "ts": "2026-09-26T17:01:39.945091Z",
+   "payload": {
+    "text": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. ",
+    "marker_ids": [
+     "cq-b56c7ac6cdfc-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PMID 11237011"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11237011",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11237011/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "b6b93ffe-1bc4-47e6-975e-6eda3cabbe65",
+   "seq": 20,
+   "ts": "2026-09-26T17:01:39.945672Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 13537,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.98,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 124
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 183
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.89,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 203
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. \n\nArticle records found\n\nArticle record PMID:11237011 [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}
