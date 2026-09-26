@@ -34,7 +34,7 @@ Do not jump straight to reading files or calling tools. The system has rules for
 
 ### When to apply
 
-- Any skill with 4+ steps, including `/ship`, `/release`, `/dev-standards`, `/verify`, and bossman-mode phases
+- Any skill with 4+ steps, including `/ship`, `/release`, `/dev-standards`, `/precommit`, `/verify`, and bossman-mode phases
 - Any skill with an exit checklist
 - Any skill where the model has previously skipped steps (add the specific rationalization to this table)
 

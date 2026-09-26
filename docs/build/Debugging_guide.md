@@ -183,7 +183,7 @@ Every row below was verified against the named file. Work the rows this way:
 | Seventeen psycopg2 tests fail right after you set `GRAPH_QUERY_URL` in `.env` | `tests/system_03_search_agent/tools/conftest.py` | Importing `litellm` anywhere calls `load_dotenv()`, so your `.env` becomes process state and the Layer 1 transport choice stops being explicit |
 | Tests skip with a graph reason that looks wrong | `tests/system_03_search_agent/graph_gate.py` | The one implementation of the reachability probe. It replaced eight copies that all probed a transport that no longer exists and produced false skips |
 | Many unrelated tests fail at once after a harness change | `tests/system_03_search_agent/model_stub.py` | One shared stub dispatches per tier. It breaks when a tier's response becomes load-bearing |
-| `pytest` exits 0 having collected nothing | `.claude/skills/verify/SKILL.md` | Exit code 5 is a failure, not a pass. Usually a wrong working directory, a broken `PYTHONPATH`, a bad virtualenv, or a moved test tree |
+| `pytest` exits 0 having collected nothing | `.claude/skills/precommit/SKILL.md` | Exit code 5 is a failure, not a pass. Usually a wrong working directory, a broken `PYTHONPATH`, a bad virtualenv, or a moved test tree |
 | Live premise arms do not run | Any `*_premise.py` under `tests/` | They are gated on the `RUN_PREMISE_GATE` environment variable, not on a pytest marker |
 
 ### Green locally, red in CI
@@ -191,7 +191,7 @@ Every row below was verified against the named file. Work the rows this way:
 | Symptom | Where to look | What is going on |
 |---|---|---|
 | `ruff` is clean locally and gate 3 is red | `.github/gates/gate03_lint.sh` | The gate runs `ruff check` with no path, meaning the whole repository. A local run scoped to `src` and `services` checks less |
-| `isort` is clean locally and gate 2 is red | `.claude/skills/verify/SKILL.md`, step 3b | `/verify` does run this gate, and has since 2026-08-30. If you ran bare `isort` by hand instead, that is the gap: `isort` is not idempotent on every input here, and its output can broaden a `# noqa` from one name to three. Run `bash .github/gates/gate02_import_order.sh` |
+| `isort` is clean locally and gate 2 is red | `.claude/skills/precommit/SKILL.md`, step 3b | `/precommit` does run this gate, and has since 2026-08-30. If you ran bare `isort` by hand instead, that is the gap: `isort` is not idempotent on every input here, and its output can broaden a `# noqa` from one name to three. Run `bash .github/gates/gate02_import_order.sh` |
 | `npm ci` passes on macOS and fails in the container | `frontend/.npmrc` | An unsatisfiable upstream peer dependency reached only on Linux, where npm walks the WASM fallback branch. The file explains the diagnosis in full |
 | Gate 5 reports NOT RUN | `.github/gates/gate05_integration.sh` | Neither graph credential is set, so the gate exits 0 with a warning rather than passing silently |
 | A gate passed but nothing ran | `.github/scripts/assert_gate_ran.py` | `pytest` exits 0 in more than one situation and only one of them is a pass. These assertions exist for exactly that |

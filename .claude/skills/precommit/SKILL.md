@@ -1,6 +1,6 @@
 ---
-name: verify
-description: "Run pre-commit verification checks for the agentic-search-ui stack: Python compile check, test suite, lint, git status, and an optional frontend check. Invoke with /verify."
+name: precommit
+description: "Run pre-commit verification checks for the agentic-search-ui stack: Python compile check, test suite, lint, git status, and an optional frontend check. It checks the code, not the running product: to run the app and prove a change on screen, use /verify. Invoke with /precommit."
 scope: project
 depends_on:
   - pyproject.toml
@@ -9,7 +9,9 @@ depended_by:
   - CLAUDE.md
 ---
 
-# Verify skill
+# Precommit skill
+
+Named `verify` until 2026-09-26, when it was renamed so that `/verify` could mean running the product and proving a change on screen (card 42, DECISIONS.md "The verify loop of card 42 is approved as proposed"). This skill is unchanged apart from its name.
 
 Run these checks in sequence before committing System 3 code, then format the output as a verification report. Stop at the first FAIL if it is a real blocker.
 
@@ -134,7 +136,7 @@ Overall:         READY / NOT READY
 - Before committing System 3 code
 - Before presenting work to the user
 - After making changes to the agent loop, tools, API routes, or React components
-- Say `/verify` to invoke
+- Say `/precommit` to invoke
 
 ## Important
 
