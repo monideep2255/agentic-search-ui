@@ -9,7 +9,7 @@ here before it is built. The detail behind the architecture cards sits under
 To do, below its table. Every other item's detail, every closed item and every
 note behind the board are in `testing/UI_fixes_done.md`.
 
-Last updated: 2026-09-25.
+Last updated: 2026-09-26.
 
 ## To do
 

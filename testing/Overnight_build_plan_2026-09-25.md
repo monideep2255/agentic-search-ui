@@ -367,6 +367,28 @@ Times in UTC. The order and rules are the product owner's "Yes, same rules" of 2
   - The reworded grounding-gate bullet reads weaker than before.
   - One of the lead's own decision rows, which two deletions rest on, carries no words of the product owner.
   - By the rule above, that pull request does not merge without the product owner. Builder H5 is fixing the findings on the branch so the morning decision is one yes or no.
+- 06:53: the product owner approved every open pull request, gave the lead standing permission to merge future ones once their checks pass, and kept two limits: a drop in the golden count, and a new security-layer change. They also approved closing four hook gaps and asked for a check of the graph server's SSH login.
+- 07:00: the SSH check. Root logs in by key only. Password login is still on for other accounts, fail2ban is off, and the log shows 15,947 failed attempts in 24 hours. Switching password login off waits for the owner's yes.
+- 07:02: the session stopped and `/private/tmp` was emptied, taking every scratch file and stopping phase 8.6's verifier and builder H6 mid-work. The run stalled until the owner returned at 16:45 and asked for the rest of the work to continue.
+- 16:50: every scratch file was rebuilt from the session transcript, and both agents were resumed where they stopped.
+- 16:55: phase 8.6's verifier returned PASS with nothing blocking. Four of its findings sat inside fix commits, so Rule 4 fired. The lead merged with them named, and phase 8.9's T-8.9-07 was written to close them.
+- 16:58: phase 8.6 merged (#108, c19ef2f) and deployed at 17:00.
+- 17:02 to 17:24: phase 8.6's golden run answered 99 of 150, below the floor of 102, with no rate-limit signal.
+  - G-038 "Tell me about the tree of life." was refused as off topic in all three passes.
+  - G-005 failed once on a temporary guardrail error.
+- 17:38: by the approved check, phase 8.6's product code came off develop (#111). The documents, the decision rows and the server-address redaction stay. The bin script's `--phase` mode was not used, because it would have reverted those too.
+- 17:38: the build-harness pull request merged (#110) after its second fresh check, with six items named open on the pull request.
+- 18:15: the four hook gaps merged (#112) after their second fresh check, strictly tighter than develop, with the remaining shapes named. Card 42 and its verify-loop proposal merged (#113).
+- Spend: $2.94 of the $11 stop, read from the credits endpoint.
+
+What the product owner found, set against the expectations written the night before, just below:
+
+- Phase 8.6 merged and measured, then taken off develop, because its golden run fell below the floor. Its record stays in `tracker/phase_8.6.md`.
+- The build-harness fixes merged.
+- Card 41 merged overnight.
+- Card 39 held: its deep dive describes the system, and the system depends on the decision on 8.6.
+- Phase 8.9 planned in `tracker/phase_8.9.md` and not opened, since its plan opens only after 8.6 holds its floor.
+- Six decisions, listed in `HANDOFF.md`, "What awaits the product owner".
 
 What the product owner will find in the morning, if every check passes:
 
@@ -381,9 +403,13 @@ A merge whose check fails does not happen. It waits for the product owner, named
 Waiting for the product owner in the morning, each a yes or no:
 
 - The secret scan misses keys shaped like the product's own model-provider key, where a hyphen follows `sk-` straight away. The lead's hook check found it at 05:20. The gap is the same on develop, so the harness fixes did not cause it. Tighten the pattern to catch that shape? Recommendation: yes. It is a change to a hook, so it needs your item-by-item yes.
+  - Answered 06:53 UTC: yes, with three more gaps in the delete guard ("Also close rhe hook gaps"). Built on `chore/hook-gaps`.
 - Merge the build-harness pull request, with the checker's findings fixed and checked again? Recommendation: yes, once the second check passes.
+  - Answered 06:53 UTC: "All prs approved. Also permission gives to merge all future prs". Two limits stay with the owner: "Yes 2 limits stay in my control".
 - Does "nothing weakens a gate or threshold" in your delegation leave the doc drift check's count checks free to remove? The lead wrote a row on 2026-09-26 saying they are bookkeeping, not gates, and the harness branch removed them on that reading. The checker rightly noted the row has no words of yours behind it. Recommendation: yes. They only check whether documents restate counts. The product's gates, the golden run and CI's tests are untouched.
+  - Answered by the owner's approval of every open pull request, which covers this one.
 - Check that the graph server accepts only SSH keys, with password login off. Only you can check this.
+  - The owner asked the lead to check. Root logs in by key only. Password login is still on for other accounts, fail2ban is off, and the log shows 15,947 failed attempts in 24 hours. Switching password login off is a server change that waits for the owner's yes.
 - Rewrite git history to remove the server address from old commits? Recommendation: no. The address is public, and the fix is that no file pairs it with a login command any more.
 
 Not tonight: phases 8.7, 8.3, 8.4's remainder and the paper-sentence wiring (8.8).

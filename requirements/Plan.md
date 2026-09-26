@@ -14,7 +14,7 @@ Kick-off: 2026-05-06. Last updated: 2026-09-25.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE OVERNIGHT BUILD of 2026-09-25 merged build phases 8.1, 8.5 and 8.2 (pull requests #105, #107, #106), the product owner's To do column numbered after Section 25's last phase; phase 8.4 is built on its branch, not merged, and 8.3 is not started. THE NEXT ACTION is the product owner's verdict on the night, then item 1 of the To do column on the board, `testing/UI_fix_plan.md`; the cutoff is "Where we stopped" in `testing/UI_fixes_done.md`. Authoritative build state: `tracker/BOARD.md` |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5, 4.0 through 4.16, 5.0 through 5.3, 6.0, 6.2, and PR #93. The product owner's first testing round then opened a UI fix loop that runs straight on `develop`, no branch, no PR. Fix sets 1 to 9 are live. Set 11, the product owner's live feedback of 2026-09-13 and 2026-09-14, is live in part on commit `e5947e0`: answer layout, writing banner, clean copy, detail tables, and the GCK and MODY fixes. 11.16's live write streaming and 11.21's tool layer are merged on develop as of 2026-09-14. THE OVERNIGHT BUILD of 2026-09-25 merged build phases 8.1, 8.5 and 8.2 (pull requests #105, #107, #106), the product owner's To do column numbered after Section 25's last phase. On 2026-09-26 phase 8.6 merged (#108), and its product code came back off develop (#111) when its golden run answered 99 of 150 against the floor of 102. Phase 8.4 is parked at a tag, 8.3 is not started, and phase 8.9 is planned in `tracker/phase_8.9.md`, not opened. THE NEXT ACTION is the product owner's decision on phase 8.6 (`HANDOFF.md`). Authoritative build state: the phase ledgers `tracker/phase_N.M.md`; `tracker/BOARD.md` is frozen at 6.2 |
 | Phase 7: iteration and new information | Not started |
 
 Counts are not stated here: `python3 tracker/check_doc_drift.py --counts` computes the test, decision and learning counts on demand.
@@ -1049,6 +1049,26 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-26. PHASE 8.6 MERGED, THEN ITS CODE CAME BACK OFF DEVELOP; THE BUILD HARNESS AND THE HOOK GAPS MERGED. The ledger is `tracker/phase_8.6.md`, and the night's log is in `testing/Overnight_build_plan_2026-09-25.md`.
+
+- Phase 8.6, Jev makes every choice (#108):
+  - The judge and the adversary both returned FAIL. The blocking finding: in Jev mode, a question disguised as a forged chat transcript was answered.
+  - Two fix builders closed it, and a fresh verifier returned PASS.
+  - Four of the verifier's findings sat inside fix commits, so Review_rounds Rule 4 fired. The lead merged with them named and wrote phase 8.9's T-8.9-07 to close them.
+- The golden run on develop answered 99 of 150 against the floor of 102, with no rate-limit signal.
+  - G-038 "Tell me about the tree of life." was refused as off topic in all three passes.
+  - G-005 failed once on a temporary guardrail error.
+  - A request to change the graph now gets the injection refusal instead of the read-only one (F-8.6-G01).
+  - By the approved check, `src/` and `tests/` were restored to 654f2d2 through #111, keeping the documents, the decision rows and the server-address redaction. The bin script's `--phase` mode was not used, since it would have reverted those too.
+- The session stopped at about 07:02 UTC and `/private/tmp` was emptied, so the run stalled until the product owner returned. Every scratch file was rebuilt from the session transcript, and the two stopped agents were resumed.
+- The build harness (#110): the build side of the two harness reviews, builders H1 to H5. The second fresh check passed it with six items named open; the secret scan's slowdown on a very long command waits for the owner.
+- The four hook gaps the owner approved (#112): the secret scan catches the hyphenated provider-key shape, and the delete guard catches rm in any letter case, a pipe into a shell and a here-string into a shell. The second check found the branch strictly tighter than develop, with the remaining shapes named.
+- Card 41 (#109): the graph server's address replaced by a placeholder in every tracked file, merged overnight.
+- Card 42 (#113): the product owner's request that the build team verify QA and UI work end to end, with a proposal in `docs/build/Verify_loop_proposal.md`.
+- Phase 8.9, the writer is given the field the question asked for: planned in `tracker/phase_8.9.md`, not opened, waiting on the owner's decision on 8.6.
+- Decisions and learnings: the rows dated 2026-09-26 in `DECISIONS.md` and `LEARNINGS.md`.
+- STILL OPEN: six decisions for the product owner (`HANDOFF.md`). Production is unchanged on `v0.2.0`.
 
 2026-09-25 (overnight). THE OVERNIGHT BUILD: THREE PHASES MERGED, ONE BUILT, ONE NOT STARTED. The product owner answered every question on the board's 43 cards in the evening, granted one unattended night, and slept; the plan, every answer and the night's log are in `testing/Overnight_build_plan_2026-09-25.md`.
 
