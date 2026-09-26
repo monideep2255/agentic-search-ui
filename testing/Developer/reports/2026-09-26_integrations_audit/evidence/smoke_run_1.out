@@ -1,0 +1,13 @@
+PASS health    ok (develop)
+PASS api-docs  /docs and /openapi.json answer, 17 paths
+PASS rest-sse  ask, 22 citations, 120 events, 14s
+PASS graphql   23 citations, 14s
+PASS mcp       1 tool, token required, ask, 23 citations, 21s
+PASS cli       login ok, [ask], 23 references, 17s
+FAIL kgx       s3-kgx-export --help exit 1: ModuleNotFoundError: No module named 'system_03_search_agent.observability'
+FAIL page      MCP config carries no Authorization header, so every tool call is refused; `s3 login` is printed without the email it requires; the card promises `s3 --json`, which `s3 ask` does not accept
+6 passed, 2 failed, 27s
+real 27.33
+user 5.65
+sys 1.83
+exit 1

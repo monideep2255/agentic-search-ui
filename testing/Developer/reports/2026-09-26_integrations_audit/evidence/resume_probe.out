@@ -1,0 +1,2 @@
+full replay {'status': 404, 'body': '{"detail":"no such run"}'}
+after Last-Event-ID 0 {'status': 404, 'body': '{"detail":"no such run"}'}

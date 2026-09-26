@@ -1,0 +1,26 @@
+module file: /lib/python3.11/site-packages/system_03_search_agent/adapters/cli/main.py
+third-party top-level modules loaded by the s3 client:
+   _sysconfigdata__darwin_darwin
+   annotated_types
+   click
+   httpx
+   idna
+   pydantic
+   pydantic_core
+   pygments
+   rich
+   system_03_search_agent
+   typing_extensions
+   typing_inspection
+   zstandard
+first-party modules loaded: 10
+   system_03_search_agent
+   system_03_search_agent.adapters
+   system_03_search_agent.adapters.cli
+   system_03_search_agent.adapters.cli.client
+   system_03_search_agent.adapters.cli.credentials
+   system_03_search_agent.adapters.cli.main
+   system_03_search_agent.adapters.cli.render
+   system_03_search_agent.adapters.cli.sse
+   system_03_search_agent.contracts
+   system_03_search_agent.contracts.events

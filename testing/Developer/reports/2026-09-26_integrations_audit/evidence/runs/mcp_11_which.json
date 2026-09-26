@@ -1,0 +1,48 @@
+{
+  "surface": "MCP",
+  "question": "Which diseases are associated with BRCA1?",
+  "tool": "ask_biomedical_question",
+  "args": {
+    "query": "Which diseases are associated with BRCA1?",
+    "session_id": "audit-mcp-brca1"
+  },
+  "is_error": false,
+  "outcome": "answered",
+  "trust_outcome": "ask",
+  "citation_count": 22,
+  "citation_hosts": [
+    "clinicaltrials.gov",
+    "omim.org",
+    "pubmed.ncbi.nlm.nih.gov",
+    "www.ncbi.nlm.nih.gov"
+  ],
+  "citation_urls_sample": [
+    "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+    "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+    "https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+    "https://www.ncbi.nlm.nih.gov/medgen/C4554406",
+    "https://www.ncbi.nlm.nih.gov/gene/672/"
+  ],
+  "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4].",
+  "answer_chars": 2232,
+  "answer_head": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\nBRCA1 is associated with familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. \n\nDisease records found\n\nDisease name: Familial cancer of breast [1]. Disease name: Familial breast-ovarian cancer susceptibility 1 [2]. Disease name: Pancreatic cancer susceptibility 4 [3]. Disease name: Fanconi anemia complementation group S [4]. \n\nGene records found\n\nGene symbol: BRCA1 [5]. Gene name: BRCA1 [9]. \n\nPubmed records found\n\nPubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [6]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [11]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [14]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [17]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [20]. ",
+  "trust_signal": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+  },
+  "persona_name": "Chargaff",
+  "structured_keys": [
+    "answer",
+    "citations",
+    "persona_name",
+    "run_id",
+    "trust_signal"
+  ],
+  "wall_s": 19.0
+}

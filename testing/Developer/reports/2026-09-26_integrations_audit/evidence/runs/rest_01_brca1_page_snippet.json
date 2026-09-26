@@ -1,0 +1,80 @@
+{
+  "surface": "REST+SSE",
+  "question": "Which diseases are associated with BRCA1?",
+  "session_id": "demo-1",
+  "via": "page snippet, then the event stream",
+  "run_id": "20258855-e1aa-4f2a-8217-1f8015830947",
+  "stream_status": 200,
+  "outcome": "answered",
+  "trust_outcome": "ask",
+  "citation_count": 23,
+  "citation_hosts": [
+    "clinicaltrials.gov",
+    "omim.org",
+    "pubmed.ncbi.nlm.nih.gov",
+    "www.ncbi.nlm.nih.gov"
+  ],
+  "citation_urls_sample": [
+    "https://www.ncbi.nlm.nih.gov/gene/672",
+    "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+    "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+    "https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+    "https://www.ncbi.nlm.nih.gov/medgen/C4554406"
+  ],
+  "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast [2], Familial breast-ovarian cancer susceptibility 1 [3], Pancreatic cancer susceptibility 4 [4] and Fanconi anemia complementation group S [5].",
+  "answer_chars": 2181,
+  "answer_head": "Found 4 disease records for BRCA1: Familial cancer of breast [2], Familial breast-ovarian cancer susceptibility 1 [3], Pancreatic cancer susceptibility 4 [4] and Fanconi anemia complementation group S [5]. \n\nBRCA1 mutations are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [1]. \n\nDisease records found\n\nDisease name: Familial cancer of breast [2]. Disease name: Familial breast-ovarian cancer susceptibility 1 [3]. Disease name: Pancreatic cancer susceptibility 4 [4]. Disease name: Fanconi anemia complementation group S [5]. \n\nGene records found\n\nGene symbol: BRCA1 [6]. Gene name: BRCA1 [10]. \n\nPubmed records found\n\nPubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [7]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [12]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [15]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [18]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [21]. \n\nClinvar records found\n\nClinvar title: NM_007294.4",
+  "event_type_counts": {
+    "guard": 1,
+    "think": 1,
+    "plan": 1,
+    "tool_start": 13,
+    "tool_result": 13,
+    "step": 1,
+    "token": 44,
+    "citation": 23,
+    "trust_signal": 24,
+    "done": 1
+  },
+  "clarifying_question": null,
+  "clarifying_options": null,
+  "think_narratives": [
+    "One direct query to disease-gene association resources answers it."
+  ],
+  "resolved_entities": [
+    "BRCA1=NCBIGene:672"
+  ],
+  "done_trust_line": "Based on 22 sources, not yet confirmed",
+  "done_next_step": null,
+  "done_decisions": [
+    {
+      "name": "guardrail.injection",
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "think.recent_years",
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "plan.literature",
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "think.asks_features",
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "fallback_reason": null
+    }
+  ],
+  "done_total_tool_calls": 10,
+  "done_elapsed_ms": 13592,
+  "answer_trust_signal_message": null,
+  "errors": [],
+  "wall_s": 14.0
+}

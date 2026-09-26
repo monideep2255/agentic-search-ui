@@ -1,0 +1,2653 @@
+{
+ "id": "G-001",
+ "question": "What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.",
+ "depth": "researcher",
+ "wall_s": 17.165,
+ "done": {
+  "total_cost_usd": 0.01952287848,
+  "total_tool_calls": 12,
+  "elapsed_ms": 17140,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 59 sources, not yet confirmed",
+  "layer_calls_used": 17,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 336
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 305
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 327
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 561
+   }
+  ]
+ },
+ "withdrawn": false,
+ "citations": 59,
+ "stamps": [
+  {
+   "t": 17.144,
+   "emitted": 1.489,
+   "type": "guard",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 1.489,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.525,
+   "type": "think",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.526,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.534,
+   "type": "plan",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.534,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.537,
+   "type": "tool_start",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "running"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.832,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.893,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 4.936,
+   "type": "tool_result",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 5.017,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 5.024,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 5.105,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 5.192,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 5.273,
+   "type": "tool_result",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 5.443,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 6.218,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 6.823,
+   "type": "tool_result",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 7.021,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 7.176,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 7.36,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 7.741,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 17.144,
+   "emitted": 7.751,
+   "type": "step",
+   "step": "write",
+   "tool": null,
+   "status": "started"
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.135,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.136,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.137,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.138,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.139,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.14,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.141,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 17.144,
+   "emitted": 17.141,
+   "type": "done",
+   "step": null,
+   "tool": null,
+   "status": null
+  }
+ ],
+ "rec": {
+  "model": [
+   {
+    "t": 0.139,
+    "site": "other: You are an input classifier for a biomedical evidence search",
+    "role": "guard_or_plan",
+    "prompt_chars": 3964,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 832,
+    "completion_tokens": 37,
+    "cached_tokens": 512,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.349
+   },
+   {
+    "t": 1.976,
+    "site": "think: classification",
+    "role": "guard_or_plan",
+    "prompt_chars": 4456,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1032,
+    "completion_tokens": 57,
+    "cached_tokens": 768,
+    "finish": "stop",
+    "reply": null,
+    "dur": 2.545
+   },
+   {
+    "t": 7.761,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 40672,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11502,
+    "completion_tokens": 503,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": "## Gene and Coordinate Context\n\nThe gene NCBIGene:672, name: BRCA1 DNA repair associated, is the principal gene overlapping the GRCh38 interval chr17:43,044,295\u201343,125,364 [1]. This locus corresponds to the BRCA1 gene on chromosome 17, and the knowledge graph identifies it as a DNA repair associated gene [1].\n\n## ClinVar Sequence Variants\n\nThe graph returned 29 ClinVar sequence variant records linked to BRCA1, all specified on the NM_007294.4 transcript [2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29]. These are missense substitutions spanning the coding region, including c.4709T>C (p.Leu1570Pro) at ClinVar:1000183 [2], c.3664G>A (p.Glu1222Lys) at ClinVar:1000551 [3], and c.353T>C (p.Leu118Pro) at ClinVar:1001081 [4]. Additional entries include ClinVar:1002154 for c.1226T>G (p.Val409Gly) [5], ClinVar:1002750 for c.2614T>C (p.Phe872Leu) [6], and ClinVar:1003072 for c.3017A>C (p.His1006Pro) [7]. A final record, ClinVar:1010631, was returned as a sequence variant record without a descriptive name [30].\n\n## dbVar Records\n\nNo dbVar records were returned by the knowledge graph for this coordinate range. The findings consist exclusively of gene and ClinVar sequence variant entries, with no structural-variant or copy-number-variant overlap data from dbVar among the retrieved results.\n\n## ACMG Evidence Summary\n\nThe available graph evidence for this interval is limited to BRCA1-associated ClinVar missense variant entries and the BRCA1 gene record itself. No copy number variant records, no pathogenicity classifications, and no dbVar structural variants were retrieved, so ACMG-relevant copy-number evidence for this specific GRCh38 span is not represented in the current findings.",
+    "dur": 3.7
+   },
+   {
+    "t": 11.465,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 42749,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12503,
+    "completion_tokens": 1331,
+    "cached_tokens": 10176,
+    "finish": "stop",
+    "reply": "The queried region chr17:43,044,295\u201343,125,364 on GRCh38 overlaps the BRCA1 DNA repair associated gene, NCBIGene:672, for which the graph returned 29 distinct ClinVar sequence variants plus one additional ClinVar record [1]. No dbVar records were returned for this coordinate range. The overlapping gene is BRCA1 DNA repair associated [1].\n\n## Overlapping Gene\n\nThe only gene identified within the queried interval is NCBIGene:672, designated BRCA1 DNA repair associated [1].\n\n## ClinVar Sequence Variants\n\nTwenty-nine named BRCA1 missense variants were retrieved, each registered in ClinVar under the NM_007294.4 transcript: ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [2]; ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [3]; ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [4]; ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [5]; ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [6]; ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [7]; ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [8]; ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [9]; ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [10]; ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [11]; ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [12]; ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [13]; ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [14]; ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [15]; ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [16]; ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [17]; ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [18]; ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [19]; ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [20]; ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [21]; ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [22]; ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [23]; ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [24]; ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [25]; ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [26]; ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [27]; ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [28]; ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [29].\n\n## Additional ClinVar Record\n\nAn additional ClinVar record, ClinVar:1010631, was returned without a variant name or annotation [30].\n\n## dbVar Records\n\nNo dbVar records were returned by the graph for the queried coordinate range, so no structural-variant evidence from dbVar is available in these findings.",
+    "dur": 5.63
+   }
+  ],
+  "jev": [
+   {
+    "t": 1.513,
+    "kind": "decide",
+    "key": "think.asks_features",
+    "ok": true,
+    "dur": 0.306
+   },
+   {
+    "t": 1.513,
+    "kind": "decide",
+    "key": "think.recent_years",
+    "ok": true,
+    "dur": 0.327
+   },
+   {
+    "t": 1.513,
+    "kind": "decide",
+    "key": "plan.literature",
+    "ok": true,
+    "dur": 0.562
+   }
+  ],
+  "http": [
+   {
+    "t": 0.202,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.296
+   },
+   {
+    "t": 0.226,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.25
+   },
+   {
+    "t": 1.511,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "gene"
+     ],
+     [
+      "retmax",
+      "50"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "17[CHR] AND 43044295:43125364[CPOS] AND human[ORGN]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.247
+   },
+   {
+    "t": 1.555,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.263
+   },
+   {
+    "t": 1.528,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.304
+   },
+   {
+    "t": 1.789,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "gene"
+     ],
+     [
+      "id",
+      "672,111589215,110485084,140660,111589216,129664047,126862571,127886930"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.184
+   },
+   {
+    "t": 1.542,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.532
+   },
+   {
+    "t": 1.983,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 2.531
+   },
+   {
+    "t": 4.608,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/entity/autocomplete/",
+    "params": [
+     [
+      "limit",
+      "5"
+     ],
+     [
+      "query",
+      "BRCA1"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.223
+   },
+   {
+    "t": 4.688,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "dbvar"
+     ],
+     [
+      "retmax",
+      "20"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "term",
+      "17[CH] AND 43044295:43125364[BASE] AND GRCh38[ASSM]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.146
+   },
+   {
+    "t": 4.565,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "retmax",
+      "20"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "term",
+      "17[CHR] AND 43044295:43125364[CPOS]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.296
+   },
+   {
+    "t": 4.592,
+    "host": "api.ncbi.nlm.nih.gov",
+    "path": "/datasets/v2/gene/id/672",
+    "params": [],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.295
+   },
+   {
+    "t": 4.619,
+    "host": "clinicaltrials.gov",
+    "path": "/api/v2/studies",
+    "params": [
+     [
+      "countTotal",
+      "true"
+     ],
+     [
+      "pageSize",
+      "50"
+     ],
+     [
+      "query.cond",
+      "BRCA1"
+     ],
+     [
+      "sort",
+      "@relevance"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.305
+   },
+   {
+    "t": 4.88,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "BRCA1[gene]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.136
+   },
+   {
+    "t": 4.766,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "retmax",
+      "5"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "BRCA1[Title/Abstract]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.258
+   },
+   {
+    "t": 4.966,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "BRCA1"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.138
+   },
+   {
+    "t": 5.066,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "gene"
+     ],
+     [
+      "id",
+      "672"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.126
+   },
+   {
+    "t": 5.266,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "id",
+      "4935336,4935335,4935334,4935332,4935331,4935330,4935329,4935326,4935325,4935324,4935323,4935322,4935321,4935318,4935316,"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.165
+   },
+   {
+    "t": 5.165,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "dbvar"
+     ],
+     [
+      "id",
+      "57754961,57754960,57754897,57754414,57754264,57753730,57753679,57751863,57750532,57750446,57750383,57750124,57749965,577"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.052
+   },
+   {
+    "t": 6.852,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/publications/export/biocjson",
+    "params": [
+     [
+      "pmids",
+      "39265497,39261728,36914836,35432218,28976962"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.165
+   },
+   {
+    "t": 7.039,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "id",
+      "618708,612766,611180,611143,610497,605422,604986,300617,166945,113705"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.136
+   },
+   {
+    "t": 6.838,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/efetch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "id",
+      "39265497,39261728,36914836,35432218,28976962"
+     ],
+     [
+      "retmode",
+      "xml"
+     ],
+     [
+      "rettype",
+      "abstract"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.514
+   },
+   {
+    "t": 6.939,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "id",
+      "4890846,4871869,4853057,4851364,4851359,4848411,4823850,373892,267741,267740"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.796
+   },
+   {
+    "t": 7.767,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 3.685
+   },
+   {
+    "t": 11.47,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 5.614
+   }
+  ],
+  "write": [
+   {
+    "t": 7.755,
+    "what": "resolve_concept_ids",
+    "dur": 0.0,
+    "ids": 1
+   },
+   {
+    "t": 7.755,
+    "what": "resolve_descriptor_ids",
+    "dur": 0.0,
+    "ids": 1
+   },
+   {
+    "t": 7.756,
+    "what": "features_decision_wait",
+    "dur": 0.0,
+    "asked": false
+   },
+   {
+    "t": 11.462,
+    "what": "ground_with_sentence_check",
+    "dur": 0.003,
+    "claims": 0,
+    "stripped": 14
+   },
+   {
+    "t": 17.096,
+    "what": "ground_with_sentence_check",
+    "dur": 0.003,
+    "claims": 27,
+    "stripped": 7
+   }
+  ],
+  "grounding": [
+   {
+    "t": 11.462,
+    "dur": 0.0025,
+    "narrative_chars": 1642,
+    "findings": 30,
+    "claims": 0,
+    "stripped": 14,
+    "refused": true,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 17.097,
+    "dur": 0.0029,
+    "narrative_chars": 2850,
+    "findings": 30,
+    "claims": 27,
+    "stripped": 7,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 17.103,
+    "dur": 0.0068,
+    "narrative_chars": 5017,
+    "findings": 100,
+    "claims": 60,
+    "stripped": 1,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   }
+  ],
+  "sentence_check": [],
+  "reader": []
+ },
+ "guard_sentence_check": [],
+ "answer_text": "Found 1 gene record and 37 sequence variant records for BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216 and LOC111589215 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38]. \n\nGene records found\n\nGene NCBIGene:672, name: BRCA1 DNA repair associated [1]. Gene symbol: BRCA1 [40]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [2]. SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [3]. SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [4]. SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [5]. SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [6]. SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [7]. SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [8]. SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [9]. SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [10]. SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [11]. SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [12]. SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [13]. SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [14]. SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [15]. SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [16]. SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [17]. SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [18]. SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [19]. SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [20]. SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [21]. SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [22]. SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [23]. SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [24]. SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [25]. SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [26]. SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [27]. SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [28]. SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [29]. SequenceVariant record ClinVar:1010631 [30]. SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala) [31]. SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly) [32]. SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs) [33]. SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs) [34]. SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala) [35]. SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala) [36]. SequenceVariant ClinVar:1014065, name: NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr) [37]. SequenceVariant ClinVar:1014279, name: NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu) [38]. \n\nClinvar records found\n\nClinvar title: NM_007294.4(BRCA1):c.5075-32T>C [39]. Clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [42]. Clinvar title: NM_007294.4(BRCA1):c.4779A>G (p.Ile1593Met) [45]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [47]. Clinvar title: NM_007294.4(BRCA1):c.4623G>A (p.Glu1541=) [49]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [51]. Clinvar title: NM_007294.4(BRCA1):c.4358-2733_4358-2720del [53]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [55]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [58]. \n\nPubmed records found\n\nPubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [41]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [46]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [50]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [54]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [57]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [43]. BRCA1 [43]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [44]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [48]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [52]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [56]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [59]. \n\nNote: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query\n\nNote: this answer does not address the following entities named in the question: RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215. Ask about them individually for a complete answer.\n\nNote: one further clinvar record was found for this question and is not covered in the summary above"
+}

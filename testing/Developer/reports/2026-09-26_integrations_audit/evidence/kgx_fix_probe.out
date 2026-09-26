@@ -1,0 +1,2 @@
+with eval and observability added to the packages list: PASS help works; without graph access the export stops with a message naming GRAPH_* settings
+export without graph access: exit 1 | s3-kgx-export: graph connection environment variables are not fully set: GRAPH_PG_HOST, GRAPH_PG_USER, GRAPH_PG_PASSWORD, GRAPH_PG_DBNAME must all be set, then retry

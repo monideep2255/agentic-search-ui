@@ -1,0 +1,32 @@
+17:38:21	REST	Which diseases are associated with BRCA1? [page snippet]
+17:38:21	GraphQL	Which diseases are associated with BRCA1? [page snippet]
+17:38:21	MCP	Which diseases are associated with BRCA1?
+17:38:21	MCP	What variants of it are pathogenic?
+17:38:21	MCP	What are the clinical features of Marfan syndrome?
+17:38:21	MCP	Tell me about black holes.
+17:38:21	MCP	GERD
+17:38:24	s3	diseases linked to BRCA1
+17:38:35	REST	What variants of it are pathogenic?
+17:38:36	GraphQL	What variants of it are pathogenic?
+17:38:42	s3	Which diseases are associated with BRCA1?
+17:38:49	REST	What are the clinical features of Marfan syndrome?
+17:38:50	GraphQL	What are the clinical features of Marfan syndrome?
+17:38:59	REST	Tell me about black holes.
+17:39:00	REST	GERD
+17:39:01	s3	What variants of it are pathogenic?
+17:39:02	GraphQL	Tell me about black holes.
+17:39:22	s3	What are the clinical features of Marfan syndrome?
+17:39:49	s3	Tell me about black holes.
+17:45:33	smoke	REST smoke 1
+17:45:33	smoke	GraphQL smoke 1
+17:45:33	smoke	MCP smoke 1
+17:45:33	smoke	s3 smoke 1
+17:50:46	smoke	REST smoke 2
+17:50:46	smoke	GraphQL smoke 2
+17:50:46	smoke	MCP smoke 2
+17:50:46	smoke	s3 smoke 2
+17:51:42	note	correction: smoke 2's s3 question was never sent (the wheel build failed first), so live questions so far = 26
+17:52:03	smoke	REST smoke 3
+17:52:03	smoke	GraphQL smoke 3
+17:52:03	smoke	MCP smoke 3
+17:52:03	smoke	s3 smoke 3

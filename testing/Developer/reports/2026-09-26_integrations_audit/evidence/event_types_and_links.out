@@ -1,0 +1,14 @@
+rest_01_brca1_page_snippet.json {'guard': 1, 'think': 1, 'plan': 1, 'tool_start': 13, 'tool_result': 13, 'step': 1, 'token': 44, 'citation': 23, 'trust_signal': 24, 'done': 1} | decisions: 4 | trust_line: Based on 22 sources, not yet confirmed
+rest_02_what.json {'guard': 1, 'think': 1, 'plan': 1, 'tool_start': 13, 'tool_result': 13, 'step': 1, 'token': 82, 'citation': 58, 'trust_signal': 59, 'done': 1} | decisions: 4 | trust_line: Based on 58 sources, not yet confirmed
+rest_03_what.json {'guard': 1, 'think': 1, 'plan': 1, 'tool_start': 8, 'tool_result': 8, 'step': 1, 'token': 123, 'citation': 93, 'trust_signal': 94, 'done': 1} | decisions: 4 | trust_line: Based on 58 sources
+rest_04_tell.json {'guard': 1, 'done': 1} | decisions: 2 | trust_line: None
+rest_05_gerd.json {'guard': 1, 'think': 1, 'plan': 1, 'token': 1, 'trust_signal': 1, 'done': 1} | decisions: 5 | trust_line: None
+union of REST event types: ['citation', 'done', 'guard', 'plan', 'step', 'think', 'token', 'tool_result', 'tool_start', 'trust_signal']
+rest     200 https://www.ncbi.nlm.nih.gov/gene/672
+rest     200 https://www.ncbi.nlm.nih.gov/medgen/C0346153
+graphql  200 https://www.ncbi.nlm.nih.gov/medgen/C0346153
+graphql  200 https://www.ncbi.nlm.nih.gov/medgen/C2676676
+mcp      200 https://www.ncbi.nlm.nih.gov/medgen/C0346153
+mcp      200 https://www.ncbi.nlm.nih.gov/medgen/C2676676
+s3       200 https://www.ncbi.nlm.nih.gov/gene/672
+s3       200 https://pubmed.ncbi.nlm.nih.gov/39265497/

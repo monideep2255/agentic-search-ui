@@ -1,0 +1,100 @@
+{
+  "page_line_1_s3_login": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3",
+      "login"
+    ],
+    "exit": 2,
+    "stdout": "",
+    "stderr": "usage: s3 login [-h] [--base-url BASE_URL] email\ns3 login: error: the following arguments are required: email\n",
+    "wall_s": 1.9
+  },
+  "page_line_2_s3_ask_without_login": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3",
+      "ask",
+      "diseases linked to BRCA1"
+    ],
+    "exit": 1,
+    "stdout": "",
+    "stderr": "s3: not logged in; run 's3 login' first\n",
+    "wall_s": 1.2
+  },
+  "s3_ask_json_flag": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3",
+      "ask",
+      "--json",
+      "diseases linked to BRCA1"
+    ],
+    "exit": 2,
+    "stdout": "",
+    "stderr": "usage: s3 ask [-h] [--session-id SESSION_ID]\n              [--depth {clinical_brief,researcher,deep_technical,plain_language}]\n              question\ns3 ask: error: unrecognized arguments: --json\n",
+    "wall_s": 0.9
+  },
+  "s3_no_args": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3"
+    ],
+    "exit": 2,
+    "stdout": "",
+    "stderr": "usage: s3 <ask|stop|login> ...\n",
+    "wall_s": 0.9
+  },
+  "s3_help": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3",
+      "--help"
+    ],
+    "exit": 2,
+    "stdout": "",
+    "stderr": "s3: unknown command '--help'; expected ask, stop, or login\n",
+    "wall_s": 0.8
+  },
+  "s3_ask_help": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3",
+      "ask",
+      "--help"
+    ],
+    "exit": 0,
+    "stdout": "usage: s3 ask [-h] [--session-id SESSION_ID]\n              [--depth {clinical_brief,researcher,deep_technical,plain_language}]\n              question\n\npositional arguments:\n  question              the question to ask\n\noptions:\n  -h, --help            show this help message and exit\n  --session-id SESSION_ID\n                        a session id to group related questions; a fresh one\n                        is generated if omitted\n  --depth {clinical_brief,researcher,deep_technical,plain_language}\n                        the audience depth for the answer; omitted, the server\n                        uses the depth this account last used\n",
+    "stderr": "",
+    "wall_s": 1.4
+  },
+  "s3_login_help": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3",
+      "login",
+      "--help"
+    ],
+    "exit": 0,
+    "stdout": "usage: s3 login [-h] [--base-url BASE_URL] email\n\npositional arguments:\n  email                the account email\n\noptions:\n  -h, --help           show this help message and exit\n  --base-url BASE_URL  the server to log into; consumed by main()'s sync\n                       wrapper before the HTTP client is built, not read here,\n                       since async_main is always handed an already-\n                       constructed client\n",
+    "stderr": "",
+    "wall_s": 0.8
+  },
+  "kgx_help": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3-kgx-export",
+      "--help"
+    ],
+    "exit": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<scratch>/int_prefix/bin/s3-kgx-export\", line 5, in <module>\n    from system_03_search_agent.export.cli import main\n  File \"<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/export/cli.py\", line 72, in <module>\n    from system_03_search_agent.tools.graph_connection import GraphError\n  File \"<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/tools/graph_connection.py\", line 91, in <module>\n    from system_03_search_agent.observability.audit import (\nModuleNotFoundError: No module named 'system_03_search_agent.observability'\n",
+    "wall_s": 0.6
+  },
+  "kgx_as_printed_no_graph_access": {
+    "argv": [
+      "<scratch>/int_prefix/bin/s3-kgx-export",
+      "NCBIGene:672",
+      "--hops",
+      "1",
+      "--output-dir",
+      "<scratch>/int_secrets/kgx_vphsc_g4/kgx-out"
+    ],
+    "exit": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"<scratch>/int_prefix/bin/s3-kgx-export\", line 5, in <module>\n    from system_03_search_agent.export.cli import main\n  File \"<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/export/cli.py\", line 72, in <module>\n    from system_03_search_agent.tools.graph_connection import GraphError\n  File \"<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/tools/graph_connection.py\", line 91, in <module>\n    from system_03_search_agent.observability.audit import (\nModuleNotFoundError: No module named 'system_03_search_agent.observability'\n",
+    "wall_s": 0.3
+  }
+}

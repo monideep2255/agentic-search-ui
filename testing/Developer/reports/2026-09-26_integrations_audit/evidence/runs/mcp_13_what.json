@@ -1,0 +1,45 @@
+{
+  "surface": "MCP",
+  "question": "What are the clinical features of Marfan syndrome?",
+  "tool": "ask_biomedical_question",
+  "args": {
+    "query": "What are the clinical features of Marfan syndrome?"
+  },
+  "is_error": false,
+  "outcome": "answered",
+  "trust_outcome": "answer",
+  "citation_count": 50,
+  "citation_hosts": [
+    "pubmed.ncbi.nlm.nih.gov",
+    "www.ncbi.nlm.nih.gov"
+  ],
+  "citation_urls_sample": [
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287"
+  ],
+  "first_sentence": "Found 1 disease record for Marfan syndrome: Marfan syndrome [13].",
+  "answer_chars": 5224,
+  "answer_head": "Found 1 disease record for Marfan syndrome: Marfan syndrome [13]. \n\nClinical Features\n\nMedGen lists these clinical features: Aortic regurgitation [1], Arachnodactyly [2], Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Pes planus [7], Glaucoma [8], Congestive heart failure [9] and Hypertropia [10]. While there is currently no radical treatment, early identification and treatment can effectively prolong patient life span [11]. \n\nLiterature\n\nNursing implications underscore the importance of screenings, assessments, and close follow-ups to optimize the continuum of care [12]. \n\nDisease records found\n\nDisease name: Marfan syndrome [13]. \n\nPubmed records found\n\nPubmed title: Marfan syndrome [14]. Pubmed title: [Latest advances in the diagnosis and treatment of Marfan syndrome] [78]. Pubmed title: What Is Marfan Syndrome [80]. Pubmed title: Marfan syndrome [82]. Pubmed title: Marfan syndrome [84]. \n\nMedgen records found\n\nMedgen title: Marfan syndrome [15]. \n\nClinical features MedGen lists for Marfan syndrome\n\nMedgen clinical_features: Aortic regurgitation [1]. Medgen clinical_features: Arachnodactyly [2]. Medgen clinical_features: Astigmatism [3]. Medgen clinical_featu",
+  "trust_signal": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": "35 citation(s) beyond this surface's 50-citation limit were omitted; some citation markers in the answer above may not resolve to a returned citation.",
+    "fallback_link": null
+  },
+  "persona_name": "Chargaff",
+  "structured_keys": [
+    "answer",
+    "citations",
+    "persona_name",
+    "run_id",
+    "trust_signal"
+  ],
+  "wall_s": 12.5
+}

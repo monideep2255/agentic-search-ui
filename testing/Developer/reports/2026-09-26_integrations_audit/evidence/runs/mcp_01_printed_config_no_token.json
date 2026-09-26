@@ -1,0 +1,65 @@
+{
+  "url": "https://search-agent-api-develop-43b3.up.railway.app/mcp/",
+  "server_info": {
+    "name": "system3-biomedical-search",
+    "version": "1.0.0"
+  },
+  "protocol_version": "2025-11-25",
+  "tools": [
+    {
+      "name": "ask_biomedical_question",
+      "input_schema": {
+        "properties": {
+          "query": {
+            "maxLength": 2000,
+            "title": "Query",
+            "type": "string"
+          },
+          "audience_depth": {
+            "default": "researcher",
+            "enum": [
+              "clinical_brief",
+              "researcher",
+              "deep_technical"
+            ],
+            "title": "Audience Depth",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object",
+        "title": "ask_biomedical_questionArguments"
+      },
+      "has_output_schema": true
+    }
+  ],
+  "prompts_resources": {
+    "prompts": 0,
+    "resources": 0
+  },
+  "calls": [
+    {
+      "tool": "ask_biomedical_question",
+      "args": {
+        "query": "Which diseases are associated with BRCA1?"
+      },
+      "exception": "MCPError: missing, malformed, or invalid bearer token",
+      "wall_s": 0.2
+    }
+  ]
+}

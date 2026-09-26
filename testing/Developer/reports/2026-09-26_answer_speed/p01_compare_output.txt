@@ -1,0 +1,55 @@
+withdrawn totals: floor 30 reland 42
+rose: [('G-001', 2, 3), ('G-002', 1, 2), ('G-003', 1, 3), ('G-011', 0, 1), ('G-016', 2, 3), ('G-019', 1, 2), ('G-021', 2, 3), ('G-026', 0, 2), ('G-029', 0, 1), ('G-033', 0, 1), ('G-034', 0, 3), ('G-040', 1, 2)]
+fell: [('G-006', 1, 0), ('G-024', 2, 1), ('G-035', 2, 0)]
+
+== G-001: floor 2 withdrawn, re-land 3
+  floor pass 1 kept [no prose]: 
+
+== G-002: floor 1 withdrawn, re-land 2
+  floor pass 2 kept [no prose]: 
+  floor pass 3 kept [no prose]: 
+
+== G-003: floor 1 withdrawn, re-land 3
+  floor pass 2 kept [other written prose]: Condition Record and Literature The MedGen title for the condition is Lynch syndrome [1].
+  floor pass 3 kept [other written prose]: Condition Record Further publications address Lynch Syndrome-Associated Colorectal Cancer and identification strategies for the condition [1] [2].
+
+== G-011: floor 0 withdrawn, re-land 1
+  floor pass 1 kept [other written prose]: BRCA1-Associated Diseases BRCA1 is linked to familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. The gene encodes a nuclear phosphoprotein t
+  floor pass 2 kept [other written prose]: Germline mutations in BRCA1 are estimated to underlie roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined [1]. Functional and Clinical Context The encoded protein acts as a tumor suppressor that maintains genom
+  floor pass 3 kept [other written prose]: BRCA1 mutations are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [1].
+
+== G-016: floor 2 withdrawn, re-land 3
+  floor pass 2 kept [no prose]: 
+
+== G-019: floor 1 withdrawn, re-land 2
+  floor pass 2 kept [other written prose]: Repetitive Sequences, Nucleic Acid [1] and DNA Transposable Elements [2]. Conserved Sequence [3], CpG Islands [4], GC Rich Sequence [5], and Gene Duplication [6].
+  floor pass 3 kept [other written prose]: Species Specificity is also assigned [1].
+
+== G-021: floor 2 withdrawn, re-land 3
+  floor pass 3 kept [other written prose]: The retrieved records are PMID:10075921 [1], PMID:10094564 [2], PMID:10200050 [3], PMID:10561583 [4], PMID:10581360 [5], PMID:10651488 [6], PMID:10666020 [7], PMID:10766763 [8], PMID:10799517 [9], PMID:10852925 [10], PMID:10862786 [11], PMID:10893422 [12], PMI
+
+== G-026: floor 0 withdrawn, re-land 2
+  floor pass 1 kept [other written prose]: MedGen lists these clinical features: Asthma [1], Bronchiectasis [2], Clubbing of fingers [3], Dehydration [4], Diarrhea [5], Hemoptysis [6], Hepatomegaly [7] and Hepatosplenomegaly [8]. Cystic fibrosis liver disease affects many CF patients, but encephalopath
+  floor pass 2 kept [other written prose]: The gene associated with cystic fibrosis in the knowledge graph is NCBIGene:1080, named CF transmembrane conductance regulator [1]. Two additional genes—NCBIGene:2212 (Fc gamma receptor IIa) [2] and NCBIGene:7040 (transforming growth factor beta 1) [3]. Additi
+  floor pass 3 kept [other written prose]: The gene associated with cystic fibrosis is CF transmembrane conductance regulator, NCBIGene:1080 [1]. Two additional genes retrieved are Fc gamma receptor IIa, NCBIGene:2212 [2], and transforming growth factor beta 1, NCBIGene:7040 [3]. Clinical Features MedG
+
+== G-029: floor 0 withdrawn, re-land 1
+  floor pass 1 kept [other written prose]: Li-Fraumeni syndrome is associated with the tumor protein p53 gene NCBIGene:7157 [1], the checkpoint kinase 2 gene NCBIGene:11200 [2], and the cyclin dependent kinase inhibitor 2A gene NCBIGene:1029 [3]. Li-Fraumeni syndrome is a cancer predisposition syndrome
+  floor pass 2 kept [other written prose]: Li-Fraumeni syndrome is associated with the tumor protein p53 gene (NCBIGene:7157) [1], the cyclin dependent kinase inhibitor 2A gene (NCBIGene:1029) [2], and the checkpoint kinase 2 gene (NCBIGene:11200) [3]. The syndrome follows an autosomal dominant inherit
+  floor pass 3 kept [other written prose]: TP53 is the principal gene, encoding the tumor suppressor protein p53, and germline mutations in TP53 cause the syndrome through loss of p53's genome-preserving functions [1]. The syndrome follows autosomal dominant inheritance with high penetrance, and affect
+
+== G-033: floor 0 withdrawn, re-land 1
+  floor pass 1 kept [other written prose]: This gene was identified as a locus frequently mutated in hereditary nonpolyposis colon cancer [1]. Functional assays using yeast and in vitro mismatch repair systems have been developed to analyze human MLH1 variants [2] [3]. MLH1 promoter hypermethylation ca
+  floor pass 2 kept [other written prose]: The MLH1-encoded protein heterodimerizes with PMS2 to form MutL alpha, which introduces single-strand breaks near DNA mismatches to enable exonuclease degradation [1]. MLH1 also heterodimerizes with MLH3 to form MutL gamma, involved in meiosis, and was identif
+  floor pass 3 kept [other written prose]: The MLH1-encoded protein heterodimerizes with PMS2 to form MutL alpha, part of the DNA mismatch repair system, and was identified as a locus frequently mutated in hereditary nonpolyposis colon cancer [1].
+
+== G-034: floor 0 withdrawn, re-land 3
+  floor pass 1 kept [features sentence only (T-8.6-06)]: Clinical Features MedGen lists no clinical features for Seen by breast cancer nurse [1].
+  floor pass 2 kept [features sentence only (T-8.6-06)]: Clinical Features MedGen lists no clinical features for Seen by breast cancer nurse [1].
+  floor pass 3 kept [features sentence only (T-8.6-06)]: Clinical Features MedGen lists no clinical features for Seen by breast cancer nurse [1].
+
+== G-040: floor 1 withdrawn, re-land 2
+  floor pass 1 kept [no prose]: 
+  floor pass 3 kept [no prose]: 
+
+floor runs that kept a summary on the rising questions, by what they kept: {'no prose': 6, 'other written prose': 17, 'features sentence only (T-8.6-06)': 3}

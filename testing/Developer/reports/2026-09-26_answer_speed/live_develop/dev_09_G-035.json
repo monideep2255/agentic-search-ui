@@ -1,0 +1,1077 @@
+{
+ "id": "G-035",
+ "question": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+ "started_at": "2026-09-26T21:37:25+00:00",
+ "run_id": "7c4ffddb-8a5b-41c1-a0a0-a2d3771be233",
+ "create_s": 0.217,
+ "stream_open_s": 0.408,
+ "headers": {
+  "cache-control": "no-store",
+  "content-type": "text/event-stream; charset=utf-8",
+  "server": "railway-hikari",
+  "x-accel-buffering": "no",
+  "transfer-encoding": "chunked",
+  "x-railway-edge": "iad1",
+  "connection": "close"
+ },
+ "events": [
+  {
+   "arrive_s": 1.714,
+   "type": "guard",
+   "seq": 0,
+   "ts": "2026-09-26T21:35:47.431651Z",
+   "summary": "passed=True",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   },
+   "text": null,
+   "lag_s": 0.002,
+   "server_s": 1.501
+  },
+  {
+   "arrive_s": 4.851,
+   "type": "think",
+   "seq": 2,
+   "ts": "2026-09-26T21:35:50.569874Z",
+   "summary": "class=exploratory",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 4.639
+  },
+  {
+   "arrive_s": 4.852,
+   "type": "plan",
+   "seq": 4,
+   "ts": "2026-09-26T21:35:50.571906Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.0,
+   "server_s": 4.641
+  },
+  {
+   "arrive_s": 4.873,
+   "type": "tool_start",
+   "seq": 6,
+   "ts": "2026-09-26T21:35:50.573078Z",
+   "summary": "pathogen_detection:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.02,
+   "server_s": 4.643
+  },
+  {
+   "arrive_s": 4.873,
+   "type": "tool_start",
+   "seq": 7,
+   "ts": "2026-09-26T21:35:50.573110Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.02,
+   "server_s": 4.643
+  },
+  {
+   "arrive_s": 4.988,
+   "type": "tool_result",
+   "seq": 8,
+   "ts": "2026-09-26T21:35:50.704964Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.003,
+   "server_s": 4.774
+  },
+  {
+   "arrive_s": 18.726,
+   "type": "tool_result",
+   "seq": 9,
+   "ts": "2026-09-26T21:36:04.444496Z",
+   "summary": "pathogen_detection:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 18.514
+  },
+  {
+   "arrive_s": 18.727,
+   "type": "step",
+   "seq": 10,
+   "ts": "2026-09-26T21:36:04.445922Z",
+   "summary": "write:started",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   },
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 18.515
+  },
+  {
+   "arrive_s": 25.857,
+   "type": "token",
+   "seq": 11,
+   "ts": "2026-09-26T21:36:11.563315Z",
+   "summary": "len=164 kind=claim",
+   "payload": null,
+   "text": "Found 20 pathogen detection isolate records and 1 taxonomy record for Escherichia coli [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21]. ",
+   "lag_s": 0.014,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.857,
+   "type": "token",
+   "seq": 12,
+   "ts": "2026-09-26T21:36:11.563384Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.014,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.857,
+   "type": "token",
+   "seq": 13,
+   "ts": "2026-09-26T21:36:11.563396Z",
+   "summary": "len=30 kind=heading",
+   "payload": null,
+   "text": "Isolates and their AMR genes\n\n",
+   "lag_s": 0.014,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.859,
+   "type": "token",
+   "seq": 14,
+   "ts": "2026-09-26T21:36:11.563405Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.016,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.859,
+   "type": "token",
+   "seq": 15,
+   "ts": "2026-09-26T21:36:11.563415Z",
+   "summary": "len=46 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: C236-11 [1]. ",
+   "lag_s": 0.015,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.859,
+   "type": "token",
+   "seq": 16,
+   "ts": "2026-09-26T21:36:11.563425Z",
+   "summary": "len=46 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-3677 [2]. ",
+   "lag_s": 0.015,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.859,
+   "type": "token",
+   "seq": 17,
+   "ts": "2026-09-26T21:36:11.563435Z",
+   "summary": "len=46 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4404 [3]. ",
+   "lag_s": 0.015,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 18,
+   "ts": "2026-09-26T21:36:11.563445Z",
+   "summary": "len=46 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4522 [4]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 19,
+   "ts": "2026-09-26T21:36:11.563454Z",
+   "summary": "len=46 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4623 [5]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 20,
+   "ts": "2026-09-26T21:36:11.563463Z",
+   "summary": "len=49 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4632 C1 [6]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 21,
+   "ts": "2026-09-26T21:36:11.563472Z",
+   "summary": "len=49 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4632 C2 [7]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 22,
+   "ts": "2026-09-26T21:36:11.563481Z",
+   "summary": "len=49 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4632 C3 [8]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 23,
+   "ts": "2026-09-26T21:36:11.563490Z",
+   "summary": "len=49 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4632 C4 [9]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 24,
+   "ts": "2026-09-26T21:36:11.563500Z",
+   "summary": "len=50 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-4632 C5 [10]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 25,
+   "ts": "2026-09-26T21:36:11.563509Z",
+   "summary": "len=47 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: C227-11 [11]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 26,
+   "ts": "2026-09-26T21:36:11.563518Z",
+   "summary": "len=49 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: Ec11-4988 [12]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 27,
+   "ts": "2026-09-26T21:36:11.563527Z",
+   "summary": "len=49 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: Ec11-5603 [13]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 28,
+   "ts": "2026-09-26T21:36:11.563537Z",
+   "summary": "len=49 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: Ec11-6006 [14]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 29,
+   "ts": "2026-09-26T21:36:11.563546Z",
+   "summary": "len=48 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-02030 [15]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 30,
+   "ts": "2026-09-26T21:36:11.563554Z",
+   "summary": "len=50 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-02033-1 [16]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 31,
+   "ts": "2026-09-26T21:36:11.563563Z",
+   "summary": "len=48 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-02092 [17]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 32,
+   "ts": "2026-09-26T21:36:11.563573Z",
+   "summary": "len=48 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 11-02093 [18]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.861,
+   "type": "token",
+   "seq": 33,
+   "ts": "2026-09-26T21:36:11.563583Z",
+   "summary": "len=50 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: 2011C-3493 [19]. ",
+   "lag_s": 0.017,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 34,
+   "ts": "2026-09-26T21:36:11.563592Z",
+   "summary": "len=45 kind=table_row",
+   "payload": null,
+   "text": "Pathogen Detection isolate name: NA114 [20]. ",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 35,
+   "ts": "2026-09-26T21:36:11.563601Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 36,
+   "ts": "2026-09-26T21:36:11.563610Z",
+   "summary": "len=24 kind=heading",
+   "payload": null,
+   "text": "Taxonomy records found\n\n",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 37,
+   "ts": "2026-09-26T21:36:11.563619Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 38,
+   "ts": "2026-09-26T21:36:11.563629Z",
+   "summary": "len=48 kind=table_row",
+   "payload": null,
+   "text": "Taxonomy scientificname: Escherichia coli [21]. ",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 39,
+   "ts": "2026-09-26T21:36:11.563639Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 40,
+   "ts": "2026-09-26T21:36:11.563648Z",
+   "summary": "len=116 kind=note",
+   "payload": null,
+   "text": "Pathogen Detection lists 140,775 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 41,
+   "ts": "2026-09-26T21:36:11.563657Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "token",
+   "seq": 42,
+   "ts": "2026-09-26T21:36:11.563666Z",
+   "summary": "len=125 kind=note",
+   "payload": null,
+   "text": "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "citation",
+   "seq": 43,
+   "ts": "2026-09-26T21:36:11.563680Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "citation",
+   "seq": 44,
+   "ts": "2026-09-26T21:36:11.563704Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "citation",
+   "seq": 45,
+   "ts": "2026-09-26T21:36:11.563716Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "citation",
+   "seq": 46,
+   "ts": "2026-09-26T21:36:11.563726Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.862,
+   "type": "citation",
+   "seq": 47,
+   "ts": "2026-09-26T21:36:11.563737Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.018,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.868,
+   "type": "citation",
+   "seq": 48,
+   "ts": "2026-09-26T21:36:11.563748Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.868,
+   "type": "citation",
+   "seq": 49,
+   "ts": "2026-09-26T21:36:11.563759Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.868,
+   "type": "citation",
+   "seq": 50,
+   "ts": "2026-09-26T21:36:11.563770Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.868,
+   "type": "citation",
+   "seq": 51,
+   "ts": "2026-09-26T21:36:11.563780Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.868,
+   "type": "citation",
+   "seq": 52,
+   "ts": "2026-09-26T21:36:11.563791Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 53,
+   "ts": "2026-09-26T21:36:11.563802Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 54,
+   "ts": "2026-09-26T21:36:11.563812Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 55,
+   "ts": "2026-09-26T21:36:11.563822Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 56,
+   "ts": "2026-09-26T21:36:11.563833Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 57,
+   "ts": "2026-09-26T21:36:11.563844Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 58,
+   "ts": "2026-09-26T21:36:11.563855Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 59,
+   "ts": "2026-09-26T21:36:11.563865Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 60,
+   "ts": "2026-09-26T21:36:11.563876Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 61,
+   "ts": "2026-09-26T21:36:11.563887Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 62,
+   "ts": "2026-09-26T21:36:11.563898Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "citation",
+   "seq": 63,
+   "ts": "2026-09-26T21:36:11.563908Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 64,
+   "ts": "2026-09-26T21:36:11.563942Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 65,
+   "ts": "2026-09-26T21:36:11.563960Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 66,
+   "ts": "2026-09-26T21:36:11.563972Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 67,
+   "ts": "2026-09-26T21:36:11.563984Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 68,
+   "ts": "2026-09-26T21:36:11.563995Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.633
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 69,
+   "ts": "2026-09-26T21:36:11.564277Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 70,
+   "ts": "2026-09-26T21:36:11.564292Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 71,
+   "ts": "2026-09-26T21:36:11.564303Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 72,
+   "ts": "2026-09-26T21:36:11.564314Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 73,
+   "ts": "2026-09-26T21:36:11.564326Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 74,
+   "ts": "2026-09-26T21:36:11.564337Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 75,
+   "ts": "2026-09-26T21:36:11.564349Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 76,
+   "ts": "2026-09-26T21:36:11.564362Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 77,
+   "ts": "2026-09-26T21:36:11.564374Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 78,
+   "ts": "2026-09-26T21:36:11.564385Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 79,
+   "ts": "2026-09-26T21:36:11.564397Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 80,
+   "ts": "2026-09-26T21:36:11.564408Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 81,
+   "ts": "2026-09-26T21:36:11.564419Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.869,
+   "type": "trust_signal",
+   "seq": 82,
+   "ts": "2026-09-26T21:36:11.564430Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.87,
+   "type": "trust_signal",
+   "seq": 83,
+   "ts": "2026-09-26T21:36:11.564442Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.87,
+   "type": "trust_signal",
+   "seq": 84,
+   "ts": "2026-09-26T21:36:11.564454Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.87,
+   "type": "trust_signal",
+   "seq": 85,
+   "ts": "2026-09-26T21:36:11.564472Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  },
+  {
+   "arrive_s": 25.87,
+   "type": "done",
+   "seq": 87,
+   "ts": "2026-09-26T21:36:11.564567Z",
+   "summary": "elapsed_ms=25634 outcome=ask",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 25634,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 21 sources, not yet confirmed",
+    "layer_calls_used": 4,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 184
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 124
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.97,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 128
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.97,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     }
+    ]
+   },
+   "text": null,
+   "lag_s": 0.025,
+   "server_s": 25.634
+  }
+ ],
+ "moments": {
+  "first_event": {
+   "arrive_s": 1.714,
+   "server_s": 1.501,
+   "lag_s": 0.002
+  },
+  "guard": {
+   "arrive_s": 1.714,
+   "server_s": 1.501,
+   "lag_s": 0.002
+  },
+  "think": {
+   "arrive_s": 4.851,
+   "server_s": 4.639,
+   "lag_s": 0.001
+  },
+  "plan": {
+   "arrive_s": 4.852,
+   "server_s": 4.641,
+   "lag_s": 0.0
+  },
+  "first_tool_start": {
+   "arrive_s": 4.873,
+   "server_s": 4.643,
+   "lag_s": 0.02
+  },
+  "last_tool_result": {
+   "arrive_s": 18.726,
+   "server_s": 18.514,
+   "lag_s": 0.001
+  },
+  "write_started": {
+   "arrive_s": 18.727,
+   "server_s": 18.515,
+   "lag_s": 0.001
+  },
+  "first_token": {
+   "arrive_s": 25.857,
+   "server_s": 25.633,
+   "lag_s": 0.014
+  },
+  "last_token": {
+   "arrive_s": 25.862,
+   "server_s": 25.633,
+   "lag_s": 0.018
+  },
+  "done": {
+   "arrive_s": 25.87,
+   "server_s": 25.634,
+   "lag_s": 0.025
+  },
+  "n_events": 84,
+  "n_tokens": 32,
+  "max_lag_s": 0.025,
+  "withdrawn": true
+ }
+}

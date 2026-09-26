@@ -1,0 +1,24 @@
+== REST (guest): history HTTP 200, 5 rows
+   'GERD'                                                       trust=refuse cites=0 saved=False reopen=None reopen_cites=None :: None
+   'Tell me about black holes.'                                 trust=refuse cites=0 saved=False reopen=None reopen_cites=None :: None
+   'What are the clinical features of Marfan syndrome?'         trust=answer cites=50 saved=False reopen=None reopen_cites=None :: None
+   'What variants of it are pathogenic?'                        trust=ask cites=50 saved=False reopen=None reopen_cites=None :: None
+   'Which diseases are associated with BRCA1?'                  trust=ask cites=23 saved=False reopen=None reopen_cites=None :: None
+== GraphQL and s3 (account a): history HTTP 200, 9 rows
+   'Tell me about black holes.'                                 trust=refuse cites=0 saved=False reopen=None reopen_cites=None :: None
+   'What are the clinical features of Marfan syndrome?'         trust=answer cites=50 saved=True reopen=200 reopen_cites=50 :: Found 1 disease record for Marfan syndrome: Marfan syndrome [11].
+   'What variants of it are pathogenic?'                        trust=ask cites=50 saved=False reopen=None reopen_cites=None :: None
+   'Tell me about black holes.'                                 trust=refuse cites=0 saved=False reopen=None reopen_cites=None :: None
+   'What are the clinical features of Marfan syndrome?'         trust=answer cites=50 saved=True reopen=200 reopen_cites=50 :: Found 1 disease record for Marfan syndrome: Marfan syndrome [2].
+   'Which diseases are associated with BRCA1?'                  trust=ask cites=23 saved=False reopen=None reopen_cites=None :: None
+   'What variants of it are pathogenic?'                        trust=ask cites=50 saved=False reopen=None reopen_cites=None :: None
+   'diseases linked to BRCA1'                                   trust=ask cites=26 saved=False reopen=None reopen_cites=None :: None
+   'Which diseases are associated with BRCA1?'                  trust=ask cites=23 saved=False reopen=None reopen_cites=None :: None
+== MCP (account b): history HTTP 200, 5 rows
+   'GERD'                                                       trust=refuse cites=0 saved=False reopen=None reopen_cites=None :: None
+   'Tell me about black holes.'                                 trust=refuse cites=0 saved=False reopen=None reopen_cites=None :: None
+   'What are the clinical features of Marfan syndrome?'         trust=answer cites=50 saved=True reopen=200 reopen_cites=50 :: Found 1 disease record for Marfan syndrome: Marfan syndrome [13].
+   'What variants of it are pathogenic?'                        trust=ask cites=50 saved=False reopen=None reopen_cites=None :: None
+   'Which diseases are associated with BRCA1?'                  trust=ask cites=22 saved=False reopen=None reopen_cites=None :: None
+feedback REST run, guest token: HTTP 204 {}
+feedback MCP run, account b token over REST: HTTP 204 {}

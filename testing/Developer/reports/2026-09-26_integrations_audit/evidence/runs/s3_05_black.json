@@ -1,0 +1,20 @@
+{
+  "surface": "s3",
+  "question": "Tell me about black holes.",
+  "argv": [
+    "ask",
+    "Tell me about black holes."
+  ],
+  "exit": 1,
+  "stderr_tail": "guard: this looks outside biomedical research. Try a gene, variant, pathogen, or paper question.\ns3: the run finished with no answer text and no citations; nothing was actually delivered even though the run did not fail.\n",
+  "stdout_tail": "",
+  "wall_s": 3.9,
+  "outcome": "no citations (None)",
+  "trust_outcome": null,
+  "citation_count": 0,
+  "citation_hosts": [],
+  "citation_urls_sample": [],
+  "first_sentence": "",
+  "answer_chars": 0,
+  "answer_head": ""
+}

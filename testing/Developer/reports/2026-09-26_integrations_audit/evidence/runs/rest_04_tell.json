@@ -1,0 +1,47 @@
+{
+  "surface": "REST+SSE",
+  "question": "Tell me about black holes.",
+  "session_id": "audit-rest-black",
+  "depth_sent": null,
+  "create_status": 202,
+  "persona_name": "Delbruck",
+  "run_id": "9f823459-ddac-4a0d-bec0-7c1a6e3cc197",
+  "stream_status": 200,
+  "outcome": "refused",
+  "trust_outcome": "refuse",
+  "citation_count": 0,
+  "citation_hosts": [],
+  "citation_urls_sample": [],
+  "first_sentence": "",
+  "answer_chars": 0,
+  "answer_head": "",
+  "event_type_counts": {
+    "guard": 1,
+    "done": 1
+  },
+  "clarifying_question": null,
+  "clarifying_options": null,
+  "think_narratives": [],
+  "resolved_entities": [],
+  "done_trust_line": null,
+  "done_next_step": null,
+  "done_decisions": [
+    {
+      "name": "guardrail.relevancy",
+      "chosen": "off_topic",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "guardrail.injection",
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "fallback_reason": null
+    }
+  ],
+  "done_total_tool_calls": 0,
+  "done_elapsed_ms": 871,
+  "answer_trust_signal_message": null,
+  "errors": [],
+  "wall_s": 1.3
+}

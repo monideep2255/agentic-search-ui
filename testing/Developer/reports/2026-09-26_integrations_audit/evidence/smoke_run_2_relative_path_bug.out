@@ -1,0 +1,13 @@
+PASS health    ok (develop)
+PASS api-docs  /docs and /openapi.json answer, 17 paths
+PASS rest-sse  ask, 23 citations, 125 events, 19s
+PASS graphql   23 citations, 16s
+PASS mcp       1 tool, token required, ask, 23 citations, 24s
+FAIL cli       could not build the wheel: Command '['<repo-root>/venv/bin/python', '-m', 'pip', 'wheel', '--no-deps', '--no-build-isolation', '-q', '-w', '<tmp>', 'int_tree']' returned non-zero e
+FAIL kgx       could not build the wheel: Command '['<repo-root>/venv/bin/python', '-m', 'pip', 'wheel', '--no-deps', '--no-build-isolation', '-q', '-w', '<tmp>', 'int_tree']' returned non-zero e
+FAIL page      MCP config carries no Authorization header, so every tool call is refused
+5 passed, 3 failed, 25s
+real 28.54
+user 2.12
+sys 0.52
+exit 1

@@ -1,0 +1,74 @@
+[
+  [
+    "cd26a7a",
+    "2026-09-22, the CLI adapter's last change",
+    "done",
+    "REJECTED: Value error, payload does not match the 'done' event schema (expected shape of DonePayload): 2 validation errors for DonePayload | layer_calls_used | Extra inputs are not permitted [type=extra_forbidden, input_value=9, i"
+  ],
+  [
+    "cd26a7a",
+    "2026-09-22, the CLI adapter's last change",
+    "think with options",
+    "REJECTED: Value error, payload does not match the 'think' event schema (expected shape of ThinkPayload): 1 validation error for ThinkPayload | clarifying_options | Extra inputs are not permitted [type=extra_forbidden, input_value="
+  ],
+  [
+    "cd26a7a",
+    "2026-09-22, the CLI adapter's last change",
+    "step",
+    "accepted"
+  ],
+  [
+    "537377d",
+    "2026-09-14, the GraphQL adapter's last change",
+    "done",
+    "REJECTED: Value error, payload does not match the 'done' event schema (expected shape of DonePayload): 2 validation errors for DonePayload | layer_calls_used | Extra inputs are not permitted [type=extra_forbidden, input_value=9, i"
+  ],
+  [
+    "537377d",
+    "2026-09-14, the GraphQL adapter's last change",
+    "think with options",
+    "REJECTED: Value error, payload does not match the 'think' event schema (expected shape of ThinkPayload): 1 validation error for ThinkPayload | clarifying_options | Extra inputs are not permitted [type=extra_forbidden, input_value="
+  ],
+  [
+    "537377d",
+    "2026-09-14, the GraphQL adapter's last change",
+    "step",
+    "REJECTED: type | Input should be 'guard', 'think', 'plan', 'tool_start', 'tool_result', 'token', 'citation', 'trust_signal', 'cost', 'error' or 'done' [type=literal_error, input_value='step', input_type=str] | For further informat"
+  ],
+  [
+    "20a8688",
+    "2026-09-13, the MCP adapter's last change",
+    "done",
+    "REJECTED: Value error, payload does not match the 'done' event schema (expected shape of DonePayload): 4 validation errors for DonePayload | trust_line | Extra inputs are not permitted [type=extra_forbidden, input_value='Based on "
+  ],
+  [
+    "20a8688",
+    "2026-09-13, the MCP adapter's last change",
+    "think with options",
+    "REJECTED: Value error, payload does not match the 'think' event schema (expected shape of ThinkPayload): 1 validation error for ThinkPayload | clarifying_options | Extra inputs are not permitted [type=extra_forbidden, input_value="
+  ],
+  [
+    "20a8688",
+    "2026-09-13, the MCP adapter's last change",
+    "step",
+    "REJECTED: type | Input should be 'guard', 'think', 'plan', 'tool_start', 'tool_result', 'token', 'citation', 'trust_signal', 'cost', 'error' or 'done' [type=literal_error, input_value='step', input_type=str] | For further informat"
+  ],
+  [
+    "HEAD",
+    "develop today",
+    "done",
+    "accepted"
+  ],
+  [
+    "HEAD",
+    "develop today",
+    "think with options",
+    "accepted"
+  ],
+  [
+    "HEAD",
+    "develop today",
+    "step",
+    "accepted"
+  ]
+]

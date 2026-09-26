@@ -1,0 +1,196 @@
+{
+  "history": {
+    "REST (guest)": {
+      "history_status": 200,
+      "history_keys": [
+        "count",
+        "items",
+        "omitted_count"
+      ],
+      "rows": [
+        {
+          "trace_id": "75addfa5-7f7e-4a6a-a9fd-f9672e8271b1",
+          "question": "GERD",
+          "trust_signal": "refuse",
+          "citation_count": 0,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "9f823459-ddac-4a0d-bec0-7c1a6e3cc197",
+          "question": "Tell me about black holes.",
+          "trust_signal": "refuse",
+          "citation_count": 0,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "7430e68a-e1f4-4525-a9eb-b6280629cb25",
+          "question": "What are the clinical features of Marfan syndrome?",
+          "trust_signal": "answer",
+          "citation_count": 50,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "80032865-0573-458e-b7d8-406c9ae81f7a",
+          "question": "What variants of it are pathogenic?",
+          "trust_signal": "ask",
+          "citation_count": 50,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "20258855-e1aa-4f2a-8217-1f8015830947",
+          "question": "Which diseases are associated with BRCA1?",
+          "trust_signal": "ask",
+          "citation_count": 23,
+          "has_saved_answer": false
+        }
+      ]
+    },
+    "GraphQL and s3 (account a)": {
+      "history_status": 200,
+      "history_keys": [
+        "count",
+        "items",
+        "omitted_count"
+      ],
+      "rows": [
+        {
+          "trace_id": "6229df5c-fe5b-4f25-8a35-a07f09f0d1be",
+          "question": "Tell me about black holes.",
+          "trust_signal": "refuse",
+          "citation_count": 0,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "c902c0ea-7b36-426b-bc1d-c116f1be152c",
+          "question": "What are the clinical features of Marfan syndrome?",
+          "trust_signal": "answer",
+          "citation_count": 50,
+          "has_saved_answer": true,
+          "reopen_status": 200,
+          "reopen_depth": "researcher",
+          "reopen_citations": 50,
+          "reopen_trust_line": "Based on 13 sources",
+          "reopen_first_sentence": "Found 1 disease record for Marfan syndrome: Marfan syndrome [11].",
+          "reopen_answer_head": "Found 1 disease record for Marfan syndrome: Marfan syndrome [11].\n\n## Clinical Features\n\nMedGen lists these clinical features: Aortic regurgitation [1], Arachnodactyly [2], Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Pes planus [7], Glaucoma [8], Congestive heart failure [9] and Hypertropia [10].\n\n## Disease records found\n\n| Disease | Identifier |\n| --- | --- |\n| Marfan syndrome [11] | MedGen:C0024796 |\n\n## Pubmed records found\n\n| Paper | Identifier |\n| --- | --- |\n| Marfan syndrome. [12] | PMID:2402263 |\n| [Latest advances in the diagnosis and treatment of Marfan syndro"
+        },
+        {
+          "trace_id": "f507b44d-a16b-4294-9b29-c9be6666088e",
+          "question": "What variants of it are pathogenic?",
+          "trust_signal": "ask",
+          "citation_count": 50,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "ab8cd323-32a7-454b-8f47-d1dd78014775",
+          "question": "Tell me about black holes.",
+          "trust_signal": "refuse",
+          "citation_count": 0,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "b1f342ba-4ce3-4fde-ad84-65568abae79d",
+          "question": "What are the clinical features of Marfan syndrome?",
+          "trust_signal": "answer",
+          "citation_count": 50,
+          "has_saved_answer": true,
+          "reopen_status": 200,
+          "reopen_depth": "researcher",
+          "reopen_citations": 50,
+          "reopen_trust_line": "Based on 13 sources",
+          "reopen_first_sentence": "Found 1 disease record for Marfan syndrome: Marfan syndrome [2].",
+          "reopen_answer_head": "Found 1 disease record for Marfan syndrome: Marfan syndrome [2].\n\n## Clinical Context\n\nMarfan syndrome is a multisystem connective tissue disease with autosomal dominant inheritance, mainly caused by FBN1 gene mutation [1].\n\n## Disease records found\n\n| Disease | Identifier |\n| --- | --- |\n| Marfan syndrome [2] | MedGen:C0024796 |\n\n## Pubmed records found\n\n| Paper | Identifier |\n| --- | --- |\n| Marfan syndrome. [3] | PMID:2402263 |\n| [Latest advances in the diagnosis and treatment of Marfan syndrome]. [77] | PMID:35894201 |\n| What Is Marfan Syndrome? [79] | PMID:37058316 |\n| Marfan syndrome. [8"
+        },
+        {
+          "trace_id": "d7f8053b-8950-4042-88f4-9cf2112e5532",
+          "question": "Which diseases are associated with BRCA1?",
+          "trust_signal": "ask",
+          "citation_count": 23,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "58c6bb43-adcf-4362-b7ee-8e269d239ebd",
+          "question": "What variants of it are pathogenic?",
+          "trust_signal": "ask",
+          "citation_count": 50,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "fb2a2900-8aae-48fc-87d7-49fe7d34e618",
+          "question": "diseases linked to BRCA1",
+          "trust_signal": "ask",
+          "citation_count": 26,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "93708261-3608-4de5-ab04-80df52c88f0a",
+          "question": "Which diseases are associated with BRCA1?",
+          "trust_signal": "ask",
+          "citation_count": 23,
+          "has_saved_answer": false
+        }
+      ]
+    },
+    "MCP (account b)": {
+      "history_status": 200,
+      "history_keys": [
+        "count",
+        "items",
+        "omitted_count"
+      ],
+      "rows": [
+        {
+          "trace_id": "86472713-b896-414d-a39e-6ce0916acf2d",
+          "question": "GERD",
+          "trust_signal": "refuse",
+          "citation_count": 0,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "cb2c1d4e-ddd7-4d12-86c7-29eec9bba853",
+          "question": "Tell me about black holes.",
+          "trust_signal": "refuse",
+          "citation_count": 0,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "0ef4de6a-2118-428c-b512-e5a2fa6dece0",
+          "question": "What are the clinical features of Marfan syndrome?",
+          "trust_signal": "answer",
+          "citation_count": 50,
+          "has_saved_answer": true,
+          "reopen_status": 200,
+          "reopen_depth": "researcher",
+          "reopen_citations": 50,
+          "reopen_trust_line": "Based on 13 sources",
+          "reopen_first_sentence": "Found 1 disease record for Marfan syndrome: Marfan syndrome [13].",
+          "reopen_answer_head": "Found 1 disease record for Marfan syndrome: Marfan syndrome [13].\n\n## Clinical Features\n\nMedGen lists these clinical features: Aortic regurgitation [1], Arachnodactyly [2], Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Pes planus [7], Glaucoma [8], Congestive heart failure [9] and Hypertropia [10]. While there is currently no radical treatment, early identification and treatment can effectively prolong patient life span [11].\n\n## Literature\n\nNursing implications underscore the importance of screenings, assessments, and close follow-ups to optimize the continuum of care [12"
+        },
+        {
+          "trace_id": "65ef9dac-b924-4195-b0de-2c96967068a8",
+          "question": "What variants of it are pathogenic?",
+          "trust_signal": "ask",
+          "citation_count": 50,
+          "has_saved_answer": false
+        },
+        {
+          "trace_id": "c5e5ce33-a250-4a9a-8442-c6c729b6273e",
+          "question": "Which diseases are associated with BRCA1?",
+          "trust_signal": "ask",
+          "citation_count": 22,
+          "has_saved_answer": false
+        }
+      ]
+    }
+  },
+  "feedback": {
+    "REST run, guest token": {
+      "status": 204,
+      "body": {}
+    },
+    "MCP run, account b token over REST": {
+      "status": 204,
+      "body": {}
+    },
+    "GraphQL run": "GraphQL's AskResult returns a runId; the schema has no feedback mutation (see schema.py)"
+  }
+}

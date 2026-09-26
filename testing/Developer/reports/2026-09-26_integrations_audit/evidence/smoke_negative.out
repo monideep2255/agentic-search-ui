@@ -1,0 +1,7 @@
+FAIL health    HTTP 200: <!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-w
+0 passed, 1 failed, 0s
+exit 1
