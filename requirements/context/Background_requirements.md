@@ -234,7 +234,7 @@ Source: `reference/agentic-search-data-engineering/`
 
 ### What System 3 inherits
 
-Graph: 115.4M nodes, 693.3M edges on PostgreSQL + Apache AGE (Hetzner CPX42, 46.225.128.133)
+Graph: 115.4M nodes, 693.3M edges on PostgreSQL + Apache AGE (Hetzner CPX42, <server-ip>)
 
 Node types (10 categories):
 - biolink:Gene (67.5M from NCBI Gene)
@@ -257,7 +257,7 @@ CURIE convention: `NCBIGene:7157`, `ClinVar:123456`, `PMID:12345678`, `MONDO:000
 ### Connection pattern
 
 - Protocol: openCypher via psycopg2 (not Neo4j driver)
-- Connection: `postgresql://kg_reader@46.225.128.133:5432/ncbi_kg` (read-only)
+- Connection: `postgresql://kg_reader@<server-ip>:5432/ncbi_kg` (read-only)
 - Latency: <10ms for match-by-id, 1-10s for traversals
 - Required prelude: `LOAD 'age'; SET search_path = ag_catalog, "$user", public;`
 

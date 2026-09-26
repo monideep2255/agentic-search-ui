@@ -140,7 +140,6 @@ TP53_DISEASES = 12
 BRCA1 = "NCBIGene:672"
 BRCA1_NAME = "BRCA1 DNA repair associated"
 
-GRAPH_HOST_PUBLIC = "46.225.128.133"
 GRAPH_PG_PUBLIC_PORT = 5432
 
 # The two pinned query shapes. One vertex return, one scalar return, so the
@@ -211,6 +210,19 @@ def _service_is_reachable() -> bool:
         return response.status_code == 200
     except Exception:  # noqa: BLE001 - reachability probe, any failure is "no"
         return False
+
+
+def _graph_host_public() -> str | None:
+    """The box's own public address, read from GRAPH_BOX_HOST (env.example),
+    with any "user@" prefix stripped: P10 and P10c need a bare host for
+    socket.create_connection and a plain ssh destination. None when the
+    setting is configured nowhere .env or the environment reaches.
+    """
+    _load_env_explicitly()
+    box_host = os.environ.get("GRAPH_BOX_HOST", "")
+    if not box_host:
+        return None
+    return box_host.split("@")[-1]
 
 
 _RUN_LIVE = os.environ.get("RUN_PREMISE_GATE") == "1"
@@ -431,7 +443,8 @@ def test_p1_https_rows_are_byte_identical_to_psycopg2_rows(
             "against. This arm fails rather than skipping because a skip "
             "reads as a pass in the run headline, which is finding "
             "F-4.11-J-02. To close it once and for all: open the forward "
-            "(ssh -N -L 15432:127.0.0.1:5432 root@" + GRAPH_HOST_PUBLIC + "), "
+            "(ssh -N -L 15432:127.0.0.1:5432 root@"
+            + (_graph_host_public() or "<server-ip>") + "), "
             "then run this gate once with GRAPH_BYTE_EQUALITY_CAPTURE=1 and "
             "commit " + str(_BASELINE_PATH.relative_to(_REPO_ROOT)) + ". "
             "Every later run then re-verifies the premise with no forward "
@@ -1003,11 +1016,18 @@ def test_p10_the_database_port_is_still_closed_to_the_internet() -> None:
     is attributable to the host rather than to the sandbox. Under the old
     form both ports timing out was a pass. Under this one it is a failure.
     """
-    with socket.create_connection((GRAPH_HOST_PUBLIC, 443), timeout=8):
+    host = _graph_host_public()
+    if host is None:
+        pytest.skip(
+            "needs GRAPH_BOX_HOST, the box's own public address, to probe "
+            "from; env.example shows its format"
+        )
+
+    with socket.create_connection((host, 443), timeout=8):
         pass
 
     with pytest.raises(OSError):
-        socket.create_connection((GRAPH_HOST_PUBLIC, GRAPH_PG_PUBLIC_PORT), timeout=8)
+        socket.create_connection((host, GRAPH_PG_PUBLIC_PORT), timeout=8)
 
 
 @requires_service
@@ -1018,6 +1038,13 @@ def test_p10c_postgres_is_bound_to_loopback_on_the_box_itself() -> None:
     the binding directly on the host, so the two arms fail for independent
     reasons and no single environmental quirk can make both green.
     """
+    host = _graph_host_public()
+    if host is None:
+        pytest.skip(
+            "needs GRAPH_BOX_HOST, the box's own public address, to reach "
+            "over ssh; env.example shows its format"
+        )
+
     import subprocess
 
     listeners = subprocess.run(
@@ -1025,7 +1052,7 @@ def test_p10c_postgres_is_bound_to_loopback_on_the_box_itself() -> None:
             "ssh",
             "-o",
             "BatchMode=yes",
-            "root@" + GRAPH_HOST_PUBLIC,
+            "root@" + host,
             "ss -lnt sport = :5432",
         ],
         capture_output=True,
