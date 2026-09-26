@@ -39,9 +39,9 @@ Depends on:
       RunResult, TrustSignal): the type layer this module folds events
       into.
     - system_03_search_agent.contracts.events (CitationPayload, DonePayload,
-      ErrorPayload, Event, GuardPayload, TokenPayload, ToolResultPayload,
-      TrustSignalPayload): the Section 2.3 payload models this module folds
-      events against.
+      ErrorPayload, Event, GuardPayload, ThinkPayload, TokenPayload,
+      ToolResultPayload, TrustSignalPayload): the Section 2.3 payload models
+      this module folds events against.
     - system_03_search_agent.core.run_registry (RunEntry, default_registry):
       the SAME registry instance every other surface uses. This module
       never builds a second registry.
@@ -89,6 +89,7 @@ from system_03_search_agent.contracts.events import (
     ErrorPayload,
     Event,
     GuardPayload,
+    ThinkPayload,
     TokenPayload,
     ToolResultPayload,
     TrustSignalPayload,
@@ -698,6 +699,11 @@ class _Accumulator:
     non_fatal_error_classes: list[str] = field(default_factory=list)
     truncated_tool_results: int = 0
     malformed_events: int = 0
+    # T-8.10-06. Read from `think` and `done`, and reported by `_finalize`
+    # only under the rules `_parity_fields` states.
+    clarifying_question: str | None = None
+    clarifying_options: list[str] = field(default_factory=list)
+    trust_line: str | None = None
 
 
 def _parse_payload(acc: _Accumulator, event: Event, model: type[Any]) -> Any | None:
@@ -732,9 +738,11 @@ def _consume_event(acc: _Accumulator, event: Event) -> None:
     (unconditionally: this surface's `operator_mode` is a parameter kept
     only for interface symmetry with the core, since the caller pins it
     `False` in code, T-4.3's own scope reading), which drops a `cost`
-    event entirely and redacts `done.total_cost_usd`. `think`, `plan` and
+    event entirely and redacts `done.total_cost_usd`. `plan` and
     `tool_start` carry nothing this surface's schema has a field for and
-    are folded out entirely by matching no branch below.
+    are folded out entirely by matching no branch below. `think` is read
+    for its clarifying question and options only (T-8.10-06), and nothing
+    else in it reaches a result.
 
     `tool_result` is NOT folded out, and that is a change. It used to be,
     on the reasoning that it "carries nothing this surface's schema has a
@@ -791,10 +799,28 @@ def _consume_event(acc: _Accumulator, event: Event) -> None:
         payload = _parse_payload(acc, event, ToolResultPayload)
         if payload is not None and payload.truncated:
             acc.truncated_tool_results += 1
+    elif event.type == "think":
+        # T-8.10-06. Only the clarifying question and its options are read;
+        # the rest of `think` stays folded out. The FIRST `think` carrying a
+        # non-empty question wins, as on the web (`useRunView.ts` finds the
+        # first such event), so a later event can never swap it. Trimmed,
+        # so a blank question counts as none.
+        payload = _parse_payload(acc, event, ThinkPayload)
+        if payload is not None and acc.clarifying_question is None:
+            question = (payload.clarifying_question or "").strip()
+            if question:
+                acc.clarifying_question = question
+                acc.clarifying_options = [
+                    option.strip()
+                    for option in payload.clarifying_options or []
+                    if option.strip()
+                ]
     elif event.type == "done":
         payload = _parse_payload(acc, event, DonePayload)
         if payload is not None:
             acc.terminal_trust_outcome = payload.trust_outcome
+            # T-8.10-06: read the way the web reads it, blank means none.
+            acc.trust_line = (payload.trust_line or "").strip() or None
         acc.terminal_event_seen = True
 
 
@@ -867,13 +893,71 @@ def _cap_notes(notes: list[str]) -> list[str]:
     return kept
 
 
-def _finalize(
-    acc: _Accumulator, *, run_finished: bool
-) -> tuple[str, TrustSignal, list[Citation], Disclosures]:
+@dataclass(frozen=True)
+class _Finalized:
+    """What `_finalize` hands both result builders, so `ask` and `run` fill
+    their shared fields from one computation and cannot disagree."""
+
+    answer: str
+    trust_signal: TrustSignal
+    citations: list[Citation]
+    disclosures: Disclosures
+    trust_line: str | None
+    clarifying_question: str | None
+    clarifying_options: list[str] | None
+
+
+def _parity_fields(
+    acc: _Accumulator, *, final_outcome: str, citations_returned: int
+) -> tuple[str | None, str | None, list[str] | None]:
+    """The trust line and the clarifying question and options this result
+    may carry (T-8.10-06), as `(trust_line, clarifying_question,
+    clarifying_options)`. Each is reported only when it cannot read more
+    confident than the rest of the result.
+
+    The trust line is the run's own sentence about its own verdict, so it
+    is reported only when this fold reported that same verdict: the run
+    reached `done`, no fatal error ended it, nothing this fold received was
+    dropped, and no floor lowered the outcome below the one `done` gave.
+    Any of those, and the line could say "Based on 3 sources" beside a
+    result that returns two, or beside a refusal.
+
+    The clarifying fields follow the web's rule for a question back
+    (`useRunView.ts`, `clarification`) and the MCP surface's
+    `_is_ask_back`: a `think` carried a question, the guardrail did not
+    refuse, no fatal error, the run finished, and no citation came back, so
+    they can never ride on an answer.
+    """
+    clean_run = (
+        acc.terminal_event_seen
+        and acc.fatal_error_payload is None
+        and acc.citations_collector.omitted_total == 0
+        and acc.malformed_events == 0
+    )
+    trust_line = (
+        acc.trust_line
+        if clean_run and final_outcome == acc.terminal_trust_outcome
+        else None
+    )
+    guard_refused = acc.guard_payload is not None and not acc.guard_payload.passed
+    ask_back = (
+        acc.clarifying_question is not None
+        and not guard_refused
+        and acc.fatal_error_payload is None
+        and acc.terminal_event_seen
+        and citations_returned == 0
+        and acc.citations_collector.events_seen == 0
+    )
+    if not ask_back:
+        return trust_line, None, None
+    return trust_line, acc.clarifying_question, (acc.clarifying_options or None)
+
+
+def _finalize(acc: _Accumulator, *, run_finished: bool) -> _Finalized:
     """Turn an `_Accumulator` that has consumed some (possibly incomplete)
-    prefix of a run's events into the four fields every result type on
-    this surface carries: `answer`, `trust_signal`, `citations`,
-    `disclosures`.
+    prefix of a run's events into the fields every result type on this
+    surface carries: `answer`, `trust_signal`, `citations`, `disclosures`,
+    and since T-8.10-06 the trust line and any clarifying question.
 
     Every floor below only ever LOWERS a verdict. No path in this function
     raises one, and that is the invariant to preserve when editing it.
@@ -1068,7 +1152,18 @@ def _finalize(
         run_failed=run_failed,
         notes=_cap_notes(notes + preserved_trust_warnings),
     )
-    return answer_text, TrustSignal.from_payload(trust_payload), citations, disclosures
+    trust_line, clarifying_question, clarifying_options = _parity_fields(
+        acc, final_outcome=trust_payload.outcome, citations_returned=len(citations)
+    )
+    return _Finalized(
+        answer=answer_text,
+        trust_signal=TrustSignal.from_payload(trust_payload),
+        citations=citations,
+        disclosures=disclosures,
+        trust_line=trust_line,
+        clarifying_question=clarifying_question,
+        clarifying_options=clarifying_options,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1124,14 +1219,17 @@ async def fold_run(
 
     # `subscribe` returns only at the run's terminal event or once the run
     # has ended, so by this line the run is over either way.
-    answer_text, trust_signal, citations, disclosures = _finalize(acc, run_finished=True)
+    folded = _finalize(acc, run_finished=True)
     return AskResult(
         run_id=run_id,
         persona_name=persona_name,
-        answer=answer_text,
-        trust_signal=trust_signal,
-        citations=citations,
-        disclosures=disclosures,
+        answer=folded.answer,
+        trust_signal=folded.trust_signal,
+        citations=folded.citations,
+        disclosures=folded.disclosures,
+        trust_line=folded.trust_line,
+        clarifying_question=folded.clarifying_question,
+        clarifying_options=folded.clarifying_options,
     )
 
 
@@ -1171,16 +1269,17 @@ async def fold_run_snapshot(run_id: str, *, operator_mode: bool = False) -> RunR
             # text as `grounded: true` on a run `ask` had refused
             # (F-4.3-A-13).
             break
-    answer_text, trust_signal, citations, disclosures = _finalize(
-        acc, run_finished=entry.finished
-    )
+    folded = _finalize(acc, run_finished=entry.finished)
     return RunResult(
         run_id=run_id,
         finished=entry.finished,
-        answer=answer_text,
-        trust_signal=trust_signal,
-        citations=citations,
-        disclosures=disclosures,
+        answer=folded.answer,
+        trust_signal=folded.trust_signal,
+        citations=folded.citations,
+        disclosures=folded.disclosures,
+        trust_line=folded.trust_line,
+        clarifying_question=folded.clarifying_question,
+        clarifying_options=folded.clarifying_options,
     )
 
 

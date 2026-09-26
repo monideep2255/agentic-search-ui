@@ -80,6 +80,22 @@ def _event(event_type: str, trace_id: str, seq: int, payload: object) -> Event:
     )
 
 
+_GOLDEN_CITATION = CitationPayload(
+    citation_id="c1",
+    display_index=1,
+    source="ncbi_gene",
+    source_id="672",
+    source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    layer="layer_1_graph",
+    field="symbol",
+    claim_text="BRCA1 is a protein-coding gene.",
+    evidence_kind="direct",
+    assertion_confidence="high",
+    population_ancestry_context=None,
+    license="public-domain",
+)
+
+
 async def _golden_path_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     trace_id = query.trace_id
     yield _event("guard", trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
@@ -118,25 +134,7 @@ async def _golden_path_stream(query: Query, context: RequestContext) -> AsyncIte
     yield _event(
         "token", trace_id, 5, TokenPayload(text="BRCA1 is a protein-coding gene [1]. ", marker_ids=["c1"])
     )
-    yield _event(
-        "citation",
-        trace_id,
-        6,
-        CitationPayload(
-            citation_id="c1",
-            display_index=1,
-            source="ncbi_gene",
-            source_id="672",
-            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
-            layer="layer_1_graph",
-            field="symbol",
-            claim_text="BRCA1 is a protein-coding gene.",
-            evidence_kind="direct",
-            assertion_confidence="high",
-            population_ancestry_context=None,
-            license="public-domain",
-        ),
-    )
+    yield _event("citation", trace_id, 6, _GOLDEN_CITATION)
     yield _event(
         "trust_signal",
         trace_id,
@@ -235,7 +233,9 @@ def _http_client(mcp_app: FastAPI, headers: Mapping[str, str] | None) -> httpx2.
     )
 
 
-async def _call_tool(headers: Mapping[str, str] | None, arguments: dict[str, object]) -> CallToolResult:
+async def _call_named_tool(
+    headers: Mapping[str, str] | None, name: str, arguments: dict[str, object]
+) -> CallToolResult:
     mcp_app = _build_test_mcp_app()
     async with (
         mcp_app.router.lifespan_context(mcp_app),
@@ -244,7 +244,11 @@ async def _call_tool(headers: Mapping[str, str] | None, arguments: dict[str, obj
         ClientSession(read, write) as session,
     ):
         await session.initialize()
-        return await session.call_tool("ask_biomedical_question", arguments)
+        return await session.call_tool(name, arguments)
+
+
+async def _call_tool(headers: Mapping[str, str] | None, arguments: dict[str, object]) -> CallToolResult:
+    return await _call_named_tool(headers, "ask_biomedical_question", arguments)
 
 
 def _first_mcp_error(eg: BaseExceptionGroup) -> MCPError:
@@ -281,12 +285,28 @@ def _find_all(schema_fragment: object, key: str) -> list[object]:
     return found
 
 
+# A manual control: every key any MCP response may carry, pinned by hand, so
+# that any unlisted key fails, including a renamed cost field. Additions need
+# the product owner's approval, recorded beside them:
+#
+# - 2026-08-20: `persona_name`.
+# - 2026-09-26, build phase 8.10 (T-8.10-05), under the owner's parity
+#   decision in `DECISIONS.md` ("The MCP server gets full parity with the web
+#   app"), which named what these carry: `session_id` (the caller's own
+#   conversation id, to ask a follow-up), `trust_line` (the one plain trust
+#   sentence the web shows), `clarifying_question` and `clarifying_options`
+#   (the question back and its one-click options the web shows). No cost, no
+#   credential, no other account's data.
 _ALLOWED_RESPONSE_KEYS = {
     "answer",
     "citations",
     "trust_signal",
     "run_id",
     "persona_name",
+    "session_id",
+    "trust_line",
+    "clarifying_question",
+    "clarifying_options",
     "assertion_confidence",
     "citation_id",
     "claim_text",
@@ -308,6 +328,59 @@ _ALLOWED_RESPONSE_KEYS = {
     "risk_tier",
     "scope",
     "triangulated",
+}
+
+
+# The same control for the three tools T-8.10-05 added, one pinned set per
+# tool rather than one union, so a key one tool may return can never ride out
+# through another (a saved `answer_markdown` on the ask tool's response would
+# pass a union and fails here). Approved under the same 2026-09-26 decision:
+# every key below is a field of the REST route each tool stands in for
+# (`GET /v1/history`, `GET /v1/history/{trace_id}/answer`, `POST
+# /v1/query/{run_id}/feedback`), plus `audience_depth` and
+# `citations_omitted` on the reopened answer and `recorded` on feedback, and
+# the reopened answer's citations reuse the ask tool's citation keys.
+_CITATION_KEYS = {
+    "assertion_confidence",
+    "citation_id",
+    "claim_text",
+    "display_index",
+    "evidence_kind",
+    "field",
+    "layer",
+    "license",
+    "population_ancestry_context",
+    "source",
+    "source_id",
+    "source_url",
+    "entity_name",
+    "snapshot_date",
+}
+_ALLOWED_RESPONSE_KEYS_BY_TOOL: dict[str, set[str]] = {
+    "list_past_searches": {
+        "items",
+        "count",
+        "omitted_count",
+        "trace_id",
+        "question",
+        "asked_at",
+        "trust_signal",
+        "citation_count",
+        "has_saved_answer",
+    },
+    "reopen_past_answer": {
+        "trace_id",
+        "question",
+        "asked_at",
+        "audience_depth",
+        "answer_markdown",
+        "citations",
+        "citations_omitted",
+        "trust_signal",
+        "trust_line",
+    }
+    | _CITATION_KEYS,
+    "send_answer_feedback": {"run_id", "recorded"},
 }
 
 
@@ -339,6 +412,52 @@ class TestNeverCost:
         for cost_key in ("cost", "total_cost_usd", "query_cost_usd", "query_cap_usd", "cap_fraction"):
             assert _find_all(content, cost_key) == []
         assert _all_response_keys(content) <= _ALLOWED_RESPONSE_KEYS
+
+    @pytest.mark.asyncio
+    async def test_the_three_parity_tools_return_only_their_pinned_keys(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # T-8.10-05. Each new tool, called by an operator-allowlisted caller
+        # with a row that exercises every field, returns no cost key and
+        # nothing outside its own pinned set. Mutation that turns this red:
+        # add any field to `PastSearch`, `ReopenedAnswerOutput` or
+        # `FeedbackRecordedOutput` in `adapters/mcp/server.py` without
+        # adding it here, which is the control working.
+        from system_03_search_agent.feedback.contracts import InteractionRow
+        from system_03_search_agent.feedback.writer import write_interaction
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
+        user_id, headers = await _real_user_headers()
+        monkeypatch.setenv("OPERATOR_USER_IDS", user_id)
+        asked = await _call_tool(headers, {"query": "What gene is BRCA1?"})
+        run_id = asked.structured_content["run_id"]
+        await write_interaction(
+            InteractionRow(
+                trace_id=run_id,
+                owner_id=f"user:{user_id}",
+                query_text="What gene is BRCA1?",
+                query_class="lookup",
+                trust_signal="answer",
+                rubric_outcome="pass",
+                citations=[_GOLDEN_CITATION.model_dump()],
+                answer_markdown="BRCA1 is a protein-coding gene [1].",
+                audience_depth="researcher",
+                answer_trust_line="Based on 1 source, not yet confirmed",
+            )
+        )
+
+        calls = {
+            "list_past_searches": {},
+            "reopen_past_answer": {"trace_id": run_id},
+            "send_answer_feedback": {"run_id": run_id, "rating": "up"},
+        }
+        for name, arguments in calls.items():
+            result = await _call_named_tool(headers, name, arguments)
+            assert result.is_error is False, name
+            content = result.structured_content
+            for cost_key in ("cost", "total_cost_usd", "query_cost_usd", "query_cap_usd", "cap_fraction"):
+                assert _find_all(content, cost_key) == [], name
+            assert _all_response_keys(content) <= _ALLOWED_RESPONSE_KEYS_BY_TOOL[name], name
 
 
 class TestAuth:
