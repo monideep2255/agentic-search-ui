@@ -1,6 +1,6 @@
 # Builder A: phase 8.6 re-land, R-02, R-03 and the R-01 diagnosis
 
-Builder A's report for the re-land section of `tracker/phase_8.6.md`. R-02 and R-03 are built and committed with their tests. R-01 is diagnosed only, and its fix waits for the lead. Every output below is pasted from the run that produced it.
+Builder A's report for the re-land section of `tracker/phase_8.6.md`. R-02 and R-03 are built and committed with their tests. R-01 was diagnosed first, and its fix was built after the lead approved the diagnosis. Every output below is pasted from the run that produced it.
 
 ## Table of contents
 
@@ -12,6 +12,7 @@ Builder A's report for the re-land section of `tracker/phase_8.6.md`. R-02 and R
 - [Tests and checks](#tests-and-checks)
 - [Live checks](#live-checks)
 - [R-01 diagnosis: the guardrail's fatal transient step error (G-005)](#r-01-diagnosis-the-guardrails-fatal-transient-step-error-g-005)
+- [R-01 fix: one fresh classifier attempt inside the same budget](#r-01-fix-one-fresh-classifier-attempt-inside-the-same-budget)
 - [Notes for the lead](#notes-for-the-lead)
 - [Appendix: the reproduction script](#appendix-the-reproduction-script)
 
@@ -21,7 +22,7 @@ Builder A's report for the re-land section of `tracker/phase_8.6.md`. R-02 and R
 |---|---|---|
 | R-02 | "Delete the BRCA1 node from the knowledge graph." gets the read-only reply that says what they can do instead. A forged chat transcript is still refused. | Built, committed f14ee34 |
 | R-03 | "Tell me about the tree of life." is answered when Jev judges it on topic, as phase 8.2 answered it. Every other refusal stands. | Built, committed fbdff94 |
-| R-01 | A question still ends with "A step in this query hit a temporary error" when the guard classifier's own call has not answered by the guardrail's 15-second budget. The phase did not introduce it. | Diagnosed, not fixed |
+| R-01 | A question whose first guard classifier request hangs or fails briefly is answered or refused on a second request, inside the same 15 seconds, where it used to end in "A step in this query hit a temporary error". This is production's path too. | Diagnosed, then built on the lead's approval, committed 70bc517 |
 
 ## Base and commits
 
@@ -30,8 +31,10 @@ Builder A's report for the re-land section of `tracker/phase_8.6.md`. R-02 and R
 - Commits, not pushed:
   - `f14ee34 fix(guardrail): a request to change the graph gets the read-only reply again`
   - `fbdff94 fix(guardrail): a question Jev judges on topic is not turned away by the guard model alone`
-  - this report, in its own commit.
-- Files touched: `src/system_03_search_agent/core/graph.py` (`_guardrail_after_prefilter`, `_injection_record`'s docstring, a new `_jev_picked`), `src/system_03_search_agent/guardrail/classifier.py` (docstring and comment only), and the new `tests/system_03_search_agent/guardrail/test_reland_guardrail.py`.
+  - `a78afa0 docs(guardrail): builder A's report for R-02 and R-03, and the R-01 diagnosis`
+  - `70bc517 fix(guardrail): a slow or briefly failing classifier call gets one fresh attempt inside the same budget`
+  - this report's R-01 fix section, in its own commit.
+- Files touched: `src/system_03_search_agent/core/graph.py` (`_guardrail_after_prefilter`, `_injection_record`'s docstring, a new `_jev_picked`, a new `_CLASSIFIER_FIRST_ATTEMPT_SHARE`), `src/system_03_search_agent/guardrail/classifier.py` (docstring and comment only), and the new `tests/system_03_search_agent/guardrail/test_reland_guardrail.py`.
 
 ## R-02: the read-only reply for a request to change the graph
 
@@ -370,6 +373,161 @@ The measured lever is the classifier call's single 15-second budget for both of 
 
 Not decided here; the lead resumes with the scope.
 
+## R-01 fix: one fresh classifier attempt inside the same budget
+
+Built on the lead's approval of the diagnosis above, in `_guardrail_after_prefilter`, inside this fence.
+
+What the person now sees:
+
+- A question whose first guard classifier request hangs, or fails with a brief error, is answered or refused on a second request, inside the same 15 seconds. It used to end at 15 seconds with "A step in this query hit a temporary error. Retrying the query may succeed."
+- When both requests fail, or no time is left for a second one, they still get that step error, with its honest message. No verdict is still no answer, and Jev alone never stands in for the classifier.
+- With `CLASSIFIER_PROVIDER` unset this changes production too, deliberately: the defect is pre-existing and not Jev's.
+
+How much this error class has cost so far: 3 runs in the 750 of the five 150-run golden and consistency sets, 1 in each of the last three sets that saw it (G-019 in the 2026-09-22 consistency run, G-046 in phase 8.2's, G-005 in phase 8.6's) and 0 in the 2026-09-12 baseline and phase 8.1. Two of the three were questions expected to be answered (G-019, G-005), so each cost the answered count one run; G-046 was expected to be refused.
+
+The mechanism:
+
+- The node's existing two-attempt loop, which already asked the classifier once more after an unusable reply, now also asks once more after a timeout or a transient `HarnessCallError`. At most two attempts, as before.
+- Both attempts now share the guardrail's budget, `step_deadline`, which is unchanged. Before, each attempt had the whole 15 seconds to itself, so an unusable reply followed by a slow one could run 30.
+- The first attempt gets `_CLASSIFIER_FIRST_ATTEMPT_SHARE` (two thirds) of the time left, 10 of today's 15 seconds. The second gets the rest, 5.
+- A share, not a figure: the budget stays `budget_for_step("guardrail", ...)`, the owner's to change, and both attempts follow it.
+- A failure that is not transient (a bad request, a missing price) gets no second attempt: it would fail the same way.
+- No time left for the second attempt: the first attempt's failure is the step error. No time left for the first (only if the daily-cap checks spent the whole budget): the transient step error, with no classifier call.
+
+How it composes with `call_tier`:
+
+- Each attempt's `enforce_timeout` wraps the whole `call_tier` call, its own single transient retry and its reasoning fallback included. Every request of an attempt shares that attempt's budget.
+- The two attempt budgets together never pass the step's, whatever `call_tier` does inside them. The most requests one question can make is two attempts of two requests each, the same ceiling the unusable-reply path already had.
+
+Cost:
+
+- A timed-out attempt is charged by `call_tier`'s own cancellation arm: the guard tier's 128 max tokens at the model's output price (F-2.1-B02), never zero. The test pins it.
+- An attempt that failed with an error returned nothing billable and is charged nothing, as everywhere else in the loop.
+
+Why two thirds rather than the half the lead suggested, from the user's chair and measured on phase 8.6's golden run (server timestamps; the 137 runs with no relevancy decision, where Jev's injection pick took 0.1 to 0.4 seconds, so the verdict time is the classifier's; plus G-005, which never answered):
+
+```text
+samples 138 (the 137 with no relevancy decision, plus G-005 counted as never answering)
+today, one attempt with the whole budget: fails 0.72%
+share 0.50: first  7.5s, second  7.5s | first attempt cut  6.52% | fail if draws independent 0.425% | a provider steadily slower than  7.5s fails every time
+share 0.60: first  9.0s, second  6.0s | first attempt cut  2.90% | fail if draws independent 0.378% | a provider steadily slower than  9.0s fails every time
+share 0.67: first 10.0s, second  5.0s | first attempt cut  1.45% | fail if draws independent 0.294% | a provider steadily slower than 10.0s fails every time
+share 0.70: first 10.5s, second  4.5s | first attempt cut  1.45% | fail if draws independent 0.315% | a provider steadily slower than 10.5s fails every time
+share 0.80: first 12.0s, second  3.0s | first attempt cut  1.45% | fail if draws independent 0.368% | a provider steadily slower than 12.0s fails every time
+```
+
+- Two thirds fails the fewest questions of the shares tried, if two requests' times are independent: 0.29% against 0.72% today and 0.43% at half.
+- It cuts 1.45% of first attempts, where half cuts 6.5%. A cut attempt costs its person the wait up to the cut.
+- A provider that is steadily slow fails BOTH attempts alike, so only a first attempt long enough to finish helps. The slow verdicts partly cluster in time (pass 2 of the run holds most of the 8 over 7.5 seconds), so this case is real.
+- 138 samples is a small sample. The ranking between the shares rests on a handful of slow runs; the steady-slowness argument does not.
+
+The trade-off, stated plainly because it is a regression for one shape: a classifier that takes longer than 10 seconds on EVERY request now fails, where before it was admitted at up to 15 seconds (S5 below, 14 seconds every time). In phase 8.6's run one verdict in 137 came after 10 seconds (G-036 pass 2, 12.07 seconds).
+
+The reproduction re-run on the fix, beside develop at 654f2d2, provider unset and Jev mode. S5b (9 seconds on every request) and S9 (the first request hangs, the second answers at once) are new; S9 is G-005's shape:
+
+```text
+# tree=develop@654f2d2 CLASSIFIER_PROVIDER=<unset>
+S1 classifier answers late (20 s)                                  wall= 15.01s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 15.0s budget and was aborted; the loop should proceed to Write and synthesize fr"  calls=['guard_classifier']
+S2 classifier raises RateLimitError twice                          wall=  0.01s  STEP ERROR transient raised by harness.call_tier: "call_tier failed for tier 'guard' (model '<guard model>') after 2 attempt(s): transient error (Ra"  calls=['guard_classifier', 'guard_classifier']
+S3 classifier raises litellm.Timeout after 8 s, twice              wall= 15.02s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 15.0s budget and was aborted; the loop should proceed to Write and synthesize fr"  calls=['guard_classifier', 'guard_classifier']
+S4 classifier raises APIConnectionError once, then answers         wall=  0.01s  guard passed=True category=ok  calls=['guard_classifier', 'guard_classifier']
+S5 classifier answers at 14 s                                      wall= 14.08s  guard passed=True category=ok  calls=['guard_classifier']
+S5b classifier answers at 9 s                                      wall=  9.04s  guard passed=True category=ok  calls=['guard_classifier']
+S9 classifier hangs once, then answers at once                     wall= 15.00s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 15.0s budget and was aborted; the loop should proceed to Write and synthesize fr"  calls=['guard_classifier']
+S6 Jev hangs 20 s, classifier answers at 1 s                       wall=  1.03s  guard passed=True category=ok  calls=['guard_classifier']
+S7 Jev refuses the connection, classifier answers at 1 s           wall=  1.02s  guard passed=True category=ok  calls=['guard_classifier']
+S8 relevancy asked: Jev hangs, guard fallback answers late (20 s)  wall= 15.00s  guard passed=True category=ok  calls=['guard_classifier', 'guard_decide']
+```
+
+```text
+# tree=branch, R-01 fix CLASSIFIER_PROVIDER=<unset>
+S1 classifier answers late (20 s)                                  wall= 15.00s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 4.98s budget and was aborted; the loop should proceed to Write and "  calls=['guard_classifier', 'guard_classifier']
+S2 classifier raises RateLimitError twice                          wall=  0.01s  STEP ERROR transient raised by harness.call_tier: "call_tier failed for tier 'guard' (model '<guard model>') after 2 attempt(s): transient error (Ra"  calls=['guard_classifier', 'guard_classifier', 'guard_classifier', 'guard_classifier']
+S3 classifier raises litellm.Timeout after 8 s, twice              wall= 15.00s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 4.97s budget and was aborted; the loop should proceed to Write and "  calls=['guard_classifier', 'guard_classifier', 'guard_classifier']
+S4 classifier raises APIConnectionError once, then answers         wall=  0.01s  guard passed=True category=ok  calls=['guard_classifier', 'guard_classifier']
+S5 classifier answers at 14 s                                      wall= 15.01s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 4.99s budget and was aborted; the loop should proceed to Write and "  calls=['guard_classifier', 'guard_classifier']
+S5b classifier answers at 9 s                                      wall=  9.04s  guard passed=True category=ok  calls=['guard_classifier']
+S9 classifier hangs once, then answers at once                     wall= 10.01s  guard passed=True category=ok  calls=['guard_classifier', 'guard_classifier']
+S6 Jev hangs 20 s, classifier answers at 1 s                       wall=  1.01s  guard passed=True category=ok  calls=['guard_classifier']
+S7 Jev refuses the connection, classifier answers at 1 s           wall=  1.01s  guard passed=True category=ok  calls=['guard_classifier']
+S8 relevancy asked: Jev hangs, guard fallback answers late (20 s)  wall= 15.01s  guard passed=True category=ok  calls=['guard_classifier', 'guard_decide']
+```
+
+```text
+# tree=branch, R-01 fix CLASSIFIER_PROVIDER=jev
+S1 classifier answers late (20 s)                                  wall= 15.00s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 4.98s budget and was aborted; the loop should proceed to Write and "  calls=['guard_classifier', 'jev:guardrail.injection', 'guard_classifier']
+S2 classifier raises RateLimitError twice                          wall=  0.02s  STEP ERROR transient raised by harness.call_tier: "call_tier failed for tier 'guard' (model '<guard model>') after 2 attempt(s): transient error (Ra"  calls=['guard_classifier', 'guard_classifier', 'jev:guardrail.injection', 'guard_classifier', 'guard_classifier']
+S3 classifier raises litellm.Timeout after 8 s, twice              wall= 15.01s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 4.98s budget and was aborted; the loop should proceed to Write and sy"  calls=['guard_classifier', 'jev:guardrail.injection', 'guard_classifier', 'guard_classifier']
+S4 classifier raises APIConnectionError once, then answers         wall=  0.22s  guard passed=True category=ok  calls=['guard_classifier', 'guard_classifier', 'jev:guardrail.injection']
+S5 classifier answers at 14 s                                      wall= 15.04s  STEP ERROR transient raised by harness.enforce_timeout:guardrail: "step 'guardrail' exceeded its 4.98s budget and was aborted; the loop should proceed to Write and"  calls=['guard_classifier', 'jev:guardrail.injection', 'guard_classifier']
+S5b classifier answers at 9 s                                      wall=  9.01s  guard passed=True category=ok  calls=['guard_classifier', 'jev:guardrail.injection']
+S9 classifier hangs once, then answers at once                     wall= 10.02s  guard passed=True category=ok  calls=['guard_classifier', 'jev:guardrail.injection', 'guard_classifier']
+S6 Jev hangs 20 s, classifier answers at 1 s                       wall=  3.01s  guard passed=True category=ok  calls=['guard_classifier', 'jev:guardrail.injection']
+S7 Jev refuses the connection, classifier answers at 1 s           wall=  1.00s  guard passed=True category=ok  calls=['guard_classifier', 'jev:guardrail.injection']
+S8 relevancy asked: Jev hangs, guard fallback answers late (20 s)  wall= 15.00s  guard passed=True category=ok  calls=['guard_classifier', 'jev:guardrail.relevancy', 'jev:guardrail.injection', 'guard_decide']
+```
+
+Reading it:
+
+- S9, G-005's shape, now admits at 10.01 seconds on the fix where develop ends in the step error at 15.00.
+- S1 and S3, where every request fails, still end in the step error at 15.00 seconds, now after two attempts.
+- S5 is the stated trade-off: 14 seconds on every request now fails.
+- S5b, 9 seconds on every request, is admitted on both, one request each.
+- S2 shows the request ceiling: four requests, two per attempt, all within 0.01 seconds.
+- S6, S7 and S8 are unchanged.
+
+Tests, added to `test_reland_guardrail.py` (49 tests in the file now):
+
+- a first attempt that hangs, then a quick second attempt: admitted, with the real 15-second budget, after the first attempt's 10 seconds and inside 15;
+- the second attempt's verdict decides: admitted, or refused as injection, inside a shrunk budget;
+- two transient errors (`call_tier`'s own retry), then a verdict on the third request;
+- two failed attempts, hung or rate limited, give the fatal transient step error with its honest message and no verdict (two and four requests);
+- in Jev mode, two failed attempts are never an admission, with Jev saying not injection;
+- a verdict on the first attempt, admit or refuse, makes no second call;
+- a failure that is not transient gets no second attempt;
+- the two attempts' budgets are the share and the rest of the step's, and the step ends inside it;
+- no time left after the first attempt: no second attempt;
+- no time left at all (the daily-cap checks spent it): no classifier call, the transient step error;
+- a timed-out attempt is charged the harness's cancellation estimate, plus the second attempt's metered cost.
+
+No arm patches `_CLASSIFIER_FIRST_ATTEMPT_SHARE`; the arms that need it read it from the module.
+
+The retry broken once (`if attempt == 2 or exc.error_class != "transient":` replaced by `if True:`), the red lines, then restored (`cmp` printed `restored`):
+
+```text
+E       assert 1 == 2
+E       assert 2 == 4
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_a_hung_first_attempt_gets_a_second_within_the_real_budget
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_the_second_attempts_verdict_decides[{"is_injection": false, "is_off_topic": false, "confidence": 0.02, "reason": "an ordinary biomedical question"}-True-ok]
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_the_second_attempts_verdict_decides[{"is_injection": true, "is_off_topic": false, "confidence": 0.02, "reason": "an ordinary biomedical question"}-False-injection]
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_a_transient_error_twice_then_a_verdict
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_two_failed_attempts_give_the_fatal_step_error[hang]
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_two_failed_attempts_give_the_fatal_step_error[rate_limited]
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_the_two_attempts_share_the_step_budget
+FAILED tests/system_03_search_agent/guardrail/test_reland_guardrail.py::test_a_timed_out_attempt_is_charged_as_the_harness_charges_one
+8 failed, 41 passed in 29.06s
+```
+
+Whole suite after the fix, polled until it exited. The first run failed one timing test while this builder's lint and style checks ran beside it:
+
+```text
+1 failed, 5655 passed, 166 skipped, 1 xfailed, 7 warnings in 451.97s (0:07:31)
+exit=1
+```
+
+The failing test was `test_streaming_endpoints.py::TestCreateRun::test_returns_before_the_graph_has_finished`: "POST /v1/query took 0.330s to respond, expected well under the mocked model call's 0.5s delay". It asserts the response time only, and the POST returns before the guardrail runs. Run alone five times, it passed five of five, and the whole suite re-run with nothing beside it passed:
+
+```text
+5656 passed, 166 skipped, 1 xfailed, 7 warnings in 214.36s (0:03:34)
+exit=0
+```
+
+Lint on the final tree:
+
+- `ruff check .` printed `All checks passed!`.
+- `isort --check-only src tests` printed only `Skipped 2 files`.
+- `tracker/check_doc_drift.py --check` printed `ok: 2 facts computed | 0 could not be computed | 0 stale | 0 structural`.
+
 ## Notes for the lead
 
 - 5117c2f with the provider unset, read and measured: the relevancy decision is now bounded by the step deadline (15 seconds from the node's start) rather than awaited bare. The guard tier's own `decide()` call has the same 15-second budget, so the two differ by milliseconds, and both read a late decision as no pick. The unset matrix above matched develop on every case, and the reproduction's S8 with the provider unset ended admitted on both trees (15.01 seconds here, 15.02 on develop). Recorded because the contract says byte for byte, and this is the one place the phase's code, not this builder's, waits differently.
@@ -380,7 +538,7 @@ Not decided here; the lead resumes with the scope.
 
 ## Appendix: the reproduction script
 
-<details><summary>r01_repro.py, as run</summary>
+<details><summary>r01_repro.py, as last run (S5b and S9 added for the fix)</summary>
 
 ```python
 """R-01 offline reproduction: what makes the guardrail end in a fatal
@@ -490,6 +648,12 @@ async def _act(behaviour: tuple[Any, ...], who: str) -> Any:
         _, delay, what = behaviour
         await asyncio.sleep(delay)
         raise _transient(what)
+    if kind == "hang_then_answer":
+        _, content = behaviour
+        if SCENARIO.setdefault("_hung", 0) == 0:
+            SCENARIO["_hung"] = 1
+            await asyncio.sleep(60)
+        return _reply(content)
     if kind == "raise_then_answer":
         _, what, content = behaviour
         if SCENARIO.setdefault("_raised", 0) == 0:
@@ -542,6 +706,12 @@ SCENARIOS: list[tuple[str, str, dict[str, Any]]] = [
         {"classifier": ("raise_then_answer", "connection", ADMIT)},
     ),
     ("S5 classifier answers at 14 s", G005, {"classifier": ("answer", 14.0, ADMIT)}),
+    ("S5b classifier answers at 9 s", G005, {"classifier": ("answer", 9.0, ADMIT)}),
+    (
+        "S9 classifier hangs once, then answers at once",
+        G005,
+        {"classifier": ("hang_then_answer", ADMIT)},
+    ),
     (
         "S6 Jev hangs 20 s, classifier answers at 1 s",
         G005,
