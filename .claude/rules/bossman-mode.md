@@ -46,9 +46,7 @@ Accepted by the product owner on 2026-09-24 from `docs/build/Bossman_mode_redesi
 
 ### Three-state permissions
 
-The lists below are the owner's to change item by item: the 2026-09-20 amendment of the Deny entry on pushing to develop was made on their explicit sign-off, and the delegation of 2026-09-25 keeps deny rules on that footing. Their rewrite to the dial's positions is proposed word for word in `testing/Developer/reports/2026-09-25_harness_review/builder_H2.md` and waits for that yes.
-
-Until then the two carve-outs read onto the dial this way: "UI fix mode" is a card alone at position one or two, and "build-phase mode" is a numbered phase or any change at position three. Position two adds a judge and an adversary to cards that used to land with neither, so the dial is at least as strict as the mode was.
+The lists below are the owner's to change item by item: the 2026-09-20 amendment of the Deny entry on pushing to develop was made on their explicit sign-off, and so was its rewrite to the dial's positions on 2026-09-26 (DECISIONS.md, 2026-09-26, "Two rule edits approved item by item").
 
 Allow:
 - Write files, run commands, dispatch agents and teammates without conversational confirmation
@@ -57,6 +55,7 @@ Allow:
 - Execute an entire phase autonomously on a phase branch
 - Run the judge round, the adversary round, one fix-and-verify round and the phase-end gates, then ship, at phase end
 - Dispatch the product reviewer against the deployed develop app before every owner retest, and run the golden consistency run on every answer-path change
+- Land a card alone at dial position one or two on develop once its position's steps have run
 
 Ask:
 - Architecture-level changes that contradict the agreed plan
@@ -74,26 +73,27 @@ Deny:
 - Landing anything else on develop while the golden answered count sits below its floor
 - Writing a premise gate, a mutation harness file or a coverage claim for anything that is not answer behaviour
 - Ignoring a blocker by guessing
-- Pushing to develop directly (push to phase branch only, merge via MR). Two carve-outs, both narrow and both named, and nothing else:
-  - The sanctioned /ship release chain at phase end, where ship/SKILL.md's explicit user directive overrides this and permits pushing directly to develop
-  - UI fix mode, invoked as `/bossman --ui`, where the whole point of the cadence is that a product-owner defect lands on develop immediately and their retest is the verification step. Product-owner decision of 2026-09-12, re-confirmed on 2026-09-20
+- Pushing to develop directly, except where the dial puts the change there. The exception is bounded by the dial's positions, each named here, and by nothing else:
+  - Position one, a copy or layout fix, as a card alone: builder, clerk and product review, then the push to develop. The push is the cadence, not a favour.
+  - Position two, a change to runnable behaviour, as a card alone: the judge and the adversary read the unpushed commits and one fix-and-verify runs, then the push to develop.
+  - Position three, auth, the graph credential, the event schema or `.claude/`: never pushed to develop directly. A branch, a pull request, the owner merges.
+  - A numbered phase, at any position: never pushed to develop directly. Its branch and pull request come from the 2026-07-26 decision `git-workflow` encodes, which the dial does not touch.
+  - The documents `/phase-checkpoint` and `/ship` refresh after a change has landed are position one and land on develop the same way.
 
-THE CARVE-OUTS ARE BOUNDED BY MODE, NOT BY CONVENIENCE, and the wording above is
-deliberate. UI fix mode is a one-off cadence for defects the product owner hits
-while testing, not a standing licence: build-phase mode still branches, still
-opens a pull request, and still runs the judge and adversary rounds. An agent
-that wants to push to develop must be able to name which of the two carve-outs
-it is standing in, and `/bossman` with no `--ui` flag is neither of them.
+THE EXCEPTION IS BOUNDED BY THE DIAL, NOT BY CONVENIENCE, and the wording above is deliberate. An agent that wants to push to develop must be able to name the position it is standing in and show that the position's steps have run: at position two, the report folder holds the judge's and the adversary's rows before the push exists. "It is small" is not a position. "The owner will retest anyway" is not a position.
 
-WHY THIS WAS AMENDED RATHER THAN LEFT, recorded because the amendment weakens a
-Deny entry and that should never be quiet. Between 2026-09-12 and 2026-09-20 the
-UI fix loop pushed to develop directly on every fix, by design, while this line
-forbade it outright. A Deny entry that the team's own sanctioned cadence breaks
-daily is worse than no entry: it trains the next reader to treat the whole Deny
-list as advisory, which is the one thing a Deny list cannot survive. The
-alternative, changing the practice back to match the rule, was rejected by the
-product owner, who established the cadence deliberately and re-confirmed it.
-Amended on their explicit sign-off, 2026-09-20.
+WHY THIS WAS AMENDED RATHER THAN LEFT, recorded on 2026-09-20 because the amendment weakened a Deny entry and that should never be quiet:
+- Between 2026-09-12 and 2026-09-20 the UI fix loop pushed to develop directly on every fix, by design, while this line forbade it outright.
+- A Deny entry that the team's own sanctioned cadence breaks daily is worse than no entry: it trains the next reader to treat the whole Deny list as advisory, which is the one thing a Deny list cannot survive.
+- The alternative, changing the practice back to match the rule, was rejected by the product owner, who established the cadence deliberately and re-confirmed it.
+- Amended on their explicit sign-off, 2026-09-20, as two carve-outs bounded by mode: the /ship release chain and UI fix mode.
+
+WHY THE BOUNDARY MOVED FROM THE MODE TO THE DIAL, recorded in the same spirit and amended on the product owner's explicit sign-off, 2026-09-26:
+- The product owner accepted on 2026-09-24 that the two modes merge into one cadence with a risk dial once the next build phase closed, with the counter-argument on the table: the develop carve-out was bounded by mode on purpose, and a dial blurs that line (DECISIONS.md, 2026-09-24).
+- Three phases closed on 2026-09-25. The build harness review of that day measured what the mode boundary cost: a phase with zero product lines ran a judge round, a verifier and a revert, 1 hour 42 minutes of review, while a fix-loop card that changed runnable behaviour got no engineering review at all.
+- With the modes gone, "bounded by mode" names nothing, so the entry now names the dial's positions instead.
+- It is not weaker: position two adds a judge and an adversary to work that used to land on develop with neither, and a numbered phase still never lands without a pull request.
+- The mode-era carve-out for the /ship release chain is folded in, since the documents that chain pushes after a change has landed are position one.
 
 ### When bossman mode is NOT active
 
