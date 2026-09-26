@@ -178,7 +178,7 @@ describe("ArchitectureScreen", () => {
     const stack = screen.getByTestId("architecture-layers");
     expect(stack).toHaveTextContent("PostgreSQL 15 with the Apache AGE extension");
     expect(stack).toHaveTextContent("read-only credential");
-    expect(stack).toHaveTextContent("90 seconds");
+    expect(stack).toHaveTextContent("30 seconds");
     expect(stack).toHaveTextContent("500 rows");
 
     const cypher = screen.getByTestId("architecture-cypher");
@@ -196,13 +196,14 @@ describe("ArchitectureScreen", () => {
     expect(one).toHaveTextContent("Knowledge graph");
     expect(one).toHaveTextContent("L1");
     expect(one).toHaveTextContent("cypher_query");
-    expect(one).toHaveTextContent("90 seconds, at most 500 rows");
+    expect(one).toHaveTextContent("30 seconds, at most 500 rows");
 
     const two = within(layers).getByTestId("architecture-layer-2");
     expect(two).toHaveTextContent("Live NCBI APIs");
     expect(two).toHaveTextContent("L2");
     expect(two).toHaveTextContent("ncbi_efetch");
     expect(two).toHaveTextContent("E-utilities");
+    expect(two).toHaveTextContent("PubChem");
     expect(two).toHaveTextContent("ncbi_dbsnp");
     expect(two).toHaveTextContent("Variation Services");
     expect(two).toHaveTextContent("pathogen_detection");
