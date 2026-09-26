@@ -372,8 +372,9 @@ The trigger the owner's "Merge, named" set: once the golden run held (102 of 150
   - 90 s still stands in two visualizations and an `export/traversal.py` comment.
   - R-06 refuses as injection, not off topic, when Jev's relevancy failed and the guard fallback later says off topic. Still refused.
   - The acceptance's "at once" is 3.76 s, Jev's own bound, because nothing signals a Jev failure earlier.
-- 2026-09-26 22:45: merged into `phase/8.6-followup` as 3b57b2c. Gates: `ruff check` clean, `isort` clean, `check_doc_drift --check` clean, `gate04_unit_suite.sh` 6224 passed, 143 skipped, 24 deselected, 1 xfailed. R-05 to R-09 set to in-review.
 - 2026-09-26 22:40: the answer speed diagnosis found P01 is not the speed gain. Withdrawn and kept summaries take the same time, and Jev rejects sentences the old judge accepted, mostly rightly (`testing/Developer/reports/2026-09-26_answer_speed/report.md`, "P01"). The writer's input is phase 8.9's scope.
+- 2026-09-26 22:45: merged into `phase/8.6-followup` as 3b57b2c. Gates: `ruff check` clean, `isort` clean, `check_doc_drift --check` clean, `gate04_unit_suite.sh` 6224 passed, 143 skipped, 24 deselected, 1 xfailed. R-05 to R-09 set to in-review.
+- 2026-09-26 22:50: pull request opened; the judge (Opus 5.5) and the adversary (Fable 5.1) dispatched on 3b57b2c, dispatches 7 and 8 of 8.
 
 ## Findings
 
