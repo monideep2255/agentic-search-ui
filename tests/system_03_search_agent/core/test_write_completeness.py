@@ -38,6 +38,12 @@ supplies, which is the difference between testing the rule and restating it
   shared budget, the cap disclosure) now make the tail unable to ground
   first, since that is the only remaining way to reach the repair with a
   grounded first answer.
+- Exercised since build phase 8.6 (T-8.6-07): what the gate counts as
+  cited. A view the listing folds into its record's cited row (a paper's
+  abstract and PMID beneath its title) counts as cited, the rule
+  `unreported_findings` applies; a row of its own, including every clinical
+  feature, must be cited itself. Also that `done.elapsed_ms` covers the
+  writing step. Each at both listing modes where the mode matters.
 - NOT exercised: the `ask` floor's trigger beyond the cases above.
 - NOT exercised: the repair's `HarnessCallError` path beyond the fact that
   it is a separate handler from the cap path. The swallow is deliberate and
@@ -1142,3 +1148,332 @@ async def test_an_ordinary_turn_keeps_the_tools_own_order(synth_pair) -> None:
         _events_of(result["events"], "citation"), key=lambda e: e.payload["display_index"]
     )
     assert [c.payload["source_url"] for c in citations] == [r["source_url"] for r in _ROWS]
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6, T-8.6-07 (product harness review W1 and C1): the repair
+# gate and the listing agree about what "cited" means.
+#
+# The listing keeps ONE row per record (`one_finding_per_record`): a paper
+# that reached the prompt as its title, its abstract and its PMID is listed
+# once, by its title. `unreported_findings` counts the other two views as
+# reported once that row is cited, because the reader is looking at the
+# paper. The gate compared citation ids instead, so the two uncited views
+# kept the second writing call firing on nearly every question, and its
+# reply reached nothing in 4 of 5 traced questions.
+#
+# What these arms do not cover: whether the writing model obeys the
+# completeness directive (a live property), and the live firing rate, which
+# the builder's report measures on four golden questions.
+# ---------------------------------------------------------------------------
+
+_PAPER_URL = "https://pubmed.ncbi.nlm.nih.gov/38000001/"
+_PAPER_TITLE = "Glucokinase and the threshold for insulin release"
+_PAPER_ABSTRACT = (
+    "Glucokinase sets the glucose threshold for insulin release. Its variants "
+    "cause a mild fasting hyperglycaemia."
+)
+_MEDGEN_URL = "https://www.ncbi.nlm.nih.gov/medgen/44287"
+
+
+def _view(
+    ref: int, call: str, tool: str, layer: str, field: str, value: str, url: str
+) -> SynthFinding:
+    return SynthFinding(
+        ref_index=ref,
+        citation_id=f"{call}-{ref}",
+        layer=layer,
+        tool=tool,
+        field=field,
+        field_value=value,
+        source_url=url,
+        call_id=call,
+    )
+
+
+def _two_diseases() -> list[SynthFinding]:
+    return [
+        _view(ref, "cq", "cypher_query", "layer_1_graph", "name", f"disease name number {ref}", row["source_url"])
+        for ref, row in ((1, _ROWS[0]), (2, _ROWS[1]))
+    ]
+
+
+def _paper_three_views(start: int = 3) -> list[SynthFinding]:
+    """One paper as the three views it reaches the prompt as: its title and
+    abstract from EFetch and its PMID from PubTator, all on its own page."""
+    return [
+        _view(start, "ne", "ncbi_efetch", "layer_2_api", "title", _PAPER_TITLE, _PAPER_URL),
+        _view(start + 1, "pt", "pubtator_annotate", "layer_3_enrichment", "pmid", "38000001", _PAPER_URL),
+        _view(start + 2, "ne", "ncbi_efetch", "layer_2_api", "abstract", _PAPER_ABSTRACT, _PAPER_URL),
+    ]
+
+
+def _gate(
+    omitted: list[SynthFinding],
+    findings: list[SynthFinding],
+    *,
+    tool_outcome: str = "ok",
+    model_grounded: bool = True,
+    lists_every_finding: bool = True,
+) -> bool:
+    return graph_module._code_built_lines_will_cite(
+        omitted,
+        findings,
+        tool_outcome=tool_outcome,
+        model_grounded=model_grounded,
+        lists_every_finding=lists_every_finding,
+        question="",
+    )
+
+
+def _omitted_after_prose(findings: list[SynthFinding], prose_cited: set[str]) -> list[SynthFinding]:
+    """What `write_node` computes as omitted after the model's prose, by the
+    shipped rule rather than by hand (F-4.5-09)."""
+    from system_03_search_agent.synthesis.findings import unreported_findings
+
+    return unreported_findings(prose_cited, findings)
+
+
+@pytest.mark.parametrize("lists_every_finding", [True, False])
+def test_a_three_view_paper_the_listing_shows_skips_the_repair(lists_every_finding: bool) -> None:
+    """The prose cited both diseases and not the paper, so the paper's three
+    views are omitted. The listing shows the paper as one cited row, which
+    is all the reader can be shown of it, so the repair has nothing to add.
+
+    MUTATION PROOF: restoring the citation-id comparison
+    (`all(finding.citation_id in cited for finding in omitted_findings)`)
+    turns both cases red.
+    """
+    findings = _two_diseases() + _paper_three_views()
+    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
+    # Populate check: all three views of the paper are what the prose left out.
+    assert sorted(f.field for f in omitted) == ["abstract", "pmid", "title"]
+    assert _gate(omitted, findings, lists_every_finding=lists_every_finding)
+
+
+def test_a_one_view_record_behaves_as_before() -> None:
+    """The control: a paper that reached the prompt as its title alone is
+    cited by its own row, and skips the repair exactly as before; when that
+    one row fails the pass, the repair still runs."""
+    findings = _two_diseases() + _paper_three_views()[:1]
+    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
+    assert [f.field for f in omitted] == ["title"]
+    assert _gate(omitted, findings)
+
+
+def test_a_three_view_paper_whose_row_fails_the_pass_still_gets_the_repair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The listing's one row for the paper is its title. When that row
+    cannot ground, nothing on the page shows the paper, so only the model's
+    own phrasing can, and the repair runs."""
+    findings = _two_diseases() + _paper_three_views()
+    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda rendered: _ORIGINAL_FALLBACK_BUILDER([f for f in rendered if f.field != "title"]),
+    )
+    assert not _gate(omitted, findings)
+
+
+def test_a_clinical_feature_whose_row_fails_the_pass_still_gets_the_repair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A clinical feature is a row of its own beneath its disease, never a
+    view folded into the disease's row, so it must be cited itself: its
+    disease being listed does not show the reader that feature."""
+    medgen = [
+        _view(3, "mg", "ncbi_efetch", "layer_2_api", "title", "Marfan syndrome", _MEDGEN_URL),
+        _view(4, "mg", "ncbi_efetch", "layer_2_api", "clinical_features", "Ectopia lentis", _MEDGEN_URL),
+        _view(5, "mg", "ncbi_efetch", "layer_2_api", "clinical_features", "Arachnodactyly", _MEDGEN_URL),
+    ]
+    findings = _two_diseases() + medgen
+    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
+    assert len(omitted) == 3
+    # Control: every row grounds, so the listing shows all three.
+    assert _gate(omitted, findings)
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda rendered: _ORIGINAL_FALLBACK_BUILDER(
+            [f for f in rendered if f.field_value != "Arachnodactyly"]
+        ),
+    )
+    assert not _gate(omitted, findings)
+
+
+@pytest.mark.parametrize(
+    ("tool_outcome", "model_grounded"), [("error", True), ("empty", True), ("ok", False)]
+)
+def test_the_repair_still_runs_off_the_ok_path_and_when_the_prose_grounded_nothing(
+    tool_outcome: str, model_grounded: bool
+) -> None:
+    findings = _two_diseases() + _paper_three_views()
+    omitted = _omitted_after_prose(findings, {"cq-1", "cq-2"})
+    assert not _gate(omitted, findings, tool_outcome=tool_outcome, model_grounded=model_grounded)
+
+
+def _paper_write_state(audience_depth: str = "researcher") -> dict[str, object]:
+    """Two disease rows from the graph, and one paper as its three views: an
+    EFetch title and abstract (the product's own row builder) and a PubTator
+    PMID, all on the paper's page."""
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    state = _write_state(audience_depth=audience_depth)
+    graph_finding = state["findings"][0]  # type: ignore[index]
+    graph_finding.structured_fields["rows"] = _ROWS[:2]  # type: ignore[union-attr]
+    graph_finding.structured_fields["row_count"] = 2  # type: ignore[union-attr]
+    graph_finding.structured_fields["total_available"] = 2  # type: ignore[union-attr]
+    efetch_fields = graph_module._ncbi_efetch_output_to_structured_fields(
+        NcbiEfetchOutput(
+            status="ok",
+            action="summary",
+            records=[
+                NcbiEfetchRecord(
+                    id="38000001",
+                    db="pubmed",
+                    fields={"title": _PAPER_TITLE, "abstract": _PAPER_ABSTRACT},
+                    source_url=_PAPER_URL,
+                )
+            ],
+            record_count=1,
+            total_available=1,
+            truncated=False,
+        ),
+        "pubmed_abstracts",
+    )
+    pubtator_fields = {
+        "status": "ok",
+        "row_count": 1,
+        "total_available": 1,
+        "truncated": False,
+        "rows": [
+            {"curie": "", "node_or_edge_type": "pubtator", "fields": {"pmid": "38000001"}, "source_url": _PAPER_URL}
+        ],
+        "error": None,
+    }
+    state["findings"] = [
+        graph_finding,
+        Finding(
+            call_id="ne-paper",
+            tool="ncbi_efetch",
+            layer="layer_2_api",
+            source="structured_pass_through",
+            structured_fields=efetch_fields,
+            extracted_entities=None,
+            normalized_ids=None,
+            evidence_summary=None,
+        ),
+        Finding(
+            call_id="pt-paper",
+            tool="pubtator_annotate",
+            layer="layer_3_enrichment",
+            source="structured_pass_through",
+            structured_fields=pubtator_fields,
+            extracted_entities=None,
+            normalized_ids=None,
+            evidence_summary=None,
+        ),
+    ]
+    state["findings_count"] = 3
+    return state
+
+
+def _synth_covering(monkeypatch: pytest.MonkeyPatch, *, first_covers: str, delay_s: float = 0.0) -> None:
+    """The first writing call reports only the prompt lines containing
+    `first_covers`; a repair (the call carrying the completeness correction)
+    reports every line. Chosen by content, not by number, so the arms do not
+    depend on how the findings are numbered."""
+    import asyncio
+
+    async def _dispatch(*_args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
+        lines = _FINDING_LINE.findall(joined)
+        if _CORRECTION_MARKER in joined:
+            chosen = {int(index) for index, _ in lines}
+        elif SYNTH_SYSTEM_INSTRUCTION in joined:
+            if delay_s:
+                await asyncio.sleep(delay_s)
+            chosen = {int(index) for index, body in lines if first_covers in body}
+        else:
+            return _fake_response("ok")
+        return _fake_response(_narrative_covering(joined, chosen))
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_dispatch))
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("audience_depth", ["researcher", "plain_language"])
+async def test_a_three_view_paper_the_listing_shows_makes_one_writing_call(
+    monkeypatch: pytest.MonkeyPatch, audience_depth: str
+) -> None:
+    """End to end through the real `write_node`: the prose reports the two
+    diseases, the listing shows the paper by its title, and the answer is
+    made with one writing call. Before T-8.6-07 this made two.
+
+    MUTATION PROOF: restoring the citation-id comparison in
+    `_code_built_lines_will_cite` turns both cases red with `[False, True]`.
+    """
+    _synth_covering(monkeypatch, first_covers="disease name number")
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    result = await graph_module.write_node(_paper_write_state(audience_depth))
+    events = result["events"]
+
+    assert dispatched == [False], dispatched
+    cited = {e.payload["source_url"] for e in events if e.type == "citation"}
+    assert _PAPER_URL in cited, cited
+    assert _PAPER_TITLE in _narrative(events)
+    assert "further" not in _narrative(events), "nothing the model was shown is left unreported"
+
+
+@pytest.mark.asyncio
+async def test_a_three_view_paper_whose_row_fails_the_pass_still_makes_the_repair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The write-level control: with the paper's one listing row unable to
+    ground, the repair is the only way to show it, and it runs."""
+    _synth_covering(monkeypatch, first_covers="disease name number")
+    monkeypatch.setattr(
+        graph_module,
+        "build_structured_fallback_narrative",
+        lambda rendered: _ORIGINAL_FALLBACK_BUILDER([f for f in rendered if f.source_url != _PAPER_URL]),
+    )
+    dispatched = _record_synth_dispatches(monkeypatch)
+
+    await graph_module.write_node(_paper_write_state())
+
+    assert dispatched == [False, True], dispatched
+
+
+@pytest.mark.asyncio
+async def test_the_done_events_elapsed_time_covers_the_writing_step(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Product harness review W3: `done.elapsed_ms` was read at the top of
+    the Write step, before the writing call, so on 97 of 102 answered golden
+    runs it under-read the question's time by the whole write step. It is
+    now read when the done event is built.
+
+    MUTATION PROOF: passing the value read at the top of the step to the
+    done event again turns this red (about 0 against at least 300).
+    """
+    _synth_covering(monkeypatch, first_covers="disease name number", delay_s=0.3)
+    state = _paper_write_state()
+    state["start_monotonic"] = time.monotonic()
+
+    result = await graph_module.write_node(state)
+
+    done = next(event for event in result["events"] if event.type == "done")
+    assert done.payload["elapsed_ms"] >= 300, done.payload["elapsed_ms"]

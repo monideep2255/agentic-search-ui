@@ -7,6 +7,7 @@ Builder L's record for tickets T-8.6-06 (the stray "no clinical features" senten
 - [Summary](#summary)
 - [Baseline, before any change](#baseline-before-any-change)
 - [Findings](#findings)
+- [Second assignment: wiring, T-8.6-07 and the model document](#second-assignment-wiring-t-86-07-and-the-model-document)
 
 ## Summary
 
@@ -141,3 +142,35 @@ The last live run (14 of 14) repeated "What phenotypic features are associated w
 - So the phenotype acceptance at both depths rests on L-02 and L-03 (T-8.6-06 alone, both met) plus the offline arms, not on a final-code run. The product reviewer's pass on develop is where to confirm it with builder K's change in.
 
 Live-run budget, final: 14 of 14 used, $0.22 in all.
+
+## Second assignment: wiring, T-8.6-07 and the model document
+
+Started on the lead's merge, `phase/8.6-jev-everywhere` at d5e57ad, fast-forwarded into this worktree. Findings follow as established.
+
+### L-09: builder K's sentence-check wiring applied as sent
+
+- `sentence_check_wiring.patch` applied cleanly (`git apply --check`, then `git apply`); no hunk had moved. Committed as ed29efc with K's three graph-level tests, which pass (65 of 65 in `test_sentence_check.py`).
+- K added a public `harness.decide.jev_decides()`. The guardrail's injection decision now reads the provider through it instead of its own copy of the same line (3c926ad), which closes the drift risk L-07 named.
+
+### L-10: W1 and W3 reproduced offline before any fix
+
+Tests added to `tests/system_03_search_agent/core/test_write_completeness.py`, run against the unchanged gate:
+
+- A paper that reached the prompt as three views (EFetch title and abstract, PubTator PMID), which the prose did not cite: `_code_built_lines_will_cite` returns False at both listing modes, although the listing shows the paper as one cited row.
+- Through the real `write_node`, at researcher and plain-language depth: two writing calls (`[False, True]`), where one would do.
+- `done.elapsed_ms` with a writing call that takes 0.3 s: 0.
+- The controls already pass and must keep passing: a one-view record skips as before; the repair runs when the paper's row fails the pass, when a clinical feature's row fails, when the tool outcome is not ok, and when the prose grounded nothing.
+
+### L-11: T-8.6-07 built: the repair gate counts a record's row the way the answer does, and the done event's time covers the writing step
+
+What the person notices: an answer whose listing already shows every record the model's prose left out arrives without a second writing call, several seconds sooner; nothing on the page changes. The product's own "how long this took" now includes the writing step.
+
+What changed in `core/graph.py`:
+
+- `_code_built_lines_will_cite` keeps its probe, and now judges "cited" by `unreported_findings`' rule: a view the listing folds into its record's row counts as cited when that row is cited. A finding the listing renders as a row of its own must be cited itself; that includes every clinical feature, which sits beneath its disease rather than being folded into it. The early returns are unchanged (tool outcome not ok, prose grounded nothing, nothing omitted).
+- The probe now renders every prepared finding at every depth. Since 2026-09-14 the listing does (`tail_is_listing = True`), but the probe still rendered only the omitted findings below Researcher depth, a narrative no answer carries. The two now ground the same text.
+- `done.elapsed_ms`, and the elapsed time on every other done event the Write step sends, is read when the event is built, not at the top of the step.
+
+Break-it checks, each restored after: restoring the citation-id comparison turned 4 arms red (the three-view gate at both modes, one writing call at both depths); dropping the clinical-feature rule turned its arm red; passing the elapsed time read at the top of the step to the final done event turned the elapsed arm red (0 against at least 300).
+
+A quirk found on the way, not changed: `unreported_findings` itself counts a clinical feature as reported whenever its disease's row is cited, because it looks up any finding's record by page and a feature shares its disease's page. So if one feature's row were ever stripped, the answer's omission count would not mention it. The gate no longer relies on that; whether the count should change is for the lead.

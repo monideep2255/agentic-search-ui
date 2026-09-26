@@ -8443,9 +8443,25 @@ def _code_built_lines_will_cite(
       boundary, or one that fails the number check), because only the
       model's own phrasing can still cite that finding.
 
-    `lists_every_finding` selects the Researcher listing, which renders every
-    prepared finding, over the tail, which renders only the omitted ones, so
-    the probe grounds exactly the narrative the answer will carry.
+    `lists_every_finding` selects the listing, which renders every prepared
+    finding, over the tail, which renders only the omitted ones, so the probe
+    grounds exactly the narrative the answer will carry. Every depth has
+    rendered the listing since 2026-09-14 (`tail_is_listing` in
+    `write_node`), and `write_node` passes True.
+
+    WHAT "CITED" MEANS, build phase 8.6, T-8.6-07 (the product harness
+    review's W1 and C1). The listing keeps ONE row per record
+    (`one_finding_per_record`): a paper that reached the prompt as its
+    title, its abstract and its PMID is listed once, by its title. This
+    compared citation ids, so the two views the listing folds into that row
+    were always "uncited", and the repair fired on nearly every question;
+    its reply reached nothing the reader saw in 4 of 5 traced questions.
+    The rule is now `unreported_findings`', the one the answer's own
+    omission count already applies after the listing: a folded view counts
+    as cited when its record's row is. A finding the listing renders as a
+    row of its own must be cited itself, and that includes every clinical
+    feature, which sits beneath its disease as its own row rather than
+    being folded into the disease's.
     """
     if tool_outcome != "ok" or not model_grounded or not omitted_findings:
         return False
@@ -8457,7 +8473,16 @@ def _code_built_lines_will_cite(
         question=question,
     )
     cited = {claim.finding.citation_id for claim in probe.claims}
-    return all(finding.citation_id in cited for finding in omitted_findings)
+    unreported = {finding.citation_id for finding in unreported_findings(cited, rendered)}
+    reported_by_its_row = {finding.citation_id for finding in rendered} - unreported
+    return all(
+        finding.citation_id in cited
+        or (
+            finding.field != CLINICAL_FEATURES_FIELD
+            and finding.citation_id in reported_by_its_row
+        )
+        for finding in omitted_findings
+    )
 
 
 def _build_repair_cap_note(omission_remains: bool = True) -> str:
@@ -10904,7 +10929,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     query = state["query"]
     trace_id = query.trace_id
     sink = _EventSink(trace_id, state["seq"])
-    elapsed_ms = _elapsed_ms(state)
+    # The question's elapsed time is read when each done event is built,
+    # never here. Read at the top of the step it left the writing call out:
+    # on 97 of 102 answered golden runs `done.elapsed_ms` under-read the
+    # question by the whole write step (build phase 8.6, T-8.6-07; product
+    # harness review W3).
     total_tool_calls = state.get("findings_count", 0)
     findings: list[Finding] = state.get("findings", [])
     # T-3.4-05: empty for the common single-tool query; see GraphState's
@@ -10927,7 +10956,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -10938,7 +10967,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     if state.get("cap_exceeded", False):
         # Routed straight here from an earlier node's per-query cap hit;
         # ship the partial result per Section 19.1, never a blank failure.
-        return _partial_result_for_cap(sink, harness, trace_id, elapsed_ms, total_tool_calls)
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
 
     clarification_needed = state.get("clarification_needed")
     if clarification_needed:
@@ -10966,7 +10997,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -11025,7 +11056,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -11290,7 +11321,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # A cap hit discovered only here, at Write's own call, not routed
         # in from an earlier node: handled inline with the same partial-
         # result shape.
-        return _partial_result_for_cap(sink, harness, trace_id, elapsed_ms, total_tool_calls)
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
     except HarnessCallError as exc:
         sink.emit("error", ErrorPayload(**_step_error_kwargs("write", exc)))
         sink.emit(
@@ -11298,7 +11331,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             DonePayload(
                 total_cost_usd=harness.get_query_cost_usd(trace_id),
                 total_tool_calls=total_tool_calls,
-                elapsed_ms=elapsed_ms,
+                elapsed_ms=_elapsed_ms(state),
                 trust_outcome="refuse",
                 layer_calls_used=call_budget.calls_made(),
                 decisions=_done_decisions(harness),
@@ -11456,7 +11489,12 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 synth_findings,
                 tool_outcome=tool_outcome,
                 model_grounded=bool(grounding.claims),
-                lists_every_finding=query.audience_depth == "researcher",
+                # Every depth lists every prepared finding (`tail_is_listing`
+                # below, since 2026-09-14), so the probe renders the same
+                # list at every depth (build phase 8.6, T-8.6-07). It used to
+                # render only the omitted findings below Researcher depth,
+                # a narrative no answer carries.
+                lists_every_finding=True,
                 question=query.text,
             )
         ):
@@ -12178,7 +12216,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         DonePayload(
             total_cost_usd=harness.get_query_cost_usd(trace_id),
             total_tool_calls=total_tool_calls,
-            elapsed_ms=elapsed_ms,
+            elapsed_ms=_elapsed_ms(state),
             trust_outcome=trust_outcome,
             layer_calls_used=call_budget.calls_made(),
             # UI fix set 9, item 9.9: the one plain line, derived from the
