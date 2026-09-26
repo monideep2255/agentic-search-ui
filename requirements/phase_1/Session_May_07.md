@@ -97,11 +97,7 @@ Architecture:
 
 Three directives treated as requirements that constrain system behavior, not aspirational positioning:
 
-FY26 guiding principles (from NCBI's Acting Director):
-- Simplify content discovery for users
-- Eliminate the need for users to understand NCBI's internal architecture
-- Optimize content and metadata for AI and machine consumption
-- Four primary use cases: archiving/publishing, reference collection, discovery (exploration), data reuse (analysis)
+FY26 guiding principles: an internal NCBI directive, kept in the local notes file (`requirements/context/Private_NCBI_context.md`, gitignored) and not published.
 
 Gold Standard Science (NIH, August 2025):
 - Reproducible: every answer traceable to specific database records (our provenance model)

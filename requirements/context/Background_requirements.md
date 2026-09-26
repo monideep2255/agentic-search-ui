@@ -28,38 +28,7 @@ Last updated: 2026-05-06
 
 ## 1. Strategic foundation
 
-### Innovation proposal (starting ground)
-
-Source: `reference/personal-os-work/NIH/Agentic-Search/Proposals/Innovation_proposal_2026.md`
-
-A 6-month alpha proposal for agentic search at NCBI. Biomedical researchers ask plain English questions, receive cited answers from all NCBI databases unified through a BioLink-compliant knowledge graph. Every fact traces to a source record.
-
-Key points for PRD:
-- Two-phase delivery (months 1-3: KG + pipelines, months 4-6: quality monitoring + evaluation)
-- Trust-first design: full provenance, SME validation loops, golden datasets, LLM-as-judge
-- Five delivery formats: web UI, GraphQL API, MCP server, KGX export, CLI agent
-- Cost model: ~$100-150K for 6 months ($2K/mo Neo4j, $2K/mo LLM API, $1K/mo observability)
-- Success metrics: accuracy/validation, cross-database coverage, latency at scale, cost control
-
-### NCBI strategic alignment
-
-Source: `reference/personal-os-work/NIH/Agentic-Search/NCBI strategy/`
-
-Three directives the system must align with:
-- NCBI FY26 guiding principles: simplify discovery, optimize for AI consumption
-- NIH Gold Standard Science (August 2025): reproducibility, transparency, error/uncertainty communication
-- America's AI Action Plan (July 2025): build highest-quality AI-ready scientific datasets
-
-### Two-track plan
-
-Source: `reference/personal-os-work/NIH/Agentic-Search/Plan/Two_track_plan.md`
-
-Track 1 (personal portfolio project): open source, 2 months, ~$300-500 total cost
-Track 2 (NCBI innovation proposal): official 6-month alpha, $100-150K budget, SME validation
-
-Source: `reference/personal-os-work/NIH/Agentic-Search/Data/Personal_build_plan.md`
-
-Week-by-week execution plan for the personal build track.
+Internal NCBI context, meaning the innovation proposal summary, its budget and cost model, NCBI-internal strategy notes, and the two-track budget split, is kept in a local notes file that is not published (`requirements/context/Private_NCBI_context.md`, gitignored). The public directives the system aligns with are NIH Gold Standard Science (August 2025) and America's AI Action Plan (July 2025).
 
 ---
 
