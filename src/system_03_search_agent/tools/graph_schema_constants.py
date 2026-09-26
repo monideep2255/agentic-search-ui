@@ -174,7 +174,8 @@ MAX_ROW_LIMIT: Final[int] = 500
 # lookup returns in roughly 110 ms and a labelled multi-hop traversal in
 # roughly 130 ms. What actually consumes the budget is the plan-tier
 # generation call that writes the Cypher, which Section 3.1 budgets at
-# "1 to a few seconds" and which measures nothing like that.
+# "1 to a few seconds" and which, in build phase 2.1, measured nothing
+# like that.
 #
 # Six real generation calls across lookup, single-hop, multi-hop and
 # aggregate shapes: 13169, 20083, and up to 39378 ms, mean 25472 ms. Two
@@ -183,17 +184,28 @@ MAX_ROW_LIMIT: Final[int] = 500
 # measured 8 of 10 real-model queries timing out before the guard-tier and
 # off-thread fixes narrowed the distribution.
 #
-# 90.0 is roughly 2.3x the observed worst case, leaving headroom for
-# provider variance without letting a genuinely hung call sit forever. The
-# per-query COST cap is unchanged and still bounds spend independently, so
-# a longer wall-clock budget does not mean an unbounded bill.
+# Those figures are history. Commit 9a3f50a widened the budget from 30 to
+# 90 seconds for them, and the next measurement showed the widening bought
+# only a slower failure: the cause was the plan tier's reasoning effort,
+# `high`, spending nearly its whole output reasoning over one line of
+# Cypher. DECISIONS.md, 2026-07-31, "Dropped the plan tier's reasoning
+# effort from `high` to `none`, and left the tool budget where commit
+# 9a3f50a widened it": effort `none` wrote the same five query shapes in
+# 6.1 seconds in total, 2.2 at worst, and the budget was left at 90 only
+# because tightening it then would have been a second change measured
+# against nothing.
 #
-# PROVISIONAL, and model-dependent. These figures are six calls against
-# one plan-tier model at `effort: high`. Build phase 7.0's model-bench
-# picks the tier winners and should re-measure. Section 6.1 still states
-# 30 seconds and is a Step 6.2 reconciliation item, filed with the other
-# spec-versus-code divergences this phase found.
-CYPHER_QUERY_TIMEOUT_SECONDS: Final[float] = 90.0
+# Back to 30.0, Section 6.1's and the rule's figure, on the product
+# owner's decision of 2026-09-26 ("Back to 30 seconds"; phase 8.6's re-land
+# follow-up, R-09), now that it is measured. The plan tier still runs at
+# effort `none` (`harness._TIER_REASONING`). Across phase 8.6's two golden
+# runs of 2026-09-26, 290 `cypher_query` calls took a median of 0.71
+# seconds and a 90th percentile of 3.58, and no call that ran past 30
+# seconds succeeded: all four ran the full 90 and ended in an error
+# (G-005 once, G-006 three times). So 90 only made a question that was
+# going to fail wait a minute longer to fail. The per-query COST cap still
+# bounds spend independently of this wall-clock budget.
+CYPHER_QUERY_TIMEOUT_SECONDS: Final[float] = 30.0
 
 # Section 9.3's strict host-pinned citation pattern. Never the looser
 # any-subdomain form: a citation resolves to the human-facing record page,
