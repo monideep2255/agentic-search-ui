@@ -1791,6 +1791,46 @@ def build_explanatory_directive(synth_findings: list[SynthFinding]) -> str:
 NO_CLINICAL_FEATURES_PREFIX = "MedGen lists no clinical features for "
 
 
+def is_no_clinical_features_finding(finding: SynthFinding) -> bool:
+    """Whether `finding` is the code-built "MedGen lists no clinical
+    features for <disease>" statement rather than a real feature."""
+    return finding.field == CLINICAL_FEATURES_FIELD and finding.field_value.startswith(
+        NO_CLINICAL_FEATURES_PREFIX
+    )
+
+
+def drop_no_clinical_features_findings(
+    synth_findings: list[SynthFinding],
+) -> list[SynthFinding]:
+    """Remove every "MedGen lists no clinical features for ..." finding.
+
+    Build phase 8.6, T-8.6-06. The statement is true of the record it cites
+    and was said on any disease question whose MedGen record lists no
+    features, whatever the question asked: 15 of 99 answered golden runs
+    carried it, one of them "for Seen by breast cancer nurse" inside an
+    answer to how many genes are associated with breast cancer. It answers
+    only a question about a condition's features, so `core/graph.py`'s
+    `write_node` keeps it only when the `think.asks_features` decision
+    picked `asks_features`, and calls this otherwise, before anything is
+    numbered for the model, the listing or the citations.
+
+    Survivors are renumbered densely, `ref_index` and the `citation_id`
+    suffix together, as `drop_placeholder_condition_findings` does. The
+    input is returned unchanged when there is nothing to drop.
+    """
+    kept = [f for f in synth_findings if not is_no_clinical_features_finding(f)]
+    if len(kept) == len(synth_findings):
+        return synth_findings
+    return [
+        replace(
+            finding,
+            ref_index=index,
+            citation_id=_clip(f"{finding.call_id}-{index}", MAX_CITATION_ID_CHARS),
+        )
+        for index, finding in enumerate(kept, start=1)
+    ]
+
+
 def build_clinical_features_directive(synth_findings: list[SynthFinding]) -> str:
     """The line naming the clinical feature findings, and the one form in
     which the exact gate can accept them (F-8.1-A11, fix-and-verify round).
@@ -1821,8 +1861,7 @@ def build_clinical_features_directive(synth_findings: list[SynthFinding]) -> str
     markers = [
         f.ref_index
         for f in synth_findings
-        if f.field == CLINICAL_FEATURES_FIELD
-        and not f.field_value.startswith(NO_CLINICAL_FEATURES_PREFIX)
+        if f.field == CLINICAL_FEATURES_FIELD and not is_no_clinical_features_finding(f)
     ]
     if not markers:
         return ""
@@ -1888,8 +1927,16 @@ def build_synth_messages(
     completeness_directive: str | None = None,
     answer_ref_indices: list[int] | None = None,
     topic_question: bool = False,
+    clinical_features_asked: bool = True,
 ) -> list[dict[str, str]]:
     """Assemble the Synth call's messages: stable prefix, then dynamic suffix.
+
+    `clinical_features_asked` (build phase 8.6, T-8.6-06): whether the
+    question asks about a condition's features, as the `think.asks_features`
+    decision picked. False leaves out the line telling the model how to list
+    clinical features, so a question that did not ask about them is not
+    steered into a feature list. `write_node` always passes it; the default
+    keeps every other caller's prompt exactly as before.
 
     `.claude/rules/prompt-cache-discipline.md` obligation: the system block
     is byte-identical across every request in a session, and everything
@@ -1932,8 +1979,11 @@ def build_synth_messages(
     # the plain-description line, so where they speak about the same
     # findings this, the narrower instruction about how a feature finding
     # can be cited, is the more recent one. Empty unless feature findings
-    # are in this prompt.
-    features = build_clinical_features_directive(synth_findings)
+    # are in this prompt, and empty when the question did not ask about a
+    # condition's features (build phase 8.6, T-8.6-06).
+    features = (
+        build_clinical_features_directive(synth_findings) if clinical_features_asked else ""
+    )
     features_block = f"{features}\n\n" if features else ""
     # Item 12.7: LAST of the block-level directives, immediately before the
     # question, so where it and the depth directive speak about the same
