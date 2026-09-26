@@ -92,7 +92,8 @@ USAGE
   check_facts.py --map            the downstream map: each fact, its source, every place
   check_facts.py --from PATH      only the facts computed from PATH, for "what does
                                   this change touch" (combine with --map); a file
-                                  no fact reads prints so and exits 0
+                                  no fact reads prints so and exits 0, and a
+                                  path that does not exist is refused, exit 2
   check_facts.py --reference DIR  the data-engineering repository, when reference/
                                   does not resolve (an agent worktree); a DIR that
                                   does not exist is refused, never ignored
@@ -1332,6 +1333,22 @@ def sources_read(repo: Repo, fact: Fact) -> set[str]:
     return {probe.display(p) for p in probe.read_log} | {probe.display(fact.truth.path)}
 
 
+def _from_path_problem(repo: Repo, wanted: str) -> str:
+    """Why `--from` cannot name this path, or "" when it names an existing
+    file or folder in the checkout under test, or in the data-engineering
+    repository through `reference/`. Never echoes an absolute path."""
+    if Path(wanted).is_absolute():
+        return "takes a path relative to the checkout's root, not an absolute one"
+    prefix = REFERENCE_LINK + "/"
+    if wanted.startswith(prefix) and repo.reference is not None:
+        target = repo.reference / wanted[len(prefix) :]
+    else:
+        target = repo.root / wanted
+    if target.exists():
+        return ""
+    return f"names no file in the checkout under test: {wanted}"
+
+
 def print_map(repo: Repo, facts: Iterable[Fact]) -> int:
     """For each fact: its source, then every place that states it. A change
     to the source names every place to update."""
@@ -1495,6 +1512,13 @@ def _run(argv: list[str]) -> int:
         # A fact is selected when its truth reads the file, not only when the
         # file is its main source: the tool-layer map reads every tool module.
         wanted = args.source.removeprefix("./")
+        # A mistyped path must not read as "nothing restates it", exit 0,
+        # which `/verify` counts as a pass (PR118-V06). An existing file no
+        # fact reads still exits 0 below.
+        missing = _from_path_problem(repo, wanted)
+        if missing:
+            print(f"check_facts: --from {missing}; nothing was checked", file=sys.stderr)
+            return 2
         facts = tuple(f for f in facts if wanted in sources_read(repo, f))
         if not facts:
             print(f"check_facts: no fact is computed from {wanted}, so nothing restates it")

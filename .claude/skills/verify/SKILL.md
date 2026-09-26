@@ -211,7 +211,7 @@ venv/bin/python .claude/skills/verify/scripts/check_facts.py
   - Exit 2: at least one ERROR. The registry no longer matches the code, or a place reads as nothing; update the registry in the same change.
   - Exit 3: at least one GAP and nothing worse. A source could not be read here, so those places were never judged. Rerun with the reference present.
 - Copy every FAIL, GAP and ERROR line into the report unchanged, with the summary line. The summary ends PASS or NOT PASSED, the same verdict as the exit code.
-- For each backend file in the diff, `--map --from <file>` names every screen and document that restates a fact computed from it, so one round updates them all.
+- For each backend file in the diff, `--map --from <file>` names every screen and document that restates a fact computed from it, so one round updates them all. A `--from` path that does not exist is refused with exit 2, so a typo cannot read as "nothing restates it".
 - A change that puts a new number, name, limit or capability on a screen adds it to the registry, then runs `--self-test` with the reference present. The self-test fails unless every place can both pass and fail and every reader follows a changed source.
 
 After the merge, check the merged develop commit itself, then confirm develop serves it. The branch-head run above proved the branch, not what landed.
