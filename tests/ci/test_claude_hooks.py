@@ -76,6 +76,16 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  too. A harmless one stays allowed, and so does a
                  here-document into cat or a here-string into a script such
                  as ./install.sh, with a redirect or without.
+    Covered      The rest of the here-string and here-document shapes (the
+                 checker's finding HG2-01 of 2026-09-26): an input redirect
+                 between the shell and the << (`</dev/null`, `0<in.txt`,
+                 `<>f.txt`, `3<f.txt`, `<&0`, `0<&-`, with no spaces too), a
+                 quoted redirect target (`2>"a;b"`), a quoted shell name
+                 (`"bash"`, `'bash'`, `"/bin/sh"`) and a bracketed shell
+                 (`(bash)`, `{ bash; }`, `(bash -s) 2>&1`), with `<<<` and
+                 with a here-document. The same shapes with no destructive
+                 word stay allowed, and so does cat or a script behind an
+                 input redirect.
     Covered      The secret scan: the token-prefix check on every command,
                  grep included. The field-assignment check skipped only for
                  the searches (grep, rg, git grep) a command starts with, and
@@ -125,11 +135,18 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  assignment (`LANG=C rm -rf x`), the `command` builtin, or a
                  runner given as a path (`/usr/bin/env rm`, and
                  `| /usr/bin/env bash`).
-    NOT covered  Text that reaches a shell other than by a pipe, or a
-                 here-string or here-document on the shell's own line:
-                 process substitution (`bash <(...)`), `source /dev/stdin
-                 <<<`, or a shell that is the argument of another program
+    NOT covered  A here-string or here-document into a shell outside the one
+                 rule the guard reads: the shell word, maybe quoted or closing
+                 a group, followed on the same line by its arguments, its
+                 redirects with word or quoted targets, and the <<. So these
+                 pass: process substitution (`bash <(...)`, `bash >
+                 >(tee log) <<<`), a here-string on the line after its shell
+                 behind a backslash and a newline, `source /dev/stdin <<<`,
+                 and a shell that is the argument of another program
                  (`| docker exec -i c sh`).
+    NOT covered  A wrapper whose name is quoted before its flag or host, such
+                 as `"bash" -c '...'`, `"ssh" host '...'` or `'python3' -c`.
+                 Each wrapper word must be followed by a space.
     NOT covered  A pipe or a here-document into an interpreter that is not a
                  shell, such as `python3 -`, `perl` or `node`. The guard does
                  not treat one as a wrapper, so even a named rmtree passes.
@@ -447,6 +464,30 @@ DELETE_GUARD_BLOCKS = [
     pytest.param(
         "bash >>out.txt 2>&1 <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-after-two-redirects"
     ),
+    # The rest of the here-string and here-document shapes (the checker's
+    # finding HG2-01 of 2026-09-26; DECISIONS.md, "Three more guard gaps are
+    # closed", item c): an input redirect, a quoted target, a quoted shell name
+    # or a bracketed shell between the shell and the <<. Bash applies
+    # redirects left to right, so the here-string still feeds the shell.
+    pytest.param("bash </dev/null <<< 'rm -rf x'", id="here-string-after-devnull-input"),
+    pytest.param("bash 0<in.txt <<< 'rm -rf x'", id="here-string-after-fd0-input"),
+    pytest.param("bash <>f.txt <<< 'rm -rf x'", id="here-string-after-read-write"),
+    pytest.param("bash 3<f.txt <<< 'rm -rf x'", id="here-string-after-fd3-input"),
+    pytest.param("bash 2>&1 <&0 <<< 'rm -rf x'", id="here-string-after-input-dup"),
+    pytest.param("bash 2>&1 0<&- <<< 'rm -rf x'", id="here-string-after-input-close"),
+    pytest.param("bash</dev/null<<<'rm -rf x'", id="here-string-after-input-no-spaces"),
+    pytest.param("bash 2>\"a;b\" <<< 'rm -rf x'", id="here-string-after-quoted-target"),
+    pytest.param("\"bash\" <<< 'rm -rf x'", id="here-string-into-double-quoted-bash"),
+    pytest.param("'bash' <<< 'rm -rf x'", id="here-string-into-single-quoted-bash"),
+    pytest.param("\"/bin/sh\" <<< 'rm -rf x'", id="here-string-into-quoted-path-sh"),
+    pytest.param("(bash) <<< 'rm -rf x'", id="here-string-into-subshell-bash"),
+    pytest.param("{ bash; } <<< 'rm -rf x'", id="here-string-into-group-bash"),
+    pytest.param("(bash -s) 2>&1 <<< 'rm -rf x'", id="here-string-into-subshell-then-redirect"),
+    pytest.param("bash </dev/null <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-after-devnull-input"),
+    pytest.param("bash 0<in.txt <<'EOF'\nLANG=C rm -rf x\nEOF", id="here-doc-after-fd0-input"),
+    pytest.param("\"bash\" <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-into-quoted-bash"),
+    pytest.param("(bash) <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-into-subshell-bash"),
+    pytest.param("{ bash; } <<'EOF'\nLANG=C rm -rf x\nEOF", id="here-doc-into-group-bash"),
     # Every command word in any letter case, not only rm and rmdir: on the
     # case-insensitive disk a runner, a wrapper, a shell or mkfs in upper or
     # mixed case runs as its lower-case form does (DECISIONS.md 2026-09-26,
@@ -577,6 +618,20 @@ DELETE_GUARD_ALLOWS = [
     ),
     pytest.param(
         "./install.sh 2>&1 <<< 'rm the old build'", id="here-string-into-script-after-redirect"
+    ),
+    # An input redirect, a quoted shell name or a bracketed shell changes
+    # neither: a shell with no destructive word stays allowed, and a program
+    # that is not a shell stays one.
+    pytest.param("bash </dev/null <<< 'echo hi'", id="here-string-after-devnull-input-harmless"),
+    pytest.param("\"bash\" <<< 'echo hi'", id="here-string-into-quoted-bash-harmless"),
+    pytest.param("(bash) <<< 'echo hi'", id="here-string-into-subshell-bash-harmless"),
+    pytest.param("{ bash; } <<< 'echo hi'", id="here-string-into-group-bash-harmless"),
+    pytest.param(
+        "cat 0<in.txt <<EOF\nthe word rm appears here\nEOF", id="here-doc-into-cat-after-input"
+    ),
+    pytest.param("(cat) <<< 'rm the old build'", id="here-string-into-subshell-cat"),
+    pytest.param(
+        "./install.sh </dev/null <<< 'rm the old build'", id="here-string-into-script-after-input"
     ),
     # Any letter case keeps every whole-word edge: a program whose name only
     # starts with SH is not a shell, rm inside a longer word is not rm, and a

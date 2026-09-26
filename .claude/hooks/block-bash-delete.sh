@@ -26,6 +26,14 @@
 # Approved item by item by the product owner on 2026-09-26 ("Also close the
 # hook gaps"). tests/ci/test_claude_hooks.py pins every case both ways.
 #
+# A here-string or here-document into a shell also counts with any other
+# redirect between the shell and the << (</dev/null, 0<in.txt, <&0, a quoted
+# target), with a quoted shell name ("bash", 'bash') and with a bracketed
+# shell ((bash), { bash; }): bash applies the redirects left to right, so the
+# here-string still feeds the shell. Approved item by item by the product
+# owner on 2026-09-26 (DECISIONS.md, "Three more guard gaps are closed", item
+# c).
+#
 # Every check reads the command in any letter case, not only rm and rmdir: a
 # runner, a wrapper, a shell or mkfs in upper or mixed case runs on that disk
 # just as it does in lower case, so BASH -c, Bash -c, | BASH, SH -c, ENV rm,
@@ -47,6 +55,10 @@
 # - A pipe whose shell is not the word right after it: the shell on the next
 #   line or after | and a backslash-newline, | (bash), | { bash; },
 #   | tee >(bash), | $SHELL, | busybox sh, | ssh-agent bash, | mksh.
+# - A shell fed by process substitution (bash <(...), bash > >(tee log) <<<),
+#   and a here-string on the line after its shell, behind a backslash.
+# - A wrapper whose name is quoted before its flag or host: "bash" -c '...',
+#   "ssh" host '...', 'python3' -c. Each wrapper word needs a space after it.
 # - An escape the guard does not read as one: PowerShell's backtick (`n)
 #   right before rm inside a wrapper.
 # - Deletion that never names rm or rmdir: find -delete, unlink, shred,
@@ -124,14 +136,24 @@ fi
 #    behind a runner such as sudo, a quote or a path such as /bin/sh, so
 #    | shasum, | shellcheck and | grep bash never count. A here-string or
 #    here-document counts when a shell word (not a script such as install.sh)
-#    is followed on its line by its arguments, any output redirects with their
-#    targets (2>&1, >out.txt, 2> err.log, >&2, &>log) and <<. The shells are
+#    is followed on its line by its arguments, any redirects with their
+#    targets, and <<. A redirect is an output one (2>&1, >out.txt, 2> err.log,
+#    >&2, &>log) or an input one (</dev/null, 0<in.txt, <>f.txt, 3<f.txt, <&0,
+#    0<&-), and its target may be quoted (2>"a;b"). The shell word may be
+#    quoted ("bash", 'bash') or end a group ((bash), { bash; }). The shells are
 #    bash, sh, zsh, dash, ksh, csh, tcsh and fish.
+#
+#    Still not counted, named and not closed: a shell fed by process
+#    substitution (bash <(...), bash > >(tee log) <<<), whose target is a
+#    command rather than a word, and a here-string on the line after its shell,
+#    behind a backslash and a newline, since grep reads one line at a time.
 SHELLS='((ba|da|k|z|c|tc)?sh|fish)'
 SHELL_END='([[:space:];&|)<>`"'"'"']|$)'   # what may follow a shell's name
 PIPE_SHELL='[|]&?[[:space:]]*('"$RUNNER"')*'"$CMDWORD$SHELLS$SHELL_END"
-SHELL_REDIR='[0-9]*(&>>?|>[>|&]?)[[:space:]]*[^[:space:];&|<>]+'   # 2>&1, >out, &>log
-HERE_SHELL='(^|[^[:alnum:]_.-])'"$SHELLS"'([[:space:]]+[^[:space:];&|<>]+|[[:space:]]*'"$SHELL_REDIR"')*[[:space:]]*<<'
+TARGET='("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:];&|<>])+'   # a word, or a quoted string
+SHELL_REDIR='[0-9]*(&>>?|>[>|&]?|<>|<&?)[[:space:]]*'"$TARGET"   # 2>&1, >out, </dev/null, <&0
+GROUP_END='[[:space:]]*;?[[:space:]]*[)}]'   # the end of (bash) or { bash; }
+HERE_SHELL='(^|[^[:alnum:]_.-])'"$SHELLS$QUOTE"'?([[:space:]]+[^[:space:];&|<>]+|[[:space:]]*'"$SHELL_REDIR"'|'"$GROUP_END"')*[[:space:]]*<<'
 WRAPPER='(ssh[[:space:]]|python3?[[:space:]]+-c|perl[[:space:]]+-e|ruby[[:space:]]+-e|node[[:space:]]+-e|bash[[:space:]]+-c|sh[[:space:]]+-c|zsh[[:space:]]+-c|eval[[:space:]]'"|$PIPE_SHELL|$HERE_SHELL)"
 ESCAPE='\\[[:alnum:]]+|\\[CM]-[[:alnum:]]'  # \n, \012, \x3b, \u000a; Ruby's \C-j
 INSIDE="(^|[^[:alnum:]_]|$ESCAPE)$RM$WORD_END|$RMDIR|rmtree|dd[[:space:]]+if=|mkfs|$DEVICE_WRITE"
