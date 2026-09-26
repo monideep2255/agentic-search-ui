@@ -876,9 +876,14 @@ def _elapsed_ms(state: GraphState) -> int:
 # 2026-09-25, cards 3, 4, 5, 8 and 9).
 #
 # The loop's small closed choices are made by `harness.decide`, never by a
-# word list: Jev decides when CLASSIFIER_PROVIDER=jev, the guard tier decides
-# the same question beside it and is recorded, and any Jev failure falls back
-# to the guard's pick. Code only verifies what a classifier decided.
+# word list. With CLASSIFIER_PROVIDER=jev, Jev decides alone and the guard
+# tier is asked only after Jev made no pick (build phase 8.6, T-8.6-01), with
+# every wait bounded by the calling step's own budget (fix round, F-8.6-A03);
+# otherwise the guard tier decides alone. Two points never take the guard
+# fallback: `guardrail.injection` asks Jev directly and keeps the guardrail
+# classifier's verdict when Jev fails, refusing when either says injection,
+# and the reworded-sentence check approves nothing when Jev fails. Code only
+# verifies what a classifier decided.
 #
 # Each point below carries a FIXED, code-authored description of what is
 # being decided: one instruction line and one criterion per option. Both
@@ -1408,6 +1413,11 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
             timeout=_JEV_INJECTION_WAIT_S,
         )
     except JevCallError as exc:
+        # A reply that came back but could not be used was still billed:
+        # charge its reported cost, never zero, exactly as `decide()`'s own
+        # Jev call does (fix round, F-8.6-J10).
+        if exc.billed_cost_usd:
+            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         return exc.reason
     except TimeoutError:
         return "timeout"
@@ -8516,8 +8526,10 @@ async def _ground_with_sentence_check(
        pass again, accepting exactly the sentences the model approved with
        exactly those quotes. Which model is `sentence_check.
        check_reworded_sentences`' job (build phase 8.6, T-8.6-02): Jev
-       when CLASSIFIER_PROVIDER=jev, with the guard tier only when Jev
-       fails; the guard tier alone, exactly as before, otherwise.
+       when CLASSIFIER_PROVIDER=jev, where a Jev failure approves nothing
+       and `_ask_guard_tier` is never called as a second chance (fix
+       round, F-8.6-A01); the guard tier alone, exactly as before,
+       otherwise.
 
     Fails closed at every step: no candidates, too little budget, the cost
     cap, a failed or timed-out call, or an unreadable reply all return the

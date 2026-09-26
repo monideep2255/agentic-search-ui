@@ -1000,6 +1000,33 @@ async def test_with_jev_the_real_client_failing_asks_no_generic_prompt(
 
 
 @pytest.mark.asyncio
+async def test_with_jev_an_unusable_reply_is_charged_at_its_billed_cost(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, _jev: list[str]
+) -> None:
+    """F-8.6-J10 at the guardrail: a Jev reply that came back but could not
+    be used was still billed, so the run pays its reported cost, exactly as
+    `decide()`'s own Jev call does, and the classifier's verdict stands.
+
+    MUTATION PROOF: dropping the charge in `_jev_injection_pick`'s
+    `JevCallError` arm turns this red.
+    """
+    from system_03_search_agent.harness.jev_client import JevCallError
+
+    costs: list[float] = []
+    for billed in (0.0, 0.0125):
+        _install_jev(
+            monkeypatch,
+            JevCallError("unusable", reason="malformed_reply", billed_cost_usd=billed),
+        )
+        events, _ = await _run_guardrail("Which diseases are associated with BRCA1?")
+        assert _payload(events, "guard")["passed"] is True
+        assert _done_record(events)["fallback_reason"] == "malformed_reply"
+        harness = _RUN_HARNESSES[-1]
+        costs.append(harness.get_query_cost_usd(harness.trace_id))
+    assert costs[1] - costs[0] == pytest.approx(0.0125), "the billed cost was not charged"
+
+
+@pytest.mark.asyncio
 async def test_with_jev_two_unusable_classifier_replies_still_fail_closed(
     monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, _jev: list[str]
 ) -> None:
