@@ -98,11 +98,29 @@ def test_known_golden_ids_come_back_in_order(script) -> None:
     assert questions[0][1] == "Tell me about the tree of life."
 
 
+def _snapshot_every_decide(monkeypatch: pytest.MonkeyPatch) -> list[types.ModuleType]:
+    """Register every loaded module's `decide` with monkeypatch BEFORE the
+    recorder touches it, so teardown restores each one even if the test
+    fails midway (finding K-14: `core.graph` was left patched and four
+    later tests in `core/test_graph.py` failed)."""
+    holders = [
+        module
+        for name, module in list(sys.modules.items())
+        if name.startswith("system_03_search_agent")
+        and name != decide_module.__name__
+        and getattr(module, "decide", None) is decide_module.decide
+    ]
+    for module in holders:
+        monkeypatch.setattr(module, "decide", module.decide)
+    return holders
+
+
 @pytest.mark.asyncio
 async def test_the_recorder_compares_hands_back_the_live_record_and_survives_a_cancel(script, monkeypatch) -> None:
     fake = types.ModuleType("system_03_search_agent._compare_script_test_module")
     fake.decide = decide_module.decide
     monkeypatch.setitem(sys.modules, fake.__name__, fake)
+    holders = _snapshot_every_decide(monkeypatch)
     release = asyncio.Event()
 
     async def _fake_compare(harness, trace_id, point, state, options, *, instructions=None, criteria=None):
@@ -113,7 +131,7 @@ async def test_the_recorder_compares_hands_back_the_live_record_and_survives_a_c
     monkeypatch.setattr(decide_module, "compare_models", _fake_compare)
     rows: list = []
     pending: list = []
-    patched = script._install_recorder(rows, pending, {"id": "G-042"})
+    patched, uninstall = script._install_recorder(rows, pending, {"id": "G-042"})
 
     assert fake.__name__ in patched and fake.decide is not decide_module.decide
     record = await fake.decide(None, "t", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic")
@@ -130,6 +148,11 @@ async def test_the_recorder_compares_hands_back_the_live_record_and_survives_a_c
     assert [row.point for row in rows] == ["guardrail.relevancy", "slow"]
     assert rows[1].loop_cancelled and rows[1].comparison is not None, "the comparison finished after the loop moved on"
     assert all(row.golden_id == "G-042" for row in rows)
+
+    uninstall()
+    assert all(module.decide is decide_module.decide for module in holders), (
+        "the script's own uninstall puts every module's decide back"
+    )
 
 
 def test_the_report_counts_agreement_per_point_and_lists_disagreements(script) -> None:

@@ -179,10 +179,14 @@ def _ended(final_state: dict[str, Any]) -> str:
 
 def _install_recorder(
     rows: list[_Row], pending: list[asyncio.Task[Any]], current: dict[str, str]
-) -> list[str]:
+) -> tuple[list[str], Callable[[], None]]:
     """Swap every module-level `decide` the loop imported for the recorder.
 
-    Returns the names of the modules patched, for the report.
+    Returns the names of the modules patched, for the report, and an
+    `uninstall` that puts each module's original `decide` back. The caller
+    must call it however the run ends: a module left patched sends every
+    later `decide` in the same process through the recorder (finding K-14,
+    which a test in another folder caught).
     """
     from system_03_search_agent.harness import decide as decide_module
 
@@ -227,14 +231,20 @@ def _install_recorder(
             raise
         return comparison.live_record(default)
 
-    patched: list[str] = []
+    patched: dict[str, Any] = {}
     for name, module in list(sys.modules.items()):
         if not name.startswith("system_03_search_agent") or name == decide_module.__name__:
             continue
         if getattr(module, "decide", None) is original:
             module.decide = recording_decide
-            patched.append(name)
-    return sorted(patched)
+            patched[name] = module
+
+    def uninstall() -> None:
+        for module in patched.values():
+            if getattr(module, "decide", None) is recording_decide:
+                module.decide = original
+
+    return sorted(patched), uninstall
 
 
 def _guardrail_think_plan(graph_module: Any) -> Any:
@@ -260,19 +270,45 @@ async def _run(questions: list[tuple[str, str]], per_question_cap_usd: float) ->
     os.environ["PER_QUERY_COST_CAP_USD"] = f"{per_question_cap_usd:.4f}"
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
-    from system_03_search_agent.contracts.query import Query, RequestContext
     from system_03_search_agent.core import graph as graph_module
-    from system_03_search_agent.harness.call_budget import query_budget_scope
-    from system_03_search_agent.harness.harness import Harness
     from system_03_search_agent.harness.tiers import resolve_jev_model, resolve_model
-    from system_03_search_agent.observability.audit import trace_id_scope
 
     rows: list[_Row] = []
     pending: list[asyncio.Task[Any]] = []
     current = {"id": ""}
-    patched = _install_recorder(rows, pending, current)
-    steps = _guardrail_think_plan(graph_module)
+    patched, uninstall = _install_recorder(rows, pending, current)
+    try:
+        runs = await _run_questions(questions, rows, pending, current, graph_module)
+    finally:
+        uninstall()
 
+    return {
+        "rows": rows,
+        "runs": runs,
+        "patched": patched,
+        "models": {
+            "jev": resolve_jev_model(),
+            "guard": resolve_model("guard"),
+            "plan": resolve_model("plan"),
+        },
+    }
+
+
+async def _run_questions(
+    questions: list[tuple[str, str]],
+    rows: list[_Row],
+    pending: list[asyncio.Task[Any]],
+    current: dict[str, str],
+    graph_module: Any,
+) -> list[_QuestionRun]:
+    """Each question through Guardrail, Think and Plan, with the recorder in
+    place. Split out of `_run` so the recorder is uninstalled on every exit."""
+    from system_03_search_agent.contracts.query import Query, RequestContext
+    from system_03_search_agent.harness.call_budget import query_budget_scope
+    from system_03_search_agent.harness.harness import Harness
+    from system_03_search_agent.observability.audit import trace_id_scope
+
+    steps = _guardrail_think_plan(graph_module)
     runs: list[_QuestionRun] = []
     for golden_id, question in questions:
         current["id"] = golden_id
@@ -317,17 +353,7 @@ async def _run(questions: list[tuple[str, str]], per_question_cap_usd: float) ->
             )
         )
         print(f"{golden_id}: {ended}, {sum(1 for r in rows if r.golden_id == golden_id)} decisions", flush=True)
-
-    return {
-        "rows": rows,
-        "runs": runs,
-        "patched": patched,
-        "models": {
-            "jev": resolve_jev_model(),
-            "guard": resolve_model("guard"),
-            "plan": resolve_model("plan"),
-        },
-    }
+    return runs
 
 
 # ---------------------------------------------------------------- the report

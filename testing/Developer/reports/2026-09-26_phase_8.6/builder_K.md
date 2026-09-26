@@ -172,6 +172,9 @@ The live run, `classifier_comparison.md` in this folder, 10 golden questions cho
 - K-08: the script ran twice, because the first report's opening paragraph failed the house style check (a four-item comma chain) and the committed file had to be the script's own output. The first run, minutes earlier, also cost $0.0097, so about $0.02 was spent in all. It disagreed once, on G-009, "the": Jev off_topic at 0.84 (probabilities 0.92 and 0.08), the guard tier on_topic. In the second run the guard tier said off_topic and Jev said the same as before. On this one question Jev was the steadier of the two.
 - K-09: Jev answered each decision three to five times faster than the guard tier (median 266 to 314 ms against 947 to 1334 ms), which is what T-8.6-01 now gives every question.
 - K-10 (coverage): no golden question reaches `think.ask_back`. It is asked only for a first message of one to three words, and the golden set's only two, G-008 "334" and G-009 "the", are refused at the guardrail before Think runs. `guardrail.relevancy` was asked for 4 of the 10, since the biomedical word list admits the rest without a model. Comparing ask-back needs short questions the guardrail admits, which the golden set does not have.
+- K-14 (reported by the lead after merging both builders' branches, reproduced here): `test_the_recorder_compares_hands_back_the_live_record_and_survives_a_cancel` called `_install_recorder`, which swaps `decide` on EVERY loaded `system_03_search_agent.*` module still holding the original, `core.graph` included once any earlier test had imported it, and nothing put them back. Every later test that relied on `core.graph.decide` then ran through the recorder. Reproduction, `tests/system_03_search_agent/harness/test_compare_classifiers_script.py` with `core/test_graph.py::test_a_decision_nobody_made_is_recorded_as_what_the_run_did`: 4 failed, 7 passed. My own runs did not catch it: in `harness/` and `synthesis/` no test after this one goes through `core.graph.decide`, and I ran `core/` in a separate process.
+
+  Fixed in two places. `_install_recorder` now returns `(patched, uninstall)`, and `_run` calls `uninstall` in a `finally`, so the script leaves every module as it found it. The test also registers every loaded module's `decide` with `monkeypatch` before the recorder touches it, so teardown restores them even when the test fails midway, and it asserts `uninstall` put them back. After the fix, the lead's reproduction command: 11 passed. `tests/system_03_search_agent/harness` and `core` in one process: 1502 passed, 56 skipped, 1 deselected.
 - K-11: the plan tier in this local run was the code default, `moonshotai/kimi-k2.6`, because the main checkout's `.env` does not set `PLAN_MODEL`, while develop overrides it to `deepseek/deepseek-v4-flash`. That model runs Think's own classification, which is not compared; the report states it. The script does not pin a model id, since model identity belongs to the environment (`system-design-patterns` pattern 11).
 
 Tests:
@@ -179,9 +182,20 @@ Tests:
 - `test_decide.py`, 12 new: `compare_models` asks both models whatever the provider, with the same description; it asks them at the same time (two 0.4-second models finish under 0.7 s); for five combinations of Jev and guard behaviour, its `live_record` equals what `decide()` returns in Jev mode; a bad default and bad options are refused as `decide()` refuses them; nothing under `src/` but `decide.py` names `compare_models`, `ModelComparison` or the script.
 - `test_compare_classifiers_script.py`, 7: the repository is found from the script's own path and the source names no absolute path; a budget below $0.02 per question refuses before credentials are read; an unknown golden id stops the run; ids come back in order; the recorder hands back the live record and a cancelled wait still records the finished comparison; the report's agreement row, disagreement row and failure row, and the "None" line when nothing disagreed.
 
+## T-8.6-08
+
+Added by the lead from the product harness review (`testing/Developer/reports/2026-09-25_harness_review/product_harness.md` in the main checkout, W6, W7, C4, C5, C6).
+
+- K-12 (on reading the code): the operator-only `cost` event is not built in `harness/harness.py`. `harness/cost_control.py::build_cost_event_payload(harness, trace_id, tier)` builds it, and `core/graph.py` calls it after each metered model call. A new optional field on `CostPayload` would stay empty unless that builder fills it, so T-8.6-08 adds two lines there that read the new timing from the harness. `cost_control.py` is outside the lead's file list for this ticket but inside no other builder's fence; `core/graph.py` is not touched.
+- K-13 (litellm as installed): the 400 in W6 reaches `call_tier` as `litellm.BadRequestError`, and `str(exc)` carries the provider's own words: `litellm.BadRequestError: OpenrouterException - {"error":{"message":"Reasoning is mandatory for this endpoint and cannot be disabled.","code":400}}`. `ContextWindowExceededError`, `ContentPolicyViolationError` and `UnsupportedParamsError` are subclasses of it, so the fallback is keyed on the text naming reasoning, not on the class alone.
+
+## T-8.6-09
+
+Added by the lead from the same review (C5, the golden client half).
+
 ## Tests and gates
 
-Run after the last commit's changes, on this worktree:
+Run after T-8.6-03's commit, on this worktree:
 
 | Gate | Result |
 | --- | --- |
