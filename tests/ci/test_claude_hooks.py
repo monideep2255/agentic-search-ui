@@ -51,6 +51,14 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  an escape before it included. The whole-word edges are
                  pinned too: "ARM64", "RMS", "PERFORM" and `git RM` stay
                  allowed.
+    Covered      Every other command word the delete guard reads, in any
+                 letter case too: `BASH -c`, `Bash -c`, `SH -c`, `| BASH`,
+                 `| Sh`, `| SUDO bash`, `BASH <<<`, `SSH host`, `ENV rm`,
+                 `SUDO rm`, `| XARGS rm`, `NOHUP rm`, `MKFS.ext4`, `SUDO Mkfs`
+                 and `PYTHON3 -c`, an escape before rm included. The edges
+                 stay whole words: `| SHASUM`, `| SHA256SUM`, "ARM64 RMS
+                 PERFORM" into BASH, and a harmless command behind BASH, SUDO
+                 or ENV stay allowed.
     Covered      A pipe into a shell as an execution wrapper: `| bash`, `| sh`,
                  `| zsh`, `| dash`, `|& bash`, `| sudo bash`, `| sudo -u root
                  sh` and `| /bin/sh`, with the destructive word anywhere in
@@ -113,11 +121,6 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  `%0a`. The letter before rm is an ordinary character until
                  the command runs, so a whole-word match cannot tell it from
                  "platform"; the old substring match blocked these.
-    NOT covered  A command word in upper case other than rm and rmdir. The
-                 case-insensitive disk runs `ENV rm`, `ls | XARGS rm`,
-                 `BASH -c "..."`, `| BASH` and `MKFS.ext4`, and the guard
-                 matches runners, wrappers, shells and mkfs in lower case
-                 only.
     NOT covered  rm behind a word the guard does not know as a runner: an
                  assignment (`LANG=C rm -rf x`), the `command` builtin, or a
                  runner given as a path (`/usr/bin/env rm`, and
@@ -137,6 +140,13 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  `| (bash)`, `| { bash; }`, `| tee >(bash)`, `| $SHELL`,
                  `| busybox sh`, `| ssh-agent bash`, `| mksh`,
                  `base64 -d | bash`, `printf '\\x72\\x6d'` and `'r''m'`.
+    NOT covered  An escape the delete guard does not read as one: PowerShell's
+                 backtick (a backtick then n) right before rm inside an ssh
+                 wrapper (the checker's finding F01 of 2026-09-26).
+    NOT covered  A command holding a JSON lone surrogate. The hooks' JSON
+                 reader cannot print it, so each hook reads the raw JSON text
+                 instead: the delete guard then misses an rm on its own line,
+                 and the secret scan a quoted field-shaped literal.
     NOT covered  A search whose own option runs another command, such as git
                  grep's pager option. The option's text is part of a leading
                  search, so the field check skips it, as the approval skips a
@@ -437,6 +447,30 @@ DELETE_GUARD_BLOCKS = [
     pytest.param(
         "bash >>out.txt 2>&1 <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-after-two-redirects"
     ),
+    # Every command word in any letter case, not only rm and rmdir: on the
+    # case-insensitive disk a runner, a wrapper, a shell or mkfs in upper or
+    # mixed case runs as its lower-case form does (DECISIONS.md 2026-09-26,
+    # "Three more guard gaps are closed", item b).
+    pytest.param('BASH -c "rm -rf /tmp/x"', id="upper-bash-c"),
+    pytest.param('Bash -c "rm -rf /tmp/x"', id="mixed-case-bash-c"),
+    pytest.param('SH -c "rm -rf x"', id="upper-sh-c"),
+    pytest.param("echo 'rm -rf x' | BASH", id="pipe-into-upper-bash"),
+    pytest.param("echo 'rm -rf x' | Sh", id="pipe-into-mixed-case-sh"),
+    pytest.param("echo 'rm -rf x' | SUDO bash", id="pipe-into-upper-sudo-bash"),
+    pytest.param("BASH <<< 'rm -rf x'", id="here-string-into-upper-bash"),
+    pytest.param('SSH host "rm -rf /data"', id="upper-ssh-rm"),
+    pytest.param("ENV rm -rf x", id="upper-env-rm"),
+    pytest.param("SUDO rm -rf /", id="upper-sudo-rm"),
+    pytest.param("ls | XARGS rm", id="pipe-upper-xargs-rm"),
+    pytest.param("NOHUP rm -rf x &", id="upper-nohup-rm"),
+    pytest.param("MKFS.ext4 /dev/sdb1", id="upper-mkfs"),
+    pytest.param("SUDO Mkfs -t ext4 /dev/sdb1", id="upper-sudo-mixed-case-mkfs"),
+    pytest.param('bash -c "MKFS.ext4 /dev/sdb1"', id="bash-c-upper-mkfs"),
+    pytest.param("PYTHON3 -c \"import os; os.system('rm -rf ~')\"", id="upper-python3-c"),
+    pytest.param(
+        f"PYTHON3 -c \"import os; os.system('true{_BS}nrm -rf ~')\"",
+        id="upper-python3-c-escape-newline",
+    ),
 ]
 
 DELETE_GUARD_ALLOWS = [
@@ -544,6 +578,16 @@ DELETE_GUARD_ALLOWS = [
     pytest.param(
         "./install.sh 2>&1 <<< 'rm the old build'", id="here-string-into-script-after-redirect"
     ),
+    # Any letter case keeps every whole-word edge: a program whose name only
+    # starts with SH is not a shell, rm inside a longer word is not rm, and a
+    # harmless command into an upper-case shell or runner stays allowed.
+    pytest.param("echo 'rm -rf x' | SHASUM -a 256", id="pipe-rm-text-into-upper-shasum"),
+    pytest.param("printf 'rm -rf x' | SHA256SUM", id="pipe-rm-text-into-upper-sha256sum"),
+    pytest.param("echo ARM64 RMS PERFORM | BASH", id="words-holding-rm-into-upper-bash"),
+    pytest.param("echo hi | BASH", id="pipe-harmless-into-upper-bash"),
+    pytest.param('Bash -c "echo hi"', id="mixed-case-bash-c-harmless"),
+    pytest.param("SUDO ls /var/log", id="upper-sudo-harmless"),
+    pytest.param("ENV FOO=1 make build", id="upper-env-harmless"),
 ]
 
 
