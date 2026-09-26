@@ -188,7 +188,7 @@ Inspect the live index list with:
 SELECT indexname, tablename FROM pg_indexes WHERE schemaname='ncbi_kg' ORDER BY tablename, indexname;
 ```
 
-The loader's [index_builder.py](system-02-knowledge-graph/loader/index_builder.py) is being updated so the next deploy gets all three passes automatically as Step 8.
+The loader's [index_builder.py](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/system-02-knowledge-graph/loader/index_builder.py) is being updated so the next deploy gets all three passes automatically as Step 8.
 
 ## J. Statistics and the planner
 
@@ -205,7 +205,7 @@ WHERE relnamespace='ncbi_kg'::regnamespace ORDER BY reltuples DESC;
 
 ## K. Canonical smoke-test query suite
 
-The reference query suite lives at [tests/cypher/gate3_queries.sql](tests/cypher/gate3_queries.sql) in the repo and is the file to run after any maintenance change to confirm the graph still answers correctly. It contains seven queries covering BRCA1 traversal, PKU disease lookup, glucose-metabolism gene listing, TP53 article citations, human-taxon membership, vertex counts, and edge counts.
+The reference query suite lives at [tests/cypher/gate3_queries.sql](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/tests/cypher/gate3_queries.sql) in the repo and is the file to run after any maintenance change to confirm the graph still answers correctly. It contains seven queries covering BRCA1 traversal, PKU disease lookup, glucose-metabolism gene listing, TP53 article citations, human-taxon membership, vertex counts, and edge counts.
 
 Run it with:
 
@@ -213,7 +213,7 @@ Run it with:
 sudo -u postgres psql -d ncbi_kg -f /tmp/gate3_queries.sql
 ```
 
-Save the dated output alongside the suite file as [tests/cypher/gate3_results_YYYY-MM-DD.txt](tests/cypher/). Comparing two consecutive runs is the simplest regression test for the graph.
+Save the dated output alongside the suite file as [tests/cypher/gate3_results_YYYY-MM-DD.txt](https://github.com/monideep2255/agentic-search-data-engineering/tree/main/tests/cypher). Comparing two consecutive runs is the simplest regression test for the graph.
 
 ## L. Performance baseline and what slow looks like
 
@@ -362,7 +362,7 @@ PubChem, SRA, and dbGaP are excluded:
 
 See DECISIONS row 18.
 
-Layer 2 enrichment data (variant annotations from third-party tools, expression data, drug bindings, etc.) is excluded. That data is meant to be fetched on demand by System 3 and joined at query time, not pre-ingested. See [docs/architecture/Three_layer_data_architecture.md](docs/architecture/Three_layer_data_architecture.md).
+Layer 2 enrichment data (variant annotations from third-party tools, expression data, drug bindings, etc.) is excluded. That data is meant to be fetched on demand by System 3 and joined at query time, not pre-ingested. See [docs/architecture/Three_layer_data_architecture.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/architecture/Three_layer_data_architecture.md).
 
 System 3 components (FastAPI, LangGraph, UI, MCP servers, channel integrations) are not in this repo and not on this server. They run elsewhere and connect to this graph as a client.
 
@@ -382,21 +382,21 @@ A query returns garbage in the `name` field: see Section M. The MedGen ETL has a
 
 The disk is filling up: check `df -h /` first. The most likely cause is a forgotten `pg_dump` file in `/root` or a leftover KGX file. Do not delete anything inside `/var/lib/postgresql/`.
 
-age-load fails midway with `relation "ncbi_kg.X" does not exist`: a vertex label is missing from the loader's `VERTEX_LABELS` constant in [system-02-knowledge-graph/loader/schema.py](system-02-knowledge-graph/loader/schema.py). Add the label, scp the file, retry. See Phase 4 Problem 8 in [docs/learnings.md](docs/learnings.md).
+age-load fails midway with `relation "ncbi_kg.X" does not exist`: a vertex label is missing from the loader's `VERTEX_LABELS` constant in [system-02-knowledge-graph/loader/schema.py](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/system-02-knowledge-graph/loader/schema.py). Add the label, scp the file, retry. See Phase 4 Problem 8 in [docs/learnings.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/learnings.md).
 
-The Postgres process gets OOM-killed during a load: confirm swap is mounted (`free -h`); if not, `sudo swapon /swapfile`. If swap is heavily used (more than 10 GB), upgrade temporarily to CPX52 for the load window, then downgrade. See Phase 4 Problem 9 in [docs/learnings.md](docs/learnings.md).
+The Postgres process gets OOM-killed during a load: confirm swap is mounted (`free -h`); if not, `sudo swapon /swapfile`. If swap is heavily used (more than 10 GB), upgrade temporarily to CPX52 for the load window, then downgrade. See Phase 4 Problem 9 in [docs/learnings.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/learnings.md).
 
 ## References
 
-- Loader code: [system-02-knowledge-graph/loader/](system-02-knowledge-graph/loader/)
-- Schema constants: [system-02-knowledge-graph/loader/schema.py](system-02-knowledge-graph/loader/schema.py) (VERTEX_LABELS)
-- Index builder: [system-02-knowledge-graph/loader/index_builder.py](system-02-knowledge-graph/loader/index_builder.py)
-- Smoke-test suite: [tests/cypher/gate3_queries.sql](tests/cypher/gate3_queries.sql)
-- Latest smoke results: [tests/cypher/gate3_results_2026-04-22.txt](tests/cypher/gate3_results_2026-04-22.txt)
-- Phase 4 narrative: [docs/learnings.md](docs/learnings.md) Problems 1 to 13 + Gate 3 outcome section
-- Decisions log: [DECISIONS.md](DECISIONS.md) rows 67 to 79
-- VPS setup: [docs/context/setup/setup-04_hetzner_vps.md](docs/context/setup/setup-04_hetzner_vps.md)
-- AGE loader explainer: [docs/architecture/AGE_loader_explained.md](docs/architecture/AGE_loader_explained.md)
-- Health sweep snapshot: [tests/cypher/health_sweep_2026-04-22.txt](tests/cypher/health_sweep_2026-04-22.txt)
+- Loader code: [system-02-knowledge-graph/loader/](https://github.com/monideep2255/agentic-search-data-engineering/tree/main/system-02-knowledge-graph/loader)
+- Schema constants: [system-02-knowledge-graph/loader/schema.py](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/system-02-knowledge-graph/loader/schema.py) (VERTEX_LABELS)
+- Index builder: [system-02-knowledge-graph/loader/index_builder.py](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/system-02-knowledge-graph/loader/index_builder.py)
+- Smoke-test suite: [tests/cypher/gate3_queries.sql](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/tests/cypher/gate3_queries.sql)
+- Latest smoke results: [tests/cypher/gate3_results_2026-04-22.txt](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/tests/cypher/gate3_results_2026-04-22.txt)
+- Phase 4 narrative: [docs/learnings.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/learnings.md) Problems 1 to 13 + Gate 3 outcome section
+- Decisions log: [DECISIONS.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/DECISIONS.md) rows 67 to 79
+- VPS setup: [docs/context/setup/setup-04_hetzner_vps.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/context/setup/setup-04_hetzner_vps.md)
+- AGE loader explainer: [docs/architecture/AGE_loader_explained.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/architecture/AGE_loader_explained.md)
+- Health sweep snapshot: [tests/cypher/health_sweep_2026-04-22.txt](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/tests/cypher/health_sweep_2026-04-22.txt)
 
 Last updated: 2026-09-14
