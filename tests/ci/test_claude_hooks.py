@@ -20,6 +20,17 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  exemption and proof that it cannot hide an rm, and the false
                  blocks the review measured ("perform", `2>/dev/null` inside a
                  wrapper).
+    Covered      The delete guard's escape rule: inside a wrapper, an escape
+                 sequence ending in a letter or digit right before rm
+                 (`\\n`, `\\012`, `\\x3b`, `\\u000a`, `\\cJ`, Ruby's `\\C-j`) is
+                 blocked, because the wrapper decodes it into a newline or a
+                 separator and rm runs as its own command. Every escape shape
+                 the fresh-context check of 2026-09-26 measured is pinned,
+                 and so is the price of the rule: an escape right before a
+                 word that ends in rm, such as `\\nperform`, is blocked too.
+    Covered      The approved relaxations of item 1 stay allowed: a /dev/null
+                 redirect inside or after a wrapper, the words "perform" and
+                 "platform", and `kill -0`.
     Covered      The secret scan: the token-prefix check on every command,
                  grep included; the field-assignment check skipped only when
                  the first word is grep, rg or git grep; the same field check
@@ -31,6 +42,12 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
     NOT covered  Deletion that never names rm or rmdir: `find -delete`,
                  `unlink`, `shred`, `git clean`, Python's `os.remove`. Neither
                  the old hook nor the new one looks for these.
+    NOT covered  An rm that a transformation inside the wrapper puts behind a
+                 separator: a character replaced by a newline
+                 (`'trueXrm -rf x'.replace('X', chr(10))`) or a URL-decoded
+                 `%0a`. The letter before rm is an ordinary character until
+                 the command runs, so a whole-word match cannot tell it from
+                 "platform"; the old substring match blocked these.
     NOT covered  A grep-led chain that sets a literal value after the grep,
                  for example `grep x f; export ...=<literal>`. The approved
                  exemption is by first word, so the field check does not see
@@ -110,6 +127,11 @@ def assert_verdict(hook: str, command: str, expected: int) -> None:
 # Every command in this file is a string handed to a hook on stdin, which only
 # greps it. None is ever executed, so `rm` and `os.system` below are test data.
 # ---------------------------------------------------------------------------
+
+# One backslash, joined into the escape cases at run time, so each reaches the
+# hook as the characters a person types (a backslash, then n), never as the
+# newline Python would make of a bare \n in this file.
+_BS = "\\"
 
 DELETE_GUARD_BLOCKS = [
     # The destructive cases named in the builder brief.
@@ -195,10 +217,57 @@ DELETE_GUARD_BLOCKS = [
     # Inside a wrapper the approval exempts /dev/null only. Any other write into
     # /dev stays blocked there, as before, even to a stream such as stderr.
     pytest.param('bash -c "echo hi > /dev/stderr"', id="wrapper-stderr-as-before"),
+    # An escape sequence ending in a letter or digit, right before rm inside a
+    # wrapper. The wrapper decodes it into a newline or a separator, so rm runs
+    # as its own command: the approval's condition that rm -rf stays blocked.
+    # These are the fresh-context check's escape rows of 2026-09-26, E01 to E14,
+    # each of which the whole-word match alone let through, plus the two
+    # control-character forms, Perl's and Ruby's.
+    pytest.param(
+        f"python3 -c \"import os; os.system('true{_BS}nrm -rf ~')\"",
+        id="escape-newline-python-os-system",
+    ),
+    pytest.param(f"ssh host $'true{_BS}nrm -rf /data'", id="escape-newline-ssh-ansi-c"),
+    pytest.param(f"bash -c $'true{_BS}nrm -rf x'", id="escape-newline-bash-c-ansi-c"),
+    pytest.param(f"ssh host $'true{_BS}x3brm -rf /data'", id="escape-hex-semicolon-ssh"),
+    pytest.param(
+        f"node -e \"require('child_process').execSync('true{_BS}nrm -rf x')\"",
+        id="escape-newline-node-execsync",
+    ),
+    pytest.param(
+        f"python3 -c \"import os; os.system('echo{_BS}nrm -rf x')\"",
+        id="escape-newline-after-echo",
+    ),
+    pytest.param(f"eval $'true{_BS}nrm -rf x'", id="escape-newline-eval-ansi-c"),
+    pytest.param('ssh host "true;rm -rf /data"', id="escape-control-plain-semicolon"),
+    pytest.param(
+        f"python3 -c \"import os; os.system('true{_BS}u000arm -rf x')\"",
+        id="escape-unicode-newline-python",
+    ),
+    pytest.param(
+        f"python3 -c \"import os; os.system('true{_BS}012rm -rf x')\"",
+        id="escape-octal-newline-python",
+    ),
+    pytest.param(
+        "python3 -c \"import os; os.system(chr(10).join(['true','rm -rf x']))\"",
+        id="escape-control-chr-join",
+    ),
+    pytest.param(f"ssh host $'true{_BS}nrmdir x'", id="escape-newline-rmdir"),
+    pytest.param(f"perl -e 'system(\"true{_BS}cJrm -rf x\")'", id="escape-control-j-perl"),
+    pytest.param(f"ruby -e 'system(\"true{_BS}C-jrm -rf x\")'", id="escape-control-j-ruby"),
+    # The price of the escape rule, paid on purpose: the guard cannot tell an
+    # escaped separator before rm from an escape before a word that ends in rm,
+    # so it blocks both. It fails closed rather than guess.
+    pytest.param(
+        f"python3 -c \"print('done{_BS}nperform next')\"", id="escape-before-perform-fails-closed"
+    ),
 ]
 
 DELETE_GUARD_ALLOWS = [
-    # The false blocks the build harness review measured.
+    # The false blocks the build harness review measured, which the approval of
+    # item 1 relaxed: a /dev/null redirect inside or after a wrapper, the words
+    # "perform" and "platform", and kill -0. They must stay allowed with the
+    # escape rule in place (the fresh-context check's rows A01 to A06).
     pytest.param('bash -c "kill -0 12345 2>/dev/null && echo alive"', id="bash-c-devnull"),
     pytest.param(
         "python3 -c \"import json; d=json.load(open('runs.json')); print(d)\" 2>/dev/null",
@@ -206,6 +275,14 @@ DELETE_GUARD_ALLOWS = [
     ),
     pytest.param("python3 -c \"print('perform the check')\"", id="perform"),
     pytest.param('ssh host "systemctl status caddy 2>/dev/null"', id="ssh-devnull"),
+    pytest.param("python3 -c \"print('the platform is up')\"", id="platform-word"),
+    pytest.param("ssh host 'uptime' >/dev/null 2>&1", id="ssh-uptime-then-devnull"),
+    # An escape counts only right before rm: a word that merely contains rm
+    # after an escape, and an escape anywhere else, stay allowed.
+    pytest.param(
+        f"python3 -c \"print('line one{_BS}nperformance two')\"", id="escape-before-performance"
+    ),
+    pytest.param(f"python3 -c \"print('a{_BS}tb{_BS}nc')\"", id="escape-without-rm"),
     # Named in the builder brief.
     pytest.param("git rm --cached file.txt", id="git-rm-cached"),
     pytest.param("ls -la", id="ls"),
