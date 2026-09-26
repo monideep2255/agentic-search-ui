@@ -448,8 +448,10 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import email.utils
 import json
 import logging
+import math
 import os
 import re
 import secrets
@@ -1407,6 +1409,122 @@ _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 #:   admits a steady 9 seconds, half does not.
 _CLASSIFIER_FIRST_ATTEMPT_SHARE: Final[float] = 2 / 3
 
+#: How long the guard classifier's second attempt waits after the first
+#: ended in an ERROR (re-land follow-up, R-05; F-8.6-RJ01, RJ08, RA02). R-01
+#: started the second attempt the instant the first failed, so a provider
+#: error lasting even a second failed the question in about the time four
+#: requests take, with nearly the whole budget unused, and a rate-limiting
+#: provider was sent four requests back to back. Two seconds outlasts an
+#: error of about a second and still leaves the second attempt thirteen of
+#: the guardrail's fifteen seconds when the first failed at once. A first
+#: attempt that ran out of time (a hang, G-005's shape) gets no wait: its
+#: wait has already happened.
+_CLASSIFIER_RETRY_BACKOFF_S: Final[float] = 2.0
+
+#: The least time a second attempt must keep for itself after any wait
+#: before it. Phase 8.6's golden run put the guard verdict's median at 1.53
+#: seconds; three seconds covers most replies. A wait that would leave less
+#: is shortened, or, when it is the provider's own `Retry-After`, the second
+#: attempt is not made at all, since asking before the provider said to is
+#: exactly the hammering R-05 removes.
+_CLASSIFIER_MIN_SECOND_ATTEMPT_S: Final[float] = 3.0
+
+def _rate_limit_behind(exc: BaseException) -> BaseException | None:
+    """The provider's HTTP 429 behind a classifier call's failure, or None.
+
+    `call_tier` raises `HarnessCallError` from the provider's own exception,
+    so the 429 is on the cause chain; `litellm.RateLimitError` carries
+    `status_code` 429. Read by status, not by class, so this module needs no
+    import of the provider library.
+    """
+    cause = exc.__cause__
+    for _ in range(5):
+        if cause is None:
+            return None
+        if getattr(cause, "status_code", None) == 429:
+            return cause
+        cause = cause.__cause__
+    return None
+
+
+def _header_value(headers: Any, name: str) -> str | None:
+    """One header's value from an `httpx.Headers` or a plain mapping, matched
+    without regard to case; None when absent or unreadable."""
+    if headers is None:
+        return None
+    try:
+        items = headers.items()
+    except AttributeError:
+        return None
+    try:
+        for key, value in items:
+            if str(key).lower() == name:
+                return str(value)
+    except Exception:  # noqa: BLE001 - an odd header object states no wait
+        return None
+    return None
+
+
+def _provider_retry_after_s(error: BaseException) -> float | None:
+    """The wait, in seconds, a rate-limiting provider asked for in its
+    `Retry-After` header: a number of seconds or an HTTP date. None when the
+    error carries no such header or one that is not a usable wait.
+
+    litellm keeps the provider's headers in one of three places depending
+    on how the error was raised; each is read in turn.
+    """
+    sources = (
+        getattr(error, "litellm_response_headers", None),
+        getattr(error, "headers", None),
+        getattr(getattr(error, "response", None), "headers", None),
+    )
+    for headers in sources:
+        raw = _header_value(headers, "retry-after")
+        if raw is None:
+            continue
+        try:
+            seconds = float(raw)
+        except ValueError:
+            try:
+                when = email.utils.parsedate_to_datetime(raw)
+            except (TypeError, ValueError):
+                continue
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=UTC)
+            seconds = (when - datetime.now(UTC)).total_seconds()
+        if math.isfinite(seconds):
+            return max(0.0, seconds)
+    return None
+
+
+def _classifier_retry_wait_s(exc: HarnessCallError, remaining_s: float) -> float | None:
+    """How long the guard classifier's second attempt waits after the first
+    failed with `exc`, a transient `HarnessCallError`, with `remaining_s` of
+    the guardrail's budget left; None when no second attempt is made
+    (re-land follow-up, R-05).
+
+    - A first attempt cut by its own budget: 0.0. The time has already
+      passed, and R-01's fix for a hung request (G-005) stands.
+    - A provider that rate-limited and said when to come back (`Retry-After`):
+      that wait, at least `_CLASSIFIER_RETRY_BACKOFF_S`, when it still leaves
+      the second attempt `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`; otherwise None,
+      and the question ends at once in the step error rather than asking
+      before the provider said to.
+    - Any other transient error, a rate limit that named no wait included:
+      `_CLASSIFIER_RETRY_BACKOFF_S`, shortened so the second attempt keeps
+      `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`, and 0.0 when even that is not
+      left, as before this change.
+    """
+    if exc.source.startswith("harness.enforce_timeout"):
+        return 0.0
+    rate_limit = _rate_limit_behind(exc)
+    stated = _provider_retry_after_s(rate_limit) if rate_limit is not None else None
+    if stated is not None:
+        wait_s = max(stated, _CLASSIFIER_RETRY_BACKOFF_S)
+        return wait_s if wait_s + _CLASSIFIER_MIN_SECOND_ATTEMPT_S <= remaining_s else None
+    return max(0.0, min(_CLASSIFIER_RETRY_BACKOFF_S, remaining_s - _CLASSIFIER_MIN_SECOND_ATTEMPT_S))
+
+
 #: The same bound `decide()` puts on every decision's state. `Query.text`
 #: is already capped at 2000 characters; this keeps the call bounded on its
 #: own terms rather than by a promise made elsewhere.
@@ -1722,14 +1840,29 @@ async def _guardrail_after_prefilter(
         except HarnessCallError as exc:
             if attempt == 2 or exc.error_class != "transient":
                 return {"step_error": _step_error_kwargs("guardrail", exc)}
+            # Re-land follow-up, R-05: the second attempt waits first, unless
+            # the first ran out of time, and a provider's own `Retry-After`
+            # that does not fit the budget means no second attempt at all.
+            wait_s = _classifier_retry_wait_s(exc, step_deadline - time.monotonic())
+            if wait_s is None:
+                logger.warning(
+                    "guard classification call rate-limited (attempt 1 of 2, trace %s) and "
+                    "the provider asked for a wait the guardrail's budget cannot fit; "
+                    "not asking again",
+                    trace_id,
+                )
+                return {"step_error": _step_error_kwargs("guardrail", exc)}
             call_error = exc
             logger.warning(
                 "guard classification call failed (attempt 1 of 2, trace %s, %s, %s); "
-                "asking once more within the guardrail's budget",
+                "asking once more within the guardrail's budget after %.1fs",
                 trace_id,
                 exc.source,
                 exc.error_class,
+                wait_s,
             )
+            if wait_s > 0:
+                await asyncio.sleep(wait_s)
             continue
 
         try:
