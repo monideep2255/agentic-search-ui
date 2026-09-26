@@ -99,9 +99,31 @@ print(json.dumps(failures))
 """
 
 
-def _run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+# Never inherited by anything this check starts. Found on the check's own
+# final run: CI's Python job sets `PYTHONPATH: src`, and `pip install -e .`
+# leaves `src/agentic_search_ui.egg-info` behind. With both, the "empty"
+# environment's pip saw the distribution as already installed, installed
+# nothing, and the check then looked for a command that was never created.
+_NEVER_INHERITED = ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP", "PYTHONUSERBASE")
+
+
+def _base_env() -> dict[str, str]:
+    env = {key: value for key, value in os.environ.items() if key not in _NEVER_INHERITED}
+    env["PYTHONNOUSERSITE"] = "1"
+    return env
+
+
+def _run(
+    command: list[str], *, env: dict[str, str] | None = None, **kwargs: object
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        command, capture_output=True, text=True, timeout=_TIMEOUT_S, check=False, **kwargs
+        command,
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT_S,
+        check=False,
+        env=_base_env() if env is None else env,
+        **kwargs,
     )
 
 
@@ -245,12 +267,10 @@ def isolated_env(home: Path) -> dict[str, str]:
     tree or a stored sign-in in reach of the installed commands."""
     env = {
         key: value
-        for key, value in os.environ.items()
-        if key not in {"PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV", "PYTHONSTARTUP"}
-        and not key.startswith("S3_")
+        for key, value in _base_env().items()
+        if key != "VIRTUAL_ENV" and not key.startswith("S3_")
     }
     env["S3_CREDENTIALS_PATH"] = str(home / "credentials")
-    env["PYTHONNOUSERSITE"] = "1"
     return env
 
 
@@ -266,6 +286,16 @@ def check_installed_wheel(wheel: Path, work: Path) -> list[str]:
     )
     if installed.returncode != 0:
         return [f"the wheel did not install: {installed.stderr.strip()[-300:]}"]
+    if "already installed" in installed.stdout + installed.stderr:
+        # An empty environment cannot already hold the distribution. If pip
+        # says it does, something outside the environment is on its path,
+        # and every result below would be about that, not the wheel.
+        return [
+            (
+                "pip reported the wheel as already installed in an empty environment, so "
+                "something outside it is on the path; nothing below would test the wheel"
+            )
+        ]
 
     home = work / "home"
     home.mkdir(mode=0o700)
@@ -283,6 +313,9 @@ def check_installed_wheel(wheel: Path, work: Path) -> list[str]:
 
     for script in console_scripts(wheel):
         path = scripts / (f"{script}.exe" if os.name == "nt" else script)
+        if not path.exists():
+            problems.append(f"{script} was not installed as a command")
+            continue
         ran = _run([str(path), "--help"], cwd=str(work), env=env)
         output = ran.stdout + ran.stderr
         if ran.returncode != 0 or not ran.stdout.strip() or "Traceback" in output:

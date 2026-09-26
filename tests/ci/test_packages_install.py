@@ -158,6 +158,24 @@ class TestTheCleanInstall:
         problems = check_packages_install.check_installed_wheel(wheel, tmp_path / "work")
         assert problems == ["p810p-demo --help exited 2: no output"]
 
+    def test_an_egg_info_on_pythonpath_cannot_fake_an_install(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """CI's condition, found on the check's own final run: the job sets
+        `PYTHONPATH: src`, and `pip install -e .` leaves an `.egg-info`
+        there. The clean environment's pip then saw the distribution as
+        already installed and installed nothing. Mutation: let `_run`
+        inherit `PYTHONPATH` -> this reports a leak instead of passing."""
+        leaked = tmp_path / "leaked_src"
+        egg_info = leaked / "p810p_gate_demo.egg-info"
+        egg_info.mkdir(parents=True)
+        (egg_info / "PKG-INFO").write_text(
+            "Metadata-Version: 2.1\nName: p810p-gate-demo\nVersion: 0.1\n", encoding="utf-8"
+        )
+        monkeypatch.setenv("PYTHONPATH", str(leaked))
+        wheel = _wheel(tmp_path, _SOUND, scripts={"p810p-demo": f"{PACKAGE}.cli:main"})
+        assert check_packages_install.check_installed_wheel(wheel, tmp_path / "work") == []
+
     def test_the_source_tree_and_a_stored_sign_in_are_out_of_reach(self, monkeypatch) -> None:
         monkeypatch.setenv("PYTHONPATH", "src")
         monkeypatch.setenv("S3_BASE_URL", "https://somewhere.example")
