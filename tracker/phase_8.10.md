@@ -71,6 +71,7 @@ A builder stops and reports, rather than guessing, when:
 
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
+| builder Q, T-8.10-05 and 06 | Opus 5.5 | default | 22:10 | 23:10 | 598,199 |
 
 ## Tickets
 
@@ -115,7 +116,7 @@ A builder stops and reports, rather than guessing, when:
 
 ### T-8.10-05: MCP does what the web does (owner's decision, 2026-09-26; audit gaps 6 to 10)
 
-- Builder: Q. Status: todo.
+- Builder: Q. Status: in-review.
 - Acceptance:
   - "An AI agent can ask for Plain language." `audience_depth` accepts every depth the web offers. The default stays Researcher, so existing clients see no change. `tests/system_03_search_agent/adapters/test_audience_depth_values.py` changes to cite the decision row.
   - "A long answer keeps every citation it points at." No marker in the answer text, such as [77], lacks its citation. The cap of 50 is raised to the bound the event contract already puts on one answer's citations, and a bound remains.
@@ -128,7 +129,7 @@ A builder stops and reports, rather than guessing, when:
 
 ### T-8.10-06: GraphQL keeps every citation and the clarifying options (audit gaps 6 and 9)
 
-- Builder: Q. Status: todo.
+- Builder: Q. Status: in-review.
 - Acceptance:
   - "A long answer keeps every citation it points at", as in T-8.10-05.
   - "A bare topic gives the clarifying options": the `ask` result carries them.
@@ -214,5 +215,13 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
 - 2026-09-26 22:08: branch cut from develop at 00f45e8, ledger written.
 - 2026-09-26 22:10: builders P and Q dispatched from 8cd197d, in the worktrees `.claude/worktrees/p810p` and `p810q`.
 - 2026-09-26 22:19: T-8.10-08 added for builder R, the screen facts the checker of pull request #118 found stale.
+- 2026-09-26 23:10: builder Q finished T-8.10-05 and 06 (report `testing/Developer/reports/2026-09-26_phase_8.10/builder_Q.md`), merged as 29edcc9. Gates on its branch: ruff and isort clean, gate04 6190 passed with every database test run.
+  - MCP accepts Plain language, keeps every citation up to the run's own bound of 100, returns the session id, labels an ask-back `ask` with its question and options, and returns the trust line. Three new tools list past searches, reopen an answer and send feedback, under REST's ownership checks.
+  - GraphQL keeps every citation and gains the trust line and the clarifying question and options, all additive.
+  - The lead's answers to its three questions:
+    - `clarifying_question` stays, although the ticket did not name it. An agent needs the question's words to relay it, and it tells an ask-back from a hedged answer the way the web does.
+    - GraphQL still labels an ask-back `refuse`, because its fold only lowers a verdict. It is named open here, since the new `clarifyingQuestion` lets a client show the question. One label on every surface comes with card 52's phase, which touches the clarifying options everywhere.
+    - Builder R's brief says MCP has four tools and accepts Plain language.
+  - Outside every fence, for card 54: the REST citations export and the answer capture still stop at 50 citations, so a reopened long answer points at markers with nothing behind them. The debugging guide's `server.py` row still says one tool; the lead fixes it before the pull request.
 
 ## Findings
