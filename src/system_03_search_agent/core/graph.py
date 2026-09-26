@@ -1386,6 +1386,27 @@ def _drop_features_decision(harness: Any) -> None:
 #: outer net only; the client's bound fires first.
 _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 
+#: The share of the guardrail's remaining budget the guard classifier's
+#: FIRST attempt may use (re-land, R-01); a second attempt, after a timeout
+#: or a transient error, gets the rest. A share, not a figure: the budget
+#: itself stays `budget_for_step("guardrail", ...)`, the owner's to change,
+#: so two thirds of today's 15 seconds is 10 for the first attempt and 5
+#: for the second.
+#:
+#: Why two thirds, measured in phase 8.6's golden run (server timestamps,
+#: the 137 runs with no relevancy decision, where Jev's injection pick took
+#: 0.1 to 0.4 seconds, plus G-005, which never answered): the guard verdict
+#: came at a median of 1.53 seconds, and after 5, 7.5 and 10 seconds in 27,
+#: 8 and 1 of those runs.
+#: - Today, one attempt with the whole budget failed 1 run in 138 (0.72%).
+#: - Two thirds cuts 1.45% of first attempts, and fails 0.29% of questions
+#:   if the two attempts' times are independent; half cuts 6.5% and fails
+#:   0.43%.
+#: - A provider that is steadily slow fails both attempts alike, and then
+#:   only a first attempt long enough to finish helps: two thirds still
+#:   admits a steady 9 seconds, half does not.
+_CLASSIFIER_FIRST_ATTEMPT_SHARE: Final[float] = 2 / 3
+
 #: The same bound `decide()` puts on every decision's state. `Query.text`
 #: is already capped at 2000 characters; this keeps the call bounded on its
 #: own terms rather than by a promise made elsewhere.
@@ -1632,10 +1653,58 @@ async def _guardrail_after_prefilter(
     # UNUSABLE reply is not a second opinion on a verdict: a reply that
     # parsed, whatever it said, is final on the first attempt, and two
     # unusable replies still end in the fail-closed step error below.
+    #
+    # Re-land, R-01 (G-005): the same two attempts also cover a classifier
+    # call that is late or fails briefly, and both now fit inside the
+    # guardrail's own budget (`step_deadline`), which is not changed. Before,
+    # each attempt had the whole budget to itself and a late reply was never
+    # retried: `call_tier` retries a transient ERROR once, but a request that
+    # simply hangs ran out the full 15 seconds and ended the question with
+    # the fatal step error, once in 150 golden runs in each of three runs
+    # (G-019, G-046, G-005). Now the first attempt gets two thirds of what is
+    # left (`_CLASSIFIER_FIRST_ATTEMPT_SHARE`), and a timeout or a transient
+    # `HarnessCallError` gets one fresh attempt with the rest. A second
+    # failure, a non-transient one, or no time left still ends in the
+    # step error below: no verdict is still no answer. With the provider
+    # unset this is production's path too, deliberately: the defect was
+    # never Jev's.
+    #
+    # How it composes with the harness: each attempt's `enforce_timeout`
+    # wraps the whole `call_tier` call, its own single transient retry and
+    # reasoning fallback included, so every request of an attempt shares
+    # that attempt's budget, and the two budgets together never pass the
+    # step's. A timed-out attempt is charged by `call_tier`'s cancellation
+    # arm, the harness's own estimate of what the provider may have billed
+    # (F-2.1-B02); an attempt that failed with an error returned nothing
+    # billable and is charged nothing, as everywhere else in the loop.
     classifier_verdict: GuardVerdict | None = None
     classification: classifier.InjectionClassification | None = None
     parse_error: classifier.ClassificationUnavailableError | None = None
+    call_error: HarnessCallError | None = None
     for attempt in (1, 2):
+        remaining_s = step_deadline - time.monotonic()
+        if remaining_s <= 0:
+            # No time left for this attempt. After a failed call, that
+            # failure is the answer; after an unusable reply, the loop ends
+            # with no verdict and the step error below.
+            if call_error is not None:
+                return {"step_error": _step_error_kwargs("guardrail", call_error)}
+            if attempt == 1:
+                return {
+                    "step_error": _step_error_kwargs(
+                        "guardrail",
+                        HarnessCallError(
+                            "the guardrail's budget was spent before the guard "
+                            "classifier could be asked; retry the query",
+                            error_class="transient",
+                            source="core.graph.guardrail",
+                        ),
+                    )
+                }
+            break
+        attempt_budget_s = (
+            remaining_s * _CLASSIFIER_FIRST_ATTEMPT_SHARE if attempt == 1 else remaining_s
+        )
         try:
             response = await _dispatch_tier_call(
                 harness,
@@ -1643,7 +1712,7 @@ async def _guardrail_after_prefilter(
                 "guard",
                 "guardrail",
                 guard_messages,
-                budget_s=budget_for_step("guardrail", "lookup"),
+                budget_s=attempt_budget_s,
                 # No stable prefix ahead of the classifier's instruction:
                 # see `_dispatch_tier_call`.
                 cache_prefix=None,
@@ -1651,7 +1720,17 @@ async def _guardrail_after_prefilter(
         except cost_control.QueryCapExceededError:
             return {"cap_exceeded": True}
         except HarnessCallError as exc:
-            return {"step_error": _step_error_kwargs("guardrail", exc)}
+            if attempt == 2 or exc.error_class != "transient":
+                return {"step_error": _step_error_kwargs("guardrail", exc)}
+            call_error = exc
+            logger.warning(
+                "guard classification call failed (attempt 1 of 2, trace %s, %s, %s); "
+                "asking once more within the guardrail's budget",
+                trace_id,
+                exc.source,
+                exc.error_class,
+            )
+            continue
 
         try:
             classification = classifier.parse_classification(response.content)

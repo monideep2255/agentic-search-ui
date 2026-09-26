@@ -648,3 +648,290 @@ async def test_with_the_default_provider_an_off_topic_refusal_waits_on_no_decisi
     assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
     assert elapsed < 1.0, elapsed
     assert calls == []
+
+
+# ---------------------------------------------------------------------------
+# R-01 (golden G-005): a slow or briefly failing guard classifier call gets
+# one fresh attempt, inside the guardrail's unchanged budget. The first
+# attempt gets `_CLASSIFIER_FIRST_ATTEMPT_SHARE` of what is left (two
+# thirds), the second the rest. A second failure, or no time left, still
+# ends in the fatal step error: no verdict is no answer. Most arms shrink
+# the budget to one second so they run fast; the first arm keeps the real
+# budget, so it takes two thirds of it. No arm patches the share.
+# ---------------------------------------------------------------------------
+
+_SHRUNK_BUDGET_S = 1.0
+
+
+def _shrink_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    real_budget = graph_module.budget_for_step
+
+    def _budget(step: str, query_class: Any) -> float:
+        return _SHRUNK_BUDGET_S if step == "guardrail" else real_budget(step, query_class)
+
+    monkeypatch.setattr(graph_module, "budget_for_step", _budget)
+
+
+def _classifier_calls(monkeypatch: pytest.MonkeyPatch, *behaviours: Any) -> list[int]:
+    """Stub litellm's `acompletion` with one behaviour per REQUEST, in order:
+    "hang" sleeps far past any budget, an exception is raised, a string is
+    the reply's content. The last behaviour repeats. Returns a one-item list
+    counting the requests made."""
+    import asyncio
+
+    count = [0]
+
+    async def _acompletion(**_kwargs: Any) -> Any:
+        index = min(count[0], len(behaviours) - 1)
+        count[0] += 1
+        behaviour = behaviours[index]
+        if behaviour == "hang":
+            await asyncio.sleep(60)
+            raise AssertionError("a hung request was never cut")
+        if isinstance(behaviour, BaseException):
+            raise behaviour
+        return fake_response(behaviour)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _acompletion)
+    return count
+
+
+def _rate_limited() -> BaseException:
+    import litellm
+
+    return litellm.RateLimitError("rate limited (stub)", llm_provider="openrouter", model="m")
+
+
+_ADMIT = COMPLIANT_GUARD_CLASSIFICATION
+_REFUSE_INJECTION = json.dumps(
+    {**json.loads(COMPLIANT_GUARD_CLASSIFICATION), "is_injection": True}
+)
+
+
+@pytest.mark.asyncio
+async def test_a_hung_first_attempt_gets_a_second_within_the_real_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """G-005's shape with the guardrail's real budget: the first classifier
+    request hangs, the second answers at once, and the question is admitted
+    on that verdict when the first attempt's share of the budget runs out,
+    inside the budget.
+
+    MUTATION PROOF: removing the second attempt for a failed call (the
+    `continue` in the `HarnessCallError` arm) turns this red on the step
+    error.
+    """
+    budget = graph_module.budget_for_step("guardrail", "lookup")
+    first_attempt = budget * graph_module._CLASSIFIER_FIRST_ATTEMPT_SHARE
+    count = _classifier_calls(monkeypatch, "hang", _ADMIT)
+
+    started = time.monotonic()
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    elapsed = time.monotonic() - started
+
+    assert result.get("step_error") is None
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+    assert count[0] == 2
+    assert first_attempt - 0.5 < elapsed < budget, (elapsed, first_attempt, budget)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("second_reply", "passed", "category"),
+    [(_ADMIT, True, "ok"), (_REFUSE_INJECTION, False, "injection")],
+)
+async def test_the_second_attempts_verdict_decides(
+    monkeypatch: pytest.MonkeyPatch, second_reply: str, passed: bool, category: str
+) -> None:
+    """Admitted or refused on the second attempt's verdict, after a hung
+    first attempt, and within the (shrunk) budget."""
+    _shrink_budget(monkeypatch)
+    count = _classifier_calls(monkeypatch, "hang", second_reply)
+    started = time.monotonic()
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    elapsed = time.monotonic() - started
+    guard = _payload(events, "guard")
+    assert result.get("step_error") is None
+    assert guard is not None and guard["passed"] is passed and guard["category"] == category
+    assert count[0] == 2
+    assert elapsed < _SHRUNK_BUDGET_S + 0.2, elapsed
+
+
+@pytest.mark.asyncio
+async def test_a_transient_error_twice_then_a_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`call_tier` already retries a raised transient error once, inside the
+    first attempt; when both of its requests fail, the guardrail's second
+    attempt is the third request, and its verdict decides."""
+    _shrink_budget(monkeypatch)
+    count = _classifier_calls(monkeypatch, _rate_limited(), _rate_limited(), _ADMIT)
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert result.get("step_error") is None
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+    assert count[0] == 3
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["hang", "rate_limited"])
+async def test_two_failed_attempts_give_the_fatal_step_error(
+    monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    """No verdict, no answer: two hung attempts, or two attempts whose
+    requests are all rate limited, end in the fatal transient step error
+    with its honest message, inside the budget, and emit no verdict."""
+    _shrink_budget(monkeypatch)
+    behaviour = "hang" if failure == "hang" else _rate_limited()
+    count = _classifier_calls(monkeypatch, behaviour)
+
+    started = time.monotonic()
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    elapsed = time.monotonic() - started
+
+    assert result.get("step_error") == {
+        "fatal": True,
+        "scope": "step",
+        "source": "guardrail",
+        "error_class": "transient",
+        "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+        "retry_after_s": 0,
+    }
+    assert _payload(events, "guard") is None
+    # Two attempts; `call_tier` retries a raised error once inside each.
+    assert count[0] == (2 if failure == "hang" else 4)
+    assert elapsed < _SHRUNK_BUDGET_S + 0.2, elapsed
+
+
+@pytest.mark.asyncio
+async def test_with_jev_two_failed_attempts_are_never_an_admission(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None
+) -> None:
+    """Jev clearing the question cannot stand in for a classifier that never
+    answered: the step error, never an admission."""
+    _shrink_budget(monkeypatch)
+    _classifier_calls(monkeypatch, "hang")
+    _install_jev_injection(monkeypatch, "not_injection")
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert result.get("step_error") is not None
+    assert result["step_error"]["error_class"] == "transient"
+    guard = _payload(events, "guard")
+    assert guard is None or guard["passed"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("reply", "passed"),
+    [(_ADMIT, True), (_REFUSE_INJECTION, False)],
+)
+async def test_a_verdict_on_the_first_attempt_makes_no_second_call(
+    monkeypatch: pytest.MonkeyPatch, reply: str, passed: bool
+) -> None:
+    count = _classifier_calls(monkeypatch, reply)
+    events, _, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert _payload(events, "guard")["passed"] is passed
+    assert count[0] == 1
+
+
+@pytest.mark.asyncio
+async def test_a_failure_that_is_not_transient_gets_no_second_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only a timeout or a transient error is retried: a bad request would
+    fail the same way twice."""
+    import litellm
+
+    count = _classifier_calls(
+        monkeypatch, litellm.BadRequestError("bad request (stub)", model="m", llm_provider="x")
+    )
+    _, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert result["step_error"]["error_class"] == "recoverable"
+    assert count[0] == 1
+
+
+def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) -> list[float]:
+    """Replace `_dispatch_tier_call` with a stand-in that records the budget
+    each attempt was given. The first attempt runs for `first_runs_for`
+    times its own budget and then fails with a transient error: 1.0 is a
+    timeout at its bound, more than 1.0 a stall its own bound did not cut.
+    The second answers at once."""
+    import asyncio
+    from types import SimpleNamespace
+
+    from system_03_search_agent.harness.harness import HarnessCallError
+
+    budgets: list[float] = []
+
+    async def _dispatch(*_args: Any, budget_s: float, **_kwargs: Any) -> Any:
+        budgets.append(budget_s)
+        if len(budgets) == 1:
+            await asyncio.sleep(budget_s * first_runs_for)
+            raise HarnessCallError("stub failure", error_class="transient")
+        return SimpleNamespace(content=_ADMIT)  # the `LLMResponse` field the node reads
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _dispatch)
+    return budgets
+
+
+@pytest.mark.asyncio
+async def test_the_two_attempts_share_the_step_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first attempt is given its share of what is left and, timing out
+    at its bound, leaves the second the rest, so together they never pass
+    the step's budget."""
+    _shrink_budget(monkeypatch)
+    budgets = _recording_dispatch(monkeypatch, first_runs_for=1.0)
+    started = time.monotonic()
+    events, _, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    elapsed = time.monotonic() - started
+    assert _payload(events, "guard")["passed"] is True
+    share = graph_module._CLASSIFIER_FIRST_ATTEMPT_SHARE
+    assert 0 < share < 1
+    first, second = budgets
+    assert first == pytest.approx(_SHRUNK_BUDGET_S * share, abs=0.05)
+    assert second == pytest.approx(_SHRUNK_BUDGET_S * (1 - share), abs=0.05)
+    assert first + second <= _SHRUNK_BUDGET_S
+    assert elapsed < _SHRUNK_BUDGET_S, elapsed
+
+
+@pytest.mark.asyncio
+async def test_no_time_left_gives_no_second_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A first attempt that fails after the step's budget is gone gets no
+    second attempt: its failure is the step error."""
+    _shrink_budget(monkeypatch)
+    budgets = _recording_dispatch(monkeypatch, first_runs_for=2.2)
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert len(budgets) == 1, budgets
+    assert result["step_error"]["error_class"] == "transient"
+    assert _payload(events, "guard") is None
+
+
+@pytest.mark.asyncio
+async def test_no_time_left_at_all_asks_no_classifier(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The daily-cap checks run first; if they alone spent the budget, no
+    attempt is made and the question ends in the transient step error."""
+    _shrink_budget(monkeypatch)
+    count = _classifier_calls(monkeypatch, _ADMIT)
+    monkeypatch.setattr(
+        cost_control,
+        "check_system_daily_cost_cap",
+        lambda *a, **k: time.sleep(_SHRUNK_BUDGET_S + 0.05),
+    )
+    _, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert result["step_error"]["error_class"] == "transient"
+    assert count[0] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_timed_out_attempt_is_charged_as_the_harness_charges_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A hung attempt cut by its budget is charged `call_tier`'s own
+    cancellation estimate (the tier's max tokens at the output price,
+    F-2.1-B02), never zero, and the second attempt its metered cost."""
+    _shrink_budget(monkeypatch)
+    _classifier_calls(monkeypatch, "hang", _ADMIT)
+    _, _, harness = await _run_guardrail(_ORDINARY_QUESTION)
+
+    output_price = 2e-6  # the `get_model_info` stub's output price
+    cut_attempt = harness_module._TIER_MAX_TOKENS["guard"] * output_price
+    answered_attempt = 10 * 1e-6 + 5 * output_price  # `fake_response`'s usage
+    assert harness.get_query_cost_usd(harness.trace_id) == pytest.approx(
+        cut_attempt + answered_attempt
+    )
