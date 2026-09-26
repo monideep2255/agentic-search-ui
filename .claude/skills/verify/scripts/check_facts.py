@@ -205,7 +205,19 @@ class Repo:
             path = self.root / rel
             if not path.is_file():
                 raise RegistryError(f"{rel}: the registry names a file that does not exist")
-        self._texts[rel] = path.read_text(encoding="utf-8")
+        # The message names the file by its path inside the repository only:
+        # an OSError's own text carries the absolute path (PR118-V04).
+        try:
+            self._texts[rel] = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            raise RegistryError(
+                f"{self.display(rel)}: not valid UTF-8 at byte {exc.start} ({exc.reason}), "
+                "so it cannot be read; save the file as UTF-8"
+            ) from None
+        except OSError as exc:
+            raise RegistryError(
+                f"{self.display(rel)}: cannot be read ({type(exc).__name__}: {exc.strerror})"
+            ) from None
         return self._texts[rel]
 
     def python_files(self, directory: str) -> list[str]:
@@ -1188,6 +1200,13 @@ def _says(match: re.Match[str], value: Any) -> str:
     return _clip(whole, 140).replace("|", "/")
 
 
+def _reason(exc: BaseException, repo: Repo | None) -> str:
+    """One line for a failure, scrubbed of local paths. The registry's own
+    errors carry their message; anything else is named by its type too."""
+    text = str(exc) if isinstance(exc, (Gap, RegistryError)) else f"{type(exc).__name__}: {exc}"
+    return scrub(" ".join(text.split()), repo)
+
+
 def check_fact(repo: Repo, fact: Fact) -> list[Result]:
     places = [*fact.stated, *fact.downstream]
     try:
@@ -1203,9 +1222,7 @@ def check_fact(repo: Repo, fact: Fact) -> list[Result]:
             for w in places
         ]
     except Exception as exc:  # noqa: BLE001 - one ERROR line per place, and the run goes on
-        reason = scrub(
-            str(exc) if isinstance(exc, RegistryError) else f"{type(exc).__name__}: {exc}", repo
-        )
+        reason = _reason(exc, repo)
         return [
             Result(
                 "ERROR",
@@ -1219,21 +1236,27 @@ def check_fact(repo: Repo, fact: Fact) -> list[Result]:
     source = f"{repo.display(truth.path)}:{truth.line}"
     results = []
     for where in places:
+        # Reading AND judging a place sit inside one catch-all: a file that is
+        # not UTF-8, or a comparison that raises, is one ERROR line for this
+        # place, never a traceback that ends the run before its summary.
         try:
             found = statements(repo, where)
-        except (Gap, RegistryError) as exc:
+            judged = [
+                (st, where.cmp.ok(st.value, truth.value), where.cmp.describe(st.value, truth.value))
+                for st in found
+            ]
+        except Exception as exc:  # noqa: BLE001 - one ERROR line per place, and the run goes on
             results.append(
                 Result(
                     "ERROR",
                     fact,
                     where,
-                    f"ERROR | {fact.fact_id} | {where.place} | {scrub(str(exc), repo)}",
+                    f"ERROR | {fact.fact_id} | {where.place} | {_reason(exc, repo)}",
                 )
             )
             continue
-        for st in found:
-            verdict = "PASS" if where.cmp.ok(st.value, truth.value) else "FAIL"
-            true_text = where.cmp.describe(st.value, truth.value)
+        for st, ok, true_text in judged:
+            verdict = "PASS" if ok else "FAIL"
             if truth.note:
                 true_text += f" ({truth.note})"
             results.append(
@@ -1318,11 +1341,11 @@ def print_map(repo: Repo, facts: Iterable[Fact]) -> int:
             truth = fact.truth.read(repo)
             print(f"  source: {repo.display(truth.path)}:{truth.line}")
         except Exception as exc:  # noqa: BLE001 - the map still lists the places
-            print(f"  source: {repo.display(fact.truth.path)} ({scrub(str(exc), repo)})")
+            print(f"  source: {repo.display(fact.truth.path)} ({_reason(exc, repo)})")
         for where in (*fact.stated, *fact.downstream):
             try:
                 lines = ", ".join(str(s.line) for s in statements(repo, where))
-            except (Gap, RegistryError):
+            except Exception:  # noqa: BLE001 - an unreadable place is named, and the map goes on
                 lines = "not found"
             label = f"screen, {where.place}" if where in fact.stated else where.place
             print(f"  {label}: {repo.display(where.path)}:{lines}")
@@ -1347,9 +1370,9 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
         for where in (*fact.stated, *fact.downstream):
             try:
                 found = statements(repo, where)
-            except (Gap, RegistryError) as exc:
+            except Exception as exc:  # noqa: BLE001 - reported, and the self-test goes on
                 failures.append(
-                    f"{fact.fact_id} | {where.place}: cannot read the place: {scrub(str(exc), repo)}"
+                    f"{fact.fact_id} | {where.place}: cannot read the place: {_reason(exc, repo)}"
                 )
                 continue
             for st in found:
@@ -1378,9 +1401,7 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
             skipped.append(f"{fact.fact_id} (source not here: pass --reference)")
             continue
         except Exception as exc:  # noqa: BLE001 - reported, and the self-test goes on
-            failures.append(
-                f"{fact.fact_id}: reader cannot read its source: {scrub(str(exc), repo)}"
-            )
+            failures.append(f"{fact.fact_id}: reader cannot read its source: {_reason(exc, repo)}")
             continue
         if overlay is None:
             skipped.append(f"{fact.fact_id} (its source-level mutation no longer finds its target)")
@@ -1390,7 +1411,7 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
             after = fact.truth.read(repo.with_overlay(overlay))
         except Exception as exc:  # noqa: BLE001 - reported, and the self-test goes on
             failures.append(
-                f"{fact.fact_id}: the changed source no longer reads: {scrub(str(exc), repo)}"
+                f"{fact.fact_id}: the changed source no longer reads: {_reason(exc, repo)}"
             )
             continue
         if _norm(after.value) == _norm(before.value):
@@ -1441,6 +1462,18 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return 2
+    # Every place and every truth has its own catch-all. This last one means
+    # a failure outside them, such as a registry that will not import, still
+    # ends in one scrubbed line and exit 2, never a traceback that prints the
+    # interpreter's and the script's absolute paths (PR118-V04).
+    try:
+        return _run(argv)
+    except Exception as exc:  # noqa: BLE001 - one line, no traceback, exit 2
+        print(f"check_facts: stopped before any verdict: {_reason(exc, None)}", file=sys.stderr)
+        return 2
+
+
+def _run(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--all", action="store_true", help="also print PASS lines")
     parser.add_argument("--map", action="store_true", help="print the downstream map")
