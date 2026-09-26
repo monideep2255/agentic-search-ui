@@ -17,6 +17,13 @@ hook gaps"): the secret scan's key with a hyphen after sk-, and the delete
 guard's any letter case, pipe into a shell, and here-string or here-document
 into a shell. Each is pinned both ways too.
 
+The product owner approved four more item by item later on 2026-09-26
+(DECISIONS.md, "The secret scan's slowdown on a very long command" and "Three
+more guard gaps are closed"): the secret scan's speed on a very long command,
+the hyphenated key in a file write, every command word of the delete guard in
+any letter case, and the rest of the here-string and here-document shapes.
+Each is pinned both ways too.
+
 WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
 
     Covered      The delete guard: every rm and rmdir shape its patterns name
@@ -78,6 +85,15 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  starts at a word boundary, so a name such as
                  "task-tracker-some-long-branch-name" stays allowed, and that
                  is pinned too.
+    Covered      The secret scan's two speed bounds (finding F02 of
+                 2026-09-26): a command longer than 8192 characters is
+                 field-checked whole, and the split stops after 64 pieces and
+                 field-checks the whole command. Both of F02's slow shapes,
+                 12,000 searches and 100,000 leading spaces, each followed by
+                 a literal key, must be blocked in under 5 seconds. A long
+                 search that names a field-shaped literal, and a 65-piece
+                 chain of searches, are pinned as failing closed; a 64-piece
+                 chain and a long command with no literal stay allowed.
 
     NOT covered  The hooks' no-Python fallback in `lib/_json.sh`. Every case
                  here runs with a working Python on PATH, as it does on the
@@ -119,6 +135,10 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  grep's pager option. The option's text is part of a leading
                  search, so the field check skips it, as the approval skips a
                  search; the token-prefix check still reads it.
+    NOT covered  The secret scan's speed on a command at or under 8192
+                 characters in general. The worst shapes measured on
+                 2026-09-26 took under a second there, and no test here
+                 times them.
     NOT covered  Whether the permission rules in `.claude/settings.json` also
                  deny a command. This file tests the hooks alone.
     NOT covered  `scan-write-secrets.sh`, the secret hook on Edit and Write.
@@ -143,6 +163,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -606,6 +627,20 @@ SECRET_SCAN_FIELD_CHECK_KEPT = [
         f'grep -E "{_API_KEY}=abc|{_AUTH_SECRET}=abcdefgh1" .',
         id="separator-in-quoted-pattern-fails-closed",
     ),
+    # A command longer than 8192 characters is never split: it is field-checked
+    # whole, so a long search that names a field-shaped literal is blocked,
+    # where a short one is not. This fails closed on purpose (finding F02).
+    pytest.param(
+        f'grep -rn "{_API_KEY_LOWER}=settings" ' + "src/ " * 1700,
+        id="search-longer-than-8192-field-checked-whole",
+    ),
+    # The split stops after 64 pieces and field-checks the whole command, so a
+    # field-shaped literal in a search after 64 others is blocked. 64 pieces
+    # still split, as the allowed twin below shows.
+    pytest.param(
+        "grep -q x f;" * 64 + f'grep -rn "{_API_KEY_LOWER}=settings" src/',
+        id="search-chain-of-65-pieces-field-checked-whole",
+    ),
 ]
 
 SECRET_SCAN_ALLOWS = [
@@ -649,6 +684,29 @@ SECRET_SCAN_ALLOWS = [
     pytest.param("ls risk-register_for-the-next-quarter/", id="word-ending-in-risk"),
     pytest.param('grep -rn "sk-" src/', id="bare-sk-prefix"),
     pytest.param("echo sk-short-name", id="short-sk-name"),
+    # Under the two bounds of finding F02 the split still skips the searches: a
+    # chain of 64 pieces, and a long command with no literal at all.
+    pytest.param(
+        "grep -q x f;" * 63 + f'grep -rn "{_API_KEY_LOWER}=settings" src/',
+        id="search-chain-of-64-pieces-still-split",
+    ),
+    pytest.param("echo x;" * 1200, id="long-command-without-a-literal"),
+    pytest.param("grep -rn TODO " + "src/ " * 1700, id="long-search-without-a-literal"),
+]
+
+# Finding F02 of 2026-09-26: the split used to walk a long command a piece at a
+# time, in time that grew with the square of its length. These two shapes took
+# about 63 and 65 seconds, past the harness's time limit for a hook. Each must
+# now finish well inside that limit, and still be blocked.
+_LONG_COMMAND_LIMIT_S = 5.0
+
+SECRET_SCAN_LONG_COMMANDS = [
+    pytest.param(
+        "grep x f;" * 12000 + f" export {_NCBI_KEY}={_HEX_36}", id="12000-searches-then-export"
+    ),
+    pytest.param(
+        " " * 100000 + f"echo x; export {_NCBI_KEY}={_HEX_36}", id="100000-spaces-then-export"
+    ),
 ]
 
 
@@ -665,3 +723,18 @@ def test_secret_scan_field_checks_everything_but_a_leading_search(command: str) 
 @pytest.mark.parametrize("command", SECRET_SCAN_ALLOWS)
 def test_secret_scan_allows_search_and_reference(command: str) -> None:
     assert_verdict(SECRET_SCAN, command, ALLOWED)
+
+
+@pytest.mark.parametrize("command", SECRET_SCAN_LONG_COMMANDS)
+def test_secret_scan_is_fast_on_a_long_command_and_still_blocks(command: str) -> None:
+    start = time.monotonic()
+    result = run_hook(SECRET_SCAN, command)
+    elapsed = time.monotonic() - start
+    assert result.returncode == BLOCKED, (
+        f"{SECRET_SCAN} exited {result.returncode} on a {len(command)}-character command "
+        f"that sets a literal key\nstderr: {result.stderr.strip()}"
+    )
+    assert elapsed < _LONG_COMMAND_LIMIT_S, (
+        f"{SECRET_SCAN} took {elapsed:.2f}s on a {len(command)}-character command, "
+        f"over the {_LONG_COMMAND_LIMIT_S}s limit"
+    )

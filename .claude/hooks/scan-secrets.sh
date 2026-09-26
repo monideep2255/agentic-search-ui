@@ -28,6 +28,27 @@
 # "task-tracker-some-long-branch-name" is not a key. Approved item by item by
 # the product owner on 2026-09-26 ("Also close the hook gaps").
 # tests/ci/test_claude_hooks.py pins it.
+#
+# A command longer than 8192 characters is field-checked whole, in one pass,
+# and never split. The split walks the command a piece at a time, and on a
+# long command that walk grew with the square of the length: about 63 seconds
+# on a 108 KB chain of searches, past the harness's time limit for a hook.
+# Below the bound the split stops after 64 pieces, empty ones included, and
+# field-checks the whole command, because 8 KB of ampersands alone took about
+# 5 to 10 seconds. Checking the whole text reads a superset of what the split
+# would keep, so a long command is checked at least as strictly as before,
+# and a long command that starts with a search is now checked like any other.
+# The token-prefix check is unchanged. Approved item by item by the product
+# owner on 2026-09-26 (DECISIONS.md, "The secret scan's slowdown on a very
+# long command"). tests/ci/test_claude_hooks.py times both slow shapes.
+#
+# Not covered, named and not closed:
+# - A hyphenated key glued to the letter, digit or underscore before it, such
+#   as one right after %20, an escape letter (\n) or MY_, since that check
+#   starts at a word boundary.
+# - A command holding a JSON lone surrogate. The JSON reader cannot print it,
+#   so the hook reads the raw JSON text instead, where a quoted value keeps
+#   its escaping backslash and the field check misses it.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
@@ -68,14 +89,29 @@ is_search() {
 # with a search. Then the leading searches (and the empty pieces between two
 # separators, as in &&) are dropped, and the text from the first other piece
 # to the end is kept whole, separators included, so a literal that holds a
-# separator is never cut short.
+# separator is never cut short. A command longer than LONG_COMMAND characters
+# is never split: it is field-checked whole, in one pass. The split also stops
+# after MAX_PIECES pieces, empty ones included, and then the whole command is
+# field-checked, since each piece costs a pass over the rest of the command.
+LONG_COMMAND=8192
+MAX_PIECES=64
 SEPARATORS=$';&|()`\n'
-TRIMMED=${COMMAND#"${COMMAND%%[![:space:]]*}"}
 FIELD_TEXT=$COMMAND
-if is_search "${TRIMMED%%[$SEPARATORS]*}"; then
+if [ "${#COMMAND}" -le "$LONG_COMMAND" ]; then
+  TRIMMED=${COMMAND#"${COMMAND%%[![:space:]]*}"}
+else
+  TRIMMED=
+fi
+if [ -n "$TRIMMED" ] && is_search "${TRIMMED%%[$SEPARATORS]*}"; then
   FIELD_TEXT=
   REST=$TRIMMED
+  PIECES=0
   while :; do
+    PIECES=$((PIECES + 1))
+    if [ "$PIECES" -gt "$MAX_PIECES" ]; then
+      FIELD_TEXT=$COMMAND
+      break
+    fi
     PIECE=${REST%%[$SEPARATORS]*}
     case $PIECE in
       *[![:space:]]*) is_search "$PIECE" || { FIELD_TEXT=$REST; break; } ;;
