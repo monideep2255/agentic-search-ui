@@ -748,7 +748,7 @@ The workflow contains no inline shell: every gate step's body is a single token 
 | `USER_DB_URL` | yes | `src/system_03_search_agent/data/base.py` | User database connections fail; auth, interactions, and candidate tables unreachable |
 | `REDIS_URL` | yes | nothing under `src/` or `services/` | The name `REDIS_URL` appears nowhere under `src/` or `services/`. Redis is mentioned once, in a comment in `synthesis/freshness.py`. Redis is provisioned and billed per deployment, and the Section 4.3 response cache is not wired yet |
 | `AUTH_SECRET` | yes | `src/system_03_search_agent/auth/tokens.py`, `src/system_03_search_agent/auth/guest.py`, `src/system_03_search_agent/auth/router.py` | Token signing/verification fails; authentication and session management broken |
-| `S3_BASE_URL` | no | `src/system_03_search_agent/adapters/cli/main.py` | The `s3` command falls back to `_DEFAULT_BASE_URL`, which is `http://127.0.0.1:8000`. Not read by `s3-kgx-export`, which is `export/cli.py` |
+| `S3_BASE_URL` | no | `src/system_03_search_agent/adapters/cli/main.py` | `s3 login` signs in to `PRODUCTION_API_ORIGIN`, the production API, since build phase 8.10; before that it fell back to `http://127.0.0.1:8000`. Not read by `s3-kgx-export`, which is `export/cli.py` |
 | `S3_CREDENTIALS_PATH` | no | `src/system_03_search_agent/adapters/cli/credentials.py` | CLI credential file uses hardcoded path if override not set |
 | `PER_QUERY_COST_CAP_USD` | yes | `src/system_03_search_agent/harness/cost_control.py` | Cost cap cannot be enforced; RuntimeError raised if not set when checked |
 | `PER_USER_DAILY_QUERY_CAP` | yes | `src/system_03_search_agent/harness/cost_control.py` | Per-user query counting disabled; RuntimeError raised if not set when checked |

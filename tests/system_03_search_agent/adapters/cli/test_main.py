@@ -2095,7 +2095,9 @@ class TestReadPassword:
 
         result = main_module._read_password(FakeTtyStdin())
         assert result == "typed-secret"
-        assert prompts == [""]
+        # Build phase 8.10 changed the prompt from "" to "Password: ": with
+        # an empty prompt the terminal showed nothing while `s3 login` waited.
+        assert prompts == ["Password: "]
 
 
 # ---------------------------------------------------------------------------

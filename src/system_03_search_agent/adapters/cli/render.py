@@ -152,6 +152,7 @@ Writes:
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from typing import TYPE_CHECKING, TextIO
@@ -537,6 +538,21 @@ class Renderer:
         # regardless of what upstream sends.
         self._guard_rejected = False
 
+        # Build phase 8.10, T-8.10-03: a bare topic ("GERD") gets a question
+        # back plus up to four full questions to pick from
+        # (`ThinkPayload.clarifying_options`). The web shows them as chips;
+        # this surface used to print the question and drop the options.
+        # Held from the `think` event and printed, numbered, under the
+        # question text just before the trust tag.
+        self._clarifying_options: list[str] = []
+        self._printed_options = False
+
+    @property
+    def offered_options(self) -> bool:
+        """True once numbered clarifying options were printed, so `main.py`
+        can say how to ask one of them in the same conversation."""
+        return self._printed_options
+
     # ------------------------------------------------------------------
     # Dispatch
     # ------------------------------------------------------------------
@@ -600,6 +616,22 @@ class Renderer:
         narrative = _sanitize_untrusted(payload.narrative)
         self._err.write(f"{self._status_prefix('think')} {narrative}\n")
         self._err.flush()
+        if payload.clarifying_options:
+            self._clarifying_options = list(payload.clarifying_options)
+
+    def _write_clarifying_options(self) -> None:
+        """The numbered options under the question, once. Each is untrusted
+        text (built from the reader's own words and the server's lookup), so
+        each goes through `_sanitize_untrusted` like every answer token."""
+        if self._printed_options or self._guard_rejected or not self._clarifying_options:
+            return
+        self._printed_options = True
+        lines = "".join(
+            f"  {number}. {_sanitize_untrusted(option)}\n"
+            for number, option in enumerate(self._clarifying_options, start=1)
+        )
+        self._out.write(f"\n{lines}")
+        self._out.flush()
 
     def _handle_plan(self, event: Event) -> None:
         payload = PlanPayload.model_validate(event.payload)
@@ -683,6 +715,9 @@ class Renderer:
             # outcome) on top of a run this renderer already knows was
             # rejected.
             return
+        # T-8.10-03: the options belong to the question the tokens just
+        # printed, so they go between it and the tag.
+        self._write_clarifying_options()
         # J-4.2-05: a leading `\n` guarantees this tag starts its own
         # line regardless of whether the last token write ended in a
         # newline, closing the gap between this module's own docstring
@@ -888,7 +923,173 @@ class Renderer:
         # already printed it here is a no-op) and honors the
         # guard-rejection suppression internally (F-4.2-A-27), so a
         # rejected run still prints nothing.
+        self._write_clarifying_options()
         self._write_references_block()
+        return self._exit_code
+
+
+class JsonRenderer:
+    """`s3 ask --json`: the whole answer as one JSON object on stdout.
+
+    Build phase 8.10, T-8.10-03. The Integrations page promised "JSON with
+    --json" and no such flag existed. Same interface as `Renderer`
+    (`handle()` per event, `finish()` once, returning the exit code), and the
+    same exit code for the same stream, so a script can switch modes without
+    re-learning what zero means. Nothing is written until `finish()`: a
+    consumer parsing stdout gets exactly one complete JSON object, never a
+    partial one and never a status line mixed into it.
+
+    Text fields are written as the server sent them rather than through
+    `_sanitize_untrusted`, because a JSON consumer needs the true text and a
+    forged `[answer]` inside a string cannot pass for a structural field.
+    `ensure_ascii=True` is what keeps the output terminal-safe instead: every
+    control character, C1 byte and bidi override is written as a `\\uXXXX`
+    escape, never as the raw character, so printing the object to a terminal
+    executes nothing.
+
+    Keys, all always present:
+        run_id, session_id, persona_name: the run and the conversation to
+            continue with `s3 ask --session-id`.
+        complete: whether a final `done`, a fatal error or a guard
+            rejection reached this client. False means the answer is partial.
+        trust_outcome, trust_line: the verdict and the one plain trust line.
+        answer: the answer text, joined as the tokens arrived.
+        citations: every citation, in display order, with its source URL.
+        unresolved_markers: markers the answer used that no citation matched.
+        clarifying_question, clarifying_options: a question back, and the
+            full questions offered to pick from, or null and an empty list.
+        next_step, next_step_query: the offer to go further, when there is one.
+        guard: null, or the category and the plain reason a question was
+            not taken.
+        error: null, or the error class, its source and what to do next.
+        stream: frames skipped as unknown, and whether the stream was cut.
+    """
+
+    def __init__(
+        self,
+        out: TextIO,
+        err: TextIO,
+        *,
+        session_id: str,
+        run_id: str,
+        persona_name: str | None = None,
+        stream_state: object | None = None,
+    ) -> None:
+        self._out = out
+        self._err = err
+        self._session_id = session_id
+        self._run_id = run_id
+        self._persona_name = persona_name
+        # The `CliClient` whose `stream_skipped_frame_count` and
+        # `stream_truncated` are read once, at `finish()`.
+        self._stream_state = stream_state
+        self._answer_parts: list[str] = []
+        self._citations: dict[str, CitationPayload] = {}
+        self._seen_marker_ids: set[str] = set()
+        self._trust_outcome: str | None = None
+        self._trust_line: str | None = None
+        self._next_step: str | None = None
+        self._next_step_query: str | None = None
+        self._clarifying_question: str | None = None
+        self._clarifying_options: list[str] = []
+        self._guard: dict[str, str] | None = None
+        self._error: dict[str, object] | None = None
+        self._exit_code: int | None = None
+        self._written = False
+
+    def handle(self, event: Event) -> None:
+        handler = getattr(self, f"_handle_{event.type}", None)
+        if handler is not None:
+            handler(event)
+
+    def _handle_guard(self, event: Event) -> None:
+        payload = GuardPayload.model_validate(event.payload)
+        if payload.passed:
+            return
+        self._guard = {
+            "category": payload.category,
+            "message": _GUARD_CATEGORY_COPY.get(payload.category, _GUARD_CATEGORY_FALLBACK),
+        }
+        self._exit_code = _EXIT_FAILURE
+
+    def _handle_think(self, event: Event) -> None:
+        payload = ThinkPayload.model_validate(event.payload)
+        if payload.clarifying_question:
+            self._clarifying_question = payload.clarifying_question
+        if payload.clarifying_options:
+            self._clarifying_options = list(payload.clarifying_options)
+
+    def _handle_token(self, event: Event) -> None:
+        payload = TokenPayload.model_validate(event.payload)
+        self._answer_parts.append(payload.text)
+        self._seen_marker_ids.update(payload.marker_ids)
+
+    def _handle_citation(self, event: Event) -> None:
+        payload = CitationPayload.model_validate(event.payload)
+        # The first source for an id wins, as in `Renderer` (F-4.2-A-19).
+        self._citations.setdefault(payload.citation_id, payload)
+
+    def _handle_trust_signal(self, event: Event) -> None:
+        payload = TrustSignalPayload.model_validate(event.payload)
+        if payload.scope == "answer" and self._guard is None:
+            self._trust_outcome = payload.outcome
+
+    def _handle_error(self, event: Event) -> None:
+        payload = ErrorPayload.model_validate(event.payload)
+        self._error = {
+            "fatal": payload.fatal,
+            "error_class": payload.error_class,
+            "source": payload.source,
+            "message": _error_disclosure(payload.error_class),
+            "retry_after_s": payload.retry_after_s,
+        }
+        if payload.fatal or payload.error_class not in ("transient", "recoverable"):
+            self._exit_code = _EXIT_FAILURE
+
+    def _handle_done(self, event: Event) -> None:
+        payload = DonePayload.model_validate(event.payload)
+        if self._guard is None:
+            self._trust_outcome = payload.trust_outcome
+        self._trust_line = payload.trust_line
+        self._next_step = payload.next_step
+        self._next_step_query = payload.next_step_query
+        if self._exit_code is None:
+            self._exit_code = _EXIT_FAILURE if payload.trust_outcome == "refuse" else _EXIT_OK
+
+    def finish(self) -> int:
+        complete = self._exit_code is not None
+        if self._exit_code is None:
+            self._exit_code = _EXIT_FAILURE
+        if not self._written:
+            self._written = True
+            document = {
+                "run_id": self._run_id,
+                "session_id": self._session_id,
+                "persona_name": self._persona_name,
+                "complete": complete,
+                "trust_outcome": self._trust_outcome,
+                "trust_line": self._trust_line,
+                "answer": "".join(self._answer_parts),
+                "citations": [
+                    citation.model_dump(mode="json")
+                    for citation in sorted(self._citations.values(), key=lambda c: c.display_index)
+                ],
+                "unresolved_markers": sorted(self._seen_marker_ids - self._citations.keys()),
+                "clarifying_question": self._clarifying_question,
+                "clarifying_options": self._clarifying_options,
+                "next_step": self._next_step,
+                "next_step_query": self._next_step_query,
+                "guard": self._guard,
+                "error": self._error,
+                "stream": {
+                    "skipped_frames": int(
+                        getattr(self._stream_state, "stream_skipped_frame_count", 0) or 0
+                    ),
+                    "truncated": bool(getattr(self._stream_state, "stream_truncated", False)),
+                },
+            }
+            self._out.write(json.dumps(document, ensure_ascii=True, indent=2) + "\n")
+            self._out.flush()
         return self._exit_code
 
 

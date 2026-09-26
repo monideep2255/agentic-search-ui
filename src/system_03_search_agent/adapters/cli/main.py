@@ -93,6 +93,7 @@ import asyncio
 import contextlib
 import getpass
 import os
+import shlex
 import signal
 import sys
 import uuid
@@ -114,12 +115,38 @@ T = TypeVar("T")
 # premise gate itself asserts.
 EXIT_INTERRUPTED = 130
 
-# No canonical production host is named anywhere in the locked spec or
-# the tracker; this is a local-dev fallback only, used when `s3 login`
-# is run with neither `--base-url` nor `S3_BASE_URL` set. `ask` and
-# `stop` never use it: they always read the base_url a prior `s3 login`
-# already recorded in the credential file.
-_DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+# Build phase 8.10, T-8.10-03: `s3` talks to the live product unless told
+# otherwise. This used to be `http://127.0.0.1:8000`, a local-development
+# address, so `s3 login` as the Integrations page printed it signed in to the
+# person's own laptop. The production API origin is recorded in `README.md`,
+# `docs/build/Release_flow.md` and
+# `tests/system_03_search_agent/tools/fixtures/release_environments.json`;
+# `test_s3_as_printed.py` pins this constant to that fixture, so a move of
+# production has to move both. `--base-url` and `S3_BASE_URL` still override
+# it for `s3 login`, and `ask`, `stop` and `mcp` always read the base URL a
+# prior `s3 login` recorded in the credential file.
+PRODUCTION_API_ORIGIN = "https://search-agent-api-production.up.railway.app"
+_DEFAULT_BASE_URL = PRODUCTION_API_ORIGIN
+
+# The top-level help `s3`, `s3 -h` and `s3 --help` print. Written for the
+# person at the terminal: what each command is for, and the one example
+# they need first.
+_TOP_LEVEL_HELP = f"""usage: s3 <command> [options]
+
+Ask System 3 biomedical questions from a terminal, with every claim cited.
+
+commands:
+  login   sign in once and keep the session:  s3 login you@example.org
+  ask     ask a question and print the cited answer (--json for JSON):
+          s3 ask "diseases linked to BRCA1"
+  stop    stop a running question by its run id
+  mcp     run a local MCP server over stdio, so an AI agent can ask
+          System 3 with your sign-in
+
+Run 's3 <command> --help' for a command's options. s3 uses
+{PRODUCTION_API_ORIGIN} unless 's3 login --base-url' or
+S3_BASE_URL names another server.
+"""
 
 # connect/write/pool stay short since those are quick request/response
 # legs; read stays generous since the SSE stream for a deep_technical
@@ -212,9 +239,29 @@ def _read_password(stdin: TextIO) -> str:
     """
     isatty = getattr(stdin, "isatty", None)
     if callable(isatty) and isatty():
-        return getpass.getpass("")
+        # Build phase 8.10: a prompt, not an empty string. With an empty
+        # prompt the terminal showed nothing at all and a person could not
+        # tell `s3 login` was waiting for them.
+        return getpass.getpass("Password: ")
     line = stdin.readline()
     return line.rstrip("\n").rstrip("\r")
+
+
+def _read_email(stdin: TextIO, stderr: TextIO) -> str:
+    """Asks for the account email when `s3 login` was run without one.
+
+    Build phase 8.10, T-8.10-03: the Integrations page printed `s3 login`
+    with no argument, and the parser rejected it ("the following arguments
+    are required: email"). On a terminal this now asks, on stderr so a
+    redirected stdout stays clean. Piped, the first line of stdin is the
+    email and the second the password, so a script can still sign in without
+    putting either on the command line.
+    """
+    isatty = getattr(stdin, "isatty", None)
+    if callable(isatty) and isatty():
+        stderr.write("Email: ")
+        stderr.flush()
+    return stdin.readline().strip()
 
 
 def _extract_error_message(response: httpx.Response) -> str:
@@ -636,6 +683,18 @@ def _parse_ask_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argpars
             "depth this account last used"
         ),
     )
+    # Build phase 8.10, T-8.10-03: the Integrations page promised it, and it
+    # did not exist. `dest` is not `json`, so it never shadows the module.
+    parser.add_argument(
+        "--json",
+        dest="as_json",
+        action="store_true",
+        help=(
+            "print the whole answer as one JSON object: the answer text, its "
+            "citations with their URLs, the trust outcome, any clarifying "
+            "question and its options, and the session id to continue with"
+        ),
+    )
     return parser.parse_args(list(argv))
 
 
@@ -647,14 +706,19 @@ def _parse_stop_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argpar
 
 def _parse_login_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argparse.Namespace:
     parser = _CliArgumentParser(prog="s3 login", out=out, err=err)
-    parser.add_argument("email", help="the account email")
+    # Optional since build phase 8.10 (T-8.10-03): left off, it is asked for.
+    parser.add_argument(
+        "email",
+        nargs="?",
+        default=None,
+        help="the account email; asked for when left off",
+    )
     parser.add_argument(
         "--base-url",
         default=None,
         help=(
-            "the server to log into; consumed by main()'s sync wrapper before the HTTP "
-            "client is built, not read here, since async_main is always handed an "
-            "already-constructed client"
+            f"the server to sign in to, default {PRODUCTION_API_ORIGIN} "
+            "(or S3_BASE_URL when set)"
         ),
     )
     return parser.parse_args(list(argv))
@@ -687,6 +751,13 @@ async def _run_login(
     from system_03_search_agent.adapters.cli import credentials as credentials_module
     from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
 
+    email = args.email if args.email else _read_email(stdin, stderr)
+    if not email:
+        stderr.write(
+            "s3 login: no email was given; run it as: s3 login you@example.org\n"
+        )
+        return 1
+
     password = _read_password(stdin)
     if not password:
         stderr.write("s3 login: no password was provided on stdin\n")
@@ -695,7 +766,7 @@ async def _run_login(
     try:
         response = await http_client.post(
             "/auth/login",
-            json={"email": args.email, "password": password},
+            json={"email": email, "password": password},
             timeout=_LOGIN_TIMEOUT_SECONDS,
         )
     except httpx.HTTPError as exc:
@@ -777,7 +848,11 @@ async def _run_login(
         refresh_token=refresh_token,
     )
     credentials_module.store(creds)
-    stdout.write("logged in\n")
+    # Build phase 8.10: name the server, since the default changed from a
+    # local address to production and a person should see which one they
+    # are now signed in to. The URL can come from `--base-url`, so it is
+    # sanitized like any other text this command did not write itself.
+    stdout.write(f"logged in to {_sanitize_untrusted(creds.base_url)}\n")
     return 0
 
 
@@ -891,8 +966,23 @@ async def _run_ask(
     # taken from the create response rather than redrawn locally, so the CLI
     # names the same scientist the web UI and the GraphQL surface do for the
     # same account.
-    renderer = Renderer(stdout, stderr, operator=False, persona_name=persona_name)
     client = CliClient(http_client, creds)
+    if getattr(args, "as_json", False):
+        # T-8.10-03. Imported only on this path, so the test seam that
+        # replaces `render` with a stand-in exposing `Renderer` alone keeps
+        # working for every human-mode test.
+        from system_03_search_agent.adapters.cli.render import JsonRenderer
+
+        renderer = JsonRenderer(
+            stdout,
+            stderr,
+            session_id=session_id,
+            run_id=run_id,
+            persona_name=persona_name,
+            stream_state=client,
+        )
+    else:
+        renderer = Renderer(stdout, stderr, operator=False, persona_name=persona_name)
     stream_iter = client.stream_events(run_id).__aiter__()
 
     with sigint_scope or contextlib.nullcontext():
@@ -927,7 +1017,20 @@ async def _run_ask(
             renderer.finish()
             return EXIT_INTERRUPTED
         return outcome
-    return renderer.finish()
+    exit_code = renderer.finish()
+    if getattr(renderer, "offered_options", False):
+        # T-8.10-03: the numbered options are only useful if the person
+        # knows how to pick one. The session id keeps the pick in the same
+        # conversation. It may be the person's own `--session-id` text, so
+        # it is sanitized before it reaches the terminal.
+        from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
+
+        stderr.write(
+            "s3: to ask one of these, run: s3 ask --session-id "
+            f"{shlex.quote(_sanitize_untrusted(session_id))} \"<the question you pick>\"\n"
+        )
+        stderr.flush()
+    return exit_code
 
 
 # ---------------------------------------------------------------------------
@@ -1183,10 +1286,16 @@ async def async_main(
     that narrowly rather than installed once for the whole run.
     """
     if not argv:
-        stderr.write("usage: s3 <ask|stop|login> ...\n")
+        stderr.write(_TOP_LEVEL_HELP)
         return 2
 
     command, rest = argv[0], argv[1:]
+
+    if command in ("-h", "--help", "help"):
+        # Build phase 8.10, T-8.10-01: `s3 --help` exited 2 as an unknown
+        # command, so an installed copy could not even say what it does.
+        stdout.write(_TOP_LEVEL_HELP)
+        return 0
 
     try:
         if command == "ask":
@@ -1246,13 +1355,18 @@ def _resolve_base_url_for_main(argv: Sequence[str]) -> str:
     other command reads the base_url a prior `s3 login` already recorded
     in the credential file.
     """
-    if argv and argv[0] == "login":
+    if not argv or argv[0] in ("-h", "--help", "help") or "-h" in argv or "--help" in argv:
+        # Help never reads, and so never repairs or promotes, the stored
+        # credential file (build phase 8.10).
+        return os.environ.get("S3_BASE_URL") or _DEFAULT_BASE_URL
+
+    if argv[0] == "login":
         for index, token in enumerate(argv):
             if token == "--base-url" and index + 1 < len(argv):
                 return argv[index + 1]
             if token.startswith("--base-url="):
                 return token.split("=", 1)[1]
-        return os.environ.get("S3_BASE_URL", _DEFAULT_BASE_URL)
+        return os.environ.get("S3_BASE_URL") or _DEFAULT_BASE_URL
 
     from system_03_search_agent.adapters.cli import credentials as credentials_module
 
@@ -1262,7 +1376,7 @@ def _resolve_base_url_for_main(argv: Sequence[str]) -> str:
         # default transport; async_main's own credentials.load() call
         # raises the real, specific error and prints it. This pre-parse
         # only needs SOME base_url to construct the HTTP client with.
-        return os.environ.get("S3_BASE_URL", _DEFAULT_BASE_URL)
+        return os.environ.get("S3_BASE_URL") or _DEFAULT_BASE_URL
 
 
 def main(argv: Sequence[str] | None = None) -> int:
