@@ -419,3 +419,232 @@ async def test_with_the_default_provider_jev_is_never_asked_and_verdicts_are_unc
     assert guard["passed"] is (expected_category == "ok")
     assert calls == []
     assert _mock_litellm.await_count == 1
+
+
+# ---------------------------------------------------------------------------
+# R-03: a question Jev judges on topic is not turned away by the guard
+# classifier's off-topic verdict alone (golden G-038).
+# ---------------------------------------------------------------------------
+
+#: The golden run's G-038. It misses the biomedical allowlist, so the
+#: relevancy decision is asked.
+_TREE_OF_LIFE = "Tell me about the tree of life."
+
+
+def test_the_tree_of_life_question_is_judged_by_the_relevancy_decision() -> None:
+    """Populate check: G-038 passes every deterministic screen and misses
+    the allowlist, so the relevancy decision is what the R-03 arms read."""
+    assert prefilter.screen(_TREE_OF_LIFE) is None
+    assert not prefilter.clears_biomedical_allowlist(_TREE_OF_LIFE)
+    assert forbidden.screen(_TREE_OF_LIFE) is None
+
+
+@pytest.mark.asyncio
+async def test_with_jev_an_on_topic_pick_sets_aside_the_classifiers_off_topic_refusal(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, _jev_on: None
+) -> None:
+    """G-038: the classifier says off topic, Jev's own relevancy pick says on
+    topic, Jev's injection pick says not injection. Admitted.
+
+    MUTATION PROOF: removing the R-03 branch in `_guardrail_after_prefilter`
+    turns this red on `passed`.
+    """
+    _mock_litellm.return_value = _classification_reply(is_off_topic=True)
+    _install_jev_injection(monkeypatch, "not_injection")
+    asked = _install_relevancy(monkeypatch, "on_topic")
+
+    events, result, _ = await _run_guardrail(_TREE_OF_LIFE)
+
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+    assert result.get("guard_refused") is not True
+    assert asked == ["guardrail.relevancy"], "asked once, read once"
+    assert _mock_litellm.await_count == 1, "the classifier still judged the question"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("pick", "by"),
+    [
+        ("off_topic", "jev"),
+        (None, "jev"),
+        ("on_topic", "guard"),
+        ("off_topic", "guard"),
+    ],
+    ids=["jev-off-topic", "no-pick", "guard-fallback-on-topic", "guard-fallback-off-topic"],
+)
+async def test_with_jev_the_classifiers_off_topic_refusal_stands_without_jevs_own_on_topic_pick(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    _jev_on: None,
+    pick: str | None,
+    by: str,
+) -> None:
+    """Jev off topic is refused; Jev with no pick keeps the classifier's
+    refusal; and a pick the GUARD tier made after Jev failed never sets the
+    guard classifier's own verdict aside: only Jev's own pick may.
+
+    MUTATION PROOF: reading `_usable_choice` (any judge's pick) in place of
+    `_jev_picked` turns the guard-fallback-on-topic case red.
+    """
+    _mock_litellm.return_value = _classification_reply(is_off_topic=True)
+    _install_jev_injection(monkeypatch, "not_injection")
+    _install_relevancy(monkeypatch, pick, by=by)
+
+    events, result, _ = await _run_guardrail(_TREE_OF_LIFE)
+
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+    assert result.get("guard_refused") is True
+
+
+@pytest.mark.asyncio
+async def test_with_jev_an_on_topic_pick_never_sets_aside_an_injection_refusal(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, _jev_on: None
+) -> None:
+    """Only an off-topic verdict is ever set aside. The classifier's
+    injection verdict stands with Jev's relevancy pick on topic, and so does
+    Jev's own injection pick on a question the classifier called off topic."""
+    _install_relevancy(monkeypatch, "on_topic")
+
+    _mock_litellm.return_value = _classification_reply(is_injection=True, is_off_topic=True)
+    _install_jev_injection(monkeypatch, "not_injection")
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "injection"
+
+    _mock_litellm.return_value = _classification_reply(is_off_topic=True)
+    _install_jev_injection(monkeypatch, "injection")
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "injection"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("classifier_reply", [{"is_off_topic": True}, {}])
+async def test_with_jev_an_on_topic_pick_never_sets_aside_a_write_refusal(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    _jev_on: None,
+    classifier_reply: dict[str, bool],
+) -> None:
+    """A write request that misses the allowlist, Jev on topic: the
+    forbidden screen still refuses it with the read-only reply, whether the
+    classifier called it off topic or admitted it."""
+    text = "Delete everything in your database."
+    expected = forbidden.screen(text)
+    assert expected is not None and not prefilter.clears_biomedical_allowlist(text)
+    _mock_litellm.return_value = _classification_reply(**classifier_reply)
+    _install_jev_injection(monkeypatch, "not_injection")
+    _install_relevancy(monkeypatch, "on_topic")
+
+    events, _, _ = await _run_guardrail(text)
+
+    assert _payload(events, "guard") == {
+        "passed": False,
+        "category": "write_seeking",
+        "reason": expected.reason,
+    }
+
+
+@pytest.mark.asyncio
+async def test_with_jev_a_relevancy_pick_still_running_at_the_budget_keeps_the_refusal(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, _jev_on: None
+) -> None:
+    """A decision still running when the guardrail's budget runs out reads
+    as no pick, so the classifier's off-topic refusal stands and the step
+    ends near its budget. The budget is shrunk so the arm runs fast."""
+    import asyncio
+
+    real_budget = graph_module.budget_for_step
+
+    def _budget(step: str, query_class: Any) -> float:
+        return 0.3 if step == "guardrail" else real_budget(step, query_class)
+
+    monkeypatch.setattr(graph_module, "budget_for_step", _budget)
+
+    async def _slow_decide(*_args: Any, **_kwargs: Any) -> DecisionRecord:
+        await asyncio.sleep(5)
+        raise AssertionError("never reached")
+
+    monkeypatch.setattr(graph_module, "decide", _slow_decide)
+    _mock_litellm.return_value = _classification_reply(is_off_topic=True)
+    _install_jev_injection(monkeypatch, "not_injection")
+
+    started = time.monotonic()
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    elapsed = time.monotonic() - started
+
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+    assert elapsed < 2.0, elapsed
+
+
+@pytest.mark.asyncio
+async def test_with_jev_a_memory_bound_follow_up_keeps_its_own_rule(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, _jev_on: None
+) -> None:
+    """F-8.2-A01's rule is unchanged: a memory-bound follow-up whose
+    off-topic verdict was set aside on its referring word still needs a
+    usable relevancy pick, and with none the classifier's refusal stands."""
+    from datetime import UTC, datetime
+
+    from system_03_search_agent.contracts.query import ResolvedEntity, SessionMemorySummary
+
+    memory = SessionMemorySummary(
+        session_id="reland-guardrail-test",
+        last_updated=datetime.now(UTC),
+        resolved_entities=[
+            ResolvedEntity(mention="BRCA1", curie="NCBIGene:672", entity_type="Gene")
+        ],
+        compressed_findings=[],
+        open_threads=["Which diseases are associated with BRCA1?"],
+    )
+    _mock_litellm.return_value = _classification_reply(is_off_topic=True)
+    _install_jev_injection(monkeypatch, "not_injection")
+
+    _install_relevancy(monkeypatch, None)
+    events, _, _ = await _run_guardrail("And what about it in children?", session_memory=memory)
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+
+    _install_relevancy(monkeypatch, "on_topic")
+    events, _, _ = await _run_guardrail("And what about it in children?", session_memory=memory)
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+
+
+@pytest.mark.asyncio
+async def test_with_the_default_provider_an_off_topic_refusal_waits_on_no_decision(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """Production's setting: the classifier's off-topic refusal returns at
+    once, as before the phase, even when the guard tier's relevancy pick
+    would have said on topic. Nothing waits on the relevancy decision."""
+    import asyncio
+
+    asked: list[str] = []
+
+    async def _slow_on_topic(
+        harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any
+    ) -> DecisionRecord:
+        asked.append(point)
+        await asyncio.sleep(5)
+        return DecisionRecord(
+            name=point,
+            options=list(options),
+            chosen="on_topic",
+            decided_by="guard",
+            guard_choice="on_topic",
+        )
+
+    monkeypatch.setattr(graph_module, "decide", _slow_on_topic)
+    _mock_litellm.return_value = _classification_reply(is_off_topic=True)
+    calls = _install_jev_injection(monkeypatch, "not_injection")
+
+    started = time.monotonic()
+    events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
+    elapsed = time.monotonic() - started
+
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+    assert elapsed < 1.0, elapsed
+    assert calls == []

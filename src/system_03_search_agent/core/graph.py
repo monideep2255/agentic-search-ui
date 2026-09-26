@@ -1191,6 +1191,22 @@ def _usable_choice(record: DecisionRecord | None) -> str | None:
     return record.chosen
 
 
+def _jev_picked(record: DecisionRecord | None, option: str) -> bool:
+    """Whether Jev ITSELF picked `option` for this decision (re-land, R-03).
+
+    True only for a record `decide()` built from Jev's own usable pick:
+    `decided_by` "jev" and Jev's choice is `option`. A pick the guard tier
+    made after Jev failed, no pick at all, or no record (a decision stopped
+    at the step's budget, or a seam that failed) are all False.
+    """
+    return (
+        record is not None
+        and record.decided_by == "jev"
+        and record.jev_choice == option
+        and record.chosen == option
+    )
+
+
 def _jev_decides() -> bool:
     """Whether the classifier seam is switched to Jev: `harness.decide.
     jev_decides`, the one reading of `CLASSIFIER_PROVIDER` that `decide()`
@@ -1717,6 +1733,9 @@ async def _guardrail_after_prefilter(
         _run_decisions(harness).records.append(_injection_record(jev, classification))
 
     classifier_off_topic_set_aside = False
+    # The relevancy decision, once read, so it is waited for only once.
+    relevancy_record: DecisionRecord | None = None
+    relevancy_read = False
     if not classifier_verdict.admitted:
         if classifier_verdict.category == "off_topic" and _is_memory_bound_follow_up(
             query.text, state
@@ -1733,6 +1752,37 @@ async def _guardrail_after_prefilter(
             classifier_off_topic_set_aside = True
             logger.info(
                 "guard off-topic verdict set aside for a memory-bound follow-up "
+                "(trace %s)",
+                trace_id,
+            )
+        elif (
+            classifier_verdict.category == "off_topic"
+            and relevancy_task is not None
+            and _jev_decides()
+        ):
+            # Re-land, R-03 (G-038). With Jev as the classifier, Jev decides
+            # and the guard tier is its fallback on failure only (DECISIONS.md
+            # 2026-09-25), so a question Jev itself judges on topic is not
+            # turned away by the guard classifier's off-topic verdict alone.
+            # Only an off-topic verdict is ever set aside, and only on Jev's
+            # OWN usable "on_topic" pick for this question, read within the
+            # guardrail's budget: a pick the guard tier made after Jev
+            # failed, no pick, or a decision still running at the budget
+            # leaves the classifier's refusal standing. The classifier has
+            # judged the question either way, and every screen below still
+            # runs, Jev's own injection pick included. No threshold is read
+            # from Jev's confidence, which is a margin, not a probability
+            # (F-8.6-A16). With the provider unset this branch is never
+            # reached, so nothing is waited for that was not waited for
+            # before.
+            relevancy_record = await _await_within_step(
+                relevancy_task, step_deadline, None, point=_RELEVANCY.point, trace_id=trace_id
+            )
+            relevancy_read = True
+            if not _jev_picked(relevancy_record, "on_topic"):
+                return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
+            logger.info(
+                "guard off-topic verdict set aside: Jev judged the question on topic "
                 "(trace %s)",
                 trace_id,
             )
@@ -1756,11 +1806,11 @@ async def _guardrail_after_prefilter(
     # running at the guardrail's budget reads as no usable pick (fix round,
     # F-8.6-A03): the person does not wait on a classifier failing over.
     if relevancy_task is not None:
-        relevancy = _usable_choice(
-            await _await_within_step(
+        if not relevancy_read:
+            relevancy_record = await _await_within_step(
                 relevancy_task, step_deadline, None, point=_RELEVANCY.point, trace_id=trace_id
             )
-        )
+        relevancy = _usable_choice(relevancy_record)
         if relevancy == "off_topic":
             return _decline_for_guardrail(
                 state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
