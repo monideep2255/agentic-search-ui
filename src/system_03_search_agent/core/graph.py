@@ -450,6 +450,7 @@ import asyncio
 import dataclasses
 import json
 import logging
+import os
 import re
 import secrets
 import time
@@ -459,7 +460,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, get_args
 
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -556,7 +557,9 @@ from system_03_search_agent.synthesis.findings import (
     build_structured_fallback_narrative,
     build_synth_findings,
     build_synth_messages,
+    drop_no_clinical_features_findings,
     drop_placeholder_condition_findings,
+    reserve_prompt_slots,
     unreported_findings,
 )
 from system_03_search_agent.synthesis.freshness import (
@@ -1008,9 +1011,109 @@ _LITERATURE: Final = _DecisionSpec(
     },
 )
 
-#: `DonePayload.decisions`' own `max_length`. A run makes at most four
-#: decisions today (relevancy, ask_back, recent_years, literature).
+#: The guardrail's injection verdict (build phase 8.6, T-8.6-04). Its
+#: description lives beside the classifier it replaces, in
+#: `guardrail/classifier.py`. Unlike every other point here this one FAILS
+#: CLOSED: no usable pick ends the run in the classifier's own step error,
+#: never an admission (`_guardrail_after_prefilter`). `fail_open` is
+#: therefore the option that does not admit, so a record of a decision
+#: nobody made never says the question was cleared.
+_INJECTION: Final = _DecisionSpec(
+    point=classifier.INJECTION_DECISION_POINT,
+    options=classifier.INJECTION_DECISION_OPTIONS,
+    fail_open="injection",
+    instructions=classifier.INJECTION_DECISION_INSTRUCTIONS,
+    criteria=classifier.INJECTION_DECISION_CRITERIA,
+)
+
+_ASKS_FEATURES: Final = _DecisionSpec(
+    point="think.asks_features",
+    options=("asks_features", "not_applicable"),
+    fail_open="not_applicable",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. Decide whether it asks about a condition's features: the signs, "
+        "symptoms, clinical features or phenotype of a disease, syndrome or "
+        "condition."
+    ),
+    criteria={
+        "asks_features": (
+            "It asks what the features, signs, symptoms, clinical features, "
+            "manifestations, presentation or phenotype of a disease, syndrome or "
+            "condition are, or how the condition shows itself in a person."
+        ),
+        "not_applicable": (
+            "Anything else. It asks what a condition is, which genes, variants or "
+            "causes are linked to it, how many of something there are, about "
+            "treatment, trials, papers or records, or it is not about a condition at "
+            "all. Naming a condition is not asking about its features."
+        ),
+    },
+)
+
+#: The question class (build phase 8.6, T-8.6-05): the five shapes Think's
+#: own classification call has always chosen between (`QueryClass`), each
+#: described from `_THINK_SYSTEM_INSTRUCTION`'s own definitions but without
+#: its example questions. The plan tier still extracts the entities, and its
+#: class is kept whenever this decision has no usable pick, so `fail_open`
+#: is only the record's filler until Think rewrites it to the class the run
+#: actually used (`_record_fallback_class`).
+_QUERY_CLASS: Final = _DecisionSpec(
+    point="think.query_class",
+    options=get_args(QueryClass),
+    fail_open="exploratory",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine that answers from gene, variant and disease records, the links "
+        "between them in a knowledge graph, clinical trial registrations and the "
+        "published literature. Decide the question's shape: what it takes to "
+        "answer it. Judge the shape of what it asks, not which words it contains: "
+        "a question that names several databases but asks one simple fact is "
+        "still a lookup or single_hop, and one that asks for evidence assembled "
+        "across databases is aggregate or exploratory even without the word "
+        "count."
+    ),
+    criteria={
+        "lookup": (
+            "One live lookup of one record answers it directly: a single fact "
+            "about one named thing, such as its identifier, its accession or one "
+            "field of its record."
+        ),
+        "single_hop": (
+            "One or two direct lookups answer it: a fact about one named thing "
+            "that needs its own record and perhaps one record linked directly to "
+            "it."
+        ),
+        "multi_hop": (
+            "It needs a traversal across linked records: following links from one "
+            "record to the records linked to it and on again, across two or more "
+            "steps, to reach the things it asks about."
+        ),
+        "aggregate": (
+            "It asks for a count, a grouping or evidence assembled over many "
+            "records: how many records of some kind exist, or the published "
+            "evidence gathered across several databases for one subject or region."
+        ),
+        "exploratory": (
+            "It is broad and open-ended, asks in general what is known about "
+            "something, or needs several sources with no single obvious path to "
+            "the answer."
+        ),
+    },
+)
+
+#: `DonePayload.decisions`' own `max_length`. A run makes at most seven
+#: decisions today (relevancy, injection, ask_back, recent_years,
+#: literature, asks_features, query_class).
 _MAX_DONE_DECISIONS: Final[int] = 16
+
+#: How long a step waits, at the point it needs a decision started earlier,
+#: for one that has not finished yet (build phase 8.6). A decision started
+#: at Think has normally finished long before Write reads it; one still
+#: running this late is Jev failing over to the guard tier, and the person
+#: should not wait on it. Not finished within this many seconds is read as
+#: no usable pick, and the decision is stopped.
+_LATE_DECISION_GRACE_S: Final[float] = 1.0
 
 
 @dataclasses.dataclass
@@ -1033,6 +1136,15 @@ class _RunDecisions:
     #: True once the literature decision has been asked for this run, so
     #: Plan never asks twice.
     literature_asked: bool = False
+    #: `think.asks_features` (build phase 8.6, T-8.6-06), started at Think
+    #: beside the other Think-step decisions and read by Write, the step
+    #: that decides what is said about a condition's clinical features. None
+    #: when Think never started it (small talk, or a Write reached directly).
+    features_task: asyncio.Task[DecisionRecord | None] | None = None
+    #: `think.query_class` (build phase 8.6, T-8.6-05), started with the
+    #: other Think-step decisions and read by Think itself once its own
+    #: classification call has returned. None when not started.
+    query_class_task: asyncio.Task[DecisionRecord | None] | None = None
 
 
 #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
@@ -1119,6 +1231,24 @@ def _usable_choice(record: DecisionRecord | None) -> str | None:
     return record.chosen
 
 
+def _jev_decides() -> bool:
+    """Whether the classifier seam is switched to Jev, read exactly as
+    `harness.decide.decide` reads it (`CLASSIFIER_PROVIDER`, code default
+    "guard").
+
+    Build phase 8.6, T-8.6-04: the one place the loop itself asks. With the
+    provider at its default, the guard tier decides every point alone, and
+    for the injection verdict the guard tier already decides through the
+    guardrail's own classifier call, whose instruction was measured against
+    real injection payloads (F-4.7-A-01). Asking the guard tier the same
+    question a second time through `decide` would add a model call to every
+    question and swap that measured instruction for a generic one on
+    production. So `guardrail.injection` goes through the seam only when
+    Jev is the classifier.
+    """
+    return os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower() == "jev"
+
+
 def _cancel_if_pending(task: asyncio.Task[Any] | None) -> None:
     """Stop a decision nobody will read, so it spends nothing more."""
     if task is not None and not task.done():
@@ -1162,6 +1292,73 @@ def _drop_literature_decision(harness: Harness) -> None:
         entry.literature_record = task.result()
     else:
         task.cancel()
+
+
+async def _read_late_decision(
+    task: asyncio.Task[DecisionRecord | None] | None,
+) -> DecisionRecord | None:
+    """A decision started at an earlier step, read by the step that needs it.
+
+    Build phase 8.6. A decision that has finished is read at no cost. One
+    still running is waited for at most `_LATE_DECISION_GRACE_S` and then
+    stopped, and reads as no decision: the person never waits on a
+    classifier that is failing over. None when no decision was started.
+    """
+    if task is None:
+        return None
+    if not task.done():
+        await asyncio.wait({task}, timeout=_LATE_DECISION_GRACE_S)
+    if not task.done():
+        task.cancel()
+        return None
+    if task.cancelled() or task.exception() is not None:
+        return None
+    return task.result()
+
+
+async def _clinical_features_asked(harness: Harness) -> bool:
+    """Whether `think.asks_features` picked `asks_features` for this run.
+
+    Build phase 8.6, T-8.6-06. Read once, by Write. No decision started, no
+    usable pick, or one still running past the grace all read as False, the
+    decision's fail-open side: nothing is said about a condition's features
+    that the question did not ask about.
+    """
+    entry = _run_decisions(harness)
+    task, entry.features_task = entry.features_task, None
+    return _usable_choice(await _read_late_decision(task)) == "asks_features"
+
+
+def _decided_query_class(
+    harness: Any, record: DecisionRecord | None, plan_tier_class: QueryClass
+) -> QueryClass:
+    """The question class the run uses: `think.query_class`'s usable pick,
+    else the plan tier's own class (build phase 8.6, T-8.6-05).
+
+    When the decision made no usable pick, its record on the run's list is
+    rewritten to name the class the run actually used, so the `done` event
+    never shows a class nobody chose (the F-8.2-J13 rule). The rewrite
+    keeps both picks None and the "no_usable_pick" reason, which is what
+    says no classifier decided.
+    """
+    pick = _usable_choice(record)
+    if pick in _QUERY_CLASS.options:
+        return pick  # type: ignore[return-value]
+    if record is not None and record.chosen != plan_tier_class:
+        records = _run_decisions(harness).records
+        for index, existing in enumerate(records):
+            if existing is record:
+                records[index] = record.model_copy(update={"chosen": plan_tier_class})
+                break
+    return plan_tier_class
+
+
+def _drop_features_decision(harness: Any) -> None:
+    """Stop `think.asks_features` on a path that ends the run without
+    reading it (a refusal or error Write ships early). Never awaits."""
+    entry = _run_decisions(harness)
+    task, entry.features_task = entry.features_task, None
+    _cancel_if_pending(task)
 
 
 # ---------------------------------------------------------------------------
@@ -1247,21 +1444,45 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
         relevancy_task = asyncio.create_task(
             _decide_point(harness, trace_id, _RELEVANCY, _relevancy_state(query.text, state))
         )
+    # guardrail.injection (build phase 8.6, T-8.6-04). With Jev as the
+    # classifier, the injection verdict is its decision, started NOW beside
+    # the classifier call below so the person waits for the slower of the
+    # two, not both. The question alone is the state: an injection is
+    # judged on what was typed, never on the conversation. See
+    # `_jev_decides` for why the default provider keeps the classifier.
+    injection_task: asyncio.Task[DecisionRecord | None] | None = None
+    if _jev_decides():
+        injection_task = asyncio.create_task(
+            _decide_point(harness, trace_id, _INJECTION, query.text)
+        )
     try:
-        return await _guardrail_after_prefilter(state, sink, relevancy_task)
+        return await _guardrail_after_prefilter(state, sink, relevancy_task, injection_task)
     finally:
-        # Any path that ends the node before reading the relevancy decision
-        # (a refusal, a cap hit, a step error) stops it spending more.
+        # Any path that ends the node before reading the relevancy or the
+        # injection decision (a refusal, a cap hit, a step error) stops it
+        # spending more.
         _cancel_if_pending(relevancy_task)
+        _cancel_if_pending(injection_task)
+
+
+#: The step error's message when the injection decision had no usable pick
+#: from either model (build phase 8.6, T-8.6-04): the same fail-closed path
+#: as two unusable classifier replies, saying what to do next.
+_INJECTION_UNDECIDED_MESSAGE: Final[str] = (
+    "the injection classifier returned no usable verdict for this query, so it "
+    "was not admitted; retrying the query may succeed"
+)
 
 
 async def _guardrail_after_prefilter(
     state: GraphState,
     sink: _EventSink,
     relevancy_task: asyncio.Task[DecisionRecord | None] | None,
+    injection_task: asyncio.Task[DecisionRecord | None] | None = None,
 ) -> dict[str, Any]:
     """Section 10.1 steps 3 to 6, after the pre-filter, plus the relevancy
-    decision `guardrail_node` started (None when the allowlist admitted)."""
+    decision `guardrail_node` started (None when the allowlist admitted) and,
+    with Jev as the classifier, the injection decision (None otherwise)."""
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
@@ -1288,6 +1509,7 @@ async def _guardrail_after_prefilter(
     # parsed, whatever it said, is final on the first attempt, and two
     # unusable replies still end in the fail-closed step error below.
     classifier_verdict: GuardVerdict | None = None
+    classification: classifier.InjectionClassification | None = None
     parse_error: classifier.ClassificationUnavailableError | None = None
     for attempt in (1, 2):
         try:
@@ -1308,9 +1530,8 @@ async def _guardrail_after_prefilter(
             return {"step_error": _step_error_kwargs("guardrail", exc)}
 
         try:
-            classifier_verdict = classifier.verdict_for(
-                classifier.parse_classification(response.content)
-            )
+            classification = classifier.parse_classification(response.content)
+            classifier_verdict = classifier.verdict_for(classification)
             break
         except classifier.ClassificationUnavailableError as exc:
             parse_error = exc
@@ -1341,6 +1562,43 @@ async def _guardrail_after_prefilter(
                 "retry_after_s": 0,
             }
         }
+
+    # guardrail.injection (build phase 8.6, T-8.6-04): with Jev as the
+    # classifier, its pick is the injection verdict and the classifier's
+    # own `is_injection` is not; the classifier still judges topicality.
+    # Read only after the classifier's own failure paths above, which are
+    # unchanged. No usable pick from either model is today's classifier
+    # failure path, fail closed: a step error, never an admission, since no
+    # verdict was reached and reporting one would be false.
+    # (`classification` is set whenever `classifier_verdict` is.)
+    if injection_task is not None and classification is not None:
+        injection = _usable_choice(await injection_task)
+        if injection not in classifier.INJECTION_DECISION_OPTIONS:
+            logger.warning(
+                "guardrail.injection had no usable pick (trace %s); failing closed",
+                trace_id,
+            )
+            return {
+                "step_error": {
+                    "fatal": True,
+                    "scope": "step",
+                    "source": "guardrail",
+                    "error_class": "recoverable",
+                    "message": _INJECTION_UNDECIDED_MESSAGE,
+                    "retry_after_s": 0,
+                }
+            }
+        if (injection == "injection") != classification.is_injection:
+            logger.info(
+                "guardrail.injection picked %s; the guard classifier's own field "
+                "said is_injection=%s (trace %s)",
+                injection,
+                classification.is_injection,
+                trace_id,
+            )
+        classifier_verdict = classifier.verdict_for_decision(
+            injection == "injection", classification
+        )
 
     classifier_off_topic_set_aside = False
     if not classifier_verdict.admitted:
@@ -2854,7 +3112,9 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     so they overlap everything Think does before either is needed: the
     person waits for one decision, not three (card 6). Recent-years is read
     here; the literature decision is Plan's, handed over still running
-    (`_RunDecisions.literature_task`). Any path out of this node that ends
+    (`_RunDecisions.literature_task`). Build phase 8.6 adds
+    `decide(point="think.asks_features")`, started at the same moment and
+    handed to Write (`_RunDecisions.features_task`). Any path out of this node that ends
     the search, a question asked back, a cap hit, a step error, cancels
     whatever is still in flight rather than letting it spend on.
     """
@@ -2874,15 +3134,34 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         decisions.literature_task = asyncio.create_task(
             _decide_point(harness, query.trace_id, _LITERATURE, query.text)
         )
+    # think.asks_features (build phase 8.6, T-8.6-06): started beside the
+    # other Think-step decisions and read by Write, so it adds no wait.
+    if not small_talk and decisions.features_task is None:
+        decisions.features_task = asyncio.create_task(
+            _decide_point(harness, query.trace_id, _ASKS_FEATURES, query.text)
+        )
+    # think.query_class (build phase 8.6, T-8.6-05): started with the others
+    # and read by Think once its own classification call returns, so it
+    # overlaps that call rather than following it.
+    if not small_talk and decisions.query_class_task is None:
+        decisions.query_class_task = asyncio.create_task(
+            _decide_point(harness, query.trace_id, _QUERY_CLASS, query.text)
+        )
     result: dict[str, Any] | None = None
     try:
         result = await _think(state, recent_task)
         return result
     finally:
         _cancel_if_pending(recent_task)
+        # Read inside `_think` on the classified path; on any other way out
+        # (a question asked back, a cap hit, a step error) nobody reads it.
+        _cancel_if_pending(decisions.query_class_task)
+        decisions.query_class_task = None
         if result is None or not _search_goes_ahead(result):
             _cancel_if_pending(decisions.literature_task)
             decisions.literature_task = None
+            _cancel_if_pending(decisions.features_task)
+            decisions.features_task = None
 
 
 def _search_goes_ahead(think_result: dict[str, Any]) -> bool:
@@ -3210,7 +3489,18 @@ async def _think(
         )
     resolved_entities = resolved_entities[:_TARGET_ENTITIES_MAX_ITEMS]
 
-    query_class: QueryClass = classification.query_class
+    # think.query_class (build phase 8.6, T-8.6-05): the class is the
+    # classifier seam's pick. The decision started with the node and has
+    # normally finished while the classification call above ran; one still
+    # running is waited for at most `_LATE_DECISION_GRACE_S`, so the Think
+    # step is never held up by it. No usable pick keeps the plan tier's own
+    # class, today's classification. The plan tier's entities are used
+    # either way.
+    run_decisions = _run_decisions(harness)
+    class_task, run_decisions.query_class_task = run_decisions.query_class_task, None
+    query_class: QueryClass = _decided_query_class(
+        harness, await _read_late_decision(class_task), classification.query_class
+    )
     # T-6.0-02, Section 21.4. The run opened its call-budget scope at
     # `lookup`, the shortest queue wait ceiling, because this line is where
     # the real class first exists. Widened here, at the earliest point it is
@@ -7285,6 +7575,11 @@ def _anchor_disease_prompt_reservation(synth_findings: list[SynthFinding]) -> li
     question-shape rule is involved. A record that lists none contributes
     its one "lists none" finding, which is the honest answer to a phenotype
     question about it. Empty when there are no such findings.
+
+    Called only when the `think.asks_features` decision picked
+    `asks_features` (build phase 8.6, T-8.6-06): whether the question asks
+    about features is the classifier's call, and this only says which
+    findings to keep in view once it has.
     """
     features = [f for f in synth_findings if f.field == CLINICAL_FEATURES_FIELD]
     features = features[:_ANCHOR_FEATURE_PROMPT_SLOTS]
@@ -10580,6 +10875,20 @@ def _answer_tokens(
 
 
 async def write_node(state: GraphState) -> dict[str, Any]:
+    """The Write step (Section 8), `_write_answer`, plus one settling rule.
+
+    Build phase 8.6, T-8.6-06: the `think.asks_features` decision Think
+    started is read on the answer path only. Every other way out of Write
+    (a step error, a cap hit, a question asked back, a refusal) ends the
+    run without reading it, so it is stopped here rather than left spending.
+    """
+    try:
+        return await _write_answer(state)
+    finally:
+        _drop_features_decision(state["harness"])
+
+
+async def _write_answer(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
@@ -10851,15 +11160,36 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         synth_findings
     )
 
-    # F-8.1-A12's prompt-slot reservation (`reserve_prompt_slots` with
-    # `_anchor_disease_prompt_reservation`) is deliberately NOT called here.
-    # Round 2 (F-8.1-V01) showed it takes 11 of the 30 prompt slots on every
-    # disease-anchored question, phenotype-shaped or not, and can push the
-    # definitional abstracts out of `What is Marfan syndrome?`. The lead
-    # withdrew the call rather than merge that trade: a disease's features
-    # still reach the reader in the code-built listing at every depth. The
-    # follow-up is to reserve the slots only when a classifier decides the
-    # question asks for phenotypes (phase 8.2's seam), recorded on the board.
+    # Build phase 8.6, T-8.6-06: what is said about a condition's clinical
+    # features follows the `think.asks_features` decision, never the
+    # findings alone.
+    #
+    # - Asked: F-8.1-A12's prompt-slot reservation runs, so up to
+    #   `_ANCHOR_FEATURE_PROMPT_SLOTS` features and their record's title sit
+    #   inside the model's prompt behind a long graph answer, and a record
+    #   read with none keeps its one "MedGen lists no clinical features for
+    #   <disease>" statement, the honest answer to that question.
+    # - Not asked, or no usable pick: no reservation, since round 2
+    #   (F-8.1-V01) showed it can take 11 of the 30 prompt slots on any
+    #   disease question with a long graph answer and can push the
+    #   definition out of `What is Marfan syndrome?`; and the "lists none"
+    #   statement is dropped, since it answers nothing the question asked
+    #   (15 golden answers carried it, one "for Seen by breast cancer
+    #   nurse"). The features themselves stay in the code-built listing,
+    #   beneath their disease.
+    #
+    # Either can renumber, so this runs before `row_types` and the prompt
+    # slice read the numbering.
+    clinical_features_asked = await _clinical_features_asked(harness)
+    if clinical_features_asked:
+        synth_findings = reserve_prompt_slots(
+            synth_findings,
+            _anchor_disease_prompt_reservation(synth_findings),
+            _MAX_FINDINGS_FOR_MODEL_PROMPT,
+            lead_call_ids=answer_call_ids,
+        )
+    else:
+        synth_findings = drop_no_clinical_features_findings(synth_findings)
 
     row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
 
@@ -10941,6 +11271,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 query.audience_depth,
                 answer_ref_indices=answer_ref_indices,
                 topic_question=bool(state.get("topic_search_term")),
+                clinical_features_asked=clinical_features_asked,
             ),
             budget_s=write_budget_s,
         )
@@ -11133,6 +11464,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                         ),
                         answer_ref_indices=answer_ref_indices,
                         topic_question=bool(state.get("topic_search_term")),
+                        clinical_features_asked=clinical_features_asked,
                     ),
                     budget_s=repair_budget_s,
                 )

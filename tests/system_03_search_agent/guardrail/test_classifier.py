@@ -286,3 +286,65 @@ def test_the_physiological_carveout_does_not_swallow_non_biomedical_effective() 
     assert "investment strategy" in GUARD_SYSTEM_INSTRUCTION
     assert "study technique for an exam" in GUARD_SYSTEM_INSTRUCTION
     assert "marketing trend" in GUARD_SYSTEM_INSTRUCTION
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6, T-8.6-04: the injection verdict as a classifier-seam
+# decision. `verdict_for_decision` takes the decision's pick for injection
+# and the classification's `is_off_topic` for topicality.
+# ---------------------------------------------------------------------------
+
+
+def _classified(**fields: object) -> InjectionClassification:
+    values: dict[str, object] = {
+        "is_injection": False,
+        "is_off_topic": False,
+        "confidence": 0.1,
+        "reason": "a real question",
+    }
+    values.update(fields)
+    return InjectionClassification.model_validate(values)
+
+
+def test_a_decided_injection_refuses_whatever_the_classification_said() -> None:
+    from system_03_search_agent.guardrail.classifier import verdict_for_decision
+
+    verdict = verdict_for_decision(True, _classified(is_injection=False))
+    assert not verdict.admitted and verdict.category == "injection"
+    # The seam returns a choice, never free text, so no model reason rides it.
+    assert "(" not in (verdict.reason or "")
+
+
+def test_a_decided_not_injection_admits_over_the_classifications_own_field() -> None:
+    from system_03_search_agent.guardrail.classifier import verdict_for_decision
+
+    verdict = verdict_for_decision(False, _classified(is_injection=True))
+    assert verdict.admitted
+
+
+def test_topicality_still_comes_from_the_classification() -> None:
+    from system_03_search_agent.guardrail.classifier import verdict_for_decision
+
+    off_topic = verdict_for_decision(False, _classified(is_off_topic=True))
+    assert not off_topic.admitted and off_topic.category == "off_topic"
+    # Injection still outranks off-topic.
+    both = verdict_for_decision(True, _classified(is_off_topic=True))
+    assert both.category == "injection"
+
+
+def test_the_injection_decisions_description_fits_the_seam() -> None:
+    """One criterion per offered option, each inside `decide`'s 1000-character
+    bound, and no example query in any of it."""
+    from system_03_search_agent.guardrail.classifier import (
+        INJECTION_DECISION_CRITERIA,
+        INJECTION_DECISION_INSTRUCTIONS,
+        INJECTION_DECISION_OPTIONS,
+        INJECTION_DECISION_POINT,
+    )
+
+    assert INJECTION_DECISION_POINT == "guardrail.injection"
+    assert INJECTION_DECISION_OPTIONS == ("injection", "not_injection")
+    assert set(INJECTION_DECISION_CRITERIA) == set(INJECTION_DECISION_OPTIONS)
+    for text in (INJECTION_DECISION_INSTRUCTIONS, *INJECTION_DECISION_CRITERIA.values()):
+        assert 0 < len(text) <= 1000
+        assert "?" not in text and "'" not in text, "no quoted or example query"
