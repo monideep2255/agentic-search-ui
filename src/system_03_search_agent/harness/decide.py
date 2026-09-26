@@ -30,9 +30,9 @@ caller lives in `core/graph.py`, whose "classifier seam, wired" section
 holds each decision point's fixed description and the list of points.
 
 What this decides, and what it never decides: `decide()` answers exactly
-one closed-option question at a time (`point`, e.g. "think.ask_back",
-"guardrail.relevancy", "plan.literature", "plan.resource",
-"think.recent_years"), never free text.
+one closed-option question at a time (`point`, e.g. "guardrail.relevancy",
+"guardrail.injection", "think.ask_back", "think.recent_years",
+"think.asks_features", "plan.literature"), never free text.
 
 Who decides, since build phase 8.6. With `CLASSIFIER_PROVIDER=jev`, Jev is
 asked alone. The guard tier is asked the same question over the same

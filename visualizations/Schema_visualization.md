@@ -193,6 +193,7 @@ erDiagram
         string trust_outcome
         string next_step "optional"
         string next_step_query "optional"
+        array decisions "optional"
     }
     StepPayload {
         string step "write"
@@ -219,9 +220,9 @@ erDiagram
 | `token` | `text` 1000 chars. `marker_ids` at most 20 |
 | `citation` | The full provenance record. See the next section |
 | `trust_signal` | `outcome`, `risk_tier` 16 chars, `grounded` bool, `triangulated` tri-state, `citation_id` optional, `scope` `claim` or `answer`, `message` optional, `fallback_link` host-pinned |
-| `cost` | `query_cost_usd`, `query_cap_usd`, `cap_fraction`, all at least 0. `model_tier` one of `guard`, `plan`, `synth` |
+| `cost` | `query_cost_usd`, `query_cap_usd`, `cap_fraction`, all at least 0. `model_tier` one of `guard`, `plan`, `synth`. `call_elapsed_s` optional, at least 0: the seconds the latest completed call on `model_tier` took for this question, which a step that made no call on that tier repeats from an earlier call. Added 2026-09-26, build phase 8.6 |
 | `error` | `fatal` bool. `scope` `tool`, `step` or `run`. `source` 64 chars. `error_class` one of `transient`, `recoverable`, `unexpected`, `cancelled`. `message` 256 chars. `retry_after_s` at least 0 |
-| `done` | `total_cost_usd`, `total_tool_calls`, `elapsed_ms`, all at least 0. `trust_outcome`. `next_step` optional, 200 chars. `next_step_query` optional, 2000 chars, the question a surface sends when the reader accepts `next_step` |
+| `done` | `total_cost_usd`, `total_tool_calls`, `elapsed_ms`, all at least 0. `trust_outcome`. `next_step` optional, 200 chars. `next_step_query` optional, 2000 chars, the question a surface sends when the reader accepts `next_step`. `decisions` optional, at most 16 decision records, one per classifier decision the question made: its point, options, pick, which model decided and, when the guard tier stepped in, why |
 | `step` | `step` is `write`, `status` is `started`. Sent live the moment the Write step begins, after the last refusal check and before the answer-writing model call. Added 2026-09-14 as an additive twelfth member within `v1`; the web client skips it by name |
 
 Three details in that table carry more weight than their size suggests:
@@ -398,4 +399,4 @@ References:
 - [docs/ncbi/Tool_implementation_mechanics.md](../docs/ncbi/Tool_implementation_mechanics.md): the per-tool API traps behind these schemas
 - [docs/build/Debugging_guide.md](../docs/build/Debugging_guide.md): one row per file under `src/`
 
-Last updated: 2026-09-14
+Last updated: 2026-09-26

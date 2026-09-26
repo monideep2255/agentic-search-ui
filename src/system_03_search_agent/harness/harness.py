@@ -729,10 +729,17 @@ class Harness:
         """Seconds the latest completed `call_tier` call on `tier` took for
         `trace_id`, or None when none has completed (C5).
 
-        Read by `cost_control.build_cost_event_payload` for the operator-only
-        `cost` event, which the loop emits straight after each metered call,
-        so it is that call's time. Two calls on the same tier running at
-        once for one query can both complete before the event is built; the
+        It measures one call: the most recent one on that tier to complete
+        for this question, whichever step made it. Read by
+        `cost_control.build_cost_event_payload` for the operator-only
+        `cost` event, so an event emitted straight after a call carries that
+        call's time. An event emitted by a step that made no call on the
+        tier repeats an earlier call's time instead: Plan emits its `plan`
+        cost event even when it used a template, so it then carries Think's
+        classification call, which runs on the plan tier too (fix round,
+        F-8.6-J11). Summing it over a question's cost events can therefore
+        count a call twice. Two calls on the same tier running at once for
+        one question can both complete before the event is built; the
         event then carries whichever finished last.
         """
         with self._cost_lock:
