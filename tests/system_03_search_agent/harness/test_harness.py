@@ -731,6 +731,88 @@ async def test_a_bad_request_that_does_not_name_reasoning_is_still_not_retried(
     assert exc_info.value.error_class == "recoverable"
 
 
+# Fix round (F-8.6-J05, A02): the retry keys on the provider's whole refusal
+# phrase, never on the word "reasoning", and never on a context-window or
+# content-policy error, whatever its text says. Before the fix every case
+# below was retried once without the reasoning block.
+
+
+def _bad_request(kind: type[litellm.BadRequestError], text: str) -> litellm.BadRequestError:
+    return kind(message=text, llm_provider="openrouter", model="test-provider/test-model")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error",
+    [
+        _bad_request(
+            litellm.ContextWindowExceededError,
+            "This model's maximum context length is 8192 tokens, and reasoning tokens count toward it",
+        ),
+        _bad_request(
+            litellm.ContentPolicyViolationError,
+            "Your prompt was flagged: 'explain the reasoning behind BRCA1 testing'",
+        ),
+        _bad_request(
+            litellm.ContentPolicyViolationError,
+            "Your prompt was flagged: 'Reasoning is mandatory for this endpoint and cannot be disabled'",
+        ),
+        _bad_request(litellm.ContextWindowExceededError, _REASONING_REFUSAL_TEXT),
+        _bad_request(
+            litellm.BadRequestError,
+            "Invalid request: 'a clinical reasoning question' does not fit this field",
+        ),
+    ],
+    ids=[
+        "context window 400 naming reasoning",
+        "content policy 400 echoing the person's words",
+        "content policy 400 echoing the refusal phrase",
+        "context window 400 carrying the refusal phrase",
+        "plain 400 echoing the person's words",
+    ],
+)
+async def test_a_400_that_only_mentions_reasoning_is_not_retried(
+    monkeypatch: pytest.MonkeyPatch, error: litellm.BadRequestError
+) -> None:
+    _patch_model_env(monkeypatch, "SYNTH_MODEL")
+    _patch_price(monkeypatch)
+    mock_acompletion = AsyncMock(side_effect=[error, _fake_response("never reached", 1, 1)])
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+
+    with pytest.raises(HarnessCallError) as exc_info:
+        await Harness(trace_id="j05-1").call_tier("synth", [{"role": "user", "content": "hi"}])
+
+    assert mock_acompletion.call_count == 1, "no second request without the reasoning block"
+    assert mock_acompletion.call_args.kwargs["reasoning"] == {"effort": "none"}
+    assert exc_info.value.error_class == "recoverable"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "text",
+    [
+        _REASONING_REFUSAL_TEXT,
+        'OpenrouterException - {"error":{"message":"REASONING IS MANDATORY FOR THIS ENDPOINT AND CANNOT BE DISABLED."}}',
+        "Reasoning is mandatory for this endpoint\n  and cannot be disabled.",
+    ],
+    ids=["the live text", "upper case", "wrapped over two lines"],
+)
+async def test_the_refusal_phrase_is_recognised_however_it_is_cased_or_wrapped(
+    monkeypatch: pytest.MonkeyPatch, text: str
+) -> None:
+    _patch_model_env(monkeypatch, "SYNTH_MODEL")
+    _patch_price(monkeypatch)
+    refusal = _bad_request(litellm.BadRequestError, text)
+    mock_acompletion = AsyncMock(side_effect=[refusal, _fake_response("an answer", 1, 1)])
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+
+    result = await Harness(trace_id="j05-2").call_tier("synth", [{"role": "user", "content": "hi"}])
+
+    assert result.content == "an answer"
+    assert mock_acompletion.call_count == 2
+    assert "reasoning" not in mock_acompletion.call_args_list[1].kwargs
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("transient_first", [True, False])
 async def test_the_reasoning_fallback_and_the_transient_retry_are_separate(
