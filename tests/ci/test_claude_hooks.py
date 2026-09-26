@@ -54,9 +54,12 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  wrapper: `bash <<<`, `sh <<<`, `zsh<<<`, `sudo bash -s <<<`,
                  `sh <<'EOF'` and `bash -s <<EOF`. The command-word check
                  alone misses every one of them but the sudo case, which it
-                 reads through sudo's arguments. A harmless one stays
-                 allowed, and so does a here-document into cat or a
-                 here-string into a script such as ./install.sh.
+                 reads through sudo's arguments. An output redirect between
+                 the shell and the << (`2>&1`, `>out.txt`, `2>err.log`,
+                 `&>log.txt`, `2> err.log`, `>&2`, two in a row) is pinned
+                 too. A harmless one stays allowed, and so does a
+                 here-document into cat or a here-string into a script such
+                 as ./install.sh, with a redirect or without.
     Covered      The secret scan: the token-prefix check on every command,
                  grep included. The field-assignment check skipped only for
                  the searches (grep, rg, git grep) a command starts with, and
@@ -105,6 +108,13 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
     NOT covered  A pipe or a here-document into an interpreter that is not a
                  shell, such as `python3 -`, `perl` or `node`. The guard does
                  not treat one as a wrapper, so even a named rmtree passes.
+    NOT covered  A pipe whose shell is not the word right after it, and text
+                 encoded or split so no whole-word rm is written (the
+                 checker's finding HG-02 of 2026-09-26, named, not closed):
+                 the shell on the next line or after `| \\` and a newline,
+                 `| (bash)`, `| { bash; }`, `| tee >(bash)`, `| $SHELL`,
+                 `| busybox sh`, `| ssh-agent bash`, `| mksh`,
+                 `base64 -d | bash`, `printf '\\x72\\x6d'` and `'r''m'`.
     NOT covered  A search whose own option runs another command, such as git
                  grep's pager option. The option's text is part of a leading
                  search, so the field check skips it, as the approval skips a
@@ -362,6 +372,19 @@ DELETE_GUARD_BLOCKS = [
     pytest.param("sudo bash -s <<< 'rm -rf /var/x'", id="here-string-into-sudo-bash"),
     pytest.param("sh <<'EOF'\nLANG=C rm -rf x\nEOF", id="here-doc-into-sh"),
     pytest.param("bash -s <<EOF\necho start && command rm -rf x\nEOF", id="here-doc-into-bash-s"),
+    # An output redirect between the shell and the << still feeds the shell
+    # (the checker's finding HG-01 of 2026-09-26): 2>&1, >file, 2>file, &>file,
+    # >&2, with or without a space before the target, one or several.
+    pytest.param("bash 2>&1 <<< 'rm -rf x'", id="here-string-after-2>&1"),
+    pytest.param("bash >out.txt <<< 'rm -rf x'", id="here-string-after-stdout-to-file"),
+    pytest.param("bash 2>err.log <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-after-stderr-to-file"),
+    pytest.param("bash &>log.txt <<< 'rm -rf x'", id="here-string-after-both-to-file"),
+    pytest.param('sh 2> err.log <<< "rm -rf x"', id="here-string-after-spaced-redirect"),
+    pytest.param("bash -s >&2 <<< 'rm -rf x'", id="here-string-after-dup-to-stderr"),
+    pytest.param("bash 2>&1<<<'rm -rf x'", id="here-string-after-redirect-no-space"),
+    pytest.param(
+        "bash >>out.txt 2>&1 <<EOF\nLANG=C rm -rf x\nEOF", id="here-doc-after-two-redirects"
+    ),
 ]
 
 DELETE_GUARD_ALLOWS = [
@@ -456,6 +479,19 @@ DELETE_GUARD_ALLOWS = [
         "cat <<'EOF' > notes.txt\nthe word rm appears here\nEOF", id="here-doc-into-cat"
     ),
     pytest.param("./install.sh <<< 'rm the old build'", id="here-string-into-script"),
+    # A redirect before the << changes neither: a shell with no destructive
+    # word stays allowed, and a program that is not a shell stays one.
+    pytest.param("bash 2>&1 <<< 'echo hi'", id="here-string-after-2>&1-harmless"),
+    pytest.param(
+        "cat <<EOF > file.txt\nthe word rm appears here\nEOF", id="here-doc-into-cat-then-file"
+    ),
+    pytest.param(
+        "cat >notes.txt 2>&1 <<'EOF'\nthe word rm appears here\nEOF",
+        id="here-doc-into-cat-after-redirects",
+    ),
+    pytest.param(
+        "./install.sh 2>&1 <<< 'rm the old build'", id="here-string-into-script-after-redirect"
+    ),
 ]
 
 

@@ -206,13 +206,14 @@ The real residual risk:
   - It matches `rm` and `rmdir` as whole command words after a separator, an opener, `find -exec` or a runner such as `sudo` or `xargs`.
   - It matches them in any letter case, since the disk is case-insensitive on macOS and `RM`, `Rm` or `/bin/RM` runs rm. Words such as "ARM64", "RMS" and "perform" are still not rm.
   - In a command that names an execution wrapper (`ssh`, `python -c`, `perl -e`, `ruby -e`, `node -e`, `bash -c`, `sh -c`, `zsh -c`, `eval`), it blocks `rmdir`, `rmtree`, `dd if=`, `mkfs` or a write into `/dev` anywhere in the command.
-  - A pipe into a shell (`| bash`, `| sh`, `| sudo bash`, `curl ... | sh`) counts as such a wrapper, and so does a here-string or here-document into a shell (`bash <<< '...'`, `sh <<EOF`). A pipe into a program whose name only starts with sh, such as `shasum`, does not.
+  - A pipe into a shell (`| bash`, `| sh`, `| sudo bash`, `curl ... | sh`) counts as such a wrapper, and so does a here-string or here-document into a shell (`bash <<< '...'`, `sh <<EOF`), an output redirect such as `2>&1` before the `<<` included. A pipe into a program whose name only starts with sh, such as `shasum`, does not.
   - In the same command it blocks `rm` as a whole word, or right after an escape sequence that ends in a letter or digit (`\n`, `\012`, `\x3b`, `\u000a`, Ruby's `\C-j`), which the wrapper decodes into a newline or a separator. An escape right before a word that ends in rm, such as `\nperform`, is blocked too: the hook cannot tell the two apart, so it fails closed.
 - What the hook does not see, checked on 2026-09-26, which `tests/ci/test_claude_hooks.py` states too:
   - A wrapper outside that list, such as `osascript -e`.
   - A runner, wrapper or shell named in upper case, such as `ENV rm`, `BASH -c` or `| BASH`. The case-insensitive disk runs them, and the hook reads only `rm` and `rmdir` in any letter case.
   - An `rm` behind a word the hook does not know as a runner, such as `LANG=C rm`, `command rm` or `/usr/bin/env rm`.
   - Text that reaches a shell another way, such as `bash <(...)` or `source /dev/stdin <<<`, and a pipe or here-document into an interpreter that is not a shell, such as `python3 -`.
+  - A pipe whose shell is not the word right after it: the shell on the next line or after `| \` and a newline, `| (bash)`, `| { bash; }`, `| tee >(bash)`, `| $SHELL`, `| busybox sh`, `| ssh-agent bash` or `| mksh`. Destructive text the command encodes or splits so no whole-word `rm` is written passes too, such as `base64 -d | bash`, `printf '\x72\x6d'` or `'r''m'`.
   - Deletion that never names those words, such as `find -delete`, `unlink`, `shred`, `git clean` or Python's `os.remove`.
   - An `rm` that a transformation inside the wrapper puts behind a separator, such as a character the command replaces with a newline, or a URL-decoded `%0a`. Until the command runs, the letter before `rm` is an ordinary character, so a whole-word match cannot tell it from "platform".
 
