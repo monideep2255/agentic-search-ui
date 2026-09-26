@@ -180,9 +180,21 @@ def test_s3_is_the_same_entry_point_as_the_servers_distribution() -> None:
 
 
 def test_the_wheel_is_built_from_the_servers_own_source_files() -> None:
-    """No second copy: the package directory holds no Python at all."""
+    """No second copy: the package directory tracks no Python at all.
+
+    Tracked files, not the directory's contents: building the wheel in place
+    leaves a gitignored `build/lib` copy there, which is build output rather
+    than a second source."""
     assert _client_config()["tool"]["setuptools"]["package-dir"] == {"": "../../src"}
-    assert not list(CLIENT_PYPROJECT.parent.rglob("*.py"))
+    listed = subprocess.run(
+        ["git", "ls-files", "--", "clients/system3-cli"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert "clients/system3-cli/pyproject.toml" in listed
+    assert [name for name in listed if name.endswith(".py")] == []
 
 
 def test_s3_imports_only_what_the_package_ships_and_declares() -> None:

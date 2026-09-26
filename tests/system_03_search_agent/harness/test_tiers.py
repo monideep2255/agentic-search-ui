@@ -167,6 +167,13 @@ _EXEMPT_MEDIA_TYPE_LITERALS = frozenset(
     {
         "text/event-stream",  # adapters/cli/client.py: the SSE Accept header
         "application/json",  # adapters/cli/client.py: the JSON body content-type check
+        # Build phase 8.10, on the lead's approval: an MCP method name, not a
+        # media type, and the same false positive. The MCP specification
+        # names its methods "namespace/name", so its cancellation
+        # notification is the literal "notifications/cancelled", which
+        # adapters/cli/mcp_bridge.py matches to stop waiting on a request
+        # the agent gave up on. The exact string only, never a pattern.
+        "notifications/cancelled",
     }
 )
 
