@@ -30,9 +30,9 @@ The point is to prove the code path works, not just unit tests. This is a manual
 
 ## Step 2: automated verification
 
-Invoke `.claude/skills/verify/SKILL.md` (say `/verify`). It runs the Python compile check, the test suite, lint, git status, and the frontend check in one pass. All checks must come back READY before continuing to Step 3.
+Invoke `.claude/skills/precommit/SKILL.md` (say `/precommit`). It runs the Python compile check, the test suite, lint, git status, and the frontend check in one pass. All checks must come back READY before continuing to Step 3.
 
-If tests are missing for the change, write them first, then re-run verify. Verify itself has no check for this: it reports missing tests as a pass with a note ("no tests collected"), not a blocker, so this instruction stays here.
+If tests are missing for the change, write them first, then re-run precommit. Precommit itself has no check for this: it reports missing tests as a pass with a note ("no tests collected"), not a blocker, so this instruction stays here.
 
 ## Step 3: security scan (milestone gate)
 

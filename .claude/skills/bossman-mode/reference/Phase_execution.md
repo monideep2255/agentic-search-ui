@@ -262,7 +262,7 @@ Two rules govern context across the team:
 
 Run the phase-end chain in full, in order. These grade whether the work is allowed to ship, which is a different question from the judge's, so do not treat them as optional because the judge passed.
 
-1. `verify`: compile check, tests, lint, git status.
+1. `precommit`: compile check, tests, lint, git status.
 2. `ship`: the CI gates run locally (ruff over the whole repository, isort, the unit suite when Python changed, `npm run build` when the frontend changed, the doc drift check), the docs sync, the commit, the push of the phase branch and the pull request.
 3. `task-tracker --close`: record the evidence on each ticket in the ledger and leave each at `in-review`. The board is frozen, so nothing is rendered.
 
