@@ -1,9 +1,10 @@
-"""Run the two Bash guard hooks the way the harness does, and assert block or allow.
+"""Run the guard hooks the way the harness does, and assert block or allow.
 
 `.claude/settings.json` wires `block-bash-delete.sh` and `scan-secrets.sh` as
-PreToolUse hooks on every Bash call. The harness runs each as `bash <hook>`,
-writes the tool call to its stdin as JSON, and treats exit 2 as "blocked" and
-exit 0 as "allowed". This file does exactly that, once per case below.
+PreToolUse hooks on every Bash call, and `scan-write-secrets.sh` on every Edit
+and Write. The harness runs each as `bash <hook>`, writes the tool call to its
+stdin as JSON, and treats exit 2 as "blocked" and exit 0 as "allowed". This
+file does exactly that, once per case below.
 
 Why it exists. The product owner approved two narrowings on 2026-09-25
 (DECISIONS.md, "Four security-layer changes approved item by item", items 1
@@ -94,6 +95,11 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  search that names a field-shaped literal, and a 65-piece
                  chain of searches, are pinned as failing closed; a 64-piece
                  chain and a long command with no literal stay allowed.
+    Covered      The write scan's token prefix for the same hyphenated key
+                 shape, on a Write and an Edit into Python, TypeScript, shell,
+                 YAML and an .env file. The word boundary is pinned too: a
+                 branch name holding "task-tracker-..." and a short sk- name
+                 stay allowed in a source file and in an .env file.
 
     NOT covered  The hooks' no-Python fallback in `lib/_json.sh`. Every case
                  here runs with a working Python on PATH, as it does on the
@@ -141,9 +147,10 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  times them.
     NOT covered  Whether the permission rules in `.claude/settings.json` also
                  deny a command. This file tests the hooks alone.
-    NOT covered  `scan-write-secrets.sh`, the secret hook on Edit and Write.
-                 This file does not run it, and its own token prefix still
-                 misses a key with a hyphen or underscore after sk-.
+    NOT covered  The rest of `scan-write-secrets.sh`, the secret hook on Edit
+                 and Write: its other token prefixes and its field check on
+                 config files are not pinned here. It checks no file type
+                 outside its two lists, markdown and plain text included.
 
 Secret-shaped values are assembled from fragments at run time, so no literal
 the scanners look for ever sits in this file.
@@ -151,6 +158,7 @@ the scanners look for ever sits in this file.
 Depends on:
     - .claude/hooks/block-bash-delete.sh
     - .claude/hooks/scan-secrets.sh
+    - .claude/hooks/scan-write-secrets.sh
     - .claude/hooks/lib/_json.sh
 
 Writes:
@@ -172,6 +180,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS = REPO_ROOT / ".claude" / "hooks"
 DELETE_GUARD = "block-bash-delete.sh"
 SECRET_SCAN = "scan-secrets.sh"
+WRITE_SCAN = "scan-write-secrets.sh"
 
 BLOCKED = 2
 ALLOWED = 0
@@ -194,6 +203,28 @@ def run_hook(hook: str, command: str) -> subprocess.CompletedProcess:
     )
     return subprocess.run(
         ["bash", str(HOOKS / hook)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT_S,
+        check=False,
+        env={**os.environ, "CLAUDE_PROJECT_DIR": str(REPO_ROOT)},
+    )
+
+
+def run_write_hook(tool: str, file_path: str, text: str) -> subprocess.CompletedProcess:
+    """Feed one Write (text as content) or Edit (text as new_string) call to the write scan."""
+    field = "content" if tool == "Write" else "new_string"
+    payload = json.dumps(
+        {
+            "session_id": "hook-regression",
+            "hook_event_name": "PreToolUse",
+            "tool_name": tool,
+            "tool_input": {"file_path": file_path, field: text},
+        }
+    )
+    return subprocess.run(
+        ["bash", str(HOOKS / WRITE_SCAN)],
         input=payload,
         capture_output=True,
         text=True,
@@ -737,4 +768,71 @@ def test_secret_scan_is_fast_on_a_long_command_and_still_blocks(command: str) ->
     assert elapsed < _LONG_COMMAND_LIMIT_S, (
         f"{SECRET_SCAN} took {elapsed:.2f}s on a {len(command)}-character command, "
         f"over the {_LONG_COMMAND_LIMIT_S}s limit"
+    )
+
+
+# ---------------------------------------------------------------------------
+# The write scan, scan-write-secrets.sh, on Edit and Write
+#
+# Only its hyphenated-key shape is pinned here: the alternative it gained on
+# 2026-09-26, the same one the Bash secret scan carries. Source files get the
+# token-prefix check alone, so a key written into one is caught by that check
+# and nothing else. Config files also get the field check.
+# ---------------------------------------------------------------------------
+
+WRITE_SCAN_BLOCKS = [
+    pytest.param(
+        "Write", "src/app/client.py", f'client = Client(api_key="{_ROUTER_KEY_FULL}")\n',
+        id="router-key-into-python",
+    ),
+    pytest.param(
+        "Edit", "frontend/src/config.ts", f"const key = '{_ROUTER_KEY_FULL}';",
+        id="router-key-edited-into-typescript",
+    ),
+    pytest.param(
+        "Write", "scripts/run.sh", f"curl -H 'Authorization: Bearer {_ANT_KEY}' x\n",
+        id="hyphenated-key-into-shell-script",
+    ),
+    pytest.param("Write", "deploy/values.yaml", f"key: {_PROJ_KEY}\n", id="proj-key-into-yaml"),
+    pytest.param("Write", ".env", f"{_ROUTER_KEY_FULL}\n", id="bare-router-key-into-env-file"),
+]
+
+WRITE_SCAN_ALLOWS = [
+    # The check starts at a word boundary, so a name that holds sk- inside a word
+    # is not a key, however long it runs. A short sk- name is not a key either.
+    pytest.param(
+        "Write", "scripts/branch.sh", "git checkout -b chore/task-tracker-some-long-branch-name\n",
+        id="branch-name-with-task-in-shell-script",
+    ),
+    pytest.param(
+        "Edit", "src/app/names.py", 'BRANCH = "chore/task-tracker-some-long-branch-name"',
+        id="branch-name-with-task-in-python",
+    ),
+    pytest.param(
+        "Write", ".env", "BRANCH=chore/task-tracker-some-long-branch-name\n",
+        id="branch-name-with-task-in-env-file",
+    ),
+    pytest.param("Write", "src/app/flags.py", 'PREFIX = "sk-short-name"\n', id="short-sk-name"),
+    pytest.param(
+        "Write", "src/app/client.py", 'api_key = os.environ["OPENROUTER_API_KEY"]\n',
+        id="key-read-from-environment",
+    ),
+]
+
+
+@pytest.mark.parametrize(("tool", "file_path", "text"), WRITE_SCAN_BLOCKS)
+def test_write_scan_blocks_hyphenated_key(tool: str, file_path: str, text: str) -> None:
+    result = run_write_hook(tool, file_path, text)
+    assert result.returncode == BLOCKED, (
+        f"{WRITE_SCAN} exited {result.returncode} on a {tool} of a key into {file_path}"
+        f"\nstderr: {result.stderr.strip()}"
+    )
+
+
+@pytest.mark.parametrize(("tool", "file_path", "text"), WRITE_SCAN_ALLOWS)
+def test_write_scan_allows_name_that_is_not_a_key(tool: str, file_path: str, text: str) -> None:
+    result = run_write_hook(tool, file_path, text)
+    assert result.returncode == ALLOWED, (
+        f"{WRITE_SCAN} exited {result.returncode} on a {tool} into {file_path}: {text!r}"
+        f"\nstderr: {result.stderr.strip()}"
     )
