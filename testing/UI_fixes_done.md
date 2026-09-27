@@ -421,7 +421,7 @@ LAST UPDATED 2026-09-27. THE ONE THING TO KNOW: everything in flight is parked, 
 
 What is live on develop:
 
-- Product code through card 58's merge (`e116b9d9`), plus documents after it. Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`.
+- Product code through card 58's merge (`e116b9d9`) and the `graphql-core==3.2.11` pin (#127), plus documents and comment wording after them. Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`.
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger says where each builder stopped.
 - Production is unchanged on `v0.2.0`. In both repositories the release job now tags `production` and never pushes to it, and only the owner changes `develop` and `production`. Data engineering released v1.0.0 on 2026-09-27.
 
