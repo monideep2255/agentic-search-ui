@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentEvent, ErrorPayload, GuardPayload } from "../../lib/events";
-import { deriveStopEnabled, StopButton } from "./StopButton";
+import { deriveStopEnabled, deriveStopOffered, StopButton } from "./StopButton";
 
 // `lib/api.ts`'s `stopRun` is mocked at the module level (rather than
 // stubbing global `fetch`, which is how `useAgentRun.test.ts` covers the
@@ -84,8 +84,12 @@ describe("deriveStopEnabled", () => {
     expect(deriveStopEnabled([guardPassedEvent])).toBe(true);
   });
 
-  it("is disabled again after a trust_signal event", () => {
-    expect(deriveStopEnabled([guardPassedEvent, trustSignalEvent])).toBe(false);
+  // Card 58 (2026-09-27): a trust signal is part of the answer, never its
+  // end. It used to switch Stop off, and on develop every one arrives in the
+  // same burst as `done`; once answers stream sentence by sentence a
+  // claim-scope verdict can arrive while the server is still writing.
+  it("stays enabled after a trust_signal event, which is part of the answer, not its end", () => {
+    expect(deriveStopEnabled([guardPassedEvent, trustSignalEvent])).toBe(true);
   });
 
   it("is disabled again after a done event", () => {
@@ -98,6 +102,58 @@ describe("deriveStopEnabled", () => {
 
   it("stays enabled after a non-fatal error event", () => {
     expect(deriveStopEnabled([guardPassedEvent, nonFatalErrorEvent])).toBe(true);
+  });
+});
+
+/*
+ * Card 58, the rule the run screens use. `events` is what has ARRIVED; the
+ * second argument is what the SCREEN has shown, which the pacing and the
+ * reveal hold many seconds behind the stream. The product owner: "a user
+ * should be able to stop the answer at any point of time until the answer
+ * pops out."
+ */
+describe("deriveStopOffered", () => {
+  const nothingShown = { landed: false, claimsShown: 0 };
+  const firstSentenceShown = { landed: false, claimsShown: 1 };
+  const landedView = { landed: true, claimsShown: 3 };
+
+  it("is off before the guard has passed, and after it failed", () => {
+    expect(deriveStopOffered([], nothingShown)).toBe(false);
+    expect(deriveStopOffered([guardFailedEvent], nothingShown)).toBe(false);
+  });
+
+  it("is on once the guard has passed and nothing is on screen", () => {
+    expect(deriveStopOffered([guardPassedEvent], nothingShown)).toBe(true);
+  });
+
+  it("stays on after the server finished while no sentence is on screen yet", () => {
+    // The defect: the whole answer and `done` had arrived, the screen was
+    // still showing the helpers or the writing banner, and Stop was grey.
+    expect(
+      deriveStopOffered([guardPassedEvent, trustSignalEvent, doneEvent], nothingShown),
+    ).toBe(true);
+  });
+
+  it("goes off once the first sentence is on screen and the server has finished", () => {
+    expect(
+      deriveStopOffered([guardPassedEvent, trustSignalEvent, doneEvent], firstSentenceShown),
+    ).toBe(false);
+  });
+
+  it("stays on with sentences on screen while the server is still writing (item 9.6)", () => {
+    expect(deriveStopOffered([guardPassedEvent, trustSignalEvent], firstSentenceShown)).toBe(true);
+  });
+
+  it("is off once the view has landed, whatever arrived", () => {
+    expect(deriveStopOffered([guardPassedEvent], landedView)).toBe(false);
+    expect(deriveStopOffered([guardPassedEvent, doneEvent], { landed: true, claimsShown: 0 })).toBe(
+      false,
+    );
+  });
+
+  it("is off after a fatal error even with nothing on screen, and stays on after a non-fatal one", () => {
+    expect(deriveStopOffered([guardPassedEvent, fatalErrorEvent], nothingShown)).toBe(false);
+    expect(deriveStopOffered([guardPassedEvent, nonFatalErrorEvent], nothingShown)).toBe(true);
   });
 });
 
@@ -121,10 +177,20 @@ describe("StopButton", () => {
     expect(screen.getByRole("button", { name: /stop/i })).toBeEnabled();
   });
 
-  it("is disabled again after a trust_signal event", () => {
-    render(
+  it("stays enabled after a trust_signal event, and is disabled once done follows it", () => {
+    const { rerender } = render(
       <StopButton
         events={[guardPassedEvent, trustSignalEvent]}
+        runId="run-1"
+        token="test-token"
+        stop={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /stop/i })).toBeEnabled();
+
+    rerender(
+      <StopButton
+        events={[guardPassedEvent, trustSignalEvent, doneEvent]}
         runId="run-1"
         token="test-token"
         stop={vi.fn()}

@@ -10,6 +10,7 @@
  *   view stays unlanded until the last one, and the landed view is the input
  *   object itself (nothing dropped);
  * - Stop mid-reveal freezes the count and leaves no pending timer;
+ * - Stop before the first sentence withholds the whole answer (card 58);
  * - a run with no sentences (a refusal) passes straight through;
  * - a new run starts from zero.
  *
@@ -128,6 +129,36 @@ describe("useAnswerReveal", () => {
     act(() => vi.advanceTimersByTime(5000));
     expect(result.current.claims).toHaveLength(2);
     expect(result.current.landed).toBe(false);
+  });
+
+  it("withholds the whole answer when Stop latches before the first sentence (card 58, F-58-J02, F-58-A01)", () => {
+    // What Stop's flush hands the reveal: the per-question cap's partial
+    // result, landed, with no sentence to hold back, carrying its note, a
+    // verdict, and a clarification the person had already read.
+    const flushed = viewWith(0, {
+      landed: true,
+      activeStep: null,
+      meta: "3 tools · 0 sources",
+      outcome: "Partial result",
+      trust: [{ kind: "plain", label: "Not verified" }],
+      capMessage: "This answer stopped early because it reached its processing budget.",
+      systemNotes: ["Note: this result was truncated."],
+      clarification: "Which gene do you mean?",
+      refusal: "Which gene do you mean?",
+    });
+    const { result } = renderHook(() => useAnswerReveal(flushed, { runKey: "run-1", stopped: true }));
+
+    expect(result.current.landed, "a stopped run landed on the result page").toBe(false);
+    expect(result.current.claims).toEqual([]);
+    expect(result.current.trust, "a trust line survived Stop").toEqual([]);
+    expect(result.current.capMessage, "the stopped answer's cap note survived Stop").toBeNull();
+    expect(result.current.systemNotes).toEqual([]);
+    expect(result.current.meta).toBe("");
+    expect(result.current.outcome).toBeNull();
+    // Kept: shown the moment it arrived, before any Stop, and it says what to type next.
+    expect(result.current.clarification).toBe("Which gene do you mean?");
+    expect(result.current.refusal).toBe("Which gene do you mean?");
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("cuts the banner minimum under reduced motion, keeping banner-then-sentences order", () => {
