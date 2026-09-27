@@ -74,9 +74,9 @@ A builder stops and reports, rather than guessing, when:
 | builder P, T-8.10-01 to 04 | Opus 5.5 | default | 22:10 | 23:42 | 747,091 |
 | builder Q, T-8.10-05 and 06 | Opus 5.5 | default | 22:10 | 23:10 | 598,199 |
 | builder R, T-8.10-07 and 08 | Sonnet 5 | default | 23:33 | 23:56 | 329,279 |
-| judge | Opus 5.5 | default | 00:12 | 00:48 | 426,470 |
-| adversary | Fable 5.1 | default | 00:12 | 00:36 | 430,356 |
-| fix agent | Opus 5.5 | default | 00:50 | 01:36 | 546,213 |
+| judge | Opus 5.5 | default | 00:09 | 00:46 | 426,470 |
+| adversary | Fable 5.1 | default | 00:09 | 00:33 | 430,356 |
+| fix agent | Opus 5.5 | default | 00:47 | 01:32 | 546,213 |
 
 ## Tickets
 
@@ -254,11 +254,11 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
   - Gates on b31974b: `ruff check` clean; `isort` clean; `gate_packages_install.sh` 2 passed, 0 failed; `gate04_unit_suite.sh` 6349 passed, 143 skipped, 24 deselected, 1 xfailed.
   - T-8.10-01 to 08 are in review.
 - 2026-09-27 00:12: pull request #120 opened. The judge (Opus 5.5) and the adversary (Fable 5.1) dispatched on 5ba8f4d, dispatches 4 and 5 of 8. Their findings come back in their final messages, and the lead files them here.
-- 2026-09-27 00:36: the adversary returned PASS (A01 to A14). 00:48: the judge returned FAIL on J04 and J05, the same as the lead's L01 and L02, inside T-8.10-08 and not inside a fix. So one fix-and-verify round runs, with one fix agent (dispatch 6 of 8) and one fresh verifier (dispatch 7).
+- 2026-09-27 00:33: the adversary returned PASS (A01 to A14). 00:46: the judge returned FAIL on J04 and J05, the same as the lead's L01 and L02, inside T-8.10-08 and not inside a fix. So one fix-and-verify round runs, with one fix agent (dispatch 6 of 8) and one fresh verifier (dispatch 7).
   - The allowlist keys T-8.10-05 added (J11), from `tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py`:
     - On `ask_biomedical_question`: `session_id`, `trust_line`, `clarifying_question` and `clarifying_options`.
     - `list_past_searches`, `reopen_past_answer` and `send_answer_feedback` each carry their own pinned set, named in that test file beside the tool.
-- 2026-09-27 01:36: the fix agent finished (report `testing/Developer/reports/2026-09-26_phase_8.10/fix_round.md`), merged as 6ee5f7e. All eight finding groups were fixed, each with a test shown to fail on the unfixed file:
+- 2026-09-27 01:32: the fix agent finished (report `testing/Developer/reports/2026-09-26_phase_8.10/fix_round.md`), merged as 6ee5f7e. All eight finding groups were fixed, each with a test shown to fail on the unfixed file:
   - J01 and A01: every request gets exactly one answer, and `serve` survives any line.
   - A04, A07, J12 and A06: replies are capped at 4 MiB, each request has a 5 minute deadline, and only JSON-RPC 2.0 is forwarded.
   - A05: userinfo is never shown.
