@@ -71,7 +71,11 @@ from system_03_search_agent.synthesis.disease_names import (
     is_placeholder_condition_title,
     readable_disease_name,
 )
-from system_03_search_agent.synthesis.findings import SynthFinding, one_finding_per_record
+from system_03_search_agent.synthesis.findings import (
+    SynthFinding,
+    is_no_clinical_features_finding,
+    one_finding_per_record,
+)
 from system_03_search_agent.synthesis.grounding import (
     _MARKER,
     GroundedClaim,
@@ -910,6 +914,65 @@ def drop_record_restatements(
 MAX_SUMMARY_NAMES = 6
 
 
+@dataclass(frozen=True)
+class AskedField:
+    """The kind of fact a question asks for, as the loop was told it, and
+    the record fields that would carry it (build phase 8.7, T-8.7-01).
+
+    `label` is how the opening line names it, article included where one
+    is needed ("clinical features", "the organism"). `field_names` are the
+    row and finding fields code checks. Supplied by the loop from a
+    decision already made (today `think.asks_features`), never read off
+    the question's words (DECISIONS.md 2026-09-24).
+    """
+
+    label: str
+    field_names: tuple[str, ...]
+
+
+def records_lack_field(
+    counted: list[SynthFinding],
+    all_findings: list[SynthFinding],
+    row_for: Any,
+    asked: AskedField,
+) -> bool:
+    """Whether NO record in this answer carries the asked-for field.
+
+    The check behind the honest-gap clause of `answer_summary_sentence`:
+    the clause says the records do not give something, so code must have
+    looked. Every counted record's own row is read for a non-empty value
+    under any of `asked.field_names`, and every finding in the answer,
+    counted or not, is read for a finding of that field, so a record the
+    line does not count can never hold the fact the line says is missing.
+    The one finding that states an absence in its own words, "MedGen lists
+    no clinical features for <disease>", carries no feature and is not
+    counted as one. True only when every check found nothing.
+    """
+    names = set(asked.field_names)
+    if not names:
+        return False
+    for finding in all_findings:
+        if finding.field in names and not is_no_clinical_features_finding(finding):
+            return False
+    for finding in counted:
+        row = row_for(finding)
+        fields = (row or {}).get("fields") if isinstance(row, dict) else None
+        if not isinstance(fields, dict):
+            continue
+        for name in names:
+            value = fields.get(name)
+            if value not in (None, "", [], {}):
+                return False
+    return True
+
+
+def _gap_clause(record_count: int, asked: AskedField) -> str:
+    """The words the opening line adds when the records lack what was asked."""
+    if record_count == 1:
+        return f", which does not give {asked.label}"
+    return f", none of which gives {asked.label}"
+
+
 def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
     """The name the summary sentence prints for one answer finding, from
     the finding's own value when that value names the record, else the same
@@ -929,8 +992,20 @@ def answer_summary_sentence(
     condition_names: dict[str, str | None] | None = None,
     *,
     audience_depth: str = "researcher",
+    asked_field: AskedField | None = None,
+    all_findings: list[SynthFinding] | None = None,
 ) -> str | None:
     """The code-built sentence that opens an answer (2026-09-14).
+
+    The honest gap (build phase 8.7, T-8.7-01, design C). When the loop
+    says what kind of fact the question asks for (`asked_field`) and code
+    finds that no record in the answer carries it (`records_lack_field`,
+    over the counted records' rows and every finding in `all_findings`),
+    the line ends by saying so: "Found 40 gene records for TP53 [1]...[40],
+    none of which gives the organism." That is the owner's "or tells me the
+    records do not say". It is added only after that check, so the line
+    can never claim a gap one of its own records disproves, and it states
+    an absence of records, never a fact about the subject.
 
     Item 12.9, rule 1 (2026-09-23): in plain language the same sentence
     speaks to a reader with no technical background: "I found 4 conditions
@@ -1008,6 +1083,14 @@ def answer_summary_sentence(
             by_page[page] = finding
     counted = list(by_page.values()) + unkeyed
 
+    def finish(sentence: str) -> str:
+        # Build phase 8.7: the honest gap, only once code has looked.
+        if asked_field is not None and records_lack_field(
+            counted, list(all_findings or answer_findings), row_for, asked_field
+        ):
+            return sentence[:-1] + _gap_clause(len(counted), asked_field) + "."
+        return sentence
+
     def joined(items: list[str]) -> str:
         return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
@@ -1056,12 +1139,12 @@ def answer_summary_sentence(
             body += f", out of {total} available"
         body += " " + "".join(f"[{slot}]" for slot in markers)
         if not titles:
-            return body + "."
+            return finish(body + ".")
         conditions = "condition" if len(titles) == 1 else "conditions"
         clause = f", linked to {len(titles)} {conditions}"
         if named_diseases:
             clause += " " + "".join(f"[{display_slots[f.citation_id]}]" for f in named_diseases)
-        return body + clause + "."
+        return finish(body + clause + ".")
 
     counts: dict[str, int] = {}
     for finding in counted:
@@ -1089,7 +1172,7 @@ def answer_summary_sentence(
         body = f"{head} " + "".join(f"[{slot}]" for slot in markers)
 
     if not titles:
-        return body + "."
+        return finish(body + ".")
     others = len(titles) - len(named_diseases)
     noun = "disease" if len(titles) == 1 else "diseases"
     clause = f", linked to {len(titles)} {noun}"
@@ -1102,4 +1185,4 @@ def answer_summary_sentence(
         )
         if others > 0:
             clause += f" and {others} {'other' if others == 1 else 'others'}"
-    return body + clause + "."
+    return finish(body + clause + ".")

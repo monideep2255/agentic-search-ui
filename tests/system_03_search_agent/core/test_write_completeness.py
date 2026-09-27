@@ -56,6 +56,7 @@ supplies, which is the difference between testing the rule and restating it
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
 from types import SimpleNamespace
@@ -79,6 +80,11 @@ _PLAN_MODEL = "test-provider/plan-model"
 _SYNTH_MODEL = "test-provider/synth-model"
 
 _CORRECTION_MARKER = "COMPLETENESS CORRECTION"
+#: Build phase 8.7, option B: the completeness draft written BESIDE the first
+#: (`build_listing_gap_directive`), sent when the listing cannot cite a
+#: finding the writer is shown. Either marker names the second draft.
+_REQUIREMENT_MARKER = "COMPLETENESS REQUIREMENT"
+_SECOND_DRAFT_MARKERS = (_CORRECTION_MARKER, _REQUIREMENT_MARKER)
 _FINDING_LINE = re.compile(r"^\[(\d+)\]\s+(.+)$", re.MULTILINE)
 #: The real builder, kept so an arm that replaced it can put it back
 #: mid-test.
@@ -153,7 +159,7 @@ def synth_pair(monkeypatch: pytest.MonkeyPatch):
                 message.get("content") or ""
                 for message in messages  # type: ignore[union-attr]
             )
-            if _CORRECTION_MARKER in joined:
+            if any(marker in joined for marker in _SECOND_DRAFT_MARKERS):
                 return _fake_response(_narrative_covering(joined, repaired))
             if SYNTH_SYSTEM_INSTRUCTION in joined:
                 return _fake_response(_narrative_covering(joined, first))
@@ -237,8 +243,10 @@ def _tail_cannot_ground(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _record_synth_dispatches(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
-    """Wrap the real `_dispatch_tier_call`; one entry per Synth call, True
-    when that call carried the completeness correction."""
+    """Wrap the real `_dispatch_tier_call`; one entry per Synth call, in the
+    order each call starts, True when that call carried a completeness
+    directive: the correction after a first reply, or, since build phase
+    8.7, the requirement a draft started beside the first carries."""
     original = graph_module._dispatch_tier_call
     dispatched: list[bool] = []
 
@@ -246,7 +254,7 @@ def _record_synth_dispatches(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
         if len(args) > 2 and args[2] == "synth":
             messages = kwargs.get("messages") if "messages" in kwargs else args[4]
             joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
-            dispatched.append(_CORRECTION_MARKER in joined)
+            dispatched.append(any(marker in joined for marker in _SECOND_DRAFT_MARKERS))
         return await original(*args, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr(graph_module, "_dispatch_tier_call", _recording)
@@ -514,10 +522,11 @@ async def test_both_write_calls_share_the_steps_one_declared_budget(
         AssertionError: the repair must draw down the step's one budget;
         first=45.0 repair=45.0
     """
-    synth_pair(first={1, 2}, repaired={2, 3, 4, 5})
-    # Speed fix (2026-09-14): the repair fires only when the tail cannot
-    # cite what the model left out, so make it unable to.
-    _tail_cannot_ground(monkeypatch)
+    # Build phase 8.7: the repair that waits for the first reply is the one
+    # a first reply grounding nothing calls for while the listing cites
+    # every finding. A listing that cannot cite one starts the second draft
+    # beside the first instead (the arm below).
+    synth_pair(first=set(), repaired={1, 2, 3, 4, 5})
 
     original = graph_module._dispatch_tier_call
     budgets: list[float] = []
@@ -536,6 +545,47 @@ async def test_both_write_calls_share_the_steps_one_declared_budget(
         f"the repair must draw down the step's one budget; "
         f"first={budgets[0]} repair={budgets[1]}"
     )
+
+
+@pytest.mark.asyncio
+async def test_a_second_draft_beside_the_first_runs_inside_the_same_window(
+    synth_pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Build phase 8.7, option B. A draft started beside the first shares the
+    step's ONE budget by running in the same window: both are started before
+    either returns, and neither is given more than the step's own budget, so
+    the step's worst case stays its declared budget, never twice it."""
+    synth_pair(first={1, 2}, repaired={1, 2, 3, 4, 5})
+    _tail_cannot_ground(monkeypatch)
+
+    original = graph_module._dispatch_tier_call
+    budgets: list[float] = []
+    log: list[tuple[str, str]] = []
+
+    async def _recording(*args: object, **kwargs: object):
+        if len(args) > 3 and args[3] == "write":
+            messages = args[4]
+            joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
+            name = "second" if _REQUIREMENT_MARKER in joined else "first"
+            budgets.append(float(kwargs["budget_s"]))  # type: ignore[arg-type]
+            log.append(("start", name))
+            # A real call yields while it waits on the provider.
+            await asyncio.sleep(0.05)
+            result = await original(*args, **kwargs)  # type: ignore[arg-type]
+            log.append(("return", name))
+            return result
+        return await original(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _recording)
+
+    await graph_module.write_node(_write_state())
+
+    step_budget = graph_module.budget_for_step("write", "lookup")
+    starts = [name for kind, name in log if kind == "start"]
+    assert sorted(starts) == ["first", "second"], log
+    first_return = next(index for index, (kind, _) in enumerate(log) if kind == "return")
+    assert [kind for kind, _ in log[:first_return]] == ["start", "start"], log
+    assert all(budget <= step_budget for budget in budgets), (budgets, step_budget)
 
 
 @pytest.mark.asyncio
@@ -1367,16 +1417,17 @@ def _paper_write_state(audience_depth: str = "researcher") -> dict[str, object]:
 
 def _synth_covering(monkeypatch: pytest.MonkeyPatch, *, first_covers: str, delay_s: float = 0.0) -> None:
     """The first writing call reports only the prompt lines containing
-    `first_covers`; a repair (the call carrying the completeness correction)
-    reports every line. Chosen by content, not by number, so the arms do not
-    depend on how the findings are numbered."""
-    import asyncio
+    `first_covers`; a second draft (the call carrying a completeness
+    directive, the correction or, since build phase 8.7, the requirement a
+    draft started beside the first carries) reports every line. Chosen by
+    content, not by number, so the arms do not depend on how the findings
+    are numbered."""
 
     async def _dispatch(*_args: object, **kwargs: object):
         messages = kwargs.get("messages") or []
         joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
         lines = _FINDING_LINE.findall(joined)
-        if _CORRECTION_MARKER in joined:
+        if any(marker in joined for marker in _SECOND_DRAFT_MARKERS):
             chosen = {int(index) for index, _ in lines}
         elif SYNTH_SYSTEM_INSTRUCTION in joined:
             if delay_s:
