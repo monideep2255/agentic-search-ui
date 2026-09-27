@@ -251,6 +251,10 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
   - Gates on b31974b: `ruff check` clean; `isort` clean; `gate_packages_install.sh` 2 passed, 0 failed; `gate04_unit_suite.sh` 6349 passed, 143 skipped, 24 deselected, 1 xfailed.
   - T-8.10-01 to 08 are in review.
 - 2026-09-27 00:12: pull request #120 opened. The judge (Opus 5.5) and the adversary (Fable 5.1) dispatched on 5ba8f4d, dispatches 4 and 5 of 8. Their findings come back in their final messages, and the lead files them here.
+- 2026-09-27 00:36: the adversary returned PASS (A01 to A14). 00:48: the judge returned FAIL on J04 and J05, the same as the lead's L01 and L02, inside T-8.10-08 and not inside a fix. So one fix-and-verify round runs, with one fix agent (dispatch 6 of 8) and one fresh verifier (dispatch 7).
+  - The allowlist keys T-8.10-05 added (J11), from `tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py`:
+    - On `ask_biomedical_question`: `session_id`, `trust_line`, `clarifying_question` and `clarifying_options`.
+    - `list_past_searches`, `reopen_past_answer` and `send_answer_feedback` each carry their own pinned set, named in that test file beside the tool.
 
 ## Findings
 - F-8.10-L01, should-fix, filed by the lead from the re-split facts checker (#122) run on this branch's page text: the About page's Plan tier card now says the plan tier answers Plan's routing decision. That step reaches only Jev and the guard tier, never the plan tier (`check_facts.py` call-graph reading of `core/graph.py`'s plan node). T-8.10-08.
@@ -270,3 +274,18 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
 - F-8.10-A13, note, adversary: a new enum value in a frame the client never renders ends the run. Honest but stricter than the contract's additive rule, as builder P's report states.
 - F-8.10-A14, note, adversary: the `[ask]` label keys on `think.clarifying_question` alone. A future core change that both asks and refuses would print a refusal under `[ask]`. Not reachable today.
 - Adversary verdict: PASS, 3 of 8 live questions. Verified: the account ownership of all three new tools with real Postgres, including a deleted account's token; sign-in renewal failing closed with no secret in stdout or stderr; tomorrow's stream tolerated without a wrong answer printed as right; the page's commands as printed.
+- F-8.10-J01, should-fix, judge (A01 and more): `s3 mcp` can leave a request unanswered for good. A reply nested 5000 deep raises `RecursionError` in `_read_json` and `_read_event_stream`. A body labelled gzip that is not gzip raises `httpx.DecodingError`, which `_post` does not catch. Either way `_forward` writes nothing back and stderr is empty, and a deeply nested line from the agent ends `serve`. `credentials._refresh_and_store`'s `response.json()` has the same gap, by reading. Fix: catch every exception in `_forward` and answer the request (`scratchpad/judge_probes/probe_bridge_noauth.py`).
+- F-8.10-J02, should-fix, judge (A02): capture stores 50 citations of a 60-marker answer, so markers [51] to [60] point at nothing, and `reopen_past_answer` still says `citations_omitted: 0` (`probe_capture60.py`).
+- F-8.10-J03, should-fix, judge: About's stop 2 changed the true "matched to how hard the step is" to the false "how hard the question is". Tiers are per job (`harness/tiers.py`), never per question.
+- F-8.10-J04, blocking, judge (same as L01): About's Plan tier card says the plan tier answers Plan's routing decision, "such as how far back to search the literature". Plan's `plan.literature` decision goes to the guard tier or Jev (`harness/decide.py:389-420`), and "how far back" is Think's `think.recent_years` (`graph.py:983`). T-8.10-08 is unmet.
+- F-8.10-J05, blocking, judge (same as L02): `OnboardingTour.tsx:193`, "Two of these four come word for word from the evaluation set". None of the four seeds is one of the 50 golden questions. T-8.10-08 is unmet.
+- F-8.10-J06, should-fix, judge: the develop web bundle points the REST, GraphQL and MCP examples at develop, but `CLI_EXAMPLE`'s `s3 login you@example.org` has no `--base-url`, and `s3` now defaults to production. A tester following the page on develop signs in to production.
+- F-8.10-J07, note, judge: `TestFeedbackIsYoursAlone` claims that skipping `resolve_owned_run` turns it red. It does not, since the second check in `record_feedback` still refuses, so the registry check has no test of its own.
+- F-8.10-J08, note, judge: `s3 ask --json` with no sign-in writes nothing to stdout, so a script gets no JSON object for a failure before the stream starts.
+- F-8.10-J09, note, judge: a frame nested past the recursion limit raises out of `CliClient.stream_events`, the same on 15aae08. Not a regression.
+- F-8.10-J10, note, judge (A12): the page never shows the agent-side `{"command":"s3","args":["mcp"]}`, and `s3 mcp` typed at a terminal waits on stdin.
+- F-8.10-J11, should-fix, judge: T-8.10-05's acceptance asks that each allowlist key be named in the History. The keys match the output models exactly, but only the test comment lists them. The lead records them.
+- F-8.10-J12, note, judge (near A06): the bridge forwards any JSON value the agent writes, not only JSON-RPC, with the token attached. Nothing from a remote reply runs locally.
+- F-8.10-J13, note, judge: the MCP card says "the same parity the web app has", while the follow-up offers wait for card 52.
+- F-8.10-J14, note, latent, judge: `client._nested_model_class` treats `dict[str, Model]` like `Model`. No such field exists today.
+- Judge verdict: FAIL, blocking J04 and J05, neither inside a fix. Verified by the judge: the package gate fails three ways under mutation; 6349 unit tests pass; stream leniency holds; `--json` is complete; `PRODUCTION_API_ORIGIN` is production; every page command parses; ownership and schema bounds hold; the GraphQL diff is additive; nothing is published.
