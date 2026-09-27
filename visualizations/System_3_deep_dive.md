@@ -4,6 +4,11 @@ System 3 as it runs on develop, drawn for the product owner and for anyone they 
 
 As of 2026-09-26: develop at commit `d042860`. Its product code under `src/` is byte for byte the code at `654f2d2`, which phase 8.6's rollback restored, and at `566e1ab`, where phase 8.2's golden run was deployed. That run's saved answers are therefore real traces of the code described here.
 
+Corrected since, against develop `3964bb9` on 2026-09-27 (card 53), so these lines describe that commit rather than `d042860`:
+
+- A whole `cypher_query` call has 30 s, back from 90 s on the product owner's decision of 2026-09-26 (R-09).
+- Plan's row and the traced run name the literature decision Plan reads, and when Plan asks it itself.
+
 What it covers, in order:
 
 - The architecture: the five-step loop, the three data layers, and where an answer's trust comes from.
@@ -65,7 +70,7 @@ flowchart LR
 |------|-------------|------------------------|-------|
 | Guardrail | Refuse what the system must not answer, before anything is searched | The guard tier's injection and off-topic classifier. The relevancy decision, Jev beside the guard tier, when the word list does not recognise the question | `guardrail_node`, `_guardrail_after_prefilter` |
 | Think | Say what kind of question this is and which entities it names, or ask back | The plan tier's classification. The ask-back, recent-work and literature decisions, Jev beside the guard tier. The guard tier writes ask-back choices | `think_node`, `_think` |
-| Plan | Choose tools and graph templates from Think's entities | None. Its model call was deleted on 2026-09-14 | `plan_node` |
+| Plan | Choose tools and graph templates from Think's entities | None of its own on a normal run. It reads the literature decision Think started, and asks it itself only when Think did not start it. Its plan-tier call was deleted on 2026-09-14 | `plan_node`, `_literature_choice` |
 | Act | Run the chosen tools at once and record what each returned | The plan tier writes Cypher only when no template fits. The guard tier reads article titles from the graph | `act_node` |
 | Write | Turn verified findings into cited prose, or refuse | The synth tier's answer and a possible repair. The guard tier's check on reworded sentences | `write_node` |
 
@@ -355,11 +360,11 @@ A model-calling step's budget follows the tier that answers it, because measured
 | Reader pass | 10 s | `_READER_CALL_TIMEOUT_S` |
 | Sentence check | At most 12 s, skipped with under 4 s left | `_SENTENCE_CHECK_MAX_BUDGET_S` |
 | Repair pass | What is left of Write's 45 s, at least 5 s | `_WRITE_REPAIR_MIN_BUDGET_S` |
-| A whole `cypher_query` call, Cypher writing included | 90 s | `tools/graph_schema_constants.py` |
+| A whole `cypher_query` call, Cypher writing included | 30 s | `tools/graph_schema_constants.py` |
 | One Layer 2 or Layer 3 HTTP call | 15 s by default | `tools/ncbi_transport.py` |
 | Pathogen Detection isolate search | 120 s for all of one call's reads, and Act waits up to 150 s | `_TOTAL_BUDGET_S` in `tools/pathogen_detection.py`, `_LAYER_TOOL_ACT_TIMEOUT_SECONDS` in `core/graph.py` |
 
-The `cypher_query` figure is 90 seconds in code while `.claude/rules/tool-call-budgets.md` and the specification say 30. The comment above the constant gives the measured reason: writing the Cypher, not the graph read, consumed the budget. It is filed as a reconciliation item.
+The `cypher_query` figure is 30 seconds, the same as `.claude/rules/tool-call-budgets.md` and the specification. It was 90 for a while, because writing the Cypher was once measured to consume the budget. It went back to 30 on the product owner's decision of 2026-09-26 (R-09): the comment above the constant records that across two golden runs, 290 calls took a median of 0.71 seconds and no call that ran past 30 seconds succeeded.
 
 The Pathogen Detection figure differs from the rule and the specification in the other direction. `.claude/rules/tool-call-budgets.md` and the specification state "60 seconds or more". The transport's own 60 seconds (`DEFAULT_TIMEOUT_S` in `tools/pathogen_ftp_transport.py`) applies only when a caller passes no deadline, and the tool always passes one: 120 seconds from the start of the call, shared across its reads.
 
@@ -464,7 +469,7 @@ sequenceDiagram
         L->>PM: class and entities
     end
     L-->>P: think, single hop
-    Note over L: Plan, no model call
+    Note over L: Plan reads the literature pick
     L-->>P: plan, three tools
     Note over L: Act
     par graph
