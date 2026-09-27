@@ -353,9 +353,10 @@ export interface RunProgressProps {
   /**
    * Whether Stop is still meaningful.
    *
-   * Derived from the run's own events by `deriveStopEnabled`, which has 19
-   * tests behind it. An earlier version of this screen offered Stop
-   * unconditionally, including after the run had already finished.
+   * Derived by `App` with `deriveStopOffered`: on from the passed guard until
+   * the first answer sentence is on screen or the view lands (card 58). An
+   * earlier version of this screen offered Stop unconditionally, including
+   * after the run had already finished.
    */
   stopEnabled?: boolean;
   /**
