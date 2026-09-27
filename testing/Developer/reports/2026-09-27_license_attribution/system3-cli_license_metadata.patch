@@ -1,0 +1,355 @@
+diff --git a/.github/gates/check_packages_install.py b/.github/gates/check_packages_install.py
+index 25fe8ed7..dbee94a5 100644
+--- a/.github/gates/check_packages_install.py
++++ b/.github/gates/check_packages_install.py
+@@ -23,7 +23,9 @@ For each distribution (the root `pyproject.toml`, and every
+        `src/system_03_search_agent/`, Python or data, must be in the wheel.
+        A client distribution ships a deliberate subset, so it is not
+        compared; step 5 catches a module it needs and lacks.
+-    4. Install the wheel, with no dependencies, into a new, empty virtual
++    4. Every wheel's `dist-info/licenses/` holds LICENSE and NOTICE, the
++       attribution Apache 2.0 Section 4(d) has every redistribution carry.
++    5. Install the wheel, with no dependencies, into a new, empty virtual
+        environment. Its third-party dependencies are reached through one path
+        entry to this interpreter's own site-packages, so no network is used
+        and the versions are the ones this environment already vetted. The
+@@ -32,8 +34,8 @@ For each distribution (the root `pyproject.toml`, and every
+        file inside that site-packages (such as an editable install's) is not
+        processed, because Python processes `.pth` files only in a site
+        directory, never in a path a `.pth` line adds.
+-    5. Import every first-party module the wheel ships.
+-    6. Run every console script the wheel declares with `--help`: it must
++    6. Import every first-party module the wheel ships.
++    7. Run every console script the wheel declares with `--help`: it must
+        exit 0, print something, and print no traceback.
+ 
+ What this does NOT cover, stated so a gap is arguable rather than discovered
+@@ -81,7 +83,12 @@ import zipfile
+ from pathlib import Path
+ 
+ _TIMEOUT_S = 600
+-_STAGED_TOP_LEVEL = ("pyproject.toml", "src", "clients")
++# LICENSE and NOTICE: every distribution's `license-files` names them (the
++# root's directly, a client's as committed copies), and setuptools silently
++# leaves out a license file it cannot find, so a staged tree without them
++# would build a wheel that passes here and ships without its attribution.
++_STAGED_TOP_LEVEL = ("pyproject.toml", "LICENSE", "NOTICE", "src", "clients")
++_LICENSE_FILES = ("LICENSE", "NOTICE")
+ _SKIPPED_PARTS = {"__pycache__", "build", "dist"}
+ 
+ # Run by the fresh environment's own interpreter, with the wheel's module
+@@ -218,6 +225,16 @@ def missing_from_wheel(wheel: Path, source_files: list[Path]) -> list[str]:
+     return sorted(missing)
+ 
+ 
++def missing_license_files(wheel: Path) -> list[str]:
++    """Each of LICENSE and NOTICE that the wheel's `dist-info/licenses/` lacks."""
++    shipped = {
++        name.rsplit("/", 1)[-1]
++        for name in wheel_names(wheel)
++        if ".dist-info/licenses/" in name
++    }
++    return [name for name in _LICENSE_FILES if name not in shipped]
++
++
+ def first_party_modules(wheel: Path) -> list[str]:
+     modules = []
+     for name in wheel_names(wheel):
+@@ -275,7 +292,7 @@ def isolated_env(home: Path) -> dict[str, str]:
+ 
+ 
+ def check_installed_wheel(wheel: Path, work: Path) -> list[str]:
+-    """Steps 4 to 6 for one wheel. Returns the problems found."""
++    """Steps 5 to 7 for one wheel. Returns the problems found."""
+     problems: list[str] = []
+     python, scripts = clean_environment(work / "venv")
+     installed = _run(
+@@ -347,6 +364,10 @@ def check(repo_root: Path, *, isolation: bool) -> list[tuple[str, list[str]]]:
+                     f"left out of the wheel: src/{name}"
+                     for name in missing_from_wheel(wheel, source)
+                 )
++            problems.extend(
++                f"left out of the wheel's dist-info/licenses/: {name}"
++                for name in missing_license_files(wheel)
++            )
+             problems.extend(check_installed_wheel(wheel, work))
+             results.append((f"{label} ({wheel.name})", problems))
+     return results
+diff --git a/clients/system3-cli/LICENSE b/clients/system3-cli/LICENSE
+new file mode 100644
+index 00000000..d6456956
+--- /dev/null
++++ b/clients/system3-cli/LICENSE
+@@ -0,0 +1,202 @@
++
++                                 Apache License
++                           Version 2.0, January 2004
++                        http://www.apache.org/licenses/
++
++   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
++
++   1. Definitions.
++
++      "License" shall mean the terms and conditions for use, reproduction,
++      and distribution as defined by Sections 1 through 9 of this document.
++
++      "Licensor" shall mean the copyright owner or entity authorized by
++      the copyright owner that is granting the License.
++
++      "Legal Entity" shall mean the union of the acting entity and all
++      other entities that control, are controlled by, or are under common
++      control with that entity. For the purposes of this definition,
++      "control" means (i) the power, direct or indirect, to cause the
++      direction or management of such entity, whether by contract or
++      otherwise, or (ii) ownership of fifty percent (50%) or more of the
++      outstanding shares, or (iii) beneficial ownership of such entity.
++
++      "You" (or "Your") shall mean an individual or Legal Entity
++      exercising permissions granted by this License.
++
++      "Source" form shall mean the preferred form for making modifications,
++      including but not limited to software source code, documentation
++      source, and configuration files.
++
++      "Object" form shall mean any form resulting from mechanical
++      transformation or translation of a Source form, including but
++      not limited to compiled object code, generated documentation,
++      and conversions to other media types.
++
++      "Work" shall mean the work of authorship, whether in Source or
++      Object form, made available under the License, as indicated by a
++      copyright notice that is included in or attached to the work
++      (an example is provided in the Appendix below).
++
++      "Derivative Works" shall mean any work, whether in Source or Object
++      form, that is based on (or derived from) the Work and for which the
++      editorial revisions, annotations, elaborations, or other modifications
++      represent, as a whole, an original work of authorship. For the purposes
++      of this License, Derivative Works shall not include works that remain
++      separable from, or merely link (or bind by name) to the interfaces of,
++      the Work and Derivative Works thereof.
++
++      "Contribution" shall mean any work of authorship, including
++      the original version of the Work and any modifications or additions
++      to that Work or Derivative Works thereof, that is intentionally
++      submitted to Licensor for inclusion in the Work by the copyright owner
++      or by an individual or Legal Entity authorized to submit on behalf of
++      the copyright owner. For the purposes of this definition, "submitted"
++      means any form of electronic, verbal, or written communication sent
++      to the Licensor or its representatives, including but not limited to
++      communication on electronic mailing lists, source code control systems,
++      and issue tracking systems that are managed by, or on behalf of, the
++      Licensor for the purpose of discussing and improving the Work, but
++      excluding communication that is conspicuously marked or otherwise
++      designated in writing by the copyright owner as "Not a Contribution."
++
++      "Contributor" shall mean Licensor and any individual or Legal Entity
++      on behalf of whom a Contribution has been received by Licensor and
++      subsequently incorporated within the Work.
++
++   2. Grant of Copyright License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      copyright license to reproduce, prepare Derivative Works of,
++      publicly display, publicly perform, sublicense, and distribute the
++      Work and such Derivative Works in Source or Object form.
++
++   3. Grant of Patent License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      (except as stated in this section) patent license to make, have made,
++      use, offer to sell, sell, import, and otherwise transfer the Work,
++      where such license applies only to those patent claims licensable
++      by such Contributor that are necessarily infringed by their
++      Contribution(s) alone or by combination of their Contribution(s)
++      with the Work to which such Contribution(s) was submitted. If You
++      institute patent litigation against any entity (including a
++      cross-claim or counterclaim in a lawsuit) alleging that the Work
++      or a Contribution incorporated within the Work constitutes direct
++      or contributory patent infringement, then any patent licenses
++      granted to You under this License for that Work shall terminate
++      as of the date such litigation is filed.
++
++   4. Redistribution. You may reproduce and distribute copies of the
++      Work or Derivative Works thereof in any medium, with or without
++      modifications, and in Source or Object form, provided that You
++      meet the following conditions:
++
++      (a) You must give any other recipients of the Work or
++          Derivative Works a copy of this License; and
++
++      (b) You must cause any modified files to carry prominent notices
++          stating that You changed the files; and
++
++      (c) You must retain, in the Source form of any Derivative Works
++          that You distribute, all copyright, patent, trademark, and
++          attribution notices from the Source form of the Work,
++          excluding those notices that do not pertain to any part of
++          the Derivative Works; and
++
++      (d) If the Work includes a "NOTICE" text file as part of its
++          distribution, then any Derivative Works that You distribute must
++          include a readable copy of the attribution notices contained
++          within such NOTICE file, excluding those notices that do not
++          pertain to any part of the Derivative Works, in at least one
++          of the following places: within a NOTICE text file distributed
++          as part of the Derivative Works; within the Source form or
++          documentation, if provided along with the Derivative Works; or,
++          within a display generated by the Derivative Works, if and
++          wherever such third-party notices normally appear. The contents
++          of the NOTICE file are for informational purposes only and
++          do not modify the License. You may add Your own attribution
++          notices within Derivative Works that You distribute, alongside
++          or as an addendum to the NOTICE text from the Work, provided
++          that such additional attribution notices cannot be construed
++          as modifying the License.
++
++      You may add Your own copyright statement to Your modifications and
++      may provide additional or different license terms and conditions
++      for use, reproduction, or distribution of Your modifications, or
++      for any such Derivative Works as a whole, provided Your use,
++      reproduction, and distribution of the Work otherwise complies with
++      the conditions stated in this License.
++
++   5. Submission of Contributions. Unless You explicitly state otherwise,
++      any Contribution intentionally submitted for inclusion in the Work
++      by You to the Licensor shall be under the terms and conditions of
++      this License, without any additional terms or conditions.
++      Notwithstanding the above, nothing herein shall supersede or modify
++      the terms of any separate license agreement you may have executed
++      with Licensor regarding such Contributions.
++
++   6. Trademarks. This License does not grant permission to use the trade
++      names, trademarks, service marks, or product names of the Licensor,
++      except as required for reasonable and customary use in describing the
++      origin of the Work and reproducing the content of the NOTICE file.
++
++   7. Disclaimer of Warranty. Unless required by applicable law or
++      agreed to in writing, Licensor provides the Work (and each
++      Contributor provides its Contributions) on an "AS IS" BASIS,
++      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
++      implied, including, without limitation, any warranties or conditions
++      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
++      PARTICULAR PURPOSE. You are solely responsible for determining the
++      appropriateness of using or redistributing the Work and assume any
++      risks associated with Your exercise of permissions under this License.
++
++   8. Limitation of Liability. In no event and under no legal theory,
++      whether in tort (including negligence), contract, or otherwise,
++      unless required by applicable law (such as deliberate and grossly
++      negligent acts) or agreed to in writing, shall any Contributor be
++      liable to You for damages, including any direct, indirect, special,
++      incidental, or consequential damages of any character arising as a
++      result of this License or out of the use or inability to use the
++      Work (including but not limited to damages for loss of goodwill,
++      work stoppage, computer failure or malfunction, or any and all
++      other commercial damages or losses), even if such Contributor
++      has been advised of the possibility of such damages.
++
++   9. Accepting Warranty or Additional Liability. While redistributing
++      the Work or Derivative Works thereof, You may choose to offer,
++      and charge a fee for, acceptance of support, warranty, indemnity,
++      or other liability obligations and/or rights consistent with this
++      License. However, in accepting such obligations, You may act only
++      on Your own behalf and on Your sole responsibility, not on behalf
++      of any other Contributor, and only if You agree to indemnify,
++      defend, and hold each Contributor harmless for any liability
++      incurred by, or claims asserted against, such Contributor by reason
++      of your accepting any such warranty or additional liability.
++
++   END OF TERMS AND CONDITIONS
++
++   APPENDIX: How to apply the Apache License to your work.
++
++      To apply the Apache License to your work, attach the following
++      boilerplate notice, with the fields enclosed by brackets "[]"
++      replaced with your own identifying information. (Don't include
++      the brackets!)  The text should be enclosed in the appropriate
++      comment syntax for the file format. We also recommend that a
++      file or class name and description of purpose be included on the
++      same "printed page" as the copyright notice for easier
++      identification within third-party archives.
++
++   Copyright [yyyy] [name of copyright owner]
++
++   Licensed under the Apache License, Version 2.0 (the "License");
++   you may not use this file except in compliance with the License.
++   You may obtain a copy of the License at
++
++       http://www.apache.org/licenses/LICENSE-2.0
++
++   Unless required by applicable law or agreed to in writing, software
++   distributed under the License is distributed on an "AS IS" BASIS,
++   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++   See the License for the specific language governing permissions and
++   limitations under the License.
+diff --git a/clients/system3-cli/NOTICE b/clients/system3-cli/NOTICE
+new file mode 100644
+index 00000000..536a2f87
+--- /dev/null
++++ b/clients/system3-cli/NOTICE
+@@ -0,0 +1,5 @@
++Agentic search UI
++Copyright 2026 Monideep Chakraborti (https://github.com/monideep2255)
++
++This product includes software developed by Monideep Chakraborti
++(https://github.com/monideep2255/agentic-search-ui).
+diff --git a/clients/system3-cli/pyproject.toml b/clients/system3-cli/pyproject.toml
+index 38318dea..4a172527 100644
+--- a/clients/system3-cli/pyproject.toml
++++ b/clients/system3-cli/pyproject.toml
+@@ -34,6 +34,15 @@ name = "system3-cli"
+ version = "0.1.0"
+ description = "s3, the System 3 biomedical search command line, and s3 mcp, a local MCP server that lets an AI agent ask System 3 with your sign-in"
+ requires-python = ">=3.11"
++authors = [{ name = "Monideep Chakraborti" }]
++license = "Apache-2.0"
++# The two files are COPIES of the repository root's LICENSE and NOTICE, and
++# `test_system3_cli_package.py` fails the day either differs by a byte. A copy
++# is the one exception to "same source, no copy" above, because PEP 639 forbids
++# a `license-files` path that leaves the project directory (`../../LICENSE`),
++# and setuptools 83 only tolerates one. Apache 2.0 Section 4(d) has every
++# redistribution carry NOTICE, and a wheel is one.
++license-files = ["LICENSE", "NOTICE"]
+ dependencies = [
+     "httpx==0.28.1",
+     "pydantic==2.13.4",
+@@ -49,6 +58,11 @@ dependencies = [
+     "typing-inspection==0.4.2",
+ ]
+ 
++[project.urls]
++Homepage = "https://github.com/monideep2255/agentic-search-ui"
++Repository = "https://github.com/monideep2255/agentic-search-ui"
++Issues = "https://github.com/monideep2255/agentic-search-ui/issues"
++
+ [project.scripts]
+ s3 = "system_03_search_agent.adapters.cli.main:main"
+ 
+diff --git a/tests/system_03_search_agent/adapters/cli/test_system3_cli_package.py b/tests/system_03_search_agent/adapters/cli/test_system3_cli_package.py
+index b5f84f5e..f6acea58 100644
+--- a/tests/system_03_search_agent/adapters/cli/test_system3_cli_package.py
++++ b/tests/system_03_search_agent/adapters/cli/test_system3_cli_package.py
+@@ -223,3 +223,22 @@ def test_s3_imports_only_what_the_package_ships_and_declares() -> None:
+     assert third_party <= ALLOWED_THIRD_PARTY_IMPORTS, (
+         f"undeclared packages imported: {sorted(third_party - ALLOWED_THIRD_PARTY_IMPORTS)}"
+     )
++
++
++def test_the_license_and_notice_copies_match_the_repository_root() -> None:
++    """The client's LICENSE and NOTICE are byte-for-byte the root's.
++
++    PEP 639 forbids a `license-files` path that leaves the project directory,
++    so the client carries copies, and a copy is only acceptable while nothing
++    can tell it from the original. Apache 2.0 Section 4(d) has every
++    redistribution carry NOTICE, and the wheel is one.
++    """
++    client_dir = CLIENT_PYPROJECT.parent
++    for name in ("LICENSE", "NOTICE"):
++        assert (client_dir / name).read_bytes() == (REPO_ROOT / name).read_bytes(), (
++            f"clients/system3-cli/{name} differs from the repository root's {name}; "
++            f"copy the root's file over it, the root is the source"
++        )
++    declared = tomllib.loads(CLIENT_PYPROJECT.read_text(encoding="utf-8"))["project"]
++    assert declared["license"] == "Apache-2.0"
++    assert declared["license-files"] == ["LICENSE", "NOTICE"]
