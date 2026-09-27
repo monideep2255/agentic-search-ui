@@ -342,6 +342,13 @@ _FEEDBACK_NOT_YET_CAPTURED_MESSAGE = (
     "request in a few seconds"
 )
 _NO_SAVED_ANSWER_MESSAGE = "no saved answer for this search; ask it again to get a fresh one"
+# Build phase 8.10's fix round, F-8.10-A08: a call carrying none of the four
+# was recorded as feedback and could replace an earlier rating with nothing.
+_NOTHING_TO_RECORD_MESSAGE = (
+    "nothing to record: send at least one of rating ('up' or 'down'), comment, "
+    "flagged_reason or citation_flags. Any feedback already sent for this answer "
+    "is unchanged"
+)
 
 # F-4.1-A-16 (adversary round 1, fix round 2): C0 control bytes and DEL,
 # including the ESC (\x1b) that opens an ANSI escape sequence and the NUL
@@ -1604,8 +1611,9 @@ async def reopen_past_answer(
     description=(
         "Tell the team what you thought of one answer: a thumbs up or down, a "
         "comment, a reason it was wrong, or the citations that do not support "
-        "their claim. run_id is the one ask_biomedical_question returned. "
-        "Sending feedback again for the same answer replaces the earlier one."
+        "their claim. Send at least one of them. run_id is the one "
+        "ask_biomedical_question returned. Sending feedback again for the same "
+        "answer replaces the earlier one."
     ),
     annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True),
 )
@@ -1657,6 +1665,17 @@ async def send_answer_feedback(
     user = await _authenticate_mcp_caller(ctx)
     _reject_unknown_arguments(ctx, _SEND_ANSWER_FEEDBACK_ARGUMENT_NAMES)
     owner_id = _owner_id_for(user)
+
+    # Refused before the run is looked up, so a call with nothing in it
+    # writes nothing and learns nothing about the run (fix round,
+    # F-8.10-A08). Blank text is nothing too. The REST route is unchanged.
+    if (
+        rating is None
+        and not (comment and comment.strip())
+        and not (flagged_reason and flagged_reason.strip())
+        and not citation_flags
+    ):
+        raise MCPError(code=INVALID_PARAMS, message=_NOTHING_TO_RECORD_MESSAGE)
 
     try:
         entry = default_registry.resolve_owned_run(run_id, owner_id)

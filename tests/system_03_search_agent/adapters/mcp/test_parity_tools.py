@@ -900,6 +900,36 @@ class TestFeedbackIsYoursAlone:
         ]
 
     @pytest.mark.asyncio
+    async def test_a_call_with_nothing_to_record_is_refused_and_keeps_earlier_feedback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Fix round, F-8.10-A08: a call with no rating, comment, flag or
+        # citation flag reported `recorded: True` and replaced the earlier
+        # feedback with nothing. Mutation that turns this red: drop the
+        # nothing-to-record check -> the call succeeds and the stored rating
+        # is gone.
+        a_id, a_headers = await _new_account()
+        asked, _query = await _ask(monkeypatch, a_headers, {"query": "What gene is BRCA1?"})
+        run_id = asked.structured_content["run_id"]
+        await _seed_row(owner_id=f"user:{a_id}", trace_id=run_id)
+        first = await _call(
+            a_headers, "send_answer_feedback", {"run_id": run_id, "rating": "down", "comment": "Wrong gene."}
+        )
+        assert first.is_error is False, "populate check: the first feedback is stored"
+
+        for empty in (
+            {"run_id": run_id},
+            {"run_id": run_id, "comment": "   ", "flagged_reason": ""},
+            {"run_id": run_id, "citation_flags": []},
+        ):
+            message = await _call_expecting_error(a_headers, "send_answer_feedback", empty)
+            assert message == server_module._NOTHING_TO_RECORD_MESSAGE, empty
+
+        stored = _stored_feedback(run_id)
+        assert stored["rating"] == "down"
+        assert stored["comment"] == "Wrong gene."
+
+    @pytest.mark.asyncio
     async def test_the_stored_rows_own_owner_is_checked_too(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
