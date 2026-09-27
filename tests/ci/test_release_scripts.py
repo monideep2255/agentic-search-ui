@@ -650,3 +650,38 @@ def test_a_commit_borrowing_the_robots_subject_is_counted(tmp_path: Path) -> Non
     assert "Plus 3 internal changes" in notes, (
         f"a commit that borrows the robot's subject was hidden from the notes:\n{notes}"
     )
+
+
+# ---------------------------------------------------------------------------
+# A release's notes are its own section, and only its own
+# ---------------------------------------------------------------------------
+
+
+def test_the_notes_stop_at_the_next_heading_even_one_for_the_same_version(
+    tmp_path: Path,
+) -> None:
+    """Finding F-REL-J11: a second heading for the same version doubled the notes.
+
+    The owner drafts a section by hand under the version the release will get.
+    The job then writes its own section above it, so CHANGELOG.md carries two
+    headings for one version. The notes are the job's section alone: the
+    reader stops at the next `## ` heading whatever that heading says.
+    """
+    repo, changelog = _repo_at_v0_1_0(tmp_path)
+    draft = changelog.replace(
+        "## v0.1.0",
+        "## v0.1.1 (draft)\n\n- a note written by hand before the release\n\n## v0.1.0",
+    )
+    repo.commit("docs: draft the next release's notes", changelog=draft)
+    repo.commit("fix: keep the citation beside its sentence")
+    repo.push("develop")
+    repo.release()
+
+    run = repo.run_release_job()
+
+    assert run.outputs["version"]["version"] == "v0.1.1", run.log
+    notes = _call(run, "release", "create", "v0.1.1").stdin
+    assert "keep the citation beside its sentence" in notes, notes
+    assert "a note written by hand" not in notes, (
+        f"the notes ran on into a second v0.1.1 section:\n{notes}"
+    )

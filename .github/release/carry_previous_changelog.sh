@@ -51,7 +51,7 @@ fi
 # previous back-merge before cutting this release, so `production` already has
 # the previous section.
 if [ -f CHANGELOG.md ] \
-   && awk -v h="## ${previous} " 'index($0, h) == 1 { found = 1 } END { exit !found }' CHANGELOG.md; then
+   && [ -n "$(release_changelog_section "$previous" < CHANGELOG.md)" ]; then
   echo "CHANGELOG.md already has the ${previous} section; nothing to carry" >&2
   exit 0
 fi

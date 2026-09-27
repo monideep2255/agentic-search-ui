@@ -76,9 +76,11 @@ fi
 
 # The release body is the changelog section just written, not the tag
 # annotation, because the section is the part a human wrote commits toward.
-# awk stops at the next `## ` heading so only this version's section is taken.
+# commit_lib.sh's section reader stops at the next `## ` heading, whatever it
+# says, so only this version's section is taken; `tail` drops its heading,
+# which the release page shows as its title.
 # `--verify-tag` makes gh refuse rather than create a missing tag, since gh
 # would otherwise cut one from the default branch, which is `develop`.
-notes="$(awk -v v="## ${version}" 'index($0,v)==1{f=1;next} f&&/^## /{exit} f' CHANGELOG.md)"
+notes="$(release_changelog_section "${version}" < CHANGELOG.md | tail -n +2)"
 printf '%s' "$notes" | gh release create "${version}" --verify-tag --title "${version}" --notes-file -
 echo "released ${version} at ${release_sha}" >&2

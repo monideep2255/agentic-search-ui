@@ -139,6 +139,38 @@ release_changelog_verdict() {
 }
 
 # ---------------------------------------------------------------------------
+# One release's section of CHANGELOG.md, read once
+# ---------------------------------------------------------------------------
+
+# release_changelog_section <version>
+# Reads a CHANGELOG.md on stdin and prints the section for <version>: its
+# `## <version> ` heading and every line after it up to, not including, the
+# next `## ` heading, with trailing blank lines dropped. Prints nothing when
+# the file has no section for <version>.
+#
+# THE NEXT `## ` HEADING ENDS THE SECTION WHATEVER IT SAYS, including a second
+# heading for the same version (F-REL-J11). The notes reader this replaced
+# tested for the version's heading before testing for "any heading", so a
+# second `## <version>` line restarted the section instead of ending it, and a
+# changelog carrying two headings for one version, for example a section the
+# owner drafted by hand under the version the release then got, published
+# both as one release's notes. The first heading for <version> wins.
+#
+# The heading is matched as `## <version> ` with its trailing space, or as the
+# bare `## <version>`, so `## v0.2.0` never matches `## v0.2.01`.
+release_changelog_section() {
+  awk -v with_date="## $1 " -v bare="## $1" '
+    found && /^## / { exit }
+    !found && (index($0, with_date) == 1 || $0 == bare) { found = 1 }
+    found { lines[++n] = $0 }
+    END {
+      while (n > 0 && lines[n] !~ /[^[:space:]]/) { n-- }
+      for (i = 1; i <= n; i++) { print lines[i] }
+    }
+  '
+}
+
+# ---------------------------------------------------------------------------
 # What a Conventional Commit is, decided once
 # ---------------------------------------------------------------------------
 
