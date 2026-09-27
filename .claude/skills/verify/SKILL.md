@@ -26,8 +26,9 @@ A script captures and the model judges. The script measures what a script can de
 - [Step 3: capture, with the script](#step-3-capture-with-the-script)
 - [Step 4: judge](#step-4-judge)
 - [Step 5: answers](#step-5-answers)
-- [Step 6: the loop](#step-6-the-loop)
-- [Step 7: closing](#step-7-closing)
+- [Step 6: facts and downstream](#step-6-facts-and-downstream)
+- [Step 7: the loop](#step-7-the-loop)
+- [Step 8: closing](#step-8-closing)
 - [The report](#the-report)
 - [What it will not catch](#what-it-will-not-catch)
 - [Exit checklist](#exit-checklist)
@@ -35,6 +36,7 @@ A script captures and the model judges. The script measures what a script can de
 ## When to use
 
 - Any change that touches a screen, before it reaches the owner.
+- Any backend change that can make what a screen or a document says about the system untrue: Step 6 alone runs, with no screen to capture.
 - On a branch before the merge, and on deployed develop after it.
 - When anyone asks whether the site looks right, or to QA a change.
 
@@ -180,16 +182,75 @@ A change to the answer path, one that can change what an answer says, which reco
 
 Run them exactly as written there. The `/verify` report names their result, or names them as still to run. A screenshot check cannot judge whether an answer is right.
 
-## Step 6: the loop
+## Step 6: facts and downstream
+
+What the app says about itself must still be true, and so must every document that restates it. The product owner's request of 2026-09-26. A screenshot cannot catch this, because a stale sentence looks exactly like a true one. The facts include:
+
+- The graph's size and where it came from.
+- The tools, and the data layer each reads.
+- Each time limit and call budget.
+- Which step asks which model.
+- Who may use which surface.
+
+The check is `.claude/skills/verify/scripts/check_facts.py`, and its module comment is the full contract. Its registry, `facts_registry.py` beside it, names two things for each fact:
+
+- Its one source: a constant or type in the backend, a data file, or the graph owner's reference.
+- Every screen and document that states it.
+
+Before the merge, from the checkout under test, with the repository's virtual environment:
+
+```bash
+venv/bin/python .claude/skills/verify/scripts/check_facts.py
+```
+
+- It needs Python 3.11 or later, which the venv has. A system `python3` may be 3.9, and the script refuses it with exit code 2 and a message naming the venv.
+- It reads the code and never imports or runs it, so the stack need not be up. It needs no network and no secret. The one process it starts is `git rev-parse`.
+- In an agent worktree the `reference/` link does not resolve. The script falls back to the main checkout's copy, or takes `--reference <dir>`. A `--reference` that names no directory is refused, never ignored.
+- This step has its own rule, stricter than the report's verdict: the facts check passes only on exit 0, which means every place matches its source. Any other exit fails `/verify`, whatever the screens show:
+  - Exit 1: at least one FAIL, a stale screen, document or copy in code.
+  - Exit 2: at least one ERROR. The registry no longer matches the code, or a place reads as nothing; update the registry in the same change.
+  - Exit 3: at least one GAP and nothing worse. A source could not be read here, so those places were never judged. Rerun with the reference present.
+- Copy every FAIL, GAP and ERROR line into the report unchanged, with the summary line. The summary ends PASS or NOT PASSED, the same verdict as the exit code.
+- For each backend file in the diff, `--map --from <file>` names every screen and document that restates a fact computed from it, so one round updates them all. A `--from` path that does not exist is refused with exit 2, so a typo cannot read as "nothing restates it".
+- A change that puts a new number, name, limit or capability on a screen adds it to the registry, then runs `--self-test` with the reference present. The self-test fails unless every place can both pass and fail and every reader follows a changed source.
+
+After the merge, check the merged develop commit itself, then confirm develop serves it. The branch-head run above proved the branch, not what landed.
+
+1. Fetch and export the merged commit, then rerun the check on it with the checker and registry from that export. Run it from the main checkout, for its `venv/bin/python` alone: whatever branch the main checkout has out, and whatever its own `scripts/` folder holds, plays no part.
+
+```bash
+git fetch origin develop
+C=$(git rev-parse --short origin/develop)
+mkdir <scratch>/develop_$C
+git archive origin/develop | tar -x -C <scratch>/develop_$C
+venv/bin/python <scratch>/develop_$C/.claude/skills/verify/scripts/check_facts.py \
+  --root <scratch>/develop_$C --reference <repo-root>/reference/agentic-search-data-engineering
+```
+
+- `mkdir` without `-p` refuses a folder that already exists, so an older export is never checked by mistake. Pick a new folder name instead.
+- If the export has no `check_facts.py`, Python refuses to open it. The merge did not land the checker, and nothing else is run in its place.
+
+2. Confirm the deployed version is that commit. `/health` cannot say: its response model, `HealthResponse` in `adapters/web_sse/app.py`, carries `status` and `app_env` only, and the web bundle carries no commit either.
+   - The API service: read its latest deployment the way `/ship` does, which must show SUCCESS and the commit `git rev-parse origin/develop` names.
+   - The web service: `/ship` does not read it. Read its latest deployment the same way from the deployment platform, or write a GAP line for it.
+   - Write each commit, and where it was read, in the report's target line.
+3. If a deploy record cannot be read, write a GAP line, "deployed commit unknown for <service>, /health reports none". The facts are then proven for the merged code, not for what develop serves. This GAP line is written by the model, not printed by the facts check, so it names the gap without failing the verdict (The report, item 7).
+
+### Integrations smoke, not yet wired in
+
+The Integrations audit is on develop, and its smoke script is `testing/Developer/reports/2026-09-26_integrations_audit/integrations_smoke.py`. It runs each command the Integrations page prints against the target, one line per command. It is not part of `/verify` yet: phase 8.10 makes it pass first, and the lead wires it in here after that. Until then the registry checks those commands' names and flags against the code and runs none of them.
+
+## Step 7: the loop
 
 - A failing line goes back to whoever built the change, with the line and its file.
 - They fix it, and `/verify` runs again with the same spec. The rerun gets its own new folder, and its report names the round.
 - At most two rounds (`.claude/rules/self-eval-loop.md`). If a line still fails after round two, stop and name it: the change ships with that line named as open, or it is reverted. There is no third round.
 - Never make a check pass by changing the check. Dropping a failing screen or width from the spec, or rewording a line to pass, is a failed run (`.claude/rules/goal-contracts.md`).
 
-## Step 7: closing
+## Step 8: closing
 
 - A wording or layout card that passes at both widths, 1280 and 390, starts the seven-day close. A run with `--allow-partial-widths` never does. The owner's retest is a spot check, and the owner can object or reopen within the seven days (DECISIONS.md 2026-09-26, "A `/verify` pass at 1280 and 390 pixels starts the seven-day close").
+- A facts check that did not exit 0 makes the verdict FAIL (The report, item 7), so it holds the close too. A GAP line for a screen with no design, or for an unread deploy record, does not.
 - The lead writes the "closes on" date on the card, as `.claude/skills/bossman-mode/reference/UI_fix_loop.md` step 8 says.
 - A card that changes answers waits for the owner's verdict, whatever `/verify` says.
 - `/verify` never moves a card or closes a ticket itself.
@@ -199,7 +260,7 @@ Run them exactly as written there. The `/verify` report names their result, or n
 The report is `report.md` in the same folder. An agent that may not write files returns it as text, and the lead saves it there. It is short, in this order:
 
 1. The target: the web and API URLs, `app_env`, the local checkout's commit and the deployed commit where known, and the round.
-2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, and no others:
+2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, plus ERROR on a facts line from Step 6, and no others:
 
 ```text
 - FAIL | answer at 390 | horizontal overflow | 14 px | testing/Developer/reports/<folder>/results.json
@@ -208,9 +269,13 @@ The report is `report.md` in the same folder. An agent that may not write files 
 ```
 
 3. For an answer-path change, the golden run and rubric results, or that they are still to run.
-4. What was not captured and why, stated rather than implied.
-5. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. Raise it per `decision-cadence`, asked at once with a notification, not held for this report. The line itself stays FAIL until the owner says otherwise.
-6. The verdict: PASS at both widths, or FAIL with the lines still failing.
+4. The facts lines from Step 6, fails first, and the deployed commit or its GAP line.
+5. What was not captured and why, stated rather than implied.
+6. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. Raise it per `decision-cadence`, asked at once with a notification, not held for this report. The line itself stays FAIL until the owner says otherwise.
+7. The verdict: PASS at both widths, or FAIL with the lines still failing. How the lines count:
+   - A GAP line the model writes does not fail the verdict: a screen with no design (Step 4), or a deploy record that could not be read after the merge (Step 6). It names what was not judged, and the owner reads it.
+   - The facts check keeps its own stricter rule (Step 6): it passes only when `check_facts.py` exits 0. Any other exit makes the verdict FAIL, and every line the script printed that is not PASS, its GAP and ERROR lines included, is a line still failing.
+   - A backend-only change has no screen to capture, so its verdict is the facts check's alone.
 
 Before committing the folder, prove it holds no local path, secret or personal data. `grep -rlF "$HOME" <folder>` must print nothing, and read the `.txt` files. The capture runs as a guest, so no account appears on screen.
 
@@ -222,6 +287,7 @@ Before committing the folder, prove it holds no local path, secret or personal d
 - A screen only a signed-in person sees: the script has no sign-in step yet, so such a screen is named as not captured.
 - Keyboard traps, screen-reader order and touch behaviour. The phone width is a viewport, not a device profile.
 - Contrast during an animation: pages run with reduced motion, so the scan reads the settled colours, as the accessibility suite does.
+- A fact the registry does not name. A new sentence stating a new number is unchecked until Step 6's registry carries it, and what the deployment sets at run time, such as a tier's model on develop, is checked only as the code's default.
 
 ## Exit checklist
 
@@ -230,5 +296,8 @@ Before committing the folder, prove it holds no local path, secret or personal d
 - [ ] Every scripted line was copied unchanged, with its file
 - [ ] Every screenshot pair has a judgement line naming both files, or a gap line
 - [ ] An answer-path change names the golden run and the rubric, run or still to run
+- [ ] The verdict is PASS at both widths, or FAIL with the lines still failing; a GAP line for a screen with no design or an unread deploy record was named and did not fail it
+- [ ] The facts check ran with the venv and exited 0, or every FAIL, GAP and ERROR line it printed was copied and the verdict is FAIL, since any exit but 0 fails `/verify`
+- [ ] After the merge, the facts check reran on the merged develop commit, and each service's deployed commit was confirmed or named as a GAP
 - [ ] At most two rounds, and anything still failing is named as open
 - [ ] The report folder holds no local path, secret or personal data
