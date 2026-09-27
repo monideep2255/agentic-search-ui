@@ -152,5 +152,7 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
 - 2026-09-27 04:45: builder C found two things the goal contract did not know.
   - The per-question cap is a deployment variable, `PER_QUERY_COST_CAP_USD`, with deliberately no code default. The owner's decision covers 25 cents on develop, so the lead sets it when this phase merges.
   - Develop's system daily cap is $10. At Opus's mean cost of about $0.126 a question, that is about 79 questions, and one 150-question golden run costs about $19. Raising a daily cap is the owner's decision. The question is queued for the owner, with a notification sent at 04:45 UTC. Until they answer, this phase builds and is reviewed, but its golden run and merge wait.
+- 2026-09-27 05:11: card 58 landed on develop (e8169d5c), and develop was merged into this branch (1f16d2bf). Builder B (T-8.7-03) dispatched from 1f16d2bf, dispatch 3 of 8, in `.claude/worktrees/p87s2`.
+- 2026-09-27 05:08: a second copy of this lead's conversation, opened by the owner in the belief that the session had been cut off, resumed six of this session's agents by their saved IDs at about 04:55 UTC, builders A and C among them. It stopped every copy and stood down by 05:07. Each builder was told to keep only edits it can account for before its next commit. Duplicate work that is on-brief is reviewed and kept, never rewritten. Nothing from the copy reached `develop` or any remote.
 
 ## Findings
