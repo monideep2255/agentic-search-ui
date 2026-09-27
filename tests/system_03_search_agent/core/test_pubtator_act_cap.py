@@ -47,7 +47,10 @@ from system_03_search_agent.tools.pubtator_annotate_schemas import (
 )
 from tests.system_03_search_agent.model_stub import compliant_synth_narrative, fake_response
 
-_SCALE = 100.0
+#: Real seconds are simulated seconds divided by this. Ten, not a hundred:
+#: at a hundred the five-second arm finished 10 ms inside the scaled cap and
+#: failed once under a loaded machine; at ten the margin is 100 ms.
+_SCALE = 10.0
 
 _QUESTION = "Which diseases are associated with BRCA1?"
 
