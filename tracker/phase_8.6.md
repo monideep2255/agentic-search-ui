@@ -407,6 +407,12 @@ Open flags. Owner: the lead. Trigger: ticket R-10 below, the first change tomorr
 - 2026-09-26 22:50: pull request opened; the judge (Opus 5.5) and the adversary (Fable 5.1) dispatched on 3b57b2c, dispatches 7 and 8 of 8.
 - 2026-09-26 23:29: the adversary returned FAIL on FA03, inside R-06. Rule 4 fired, and the owner answered "Merge, named".
 - 2026-09-26 23:41: the judge returned FAIL on FJ01 and FJ11, FJ11 inside R-05. Rule 4 fired again, and the owner answered "Merge, named" again. The open flags and R-10 are under "Follow-up triage". All 8 of 8 dispatches are spent.
+- 2026-09-26 23:44: pull request #119 merged to develop as 15aae08 after CI passed on all four checks; both develop services deployed it at 23:45.
+- 2026-09-27 00:05: the follow-up's golden run on develop at 15aae08 answered 101 of 150, one below the floor of 102, with 0 rate-limit signals (`testing/Developer/reports/2026-09-26_phase_8.6-followup_golden/summary.md`).
+  - The whole drop is G-005, which answered 1 of 3 against 3 of 3 at the floor. In both misses Think returned no entity, and Plan planned no call.
+  - G-038 answered 3 of 3, against 2 of 3 at the floor.
+  - The median time to the first word was 13.5 s, against 15.3 s in the re-land.
+  - The product owner kept the merge ("Keep the merge", `DECISIONS.md` 2026-09-27). The floor stays 102, and G-005 is card 56.
 
 ## Findings
 
