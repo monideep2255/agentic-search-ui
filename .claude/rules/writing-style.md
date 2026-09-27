@@ -4,7 +4,7 @@ scope: portable
 
 ## Writing style
 
-Rules for all documentation and external-facing content in this repo.
+Rules for all documentation and external-facing content in this repository.
 
 ### Formatting
 - No em dashes, en dashes, or mid-sentence hyphens as punctuation. These are a strong AI-written signal. Instead, use transition words (additionally, next, also, specifically, in particular), commas, relative clauses ("which", "where", "who"), or restructure into separate sentences. Use colons for lists. Hyphens with spaces ( - ) are acceptable only in tables and bullet labels (e.g. "Label - description")

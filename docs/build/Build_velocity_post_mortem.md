@@ -5,8 +5,8 @@ Answers one question: why has the build slowed down, is that slowdown real work 
 ## Table of contents
 
 - [The measured answer](#the-measured-answer)
-- [Is the reference repo a fair comparison](#is-the-reference-repo-a-fair-comparison)
-- [This repo's own velocity, phase by phase](#this-repos-own-velocity-phase-by-phase)
+- [Is the reference repository a fair comparison](#is-the-reference-repository-a-fair-comparison)
+- [This repository's own velocity, phase by phase](#this-repositorys-own-velocity-phase-by-phase)
 - [Where 2026-08-03 actually went](#where-2026-08-03-actually-went)
 - [The harness's own overhead](#the-harnesss-own-overhead)
 - [Idiot index: work versus overhead](#idiot-index-work-versus-overhead)
@@ -22,18 +22,18 @@ Answers one question: why has the build slowed down, is that slowdown real work 
 Three things are happening at once, and they are not the same thing:
 
 - Four phases (1.0, 1.1, 1.2, 2.0) shipped in under two calendar days (2026-07-27 08:51 to 2026-07-28 22:24), each with real production code, tests, and a judge and adversary pass. Auto mode was running the whole time. It was fast.
-- Build phase 2.1 took four calendar days (2026-07-29 to 2026-08-01) because a single composition defect survived four consecutive reviews behind a green 879-test suite, and needed a fifth round to find. This is documented exhaustively in LEARNINGS.md's own retrospective and is the single biggest time sink measured in this repo's history.
+- Build phase 2.1 took four calendar days (2026-07-29 to 2026-08-01) because a single composition defect survived four consecutive reviews behind a green 879-test suite, and needed a fifth round to find. This is documented exhaustively in LEARNINGS.md's own retrospective and is the single biggest time sink measured in this repository's history.
 - Build phase 2.2 ran one session of about 6.7 hours on 2026-08-03 (11:44 to 18:27) and paused, not because of process bloat but because three network outages killed two premise-gate runs and three review agents (an estimated 1 to 1.5 hours of dead dispatches), layered on top of a review round that found two critical defects: a negation grounding as support for the claim it denies, and a fabrication (an invented treatment-discontinuation instruction) shipping uncited by exploiting a prefix-only exemption check.
 
-The reference repo's "weekend" claim is true for what a weekend actually bought: a five-day, single-orchestrator, zero-review MVP. It is not comparable to what build phases 2.1 and 2.2 are building, a system with an adversarial review gate whose job is to catch the exact class of failure ("confident wrong answer, fully cited") that a weekend prototype has no mechanism to catch at all. Full comparison below.
+The reference repository's "weekend" claim is true for what a weekend actually bought: a five-day, single-orchestrator, zero-review MVP. It is not comparable to what build phases 2.1 and 2.2 are building, a system with an adversarial review gate whose job is to catch the exact class of failure ("confident wrong answer, fully cited") that a weekend prototype has no mechanism to catch at all. Full comparison below.
 
 Auto mode is not the primary cause of the slowdown. It is a real cost multiplier for how the review cost shows up: a phase that needs five review rounds pays for five separate agent dispatches, each re-loading the harness's roughly 150KB of always-on context, rather than one continuous human reviewer's attention. That multiplication is real and worth reducing. It is not the same claim as "autonomous execution is slow," which the four two-day phases directly disprove.
 
-## Is the reference repo a fair comparison
+## Is the reference repository a fair comparison
 
 Read from `reference/ncbi_ai_agents-ncbi-kg`, a read-only symlink resolving to a sibling checkout of `ncbi_ai_agents` on the local machine.
 
-| Metric | Reference repo | This repo (System 3, since 2026-05-05) |
+| Metric | Reference repository | This repository (System 3, since 2026-05-05) |
 |--------|----------------|------------------------------------------|
 | Total commits | 557, spanning 2025-07-10 to 2026-04-07 (9 months) | 267 |
 | Code files (py/js/ts/tsx/jsx, excluding venv/node_modules) | 142 | separate counts below |
@@ -42,17 +42,17 @@ Read from `reference/ncbi_ai_agents-ncbi-kg`, a read-only symlink resolving to a
 | Review process | None found in git history: no judge, no adversary, no premise gate | Judge, adversary, mutation pass, premise gate, all with cited evidence |
 | Citation or grounding gate | None found | Deterministic cite-or-refuse, the subject of build phase 2.2 |
 
-The "weekend" claim holds for a specific, narrower thing than the whole reference repo. Its first commit is 2025-07-10. By 2025-07-15, five days later, the commit messages read "Phase 3 MVP Complete: Streamlit UI + LangSmith Observability", with a PMC API wrapper, a ClinVar wrapper, NCBI Datasets integration, and single-shot OpenAI GPT-4o orchestration already built. That is the weekend-scale prototype the product owner remembers, and the memory is accurate.
+The "weekend" claim holds for a specific, narrower thing than the whole reference repository. Its first commit is 2025-07-10. By 2025-07-15, five days later, the commit messages read "Phase 3 MVP Complete: Streamlit UI + LangSmith Observability", with a PMC API wrapper, a ClinVar wrapper, NCBI Datasets integration, and single-shot OpenAI GPT-4o orchestration already built. That is the weekend-scale prototype the product owner remembers, and the memory is accurate.
 
 What is not comparable:
 
 - The 557-commit, 9-month history is everything built AFTER that five-day MVP: a Neo4j to AGE migration, a KGX export pipeline, BioLink validation, a force-graph frontend, an MCP server package, and roughly a dozen skills. That is a different, much larger project than "one phase."
-- No commit in the reference repo's history shows a judge pass, an adversary pass, a premise gate, or a citation-grounding gate. Its README and CHANGELOG (338 and 212 lines) document features shipped, not defects a review process caught before shipping.
-- This repo's build phase 2.2 is not "add a feature." It is the deterministic half of a cite-or-refuse gate, the mechanism this repo's own `production-standards.md` calls "the single highest-leverage correctness gate for a biomedical search system, where a confident wrong answer is worse than no answer." The reference repo has no equivalent deliverable to time against.
+- No commit in the reference repository's history shows a judge pass, an adversary pass, a premise gate, or a citation-grounding gate. Its README and CHANGELOG (338 and 212 lines) document features shipped, not defects a review process caught before shipping.
+- This repository's build phase 2.2 is not "add a feature." It is the deterministic half of a cite-or-refuse gate, the mechanism this repository's own `production-standards.md` calls "the single highest-leverage correctness gate for a biomedical search system, where a confident wrong answer is worse than no answer." The reference repository has no equivalent deliverable to time against.
 
-Fair reading: the reference repo proves a single developer, working alone with no adversarial review, can ship a demo-quality prototype in a weekend. It says nothing about how long the same developer would need to also catch a negation grounding as medical support, or a fabricated drug-discontinuation instruction, before shipping. Nothing in its history shows that check ever running.
+Fair reading: the reference repository proves a single developer, working alone with no adversarial review, can ship a demo-quality prototype in a weekend. It says nothing about how long the same developer would need to also catch a negation grounding as medical support, or a fabricated drug-discontinuation instruction, before shipping. Nothing in its history shows that check ever running.
 
-## This repo's own velocity, phase by phase
+## This repository's own velocity, phase by phase
 
 Commit timestamps read directly from `git log`, not estimated.
 
@@ -96,7 +96,7 @@ Two things stand out against the product owner's "auto mode" hypothesis:
 
 ## The harness's own overhead
 
-`.claude/rules/` and `CLAUDE.md` load on every single turn, per this repo's own architecture. Measured directly, not estimated:
+`.claude/rules/` and `CLAUDE.md` load on every single turn, per this repository's own architecture. Measured directly, not estimated:
 
 | Item | Count | Bytes |
 |------|-------|-------|
@@ -112,7 +112,7 @@ This is a real, standing cost, but it is a cost per model call (context tax, pai
 
 `docs/build/Build_workflow_cadence.md`'s own 12-stage table is the other standing structural cost. Two things in it are directly relevant here:
 
-- The cadence already dropped reasoning effort from `high` to `medium` for most roles on 2026-08-02, the day before build phase 2.2 opened, on measured evidence: 76 percent fewer output tokens at the same completion rate externally, and an internal 27x latency multiple (163.0 seconds versus 6.1 seconds) for one bounded Cypher-generation call with no quality loss. Judge, adversary, decomposition, and the premise gate stayed at `depth`/`high` deliberately, because this repo has direct evidence (build phase 2.1) that weakening review costs whole rounds, not just latency.
+- The cadence already dropped reasoning effort from `high` to `medium` for most roles on 2026-08-02, the day before build phase 2.2 opened, on measured evidence: 76 percent fewer output tokens at the same completion rate externally, and an internal 27x latency multiple (163.0 seconds versus 6.1 seconds) for one bounded Cypher-generation call with no quality loss. Judge, adversary, decomposition, and the premise gate stayed at `depth`/`high` deliberately, because this repository has direct evidence (build phase 2.1) that weakening review costs whole rounds, not just latency.
 - `release-workflow` is stated as "mandatory, no skips" at every phase end. Measured dispatch count across the five completed phases: 0 of 5. This is a real, ongoing drift between what the process document says and what actually runs, independent of network outages or review depth, and it is addressed under "What to change" below.
 
 ## Idiot index: work versus overhead
@@ -138,7 +138,7 @@ Direct answer: no, not as stated, but there is a real mechanism buried inside th
 Evidence against "auto mode causes slowness":
 
 - The same autonomous, judge-and-adversary-reviewed harness shipped four phases (1.0, 1.1, 1.2, 2.0) in under two calendar days. If autonomy itself were the drag, the fast phases and the slow ones would not differ this sharply while running the identical process.
-- What actually differed between the fast phases and build phase 2.1 was not autonomy, it was whether a real defect existed to find. LEARNINGS.md's own retrospective is explicit: "Neither component was wrong... The defect was in the composition, and nothing in the process looked there." A human reviewer working alone, without a judge, an adversary, and a premise gate, has no demonstrated mechanism in either repo's history for finding a composition defect like that faster. The reference repo's weekend prototype has no review step at all, so it could not have found the ortholog bug or the tamoxifen fabrication either; it would have shipped them.
+- What actually differed between the fast phases and build phase 2.1 was not autonomy, it was whether a real defect existed to find. LEARNINGS.md's own retrospective is explicit: "Neither component was wrong... The defect was in the composition, and nothing in the process looked there." A human reviewer working alone, without a judge, an adversary, and a premise gate, has no demonstrated mechanism in either repository's history for finding a composition defect like that faster. The reference repository's weekend prototype has no review step at all, so it could not have found the ortholog bug or the tamoxifen fabrication either; it would have shipped them.
 
 Evidence for a narrower, real version of the hypothesis:
 
@@ -160,7 +160,7 @@ Per `.claude/rules/attack-the-constraint.md`, run in order, not skipped to autom
 
 ### 2. Delete
 
-- Already done, cited as precedent: `CHANGELOG.md` was deleted outright on 2026-08-02 rather than backfilled, and the Sub-planner and Integrator roles were removed from the cadence after zero dispatches across five phases. This repo already deletes when the evidence supports it.
+- Already done, cited as precedent: `CHANGELOG.md` was deleted outright on 2026-08-02 rather than backfilled, and the Sub-planner and Integrator roles were removed from the cadence after zero dispatches across five phases. This repository already deletes when the evidence supports it.
 - Candidate for this pass: fold the mutation-testing pass into the judge's stage-8 checklist rather than running it as stage 10's own dispatch. If judge dispatches already run at `depth`/`high effort` and already read the diff, adding one explicit instruction ("does every new validation function have a test that fails if the check is removed") likely catches the same gap without a fifth agent dispatch.
 - Not a candidate for deletion: the premise gate, the judge, or the adversary. All three earned their cost with a specific, cited catch in the last week alone.
 
@@ -185,7 +185,7 @@ Prioritized, in the order this investigation found them, delete first:
 | Priority | Action | Why |
 |----------|--------|-----|
 | 1 | Add a pre-flight health check before dispatching any premise-gate run or review agent, with ONE PROBE PER TRANSPORT. See the correction below: the commands in `tracker/phase_2.2.md`'s "Resume here" section cover premise-gate runs only and do not cover agent dispatch at all | Recovers the single largest measured waste on 2026-08-03 (1 to 1.5 hours), and prevents the same diagnostic confusion (outage read as defect) from costing time a third time |
-| 2 | Resolve the `release-workflow`/`ship` "mandatory, no skips" gap: either actually run it at every phase end, or rewrite the rule to state the real, chosen practice | 0 of 5 real dispatches against a rule that says mandatory is an ownerless requirement by this repo's own `attack-the-constraint` standard, and it is a live contradiction sitting in `bossman-mode.md` right now |
+| 2 | Resolve the `release-workflow`/`ship` "mandatory, no skips" gap: either actually run it at every phase end, or rewrite the rule to state the real, chosen practice | 0 of 5 real dispatches against a rule that says mandatory is an ownerless requirement by this repository's own `attack-the-constraint` standard, and it is a live contradiction sitting in `bossman-mode.md` right now |
 | 3 | Fold the mutation-testing pass into the judge's stage-8 checklist as an explicit line item, rather than a separate stage-10 dispatch | Same catch (does every new check have a test that can kill a mutant), one fewer agent dispatch and one fewer context-reload tax per phase with a review round |
 | 4 | Keep the judge, adversary, and premise gate exactly as they are, at `depth`/`high effort` | Twice measured this week alone to catch a defect that would otherwise have shipped as a confident, fully cited, wrong or dangerous answer: 25 non-human orthologs for a disease question (2.1), and an uncited invented drug-discontinuation instruction (2.2). This is the highest-value spend in the entire cadence and should not be the target of any future cost-cutting pass |
 | 5 | Leave the 2026-08-02 reasoning-effort tiering as is | Already measured and already correct; nothing in 2026-08-03's slowdown traces back to it |
@@ -229,7 +229,7 @@ So a green pre-flight predicts nothing about whether an agent dispatch will surv
 
 What this changes:
 
-- A correct pre-flight needs one probe per transport, not one probe. The OpenRouter probe stays as is and covers gate runs. Agent dispatch needs its own probe against the harness provider, and no such probe is written down anywhere in this repo yet.
+- A correct pre-flight needs one probe per transport, not one probe. The OpenRouter probe stays as is and covers gate runs. Agent dispatch needs its own probe against the harness provider, and no such probe is written down anywhere in this repository yet.
 - Until that second probe exists, treat a dead dispatch as an expected outcome rather than a signal about the work. Retry once, and if it dies again, do the work inline.
 
 The second, cheaper lesson from the same incident: the delegated task was two file reads and a documentation grep. Doing it inline after both dispatches died cost less than either dispatch had already burned. `docs/build/Build_workflow_cadence.md` already says "each dispatched agent should carry a task worth its overhead", and that line was written about builders. It applies to researchers too, and the overhead it refers to includes the failure rate, not just the setup cost.
@@ -241,5 +241,5 @@ Stated plainly rather than glossed over:
 - Exact wall-clock hours worked per phase. Git commit timestamps give a session window (first commit to last commit each day), not actual continuous working time, breaks, or overlap with other work.
 - Exact dollar cost per phase or per agent dispatch. No LiteLLM billing log was available to this investigation; the $0.013-per-run premise-gate figure and the 100k-175k-token full-security-scan figure are both prior measurements cited from `docs/build/Build_workflow_cadence.md` and `DECISIONS.md`, not re-measured here.
 - Exact token counts for the 2026-08-03 review round's four dispatches. The 15-25 minute per-agent and 6-10 minute per-premise-gate-run figures were supplied as known facts for this investigation and are used as given, not independently re-timed.
-- The reference repo's actual effort in hours during its five-day MVP window. Only commit dates and messages are available, not session logs, so "weekend" is confirmed as a commit-date pattern, not as a measured hour count.
+- The reference repository's actual effort in hours during its five-day MVP window. Only commit dates and messages are available, not session logs, so "weekend" is confirmed as a commit-date pattern, not as a measured hour count.
 - Whether folding mutation testing into the judge's checklist (change 3 above) actually saves a dispatch without losing coverage. This is a reasoned recommendation from the evidence available, not something tested by running it.

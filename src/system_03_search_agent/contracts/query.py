@@ -280,7 +280,7 @@ class RequestContext(BaseModel):
     # (system-design-patterns.md pattern 10) since this is a new enum
     # member, not a redefinition of an existing one. Every hand-maintained
     # consumer copy of this closed set was searched for (backend: grepped
-    # the whole repo for the literal strings "web_ui"/"rest_sse"/"mcp"/
+    # the whole repository for the literal strings "web_ui"/"rest_sse"/"mcp"/
     # "cli" together; only this declaration and the two surfaces' own
     # `RequestContext(surface=...)` call sites reference the set at all.
     # Frontend: grepped frontend/src for the same four strings and for

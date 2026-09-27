@@ -1,5 +1,5 @@
 ---
-description: "Non-negotiable security, quality, and hardening gates for Python, FastAPI, LangGraph, Cypher/SQL, and React code in this repo."
+description: "Non-negotiable security, quality, and hardening gates for Python, FastAPI, LangGraph, Cypher/SQL, and React code in this repository."
 scope: portable
 alwaysApply: true
 ---

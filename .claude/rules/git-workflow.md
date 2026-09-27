@@ -75,7 +75,7 @@ If there is ever a reason to keep a branch after merge, say so at merge time and
 
 ### Commit hygiene
 
-Adopted 2026-07-26: this repo follows the Conventional Commits specification (v1.0.0) for the commit subject line. Commits at 1f2ffd0 (2026-07-26) and earlier predate this convention and use the previous sentence-case style with no type prefix. That seam in `git log` is expected, not an error; the pre-adoption commits are not being rewritten.
+Adopted 2026-07-26: this repository follows the Conventional Commits specification (v1.0.0) for the commit subject line. Commits at 1f2ffd0 (2026-07-26) and earlier predate this convention and use the previous sentence-case style with no type prefix. That seam in `git log` is expected, not an error; the pre-adoption commits are not being rewritten.
 
 Header structure:
 
@@ -90,14 +90,14 @@ Header structure:
 - type: required, one of the eight below.
 - scope: optional, a noun in parentheses right after the type, e.g. `fix(cypher-query): ...`. Use zero or one scope per commit. Stacking more than one scope signals the commit does more than one logical thing, which the next rule already forbids.
 - `!`: optional, placed immediately before the colon, flags a breaking change (see below).
-- description: required, sentence case, immediately after the colon and space. Same casing rule this repo already used.
+- description: required, sentence case, immediately after the colon and space. Same casing rule this repository already used.
 
 Types:
 
 - feat: a new capability lands, a tool implementation, an agent-loop step, an API route, a UI surface.
 - fix: a bug in existing code or a wrong planning artifact gets corrected.
 - docs: a change to `docs/`, `requirements/`, `README.md`, `CLAUDE.md`, `AGENTS.md`, or a rule under `.claude/rules/`.
-- chore: repo maintenance with no behavior change, a dependency bump, a `.gitignore` edit, tracker housekeeping, a file rename.
+- chore: repository maintenance with no behavior change, a dependency bump, a `.gitignore` edit, tracker housekeeping, a file rename.
 - refactor: a code or doc restructuring with no behavior change and no bug fix.
 - test: adding or changing tests only, no production code change.
 - ci: a change to `.claude/hooks/`, `.claude/settings.json`, or a GitHub Actions workflow.

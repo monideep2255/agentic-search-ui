@@ -67,7 +67,7 @@ itself (see that module's design decision 5).
 
 ## eligibility_summary: truncate cleanly, never withhold
 
-Unlike this repo's other Layer 2/3 tools (`ncbi_dbsnp`'s
+Unlike this repository's other Layer 2/3 tools (`ncbi_dbsnp`'s
 `clinical_significance`, `litvar2_lookup`'s `clinical_significance`/
 `matched_on`), which WITHHOLD an over-length field rather than truncate it
 (F-3.2-A-01, F-3.3-03: a truncated ClinVar term reads as a real, different,
@@ -77,7 +77,7 @@ risk: `clinical_significance` is a short, closed-vocabulary controlled
 term where a truncated prefix looks like a DIFFERENT real term (silently
 wrong, not obviously partial); `eligibilityCriteria` is free-flowing prose
 with no controlled vocabulary to collide with, and `eligibility_summary`
-is already documented, by this repo's own design (Section 6.7's field
+is already documented, by this repository's own design (Section 6.7's field
 description, `clinicaltrials_search_schemas.py`'s design decision 4), as a
 BOUNDED PROJECTION of the full text, not a verbatim field ClinicalTrials.gov
 itself returns pre-summarized. Cutting it further to fit the schema's own
@@ -191,7 +191,7 @@ def _build_eligibility_summary(raw_criteria: Any) -> str | None:
 
     See the module docstring's "eligibility_summary: truncate cleanly,
     never withhold" section for why this field is deliberately truncated
-    rather than withheld, unlike this repo's other Layer 2/3 free-text
+    rather than withheld, unlike this repository's other Layer 2/3 free-text
     fields. Cuts at the last whitespace boundary inside budget so the
     summary does not end mid-word, then appends an explicit truncation
     marker; the marker's own length is reserved out of the budget up

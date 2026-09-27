@@ -165,7 +165,7 @@ _DEFAULT_TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0
 # silently inherited `_DEFAULT_TIMEOUT`'s 120.0s read leg, an eightfold
 # drift from the 15s budget credentials.py's `REFRESH_TIMEOUT_SECONDS`
 # already applies to `POST /auth/refresh`, the identical auth-router call
-# shape (a plain request/response round trip against this repo's own
+# shape (a plain request/response round trip against this repository's own
 # backend, never a live third-party API). Matched here rather than left
 # to inherit the stream's own generous budget.
 _LOGIN_TIMEOUT_SECONDS: float = 15.0
@@ -521,7 +521,7 @@ async def _call_with_one_refresh(
     # caught here by that base rather than a hand-maintained list of
     # subclasses (J-4.2-02/F-4.2-A-06: this catch used to be `except
     # httpx.HTTPStatusError`, a type refresh_locked never raises, so this
-    # repo's most routine failure, an expired session, fell straight
+    # repository's most routine failure, an expired session, fell straight
     # through to async_main's generic catch-all and was reported as
     # "unexpected" instead of a curated message; catching by base, not by
     # an enumerated list, is what stops the same defect recurring a

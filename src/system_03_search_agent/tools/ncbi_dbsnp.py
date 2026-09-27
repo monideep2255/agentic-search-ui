@@ -120,7 +120,7 @@ clinically-cited variants hit the `clinical_significance` item cap (40
 chars) or list cap (10 items) alone, because two standard ClinVar
 vocabulary terms, `conflicting-interpretations-of-pathogenicity` (44
 chars) and `no-classifications-from-unflagged-records` (41 chars), are
-common. Flagship variants this repo already uses as ground truth,
+common. Flagship variants this repository already uses as ground truth,
 rs429358 (APOE epsilon4), rs6025 (Factor V Leiden), rs1801133 (MTHFR
 C677T), rs1800562 (HFE C282Y), rs1042522 (TP53 P72R), rs80359198 (BRCA2),
 all returned `status: "error"` for an otherwise fully successful fetch:

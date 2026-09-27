@@ -205,7 +205,7 @@ WHERE relnamespace='ncbi_kg'::regnamespace ORDER BY reltuples DESC;
 
 ## K. Canonical smoke-test query suite
 
-The reference query suite lives at [tests/cypher/gate3_queries.sql](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/tests/cypher/gate3_queries.sql) in the repo and is the file to run after any maintenance change to confirm the graph still answers correctly. It contains seven queries covering BRCA1 traversal, PKU disease lookup, glucose-metabolism gene listing, TP53 article citations, human-taxon membership, vertex counts, and edge counts.
+The reference query suite lives at [tests/cypher/gate3_queries.sql](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/tests/cypher/gate3_queries.sql) in the repository and is the file to run after any maintenance change to confirm the graph still answers correctly. It contains seven queries covering BRCA1 traversal, PKU disease lookup, glucose-metabolism gene listing, TP53 article citations, human-taxon membership, vertex counts, and edge counts.
 
 Run it with:
 
@@ -364,7 +364,7 @@ See DECISIONS row 18.
 
 Layer 2 enrichment data (variant annotations from third-party tools, expression data, drug bindings, etc.) is excluded. That data is meant to be fetched on demand by System 3 and joined at query time, not pre-ingested. See [docs/architecture/Three_layer_data_architecture.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/architecture/Three_layer_data_architecture.md).
 
-System 3 components (FastAPI, LangGraph, UI, MCP servers, channel integrations) are not in this repo and not on this server. They run elsewhere and connect to this graph as a client.
+System 3 components (FastAPI, LangGraph, UI, MCP servers, channel integrations) are not in this repository and not on this server. They run elsewhere and connect to this graph as a client.
 
 ## R. Troubleshooting playbook
 

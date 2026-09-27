@@ -36,7 +36,7 @@ from typing import Any
 
 from system_03_search_agent.feedback.promotion import DEFAULT_POOL_PATH, FewShotExample
 
-#: Section 17: "It lives as a versioned file in the repo... loaded once at
+#: Section 17: "It lives as a versioned file in the repository... loaded once at
 #: process start, not a live table read on every request." A module-level
 #: cache, not a request-scoped one, is the whole point: production code
 #: calls `load_pool()` and gets the same in-memory list for the life of the

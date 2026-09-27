@@ -13,7 +13,7 @@ Run under caffeinate so the laptop does not sleep mid-measurement:
 
     caffeinate -i .venv/bin/python testing/Developer/reports/2026-09-22_isolate_search/probe_ecoli_metadata.py
 
-Run with the repo's src/ on PYTHONPATH (this repo has no `pip install -e .`
+Run with the repository's src/ on PYTHONPATH (this repository has no `pip install -e .`
 into its own venv at the time of this probe):
 
     PYTHONPATH=src caffeinate -i venv/bin/python testing/Developer/reports/2026-09-22_isolate_search/probe_ecoli_metadata.py
