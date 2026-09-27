@@ -121,6 +121,32 @@ describe("the integrations page, rebuilt from the reference layout", () => {
     expect(config).toHaveTextContent("mcpServers");
   });
 
+  it("prints the agent configuration for s3 mcp, and says it is not for a terminal", () => {
+    // Build phase 8.10's fix round, F-8.10-J10 and A12: the page named `s3
+    // mcp` but printed nothing to paste into an agent, and `s3 mcp` typed at
+    // a terminal only waits for input. Mutation that turns this red: drop the
+    // code block, or the sentence that says where it goes.
+    render(<IntegrationsScreen />);
+
+    const config = screen.getByRole("region", { name: /Agent configuration for s3 mcp/i });
+    expect(JSON.parse(config.textContent ?? "")).toEqual({
+      mcpServers: { system3: { command: "s3", args: ["mcp"] } },
+    });
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).toHaveTextContent(/not typed into a terminal/);
+    expect(card).toHaveTextContent(/pasted into the agent's MCP settings/);
+  });
+
+  it("says the MCP follow-up offers are coming rather than claiming the same parity", () => {
+    // F-8.10-J13: the follow-up offers wait for card 52's phase. Mutation
+    // that turns this red: put back "the same parity the web app has".
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "MCP server" }).parentElement;
+    expect(card).not.toHaveTextContent(/same parity/i);
+    expect(card).toHaveTextContent(/follow-up offers.*are coming/);
+  });
+
   it("puts the API documentation section on the page, with the real event names", () => {
     render(<IntegrationsScreen />);
 
@@ -210,6 +236,31 @@ describe("the integrations page, rebuilt from the reference layout", () => {
         expect(writeText, `${testId} copied nothing`).toHaveBeenCalledTimes(1);
         expect(writeText.mock.calls[0][0]).toContain(expected);
       }
+    });
+
+    it("points s3 login at the page's own API origin, the same one the REST example uses", async () => {
+      // F-8.10-J06: `s3` defaults to production, so a tester following
+      // develop's page signed in to production. Mutation that turns this
+      // red: drop `--base-url` from the printed `s3 login`. And F-8.10-J10:
+      // no terminal line starts `s3 mcp`, which only waits for input there.
+      const user = setupWithClipboard();
+      render(<IntegrationsScreen />);
+
+      await user.click(cards().getByTestId("integration-copy-rest"));
+      const origin = /curl -X POST (\S+)\/v1\/query/.exec(writeText.mock.calls[0][0])?.[1];
+      expect(origin, "populate check: the REST example names an origin").toBeTruthy();
+
+      writeText.mockClear();
+      await user.click(cards().getByTestId("integration-copy-cli"));
+      const cli = writeText.mock.calls[0][0];
+      expect(cli).toContain(`s3 login --base-url ${origin} you@example.org`);
+      expect(cli.split("\n").map((line) => line.trim())).not.toContain("s3 mcp");
+
+      writeText.mockClear();
+      await user.click(cards().getByTestId("integration-copy-mcp-stdio"));
+      expect(JSON.parse(writeText.mock.calls[0][0])).toEqual({
+        mcpServers: { system3: { command: "s3", args: ["mcp"] } },
+      });
     });
 
     it("says so when the clipboard is unavailable, rather than looking like nothing happened", async () => {

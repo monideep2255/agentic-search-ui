@@ -104,14 +104,17 @@ export const PIPELINE_STEPS = [
  *
  * Sources: `visualizations/Architecture_diagram.md`'s tool table for the
  * layer split and the budgets, each of which is a constant in code
- * (`CYPHER_QUERY_TIMEOUT_SECONDS = 90.0` and `MAX_ROW_LIMIT = 500` in
+ * (`CYPHER_QUERY_TIMEOUT_SECONDS = 30.0`, cut from 90.0 by pull request #119
+ * on phase 8.6's judge finding F-8.6-FJ08, and `MAX_ROW_LIMIT = 500` in
  * `tools/graph_schema_constants.py`, `DEFAULT_TIMEOUT_S = 15.0` in
  * `tools/ncbi_transport.py`, `_TOTAL_BUDGET_S = 120.0` in
  * `tools/pathogen_detection.py`). The hosts come from the tool modules
  * themselves: `_EUTILS_BASE` in `tools/ncbi_eutils_actions.py`,
- * `_DATASETS_BASE` in `tools/ncbi_datasets_actions.py`, `_VARIATION_BASE` in
- * `tools/ncbi_dbsnp.py`, and the PubTator3, LitVar2 and ClinicalTrials.gov
- * constants in their own modules.
+ * `_DATASETS_BASE` in `tools/ncbi_datasets_actions.py`, `_PUBCHEM_BASE` in
+ * `tools/ncbi_pubchem_actions.py` (reached through `ncbi_efetch`'s
+ * `pubchem_property` action), `_VARIATION_BASE` in `tools/ncbi_dbsnp.py`,
+ * and the PubTator3, LitVar2 and ClinicalTrials.gov constants in their own
+ * modules.
  *
  * ONE DIVERGENCE IS DELIBERATE. The About page's walk lists
  * `pathogen_detection` under layer 3. This list puts it under layer 2,
@@ -136,7 +139,7 @@ export const LAYERS: {
       {
         name: "cypher_query",
         calls: "the ncbi_kg graph, PostgreSQL with Apache AGE",
-        budget: "90 seconds, at most 500 rows",
+        budget: "30 seconds, at most 500 rows",
       },
     ],
   },
@@ -148,7 +151,7 @@ export const LAYERS: {
     tools: [
       {
         name: "ncbi_efetch",
-        calls: "E-utilities ESearch, ESummary, EFetch and ELink, plus NCBI Datasets v2",
+        calls: "E-utilities ESearch, ESummary, EFetch and ELink, NCBI Datasets v2, and PubChem",
         budget: "15 seconds, one retry",
       },
       {

@@ -22,8 +22,9 @@ import { DepthControl } from "../controls/DepthControl";
 import type { AudienceDepth } from "../controls/DepthControl";
 
 /**
- * Seed questions. Real must-pass questions from the evaluation set, not
- * invented ones, so the landing shows what the product is genuinely for.
+ * Seed questions: example questions that show what the product is for. None
+ * is word for word one of the golden set's questions (F-8.10-J05), so the
+ * tour calls them examples and claims no provenance.
  *
  * Identifiers are monospace; gene symbols are not. Settled 2026-08-12: the
  * test is not "is this biomedical" but "would someone compare this character

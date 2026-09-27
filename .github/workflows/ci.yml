@@ -176,6 +176,18 @@ jobs:
       - name: "Gate 9: Required-path tests, never skippable"
         run: .github/gates/gate09_required_paths.sh
 
+      # Build phase 8.10, T-8.10-01. NOT one of Section 24's ten gates: the
+      # phase 8.10 ledger adds it, and it runs last so the ten keep their
+      # order. Every other step here reads the source tree through
+      # PYTHONPATH, which is how `s3-kgx-export` shipped broken for four
+      # weeks with every gate green. This one builds every wheel the
+      # repository makes, installs each into an empty environment, imports
+      # every module it ships and runs every console script with --help. It
+      # lives in this job because this job already has every dependency and
+      # the placeholder environment the server's modules need at import.
+      - name: "Package check: every wheel installs and its commands start"
+        run: .github/gates/gate_packages_install.sh
+
   # ---------------------------------------------------------------------------
   # Gate 5. Section 24: "Yes, network-gated job".
   # ---------------------------------------------------------------------------

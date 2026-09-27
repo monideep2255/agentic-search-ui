@@ -249,6 +249,11 @@ def fake_modules(monkeypatch: pytest.MonkeyPatch):
     from system_03_search_agent.adapters.cli import render as _real_render_module
 
     render_module._sanitize_untrusted = _real_render_module._sanitize_untrusted
+    # Build phase 8.10's fix round (F-8.10-A05): `_run_login` names the
+    # server it signed in to through `address_for_display`, which drops a
+    # `user:pass@` from the base URL. The genuine function too, for the
+    # same reason as the one above.
+    render_module.address_for_display = _real_render_module.address_for_display
 
     monkeypatch.setitem(
         sys.modules, "system_03_search_agent.adapters.cli.credentials", credentials_module
@@ -2095,7 +2100,9 @@ class TestReadPassword:
 
         result = main_module._read_password(FakeTtyStdin())
         assert result == "typed-secret"
-        assert prompts == [""]
+        # Build phase 8.10 changed the prompt from "" to "Password: ": with
+        # an empty prompt the terminal showed nothing while `s3 login` waited.
+        assert prompts == ["Password: "]
 
 
 # ---------------------------------------------------------------------------

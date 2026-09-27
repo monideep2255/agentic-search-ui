@@ -188,9 +188,11 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "seeds",
-    title: "Seed questions",
+    // F-8.10-J05: named example questions, with no claim about where they
+    // came from. None of the four is one of the 50 golden questions whole.
+    title: "Example questions",
     body: [
-      "Not sure where to start? These four are real questions from the evaluation set.",
+      "Not sure where to start? Try one of these four example questions.",
       "Click one and it runs as written, at the depth you chose.",
     ],
     targets: ["seeds"],
@@ -208,7 +210,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: "nav",
     title: "The app bar",
     body: [
-      "Integrations lists the other ways in: the API, GraphQL, the command line and the export. About explains how the system works.",
+      "Integrations lists the other ways in: the API, GraphQL, the MCP server, and the command line and the export. About explains how the system works.",
       "Log in keeps your search history across reloads. On a phone the history opens as a drawer from the bar.",
     ],
     targets: ["nav", "login"],

@@ -172,10 +172,20 @@ class InvalidAskInput(GraphQLError, SchemaError):
 # matching how MCP and the CLI each hold their own.
 MAX_ANSWER_LENGTH = 8000
 
-# Mirrors adapters/mcp/server.py's _MAX_CITATIONS and adapters/web_sse/
-# app.py's _MAX_CITATIONS_PER_RUN. Same value, same reasoning, held locally
-# for the same surface-local-constants reason above.
-MAX_CITATIONS = 50
+# Mirrors adapters/mcp/server.py's _MAX_CITATIONS, held locally for the same
+# surface-local-constants reason above.
+#
+# Raised from 50 to 100 by build phase 8.10 (T-8.10-06). What a person saw
+# before: the Marfan syndrome answer cited 84 records here, this surface
+# returned 50, and markers such as [77] in the answer resolved to nothing.
+# 100 is the most one answer's run can emit: the event contract bounds no
+# count (each citation is its own event), and the run builds one citation
+# per display slot, capped at `core/graph.py`'s `_MAX_FINDINGS_FOR_DISPLAY`
+# (the planned graph call's own row limit, 100). A bound still exists, and
+# the fold still discloses anything cut at it. `adapters/web_sse/app.py`'s
+# `_MAX_CITATIONS_PER_RUN` (the REST citations export) is still 50; that
+# route is outside this phase's GraphQL and MCP fence.
+MAX_CITATIONS = 100
 
 # This surface's own bound, since neither REST nor MCP carries a Disclosures
 # type: caps how many distinct disclosure sentences one AskResult/RunResult
@@ -351,6 +361,32 @@ class Disclosures:
 # ---------------------------------------------------------------------------
 
 
+# Build phase 8.10, T-8.10-06: three optional fields on both results, all
+# additive (no existing field renamed or retyped, and each defaults to null,
+# so every existing construction site and every existing query is
+# unchanged; `system-design-patterns` pattern 10). Both results carry them,
+# not only `ask`, because `run` folds the same run and the two must not
+# disagree about it (F-4.3-A-13).
+#
+#   trust_line           `DonePayload.trust_line`, the one plain trust
+#                        sentence the web shows under an answer. Null when
+#                        the fold reported a verdict below the run's own,
+#                        since the line describes the run's verdict and
+#                        would then read more confident than the result.
+#   clarifying_question  `ThinkPayload.clarifying_question`, set only when
+#   clarifying_options   the answer is a question back to the caller, with
+#                        up to four one-click questions to send next. The
+#                        fold keeps `trustSignal.outcome` as the run
+#                        reported it (`refuse`), because this fold never
+#                        raises a verdict; `clarifyingQuestion` is how a
+#                        client tells a question back from a refusal, the
+#                        same field the web uses.
+#
+# Their bounds are the source payloads' own (`trust_line` 200 characters,
+# the question 500, at most 4 options of 220), enforced where the fold
+# parses each event through its payload model.
+
+
 @strawberry.type
 class AskResult:
     run_id: str
@@ -359,6 +395,9 @@ class AskResult:
     trust_signal: TrustSignal
     citations: list[Citation]
     disclosures: Disclosures
+    trust_line: str | None = None
+    clarifying_question: str | None = None
+    clarifying_options: list[str] | None = None
 
 
 @strawberry.type
@@ -369,6 +408,9 @@ class RunResult:
     trust_signal: TrustSignal
     citations: list[Citation]
     disclosures: Disclosures
+    trust_line: str | None = None
+    clarifying_question: str | None = None
+    clarifying_options: list[str] | None = None
 
 
 # `disclosures` is REQUIRED, with no default, and that is the point (judge

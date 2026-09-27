@@ -152,8 +152,10 @@ Writes:
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
+import urllib.parse
 from typing import TYPE_CHECKING, TextIO
 
 import httpx
@@ -489,6 +491,71 @@ def _sanitize_untrusted(text: str) -> str:
     return _escape_forgery_markers(_escape_control_bytes(text))
 
 
+def address_for_display(url: str) -> str:
+    """The server a base URL names, as a person should see it: its scheme,
+    host and port, and nothing else.
+
+    Build phase 8.10's fix round, F-8.10-A05: `s3 login` and `s3 mcp` printed
+    the whole base URL, so one written `https://user:pass@host` put the
+    password on stdout, on stderr and in every error the agent read. The
+    userinfo is never shown, and neither is a path, query or fragment, any
+    of which can carry a secret too. Sanitized like any text the person did
+    not write, since the URL can come from `--base-url` or `S3_BASE_URL`.
+    """
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = parts.hostname or ""
+        port = parts.port
+    except ValueError:
+        host, port = "", None
+    if not host:
+        return "the server s3 login used"
+    if ":" in host:
+        host = f"[{host}]"  # an IPv6 address
+    address = f"{parts.scheme}://{host}" if parts.scheme else host
+    if port is not None:
+        address = f"{address}:{port}"
+    return _sanitize_untrusted(address)
+
+
+def _is_ask_back(
+    *,
+    clarifying_question: str | None,
+    guard_rejected: bool,
+    fatal_error_seen: bool,
+    citations_seen: int,
+) -> bool:
+    """Whether this run's answer is a question back, not a refusal.
+
+    Build phase 8.10. The core sends a question back ("GERD" gets "What would
+    you like to know about GERD?" and four options) through the refusal path,
+    so its stream says `refuse`, and every surface tells the two apart. This
+    is the same rule builder Q's MCP fold uses (`adapters/mcp/server.py`,
+    `_is_ask_back`), which says it mirrors the web's
+    (`frontend/src/hooks/useRunView.ts`):
+
+    - a `think` event carried a non-empty clarifying question;
+    - the guardrail did not refuse the question;
+    - no fatal error ended the run;
+    - no citation arrived, so an answer is never relabelled.
+
+    It reads the `think` event, never the refusal's wording.
+    """
+    if clarifying_question is None or guard_rejected or fatal_error_seen:
+        return False
+    return citations_seen == 0
+
+
+def _first_clarification(payload: ThinkPayload) -> tuple[str | None, list[str]]:
+    """The clarifying question a `think` event carries, trimmed, and the
+    options that came with it; `(None, [])` when it carries none."""
+    question = (payload.clarifying_question or "").strip()
+    if not question:
+        return None, []
+    options = [option.strip() for option in payload.clarifying_options or [] if option.strip()]
+    return question, options
+
+
 class Renderer:
     """Renders one run's `Event` stream per Section 13.3's ten rules.
 
@@ -536,6 +603,40 @@ class Renderer:
         # it. Checked in `_write_trust_prefix` directly, defense in depth
         # regardless of what upstream sends.
         self._guard_rejected = False
+
+        # Build phase 8.10, T-8.10-03: a bare topic ("GERD") gets a question
+        # back plus up to four full questions to pick from
+        # (`ThinkPayload.clarifying_options`). The web shows them as chips;
+        # this surface used to print the question and drop the options.
+        # Held from the `think` event and printed, numbered, under the
+        # question text just before the trust tag.
+        self._clarifying_question: str | None = None
+        self._clarifying_options: list[str] = []
+        self._printed_options = False
+        # What `_is_ask_back` needs besides the question and the guard.
+        self._fatal_error_seen = False
+        self._citations_seen = 0
+
+    @property
+    def offered_options(self) -> bool:
+        """True once numbered clarifying options were printed, so `main.py`
+        can say how to ask one of them in the same conversation."""
+        return self._printed_options
+
+    def _asked_back(self) -> bool:
+        return _is_ask_back(
+            clarifying_question=self._clarifying_question,
+            guard_rejected=self._guard_rejected,
+            fatal_error_seen=self._fatal_error_seen,
+            citations_seen=self._citations_seen,
+        )
+
+    def _shown_outcome(self, outcome: TrustOutcome) -> TrustOutcome:
+        """The outcome to show: `ask` for a question back, which the stream
+        labels `refuse`, and the stream's own outcome for everything else."""
+        if outcome == "refuse" and self._asked_back():
+            return "ask"
+        return outcome
 
     # ------------------------------------------------------------------
     # Dispatch
@@ -600,6 +701,26 @@ class Renderer:
         narrative = _sanitize_untrusted(payload.narrative)
         self._err.write(f"{self._status_prefix('think')} {narrative}\n")
         self._err.flush()
+        # The first `think` with a question wins, as on the web and over
+        # MCP, and its options are the ones kept: a later event can never
+        # swap in a different question.
+        if self._clarifying_question is None:
+            self._clarifying_question, self._clarifying_options = _first_clarification(payload)
+
+    def _write_clarifying_options(self) -> None:
+        """The numbered options under the question, once, and only for a
+        question back. Each is untrusted text (built from the reader's own
+        words and the server's lookup), so each goes through
+        `_sanitize_untrusted` like every answer token."""
+        if self._printed_options or not self._clarifying_options or not self._asked_back():
+            return
+        self._printed_options = True
+        lines = "".join(
+            f"  {number}. {_sanitize_untrusted(option)}\n"
+            for number, option in enumerate(self._clarifying_options, start=1)
+        )
+        self._out.write(f"\n{lines}")
+        self._out.flush()
 
     def _handle_plan(self, event: Event) -> None:
         payload = PlanPayload.model_validate(event.payload)
@@ -641,6 +762,7 @@ class Renderer:
 
     def _handle_citation(self, event: Event) -> None:
         payload = CitationPayload.model_validate(event.payload)
+        self._citations_seen += 1
         existing = self._citations.get(payload.citation_id)
         if existing is not None and existing != payload:
             # F-4.2-A-19: a second `citation` event citing an id already
@@ -683,6 +805,12 @@ class Renderer:
             # outcome) on top of a run this renderer already knows was
             # rejected.
             return
+        # T-8.10-03: the options belong to the question the tokens just
+        # printed, so they go between it and the tag.
+        self._write_clarifying_options()
+        # Build phase 8.10: a question back reads `[ask]`, as it does over
+        # MCP, never `[refuse]`, which is kept for real refusals.
+        outcome = self._shown_outcome(outcome)
         # J-4.2-05: a leading `\n` guarantees this tag starts its own
         # line regardless of whether the last token write ended in a
         # newline, closing the gap between this module's own docstring
@@ -718,6 +846,8 @@ class Renderer:
         source = _sanitize_untrusted(payload.source)
         self._err.write(f"error [{source}]: {disclosure}{retry_note}\n")
         self._err.flush()
+        if payload.fatal:
+            self._fatal_error_seen = True
 
         # Section 13.3: exits nonzero UNLESS fatal is false AND error_class
         # is transient or recoverable, in which case the retry policy (not
@@ -751,8 +881,12 @@ class Renderer:
         # A guard rejection or a fatal error already set a nonzero exit
         # code; a `done` event does not follow either on a well-formed
         # stream, but if it somehow does, that earlier failure still wins.
+        # Build phase 8.10: the exit code follows the outcome shown, so a
+        # question back exits 0 like any other `[ask]`, and a real refusal
+        # still exits 1.
         if self._exit_code is None:
-            self._exit_code = _EXIT_FAILURE if payload.trust_outcome == "refuse" else _EXIT_OK
+            shown = self._shown_outcome(payload.trust_outcome)
+            self._exit_code = _EXIT_FAILURE if shown == "refuse" else _EXIT_OK
 
     # ------------------------------------------------------------------
     # References block
@@ -888,8 +1022,265 @@ class Renderer:
         # already printed it here is a no-op) and honors the
         # guard-rejection suppression internally (F-4.2-A-27), so a
         # rejected run still prints nothing.
+        self._write_clarifying_options()
         self._write_references_block()
         return self._exit_code
+
+
+class JsonRenderer:
+    """`s3 ask --json`: the whole answer as one JSON object on stdout.
+
+    Build phase 8.10, T-8.10-03. The Integrations page promised "JSON with
+    --json" and no such flag existed. Same interface as `Renderer`
+    (`handle()` per event, `finish()` once, returning the exit code), and the
+    same exit code for the same stream, so a script can switch modes without
+    re-learning what zero means. Nothing is written until `finish()`: a
+    consumer parsing stdout gets exactly one complete JSON object, never a
+    partial one and never a status line mixed into it.
+
+    Text fields are written as the server sent them rather than through
+    `_sanitize_untrusted`, because a JSON consumer needs the true text and a
+    forged `[answer]` inside a string cannot pass for a structural field.
+    `ensure_ascii=True` is what keeps the output terminal-safe instead: every
+    control character, C1 byte and bidi override is written as a `\\uXXXX`
+    escape, never as the raw character, so printing the object to a terminal
+    executes nothing.
+
+    Keys, all always present:
+        run_id, session_id, persona_name: the run and the conversation to
+            continue with `s3 ask --session-id`.
+        complete: whether a final `done`, a fatal error or a guard
+            rejection reached this client. False means the answer is partial.
+        trust_outcome, trust_line: the verdict and the one plain trust line.
+            A question back reports `ask`, as over MCP, never `refuse`.
+        answer: the answer text, joined as the tokens arrived.
+        citations: every citation, in display order, with its source URL.
+        unresolved_markers: markers the answer used that no citation matched.
+        clarifying_question, clarifying_options: a question back, and the
+            full questions offered to pick from, or null and an empty list.
+        next_step, next_step_query: the offer to go further, when there is one.
+        guard: null, or the category and the plain reason a question was
+            not taken.
+        error: null, or the error class, its source and what to do next.
+        stream: frames skipped as unknown, and whether the stream was cut.
+
+    A run that never streams still gets one object with these keys, from
+    `write_json_failure` (build phase 8.10's fix round, F-8.10-J08).
+    """
+
+    def __init__(
+        self,
+        out: TextIO,
+        err: TextIO,
+        *,
+        session_id: str,
+        run_id: str,
+        persona_name: str | None = None,
+        stream_state: object | None = None,
+    ) -> None:
+        self._out = out
+        self._err = err
+        self._session_id = session_id
+        self._run_id = run_id
+        self._persona_name = persona_name
+        # The `CliClient` whose `stream_skipped_frame_count` and
+        # `stream_truncated` are read once, at `finish()`.
+        self._stream_state = stream_state
+        self._answer_parts: list[str] = []
+        self._citations: dict[str, CitationPayload] = {}
+        self._seen_marker_ids: set[str] = set()
+        self._trust_outcome: str | None = None
+        self._trust_line: str | None = None
+        self._next_step: str | None = None
+        self._next_step_query: str | None = None
+        self._clarifying_question: str | None = None
+        self._clarifying_options: list[str] = []
+        self._guard: dict[str, str] | None = None
+        self._error: dict[str, object] | None = None
+        self._exit_code: int | None = None
+        self._written = False
+        # What `_is_ask_back` needs, as in `Renderer`.
+        self._fatal_error_seen = False
+        self._citations_seen = 0
+
+    def _asked_back(self) -> bool:
+        return _is_ask_back(
+            clarifying_question=self._clarifying_question,
+            guard_rejected=self._guard is not None,
+            fatal_error_seen=self._fatal_error_seen,
+            citations_seen=self._citations_seen,
+        )
+
+    def handle(self, event: Event) -> None:
+        handler = getattr(self, f"_handle_{event.type}", None)
+        if handler is not None:
+            handler(event)
+
+    def _handle_guard(self, event: Event) -> None:
+        payload = GuardPayload.model_validate(event.payload)
+        if payload.passed:
+            return
+        self._guard = {
+            "category": payload.category,
+            "message": _GUARD_CATEGORY_COPY.get(payload.category, _GUARD_CATEGORY_FALLBACK),
+        }
+        self._exit_code = _EXIT_FAILURE
+
+    def _handle_think(self, event: Event) -> None:
+        payload = ThinkPayload.model_validate(event.payload)
+        # The first `think` with a question wins, with its own options.
+        if self._clarifying_question is None:
+            self._clarifying_question, self._clarifying_options = _first_clarification(payload)
+
+    def _handle_token(self, event: Event) -> None:
+        payload = TokenPayload.model_validate(event.payload)
+        self._answer_parts.append(payload.text)
+        self._seen_marker_ids.update(payload.marker_ids)
+
+    def _handle_citation(self, event: Event) -> None:
+        payload = CitationPayload.model_validate(event.payload)
+        self._citations_seen += 1
+        # The first source for an id wins, as in `Renderer` (F-4.2-A-19).
+        self._citations.setdefault(payload.citation_id, payload)
+
+    def _handle_trust_signal(self, event: Event) -> None:
+        payload = TrustSignalPayload.model_validate(event.payload)
+        if payload.scope == "answer" and self._guard is None:
+            self._trust_outcome = payload.outcome
+
+    def record_failure(self, error_class: str, message: str) -> None:
+        """The stream could not be opened or read to its end, so no event
+        will say why. `s3 ask --json` records it here before `finish()`, so
+        the one object on stdout carries it (F-8.10-J08). A fatal error the
+        stream already sent is kept, since it is the server's own account."""
+        if self._error is not None and self._error.get("fatal"):
+            return
+        self._error = _cli_error(error_class, message)
+
+    def _handle_error(self, event: Event) -> None:
+        payload = ErrorPayload.model_validate(event.payload)
+        self._error = {
+            "fatal": payload.fatal,
+            "error_class": payload.error_class,
+            "source": payload.source,
+            "message": _error_disclosure(payload.error_class),
+            "retry_after_s": payload.retry_after_s,
+        }
+        if payload.fatal:
+            self._fatal_error_seen = True
+        if payload.fatal or payload.error_class not in ("transient", "recoverable"):
+            self._exit_code = _EXIT_FAILURE
+
+    def _handle_done(self, event: Event) -> None:
+        payload = DonePayload.model_validate(event.payload)
+        if self._guard is None:
+            self._trust_outcome = payload.trust_outcome
+        self._trust_line = payload.trust_line
+        self._next_step = payload.next_step
+        self._next_step_query = payload.next_step_query
+        # The exit code follows the outcome shown, as in `Renderer`.
+        if self._exit_code is None:
+            asked_back = payload.trust_outcome == "refuse" and self._asked_back()
+            refused = payload.trust_outcome == "refuse" and not asked_back
+            self._exit_code = _EXIT_FAILURE if refused else _EXIT_OK
+
+    def finish(self) -> int:
+        complete = self._exit_code is not None
+        if self._exit_code is None:
+            self._exit_code = _EXIT_FAILURE
+        # Build phase 8.10: a question back reports `ask`, as over MCP, and
+        # only a question back carries the clarifying question and options.
+        asked_back = self._asked_back()
+        trust_outcome = self._trust_outcome
+        if trust_outcome == "refuse" and asked_back:
+            trust_outcome = "ask"
+        if not self._written:
+            self._written = True
+            document = {
+                "run_id": self._run_id,
+                "session_id": self._session_id,
+                "persona_name": self._persona_name,
+                "complete": complete,
+                "trust_outcome": trust_outcome,
+                "trust_line": self._trust_line,
+                "answer": "".join(self._answer_parts),
+                "citations": [
+                    citation.model_dump(mode="json")
+                    for citation in sorted(self._citations.values(), key=lambda c: c.display_index)
+                ],
+                "unresolved_markers": sorted(self._seen_marker_ids - self._citations.keys()),
+                "clarifying_question": self._clarifying_question if asked_back else None,
+                "clarifying_options": self._clarifying_options if asked_back else [],
+                "next_step": self._next_step,
+                "next_step_query": self._next_step_query,
+                "guard": self._guard,
+                "error": self._error,
+                "stream": {
+                    "skipped_frames": int(
+                        getattr(self._stream_state, "stream_skipped_frame_count", 0) or 0
+                    ),
+                    "truncated": bool(getattr(self._stream_state, "stream_truncated", False)),
+                },
+            }
+            self._out.write(json.dumps(document, ensure_ascii=True, indent=2) + "\n")
+            self._out.flush()
+        return self._exit_code
+
+
+#: Bound on the failure text `s3 ask --json` carries, which is the same
+#: words `s3` already wrote to stderr for that failure.
+_MAX_JSON_FAILURE_MESSAGE = 2000
+
+
+def _cli_error(error_class: str, message: str) -> dict[str, object]:
+    """The `error` value for a failure `s3` saw itself, in the same shape as
+    one the event stream reports, with `source` `"s3"`."""
+    return {
+        "fatal": True,
+        "error_class": error_class,
+        "source": "s3",
+        "message": message[:_MAX_JSON_FAILURE_MESSAGE],
+        "retry_after_s": None,
+    }
+
+
+def write_json_failure(
+    out: TextIO,
+    *,
+    session_id: str | None,
+    run_id: str | None,
+    persona_name: str | None,
+    error_class: str,
+    message: str,
+) -> None:
+    """`s3 ask --json` when the run never started streaming: one JSON
+    object on stdout, with every key `JsonRenderer` always writes.
+
+    Build phase 8.10's fix round, F-8.10-J08: a failure before the stream
+    started, "not logged in" for one, wrote only to stderr, so a script
+    parsing stdout got nothing to parse. Now it gets `complete: false`, an
+    empty answer, and `error` naming the class and the same words stderr
+    shows. The exit code is still non-zero; the caller returns it."""
+    document = {
+        "run_id": run_id,
+        "session_id": session_id,
+        "persona_name": persona_name,
+        "complete": False,
+        "trust_outcome": None,
+        "trust_line": None,
+        "answer": "",
+        "citations": [],
+        "unresolved_markers": [],
+        "clarifying_question": None,
+        "clarifying_options": [],
+        "next_step": None,
+        "next_step_query": None,
+        "guard": None,
+        "error": _cli_error(error_class, message),
+        "stream": {"skipped_frames": 0, "truncated": False},
+    }
+    out.write(json.dumps(document, ensure_ascii=True, indent=2) + "\n")
+    out.flush()
 
 
 # ----------------------------------------------------------------------

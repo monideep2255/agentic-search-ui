@@ -41,11 +41,17 @@
  * surfaces, so it is now the "API documentation" section at the bottom of
  * this page, the tab is removed from the bar, and `/docs` routes here.
  *
- * EVERY COMMAND PRINTED HERE WAS RUN, not written from memory of what the
- * surface probably looks like. That discipline is what T-4.16-04 exists for:
- * this page is prose about other modules, nothing links the two, and a
- * command here is as much a claim as a citation is. Verified against the
- * develop API on 2026-09-13:
+ * EVERY COMMAND PRINTED HERE IS MEANT TO BE RUN, not written from memory of
+ * what the surface probably looks like. That discipline is what T-4.16-04
+ * exists for: this page is prose about other modules, nothing links the two,
+ * and a command here is as much a claim as a citation is. This was never
+ * true of the CLI and KGX commands until build phase 8.10 (T-8.10-01 to 04,
+ * T-8.10-07) gave `s3` a real `--json` flag, a login that asks for the email
+ * left off the command, and a `system3-cli` package that installs `s3` from
+ * this repository (`s3-kgx-export` still ships with the full backend, since
+ * it needs an operator-granted graph credential `system3-cli` never carries).
+ * The REST and GraphQL examples below were verified against the develop API
+ * on 2026-09-13:
  *
  * - `POST /v1/query` with `{"text": ..., "session_id": ...}` and a bearer
  *   token answered 202 with a `run_id` and a `persona_name`.
@@ -58,9 +64,16 @@
  *   audience_depth? }`, and Strawberry's default `auto_camel_case=True`
  *   publishes those as `text`, `sessionId` and `audienceDepth`.
  *
- * The MCP server is NOT claimed to work here. Fix set 5 item 5.3 (R17) owns
- * its "Invalid Host header" defect and is not this file's work; the config
- * printed below is the one a client needs once that is fixed.
+ * The MCP server's "Invalid Host header" defect (fix set 5 item 5.3, R17) was
+ * fixed on 2026-09-13. Build phase 8.10 (T-8.10-05, T-8.10-07) then brought
+ * MCP close to the web app: every depth, every citation up to the run's own
+ * bound, the session id, the clarifying question and its options, and the
+ * trust line, plus tools to list past searches, reopen an answer and send
+ * feedback. The follow-up offers the web shows after an answer are not on
+ * MCP yet; card 52's phase adds them to every surface, so the card says they
+ * are coming rather than claiming the same parity (F-8.10-J13). The config
+ * below carries the bearer header a caller needs, and a token lasts 15
+ * minutes.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -151,16 +164,52 @@ export const GRAPHQL_EXAMPLE = `curl -X POST ${API_ORIGIN}/graphql \\
 // `POST /mcp` 307s to a plaintext Location, `POST /mcp/` returns 200 with a
 // valid initialize response. Full account:
 // `testing/Developer/reports/2026-09-20_integrations/findings.md`.
+//
+// `"type": "http"` and the `headers.Authorization` entry, added in build
+// phase 8.10 (T-8.10-07): the config below is the one a URL-plus-header
+// client (Claude Code, Cursor, VS Code) needs, per the integrations audit's
+// client table (`testing/Developer/reports/2026-09-26_integrations_audit/
+// report.md`, "The MCP packaging question"). `POST /auth/login` mints the
+// bearer token, and it lasts 15 minutes: paste a fresh one when a call is
+// refused, or use `s3 mcp` below, which renews its own.
 export const MCP_CONFIG = `{
   "mcpServers": {
     "ncbi-search": {
-      "url": "${API_ORIGIN}/mcp/"
+      "type": "http",
+      "url": "${API_ORIGIN}/mcp/",
+      "headers": {
+        "Authorization": "Bearer <your token>"
+      }
     }
   }
 }`;
 
-export const CLI_EXAMPLE = `s3 login
+/** The install line for `system3-cli`, until the owner's first release makes
+ *  a published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
+ *  T-8.10-07). Never `pip install s3`, which is a stranger's package on
+ *  PyPI, not this repository's. */
+export const INSTALL_EXAMPLE = `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
+
+/** Typed into a terminal. `--base-url` names the page's own API origin, so
+ *  every example here points at one server (F-8.10-J06): `s3` defaults to
+ *  production, and without it a tester following develop's page signed in
+ *  to production. `s3 mcp` is not here, since typed at a terminal it only
+ *  waits for input (F-8.10-J10); it is the command in `MCP_STDIO_CONFIG`. */
+export const CLI_EXAMPLE = `s3 login --base-url ${API_ORIGIN} you@example.org
 s3 ask "diseases linked to BRCA1"`;
+
+/** The agent side of `s3 mcp` (F-8.10-J10, A12): what a person pastes into
+ *  an AI agent's MCP configuration so the agent starts `s3 mcp` itself and
+ *  speaks MCP to it over stdio. It carries no token, because `s3 mcp` uses
+ *  the sign-in `s3 login` stored and renews it. */
+export const MCP_STDIO_CONFIG = `{
+  "mcpServers": {
+    "system3": {
+      "command": "s3",
+      "args": ["mcp"]
+    }
+  }
+}`;
 
 export const KGX_EXAMPLE = `s3-kgx-export NCBIGene:672 \\
   --hops 1 --output-dir ./kgx-out`;
@@ -453,11 +502,12 @@ function IntegrationCard({
             mt: 1.5,
             p: 1.25,
             // Scrolled rather than wrapped, which is the opposite of what this
-            // page did when five cards each carried a code box. Only one card
-            // shows code now, and it is a small JSON object whose lines are
-            // short enough to read at 390px; a wrapped brace-per-line config
-            // reads as broken, while a scroll container keeps the shape and
-            // still cannot bleed the page sideways.
+            // page did when five cards each carried a code box. Two cards
+            // show code now, the MCP config and the agent config for `s3 mcp`
+            // (F-8.10-J10), each a small JSON object whose lines are short
+            // enough to read at 390px; a wrapped brace-per-line config reads
+            // as broken, while a scroll container keeps the shape and still
+            // cannot bleed the page sideways.
             overflowX: "auto",
             bgcolor: designTokens.surfaceSunk,
             border: `1px solid ${designTokens.line}`,
@@ -642,7 +692,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<PlugIcon />}
           title="MCP server"
-          body="One advertised tool, ask_biomedical_question. It folds a whole run into a single cited answer, and the seven internal tools are never separately reachable."
+          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are coming to MCP next. An account is required, and a bearer token lasts 15 minutes."
           code={MCP_CONFIG}
           codeLabel="MCP server configuration"
           copies={[
@@ -657,13 +707,27 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<TerminalIcon />}
           title="Command line tools"
-          body="Two console commands rather than HTTP routes. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops."
+          body="Two console commands rather than HTTP routes, installed once with pip. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the operator grants."
+          code={MCP_STDIO_CONFIG}
+          codeLabel="Agent configuration for s3 mcp"
           copies={[
+            {
+              label: "Copy install command",
+              text: INSTALL_EXAMPLE,
+              accessibleName: "Copy the install command",
+              testId: "integration-copy-install",
+            },
             {
               label: "Copy command",
               text: CLI_EXAMPLE,
               accessibleName: "Copy the command line example",
               testId: "integration-copy-cli",
+            },
+            {
+              label: "Copy agent config",
+              text: MCP_STDIO_CONFIG,
+              accessibleName: "Copy the agent configuration for s3 mcp",
+              testId: "integration-copy-mcp-stdio",
             },
             {
               label: "Copy KGX command",
@@ -693,7 +757,10 @@ export function IntegrationsScreen() {
         >
           <li>Registered accounts: the Log in flow issues the bearer token every surface here accepts.</li>
           <li>GraphQL and the MCP server: an account is required, so a guest cannot reach either.</li>
-          <li>REST and SSE: a guest may run queries without an account, within the anonymous daily cap.</li>
+          <li>
+            REST and SSE: a guest may run queries without an account, within the anonymous daily
+            cap. POST /auth/guest issues a guest's own token.
+          </li>
         </Box>
       </Box>
 
@@ -722,11 +789,11 @@ export function IntegrationsScreen() {
         />
         <NoteCard
           title="Citations"
-          body="Every claim is tied to a specific record, with the layer that produced it, the tool that fetched it, its evidence type, its confidence and its licence. An answer with an uncited sentence is a defect."
+          body="Every claim is tied to a specific record, with the layer that produced it, its evidence type, its confidence and its licence. An answer with an uncited sentence is a defect."
         />
         <NoteCard
           title="The event stream"
-          body="A run emits eleven kinds of event: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error and done. Each SSE frame carries the sequence number as its id, the event type as its name, and the whole envelope as its data. A refusal is a normal outcome with a reason attached, not an error."
+          body="A run emits twelve kinds of event: guard, think, plan, step, tool_start, tool_result, token, citation, trust_signal, cost, error and done. Each SSE frame carries the sequence number as its id, the event type as its name, and the whole envelope as its data. A refusal is a normal outcome with a reason attached, not an error. think carries clarifying_options when the question is a bare topic, and the finishing done event carries decisions, trust_line and layer_calls_used."
           code={EVENT_STREAM_EXAMPLE}
           copy={{
             label: "Copy frame",
@@ -782,8 +849,12 @@ export function IntegrationsScreen() {
 //   - Five steps, in order: `core/graph.py`'s `add_node` calls for
 //     guardrail, think, plan, act and write, with `set_entry_point("guardrail")`.
 //   - Which tier runs which step: `core/graph.py`'s `_dispatch_tier_call`
-//     sites pass "guard" for guardrail, "plan" for think AND for plan, and
-//     "synth" for write.
+//     sites pass "guard" for guardrail, "plan" for Think's classification,
+//     and "synth" for write; `tools/cypher_generation.py` calls "plan" in
+//     Act only when no Cypher template fits. The plan step itself makes no
+//     plan-tier call: its decisions, such as `plan.literature`, go through
+//     `harness/decide.py` to the guard tier or Jev
+//     (`docs/architecture/Model_architecture.md`, F-8.10-J04).
 //   - A tier's model is resolved from configuration and held for the query:
 //     `harness/tiers.py`, `TierContext` ("fetched once at query start and
 //     held for the query's duration"), reading GUARD_MODEL, PLAN_MODEL and
@@ -835,7 +906,7 @@ const JOURNEY_TIERS = [
   {
     name: "Plan tier",
     kind: "a mid-range model",
-    body: "Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. Then runs Plan, which picks the tools to call and writes the graph query itself.",
+    body: "Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. In Act it also writes a graph query, but only when no ready-made template fits the question. Plan itself never calls this tier: it picks the tools in code, and passes the odd yes-or-no question, such as whether you want papers, to the guard tier or a dedicated classifier.",
   },
   {
     name: "Synth tier",
@@ -1112,7 +1183,7 @@ export function AboutScreen({
       n: 2,
       name: "Live NCBI APIs",
       colour: designTokens.layer2,
-      body: "E-utilities, Datasets and dbSNP, called at the moment you ask. Narrower and slower, and always current.",
+      body: "E-utilities, Datasets, PubChem, dbSNP and Pathogen Detection, called at the moment you ask. Narrower and slower, and always current.",
     },
     {
       n: 3,
@@ -1167,10 +1238,10 @@ export function AboutScreen({
 
         <JourneyStop index={2} title="The model steps, tier by tier">
           <StopText>
-            Four of the five steps ask a language model something, and the harness decides which
-            model each one gets. There are three tiers, matched to how hard the step is. A tier's
-            model is read from configuration once at the start of your question and held there, so
-            it cannot change partway through a run.
+            Every one of the five steps can ask a language model something, and the harness decides
+            which model each one gets. There are three tiers, matched to how hard the step is.
+            A tier's model is read from configuration once at the start of your question and held
+            there, so it cannot change partway through a run.
           </StopText>
           <Box sx={{ display: "grid", gap: 1.5, mb: 1.5, maxWidth: 620 }}>
             {JOURNEY_TIERS.map((tier) => (
@@ -1204,11 +1275,11 @@ export function AboutScreen({
 
         <JourneyStop index={3} title="The search goes out">
           <StopText>
-            Act runs the tools Plan chose, across three layers of data. Each call carries its own
-            time limit, 90 seconds for a graph query and 15 seconds for a live NCBI call, and one
-            question may make at most 20 live calls in total. A call that would exceed either of
-            those fails fast and says which limit it hit, rather than leaving you waiting. This is
-            the part you watch on the progress screen.
+            Act runs the tools Plan chose, across three layers of data, together rather than one
+            after another. Each call carries its own time limit, 30 seconds for a graph query and
+            15 seconds for a live NCBI call, and one question may make at most 20 live calls in
+            total. A call that would exceed either of those fails fast and says which limit it hit,
+            rather than leaving you waiting. This is the part you watch on the progress screen.
           </StopText>
           <Box
             data-testid="about-journey-layers"
@@ -1300,11 +1371,13 @@ export function AboutScreen({
 
         <JourneyStop index={5} title="The answer is written, then streamed to you">
           <StopText>
-            Write composes the answer from those records alone. Each sentence is then checked in
-            code against the record it points at, and a sentence that record does not support is
-            dropped rather than reworded. If nothing citeable survives, the system says it could
-            not find an answer and stops instead of answering from memory. That rule is called cite
-            or refuse.
+            Write composes the answer from those records alone. Code checks each sentence against
+            the record it points at: the exact words must be in the record, every number must be in
+            the quote, and a negation must match. A sentence that fails those checks is dropped. One
+            that passes but was reworded is then judged by a model, and kept only when the model
+            finds it adds nothing beyond the record's own words. If nothing citeable survives, the
+            system says it could not find an answer and stops instead of answering from memory. That
+            rule is called cite or refuse.
           </StopText>
           <StopText>
             What reaches your browser is a stream of small events rather than one finished page:
