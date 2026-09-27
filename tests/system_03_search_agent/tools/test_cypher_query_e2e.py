@@ -58,7 +58,7 @@ _GRAPH_PASSWORD_VAR = "GRAPH_PG_PASSWORD"
 def _load_env_explicitly() -> None:
     """Populate the graph variables from .env without relying on litellm.
 
-    Finding F-2.1-04: nothing in this repo calls load_dotenv(). The variables
+    Finding F-2.1-04: nothing in this repository calls load_dotenv(). The variables
     reach os.environ only because importing litellm does it as a side effect,
     which makes whether this test runs depend on unrelated import order. Load
     it here so this file's behavior is its own.

@@ -412,7 +412,7 @@ class CitationPayload(BaseModel):
     # graph_snapshot_date_from_version`, already live-confirmed and wired
     # for T-3.4-06's staleness check). It is NOT a genuine per-row
     # ingestion timestamp: F-3.4-T06-01 confirmed no such field exists
-    # anywhere this repo's ingest can read (checked live against
+    # anywhere this repository's ingest can read (checked live against
     # `ag_catalog`; no ingest-metadata table is queryable). It is the
     # closest real, non-fabricated proxy this graph has for "when was this
     # graph data current", which is what Section 7's freshness argument

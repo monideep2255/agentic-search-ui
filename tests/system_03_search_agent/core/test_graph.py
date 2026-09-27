@@ -426,7 +426,7 @@ async def _run_graph(query: Query, context: RequestContext) -> list[Event]:
     """Invoke the compiled graph directly (not via `core.run.run()`).
 
     Wrapped in `tracing_context(enabled=False)` for the same reason
-    `core.run.run()` itself is (see its module docstring): this repo's
+    `core.run.run()` itself is (see its module docstring): this repository's
     `.env` sets `LANGCHAIN_TRACING_V2=true` ahead of the real phase
     5.0/5.1 tracing integration, and invoking a compiled LangGraph graph
     without disabling tracing makes a real, noisy, failing outbound call
@@ -3705,7 +3705,7 @@ def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None
 
     They are source-vocabulary abbreviations that leaked into MedGen's name
     column during ingest. The data defect belongs to Layer 1; the confidence
-    signal this repo staples to it is ours, and asserting full confidence in
+    signal this repository staples to it is ours, and asserting full confidence in
     a value that names a vocabulary rather than a disease is the trust-signal
     defect F-2.1-B07 filed.
     """
@@ -5017,7 +5017,7 @@ def test_live_wins_for_currency_is_a_no_op_with_only_one_layer() -> None:
 # ---------------------------------------------------------------------------
 # T-3.4-06, Section 7.4: staleness auto-cross-verify
 # (_apply_layer1_staleness_notes). F-3.4-T06-01 (live-confirmed against the
-# real graph, 2026-08-09): no real Layer 1 field this repo's ingest returns
+# real graph, 2026-08-09): no real Layer 1 field this repository's ingest returns
 # matches VOLATILE_FIELD_EXAMPLES/STABLE_FIELD_EXAMPLES today (every vertex
 # label carries the identical generic id/name/xrefs/source/agent_type/
 # source_url/knowledge_level property set; see `_field_class_for_layer1_
@@ -5165,7 +5165,7 @@ def test_layer1_staleness_note_does_not_fire_when_fresh() -> None:
 
 def test_layer1_staleness_note_does_not_fire_on_an_unresolved_field_class() -> None:
     """F-3.4-T06-01: this is the real, live production shape today. Every
-    Layer 1 citation this repo can build carries a generic field name
+    Layer 1 citation this repository can build carries a generic field name
     ("name" among the fixed seven generic keys), never a VOLATILE_FIELD_
     EXAMPLES/STABLE_FIELD_EXAMPLES member, so this must never fire against
     real data, confirmed here with a snapshot old enough that it would

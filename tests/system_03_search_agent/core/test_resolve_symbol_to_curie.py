@@ -1,6 +1,6 @@
 """Unit tests for `core.graph.resolve_symbol_to_curie` and its private
 helper `_resolve_symbol_to_curie_uncached` (T-3.1-11), closing two
-re-review findings on build phase 3.1 no other test file in this repo
+re-review findings on build phase 3.1 no other test file in this repository
 covers directly: every other test file that touches this function stubs
 it out entirely (`test_graph.py`, `test_run.py`, `test_query_endpoint.py`,
 `test_streaming_endpoints.py`), by design, since their own job is the

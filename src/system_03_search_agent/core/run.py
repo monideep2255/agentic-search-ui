@@ -79,7 +79,7 @@ both call sites below. Tracing is now genuinely configured, through
 run actually transmits: BOTH the `LANGCHAIN_TRACING_V2`/`LANGSMITH_TRACING`
 flag AND a provisioned `LANGSMITH_API_KEY` are required (see
 `observability/config.py`'s docstring for why the flag alone, already
-`true` in this repo's `.env` ahead of this phase, was never sufficient
+`true` in this repository's `.env` ahead of this phase, was never sufficient
 consent on its own). With no key configured, `traced_graph_run` never even
 constructs a `langsmith.Client`, so a run today still makes zero outbound
 calls to `api.smith.langchain.com`, the same guarantee the old hardcoded
@@ -670,7 +670,7 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
     function drives `compiled_graph.astream(initial_state,
     stream_mode="updates")` instead, which yields one `{node_name:
     partial_state}` dict per node as that node itself completes (verified
-    against this repo's pinned LangGraph version; see the module
+    against this repository's pinned LangGraph version; see the module
     docstring). Pulling `partial_state["events"]` out of each yielded
     update and yielding those `Event` objects immediately means a
     consumer observes an earlier node's events (e.g. `guard`, `think`)

@@ -26,7 +26,7 @@ When user says any of these, activate immediately:
 - "sync" or "git sync" → pull then push
 - "push" or "push to github" → commit and push changes
 - "pull" or "pull from github" → pull latest changes
-- "update repo" → pull then push
+- "update repository" → pull then push
 
 ## Operations
 
@@ -56,7 +56,7 @@ git push
 
 ## Commit message guidelines
 
-This repo follows Conventional Commits (`.claude/rules/git-workflow.md`): `<type>[optional scope]: <description>`. Types are feat, fix, docs, chore, refactor, test, ci, security. The description is sentence case, immediately after the colon. The body says why, not just what. One logical change per commit.
+This repository follows Conventional Commits (`.claude/rules/git-workflow.md`): `<type>[optional scope]: <description>`. Types are feat, fix, docs, chore, refactor, test, ci, security. The description is sentence case, immediately after the colon. The body says why, not just what. One logical change per commit.
 
 Good commit messages, in this repository's own shape:
 

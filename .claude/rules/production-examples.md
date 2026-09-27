@@ -1,5 +1,5 @@
 ---
-description: "Before/after code pairs for the highest-risk security patterns in this repo's FastAPI, psycopg2/AGE, and React stack."
+description: "Before/after code pairs for the highest-risk security patterns in this repository's FastAPI, psycopg2/AGE, and React stack."
 scope: portable
 alwaysApply: false
 paths:
@@ -177,7 +177,7 @@ Log the key name as a string literal if it helps debugging ("NCBI_API_KEY missin
 
 User request: "Let the agent run git, python, ssh, and curl commands without prompting"
 
-This repo's actual `.claude/settings.json` uses prefix-match allow rules, among others:
+This repository's actual `.claude/settings.json` uses prefix-match allow rules, among others:
 
 ```json
 "permissions": {
@@ -195,7 +195,7 @@ Wrong assumption:
 - "`Bash(git:*)` only lets the agent run git commands, so a chained command like `git status && rm -rf /` will silently execute because the string starts with `git`."
 
 Correction:
-- The permission engine evaluates a Bash command per shell segment, splitting on `&&`, `||`, `;`, `|`, `&`, and newlines, and deny beats allow. `git status && rm -rf /` is two segments: `git status`, which matches the `Bash(git:*)` allow rule, and `rm -rf /`, which matches no allow rule and is also caught outright by this repo's `.claude/hooks/block-bash-delete.sh` hook. The command falls to an interactive ask, or a hard block, not silent execution. A visibly chained destructive command is not the residual risk here.
+- The permission engine evaluates a Bash command per shell segment, splitting on `&&`, `||`, `;`, `|`, `&`, and newlines, and deny beats allow. `git status && rm -rf /` is two segments: `git status`, which matches the `Bash(git:*)` allow rule, and `rm -rf /`, which matches no allow rule and is also caught outright by this repository's `.claude/hooks/block-bash-delete.sh` hook. The command falls to an interactive ask, or a hard block, not silent execution. A visibly chained destructive command is not the residual risk here.
 
 The real residual risk:
 - A destructive command hidden inside a single subcommand's quoted argument. That whole invocation is one segment, with no `&&`, `||`, `;`, `|`, `&`, or newline for the engine to split on, so it rides through on a broad allow rule that only checks the leading token, and it evades a naive rm-detecting hook, because the `rm` sits inside a quoted string, not after a bare separator.

@@ -4,20 +4,20 @@ How data flows from NCBI sources to user answers. Three layers, each with a diff
 
 ## Table of contents
 
-- [Layer 1: knowledge graph (System 1 + 2, this repo)](#layer-1-knowledge-graph-system-1--2-this-repo)
+- [Layer 1: knowledge graph (System 1 + 2, this repository)](#layer-1-knowledge-graph-system-1--2-this-repository)
 - [Why these 5 databases for Layer 1?](#why-these-5-databases-for-layer-1)
 - [Why PostgreSQL + Apache AGE](#why-postgresql--apache-age)
 - [Layer 2: NCBI on-demand APIs (System 3)](#layer-2-ncbi-on-demand-apis-system-3)
 - [Layer 3: enrichment and external APIs (System 3)](#layer-3-enrichment-and-external-apis-system-3)
 - [How they connect](#how-they-connect)
 - [Estimated monthly cost](#estimated-monthly-cost)
-- [Why this repo is the foundation](#why-this-repo-is-the-foundation)
-- [What this repo does and does not do](#what-this-repo-does-and-does-not-do)
+- [Why this repository is the foundation](#why-this-repository-is-the-foundation)
+- [What this repository does and does not do](#what-this-repository-does-and-does-not-do)
 - [Handoff point](#handoff-point)
 - [How System 3 connects to Layer 1](#how-system-3-connects-to-layer-1)
 - [Will Layer 2/3 API calls work?](#will-layer-23-api-calls-work)
 
-## Layer 1: knowledge graph (System 1 + 2, this repo)
+## Layer 1: knowledge graph (System 1 + 2, this repository)
 
 5 NCBI databases downloaded in full from FTP, parsed, mapped to BioLink 4.x, and loaded into PostgreSQL + Apache AGE. The search agent queries these via openCypher at <10ms.
 
@@ -31,7 +31,7 @@ These are the databases where graph traversal across millions of records is requ
 | MedGen | 233K concepts | biolink:Disease | Disease concept hub. Maps MONDO, OMIM, MeSH, SNOMED, HPO. |
 | Taxonomy | 2.9M organisms | biolink:OrganismTaxon | Scopes results to human (or any organism). |
 
-Built by: System 1 (ETL pipelines) + System 2 (AGE loader) in this repo.
+Built by: System 1 (ETL pipelines) + System 2 (AGE loader) in this repository.
 Latency: <10ms per Cypher query.
 Total: ~115M nodes, ~693M edges.
 
@@ -114,7 +114,7 @@ Latency: 100-500ms per API call.
 Budget: max 20 calls per user query.
 Responses cached in Redis (System 3).
 
-Built by: System 3 (search agent) in a separate repo.
+Built by: System 3 (search agent) in a separate repository.
 
 ## Layer 3: enrichment and external APIs (System 3)
 
@@ -131,7 +131,7 @@ Not NCBI databases. Specialized APIs that augment answers with deeper evidence o
 
 Latency: 200ms-2s per call. Called selectively, not on every query.
 
-Built by: System 3 (search agent) in a separate repo.
+Built by: System 3 (search agent) in a separate repository.
 
 ## How they connect
 
@@ -173,22 +173,22 @@ flowchart TD
 
 Post-Gate 3 optimization: after the graph is validated, delete KGX files and downgrade Layer 1 from CPX42 (~$34) to CPX32 (~$24-26). Drops total to ~$34-56/month steady state.
 
-## Why this repo is the foundation
+## Why this repository is the foundation
 
-This repo (System 1 + 2) is the base that makes System 3 tractable. Without the pre-built graph, System 3 would need 10-30 sequential API calls per query at 200-500ms each just to do basic traversals. With the graph, those traversals are <10ms Cypher queries. System 3's job becomes orchestration and presentation, not data wrangling.
+This repository (System 1 + 2) is the base that makes System 3 tractable. Without the pre-built graph, System 3 would need 10-30 sequential API calls per query at 200-500ms each just to do basic traversals. With the graph, those traversals are <10ms Cypher queries. System 3's job becomes orchestration and presentation, not data wrangling.
 
 | System | What it does | Complexity type |
 |--------|-------------|-----------------|
-| System 1 (this repo) | Download, parse, map, validate, export | Data engineering: predictable, batch, offline |
-| System 2 (this repo) | Load graph, serve Cypher queries | Infrastructure: set up once, maintain |
-| System 3 (separate repo) | Everything the user actually touches | Software engineering: real-time, many moving parts |
+| System 1 (this repository) | Download, parse, map, validate, export | Data engineering: predictable, batch, offline |
+| System 2 (this repository) | Load graph, serve Cypher queries | Infrastructure: set up once, maintain |
+| System 3 (separate repository) | Everything the user actually touches | Software engineering: real-time, many moving parts |
 
 System 3 handles:
 
 - Query understanding: turning "what genes cause cystic fibrosis?" into a Cypher query against the graph
 - Multi-layer orchestration: querying Layer 1 (graph), Layer 2 (NCBI APIs), and Layer 3 (enrichment APIs) in parallel, merging results
 - Agent logic: deciding which layers to query, when to follow links, when to stop
-- Citation assembly: every fact in the answer traced back to its source (provenance from this repo makes this possible)
+- Citation assembly: every fact in the answer traced back to its source (provenance from this repository makes this possible)
 - Caching: Redis for API responses to stay within NCBI rate limits under load
 - UI: web interface for users
 - Observability: logging, error tracking, latency monitoring
@@ -196,7 +196,7 @@ System 3 handles:
 
 The 115M-node graph with provenance on every record is the hard part that makes everything downstream tractable.
 
-## What this repo does and does not do
+## What this repository does and does not do
 
 Does:
 
@@ -208,7 +208,7 @@ Does:
 Does not:
 
 - Call Layer 2 or Layer 3 APIs (that is System 3, query-time)
-- Build the search agent (that is System 3, separate repo)
+- Build the search agent (that is System 3, separate repository)
 - Pre-ingest dbSNP, Protein, PMC, or any other Layer 2 database
 - Serve a UI or API endpoint (that is System 3)
 
@@ -227,7 +227,7 @@ System 3 does not need:
 
 - The KGX files (deleted after AGE load)
 - The ETL pipeline code (System 3 talks to the database, not the pipelines)
-- This repo checked out (just the running database)
+- This repository checked out (just the running database)
 
 ## How System 3 connects to Layer 1
 

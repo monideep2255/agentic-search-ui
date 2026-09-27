@@ -18,7 +18,7 @@ type ErrorEvent = Extract<AgentEvent, { type: "error" }>;
  * timeout), and hardcoding one exact string risks silently missing a
  * sibling cap's error event. Matching on "cap" as a substring is the
  * reasonable, documented engineering call: broad enough to catch every cap
- * source this repo's caps are named after, narrow enough that an ordinary
+ * source this repository's caps are named after, narrow enough that an ordinary
  * tool or network failure (whose `source` names the failing tool or layer,
  * not a cap) does not falsely trigger this banner.
  */

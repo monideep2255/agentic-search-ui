@@ -442,7 +442,7 @@ def _apply_field_tags(term: str, field_tags: list[str]) -> tuple[str | None, str
     "sym" becomes a free-text search term of its own. The flagship symbol
     lookup then ranks a wrong gene (1956, EGFR) above the intended one (672,
     BRCA1). An unscoped wrong answer that still cites cleanly is exactly the
-    failure class this repo treats as worse than a crash.
+    failure class this repository treats as worse than a crash.
 
     The root fix, therefore, is that Entrez scopes a field tag correctly ONLY
     against an atomic term. Both correct forms are live-verified:
@@ -775,7 +775,7 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
 
 # Section 6.2's verified ESummary field table (Technical_specification.md
 # lines 946-957). See the module docstring's trust table for which of these
-# are live-verified in THIS repo (gene's name/description/chromosome, case
+# are live-verified in THIS repository (gene's name/description/chromosome, case
 # 2) versus taken on trust from the locked spec (everything else here).
 _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
     "pubmed": (

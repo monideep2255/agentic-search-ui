@@ -188,7 +188,7 @@ _EXIT_FAILURE = 1
 # Section 12.6's `GuardrailBanner` copy table, mirrored here rather than
 # imported: `adapters/cli` does not depend on the web frontend, and
 # `contracts/events.py`'s own `NCBI_SOURCE_URL_PATTERN` comment already
-# establishes this repo's precedent of copying a small fixed table verbatim
+# establishes this repository's precedent of copying a small fixed table verbatim
 # across a module boundary instead of reaching across it. `guard.reason` is
 # model-generated free text (`ThinkPayload`/`GuardPayload` docstrings in
 # `contracts/events.py`); Section 12.6 never renders it raw, choosing copy

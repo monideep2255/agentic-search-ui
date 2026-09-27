@@ -84,7 +84,7 @@ ABSENT_GENE = "NCBIGene:99999999"
 def _load_env_explicitly() -> None:
     """Populate the graph and model variables from .env.
 
-    Finding F-2.1-04: nothing in this repo calls load_dotenv(), so these
+    Finding F-2.1-04: nothing in this repository calls load_dotenv(), so these
     reach os.environ only as a side effect of importing litellm. Loading
     here keeps this file's behavior its own.
     """

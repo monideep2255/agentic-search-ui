@@ -37,7 +37,7 @@ failure. That is safe in the security direction and wrong in the honest
 direction: a network blip is not evidence about the user's query, and
 reporting it as a refusal tells the user something false about what they
 asked. It would also make every outage look like a guardrail defect, which
-is a diagnostic confusion this repo has already paid for twice
+is a diagnostic confusion this repository has already paid for twice
 (`tracker/phase_2.2.md`, the environmental note).
 
 So a failure raises, the caller turns it into an `error` event, and the run
@@ -157,7 +157,7 @@ class InjectionClassification(BaseModel):
     # re-checked topicality after the pre-filter, so "What is the capital of
     # the USA?" was admitted with category="ok".
     #
-    # That is the F-2.1-J5-01 pattern this repo has already paid for once: a
+    # That is the F-2.1-J5-01 pattern this repository has already paid for once: a
     # confident comment asserting a property the code did not implement,
     # surviving review because a reader stops checking where the prose sounds
     # certain. The comment is now true because this field makes it true.

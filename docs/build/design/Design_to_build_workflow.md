@@ -87,17 +87,17 @@ The four artifacts, and how each one stays current:
 | Artifact | Where it lives | How it syncs |
 |----------|---------------|--------------|
 | Claude Design project | Cloud, `claude.ai/design` | Source of truth. The product owner edits here and nowhere else |
-| `docs/build/design/design-system/` | Repo, under git | One-to-one mirror, pulled with `DesignSync`. Exact, no interpretation |
-| `design-system/prototype/app.html` | Repo, under git | Part of the same one-to-one mirror. This is the clickable prototype |
-| `Phase_4.8_prototype.html` | Repo, under git | Generated from the prototype card by `make_prototype_artifact.py`. Never hand-edited |
-| `Phase_4.8_visual_design.html` | Repo, under git | Hand-maintained narrative. Shares the tokens, not the content. Allowed to lag |
+| `docs/build/design/design-system/` | Repository, under git | One-to-one mirror, pulled with `DesignSync`. Exact, no interpretation |
+| `design-system/prototype/app.html` | Repository, under git | Part of the same one-to-one mirror. This is the clickable prototype |
+| `Phase_4.8_prototype.html` | Repository, under git | Generated from the prototype card by `make_prototype_artifact.py`. Never hand-edited |
+| `Phase_4.8_visual_design.html` | Repository, under git | Hand-maintained narrative. Shares the tokens, not the content. Allowed to lag |
 | The published artifacts | Cloud, two stable URLs | One for the prototype, one for the argument. Republished from their HTML files |
 
 ### The mirror is partial, and the prototype exists three times
 
 Found 2026-08-14, the hard way. The table above says "one-to-one mirror", and that is true of the paths it lists and false of the project as a whole. `DesignSync list_files` on the Claude Design project returns paths the repository mirror does not carry:
 
-| Remote path | In the repo mirror? | What it is |
+| Remote path | In the repository mirror? | What it is |
 |-------------|--------------------|------------|
 | `prototype/app.html` | Yes | The prototype card the mirror carries |
 | `NCBI Agentic Search prototype.html` | NO | A second full copy of the prototype, at the project root, its own card in the Prototype group |

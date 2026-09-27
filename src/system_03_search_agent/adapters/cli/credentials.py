@@ -150,7 +150,7 @@ _DIR_FORBIDDEN_BITS = stat.S_IWGRP | stat.S_IWOTH
 # seven NCBI/graph tools `.claude/rules/tool-call-budgets.md` tabulates,
 # but the same rule's "every outbound HTTP call carries an explicit
 # timeout" line is not scoped to that table alone. 15 seconds matches the
-# per-call budget this repo already uses for every other interactive HTTPS
+# per-call budget this repository already uses for every other interactive HTTPS
 # call.
 REFRESH_TIMEOUT_SECONDS = 15.0
 
@@ -307,7 +307,7 @@ def _ensure_parent_dir_secure(parent: Path) -> None:
     check and the file open that follows it). Closing it fully would need
     directory-fd-relative opens throughout this module, a materially
     larger change than the finding asked for; recorded here rather than
-    silently left unstated, per this repo's coverage-declaration
+    silently left unstated, per this repository's coverage-declaration
     discipline.
     """
     if os.name != "posix":

@@ -16,7 +16,7 @@ This module's only job is turning one agtype column value, whatever shape
 it arrives in, into the underlying Python value: a dict for a vertex or an
 edge, a list for a path, or a bare scalar for anything else. Malformed
 input is handled deterministically and never raises into the caller's
-happy path, per this repo's retry-safety gate: a parse failure here must
+happy path, per this repository's retry-safety gate: a parse failure here must
 degrade to "could not parse" for that one value, never crash the whole
 query.
 
