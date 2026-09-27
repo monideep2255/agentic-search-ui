@@ -73,6 +73,7 @@ A builder stops and reports, rather than guessing, when:
 |---|---|---|---|---|---|
 | builder P, T-8.10-01 to 04 | Opus 5.5 | default | 22:10 | 23:42 | 747,091 |
 | builder Q, T-8.10-05 and 06 | Opus 5.5 | default | 22:10 | 23:10 | 598,199 |
+| builder R, T-8.10-07 and 08 | Sonnet 5 | default | 23:33 | 23:56 | 329,279 |
 
 ## Tickets
 
@@ -140,7 +141,7 @@ A builder stops and reports, rather than guessing, when:
 
 ### T-8.10-07: The Integrations page says what is true, and every command on it runs (audit gaps 1, 13 and the page's words)
 
-- Builder: R, dispatched after P and Q report, so the page describes what they built. Status: todo.
+- Builder: R, dispatched after P and Q report, so the page describes what they built. Status: in-review.
 - Acceptance:
   - "The MCP config I copy connects and answers." It carries `"type": "http"` and an `Authorization` header, says how long a token lasts, and says how to get one.
   - "The page tells me how to install `s3`." Until the owner's first release, that is an install from this public repository's `clients/system3-cli` directory. The page never prints `pip install s3`, a stranger's package.
@@ -153,7 +154,7 @@ A builder stops and reports, rather than guessing, when:
 
 ### T-8.10-08: The About, Architecture and tour pages say what is true (card 51's first run)
 
-- Builder: R, with T-8.10-07, since About and Integrations share `InfoScreens.tsx`. Status: todo.
+- Builder: R, with T-8.10-07, since About and Integrations share `InfoScreens.tsx`. Status: in-review.
 - Source: the stale facts on a screen in `testing/Developer/reports/2026-09-26_ui_facts/report.md`, found by the facts checker of pull request #118.
 - Acceptance, each in the words a person reads:
   - "The tour names all four ways in, the MCP server included."
@@ -233,5 +234,21 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
   - Fence extensions the lead approved: the builder's own debugging guide rows and the regenerated manifest, and one exact string, "notifications/cancelled", in `test_tiers.py`'s exemption list, because the MCP specification names that method.
   - The six gate04 failures are database tests that fail the same way on 8cd197d on this machine; CI has the database.
   - Left for the lead after the golden run: one live `s3 ask GERD` from a build of this branch.
+- 2026-09-26 23:56: builder R finished T-8.10-07 and 08 (report `testing/Developer/reports/2026-09-26_phase_8.10/builder_R.md`), merged as de62030.
+  - The Integrations page:
+    - an MCP config carrying `"type": "http"` and the Authorization header, with the 15-minute token and how to get one;
+    - the four MCP tools;
+    - the git install line for `system3-cli`, never `pip install s3`;
+    - `s3 login you@example.org` and `s3 mcp`;
+    - KGX export needing operator-granted graph access;
+    - `POST /auth/guest`;
+    - twelve event kinds;
+    - a citations sentence without the nonexistent tool field.
+  - The tour, About and Architecture: all seven stale screen facts corrected, and the graph limit shown as 30 seconds (F-8.6-FJ08).
+  - Frontend: 4 test files, 45 tests passed, and `npm run build` succeeded.
+  - The facts checker from the closed #118 branch errors on six facts whose patterns are keyed to the old false sentences. That was passed to the re-split builder on `chore/verify-facts-2`.
+- 2026-09-27 00:00: develop merged into the branch (9a0148a), bringing phase 8.6's follow-up and the 30 s graph limit. The lead corrected the debugging guide's `server.py` row to the four tools (b31974b).
+  - Gates on b31974b: `ruff check` clean; `isort` clean; `gate_packages_install.sh` 2 passed, 0 failed; `gate04_unit_suite.sh` 6349 passed, 143 skipped, 24 deselected, 1 xfailed.
+  - T-8.10-01 to 08 are in review.
 
 ## Findings
