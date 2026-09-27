@@ -6,7 +6,7 @@ A person asks a question and waits about 17 seconds in silence, and the first se
 - puts the records on screen at about 8 seconds;
 - moves the writing to the model the owner chose.
 
-Opened 2026-09-27 at 04:29 UTC on the owner's overnight decision (`DECISIONS.md`, 2026-09-27, "The overnight run"): build, review, and merge if the golden run holds.
+Opened 2026-09-27 at 04:29 UTC on the owner's overnight decision (`DECISIONS.md`, 2026-09-27, "The overnight run"), which lets it merge overnight if its golden run holds.
 
 Cards: 2 (the first sentence), 50 (nobody waits in silence), 5 (models by tier, the Opus writer). Sources:
 
