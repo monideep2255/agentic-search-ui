@@ -524,3 +524,21 @@ class NcbiEfetchOutput(BaseModel):
     ] = None
     truncated: bool
     error: Annotated[str | None, Field(default=None, max_length=500)] = None
+    #: Card 63 (2026-09-27): what went wrong, in a fixed set a person can be
+    #: told about, beside `error`, which is free text and may quote NCBI.
+    #: Additive and optional under `system-design-patterns` pattern 10, like
+    #: `candidates_checked` above: None on `ok` and `empty`, and None on an
+    #: error no action classified, which a reader takes as `other`. The four
+    #: values are `ncbi_transport.FAILURE_KINDS`, written out here so this
+    #: schema module imports no transport code; a test pins the two equal.
+    failure_kind: Annotated[
+        Literal["service_down", "rate_limited", "timed_out", "other"] | None,
+        Field(
+            default=None,
+            description=(
+                "Why an error output failed, in a fixed set: service_down (NCBI said "
+                "its own search is unavailable), rate_limited, timed_out or other. "
+                "None unless status is error."
+            ),
+        ),
+    ] = None

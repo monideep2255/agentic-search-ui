@@ -224,6 +224,100 @@ class TestSearch:
         assert output.status == "error"
         assert output.records == []
         assert "Empty Term in the request" in output.error
+        # Card 63: a request NCBI refused is NOT "the service is down".
+        assert output.failure_kind == "other"
+
+    @pytest.mark.asyncio
+    async def test_the_outage_body_is_a_service_down_search(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Card 63: the body every ESearch returned from 02:24 UTC on
+        2026-09-27. The tool says `service_down`, so the answer can tell a
+        person PubMed's search is down rather than invite them to ask again
+        straight into the outage."""
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "esearchresult": {
+                            "ERROR": (
+                                "Search Backend failed: Search is temporarily "
+                                "unavailable. Cannot connect to SOLR"
+                            ),
+                            "count": "0",
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "error"
+        assert output.records == []
+        assert output.failure_kind == "service_down"
+
+    @pytest.mark.asyncio
+    async def test_the_outage_is_logged_by_database(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The action hands its own `db` to the classifier, so the warning
+        names the database that is down. The request's own URL and key never
+        reach the classifier at all."""
+        from tests.system_03_search_agent.tools.test_ncbi_transport import _DirectLogCapture
+
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {"esearchresult": {"ERROR": "Search is temporarily unavailable"}}
+                )
+            ],
+        )
+        with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
+            await ncbi_eutils_actions.search(
+                NcbiEfetchSearchInput(action="search", db="clinvar", term="BRCA1", retmax=10)
+            )
+        assert "database clinvar" in capture.text, capture.text
+        assert "service_down" in capture.text
+        assert "temporarily" not in capture.text
+
+    @pytest.mark.asyncio
+    async def test_a_rate_limited_search_says_rate_limited(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(monkeypatch, [_json_response({}, status_code=429)])
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "error"
+        assert output.failure_kind == "rate_limited"
+
+    @pytest.mark.asyncio
+    async def test_a_timed_out_search_says_timed_out(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(monkeypatch, [ncbi_transport.TransportTimeoutError("did not answer in time")])
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "error"
+        assert output.failure_kind == "timed_out"
+
+    @pytest.mark.asyncio
+    async def test_a_successful_search_carries_no_failure_kind(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(
+            monkeypatch,
+            [_json_response({"esearchresult": {"count": "1", "idlist": ["7157"]}})],
+        )
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "ok"
+        assert output.failure_kind is None
 
     @pytest.mark.asyncio
     async def test_unvalidated_field_tag_rejected_with_no_transport_call(

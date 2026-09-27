@@ -910,6 +910,40 @@ def test_coordinate_overlap_accepts_a_zero_length_window() -> None:
 
 
 # ---------------------------------------------------------------------------
+# failure_kind (card 63): an additive optional output field in a fixed set.
+# ---------------------------------------------------------------------------
+
+
+def test_output_failure_kind_defaults_to_none_and_takes_only_the_fixed_set() -> None:
+    from typing import get_args
+
+    from system_03_search_agent.tools import ncbi_transport
+
+    plain = NcbiEfetchOutput(
+        status="ok", action="search", records=[], record_count=0, truncated=False
+    )
+    assert plain.failure_kind is None
+
+    # The schema writes the set out rather than importing the transport;
+    # this pins the two equal, so neither can drift from the other.
+    annotation = NcbiEfetchOutput.model_fields["failure_kind"].annotation
+    literal = next(arg for arg in get_args(annotation) if arg is not type(None))
+    assert set(get_args(literal)) == set(ncbi_transport.FAILURE_KINDS)
+
+    for kind in ncbi_transport.FAILURE_KINDS:
+        output = NcbiEfetchOutput(
+            status="error", action="search", records=[], record_count=0,
+            truncated=False, failure_kind=kind,
+        )
+        assert output.failure_kind == kind
+    with pytest.raises(ValidationError):
+        NcbiEfetchOutput(
+            status="error", action="search", records=[], record_count=0,
+            truncated=False, failure_kind="Cannot connect to SOLR",
+        )
+
+
+# ---------------------------------------------------------------------------
 # candidates_checked (F-3.1-24, reopened): an additive optional output
 # field, so every pre-existing output shape still validates unchanged.
 # ---------------------------------------------------------------------------
