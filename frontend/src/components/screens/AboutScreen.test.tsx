@@ -131,6 +131,26 @@ describe("AboutScreen: what happens to your question", () => {
     expect(walk).toHaveTextContent(/held there, so it cannot change partway through a run/);
   });
 
+  it("says what the plan tier does today, and that a tier is matched to the step", () => {
+    // Build phase 8.10's fix round, F-8.10-J03 and J04 (L01). The plan tier
+    // runs Think's classification and, in Act, writes a graph query when no
+    // template fits; Plan's own decisions go to the guard tier or Jev
+    // (`harness/decide.py`). Mutation that turns this red: put back "this
+    // tier answers only the one routing decision", or "matched to how hard
+    // the question is".
+    render(<AboutScreen />);
+
+    const walk = screen.getByTestId("about-journey");
+    expect(walk).toHaveTextContent(
+      "In Act it also writes a graph query, but only when no ready-made template fits the question.",
+    );
+    expect(walk).toHaveTextContent("Plan itself never calls this tier");
+    expect(walk).not.toHaveTextContent(/routing decision/i);
+    expect(walk).not.toHaveTextContent(/how far back/i);
+    expect(walk).toHaveTextContent("matched to how hard the step is");
+    expect(walk).not.toHaveTextContent("how hard the question is");
+  });
+
   it("states the cite-or-refuse rule by name", () => {
     render(<AboutScreen />);
 
