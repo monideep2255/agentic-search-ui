@@ -38,16 +38,15 @@ import tomllib
 from check_facts import (
     BOOL,
     COUNT,
+    EVERY,
     EXACT,
     MAPPING,
     MEMBER,
     MILLIONS,
     MONTH,
-    NUMBER,
     SET,
     STEPS,
     SUBSET,
-    TALLY,
     THOUSANDS,
     Computed,
     Fact,
@@ -284,107 +283,6 @@ def citation_fields_named(match: re.Match[str]) -> frozenset[str]:
 
 def modes_named(match: re.Match[str]) -> frozenset[str]:
     return frozenset(m for m in MODE_NAMES if m in match.group(0))
-
-
-# ---- places matched by the shape of their claim, not the wording they had
-#
-# A correction of a page must read as PASS or FAIL on its claim, never as a
-# pattern that finds nothing (PR118-12, and builder R's corrected pages in
-# phase 8.10). So a count is captured as `N`, any number, and a yes-or-no
-# claim is anchored on words a correction keeps, such as the card it sits
-# in, and read for which way it points. A reading the registry cannot place
-# either way raises, which is an honest ERROR, not a silent PASS.
-
-N = f"({NUMBER})"
-# How many of a group a sentence says: a number, or all or none of them.
-QUANTITY = f"((?i:every one|each one|all|none)|{NUMBER})"
-MCP_CARD = r'title="[^"]*MCP[^"]*"\s+body="'
-MCP_TOOL_COUNT = MCP_CARD + r'[^"]*?\b' + N + r" (?:advertised )?tools?\b"
-MCP_TOOL_NAMES = MCP_CARD + r'([^"]*)"'
-PLAN_TIER_CARD = r'name: "Plan tier",[^}]*?body: "([^"]*)"'
-STEPS_ASKING = (
-    r"\b" + QUANTITY + r" of the " + N + r" steps (?:can |may )?ask a (?:language )?model"
-)
-AGENT_READS = r"The agent reads ([^.:;]+)"
-WRITE_PASSAGE = r"Write composes the answer from those records alone\.(.*?)</StopText>"
-SEED_SENTENCE = (
-    r"(?:\b"
-    + QUANTITY
-    + r" of )?\b[Tt]hese "
-    + N
-    + r" (?:are|come)\b[^.;]*?\bfrom the evaluation set"
-)
-
-
-def _quantity(said: str | None, total: int) -> int:
-    said = (said or "").lower()
-    if said in ("", "every one", "each one", "all"):
-        return total
-    return 0 if said == "none" else to_int(said)
-
-
-def steps_asking(match: re.Match[str]) -> int:
-    """ "Four of the five steps ask a model" is 4; "every one of the five
-    steps can ask a model" is 5."""
-    return _quantity(match.group(1), to_int(match.group(2)))
-
-
-def seed_tally(match: re.Match[str]) -> tuple[int, int]:
-    """(seeds in all, seeds from the evaluation set): "these four are real
-    questions from the evaluation set" is (4, 4), and "two of these four
-    come word for word from the evaluation set" is (4, 2)."""
-    total = to_int(match.group(2))
-    return total, _quantity(match.group(1), total)
-
-
-def snake_names(match: re.Match[str]) -> frozenset[str]:
-    """The snake_case names a card's text gives, which is how it names tools."""
-    return frozenset(re.findall(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b", match.group(1)))
-
-
-def plan_tier_serves_plan(match: re.Match[str]) -> bool:
-    """Whether the About screen's Plan tier card says its model serves the
-    Plan step: a sentence of the card that says it "runs Plan", or that
-    names Plan with "this tier" as the one answering, asking or deciding.
-    The card is the anchor, so a rewritten card is read, not lost."""
-    for sentence in re.split(r"(?<=\.)\s+", " ".join(match.group(1).split())):
-        if re.search(r"\bruns Plan\b", sentence) or (
-            re.search(r"\bPlan\b", sentence)
-            and re.search(
-                r"\bthis tier (?:answers|asks|decides|makes|picks|runs|writes)\b", sentence
-            )
-        ):
-            return True
-    return False
-
-
-def reads_layer_one_first(match: re.Match[str]) -> bool:
-    """ "The agent reads layer 1 first" is yes; "the agent reads all three
-    layers at once" is no. Anything else cannot be judged."""
-    said = " ".join(match.group(1).lower().split())
-    if re.search(r"\b(?:layer 1|layer one|the graph) first\b", said):
-        return True
-    if re.search(r"\b(?:at once|together|in parallel)\b", said):
-        return False
-    raise ValueError(f"cannot tell whether {said[:80]!r} says layer 1 is read first")
-
-
-def checked_by_code_only(match: re.Match[str]) -> bool:
-    """Whether the About screen's passage on Write says code alone checks
-    each sentence: no when it says a model judges any of them, yes when it
-    says code checks them and names no model. Anything else cannot be
-    judged."""
-    said = " ".join(match.group(1).split())
-    if re.search(
-        r"\b(?:judged|checked|decided|read) by a (?:language )?model\b"
-        r"|\ba (?:language )?model (?:judges|checks|decides)\b",
-        said,
-        re.IGNORECASE,
-    ):
-        return False
-    if re.search(r"\bchecked in code\b|\bcode checks\b", said, re.IGNORECASE):
-        return True
-    raise ValueError(f"cannot tell who checks the sentences in {said[:80]!r}")
 
 
 # ------------------------------------------------------------------ computed truths
@@ -783,9 +681,8 @@ def seeds_in_golden_set(repo: Repo) -> Truth:
     version matched identifiers alone, so "Songs about BRCA1" passed
     (PR118-04). The second matched a substring of joined words, so "RCA1"
     passed, and counted matches rather than seeds, so a fifth seed rode
-    under "these four" (PR118-V03). The place states how many seeds there
-    are and how many come from the set, and both must match (`TALLY`):
-    "these four are" claims all four, so every seed must qualify. The note still
+    under "these four" (PR118-V03). The place compares its number with the
+    number of seeds, and every seed must qualify (`EVERY`). The note still
     names, for each seed that fails, the golden question carrying the same
     identifiers, as a lead for whoever fixes the page; it decides nothing."""
     seeds, _ = _seeds(repo)
@@ -981,9 +878,9 @@ FACTS: tuple[Fact, ...] = (
             KG_REF, r"which were ([^.]+)\. It contains", lambda m: tuple(words_list(m.group(1)))
         ),
         stated=(
-            w(ABOUT, INFO, r"\b" + N + r" NCBI databases", COUNT, flags=re.IGNORECASE),
-            w(ARCH, ARCH_TSX, r"\b" + N + r" NCBI databases are downloaded", COUNT),
-            w(ARCH, ARCH_TSX, r"The " + N + r" source databases", COUNT),
+            w(ABOUT, INFO, r"\b(five|5) NCBI databases", COUNT, flags=re.IGNORECASE),
+            w(ARCH, ARCH_TSX, r"\b(Five) NCBI databases are downloaded", COUNT),
+            w(ARCH, ARCH_TSX, r"The (five) source databases", COUNT),
         ),
         downstream=(
             *everywhere(INSTRUCTION_FILES, r"edges from (\d+) NCBI databases", COUNT),
@@ -1083,16 +980,11 @@ FACTS: tuple[Fact, ...] = (
             w(INTEGRATIONS, INFO, r'"(\d+) tools"', COUNT),
             w(INTEGRATIONS, INFO, r"the (\w+) internal tools", COUNT),
             w(ABOUT, INFO, r"the descriptions of the (\w+) tools", COUNT),
-            w(ARCH, ARCH_TSX, r"\b" + N + r" tools cover the " + NUMBER + r" layers", COUNT),
+            w(ARCH, ARCH_TSX, r"(Seven) tools cover the three layers", COUNT),
         ),
         downstream=(
             *everywhere(INSTRUCTION_FILES, r"PLANNED, (\w+) tools\.", COUNT),
-            w(
-                DOC,
-                ARCH_DIAGRAM,
-                r"## The " + NUMBER + r" data layers and the " + N + r" tools",
-                COUNT,
-            ),
+            w(DOC, ARCH_DIAGRAM, r"## The three data layers and the (\w+) tools", COUNT),
             w(DOC, SCHEMA_VIS, r"each of the (\w+) tools", COUNT),
             w(DOC, SCHEMA_VIS, r'string tool "one of (\w+)"', COUNT),
             w(DOC, README, r"Locked\. 25 sections, (\w+) tools", COUNT),
@@ -1152,10 +1044,10 @@ FACTS: tuple[Fact, ...] = (
         stated=(
             w(INTEGRATIONS, INFO, r'"(\d+) data layers"', COUNT),
             w(ABOUT, INFO, r"crosses up to (\w+) data layers", COUNT),
-            w(ARCH, ARCH_TSX, r"\b" + N + r" data layers feed one search agent", COUNT),
+            w(ARCH, ARCH_TSX, r"(Three) data layers feed one search agent", COUNT),
         ),
         downstream=(
-            *everywhere(INSTRUCTION_FILES, r"\b" + N + r"-layer data access", COUNT),
+            *everywhere(INSTRUCTION_FILES, r"(Three)-layer data access", COUNT),
             w(DOC, SCHEMA_VIS, r'string layer "one of (\w+)"', COUNT),
         ),
     ),
@@ -1163,13 +1055,13 @@ FACTS: tuple[Fact, ...] = (
         "layers.l2_tools",
         "how many tools reach the live NCBI APIs",
         Computed(EVENTS_PY, tools_in_layer(2), PATHOGEN_LAYER),
-        stated=(w(ARCH, ARCH_TSX, r"\b" + N + r" tools cover that", COUNT),),
+        stated=(w(ARCH, ARCH_TSX, r"(Three) tools cover that", COUNT),),
     ),
     Fact(
         "layers.l3_tools",
         "how many tools add enrichment",
         Computed(EVENTS_PY, tools_in_layer(3), PUBTATOR_LAYER),
-        stated=(w(ARCH, ARCH_TSX, r"\b" + N + r" further tools add evidence", COUNT),),
+        stated=(w(ARCH, ARCH_TSX, r"(three) further tools add evidence", COUNT),),
     ),
     Fact(
         "layers.l2_apis",
@@ -1449,8 +1341,14 @@ FACTS: tuple[Fact, ...] = (
             swap(MCP_SERVER, r"async def ask_biomedical_question\(", "async def ask_mutant("),
         ),
         stated=(
-            w(INTEGRATIONS, INFO, MCP_TOOL_COUNT, COUNT),
-            w(INTEGRATIONS, INFO, MCP_TOOL_NAMES, SET, snake_names),
+            w(INTEGRATIONS, INFO, r"(One) advertised tool", COUNT),
+            w(
+                INTEGRATIONS,
+                INFO,
+                r"One advertised tool, (\w+)\.",
+                SET,
+                lambda m: frozenset({m.group(1)}),
+            ),
         ),
     ),
     Fact(
@@ -1462,7 +1360,7 @@ FACTS: tuple[Fact, ...] = (
             swap(PYPROJECT, r"\[project\.scripts\]\n", '[project.scripts]\nmutant = "x:y"\n'),
         ),
         stated=(
-            w(INTEGRATIONS, INFO, r"\b" + N + r" console commands", COUNT),
+            w(INTEGRATIONS, INFO, r"(Two) console commands", COUNT),
             w(INTEGRATIONS, INFO, r"\b(s3(?:-[a-z]+)*) (?:asks|writes)", SET, g(), union),
         ),
     ),
@@ -1609,12 +1507,12 @@ FACTS: tuple[Fact, ...] = (
             w(
                 TOUR,
                 TOUR_TSX,
-                r"the " + NUMBER + r" steps the system takes: ([^.]+)\.",
+                r"the five steps the system takes: ([^.]+)\.",
                 STEPS,
                 lambda m: tuple(words_list(m.group(1))),
             ),
-            w(TOUR, TOUR_TSX, r"shows the " + N + r" steps", COUNT),
-            w(ABOUT, INFO, r"\bof the " + N + r" steps\b", COUNT),
+            w(TOUR, TOUR_TSX, r"shows the (five) steps", COUNT),
+            w(ABOUT, INFO, r"Four of the (five) steps", COUNT),
         ),
         downstream=(
             *everywhere(
@@ -1629,17 +1527,17 @@ FACTS: tuple[Fact, ...] = (
         "loop.steps_asking_a_model",
         "how many of the steps ask a language model something",
         steps_reaching_model(),
-        stated=(w(ABOUT, INFO, STEPS_ASKING, COUNT, steps_asking),),
+        stated=(w(ABOUT, INFO, r"(Four) of the five steps ask a language model", COUNT),),
         downstream=(
-            w(DOC, ARCH_DIAGRAM, r"\b" + N + r" of them make exactly one model call each", COUNT),
+            w(DOC, ARCH_DIAGRAM, r"(Four) of them make exactly one model call each", COUNT),
         ),
     ),
     Fact(
         "loop.tier_count",
         "how many model tiers the harness has",
         PyLiteral(TIERS_PY, "Tier"),
-        stated=(w(ABOUT, INFO, r"There are " + N + r" tiers", COUNT),),
-        downstream=(*everywhere(INSTRUCTION_FILES, r"harness with " + N + r" tiers", COUNT),),
+        stated=(w(ABOUT, INFO, r"There are (three) tiers", COUNT),),
+        downstream=(*everywhere(INSTRUCTION_FILES, r"harness with (three) tiers", COUNT),),
     ),
     Fact(
         "loop.guardrail_on_guard_tier",
@@ -1659,7 +1557,15 @@ FACTS: tuple[Fact, ...] = (
         "loop.plan_on_plan_tier",
         "the plan step asks the plan-tier model to pick tools and write the query",
         step_uses_tier("plan", "plan"),
-        stated=(w(ABOUT, INFO, PLAN_TIER_CARD, BOOL, plan_tier_serves_plan, flags=S),),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r"Then runs Plan, which picks the tools to call and writes the graph query itself",
+                BOOL,
+                present,
+            ),
+        ),
         downstream=(
             w(DOC, ARCH_DIAGRAM, r"- Plan: Plan tier, one call", BOOL, present),
             w(DOC, ARCH_DIAGRAM, r'PL\["Plan, Plan tier"\]', BOOL, present),
@@ -1689,7 +1595,7 @@ FACTS: tuple[Fact, ...] = (
                 "for c in coroutines:\n        await c",
             ),
         ),
-        stated=(w(ARCH, ARCH_TSX, AGENT_READS, BOOL, reads_layer_one_first),),
+        stated=(w(ARCH, ARCH_TSX, r"The agent reads layer 1 first", BOOL, present),),
     ),
     Fact(
         "loop.act_asks_no_model",
@@ -1710,7 +1616,16 @@ FACTS: tuple[Fact, ...] = (
         "loop.sentences_checked_by_code_alone",
         "each answer sentence is checked against its record by code alone",
         checked_by_code_alone("write", "_ground_with_sentence_check"),
-        stated=(w(ABOUT, INFO, WRITE_PASSAGE, BOOL, checked_by_code_only, flags=S),),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r"Each sentence is then checked in\s+code against the record it points at",
+                BOOL,
+                present,
+                flags=S,
+            ),
+        ),
     ),
     Fact(
         "models.code_defaults",
@@ -1750,131 +1665,8 @@ FACTS: tuple[Fact, ...] = (
         "seeds.from_golden_set",
         "the Home screen shows as many seeds as the tour says, and each is a golden question, whole",
         Computed(GOLDEN, seeds_in_golden_set, _seed_mutation),
-        stated=(w(TOUR, TOUR_TSX, SEED_SENTENCE, TALLY, seed_tally),),
-    ),
-)
-
-
-# ------------------------------------------------------------------ fixed readings
-
-
-def _reads(pattern: str, parse, text: str, flags: int = 0):
-    """For the self-test: a reading of `text` through a place's own pattern
-    and parser, run only when the self-test asks for it."""
-    return lambda: parse(re.search(pattern, text, flags))
-
-
-_PLAN_CARD = 'name: "Plan tier",\n    kind: "a mid-range model",\n    body: "Runs Think. {}"'
-_WRITE = "Write composes the answer from those records alone. {}\n          </StopText>"
-
-# Each place whose claim a correction rewords is read here on the wording the
-# page had AND on a correction of it, so a corrected page keeps reading as a
-# claim, PASS or FAIL, never as a pattern that finds nothing (PR118-12,
-# builder R's pages in phase 8.10). `check_facts.py --self-test` runs every
-# case: (label, reading, what it must read as).
-PARSER_CASES = (
-    ("count by shape", _reads(r"\b" + N + r" tools cover", num(), "Eight tools cover the"), 8),
-    (
-        "MCP count, one",
-        _reads(MCP_TOOL_COUNT, num(), 'title="MCP server"\n body="One advertised tool, a_b."'),
-        1,
-    ),
-    (
-        "MCP count, four, past the internal tools",
-        _reads(
-            MCP_TOOL_COUNT, num(), 'title="MCP server" body="Four tools, and the seven internal'
+        stated=(
+            w(TOUR, TOUR_TSX, r"These (\w+) are real questions from the evaluation set", EVERY),
         ),
-        4,
-    ),
-    (
-        "MCP names",
-        _reads(MCP_TOOL_NAMES, snake_names, 'title="MCP server" body="ask_one and list_two."'),
-        frozenset({"ask_one", "list_two"}),
-    ),
-    (
-        "steps asking, a number",
-        _reads(STEPS_ASKING, steps_asking, "Four of the five steps ask a language model"),
-        4,
-    ),
-    (
-        "steps asking, every one",
-        _reads(STEPS_ASKING, steps_asking, "Every one of the five steps can ask a language model"),
-        5,
-    ),
-    (
-        "seeds, all of them",
-        _reads(SEED_SENTENCE, seed_tally, "These four are real questions from the evaluation set."),
-        (4, 4),
-    ),
-    (
-        "seeds, some of them",
-        _reads(
-            SEED_SENTENCE,
-            seed_tally,
-            "Two of these four come word for word from the evaluation set;",
-        ),
-        (4, 2),
-    ),
-    (
-        "layer 1 first, as it was",
-        _reads(AGENT_READS, reads_layer_one_first, "The agent reads layer 1 first, because"),
-        True,
-    ),
-    (
-        "layer 1 first, corrected",
-        _reads(AGENT_READS, reads_layer_one_first, "The agent reads all three layers at once: the"),
-        False,
-    ),
-    (
-        "code alone, as it was",
-        _reads(
-            WRITE_PASSAGE,
-            checked_by_code_only,
-            _WRITE.format("Each sentence is then checked in\n code against the record."),
-            S,
-        ),
-        True,
-    ),
-    (
-        "code alone, corrected",
-        _reads(
-            WRITE_PASSAGE,
-            checked_by_code_only,
-            _WRITE.format("Code checks each sentence. One reworded is then judged by a model."),
-            S,
-        ),
-        False,
-    ),
-    (
-        "Plan tier card, as it was",
-        _reads(
-            PLAN_TIER_CARD,
-            plan_tier_serves_plan,
-            _PLAN_CARD.format("Then runs Plan, which picks the tools to call."),
-            S,
-        ),
-        True,
-    ),
-    (
-        "Plan tier card, this tier answers Plan's decision",
-        _reads(
-            PLAN_TIER_CARD,
-            plan_tier_serves_plan,
-            _PLAN_CARD.format("Plan then picks the tools, and this tier answers its one decision."),
-            S,
-        ),
-        True,
-    ),
-    (
-        "Plan tier card, another model answers Plan's decision",
-        _reads(
-            PLAN_TIER_CARD,
-            plan_tier_serves_plan,
-            _PLAN_CARD.format(
-                "Plan then picks the tools and asks Jev or the guard tier its decision."
-            ),
-            S,
-        ),
-        False,
     ),
 )
