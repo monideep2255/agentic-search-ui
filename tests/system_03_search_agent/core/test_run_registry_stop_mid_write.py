@@ -18,6 +18,9 @@ WHAT A STOP MID-WRITE MUST DO, one arm each:
   `trust_outcome` `refuse` (which the review ritual reads as abstain, never
   as an answer), and with the cost already spent, including the cancelled
   writing call, so neither daily cap can be dodged by stopping late.
+- S4: that cost is charged once. The row carries the harness's own total,
+  which already includes everything spent before Write, never that total
+  plus the spend before Write again (F-58-J01).
 
 HOW THE STOP LANDS MID-WRITE. The real registry drives the real
 `run_streaming()` and the real five-node graph, offline: the model tiers
@@ -44,6 +47,7 @@ import pytest
 
 from system_03_search_agent.contracts.events import CostPayload, DonePayload, Event
 from system_03_search_agent.core.run_registry import RunRegistry
+from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
 
 # The 4.16 gate's autouse fixtures and run shape, re-registered rather than
@@ -289,4 +293,76 @@ async def test_s3_a_stop_mid_write_is_recorded_as_stopped_with_its_cost(
         f"than the {last_cost_before_stop:.6f} USD spent before Write, so the "
         "cancelled writing call the provider already billed is invisible to "
         "the system-wide daily cost cap."
+    )
+
+
+def _record_harness_totals(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """Record every value `Harness.get_query_cost_usd` returns, unchanged.
+
+    The harness total only ever grows, so the largest value read is the
+    run's final total, the one `run_streaming`'s `finally` hands to capture.
+    """
+    seen: list[float] = []
+    original = Harness.get_query_cost_usd
+
+    def _recording(self: Harness, trace_id: str) -> float:
+        value = original(self, trace_id)
+        seen.append(value)
+        return value
+
+    monkeypatch.setattr(Harness, "get_query_cost_usd", _recording)
+    return seen
+
+
+@pytest.mark.asyncio
+async def test_s4_a_stopped_run_is_charged_once_not_twice(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> None:
+    """The row carries the harness total, once, F-58-J01.
+
+    S3 proves the cancelled writing call is counted. It cannot tell counted
+    once from counted twice, because both are more than the spend before
+    Write. The harness total already includes every earlier `cost` event,
+    so adding the last `cost` event to it charges the spend before Write a
+    second time, against both daily caps, for a question the person stopped.
+
+    Mutation: record `_observed_cost_usd(events) + metered_cost_usd` in
+    `_terminal_events_for_capture` instead of the larger of the two. The row
+    then carries the harness total plus the spend before Write, and this arm
+    goes red.
+    """
+    capture = _mock_capture_run(monkeypatch)
+    harness_totals = _record_harness_totals(monkeypatch)
+    await _stop_mid_write(monkeypatch, request)
+
+    assert capture.await_count == 1
+    _query_arg, captured = capture.await_args.args
+    payload = DonePayload.model_validate(captured[-1].payload)
+    last_cost_before_stop = max(
+        (
+            CostPayload.model_validate(event.payload).query_cost_usd
+            for event in captured
+            if event.type == "cost"
+        ),
+        default=0.0,
+    )
+    assert harness_totals, "populate-check failed: the harness total was never read."
+    harness_total = max(harness_totals)
+
+    # POPULATE-CHECKS: something was spent before Write, and the cancelled
+    # writing call added to it. Without both, once and twice cannot differ.
+    assert last_cost_before_stop > 0.0, (
+        "populate-check failed: no model cost was recorded before Write."
+    )
+    assert harness_total > last_cost_before_stop, (
+        "populate-check failed: the harness total does not include the "
+        "cancelled writing call, so this arm cannot see a double charge."
+    )
+
+    assert payload.total_cost_usd == pytest.approx(harness_total, rel=1e-9), (
+        f"the stopped run recorded {payload.total_cost_usd:.6f} USD, but it "
+        f"spent {harness_total:.6f} USD in all, of which "
+        f"{last_cost_before_stop:.6f} USD before Write. A row above the "
+        "harness total charges the person's daily allowance and the system "
+        "cap twice for the same model calls."
     )
