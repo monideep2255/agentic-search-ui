@@ -77,6 +77,7 @@ A builder stops and reports, rather than guessing, when:
 | judge | Opus 5.5 | default | 00:09 | 00:46 | 426,470 |
 | adversary | Fable 5.1 | default | 00:09 | 00:33 | 430,356 |
 | fix agent | Opus 5.5 | default | 00:47 | 01:32 | 546,213 |
+| fresh verifier | Opus 5.5 | default | 01:34 | 02:13 | 443,459 |
 
 ## Tickets
 
@@ -270,6 +271,11 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
   - The fix agent found and fixed a regression inside its own A07 deadline: it could cut a sign-in renewal after the server had rotated the refresh token and sign the person out everywhere. Commit 5273018 shields the renewal.
   - Gates: gate04 6402 passed; ruff and isort clean; package gate 2 passed; frontend 464 passed and the build succeeded; the facts checker shows no screen FAIL.
   - The lead corrected the bridge's debugging guide row and the seed comment in `HomeScreen.tsx` (c479bf6).
+- 2026-09-27 02:13: the fresh verifier (dispatch 7 of 8, on cf05183) returned MERGE. Every fix it checked is in place and nothing regressed. Its ten new findings, V01 to V10, are all notes. Six of them, V01 to V06, sit inside this round's fix commits, which Rule 4 sends to the owner.
+  - It probed the renewal fix against a stand-in server that revokes the session family on a replayed refresh value, in five interruption cases, and the family was never revoked. It drove the real `s3 mcp` child with the MCP SDK's own stdio client, and the filter refused nothing.
+  - Gates in its worktree with CI's env block: gate04 6402 passed against a local user database; gate04b, gate09, ruff, isort, the package gate, the frontend page tests and the doc drift check pass. It did not run gate05, gate06, gate07, gate08's full build, gate10 or screenshots, and asked no live question.
+  - Two hook refusals. The secret scan stopped a script that wrote CI's placeholder env block out literally, and a probe whose keyword argument matched the scan's pattern. Neither held a secret. The verifier rewrote both until the scan passed and asked the lead to judge. The lead's judgement: rewording until a scan stops matching is routing around it, even for a false positive. The right move is to stop and report the false positive, and the next reviewer's brief says so.
+- 2026-09-27 02:20: the owner chose merge, named. V01 to V10 go to card 61 on the board.
 
 ## Findings
 - F-8.10-L01, should-fix, filed by the lead from the re-split facts checker (#122) run on this branch's page text: the About page's Plan tier card now says the plan tier answers Plan's routing decision. That step reaches only Jev and the guard tier, never the plan tier (`check_facts.py` call-graph reading of `core/graph.py`'s plan node). T-8.10-08.
@@ -304,3 +310,14 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
 - F-8.10-J13, note, judge: the MCP card says "the same parity the web app has", while the follow-up offers wait for card 52.
 - F-8.10-J14, note, latent, judge: `client._nested_model_class` treats `dict[str, Model]` like `Model`. No such field exists today.
 - Judge verdict: FAIL, blocking J04 and J05, neither inside a fix. Verified by the judge: the package gate fails three ways under mutation; 6349 unit tests pass; stream leniency holds; `--json` is complete; `PRODUCTION_API_ORIGIN` is production; every page command parses; ownership and schema bounds hold; the GraphQL diff is additive; nothing is published.
+- F-8.10-V01, note, verifier, inside fix 0b54e82 (A07): the 5 minute deadline also counts the wait for one of the 8 slots, so a queued request can reach the server with less time than its own 240 second budget and be abandoned while the server keeps running it. Probe: 9 concurrent calls at 2.0 s each against a 3.0 s deadline, the ninth errors.
+- F-8.10-V02, note, verifier, inside fix 6393a7c6 (A08): the empty-feedback check uses `.strip()`, which keeps zero-width characters, so a comment of only U+200B is recorded and wipes the earlier rating.
+- F-8.10-V03, note, verifier, inside fix 3e7d7322 (J02): `citations_omitted` counts every bracketed number, so `Year [2023]` or `Row [7]` counts as a missing citation.
+- F-8.10-V04, note, verifier, inside fix 71dcbba9 (J08): a credential file readable by others gives `error_class "sign_in_needed"`, the wrong class, and the JSON on stdout carries the credential file's absolute path.
+- F-8.10-V05, note, verifier, inside fix 71dcbba9 (J08): a 200 event stream with no events gives `complete: false`, `error: null` and exit 1, with no reason in the JSON.
+- F-8.10-V06, note, unsure, verifier, inside fix 18ffcf6d (J13): the MCP card says follow-up offers are "coming to MCP next", a schedule promise on a public page, while card 52 is not scheduled next.
+- F-8.10-V07, note, verifier: a renewal reply that cannot be decoded tells the agent "Could not reach System 3 to renew your sign-in (DecodingError)", code -32002, with nothing on stderr. It still fails closed: 0 posts to `/mcp/`.
+- F-8.10-V08, note, verifier: `asked_at` in the output schemas of `list_past_searches` and `reopen_past_answer` is a string with no `maxLength`. Every array has `maxItems`.
+- F-8.10-V09, note, unsure, verifier, inside fix 0b54e82 (J12): the JSON-RPC-only filter refuses `"params": null`, which the MCP SDK parses as a valid request. The Python SDK never sends it; other clients were not checked.
+- F-8.10-V10, note, unsure, verifier: the page's agent configuration uses the bare command `s3`, which an agent app that does not inherit the shell PATH may not find when `system3-cli` sits in a virtualenv. Not tested.
+- Verifier verdict: MERGE. Fixed: L01, L02, A01, A02, A04 to A08, A12, J01 to J08, J10, J12, J13; J11 partly (the three new tools' keys are named by pointing at the test file). Left by design or as notes: A03 (card 52), A09, A10, A11 (card 57), A13, A14, J09, J14. The facts checker still reads ERROR on L01 and L02 because its patterns look for the old sentences, which card 53 rewrites. Regressed: none.
