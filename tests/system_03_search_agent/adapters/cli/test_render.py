@@ -253,7 +253,13 @@ class TestRefusalPath:
                 _event("done", 3, DonePayload(total_cost_usd=0.01, total_tool_calls=1, elapsed_ms=90, trust_outcome=outcome))
             )
             assert renderer.finish() == 0, f"outcome={outcome!r} should still exit 0"
-            assert f"[{outcome}]" in out.getvalue()
+            # Card 62, PR-8.10-01: a finished `ask` answer is tagged
+            # `[answer]` with the web's caution under it, since `[ask]` on
+            # this surface means a question back with options to pick.
+            tag = "[flag]\n" if outcome == "flag" else (
+                "[answer]\nSingle source, not independently confirmed\n"
+            )
+            assert tag in out.getvalue()
 
 
 class TokenPayloadEventBuilder:

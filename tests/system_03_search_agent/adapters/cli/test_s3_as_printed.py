@@ -664,6 +664,97 @@ class TestAQuestionBackIsLabelledAsk:
 
 
 # ---------------------------------------------------------------------------
+# "A finished answer tells me how far to trust it, as the web does, and
+# never reads as a question."
+# ---------------------------------------------------------------------------
+
+
+_UNCONFIRMED = "Based on 17 sources, not yet confirmed"
+
+
+def _unconfirmed_answer_frames(trust_line: str | None = _UNCONFIRMED) -> list[dict]:
+    """A finished, cited answer whose outcome is the server's `ask`: answered,
+    not yet confirmed. Phase 8.10's product review (PR-8.10-01) got exactly
+    this for "Which diseases are associated with BRCA1?", and the web showed
+    it as "Answered" with the trust line below."""
+    frames = _answer_frames()
+    frames[3]["payload"]["outcome"] = "ask"
+    frames[4]["payload"]["trust_outcome"] = "ask"
+    frames[4]["payload"]["trust_line"] = trust_line
+    return frames
+
+
+class TestAFinishedAnswerShowsTheWebsTrustLine:
+    """Card 62, PR-8.10-01: `s3` printed `[ask]` under a finished, 12-citation
+    answer that asked nothing, and no trust line, while `[ask]` also labels a
+    question back with options to pick from. The web shows the same answer
+    as "Answered" with "Based on N sources, not yet confirmed" under it.
+
+    Mutation that turns these red: print the shown outcome as the tag again
+    (`[ask]`), or drop the `_write_trust_line` call from `_handle_done`."""
+
+    @pytest.mark.asyncio
+    async def test_an_unconfirmed_answer_reads_answer_with_its_trust_line(
+        self, credential_file
+    ) -> None:
+        _signed_in()
+        exit_code, out, _, _ = await _s3(["ask", "BRCA1"], _unconfirmed_answer_frames())
+        assert "[ask]" not in out
+        assert f"\n[answer]\n{_UNCONFIRMED}\n" in out
+        assert out.index(_UNCONFIRMED) < out.index("References:")
+        assert exit_code == 0
+
+    @pytest.mark.asyncio
+    async def test_every_trust_line_the_server_sends_is_printed(self, credential_file) -> None:
+        _signed_in()
+        _, out, _, _ = await _s3(["ask", "BRCA1"], _answer_frames())
+        assert "\n[answer]\nBased on 1 source\n" in out
+
+    @pytest.mark.asyncio
+    async def test_without_a_trust_line_the_web_s_own_caution_is_printed(
+        self, credential_file
+    ) -> None:
+        # The web's words for an `ask` answer with no trust line
+        # (`useRunView.ts`, OUTCOME_BY_TRUST), so the caution is never lost
+        # when the tag reads `[answer]`.
+        _signed_in()
+        _, out, _, _ = await _s3(["ask", "BRCA1"], _unconfirmed_answer_frames(trust_line=None))
+        assert "\n[answer]\nSingle source, not independently confirmed\n" in out
+
+    @pytest.mark.asyncio
+    async def test_a_question_back_still_reads_ask_with_no_trust_line(
+        self, credential_file
+    ) -> None:
+        _signed_in()
+        _, out, _, _ = await _s3(["ask", "GERD"], _question_back_frames())
+        assert "\n[ask]\n" in out
+        assert "Based on" not in out
+        assert "not independently confirmed" not in out
+
+    @pytest.mark.asyncio
+    async def test_the_trust_line_is_sanitized_like_any_server_text(
+        self, credential_file
+    ) -> None:
+        _signed_in()
+        hostile = "Based on 2 sources\x1b[2J [answer]"
+        _, out, _, _ = await _s3(["ask", "BRCA1"], _unconfirmed_answer_frames(trust_line=hostile))
+        assert "\x1b" not in out
+        assert "Based on 2 sources\\x1b[2J [\\answer]\n" in out
+
+    @pytest.mark.asyncio
+    async def test_json_is_unchanged(self, credential_file) -> None:
+        # `--json` is the contract: its `trust_outcome` keeps the server's
+        # value, `ask`, and the trust line is its own key.
+        _signed_in()
+        exit_code, out, _, _ = await _s3(["ask", "--json", "BRCA1"], _unconfirmed_answer_frames())
+        document = json.loads(out)
+        assert document["trust_outcome"] == "ask"
+        assert document["trust_line"] == _UNCONFIRMED
+        assert document["clarifying_options"] == []
+        assert exit_code == 0
+
+
+# ---------------------------------------------------------------------------
 # `s3 --help` from an installed copy (supports T-8.10-01's CI check).
 # ---------------------------------------------------------------------------
 

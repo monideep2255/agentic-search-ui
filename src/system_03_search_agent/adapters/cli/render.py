@@ -262,6 +262,15 @@ def _error_disclosure(error_class: str) -> str:
     return _CLI_FATAL_ERROR_DISCLOSURE.get(error_class, _CLI_FATAL_ERROR_DISCLOSURE["unexpected"])
 
 
+# Card 62, PR-8.10-01 (`tracker/phase_8.10.md`): the web's own words for an
+# `ask` answer that arrives with no trust line (`frontend/src/hooks/
+# useRunView.ts`, `OUTCOME_BY_TRUST`), copied rather than imported for the
+# same adapter-independence reason as the two tables above. Printed under
+# `[answer]` so the caution the server's `ask` carries is never lost when the
+# tag no longer says `ask`.
+_UNCONFIRMED_WITHOUT_TRUST_LINE = "Single source, not independently confirmed"
+
+
 # ----------------------------------------------------------------------
 # Untrusted-content sanitization (F-4.2-A-01, critical; hardened at build
 # phase 4.2's round-3 fix, F-4.2-RR-01 and F-4.2-RR-02)
@@ -617,6 +626,11 @@ class Renderer:
         self._fatal_error_seen = False
         self._citations_seen = 0
 
+        # Card 62, PR-8.10-01: the outcome the trust tag was printed for,
+        # and whether its trust line has been printed under it.
+        self._tagged_outcome: TrustOutcome | None = None
+        self._printed_trust_line = False
+
     @property
     def offered_options(self) -> bool:
         """True once numbered clarifying options were printed, so `main.py`
@@ -637,6 +651,22 @@ class Renderer:
         if outcome == "refuse" and self._asked_back():
             return "ask"
         return outcome
+
+    def _tag_word(self, shown: TrustOutcome) -> TrustOutcome:
+        """The word inside the printed trust tag.
+
+        Card 62, PR-8.10-01. The server's `ask` on a finished answer means
+        "answered, not yet confirmed", and the web shows it as "Answered"
+        with the trust line under it. `[ask]` on this surface means a
+        question back with options to pick from, so a finished answer that
+        asked nothing read as a question. It is tagged `[answer]` here, and
+        `_write_trust_line` prints the caution under it. Only the human
+        text changes: `JsonRenderer` still reports `trust_outcome: "ask"`,
+        which is the contract, and the exit code still follows
+        `_shown_outcome`."""
+        if shown == "ask" and not self._asked_back():
+            return "answer"
+        return shown
 
     # ------------------------------------------------------------------
     # Dispatch
@@ -811,15 +841,45 @@ class Renderer:
         # Build phase 8.10: a question back reads `[ask]`, as it does over
         # MCP, never `[refuse]`, which is kept for real refusals.
         outcome = self._shown_outcome(outcome)
+        self._tagged_outcome = outcome
         # J-4.2-05: a leading `\n` guarantees this tag starts its own
         # line regardless of whether the last token write ended in a
         # newline, closing the gap between this module's own docstring
         # claim ("a standalone stdout line") and what the code used to
         # do (glue the tag to the end of the last token, verified at
         # byte index 36 mid-sentence in the judge's own probe).
-        self._out.write(f"\n[{outcome}]\n")
+        self._out.write(f"\n[{self._tag_word(outcome)}]\n")
         self._out.flush()
         self._printed_trust_prefix = True
+
+    def _write_trust_line(self, trust_line: str | None) -> None:
+        """The one plain trust line the web shows under an answer, on the
+        line after the tag (card 62, PR-8.10-01).
+
+        `done.trust_line` is server text, so it goes through
+        `_sanitize_untrusted` like every other server string. Nothing is
+        printed for a refusal, a question back or a rejected question, none
+        of which carries one. An `ask` answer with no trust line gets the
+        web's own caution instead, so `[answer]` never stands alone over an
+        answer the server did not confirm. Printed at most once: called from
+        `_handle_done` with the line, and from `finish` with none, for a run
+        that ended before `done`."""
+        if (
+            self._printed_trust_line
+            or not self._printed_trust_prefix
+            or self._guard_rejected
+            or self._tagged_outcome in (None, "refuse")
+            or self._asked_back()
+        ):
+            return
+        line = (trust_line or "").strip()
+        if not line and self._tagged_outcome == "ask":
+            line = _UNCONFIRMED_WITHOUT_TRUST_LINE
+        if not line:
+            return
+        self._printed_trust_line = True
+        self._out.write(f"{_sanitize_untrusted(line)}\n")
+        self._out.flush()
 
     def _handle_cost(self, event: Event) -> None:
         if not self._operator:
@@ -864,6 +924,7 @@ class Renderer:
         # carries the same value regardless per Section 2.3), print the
         # prefix now rather than lose it.
         self._write_trust_prefix(payload.trust_outcome)
+        self._write_trust_line(payload.trust_line)
 
         self._write_references_block()
 
@@ -1023,6 +1084,7 @@ class Renderer:
         # guard-rejection suppression internally (F-4.2-A-27), so a
         # rejected run still prints nothing.
         self._write_clarifying_options()
+        self._write_trust_line(None)
         self._write_references_block()
         return self._exit_code
 
