@@ -70,7 +70,7 @@ flowchart LR
 |------|-------------|------------------------|-------|
 | Guardrail | Refuse what the system must not answer, before anything is searched | The guard tier's injection and off-topic classifier. The relevancy decision, Jev beside the guard tier, when the word list does not recognise the question | `guardrail_node`, `_guardrail_after_prefilter` |
 | Think | Say what kind of question this is and which entities it names, or ask back | The plan tier's classification. The ask-back, recent-work and literature decisions, Jev beside the guard tier. The guard tier writes ask-back choices | `think_node`, `_think` |
-| Plan | Choose tools and graph templates from Think's entities | None of its own on a normal run. It reads the literature decision Think started, and asks it itself only when Think did not start it. Its plan-tier call was deleted on 2026-09-14 | `plan_node`, `_literature_choice` |
+| Plan | Choose tools and graph templates from Think's entities | None of its own on a normal run. When no gene resolved, it reads the literature decision Think started, and asks it itself only when Think did not start it. Its plan-tier call was deleted on 2026-09-14 | `plan_node`, `_literature_choice` |
 | Act | Run the chosen tools at once and record what each returned | The plan tier writes Cypher only when no template fits. The guard tier reads article titles from the graph | `act_node` |
 | Write | Turn verified findings into cited prose, or refuse | The synth tier's answer and a possible repair. The guard tier's check on reworded sentences | `write_node` |
 

@@ -105,7 +105,7 @@ Which tier runs which step, and what bounds it:
 
 - Guardrail: Guard tier, per-step budget 15 seconds, for the injection and off-topic classifier, asked once more after an unusable reply. The relevancy decision, Jev or the guard tier, joins it when the word list does not recognise the question. The prefilter and the forbidden-intent screen around it are pure code and cost nothing.
 - Think: Plan tier, per-step budget 45 seconds. Classifies the query into one of five shapes and resolves entities, live-confirming every model-extracted span before it contributes a CURIE. Its yes-or-no decisions go to Jev or the guard tier, and the guard tier writes ask-back choices.
-- Plan: per-step budget 45 seconds, the plan tier's figure, though it never calls the plan tier. Chooses the tool calls in code, and reads the literature decision Think started, asking it itself only when Think did not start it.
+- Plan: per-step budget 45 seconds, the plan tier's figure, though it never calls the plan tier. Chooses the tool calls in code. When no gene resolved, it reads the literature decision Think started, asking it itself only when Think did not start it. A gene question never waits for it.
 - Act: Plan tier to write a graph query when no template fits, and Guard tier to read article titles. Its budget comes from the query class rather than a tier, from 15 seconds for a lookup up to 120 seconds for an exploratory query, and it is raised to a tool's own floor when the tool declares a longer one.
 - Write: Synth tier, per-step budget 45 seconds, shared with the check on reworded sentences, by Jev or the guard tier, and a possible synth repair pass. Emits tokens, citations, trust signals and the terminal `done` event.
 
