@@ -49,6 +49,7 @@ How the two deploy:
 - Develop: merging to `develop` deploys the develop app.
 - Production: moves only when a release branch is cut from `develop` and merged into `production`.
 - A release also creates: a version tag, a changelog entry and a GitHub Release.
+- The changelog reaches `develop` through a pull request the release opens. The release job never pushes to `production`.
 
 The full procedure is [`docs/build/Release_flow.md`](docs/build/Release_flow.md).
 
