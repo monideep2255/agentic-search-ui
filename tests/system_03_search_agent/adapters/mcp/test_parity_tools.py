@@ -435,6 +435,47 @@ class TestTheSchemaTellsAnAgentHowToContinue:
 
 
 # ---------------------------------------------------------------------------
+# "A reopened answer says how many of its markers point at nothing." Fix
+# round, F-8.10-J02 and A02: capture stores at most 50 citations (card 54's
+# cap), and `citations_omitted` used to count only stored entries that
+# failed validation, so it said 0 for markers [51] to [60].
+# ---------------------------------------------------------------------------
+
+
+class TestAReopenedAnswerCountsWhatItCannotShow:
+    def test_markers_past_the_stored_citations_are_counted(self) -> None:
+        # The judge's shape. Mutation that turns this red: count only stored
+        # entries left out again -> 0.
+        stored = [_citation(index).model_dump() for index in range(1, 51)]
+        markdown = " ".join(f"Record {index} is relevant [{index}]." for index in range(1, 61))
+
+        citations, omitted = server_module._reopened_citations(stored, markdown)
+
+        assert [c.display_index for c in citations] == list(range(1, 51))
+        assert omitted == 10
+
+    def test_a_left_out_entry_is_counted_once_not_twice(self) -> None:
+        # [2] was stored but no longer validates, [3] was never stored: two
+        # omissions. Mutation that turns this red: count a left-out entry's
+        # own marker a second time (3), or stop counting it at all (1).
+        invalid = {**_citation(2).model_dump(), "source_url": "https://elsewhere.example/2"}
+        stored = [_citation(1).model_dump(), invalid]
+
+        citations, omitted = server_module._reopened_citations(stored, "One [1]. Two [2]. Three [3].")
+
+        assert [c.display_index for c in citations] == [1]
+        assert omitted == 2
+
+    def test_an_answer_with_every_citation_stored_omits_nothing(self) -> None:
+        stored = [_citation(index).model_dump() for index in (1, 2)]
+
+        citations, omitted = server_module._reopened_citations(stored, "A [1][2]. B [2].")
+
+        assert len(citations) == 2
+        assert omitted == 0
+
+
+# ---------------------------------------------------------------------------
 # DATABASE-BACKED from here on: the auth path and the three new tools.
 # ---------------------------------------------------------------------------
 
@@ -741,6 +782,48 @@ class TestReopeningIsYoursAlone:
         assert content["trust_line"] == _TRUST_LINE
         assert [c["citation_id"] for c in content["citations"]] == ["c1"]
         assert content["citations_omitted"] == 0
+
+    @pytest.mark.asyncio
+    async def test_a_sixty_marker_answer_says_ten_of_its_markers_point_at_nothing(self) -> None:
+        # Fix round, F-8.10-J02: the judge's `probe_capture60.py`, end to end.
+        # The answer goes through the real capture and the real writer, which
+        # keep 50 of its 60 citations (card 54's cap), and comes back through
+        # the real tool. Mutation that turns this red: count only stored
+        # entries left out again -> `citations_omitted` is 0.
+        from system_03_search_agent.feedback.capture import assemble_interaction
+        from system_03_search_agent.feedback.writer import write_interaction
+
+        a_id, a_headers = await _new_account()
+        trace = f"paritytest-{uuid.uuid4().hex}"
+        items: list[tuple[str, Any]] = [_GUARD_OK]
+        for index in range(1, 61):
+            items.append(
+                ("token", TokenPayload(text=f"Record {index} is relevant [{index}]. ", marker_ids=[f"c{index}"]))
+            )
+        items.extend(("citation", _citation(index)) for index in range(1, 61))
+        items.append(("trust_signal", _answer_trust("answer")))
+        items.append(("done", _done("answer", trust_line=_TRUST_LINE)))
+        events = [_event(kind, trace, seq, payload) for seq, (kind, payload) in enumerate(items)]
+        row = assemble_interaction(
+            Query(
+                text="Sixty records",
+                session_id="s-sixty",
+                trace_id=trace,
+                user_id=None,
+                owner_id=f"user:{a_id}",
+                audience_depth="researcher",
+            ),
+            events,
+        )
+        assert len(row.citations) == 50, "populate check: capture keeps 50 of the 60"
+        await write_interaction(row)
+
+        result = await _call(a_headers, "reopen_past_answer", {"trace_id": trace})
+
+        assert result.is_error is False
+        content = result.structured_content
+        assert len(content["citations"]) == 50
+        assert content["citations_omitted"] == 10
 
     @pytest.mark.asyncio
     async def test_another_account_cannot_reopen_it_and_learns_nothing(self) -> None:
