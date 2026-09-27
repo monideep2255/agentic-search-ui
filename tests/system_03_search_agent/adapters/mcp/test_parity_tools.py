@@ -855,10 +855,13 @@ class TestFeedbackIsYoursAlone:
     async def test_another_account_cannot_rate_your_run_and_nothing_is_written(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Mutation that turns this red: skip `resolve_owned_run` and call
-        # `record_feedback` with the caller's owner, or with the run's.
-        # Asserted on the STORED value, because a refusal that writes anyway
-        # passes an error assertion.
+        # Mutation that turns this red: skip `resolve_owned_run` AND pass the
+        # run's own owner to `record_feedback` instead of the caller's.
+        # Skipping `resolve_owned_run` alone does NOT, because
+        # `record_feedback`'s own check on the stored row still refuses
+        # (F-8.10-J07); `test_the_registry_check_refuses_on_its_own` below is
+        # the test for that one. Asserted on the STORED value, because a
+        # refusal that writes anyway passes an error assertion.
         _a_id, a_headers = await _new_account()
         _b_id, b_headers = await _new_account()
         asked, _query = await _ask(monkeypatch, a_headers, {"query": "What gene is BRCA1?"})
@@ -945,6 +948,30 @@ class TestFeedbackIsYoursAlone:
 
         message = await _call_expecting_error(
             a_headers, "send_answer_feedback", {"run_id": run_id, "rating": "up"}
+        )
+
+        assert message == server_module._NOT_YOUR_RUN_MESSAGE
+        assert _stored_feedback(run_id) is None
+
+    @pytest.mark.asyncio
+    async def test_the_registry_check_refuses_on_its_own(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Fix round, F-8.10-J07: the first of REST's two checks, with the
+        # second out of the way. A asked the question, so the registry says A
+        # owns the run; the stored row says B does, so `record_feedback`'s
+        # own check would let B write. Only `resolve_owned_run` stands
+        # between B and A's run. Mutation that turns this red: skip
+        # `resolve_owned_run`, for example by looking the run up with
+        # `default_registry.get_run(run_id)` -> B's rating is stored.
+        _a_id, a_headers = await _new_account()
+        b_id, b_headers = await _new_account()
+        asked, _query = await _ask(monkeypatch, a_headers, {"query": "What gene is BRCA1?"})
+        run_id = asked.structured_content["run_id"]
+        await _seed_row(owner_id=f"user:{b_id}", trace_id=run_id)
+
+        message = await _call_expecting_error(
+            b_headers, "send_answer_feedback", {"run_id": run_id, "rating": "down"}
         )
 
         assert message == server_module._NOT_YOUR_RUN_MESSAGE
