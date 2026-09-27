@@ -1,0 +1,56 @@
+usage: s3 <command> [options]
+
+Ask System 3 biomedical questions from a terminal, with every claim cited.
+
+commands:
+  login   sign in once and keep the session:  s3 login you@example.org
+  ask     ask a question and print the cited answer (--json for JSON):
+          s3 ask "diseases linked to BRCA1"
+  stop    stop a running question by its run id
+  mcp     run a local MCP server over stdio, so an AI agent can ask
+          System 3 with your sign-in
+
+Run 's3 <command> --help' for a command's options. s3 uses
+https://search-agent-api-production.up.railway.app unless 's3 login --base-url' or
+S3_BASE_URL names another server.
+---
+usage: s3 login [-h] [--base-url BASE_URL] [email]
+
+positional arguments:
+  email                the account email; asked for when left off
+
+options:
+  -h, --help           show this help message and exit
+  --base-url BASE_URL  the server to sign in to, default https://search-agent-
+                       api-production.up.railway.app (or S3_BASE_URL when set)
+---
+usage: s3 ask [-h] [--session-id SESSION_ID]
+              [--depth {clinical_brief,researcher,deep_technical,plain_language}]
+              [--json]
+              question
+
+positional arguments:
+  question              the question to ask
+
+options:
+  -h, --help            show this help message and exit
+  --session-id SESSION_ID
+                        a session id to group related questions; a fresh one
+                        is generated if omitted
+  --depth {clinical_brief,researcher,deep_technical,plain_language}
+                        the audience depth for the answer; omitted, the server
+                        uses the depth this account last used
+  --json                print the whole answer as one JSON object: the answer
+                        text, its citations with their URLs, the trust
+                        outcome, any clarifying question and its options, and
+                        the session id to continue with
+---
+usage: s3 mcp [-h]
+
+Run a local MCP server over stdin and stdout, for an AI agent that starts MCP
+servers as commands. It offers every tool System 3's remote MCP server offers,
+using the sign-in 's3 login' stored, and renews that sign-in itself. Sign in
+first with: s3 login. Point the agent at the command: s3 mcp
+
+options:
+  -h, --help  show this help message and exit

@@ -1,0 +1,28 @@
+[Avery | think] A single-hop query: the association between a gene (BRCA1) and diseases can be resolved with one API call to a knowledgebase like ClinVar or DisGeNET.
+[Avery | plan] searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search
+[tool] cypher_query (layer_1_graph): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] pubtator_annotate (layer_3_enrichment): running
+[tool] clinicaltrials_search (layer_3_enrichment): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] pubtator_annotate (layer_3_enrichment): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] cypher_query (layer_1_graph): running
+[tool] pubtator_annotate (layer_3_enrichment): ok - ok: 1 record(s) (1 result(s))
+[tool] clinicaltrials_search (layer_3_enrichment): ok - ok: 5 record(s) (5 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - dataset_report: 1 record(s) (1 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - summary: 1 record(s) (1 result(s))
+[tool] cypher_query (layer_1_graph): ok - 4 row(s) of 4 (4 result(s))
+[tool] cypher_query (layer_1_graph): ok - 40 row(s) of 40 (40 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - search: 10 id(s) (10 result(s), truncated)
+[tool] ncbi_efetch (layer_2_api): error - search: 0 id(s) (0 result(s))
+[tool] ncbi_efetch (layer_2_api): error - search: 0 id(s) (0 result(s))
+[tool] ncbi_efetch (layer_2_api): empty - no ids to fetch: the pubmed_search search did not complete (0 result(s))
+[tool] pubtator_annotate (layer_3_enrichment): empty - no ids to fetch: the pubmed_search search did not complete (0 result(s))
+[tool] ncbi_efetch (layer_2_api): empty - no ids to fetch: the clinvar_search search did not complete (0 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - summary: 1 record(s) (1 result(s))

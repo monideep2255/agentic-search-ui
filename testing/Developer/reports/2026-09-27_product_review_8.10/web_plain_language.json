@@ -1,0 +1,38 @@
+{
+ "label": "plain_language",
+ "depth_button": "Plain language",
+ "aria_pressed": "true",
+ "signed_in": true,
+ "post_status": [
+  202
+ ],
+ "landed": true,
+ "seconds_to_answer_meta": 30.404,
+ "console_errors": [
+  "Failed to load resource: the server responded with a status of 409 ()"
+ ],
+ "answer_body": "? Answered10.6s · 13 tools · 17 sources from 3 layers\n\nShow work ▾\n\nI found 4 conditions related to BRCA1.⁠1–4\n\nWHERE THIS ANSWER COMES FROM\nMeSH\t⁠1\nMONDO\t⁠2\nMedGen\t⁠3\nMedGen\t⁠4\nBRCA1\t⁠5\nNM_007294.4(BRCA1):c.5243_5277+2788del\t⁠6\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠7\nBRCA1\t⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\t⁠9\nShowing 1–10 of 18\n‹ Previous\nPage 1 of 2\nNext ›\nNOTES\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n17\n▶\nKNOWLEDGE GRAPH\n4\n▶\nLIVE NCBI APIS\n8\n▶\nENRICHMENT\n5\nBased on 17 sources, not yet confirmed\n·\nHigh-risk claim",
+ "trust_line": "Based on 17 sources, not yet confirmed\n·\nHigh-risk claim",
+ "answer_meta": "? Answered10.6s · 13 tools · 17 sources from 3 layers",
+ "sources_count": "17",
+ "notes": "NOTES\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry.",
+ "record_links": [
+  "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+  "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+  "https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+  "https://www.ncbi.nlm.nih.gov/medgen/C4554406",
+  "https://www.ncbi.nlm.nih.gov/gene/672/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+  "https://www.ncbi.nlm.nih.gov/gene/672",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+  "https://clinicaltrials.gov/study/NCT00590109",
+  "https://clinicaltrials.gov/study/NCT00597987",
+  "https://clinicaltrials.gov/study/NCT00617656",
+  "https://clinicaltrials.gov/study/NCT00673335",
+  "https://clinicaltrials.gov/study/NCT00700778"
+ ],
+ "main_text": "+ New search\n\nYOUR SEARCHES\n\nWhich diseases are associated with BRCA1?\n13 tools · 17 sources from 3 layers\n<throwaway test account>\nNo search limit in effect yet\nWhich diseases are associated with BRCA1?\nNew search\n\n? Answered10.6s · 13 tools · 17 sources from 3 layers\n\nShow work ▾\n\nI found 4 conditions related to BRCA1.⁠1–4\n\nWHERE THIS ANSWER COMES FROM\nMeSH\t⁠1\nMONDO\t⁠2\nMedGen\t⁠3\nMedGen\t⁠4\nBRCA1\t⁠5\nNM_007294.4(BRCA1):c.5243_5277+2788del\t⁠6\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠7\nBRCA1\t⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\t⁠9\nShowing 1–10 of 18\n‹ Previous\nPage 1 of 2\nNext ›\nNOTES\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n17\n▶\nKNOWLEDGE GRAPH\n4\n▶\nLIVE NCBI APIS\n8\n▶\nENRICHMENT\n5\nBased on 17 sources, not yet confirmed\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?"
+}

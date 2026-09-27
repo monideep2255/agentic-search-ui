@@ -1,0 +1,16 @@
+{
+ "auth_guest_status": 201,
+ "got_guest_token": true,
+ "tools": [
+  "ask_biomedical_question",
+  "list_past_searches",
+  "reopen_past_answer",
+  "send_answer_feedback"
+ ],
+ "list_past_searches": {
+  "raised": "MCPError: missing, malformed, or invalid bearer token"
+ },
+ "reopen_past_answer": {
+  "raised": "MCPError: missing, malformed, or invalid bearer token"
+ }
+}

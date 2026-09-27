@@ -321,3 +321,150 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
 - F-8.10-V09, note, unsure, verifier, inside fix 0b54e82 (J12): the JSON-RPC-only filter refuses `"params": null`, which the MCP SDK parses as a valid request. The Python SDK never sends it; other clients were not checked.
 - F-8.10-V10, note, unsure, verifier: the page's agent configuration uses the bare command `s3`, which an agent app that does not inherit the shell PATH may not find when `system3-cli` sits in a virtualenv. Not tested.
 - Verifier verdict: MERGE. Fixed: L01, L02, A01, A02, A04 to A08, A12, J01 to J08, J10, J12, J13; J11 partly (the three new tools' keys are named by pointing at the test file). Left by design or as notes: A03 (card 52), A09, A10, A11 (card 57), A13, A14, J09, J14. The facts checker still reads ERROR on L01 and L02 because its patterns look for the old sentences, which card 53 rewrites. Regressed: none.
+
+### Product review of develop at 560f9047 (stage 10, dispatch 8 of 8), filed 2026-09-27 from 02:20 UTC
+
+Evidence folder: `testing/Developer/reports/2026-09-27_product_review_8.10/`. `/health` read `{"status":"ok","app_env":"develop"}` at 02:20:32 UTC (`health.json`). The reviewer files; nothing here is closed.
+
+### PR-8.10-01: `s3` prints `[ask]` under a finished, 12-citation answer that asks nothing
+- Kind: answer
+- Verdict: needs your eye
+- What: `s3 ask --depth plain_language "Which diseases are associated with BRCA1?"`, from the page's own install, printed a whole answer with 12 References and then the tag `[ask]`, exit 0, with no question and no options under it. The server's `ask` outcome here means "answered, not yet confirmed" (a background search failed: `synthesis/trust.py:623`, "Based on N sources, not yet confirmed"), which the web shows as "Answered" with that trust line. Since this phase, `[ask]` on `s3` and MCP also means "a question back" (a bare topic). The human-readable `s3` output prints no trust line, so nothing tells the two apart.
+- Evidence: `s3_plain_language.stdout.txt`, the lines "One of the background searches did not finish, so this answer may be missing sources. Ask again to retry." then "[ask]".
+- Why a person would care: "It says ask, but it asked me nothing. Is this an answer or not?" A script or agent keyed on `[ask]` to mean "pick an option" gets no options.
+- NOT CLOSED
+
+### PR-8.10-02: the Plain language BRCA1 answer never names a disease
+- Kind: answer
+- Verdict: needs your eye (answer path, not this phase's change)
+- What: the first sentence counts records instead of answering, and the rest lists record ids. No disease name appears anywhere in the answer text.
+- Evidence: `s3_plain_language.stdout.txt`: "I found 4 conditions related to BRCA1 [1][2][3][4]." then "Disease record MedGen:C0346153 [1]. Disease record MedGen:C2676676 [2]. ..." Rubric line 1 fails, the same shape as PR-8.1-01.
+- Why a person would care: "I asked which diseases. It told me there are four and gave me codes."
+- NOT CLOSED
+
+### PR-8.10-03: the page's KGX command does not exist after the page's own install
+- Kind: screen
+- Verdict: fail
+- What: the Command line tools card says its commands are "installed once with pip" and offers "Copy KGX command", which gives `s3-kgx-export NCBIGene:672 --hops 1 --output-dir ./kgx-out`. The one install line the page prints (`pip install "git+...#subdirectory=clients/system3-cli"`, installed at develop 560f9047) puts only `s3` in the environment. Typed as copied: `bash: s3-kgx-export: command not found`, exit 127. `clients/system3-cli/pyproject.toml` declares only `s3` under `[project.scripts]`. The card's "needs graph credentials only the operator grants" is true, but the reader never gets far enough to learn it.
+- Evidence: `develop_integrations_copied.json` (`integration-copy-install`, `integration-copy-kgx`); `pip_list.txt`; the venv's `bin/` holds `s3` and no `s3-kgx-export`.
+- Why a person would care: "I did exactly what the page said, and the second command isn't there."
+- NOT CLOSED
+
+### PR-8.10-04: the install line assumes Python 3.11 or newer and a virtual environment, and the page says neither
+- Kind: screen
+- Verdict: needs your eye
+- What: the page prints a bare `pip install "git+..."` with no Python version and no virtual environment. Three outcomes on this Mac with the line exactly as copied:
+  - macOS's own `/usr/bin/python3` (3.9.6), in a fresh venv: fails with "ERROR: No matching distribution found for setuptools==83.0.0". The real reason, `requires-python = ">=3.11"`, is never shown.
+  - Homebrew Python 3.14 outside a venv: "error: externally-managed-environment" (dry run, nothing installed).
+  - Homebrew Python 3.14 and the project's 3.11, each in a fresh venv: installs, exit 0.
+- Evidence: `install_python39.log`, `install_python314_no_venv_dryrun.log`, `install_python314.log`, `install.log`.
+- Why a person would care: "The install failed with an error about setuptools. I have no idea what I did wrong." Once they fix it with a venv, the agent config's bare `"command": "s3"` (V10) is exactly the case that may not be found.
+- NOT CLOSED
+
+### PR-8.10-05: About still says a question "starts" at the graph, a stop after saying all three layers go out together
+- Kind: screen
+- Verdict: needs your eye (the sentence predates this phase: it is at `InfoScreens.tsx` 853 and 924 on 00f45e8 too)
+- What: About's stop 3 says "Act runs the tools Plan chose, across three layers of data, together rather than one after another". Its Knowledge graph card, directly under it, says "One query returns a stored link, which is why a question like this one starts here." Architecture now says "The agent reads all three layers at once". The facts checker's `loop.layer_one_read_first` looks at Architecture only, so it cannot see this.
+- Evidence: `screens/develop_about_text.txt` line 45; `screens/develop_architecture_text.txt` line 162; `screens/develop_about_1280.png`, stop 3.
+- Why a person would care: two neighbouring sentences on one page disagree about how their question is searched.
+- NOT CLOSED
+
+### PR-8.10-06: About and Architecture say Layer 3 is called only when a question asks for it, and a disease question called both Layer 3 tools and cited five trials
+- Kind: screen
+- Verdict: needs your eye (wording predates this phase)
+- What: About says Enrichment is "added when the question asks for it rather than by default", and Architecture says "Called when the question asks for it, never by default". The live run of "Which diseases are associated with BRCA1?", which asks for neither papers nor trials, planned "Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search", and the answer cites five ClinicalTrials.gov records, [8] to [12].
+- Evidence: `s3_plain_language.stderr.txt`, the plan line; `s3_plain_language.stdout.txt`, References [8] to [12]; `screens/develop_architecture_text.txt` line 139; `screens/develop_about_text.txt`, the Enrichment card.
+- Why a person would care: "The page says it won't pull in trials unless I ask, and half my sources are trials."
+- NOT CLOSED
+
+### PR-8.10-07: the facts checker reports no screen FAIL, but 8 screen places are not checked at all
+- Kind: screen
+- Verdict: needs your eye
+- What: `.claude/skills/verify/scripts/check_facts.py --all` on develop at 11c1ba90 (560f9047 plus one docs commit), exit 2: "facts: 64 | stale 9 | not fully checked 7 | places: PASS 153, FAIL 19, GAP 0, ERROR 8 | NOT PASSED".
+  - Screen FAIL: none.
+  - Screen ERROR: 8. The registry's patterns look for the old sentences this phase replaced (`surfaces.mcp_tools` twice, `loop.steps`, `loop.steps_asking_a_model`, `loop.plan_on_plan_tier`, `loop.layer_one_read_first`, `loop.sentences_checked_by_code_alone`, `seeds.from_golden_set`), so those page claims are unchecked, as V-round and card 53 already say.
+  - FAIL in web app code, not a screen: `frontend/src/lib/events.ts:321` lists the event types without `step`.
+  - The other 18 FAILs are documents (CLAUDE.md, AGENTS.md, README.md, two visualizations) and one code copy (`tools/catalogue.py:138`, the Pathogen Detection budget 60 against 120).
+  - The brief's path `tracker/check_facts.py` does not exist on develop; the checker is under `.claude/skills/verify/scripts/`.
+- Evidence: `check_facts_all.txt`.
+- Why a person would care: a green "no screen FAIL" here covers fewer sentences than it did before the phase.
+- NOT CLOSED
+
+### PR-8.10-08: on the web at Researcher, the BRCA1 answer names four databases as the diseases
+- Kind: answer
+- Verdict: needs your eye (answer path, not this phase's change)
+- What: the first sentence is "Found 4 disease records for BRCA1: MeSH, MONDO, MedGen and MedGen." The "Disease records found" table's DISEASE column reads MeSH, MONDO, MedGen, MedGen beside MedGen:C0346153 to C4554406. No row names a disease. The same screen says "18 sources from 3 layers" in the answer meta and "Based on 17 sources, not yet confirmed" in the trust line. The Plain language answer from the same account names no disease either: "I found 4 conditions related to BRCA1." and its record table's rows read "MeSH", "MONDO", "MedGen", "MedGen".
+- Evidence: `web_researcher.json` (`answer_body`), `web_researcher_1280.png`; `web_plain_language.json`, `web_plain_language_1280.png`.
+- Why a person would care: "It told me the diseases are MeSH and MONDO." A student could take a vocabulary name for a diagnosis. The two counts on one screen disagree.
+- NOT CLOSED
+
+### PR-8.10-09: V10 reproduced: the page's agent config `{"command": "s3", "args": ["mcp"]}` does not start under a Mac app's default PATH
+- Kind: screen
+- Verdict: needs your eye
+- What: the page-installed `s3 mcp`, started by the MCP SDK's stdio client exactly as the pasted config says (`command: "s3"`):
+  - With launchd's default PATH (`/usr/bin:/bin:/usr/sbin:/sbin`), which is what an app opened from the Dock or Finder gets: `FileNotFoundError: [Errno 2] No such file or directory: 's3'`.
+  - With the venv's `bin` on PATH: starts and lists the four tools.
+  Whether a given agent app adds the shell's PATH was not tested, since no agent app was driven. With PR-8.10-04 a venv is in practice required, so the bare name is the common failing case, and the page does not say to use the full path (`which s3`).
+- Evidence: `mcp_drive.py bare_s3` output, pasted in the product review report; `develop_integrations_copied.json` (`integration-copy-mcp-stdio`).
+- Why a person would care: "I pasted the config into my agent and it says the server failed to start."
+- NOT CLOSED
+
+### PR-8.10-10: none of today's four answers can be reopened, over MCP or on the web, because a "not yet confirmed" answer is never saved
+- Kind: answer
+- Verdict: needs your eye (the save rule predates this phase; this phase's `reopen_past_answer` is where it shows)
+- What: `list_past_searches` over the page-installed `s3 mcp` listed all four of account a's runs (the `s3`, two web and the MCP question), each with `trust_signal: "ask"` and `has_saved_answer: false`. `reopen_past_answer` on the web Researcher run answered "no saved answer for this search; ask it again to get a fresh one". `feedback/capture.py:74` saves only `("answer", "flag")`, and all four runs came back "not yet confirmed" because a background search did not finish. That happened on 4 of 4 runs here: the `s3` run shows `pubmed_search` and `clinvar_search` ending "error - search: 0 id(s)". The refusal is honest and the tool description says only `has_saved_answer` true can be reopened.
+- Evidence: `mcp_ask.json` (`list_past_searches`), `mcp_reopen_home_a.json` was not written because the refusal raised; the refusal text is quoted from the run output in the report. `s3_plain_language.stderr.txt`.
+- Why a person would care: "My agent can see my past searches but can't open any of them." Reopening a search costs them a second full search.
+- NOT CLOSED
+
+### PR-8.10-11: a guest over MCP is told their token is "missing, malformed, or invalid", not that an account is needed
+- Kind: screen
+- Verdict: needs your eye
+- What: a token from `POST /auth/guest` (HTTP 201) against the remote `/mcp/`: `list_tools` lists all four tools, and both `list_past_searches` and `reopen_past_answer` are refused with "missing, malformed, or invalid bearer token". The guest gets nothing more than the web gives a guest, which is correct. The page says "GraphQL and the MCP server: an account is required, so a guest cannot reach either." The error does not say so.
+- Evidence: `mcp_guest.json`.
+- Why a person would care: "The page told me POST /auth/guest gives me a token, and MCP says the token is invalid."
+- NOT CLOSED
+
+### PR-8.10-12: all 8 live runs today, on five surfaces, came back "not yet confirmed" because a background search did not finish
+- Kind: answer
+- Verdict: needs your eye (answer path, not this phase's change)
+- What: the same question, "Which diseases are associated with BRCA1?", asked 8 times between 02:24 and 02:40 UTC: `s3` Plain language, web Plain language, web Researcher, MCP Plain language, and the smoke's REST, GraphQL, MCP and `s3`. Every outcome was `ask` (trust line "Based on N sources, not yet confirmed"), and every answer text carries "One of the background searches did not finish, so this answer may be missing sources. Ask again to retry." The one run whose tool results are visible (`s3`) shows two NCBI ESearch calls, `pubmed_search` and `clinvar_search`, ending "error - search: 0 id(s)". No model-provider 429 or 402 was seen. Whether the searches are being rate-limited by NCBI was not established.
+- Evidence: `s3_plain_language.stderr.txt`; `web_plain_language.json` and `web_researcher.json` (`notes`, `trust_line`); `mcp_ask.json`; `mcp_list_home_b.json`; `smoke.txt` (rest-sse "ask", mcp "ask", cli "[ask]").
+- Why a person would care: every answer they get today says it may be missing sources and tells them to ask again. By PR-8.10-10's rule, none of them can be reopened either.
+- NOT CLOSED
+
+### PR-8.10-13: the smoke script passes `kgx` and `cli` on a package the page never tells anyone to install
+- Kind: screen
+- Verdict: needs your eye (the instrument, not the product)
+- What: `integrations_smoke.py --cli-source .` builds the server's own wheel with no dependencies and runs its `s3` and `s3-kgx-export`. The page's install line installs `system3-cli`, which has no `s3-kgx-export` (PR-8.10-03). So `PASS kgx` and `PASS page` ("printed commands match the code") hold on develop while a person following the page gets "command not found" for the KGX line. The `mcp` line still prints "1 tool" although the server lists four.
+- Evidence: `smoke.txt`; `integrations_smoke.py` `build_cli` and `check_page`; `pip_list.txt`.
+- Why a person would care: a green smoke run reads as "every command on the page works", and one does not.
+- NOT CLOSED
+
+### PR-8.10-14: on the web the answer took about 30 seconds to appear, while its own line said about 11, and `s3` and MCP finished in 14 to 15
+- Kind: answer
+- Verdict: needs your eye (not this phase's change; cause not established)
+- What: measured from the click on the send button to the answer's meta line appearing (headless Chromium, polled every second): 30.4 s at Plain language and 29.7 s at Researcher. The meta line on the same screens reads "Answered 10.6s" and "Answered 11.2s". The same question took 15.3 s wall clock through `s3` and 13.6 s through `s3 mcp`. The one console error per web run is the sign-in flow's expected 409, not this. Two runs only, and one headless browser, so this is a pointer, not a measurement of what a person waits.
+- Evidence: `web_plain_language.json` and `web_researcher.json` (`seconds_to_answer_meta`, `answer_meta`); `mcp_ask.json` (`ask_seconds`); the `s3` run line in the report.
+- Why a person would care: the owner's standing rule is every answer within 20 seconds, and the web, the surface most people use, is the slow one here.
+- NOT CLOSED
+
+### PR-8.10-15: V06: the MCP card promises follow-up offers are "coming to MCP next"
+- Kind: screen
+- Verdict: needs your eye
+- What: the deployed MCP card reads "The follow-up offers the web app shows after an answer are coming to MCP next." That is a schedule promise on a public page. The ledger's own out-of-scope list gives the follow-up offers to card 52's phase, and V06 notes card 52 is not scheduled next. The rest of the card matches behaviour: four tools listed over MCP, `audience_depth` takes all four depths, `session_id` and `trust_line` come back, and a guest is refused.
+- Evidence: `screens/develop_integrations_1280.png`, `screens/develop_integrations_390.png`, `screens/develop_integrations_text.txt`; `mcp_ask.json`.
+- Why a person would care: "It said next. That was months ago." A dated promise ages badly on a page people copy from.
+- NOT CLOSED
+
+### PR-8.10-16: Integrations and About have only the prototype as a design, and Architecture and the tour have none at all
+- Kind: missing design
+- Verdict: needs your eye
+- What: `docs/build/design/README.md`'s coverage table lists "Integrations, docs and about | NO | Only ever inside `prototype/app.html`". Architecture and the onboarding tour are not in the table at all. So only Integrations and About can be set beside anything:
+  - Integrations: the prototype has three columns of cards with "SIGN IN REQUIRED" pills and a sign-in callout at the top. Develop has two columns with the access notes in a box after the cards. This layout predates the phase (R15 and R18, 2026-09-13). What this phase added, the install line, a second code box and four copy buttons, sits inside the existing card and wraps to two rows of buttons at 1280 and three at 390.
+  - About: the prototype has layer cards, a five-row run loop, a tool table, cite or refuse, and "What it will not do". Develop has a seven-stop walk, which also predates the phase.
+  - Both prototype screens carry the yellow "Research tool. Answers are cited to NCBI records and are not medical advice." strip under the app bar. Develop's screens do not.
+  - Horizontal overflow at 390 is 0 on every develop screen captured. The prototype's own Integrations overflows by 34 px at 390.
+- Evidence: `screens/develop_integrations_1280.png`, `screens/prototype_integrations_1280.png`, `screens/develop_about_1280.png`, `screens/prototype_about_1280.png`, and their `_390` pairs; `screens/capture_results.json`.
+- Why a person would care: nothing here looks broken to a reader. The owner decides whether "matches the prototype" is still the bar for these pages.
+- NOT CLOSED
