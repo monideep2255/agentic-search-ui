@@ -1061,8 +1061,11 @@ export function App() {
    * lands (`deriveStopOffered` has the full rule). Pressing it after the
    * server finished discards the held answer, which is what the reader
    * asked for; the server's record of that run is a known gap, carried in
-   * the card 58 report. Gated on `runId` because `useAgentRun` keeps the
-   * previous run's events until a new run replaces them (F-4.8-J-03).
+   * the card 58 report. The discarding is `useAnswerReveal`'s
+   * `withholdAnswer`, which holds for every shape of run, including one with
+   * no sentences at all (F-58-J02). Gated on `runId` because `useAgentRun`
+   * keeps the previous run's events until a new run replaces them
+   * (F-4.8-J-03).
    */
   const stopOffered =
     runId !== null &&
