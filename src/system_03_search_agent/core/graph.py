@@ -7815,6 +7815,118 @@ async def _gather_planned_calls(coroutines: list[Any]) -> None:
     await asyncio.gather(*coroutines)
 
 
+def _one_lookup_holds(curies: list[str]) -> bool:
+    """Whether each resolver would look up every id of `curies` in ONE lookup.
+
+    Each resolver looks up a bounded batch and maps the rest to None without
+    caching them: MedGen at most `_MAX_IDS_PER_CALL` ids, MeSH as many as
+    fit one legal ESearch term. Looked up in Act, a set larger than that
+    would leave Write to look up the remainder, NCBI calls the question
+    never made before. So Act looks names up only when every id fits, and
+    otherwise leaves the whole lookup to Write, exactly as before.
+
+    The resolvers' own normalisation and batching rules are read, not
+    restated, so this guard cannot drift from them.
+    """
+    from system_03_search_agent.synthesis import disease_names, mesh_terms
+
+    medgen = {local for c in curies if (local := disease_names._normalize(str(c))) is not None}
+    if len(medgen) > disease_names._MAX_IDS_PER_CALL:
+        return False
+    mesh = sorted({local for c in curies if (local := mesh_terms._normalize(str(c))) is not None})
+    return mesh_terms._batch_for_one_term(mesh) == mesh
+
+
+async def _prefetch_answer_names(
+    state: GraphState, tool_calls: list[ToolCall], results: list[ToolExecutionResult]
+) -> None:
+    """Look up the disease and MeSH names Write will need, during Act.
+
+    Build phase 8.7, T-8.7-02, option H's Act half
+    (`testing/Developer/reports/2026-09-26_answer_speed/report.md`). Write
+    resolves the names of `curie_fallback` findings (MedGen and MeSH) and of
+    a variant row's linked conditions before its model call: up to 0.65 s
+    measured. This makes the same lookups, with the same ids in the same
+    order, while the reader pass runs, so the time hides behind it and
+    Write then finds every name in the resolvers' cache and makes no lookup
+    of its own.
+
+    Where it runs, and why only there (decided from the reader's chair):
+
+    - After every Act search, never beside one. Beside the searches the
+      lookups would compete for the question's 20 Layer 2 and 3 calls
+      (`call_budget`) and could turn a finished search into "one of the
+      background searches did not finish". After them, they see exactly
+      the call count Write's own lookup would have seen.
+    - Only when a reader pass runs (`act_node` decides), since without one
+      there is nothing in Act to hide the lookup behind.
+    - Only when every id fits one lookup (`_one_lookup_holds`), so the
+      question makes exactly the NCBI calls it made before.
+
+    The ids are Write's own: the same `build_synth_findings` call over the
+    same structured findings, with the same arguments. A reader-pass
+    finding contributes nothing to them (`build_synth_findings` skips a
+    finding with no `structured_fields`), so the structured findings are
+    computed here from `results` directly, through the same pass-through the
+    reader-free pairs take in `coordinator_worker_execute`, without waiting
+    for the reader.
+
+    It never raises and never changes an answer. The resolvers never raise;
+    anything else that fails here is logged and dropped, and Write then
+    makes its own lookup exactly as before.
+    """
+    from system_03_search_agent.harness.coordinator_worker import (
+        _structured_pass_through,
+    )
+
+    query = state["query"]
+    try:
+        structured = [
+            _structured_pass_through(call, result)
+            for call, result in zip(tool_calls, results, strict=True)
+            if not result.contains_untrusted_free_text
+        ]
+        # The same call `_write_answer` makes before its lookups.
+        synth_findings, _ = build_synth_findings(
+            structured,
+            _pick_representative_field,
+            max_findings=_MAX_FINDINGS_FOR_DISPLAY,
+            defer_source_urls=frozenset(state.get("deferred_record_ids") or []),
+            lead_call_ids=_answer_call_ids(state.get("tool_calls", []), query.text),
+            lead_quota=_LEAD_FINDINGS_QUOTA,
+        )
+        curie_fallback_curies = [f.curie for f in synth_findings if f.curie_fallback and f.curie]
+        fold_condition_ids: list[str] = []
+        for prepared in synth_findings:
+            for curie in condition_ids_for_row(
+                prepared.entity_type, _row_fields_for(prepared, structured)
+            ):
+                if curie not in fold_condition_ids:
+                    fold_condition_ids.append(curie)
+        if not _one_lookup_holds(curie_fallback_curies) or not _one_lookup_holds(
+            fold_condition_ids
+        ):
+            return
+        # Write's order: MedGen, then MeSH, over the same list, then the
+        # linked conditions. The same order keeps each lookup's view of the
+        # question's call count the one Write would have had.
+        if curie_fallback_curies:
+            await resolve_concept_ids(curie_fallback_curies)
+            await resolve_descriptor_ids(curie_fallback_curies)
+        if fold_condition_ids:
+            await resolve_concept_ids(fold_condition_ids)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        # Logged with the trace id only, never the exception text. Write
+        # makes its own lookup, as before this function existed.
+        logger.warning(
+            "name lookup during Act failed (trace %s); Write will look the names up itself",
+            query.trace_id,
+            exc_info=True,
+        )
+
+
 async def act_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     trace_id = state["query"].trace_id
@@ -8021,7 +8133,27 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             layer3_raw_outputs[planned.tool_call.call_id] = outcome.layer_raw_output
         cap_exceeded = cap_exceeded or outcome.cap_exceeded
 
-    findings = await coordinator_worker_execute(harness, tool_calls, results)
+    # Build phase 8.7, T-8.7-02 (option H's Act half): when a reader pass
+    # runs, the names Write will look up are looked up beside it, so their
+    # time hides behind the reader's. Only when Write will reach its own
+    # lookups: never on a question `_write_answer` ends before them (a step
+    # error, a cap hit, a clarifying question, an unresolved name). See
+    # `_prefetch_answer_names` for why only here.
+    reader_pass_runs = any(result.contains_untrusted_free_text for result in results)
+    write_reaches_its_lookups = not (
+        cap_exceeded
+        or state.get("cap_exceeded", False)
+        or state.get("step_error") is not None
+        or state.get("clarification_needed")
+        or state.get("unresolved_entity_symbols")
+    )
+    if reader_pass_runs and write_reaches_its_lookups:
+        findings, _ = await asyncio.gather(
+            coordinator_worker_execute(harness, tool_calls, results),
+            _prefetch_answer_names(state, tool_calls, results),
+        )
+    else:
+        findings = await coordinator_worker_execute(harness, tool_calls, results)
     # Decided from the user's chair, 2026-09-22: a search that failed is
     # recorded here, with the tool's own reason, so `write_node` can say
     # so in one plain sentence. The reason is the same bounded text the
