@@ -350,4 +350,4 @@ References:
 - [docs/build/Debugging_guide.md](../docs/build/Debugging_guide.md): which file to open when something is wrong
 - [docs/build/Release_flow.md](../docs/build/Release_flow.md): how a change reaches production
 
-Last updated: 2026-09-13
+Last updated: 2026-09-27
