@@ -562,6 +562,104 @@ async def test_a_failed_search_closes_its_follow_ups_empty_and_the_run_still_ans
     assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
 
 
+#: Card 63: the body NCBI served for every ESearch from 02:24 UTC on
+#: 2026-09-27, as the tool's untrusted `error` text. Here to prove it
+#: reaches no event, no summary and no note.
+_NCBI_OUTAGE_TEXT = (
+    "Search Backend failed: Search is temporarily unavailable. "
+    "Cannot connect to SOLR"
+)
+
+
+@pytest.mark.asyncio
+async def test_a_search_down_at_ncbi_says_so_in_our_words_and_says_try_later(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 63, end to end through the real loop with every tool faked.
+
+    PubMed's search answers the way it did during the 2026-09-27 outage:
+    `status: "error"` with `failure_kind: "service_down"` (what
+    `ncbi_eutils_actions.search` now returns for that body, proven in
+    `tests/system_03_search_agent/tools/test_ncbi_eutils_actions.py`).
+    ClinVar and OMIM answer normally. What a person and a developer see:
+
+    - the search's `tool_result` summary says the service is down at NCBI,
+      where it used to say "search: 0 id(s)";
+    - `failed_searches[].reason` carries those same words, with the kind
+      and the database beside it;
+    - the note under the answer names PubMed and says "Try again later",
+      never "Ask again to retry";
+    - none of NCBI's own text appears anywhere in the stream.
+    """
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    _ToolSpy(monkeypatch)
+    spy_efetch = graph_module.ncbi_efetch
+
+    async def _pubmed_down(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.action == "search" and root.db == "pubmed":
+            return NcbiEfetchOutput(
+                status="error", action="search", records=[], record_count=0,
+                total_available=None, truncated=False, error=_NCBI_OUTAGE_TEXT,
+                failure_kind="service_down",
+            )
+        return await spy_efetch(tool_input, **kwargs)
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _pubmed_down)
+
+    recorded: list[list[dict[str, str]]] = []
+    real_builder = graph_module._build_failed_search_note
+
+    def _recording_builder(failed_searches: list[dict[str, str]]) -> str:
+        recorded.append([dict(item) for item in failed_searches])
+        return real_builder(failed_searches)
+
+    monkeypatch.setattr(graph_module, "_build_failed_search_note", _recording_builder)
+
+    events = await _events(_GENE_QUESTION)
+
+    search_errors = [r for r in _results(events) if r["summary"].startswith("search error")]
+    assert [r["summary"] for r in search_errors] == ["search error: the service is down at NCBI"]
+    assert search_errors[0]["status"] == "error"
+    # POPULATE CHECK: the other searches ran and answered, so the one error
+    # above is PubMed's and not every search failing at once.
+    assert any(r["summary"].startswith("search: ") for r in _results(events))
+
+    assert recorded, "write_node never built a failed-search note"
+    pubmed = [item for item in recorded[-1] if item.get("source") == "pubmed"]
+    assert pubmed == [
+        {
+            "tool": "ncbi_efetch",
+            "layer": "layer_2_api",
+            "reason": "search error: the service is down at NCBI",
+            "kind": "service_down",
+            "source": "pubmed",
+        }
+    ], recorded[-1]
+
+    notes = [
+        e.payload["text"] for e in events
+        if e.type == "token" and e.payload.get("kind") == "note"
+    ]
+    down_notes = [n for n in notes if n.startswith("PubMed's search is down at NCBI right now")]
+    assert len(down_notes) == 1, notes
+    assert down_notes[0].startswith(
+        "PubMed's search is down at NCBI right now, so this answer has no papers from it."
+    )
+    assert down_notes[0].endswith("Try again later.")
+    assert not any("ask again" in note.lower() for note in notes), notes
+
+    stream = json.dumps([e.payload for e in events], default=str)
+    for fragment in ("SOLR", "temporarily unavailable", "Search Backend"):
+        assert fragment not in stream, fragment
+
+    done = next(e for e in events if e.type == "done")
+    assert done.payload["trust_outcome"] in ("ask", "flag"), done.payload
+    # The answer still stands on what did respond.
+    assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
+
+
 @pytest.mark.asyncio
 async def test_a_follow_up_that_raises_degrades_to_an_error_result(
     monkeypatch: pytest.MonkeyPatch,

@@ -16,6 +16,16 @@ carry the reasons the act step now records.
 Populate checks: the refusal arms compare against the ORIGINAL wording on a
 state with no failed search, and the note arm asserts absence on the same
 state with the failure removed, so neither direction can pass vacuously.
+
+Card 63 (2026-09-27), the outage arms at the end of this file: when NCBI
+itself says a search is down, the note names the database, says what the
+answer has none of, and says "Try again later", never "Ask again to
+retry", which during an outage sends a person straight back into it. A
+timeout or a rate limit keeps the original note, where asking again can
+help. The note is chosen from the typed `kind` and `source` keys the act
+step records, and every arm pairs the outage wording with the original
+wording on the same state, so neither can pass on a builder that returns a
+constant.
 """
 
 from __future__ import annotations
@@ -156,3 +166,97 @@ async def test_an_answer_with_every_search_finished_carries_no_such_note(monkeyp
     result = await graph_module.write_node(state)
     notes = [t["text"] for t in _tokens(result) if t["kind"] == "note"]
     assert FAILED_SEARCH_NOTE not in notes, notes
+
+
+# ---------------------------------------------------------------------------
+# Card 63: a search that is down at NCBI says "try again later".
+# ---------------------------------------------------------------------------
+
+_PUBMED_DOWN = {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "reason": "search error: the service is down at NCBI",
+    "kind": "service_down",
+    "source": "pubmed",
+}
+_CLINVAR_DOWN = {**_PUBMED_DOWN, "source": "clinvar"}
+_PUBMED_DOWN_NOTE = (
+    "PubMed's search is down at NCBI right now, so this answer has no papers "
+    "from it. Try again later."
+)
+
+
+def _note_texts(result: dict) -> list[str]:
+    return [t["text"] for t in _tokens(result) if t["kind"] == "note"]
+
+
+@pytest.mark.asyncio
+async def test_an_answer_that_lost_a_search_to_an_outage_says_try_later_not_ask_again(
+    monkeypatch,
+) -> None:
+    _install(monkeypatch, _structured_reply)
+    state = _state("researcher")
+    state["failed_searches"] = [_PUBMED_DOWN]
+    result = await graph_module.write_node(state)
+    notes = _note_texts(result)
+
+    assert _PUBMED_DOWN_NOTE in notes, notes
+    assert FAILED_SEARCH_NOTE not in notes, notes
+    assert not any("ask again" in note.lower() for note in notes), notes
+    # Unchanged by card 63: the answer still stands and is still marked
+    # "not yet confirmed". What counts as confirmed did not move.
+    assert any(t["kind"] == "claim" for t in _tokens(result)), "the answer itself still stands"
+    done = _events_of(result, "done")[-1]
+    assert done["trust_outcome"] in ("ask", "flag"), done
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["timed_out", "rate_limited", "other"])
+async def test_a_failure_asking_again_can_help_keeps_the_original_note(
+    monkeypatch, kind: str
+) -> None:
+    """The populate check for the arm above: the SAME state, with the same
+    database, under a kind where asking again can help, still gets the
+    original "Ask again to retry" note, so the outage wording is about the
+    kind and not a builder that stopped saying it."""
+    _install(monkeypatch, _structured_reply)
+    state = _state("researcher")
+    state["failed_searches"] = [{**_PUBMED_DOWN, "kind": kind}]
+    result = await graph_module.write_node(state)
+    notes = _note_texts(result)
+    assert FAILED_SEARCH_NOTE in notes, notes
+    assert _PUBMED_DOWN_NOTE not in notes, notes
+
+
+def test_the_outage_note_names_each_database_that_is_down_once() -> None:
+    build = graph_module._build_failed_search_note
+    assert build([_PUBMED_DOWN]) == _PUBMED_DOWN_NOTE
+    assert build([_PUBMED_DOWN, _CLINVAR_DOWN, _PUBMED_DOWN]) == (
+        "The PubMed and ClinVar searches are down at NCBI right now, so this "
+        "answer has nothing from them. Try again later."
+    )
+
+
+def test_the_outage_note_says_when_another_search_also_failed() -> None:
+    note = graph_module._build_failed_search_note([_PUBMED_DOWN, _TIMED_OUT])
+    assert note == (
+        "PubMed's search is down at NCBI right now, so this answer has no papers "
+        "from it. Another background search did not finish, so other sources may "
+        "be missing too. Try again later."
+    )
+    assert "ask again" not in note.lower()
+
+
+def test_an_outage_on_a_database_the_note_cannot_name_is_still_disclosed() -> None:
+    note = graph_module._build_failed_search_note([{**_PUBMED_DOWN, "source": "bioproject"}])
+    assert note == (
+        "Some of NCBI's searches are down right now, so this answer may be "
+        "missing sources from them. Try again later."
+    )
+
+
+def test_a_failed_search_recorded_before_card_63_keeps_the_original_note() -> None:
+    """A mapping with no `kind` key, the shape every earlier caller and test
+    builds, is read as `other`: the original note, never a false outage."""
+    assert graph_module._build_failed_search_note([_TIMED_OUT]) == FAILED_SEARCH_NOTE
+    assert graph_module._build_failed_search_note([_NO_ENTITY]) == FAILED_SEARCH_NOTE
