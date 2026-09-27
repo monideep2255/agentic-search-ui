@@ -251,7 +251,9 @@ class ReleaseRepo:
 
     # -- the owner's actions -------------------------------------------------
 
-    def commit(self, subject: str, *, changelog: str | None = None) -> None:
+    def commit(
+        self, subject: str, *, changelog: str | None = None, body: str | None = None
+    ) -> None:
         """Commit on the current branch: a source edit, or a CHANGELOG.md body."""
         if changelog is None:
             self._edits += 1
@@ -261,7 +263,7 @@ class ReleaseRepo:
             path = self.owner / "CHANGELOG.md"
             path.write_text(changelog, encoding="utf-8")
         self.git("add", path.name)
-        self.git("commit", "--quiet", "-m", subject)
+        self.git("commit", "--quiet", "-m", subject, *(["-m", body] if body else []))
 
     def push(self, *refs: str) -> None:
         self.git("push", "--quiet", "origin", *refs)
@@ -1104,3 +1106,110 @@ def test_a_changelog_left_for_another_production_commit_is_not_reused(tmp_path: 
     assert "answer a question about two genes" in notes, notes
     assert "a follow-up question keeps its gene" in notes, notes
     assert first_tip != tip
+
+
+# ---------------------------------------------------------------------------
+# A breaking change is a major version
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("subject", "body"),
+    [
+        ("feat(api)!: drop the v1 query endpoint", None),
+        (
+            "fix: the answer cites its record",
+            "The query endpoint moved.\n\nBREAKING CHANGE: /v1/query is gone",
+        ),
+    ],
+    ids=["bang", "footer"],
+)
+def test_a_breaking_change_releases_a_major_version(
+    tmp_path: Path, subject: str, body: str | None
+) -> None:
+    """Finding F-REL-J08: the major bump had no end-to-end test.
+
+    Either form the Conventional Commits spec gives, a `!` before the colon or
+    a `BREAKING CHANGE:` footer, makes the release major even beside a `feat`,
+    and puts the commit under the notes' Breaking changes heading.
+    """
+    repo, _ = _repo_at_v0_1_0(tmp_path)
+    repo.commit("feat: a smaller capability")
+    repo.commit(subject, body=body)
+    repo.push("develop")
+    repo.release()
+
+    run = repo.run_release_job()
+
+    version = run.outputs["version"]
+    assert (version["bump"], version["version"]) == ("major", "v1.0.0"), run.log
+    notes = _call(run, "release", "create", "v1.0.0").stdin
+    assert "### Breaking changes" in notes, notes
+
+
+# ---------------------------------------------------------------------------
+# What the job may push, and the commit it may tag
+# ---------------------------------------------------------------------------
+
+
+def test_the_only_pushes_are_the_tag_and_the_back_merge_branch_by_full_ref() -> None:
+    """Finding F-REL-J04: the job pushes two refs, each named in full.
+
+    A short name such as `git push origin v0.2.0` resolves against whatever
+    local refs exist, so a branch named like the tag would change what it
+    pushes. Every `git push` in the release scripts is read here, and the list
+    must be exactly the tag by `refs/tags/` and the back-merge branch by
+    `refs/heads/chore/back-merge-`. A push to `production` in any form fails
+    this as well as the end-to-end tests.
+    """
+    pushes = []
+    for script in sorted((REPO_ROOT / ".github" / "release").glob("*.sh")):
+        for line in script.read_text(encoding="utf-8").splitlines():
+            if re.match(r"\s*git\s+push\b", line):
+                pushes.append((script.name, line.strip()))
+    assert pushes == [
+        ("tag_and_release.sh", 'git push origin "HEAD:refs/heads/${branch}"'),
+        ("tag_and_release.sh", 'git push origin "refs/tags/${version}"'),
+    ], pushes
+    script = (REPO_ROOT / _TAG_AND_RELEASE).read_text(encoding="utf-8")
+    assert re.search(r'^branch="chore/back-merge-\$\{version\}"$', script, re.MULTILINE), (
+        "the back-merge branch pushed by tag_and_release.sh is no longer chore/back-merge-<version>"
+    )
+
+
+def test_a_commit_that_is_not_on_production_is_never_tagged(tmp_path: Path) -> None:
+    """Findings F-REL-J04 and F-REL-A10: the on-production guard had no test.
+
+    tag_and_release.sh is handed a commit that is on `develop` only. It must
+    refuse before it pushes anything: no tag, no back-merge branch, no GitHub
+    Release.
+    """
+    repo, _ = _repo_ready_for_v0_2_0(tmp_path)
+    repo.commit("feat: merged to develop, never released")
+    repo.push("develop")
+    stray = repo.origin_ref("refs/heads/develop")
+    checkout = tmp_path / "runner"
+    repo._run(
+        ["git", "clone", "--quiet", "--branch", "production", str(repo.origin), str(checkout)],
+        cwd=tmp_path,
+    )
+    (checkout / "CHANGELOG.md").write_text(
+        _CHANGELOG_PREAMBLE + "## v0.2.0 (2026-01-02)\n\n- a change\n", encoding="utf-8"
+    )
+
+    result = subprocess.run(
+        [str(REPO_ROOT / _TAG_AND_RELEASE)],
+        cwd=str(checkout),
+        env={**repo.env, "RELEASE_VERSION": "v0.2.0", "RELEASE_SHA": stray},
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT_S,
+        check=False,
+    )
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert f"refusing to tag {stray}: it is not on origin/production" in result.stderr
+    assert repo.origin_ref("refs/tags/v0.2.0") == ""
+    assert repo.origin_ref("refs/heads/chore/back-merge-v0.2.0") == ""
+    assert repo.gh_state("releases") == []
