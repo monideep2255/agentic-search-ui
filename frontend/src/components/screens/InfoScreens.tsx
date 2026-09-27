@@ -185,11 +185,20 @@ export const MCP_CONFIG = `{
   }
 }`;
 
-/** The install line for `system3-cli`, until the owner's first release makes
- *  a published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
+/** The install for `system3-cli`, until the owner's first release makes a
+ *  published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
  *  T-8.10-07). Never `pip install s3`, which is a stranger's package on
- *  PyPI, not this repository's. */
-export const INSTALL_EXAMPLE = `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
+ *  PyPI, not this repository's.
+ *
+ *  Card 62, PR-8.10-04: the bare pip line failed two ways on a Mac. The
+ *  system's Python 3.9 gave "No matching distribution found for
+ *  setuptools==83.0.0" (the package needs 3.11), and Homebrew's Python
+ *  refused with "externally-managed-environment". So the copy makes and
+ *  enters a virtual environment first, which also puts `s3` on the PATH for
+ *  the next command, and the card says 3.11 is needed. */
+export const INSTALL_EXAMPLE = `python3 -m venv s3-env
+. s3-env/bin/activate
+pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
 
 /** Typed into a terminal. `--base-url` names the page's own API origin, so
  *  every example here points at one server (F-8.10-J06): `s3` defaults to
@@ -202,17 +211,33 @@ s3 ask "diseases linked to BRCA1"`;
 /** The agent side of `s3 mcp` (F-8.10-J10, A12): what a person pastes into
  *  an AI agent's MCP configuration so the agent starts `s3 mcp` itself and
  *  speaks MCP to it over stdio. It carries no token, because `s3 mcp` uses
- *  the sign-in `s3 login` stored and renews it. */
+ *  the sign-in `s3 login` stored and renews it.
+ *
+ *  Card 62, PR-8.10-09 (F-8.10-V10): the bare `"command": "s3"` did not
+ *  start under the PATH an app opened from the Dock gets
+ *  (`FileNotFoundError: 's3'`), since such an app does not read the shell's
+ *  PATH and `s3` sits in a virtual environment. So the command is a full
+ *  path, shaped like the one `INSTALL_EXAMPLE` makes, and the card says to
+ *  replace it with what `command -v s3` prints. */
 export const MCP_STDIO_CONFIG = `{
   "mcpServers": {
     "system3": {
-      "command": "s3",
+      "command": "/path/to/s3-env/bin/s3",
       "args": ["mcp"]
     }
   }
 }`;
 
-export const KGX_EXAMPLE = `s3-kgx-export NCBIGene:672 \\
+/** Card 62, PR-8.10-03: after `INSTALL_EXAMPLE`, the bare `s3-kgx-export`
+ *  line gave "command not found", because `system3-cli` declares only `s3`.
+ *  It cannot join `s3` there: `export/cli.py` reads the graph directly
+ *  (`export.kgx`, `tools.graph_connection`, psycopg2, and a `GRAPH_*`
+ *  credential), never through the API, and `system3-cli` is a thin API
+ *  client with none of that. So the copy starts with the install that does
+ *  carry it, the server's own package from the repository root, and the
+ *  card says it needs graph credentials only the operator grants. */
+export const KGX_EXAMPLE = `pip install "git+https://github.com/monideep2255/agentic-search-ui.git"
+s3-kgx-export NCBIGene:672 \\
   --hops 1 --output-dir ./kgx-out`;
 
 /** The event stream frame, transcribed from `adapters/web_sse/app.py`'s own
@@ -708,7 +733,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<TerminalIcon />}
           title="Command line tools"
-          body="Two console commands rather than HTTP routes, installed once with pip. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the operator grants."
+          body="Two console commands rather than HTTP routes. The install needs Python 3.11 or newer, and its first two lines make and enter a virtual environment, since many systems refuse a pip install outside one. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. An agent app does not read your shell's PATH, so replace /path/to/s3-env/bin/s3 with the full path that command -v s3 prints. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops. s3-kgx-export is not in that install: it reads the knowledge graph directly rather than through the API, so it comes with the server's own package, the first line of the KGX command, and needs graph credentials only the operator grants."
           code={MCP_STDIO_CONFIG}
           codeLabel="Agent configuration for s3 mcp"
           copies={[

@@ -73,6 +73,11 @@ vi.mock("../../lib/api", async () => {
 });
 
 const CARD_TITLES = ["REST and SSE", "GraphQL", "MCP server", "Command line tools"];
+// Card 62, PR-8.10-09: a full path, since an agent app does not read the
+// shell's PATH. The card says to replace it with what `command -v s3` prints.
+const AGENT_CONFIG = {
+  mcpServers: { system3: { command: "/path/to/s3-env/bin/s3", args: ["mcp"] } },
+};
 const CHIP_LABELS = ["115M nodes", "693M edges", "3 data layers", "7 tools"];
 
 const cards = () => within(screen.getByTestId("integration-cards"));
@@ -129,12 +134,52 @@ describe("the integrations page, rebuilt from the reference layout", () => {
     render(<IntegrationsScreen />);
 
     const config = screen.getByRole("region", { name: /Agent configuration for s3 mcp/i });
-    expect(JSON.parse(config.textContent ?? "")).toEqual({
-      mcpServers: { system3: { command: "s3", args: ["mcp"] } },
-    });
+    expect(JSON.parse(config.textContent ?? "")).toEqual(AGENT_CONFIG);
     const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
     expect(card).toHaveTextContent(/not typed into a terminal/);
     expect(card).toHaveTextContent(/pasted into the agent's MCP settings/);
+  });
+
+  it("tells the reader to put the full path to s3 in the agent configuration", () => {
+    // Card 62, PR-8.10-09 (F-8.10-V10): an agent app opened from the Dock
+    // does not read the shell's PATH, so the bare `"command": "s3"` failed
+    // to start with "No such file or directory: 's3'". Mutation that turns
+    // this red: print the bare `s3` again, or drop the sentence naming
+    // `command -v s3`.
+    render(<IntegrationsScreen />);
+
+    const config = screen.getByRole("region", { name: /Agent configuration for s3 mcp/i });
+    const command = JSON.parse(config.textContent ?? "").mcpServers.system3.command;
+    expect(command.startsWith("/"), "the configuration names a full path").toBe(true);
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).toHaveTextContent(`replace ${command} with the full path that command -v s3 prints`);
+  });
+
+  it("says what the install needs: Python 3.11 or newer and a virtual environment", () => {
+    // Card 62, PR-8.10-04: macOS's own Python 3.9 failed with "No matching
+    // distribution found for setuptools==83.0.0", and Homebrew's Python
+    // outside a virtual environment refused with
+    // "externally-managed-environment". Mutation that turns this red: drop
+    // the sentence.
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).toHaveTextContent(/needs Python 3\.11 or newer/);
+    expect(card).toHaveTextContent(/virtual environment/);
+  });
+
+  it("says s3-kgx-export is not in the s3 install, and how to get it", () => {
+    // Card 62, PR-8.10-03: the card said both commands were "installed once
+    // with pip", and after the page's own install `s3-kgx-export` was
+    // "command not found". It reads the graph directly, so it ships with the
+    // server's own package. Mutation that turns this red: put back
+    // "installed once with pip".
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).not.toHaveTextContent(/installed once with pip/);
+    expect(card).toHaveTextContent(/s3-kgx-export is not in that install/);
+    expect(card).toHaveTextContent(/server's own package/);
   });
 
   it("promises no schedule for the MCP follow-up offers, and claims no parity", () => {
@@ -261,9 +306,29 @@ describe("the integrations page, rebuilt from the reference layout", () => {
 
       writeText.mockClear();
       await user.click(cards().getByTestId("integration-copy-mcp-stdio"));
-      expect(JSON.parse(writeText.mock.calls[0][0])).toEqual({
-        mcpServers: { system3: { command: "s3", args: ["mcp"] } },
-      });
+      expect(JSON.parse(writeText.mock.calls[0][0])).toEqual(AGENT_CONFIG);
+    });
+
+    it("installs s3 into a new virtual environment, and the KGX copy installs the server's own package", async () => {
+      // Card 62, PR-8.10-03 and 04. The install copy makes and activates a
+      // virtual environment before pip runs, so Homebrew's Python does not
+      // refuse and `s3` is on the PATH for the next command. The KGX copy
+      // starts with the install that actually carries `s3-kgx-export`: the
+      // repository itself, not `clients/system3-cli`.
+      const user = setupWithClipboard();
+      render(<IntegrationsScreen />);
+
+      await user.click(cards().getByTestId("integration-copy-install"));
+      const install = writeText.mock.calls[0][0].split("\n");
+      expect(install[0]).toBe("python3 -m venv s3-env");
+      expect(install[1]).toBe(". s3-env/bin/activate");
+      expect(install[2]).toMatch(/^pip install "git\+https:\/\/\S+#subdirectory=clients\/system3-cli"$/);
+
+      writeText.mockClear();
+      await user.click(cards().getByTestId("integration-copy-kgx"));
+      const kgx = writeText.mock.calls[0][0].split("\n");
+      expect(kgx[0]).toMatch(/^pip install "git\+https:\/\/[^"#]+\.git"$/);
+      expect(kgx[1]).toMatch(/^s3-kgx-export /);
     });
 
     it("says so when the clipboard is unavailable, rather than looking like nothing happened", async () => {
