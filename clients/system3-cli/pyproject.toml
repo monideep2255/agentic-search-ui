@@ -34,6 +34,15 @@ name = "system3-cli"
 version = "0.1.0"
 description = "s3, the System 3 biomedical search command line, and s3 mcp, a local MCP server that lets an AI agent ask System 3 with your sign-in"
 requires-python = ">=3.11"
+authors = [{ name = "Monideep Chakraborti" }]
+license = "Apache-2.0"
+# The two files are COPIES of the repository root's LICENSE and NOTICE, and
+# `test_system3_cli_package.py` fails the day either differs by a byte. A copy
+# is the one exception to "same source, no copy" above, because PEP 639 forbids
+# a `license-files` path that leaves the project directory (`../../LICENSE`),
+# and setuptools 83 only tolerates one. Apache 2.0 Section 4(d) has every
+# redistribution carry NOTICE, and a wheel is one.
+license-files = ["LICENSE", "NOTICE"]
 dependencies = [
     "httpx==0.28.1",
     "pydantic==2.13.4",
@@ -48,6 +57,11 @@ dependencies = [
     "typing-extensions==4.16.0",
     "typing-inspection==0.4.2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/monideep2255/agentic-search-ui"
+Repository = "https://github.com/monideep2255/agentic-search-ui"
+Issues = "https://github.com/monideep2255/agentic-search-ui/issues"
 
 [project.scripts]
 s3 = "system_03_search_agent.adapters.cli.main:main"
