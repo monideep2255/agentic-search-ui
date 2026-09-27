@@ -38,7 +38,6 @@ import tomllib
 from check_facts import (
     BOOL,
     COUNT,
-    EVERY,
     EXACT,
     MAPPING,
     MEMBER,
@@ -134,6 +133,7 @@ AUTH_ROUTER = f"{PKG}/auth/router.py"
 PERSONAS = f"{PKG}/data/personas_v1.json"
 S3_CLI = f"{PKG}/adapters/cli/main.py"
 KGX_CLI = f"{PKG}/export/cli.py"
+KGX_MANIFEST = f"{PKG}/export/manifest.py"
 GOLDEN = "eval/golden/golden_dataset.json"
 PYPROJECT = "pyproject.toml"
 
@@ -192,9 +192,12 @@ MODE_NAMES = ("Plain language", "Researcher")
 
 # Event types the web client leaves out of KNOWN_EVENT_TYPES on purpose, each
 # named in that file's own docstring: `cost` never reaches a non-operator
-# client (frontend/src/lib/events.ts). Any other type missing from the list
-# is a client that does not know the event. An omission counts only while
-# the backend still declares the type (`set_allowing_omitted`).
+# client (frontend/src/lib/events.ts). `step` is left out too, but it is not
+# listed here: it is read from the set `useAgentRun.ts` skips by name
+# (`client_parsed_types`), so it stays allowed only while the client really
+# skips it. Any other type missing from the list is a client that does not
+# know the event. An omission counts only while the backend still declares
+# the type (`set_allowing_omitted`).
 CLIENT_OMITS_ON_PURPOSE = ("cost",)
 
 # ------------------------------------------------------------------ parsers
@@ -283,6 +286,48 @@ def citation_fields_named(match: re.Match[str]) -> frozenset[str]:
 
 def modes_named(match: re.Match[str]) -> frozenset[str]:
     return frozenset(m for m in MODE_NAMES if m in match.group(0))
+
+
+def ws(text: str) -> str:
+    """A literal sentence as a pattern that allows any run of white space,
+    a line break included, between its words: page prose wraps in JSX."""
+    return r"\s+".join(re.escape(word) for word in text.split())
+
+
+def wording(meanings: dict[str, bool]):
+    """For a sentence that makes a yes-or-no claim, captured as one of the
+    wordings the registry knows: that wording's meaning. Each pattern offers
+    the page's current wording AND the wording that says the opposite, so a
+    page that flips its claim reads as the FAIL it is, never as a pattern
+    that finds nothing. A wording the registry does not know raises, which
+    reports an ERROR (card 53)."""
+    table = {" ".join(k.lower().split()): v for k, v in meanings.items()}
+
+    def parse(match: re.Match[str]) -> bool:
+        said = " ".join(match.group(1).lower().split())
+        if said not in table:
+            raise ValueError(f"the wording {said!r} is none of {sorted(table)}")
+        return table[said]
+
+    return parse
+
+
+def share_of(match: re.Match[str]) -> int:
+    """How many a sentence counts: "Every one of the five" is five, and
+    "Four of the five" is four. Group 1 is the head, group 2 the whole."""
+    head = " ".join(match.group(1).lower().split())
+    return to_int(match.group(2)) if head == "every one" else to_int(match.group(1))
+
+
+def snake_names(match: re.Match[str]) -> frozenset[str]:
+    """Every snake_case identifier a passage names, such as a tool's name."""
+    return frozenset(re.findall(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b", match.group(1)))
+
+
+def either(*phrases: str) -> str:
+    """One capture group offering each phrase, any white space between its
+    words, for `wording`."""
+    return "(" + "|".join(ws(p) for p in phrases) + ")"
 
 
 # ------------------------------------------------------------------ computed truths
@@ -612,6 +657,72 @@ def layer_one_read_first(repo: Repo) -> Truth:
     return Truth(not together, GRAPH_PY, node.lineno, note)
 
 
+LAYER3_PLANNER = "_build_layer_tool_calls"
+
+
+def layer3_planned_in_code(repo: Repo) -> Truth:
+    """True when the Plan step reaches `_build_layer_tool_calls`, and that
+    function plans every Layer 3 tool through `_layer_call` with the tool's
+    name written in the code. That is what "added in code rather than on
+    request" rests on. Which questions earn each call (a gene or disease for
+    PubTator3 and ClinicalTrials.gov, an rs id for LitVar2) was read from
+    the function by hand on 2026-09-27 and is stated on the pages; a static
+    reader cannot prove a condition, so it proves the wiring only."""
+    module = "system_03_search_agent.core.graph"
+    graph = call_graph(repo)
+    node = graph.funcs.get(f"{module}:{LAYER3_PLANNER}")
+    if node is None:
+        raise RegistryError(f"{GRAPH_PY}: no function {LAYER3_PLANNER}")
+    plan = next(fn for name, fn, _ in loop_steps(repo) if name == "plan")
+    reached = graph.reaches(f"{module}:{plan}", f"{module}:{LAYER3_PLANNER}")
+    planned = {
+        call.args[0].value
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call)
+        and getattr(call.func, "id", "") == "_layer_call"
+        and call.args
+        and isinstance(call.args[0], ast.Constant)
+    }
+    layer3 = set(tools_in_layer(3)(repo).value)
+    missing = sorted(layer3 - planned)
+    if not reached:
+        note = f"the plan step no longer reaches {LAYER3_PLANNER}"
+    elif missing:
+        note = f"{LAYER3_PLANNER} no longer plans: {', '.join(missing)}"
+    else:
+        note = f"plan_node reaches {LAYER3_PLANNER}, which plans {', '.join(sorted(layer3))}"
+    return Truth(reached and not missing, GRAPH_PY, node.lineno, note)
+
+
+USE_AGENT_RUN = "frontend/src/hooks/useAgentRun.ts"
+
+
+def client_parsed_types(repo: Repo) -> Truth:
+    """The event types the web client must parse: every type a run emits,
+    less the frames `useAgentRun.ts` skips by name before parsing
+    (`FORWARD_COMPATIBLE_EVENT_NAMES`). Read from that set, never from a
+    copy here, so a frame the client stops skipping is a type the client
+    must list. `cost`, which the server strips for a non-operator, is the
+    place's own declared omission (`CLIENT_OMITS_ON_PURPOSE`)."""
+    emitted = PyLiteral(EVENTS_PY, "type", cls="Event").read(repo)
+    text = repo.text(USE_AGENT_RUN)
+    m = re.search(r"FORWARD_COMPATIBLE_EVENT_NAMES[^=]*= new Set\(\[([^\]]*)\]\)", text)
+    if m is None:
+        raise RegistryError(f"{USE_AGENT_RUN}: no FORWARD_COMPATIBLE_EVENT_NAMES set")
+    skipped = frozenset(quoted(m.group(1)))
+    parsed = frozenset(emitted.value) - skipped
+    note = "less the frames useAgentRun.ts skips by name: " + ", ".join(
+        sorted(skipped & frozenset(emitted.value))
+    )
+    return Truth(parsed, EVENTS_PY, emitted.line, note)
+
+
+def home_seeds(repo: Repo) -> Truth:
+    """The example questions on the Home screen, in order."""
+    seeds, block = _seeds(repo)
+    return Truth(tuple(seeds), HOME_TSX, line_of(repo.text(HOME_TSX), block.start()))
+
+
 def api_reference_served(repo: Repo) -> Truth:
     """FastAPI serves /docs and /openapi.json unless the app turns them off."""
     tree = parse_python(repo, WEB_APP)
@@ -644,22 +755,6 @@ def personas_historical(repo: Repo) -> Truth:
     )
 
 
-def _spaced(text: str) -> str:
-    """Normalised for case and spacing only: punctuation and every word stay."""
-    return " ".join(text.lower().split())
-
-
-def question_forms(question: str) -> frozenset[str]:
-    """The whole-question forms a seed may take to count as this golden
-    question, normalised for case and spacing: the question's whole text,
-    and the same whole text without its one closing question mark or full
-    stop, since the Home screen writes its seeds without one. Nothing
-    shorter counts: a fragment such as "RCA1" or a phrase inside a longer
-    question is not the question (PR118-V03)."""
-    whole = _spaced(question)
-    return frozenset({whole, re.sub(r"\s*[?.]$", "", whole)})
-
-
 def _seeds(repo: Repo) -> tuple[list[str], re.Match[str]]:
     home = repo.text(HOME_TSX)
     block = re.search(r"const SEEDS[^=]*= \[(.*?)\];", home, S)
@@ -672,51 +767,13 @@ def _seeds(repo: Repo) -> tuple[list[str], re.Match[str]]:
     return seeds, block
 
 
-def seeds_in_golden_set(repo: Repo) -> Truth:
-    """Every seed question on the Home screen, each paired with whether it
-    IS a golden evaluation question: its whole text, normalised for case and
-    spacing, equals one of `question_forms` of a golden question.
-
-    That is the only provenance a script can check honestly. The first
-    version matched identifiers alone, so "Songs about BRCA1" passed
-    (PR118-04). The second matched a substring of joined words, so "RCA1"
-    passed, and counted matches rather than seeds, so a fifth seed rode
-    under "these four" (PR118-V03). The place compares its number with the
-    number of seeds, and every seed must qualify (`EVERY`). The note still
-    names, for each seed that fails, the golden question carrying the same
-    identifiers, as a lead for whoever fixes the page; it decides nothing."""
-    seeds, _ = _seeds(repo)
-    questions = [q["question"] for q in json.loads(repo.text(GOLDEN))["queries"]]
-    forms = frozenset().union(*(question_forms(q) for q in questions))
-    judged = tuple((seed, _spaced(seed) in forms) for seed in seeds)
-    leads = []
-    for seed, qualifies in judged:
-        if qualifies:
-            continue
-        ids = [w for w in re.findall(r"[A-Za-z0-9]+", seed) if re.search(r"\d|[A-Z]", w[1:])]
-        near = next(
-            (
-                q
-                for q in questions
-                if ids and all(re.search(rf"\b{re.escape(i)}\b", q) for i in ids)
-            ),
-            None,
-        )
-        leads.append(f"{seed!r} -> " + (repr(near) if near else "no golden question names it"))
-    good = sum(1 for _, qualifies in judged if qualifies)
-    note = f"{len(seeds)} seeds, {good} a golden question whole; " + "; ".join(leads)
-    return Truth(judged, GOLDEN, 1, note)
-
-
-def _seed_mutation(repo: Repo) -> dict[str, str]:
-    """For the self-test: make the first seed a golden question, whole, so
-    that seed's verdict must move."""
-    _, block = _seeds(repo)
-    question = json.loads(repo.text(GOLDEN))["queries"][0]["question"].replace('"', "'")
+def _add_seed(repo: Repo) -> dict[str, str]:
+    """For the self-test: one more example question on the Home screen, so
+    the count of seeds must move."""
     home = repo.text(HOME_TSX)
-    first = re.search(r'\{ text: "[^"]*"(?:, mono: "[^"]*")? \}', home[block.start(1) :])
-    at = block.start(1) + first.start()
-    return {HOME_TSX: home[:at] + f'{{ text: "{question}" }}' + home[at + len(first.group(0)) :]}
+    _, block = _seeds(repo)
+    at = block.start(1)
+    return {HOME_TSX: home[:at] + '\n  { text: "mutant seed" },' + home[at:]}
 
 
 def _depth_options(repo: Repo) -> tuple[dict[str, str], str, int]:
@@ -1061,7 +1118,9 @@ FACTS: tuple[Fact, ...] = (
         "layers.l3_tools",
         "how many tools add enrichment",
         Computed(EVENTS_PY, tools_in_layer(3), PUBTATOR_LAYER),
-        stated=(w(ARCH, ARCH_TSX, r"(three) further tools add evidence", COUNT),),
+        stated=(
+            w(ARCH, ARCH_TSX, r"\b(three) further tools add evidence", COUNT, flags=re.IGNORECASE),
+        ),
     ),
     Fact(
         "layers.l2_apis",
@@ -1083,6 +1142,7 @@ FACTS: tuple[Fact, ...] = (
                 INSTRUCTION_FILES, r"Layer 2: NCBI APIs live \(([^)]+)\)", SET, named_families
             ),
             w(DOC, README, r"\| Layer 2: on-demand NCBI APIs \| ([^|]+) \|", SET, named_families),
+            w(CODE, KGX_MANIFEST, r"Layer 2 \(live NCBI APIs: ([^)]+)\)", SET, named_families),
         ),
     ),
     Fact(
@@ -1105,6 +1165,66 @@ FACTS: tuple[Fact, ...] = (
                 INSTRUCTION_FILES, r"Layer 3: Enrichment APIs \(([^)]+)\)", SET, named_families
             ),
             w(DOC, README, r"\| Layer 3: enrichment APIs \| ([^|]+) \|", SET, named_families),
+            w(CODE, KGX_MANIFEST, r"Layer 3 \(enrichment APIs: ([^)]+)\)", SET, named_families),
+        ),
+    ),
+    Fact(
+        "layers.l3_in_code",
+        "Plan adds the layer 3 calls in code, from the gene, disease or variant a question "
+        "names, rather than on request",
+        Computed(
+            GRAPH_PY,
+            layer3_planned_in_code,
+            swap(
+                GRAPH_PY, r"layer_calls = _build_layer_tool_calls\(", "layer_calls = _mutant_calls("
+            ),
+        ),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r"Literature and trial evidence, "
+                + either(
+                    "added in code rather than on request", "added when the question asks for it"
+                ),
+                BOOL,
+                wording(
+                    {
+                        "added in code rather than on request": True,
+                        "added when the question asks for it": False,
+                    }
+                ),
+            ),
+            w(
+                ARCH,
+                FACTS_TS,
+                either(
+                    "Added in code rather than on request", "Called when the question asks for it"
+                ),
+                BOOL,
+                wording(
+                    {
+                        "Added in code rather than on request": True,
+                        "Called when the question asks for it": False,
+                    }
+                ),
+            ),
+            w(
+                ARCH,
+                ARCH_TSX,
+                r"Plan adds them "
+                + either(
+                    "in code rather than on request",
+                    "only when the question asks for that evidence",
+                ),
+                BOOL,
+                wording(
+                    {
+                        "in code rather than on request": True,
+                        "only when the question asks for that evidence": False,
+                    }
+                ),
+            ),
         ),
     ),
     # ---- budgets
@@ -1204,6 +1324,19 @@ FACTS: tuple[Fact, ...] = (
         stated=(
             w(INTEGRATIONS, INFO, r"A run emits (\w+) kinds of event", COUNT),
             w(INTEGRATIONS, INFO, r"kinds of event: ([a-z_, ]+?)\. Each SSE", SET, word_set),
+        ),
+        downstream=(w(DOC, SCHEMA_VIS, r'string type "one of (\w+)"', COUNT),),
+    ),
+    Fact(
+        "events.client_types",
+        "the event types the web client lists as known: every type a run emits, less the "
+        "frames useAgentRun.ts skips by name and cost, which the server strips",
+        Computed(
+            EVENTS_PY,
+            client_parsed_types,
+            swap(USE_AGENT_RUN, r'new Set\(\["step", "stage"\]\)', 'new Set(["stage"])'),
+        ),
+        stated=(
             w(
                 CODE,
                 EVENTS_TS,
@@ -1213,7 +1346,6 @@ FACTS: tuple[Fact, ...] = (
                 flags=S,
             ),
         ),
-        downstream=(w(DOC, SCHEMA_VIS, r'string type "one of (\w+)"', COUNT),),
     ),
     Fact(
         "events.guard_fields",
@@ -1341,14 +1473,19 @@ FACTS: tuple[Fact, ...] = (
             swap(MCP_SERVER, r"async def ask_biomedical_question\(", "async def ask_mutant("),
         ),
         stated=(
-            w(INTEGRATIONS, INFO, r"(One) advertised tool", COUNT),
+            w(INTEGRATIONS, INFO, r'title="MCP server"\s+body="(\w+) tools\.', COUNT, flags=S),
             w(
                 INTEGRATIONS,
                 INFO,
-                r"One advertised tool, (\w+)\.",
+                r'title="MCP server"\s+body="([^"]+)"',
                 SET,
-                lambda m: frozenset({m.group(1)}),
+                snake_names,
+                flags=S,
             ),
+        ),
+        downstream=(
+            w(DOC, ARCH_DIAGRAM, r"- MCP server: (\w+) tools,", COUNT),
+            w(DOC, ARCH_DIAGRAM, r"- MCP server: \w+ tools, (.+?), mounted at", SET, snake_names),
         ),
     ),
     Fact(
@@ -1512,7 +1649,7 @@ FACTS: tuple[Fact, ...] = (
                 lambda m: tuple(words_list(m.group(1))),
             ),
             w(TOUR, TOUR_TSX, r"shows the (five) steps", COUNT),
-            w(ABOUT, INFO, r"Four of the (five) steps", COUNT),
+            w(ABOUT, INFO, r"Every one of the (\w+) steps can ask", COUNT),
         ),
         downstream=(
             *everywhere(
@@ -1525,11 +1662,25 @@ FACTS: tuple[Fact, ...] = (
     ),
     Fact(
         "loop.steps_asking_a_model",
-        "how many of the steps ask a language model something",
+        "how many of the steps can ask a language model something",
         steps_reaching_model(),
-        stated=(w(ABOUT, INFO, r"(Four) of the five steps ask a language model", COUNT),),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r"(Every one|\w+) of the (\w+) steps can ask a language model",
+                COUNT,
+                share_of,
+            ),
+        ),
         downstream=(
-            w(DOC, ARCH_DIAGRAM, r"(Four) of them make exactly one model call each", COUNT),
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                r"and (every one|\w+) of the (\w+) can ask a model something",
+                COUNT,
+                share_of,
+            ),
         ),
     ),
     Fact(
@@ -1552,29 +1703,98 @@ FACTS: tuple[Fact, ...] = (
         "the think step asks the plan-tier model",
         step_uses_tier("think", "plan"),
         stated=(w(ABOUT, INFO, r'name: "Plan tier",[^}]*?Runs Think', BOOL, present, flags=S),),
+        downstream=(
+            *everywhere(
+                INSTRUCTION_FILES,
+                r"Plan tier: mid-range model for Think's question analysis",
+                BOOL,
+                present,
+            ),
+            w(DOC, ARCH_DIAGRAM, r"- Think: Plan tier, per-step budget", BOOL, present),
+        ),
     ),
     Fact(
         "loop.plan_on_plan_tier",
-        "the plan step asks the plan-tier model to pick tools and write the query",
+        "the plan step asks the plan-tier model",
         step_uses_tier("plan", "plan"),
         stated=(
             w(
                 ABOUT,
                 INFO,
-                r"Then runs Plan, which picks the tools to call and writes the graph query itself",
+                r"Plan itself " + either("never calls", "also calls") + r" this tier",
+                BOOL,
+                wording({"never calls": False, "also calls": True}),
+            ),
+        ),
+        downstream=(
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                r'PL\["Plan, ' + either("tools picked in code", "Plan tier") + r'"\]',
+                BOOL,
+                wording({"tools picked in code": False, "Plan tier": True}),
+            ),
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                r"though it " + either("never calls", "also calls") + r" the plan tier",
+                BOOL,
+                wording({"never calls": False, "also calls": True}),
+            ),
+            *everywhere(
+                (*INSTRUCTION_FILES, README),
+                r"The Plan step (?:itself )?picks its tools "
+                + either("in code", "with the plan tier"),
+                BOOL,
+                wording({"in code": False, "with the plan tier": True}),
+            ),
+        ),
+    ),
+    Fact(
+        "loop.act_on_plan_tier",
+        "the act step asks the plan-tier model, to write a graph query when no template fits",
+        step_uses_tier("act", "plan"),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r"In Act it " + either("also writes", "never writes") + r" a graph query",
+                BOOL,
+                wording({"also writes": True, "never writes": False}),
+            ),
+        ),
+        downstream=(
+            *everywhere(
+                INSTRUCTION_FILES,
+                r"for writing a graph query in Act when no template fits",
+                BOOL,
+                present,
+            ),
+            w(DOC, ARCH_DIAGRAM, r'AC\["Act, Plan and Guard tiers"\]', BOOL, present),
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                r"- Act: Plan tier to write a graph query when no template fits",
+                BOOL,
+                present,
+            ),
+            w(
+                DOC,
+                DEEP_DIVE,
+                r"\| Act \|[^|\n]+\| The plan tier writes Cypher only when no template fits",
                 BOOL,
                 present,
             ),
         ),
+    ),
+    Fact(
+        "loop.act_on_guard_tier",
+        "the act step asks the guard-tier model, to read article titles",
+        step_uses_tier("act", "guard"),
         downstream=(
-            w(DOC, ARCH_DIAGRAM, r"- Plan: Plan tier, one call", BOOL, present),
-            w(DOC, ARCH_DIAGRAM, r'PL\["Plan, Plan tier"\]', BOOL, present),
-            *everywhere(
-                INSTRUCTION_FILES,
-                r"Plan tier: mid-range model for query decomposition and tool selection",
-                BOOL,
-                present,
-            ),
+            w(DOC, ARCH_DIAGRAM, r'AC\["Act, Plan and Guard tiers"\]', BOOL, present),
+            w(DOC, ARCH_DIAGRAM, r"and Guard tier to read article titles", BOOL, present),
+            w(DOC, DEEP_DIVE, r"The guard tier reads article titles from the graph", BOOL, present),
         ),
     ),
     Fact(
@@ -1595,22 +1815,72 @@ FACTS: tuple[Fact, ...] = (
                 "for c in coroutines:\n        await c",
             ),
         ),
-        stated=(w(ARCH, ARCH_TSX, r"The agent reads layer 1 first", BOOL, present),),
-    ),
-    Fact(
-        "loop.act_asks_no_model",
-        "the act step makes no model call",
-        step_calls_no_model("act"),
-        downstream=(
-            w(DOC, ARCH_DIAGRAM, r"Act makes no model call at all", BOOL, present),
-            w(DOC, ARCH_DIAGRAM, r'AC\["Act, no model call"\]', BOOL, present),
+        stated=(
+            w(
+                ARCH,
+                ARCH_TSX,
+                r"The agent reads " + either("all three layers at once", "layer 1 first"),
+                BOOL,
+                wording({"all three layers at once": False, "layer 1 first": True}),
+            ),
+            w(
+                ABOUT,
+                INFO,
+                r"while the live layers are searched " + either("at the same time", "afterwards"),
+                BOOL,
+                wording({"at the same time": False, "afterwards": True}),
+            ),
+            w(
+                ABOUT,
+                INFO,
+                r"searched " + either("alongside", "after") + r" the first two layers",
+                BOOL,
+                wording({"alongside": False, "after": True}),
+            ),
+            w(
+                ARCH,
+                FACTS_TS,
+                r"and searched "
+                + either("at the same time as", "after")
+                + r" the other two layers",
+                BOOL,
+                wording({"at the same time as": False, "after": True}),
+            ),
         ),
     ),
     Fact(
         "loop.plan_asks_no_model",
         "the plan step makes no model call",
         step_calls_no_model("plan"),
-        downstream=(w(DOC, DEEP_DIVE, r"Note over L: Plan, no model call", BOOL, present),),
+        downstream=(
+            w(
+                DOC,
+                DEEP_DIVE,
+                r"and "
+                + either("asks it itself only when Think did not start it", "never asks it itself"),
+                BOOL,
+                wording(
+                    {
+                        "asks it itself only when Think did not start it": False,
+                        "never asks it itself": True,
+                    }
+                ),
+            ),
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                either(
+                    "asking it itself only when Think did not start it", "never asking it itself"
+                ),
+                BOOL,
+                wording(
+                    {
+                        "asking it itself only when Think did not start it": False,
+                        "never asking it itself": True,
+                    }
+                ),
+            ),
+        ),
     ),
     Fact(
         "loop.sentences_checked_by_code_alone",
@@ -1620,10 +1890,11 @@ FACTS: tuple[Fact, ...] = (
             w(
                 ABOUT,
                 INFO,
-                r"Each sentence is then checked in\s+code against the record it points at",
+                ws("One that passes but was reworded is then judged by")
+                + r"\s+"
+                + either("a model", "code alone"),
                 BOOL,
-                present,
-                flags=S,
+                wording({"a model": False, "code alone": True}),
             ),
         ),
     ),
@@ -1662,11 +1933,9 @@ FACTS: tuple[Fact, ...] = (
         ),
     ),
     Fact(
-        "seeds.from_golden_set",
-        "the Home screen shows as many seeds as the tour says, and each is a golden question, whole",
-        Computed(GOLDEN, seeds_in_golden_set, _seed_mutation),
-        stated=(
-            w(TOUR, TOUR_TSX, r"These (\w+) are real questions from the evaluation set", EVERY),
-        ),
+        "seeds.count",
+        "how many example questions the Home screen shows",
+        Computed(HOME_TSX, home_seeds, _add_seed),
+        stated=(w(TOUR, TOUR_TSX, r"Try one of these (\w+) example questions", COUNT),),
     ),
 )

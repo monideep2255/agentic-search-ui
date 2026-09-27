@@ -806,7 +806,11 @@ def swap(path: str, pattern: str, replacement: str) -> Callable[[Repo], dict[str
 
 TIERS = frozenset({"guard", "plan", "synth"})
 PRIMITIVE_ATTRS = frozenset({"call_tier"})
-PRIMITIVE_NAMES = frozenset({"_dispatch_tier_call", "call_jev"})
+# Jev, the classifier, is asked one decision at a time through `call_jev`
+# and a whole answer's reworded sentences at once through `call_jev_batch`
+# (`synthesis/sentence_check.py`). Both count as a classifier call.
+CLASSIFIER_CALLS = frozenset({"call_jev", "call_jev_batch"})
+PRIMITIVE_NAMES = frozenset({"_dispatch_tier_call"}) | CLASSIFIER_CALLS
 GRAPH_MODULE_PATH = f"{PACKAGE_DIR}/core/graph.py"
 
 
@@ -820,7 +824,8 @@ class CallGraph:
     step reach a model call, and on which tier".
 
     A model call is `harness.call_tier(...)` or `_dispatch_tier_call(...)`,
-    whose string argument names the tier, or `call_jev(...)`, the classifier.
+    whose string argument names the tier, or `call_jev(...)` or
+    `call_jev_batch(...)`, the classifier.
     Calls are resolved by name within a module, through `from X import y`,
     through `module.attr` on an imported module, and through `self.method`.
     A function named without being called (a callback) counts as reached.
@@ -890,7 +895,7 @@ class CallGraph:
                 if called in PRIMITIVE_NAMES or (
                     isinstance(func, ast.Attribute) and called in PRIMITIVE_ATTRS
                 ):
-                    if called == "call_jev":
+                    if called in CLASSIFIER_CALLS:
                         prims.add("classifier")
                         continue
                     literal = [
