@@ -209,7 +209,7 @@ The report is `report.md` in the same folder. An agent that may not write files 
 
 3. For an answer-path change, the golden run and rubric results, or that they are still to run.
 4. What was not captured and why, stated rather than implied.
-5. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. The line itself stays FAIL until the owner says otherwise.
+5. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. Raise it per `decision-cadence`, asked at once with a notification, not held for this report. The line itself stays FAIL until the owner says otherwise.
 6. The verdict: PASS at both widths, or FAIL with the lines still failing.
 
 Before committing the folder, prove it holds no local path, secret or personal data. `grep -rlF "$HOME" <folder>` must print nothing, and read the `.txt` files. The capture runs as a guest, so no account appears on screen.

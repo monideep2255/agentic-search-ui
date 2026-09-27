@@ -60,12 +60,10 @@ The lead decides, per that rule:
 - Wording, placement and housekeeping cards inside its remit: a label, a note's position, a test file, a lock file, a count's caption, which filters an isolate question offers.
 - Each such choice is made from the user's chair and reported in the user's words, what the person typing a question will notice, in the card's detail and the session report. "A question about one gene never shows records for a different gene", not "wire the filter into the act result path".
 
-The owner decides, and these reach them as one list:
+The owner decides:
 
 - Scope, a cost cap, a design placement the owner owns, copy the owner owns, a new dependency, anything on the v1 boundary, the security layer, and any drop in the golden answered count.
-- The list is written once a day, in the session report and on the board's To do cards marked "Your decision", with at most ten items. Each item is a yes, a no or a pick-one, with the lead's recommendation and its reason in one line.
-- In conversation the items are still asked one at a time, in the list's order, per `communication-style`. The list is the queue; each question is still single.
-- An eleventh question waits for the next day, unless it blocks work in progress, in which case it displaces the least urgent item on the list and the lead says so.
+- How and when each such decision reaches the owner is `decision-cadence`: asked the moment it comes up, with a notification, never held for a daily list. A card marked "Your decision" on the board carries the question until it is answered.
 
 ## One feature per push
 

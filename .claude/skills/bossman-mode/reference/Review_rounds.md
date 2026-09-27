@@ -102,6 +102,8 @@ Rule 3, two rounds, then stop. The budget is one judge round and one adversary r
 - Whether any open finding sits inside a fix made in this phase, named explicitly.
 - Exactly two options with a recommendation: merge with the open item named, as an open flag with an owner and a trigger, or revert this phase's changes and re-split.
 
+This escalation reaches the owner per `decision-cadence`: asked the moment the round stops, with a notification, never held for a later report.
+
 A third round is not an option, and the owner's authorisation does not create one (DECISIONS.md, 2026-09-24). Build phase 4.4's third round was authorised so a reachable major would not merge open. Under this rule it merges named or it reverts. A blocked stop is a valid, honest end state. Escalation must be cheaper than fighting the loop.
 
 Rule 4, a regression inside a prior fix stops the round immediately. Do not finish the round, and do not batch it with the round's other findings. When a reviewer locates a finding inside code written to fix an earlier finding in this same phase, the phase escalates on the spot, even in round 1, because that is the signal that the fix approach itself is wrong rather than incomplete. The escalation carries the same two options as Rule 3. The finding is filed with `Regression of: F-N.M-XX` so the pattern is visible in the ledger rather than reconstructed afterwards.

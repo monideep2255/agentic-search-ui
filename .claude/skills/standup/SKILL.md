@@ -27,7 +27,7 @@ Skip any of these that cannot answer the question at hand. Reading all five cost
 - Right now: what is in motion this moment and is NOT committed. See below; this line is the one most often skipped and the one most often wanted.
 - Next: the one next action.
 - Time to done: how long until this phase is finished, and what that estimate assumes. See below.
-- Your call: the decisions waiting on the product owner, each written so the answer is yes, no, or pick one. See below.
+- Your call: the decisions already waiting on the product owner, each written so the answer is yes, no, or pick one. This line reports a decision that was already asked per `decision-cadence`; it never asks one for the first time here. See below.
 - Blockers: what is stopping progress, or "None".
 
 Write every line in plain words. A defect is what it did to a person, not its finding id. Prefer bullets over sentences, per `.claude/rules/writing-style.md`: if a line carries three or more things, break it into bullets rather than chaining them with commas.
