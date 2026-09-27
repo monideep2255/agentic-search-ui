@@ -4,6 +4,25 @@
 # in docs/build/Release_flow.md means a release pull request was merged after CI
 # reported on it.
 #
+# THIS JOB NEVER PUSHES TO `production`. Changed on 2026-09-27, when the owner
+# chose that `production`, like `develop`, accepts changes from the owner's
+# account alone. GitHub refused to exempt the Actions robot from that ruleset on
+# a personal-account repository, so the robot stopped writing to `production`
+# instead. The job pushes exactly two things: the release tag, on the
+# production commit the version was derived from, and a
+# `chore/back-merge-<version>` branch. The changelog commit rides on that
+# branch into `develop` through a pull request, and reaches `production` with
+# the next release. The next release recognises it and leaves it out of its
+# own notes and its version bump (.github/release/commit_lib.sh).
+#
+# IF THE OWNER HAS NOT MERGED THE PREVIOUS BACK-MERGE before the next release,
+# `production`'s CHANGELOG.md is missing the previous release's section. The
+# carry step below then merges the previous changelog commit into this
+# checkout, never into `production`, so the new section is written on top of
+# the old one and the new back-merge pull request carries both. If that merge
+# cannot be done, the step says so in the log and the release goes ahead
+# without it.
+#
 # THIS FILE CONTAINS NO SHELL CODE, the same rule ci.yml follows and for the
 # same measured reason. Build phase 4.14 twice tried to verify inline shell by
 # matching strings in a `run:` body and was defeated twice, the second time by
@@ -20,6 +39,10 @@
 # workflow never interpolates any `github.event` value. The scripts read commit
 # text with `git log`, where it arrives as data on a pipe and is only matched
 # against, never executed.
+#
+# tests/ci/test_release_scripts.py runs these steps, in this order and with
+# this environment, against a throwaway repository, and fails if `production`
+# moves.
 name: Release
 
 on:
@@ -31,8 +54,9 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-# Least privilege, and both are genuinely needed: `contents` to push the
-# changelog commit and the tag, `pull-requests` to open the back-merge.
+# Least privilege, and both are genuinely needed: `contents` to push the tag
+# and the back-merge branch, `pull-requests` to open the back-merge. Neither is
+# used to push to `production`, which no step does.
 permissions:
   contents: write
   pull-requests: write
@@ -56,17 +80,25 @@ jobs:
         id: version
         run: .github/release/derive_version.sh
 
+      - name: Carry the previous changelog if its back-merge is still open
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
+        run: .github/release/carry_previous_changelog.sh
+
       - name: Write the changelog section
         if: steps.version.outputs.should_release == 'true'
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
           PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
+          RELEASE_SHA: ${{ steps.version.outputs.release_sha }}
         run: .github/release/write_changelog.sh
 
-      - name: Tag and publish the release
+      - name: Tag production, commit the changelog locally, publish the release
         if: steps.version.outputs.should_release == 'true'
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_SHA: ${{ steps.version.outputs.release_sha }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: .github/release/tag_and_release.sh
 

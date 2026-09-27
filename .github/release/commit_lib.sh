@@ -37,18 +37,30 @@
 # non-zero, and every caller exits on it.
 
 # release_commit_shas <range>
-# Prints one full sha per line for the range, oldest first, merges excluded.
-# An empty range means the whole history. Returns non-zero if git fails.
+# Prints one full sha per line for the range, newest first as `git log` gives
+# them, merges excluded, and the release job's own changelog commits excluded
+# (see release_changelog_verdict below). An empty range means the whole
+# history. Returns non-zero if git fails.
 release_commit_shas() {
-  local range="$1" out status
-  out="$(git log ${range:+"$range"} --no-merges --format='%H' 2>&1)"
+  local range="$1" out status line sha subject verdict
+  out="$(git log ${range:+"$range"} --no-merges --format='%H%x09%s' 2>&1)"
   status=$?
   if [ "$status" -ne 0 ]; then
     printf 'git log failed for range %s (exit %s): %s\n' \
       "${range:-<whole history>}" "$status" "$out" >&2
     return 1
   fi
-  printf '%s' "$out"
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    sha="${line%%$'\t'*}"
+    subject="${line#*$'\t'}"
+    verdict="$(release_changelog_verdict "$sha" "$subject")" || return 1
+    if [ "$verdict" = "changelog" ]; then
+      continue
+    fi
+    printf '%s\n' "$sha"
+  done <<< "$out"
+  return 0
 }
 
 # release_commit_field <sha> <format>
@@ -64,6 +76,66 @@ release_commit_field() {
     return 1
   fi
   printf '%s' "$out"
+}
+
+# ---------------------------------------------------------------------------
+# The release job's own changelog commit, recognised once
+# ---------------------------------------------------------------------------
+
+# WHY THE RELEASE JOB HAS TO RECOGNISE ITS OWN COMMIT. Since 2026-09-27 the job
+# never pushes to `production` (release.yml's header says why). It commits the
+# changelog locally, on top of the production commit it tagged, and that commit
+# reaches `production` the long way round: the back-merge pull request carries
+# it into `develop`, and the NEXT release pull request carries it into
+# `production`. So every release after the first finds the previous release's
+# changelog commit inside its own range. Counted as an ordinary commit it would
+# be listed in the next release's notes, and a release whose only other
+# content is merge commits would publish a patch version for nothing.
+#
+# The subject is written in exactly one place, here, and read in exactly one
+# place, release_changelog_verdict below. Two scripts spelling it separately is
+# the "two readers disagree" class this file exists to end.
+
+# release_changelog_subject <version>
+# The subject tag_and_release.sh gives the changelog commit for <version>.
+release_changelog_subject() {
+  printf 'docs(changelog): release %s [skip ci]' "$1"
+}
+
+_RELEASE_CHANGELOG_SUBJECT_RE='^docs\(changelog\): release v[0-9]+\.[0-9]+\.[0-9]+ \[skip ci\]$'
+# The same commit after a squash merge of its back-merge pull request, which
+# rewrites it under the pull request's title. The repository merges with merge
+# commits, so this should not occur, but it costs one pattern to make the
+# changelog survive any of GitHub's three merge buttons.
+_RELEASE_BACKMERGE_SQUASH_RE='^chore: back-merge v[0-9]+\.[0-9]+\.[0-9]+ into develop( \(#[0-9]+\))?$'
+
+# release_changelog_verdict <sha> <subject>
+# Prints `changelog` when the commit is the release job's own changelog
+# commit, `commit` for everything else. Returns non-zero if git fails.
+#
+# TWO CONDITIONS, BOTH REQUIRED. The subject alone is chosen by whoever writes
+# the commit, so a subject match alone would let any commit hide from the
+# release notes by borrowing it. The commit must ALSO change `CHANGELOG.md`
+# and nothing else. A commit that passes both can hide nothing but changelog
+# text, which is exactly what it is.
+release_changelog_verdict() {
+  local sha="$1" subject="$2" files status
+  if ! printf '%s' "$subject" \
+      | grep -Eq "${_RELEASE_CHANGELOG_SUBJECT_RE}|${_RELEASE_BACKMERGE_SQUASH_RE}"; then
+    printf 'commit'
+    return 0
+  fi
+  files="$(git diff-tree --no-commit-id --name-only -r --root "$sha" 2>&1)"
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    printf 'git diff-tree failed for %s (exit %s): %s\n' "$sha" "$status" "$files" >&2
+    return 1
+  fi
+  if [ "$files" = "CHANGELOG.md" ]; then
+    printf 'changelog'
+  else
+    printf 'commit'
+  fi
 }
 
 # ---------------------------------------------------------------------------

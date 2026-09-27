@@ -10,7 +10,21 @@
 # What a commit MEANS is decided in `.github/release/commit_lib.sh`, not here.
 # This script used to carry its own patterns and `write_changelog.sh` carried
 # different ones, which is finding F-4.15-A-03: a release could be major while
-# its changelog had no breaking section. One parser, two callers.
+# its changelog had no breaking section. One parser, two callers. That includes
+# the release job's own changelog commit, which arrives on `production` through
+# `develop` one release late and is never counted (commit_lib.sh says why).
+#
+# WHERE THE PREVIOUS RELEASE IS FOUND. By its tag, with `git describe` from
+# HEAD, which is the tip of `production` as the workflow checked it out. Since
+# 2026-09-27 the tag sits on that tip, a production merge commit, rather than
+# on a changelog commit pushed on top of it. `git describe` needs only that the
+# tagged commit be an ancestor of HEAD, and it is: `production` moves forward
+# by merges only, and a ruleset forbids a force-push that could rewrite it.
+#
+# THE COMMIT THIS VERSION IS FOR is written out as `release_sha`, the HEAD this
+# script read. tag_and_release.sh tags exactly that commit, and
+# write_changelog.sh lists exactly the commits up to it, so a later step moving
+# HEAD (carry_previous_changelog.sh can) never moves the tag or the notes.
 #
 # Bump rules, from the Conventional Commits spec this repository adopted on
 # 2026-07-26 (.claude/rules/git-workflow.md):
@@ -118,18 +132,21 @@ esac
 next="v${major}.${minor}.${patch}"
 
 # A version identical to the tag it replaces means the arithmetic above did not
-# happen. Publishing it pushes a changelog commit to `production` and then dies
-# on an already-existing tag, which is the tail of F-4.15-A-08 and is worse
-# than stopping here.
+# happen. Publishing it would die on an already-existing tag after the
+# changelog was written, which is the tail of F-4.15-A-08 and is worse than
+# stopping here.
 if [ -n "$previous" ] && [ "$next" = "$previous" ]; then
   echo "computed version ${next} is the previous tag; refusing to release" >&2
   exit 1
 fi
 
-echo "bump=${bump} -> ${next} (${count} commits)" >&2
+release_sha="$(git rev-parse --verify 'HEAD^{commit}')"
+
+echo "bump=${bump} -> ${next} (${count} commits) at ${release_sha}" >&2
 {
   echo "should_release=true"
   echo "previous_tag=${previous}"
   echo "version=${next}"
   echo "bump=${bump}"
+  echo "release_sha=${release_sha}"
 } >> "$GITHUB_OUTPUT"
