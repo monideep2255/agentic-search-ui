@@ -17,6 +17,7 @@ This report says why Stop went grey and what changed. It also shows how the test
 - [Tests and proof they can fail](#tests-and-proof-they-can-fail)
 - [Check results](#check-results)
 - [Files](#files)
+- [Fix round](#fix-round)
 
 ## What the reader sees, before and after
 
@@ -200,3 +201,60 @@ Evidence:
 
 - `testing/Developer/reports/2026-09-27_card58_stop/pacing_replay.py`
 - `testing/Developer/reports/2026-09-27_card58_stop/pacing_replay_output.md`
+
+## Fix round
+
+One fix-and-verify round, on four findings from the judge and the adversary. Each red below was run on this branch before its fix, or with the named mutation in place, and each file was restored byte for byte after.
+
+### What the reader sees now
+
+- A person who presses Stop before the answer appears sees "Search stopped", whatever the run's shape. They never see the result page, a note from the stopped answer, or a trust line. That holds on the full-screen run and on a follow-up in the same thread.
+- Kept on the stopped screen, because each was on screen before any Stop could discard it: a refusal or a clarification, which also says what to type next, and a failure notice.
+- Dropped: the cap notice, whatever its source. On develop its only source is the answer's own note, since the server's one non-fatal error names `write` or `cypher_query` as its source. Its copy speaks of "this answer" beside "No answer was produced".
+
+### F-58-J02, blocking: a Stop on a run with no sentences landed the result page
+
+- Cause: Stop flushes the pacing, so the whole held-back answer reaches `useRunView` at once. The reveal's freeze only holds sentences. The per-question cap's partial result (`_partial_result_for_cap`) has none, so the view landed.
+- Fix: `withholdAnswer` in `frontend/src/hooks/useAnswerReveal.ts`. A Stop before the first sentence keeps the view unlanded and clears its sentences, sources, verdicts, outcome, cap notice and notes.
+- Commit: 0aeca9d6, `fix(web-ui): Stop shows Search stopped even when the answer had no sentences`.
+- Red before the fix, full-screen run: `AssertionError: Stop was pressed, and the result page came up anyway: expected <div …(2)>…(2)</div> to be null`.
+- Red before the fix, follow-up: `AssertionError: Stop was pressed on the follow-up, but Search stopped is not on screen: expected null not to be null`.
+- Red with the fix line removed, hook test: `AssertionError: a stopped run landed on the result page: expected true to be false // Object.is equality`.
+- Populate-check arm: left alone, the same cap result lands with `answer-cap` and `trust-line`, so the J02 arm cannot pass on a shape that never lands.
+
+### F-58-A01, should-fix: a notice from the discarded answer showed under "Search stopped"
+
+- Cause: the answer's own cap note becomes `capMessage`, and `RunProgress` renders the notice whatever `stopped` says.
+- Fix: the same `withholdAnswer`, in the same commit, 0aeca9d6, since one cause produced both findings.
+- Red before the fix: `AssertionError: a notice from the discarded answer showed under Search stopped: expected <div …(3)></div> to be null`.
+- The arm's run carries a sentence, so the reveal holds the view unlanded before the fix. That keeps this arm about the notice alone.
+
+### F-58-J03, should-fix: no test covered Stop on a follow-up
+
+- Tests: two arms through the real `App`, turn one landed and the follow-up's whole run in one chunk. One is an ordinary answer, the other the cap result.
+- Commit: de961024, `test(web-ui): Stop on a follow-up in the same thread is covered`.
+- Red with `stopEnabled={false}` on the inline `RunProgress`, `App.tsx:1695`: both arms, `Error: Stop was grey on a follow-up with no answer on screen: expect(element).toBeEnabled()`, and `Tests  2 failed | 5 passed (7)`.
+
+### F-58-J01, should-fix: no test covered a stopped run being charged once
+
+- Test: S4 in `tests/system_03_search_agent/core/test_run_registry_stop_mid_write.py`. The row must equal the final harness total. The code is unchanged.
+- Commit: 855bcf2e, `test(api): a run stopped mid-write is charged once`.
+- Red with `_observed_cost_usd(events) + metered_cost_usd` at `run.py:274`: `AssertionError: the stopped run recorded 0.008200 USD, but it spent 0.008100 USD in all, of which 0.000100 USD before Write.`, and `1 failed, 3 passed in 12.10s`.
+
+### Left as filed
+
+- F-58-J04 to F-58-J07, notes.
+- F-58-A02 to F-58-A07, notes.
+- Card 59's gap: a Stop pressed after the server finished is still recorded as answered.
+
+### Fix-round check results
+
+Each line is pasted from its command's output:
+
+- Card files, `npx vitest run src/components/chat/ src/App.stopUntilAnswer.test.tsx`: `Test Files  5 passed (5)` and `Tests  56 passed (56)`.
+- The G-013 replay, `StopButton.replay.test.tsx`: `Tests  1 passed (1)`. `pacing_replay.py` rerun on the saved develop streams printed a table identical to `pacing_replay_output.md`.
+- Server, `test_run_registry_stop_mid_write.py`: `4 passed in 8.50s`, S1 to S3 plus S4.
+- Frontend files near the change, the hooks, the screens, the tour and the five App-level files: `Test Files  31 passed (31)` and `Tests  250 passed (250)`.
+- `ruff check` gave `All checks passed!`, exit 0.
+- `isort --check-only --diff src tests services tracker alembic .claude .github` exited 0.
+- `npm run build` gave `✓ built in 564ms`, exit 0.
