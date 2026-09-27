@@ -348,7 +348,15 @@ That belongs in the data engineering repo.
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE). Copyright 2026 [Monideep Chakraborti](https://github.com/monideep2255).
+
+You are welcome to use, fork and build on this code. When you share a copy or something built on it, the license asks for two things, and the project asks for one more:
+
+- Keep the `LICENSE` and `NOTICE` files with your copy. `NOTICE` carries the attribution, and Apache 2.0 (Section 4) has every redistribution carry it somewhere a reader can find it.
+- Mark any file you changed as changed, so nobody mistakes your version for this one.
+- Cite the project when you write about it. `CITATION.cff` holds a ready reference, and GitHub shows it under "Cite this repository". This one is a request, not a license term.
+
+Apache 2.0 grants no rights to the project's names or marks (Section 6). Call your derivative something of your own.
 
 ---
 
