@@ -247,11 +247,13 @@ def _is_response_to(message: Any, request_id: Any) -> bool:
 def _is_token_refusal(message: Any) -> bool:
     """The remote server's answer to a missing or invalid bearer token.
 
-    `adapters/mcp/server.py` raises `MCPError(INVALID_REQUEST, "missing,
-    malformed, or invalid bearer token")` before any run starts (T-4.1-03),
-    so resending the same message after a renewal can never start a second
-    run. Matching the words rather than only the code keeps an ordinary
-    invalid request from triggering a renewal."""
+    `adapters/mcp/server.py` raises `MCPError(INVALID_REQUEST, ...)` before
+    any run starts (T-4.1-03), so resending the same message after a renewal
+    can never start a second run. Since card 62 its three refusals say "no
+    bearer token", "malformed bearer token" or "invalid bearer token", each
+    with how to get a token, and every one keeps the words "bearer token"
+    this matches. Matching the words rather than only the code keeps an
+    ordinary invalid request from triggering a renewal."""
     if not isinstance(message, dict):
         return False
     error = message.get("error")
