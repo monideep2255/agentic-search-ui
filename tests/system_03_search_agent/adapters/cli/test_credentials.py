@@ -284,6 +284,40 @@ async def test_refresh_locked_raises_refresh_error_on_a_200_with_a_non_json_body
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("depth", [5000, 100000])
+async def test_refresh_locked_raises_refresh_error_on_a_200_nested_thousands_deep(
+    monkeypatch, tmp_path, depth: int
+) -> None:
+    """Build phase 8.10's fix round, F-8.10-J01: a JSON body nested this
+    deep raises `RecursionError`, which is not a `ValueError`, so the guard
+    the test above pins let it escape `_refresh_and_store` uncaught. `s3
+    mcp` renews through this function, so a hostile refresh reply could
+    leave an agent's request unanswered.
+
+    Mutation that turns this red: catch `ValueError` alone around
+    `response.json()` again, and `RecursionError` fails `pytest.raises`.
+    """
+    _point_at(monkeypatch, tmp_path)
+    creds_mod.store(
+        creds_mod.Credentials(base_url="http://test", access_token="old-a", refresh_token="old-r")
+    )
+    starting = creds_mod.load()
+    body = ("[" * depth + "]" * depth).encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body, headers={"content-type": "application/json"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://test")
+    try:
+        with pytest.raises(creds_mod.RefreshError):
+            await creds_mod.refresh_locked(client, starting)
+    finally:
+        await client.aclose()
+
+    assert creds_mod.load().refresh_token == "old-r"
+
+
+@pytest.mark.asyncio
 async def test_refresh_locked_raises_refresh_error_on_a_200_missing_the_token_fields(
     monkeypatch, tmp_path
 ) -> None:

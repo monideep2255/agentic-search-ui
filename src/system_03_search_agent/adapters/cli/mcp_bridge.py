@@ -63,7 +63,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import binascii
+import contextlib
 import json
 import threading
 import time
@@ -105,11 +105,25 @@ MAX_IN_FLIGHT = 8
 
 # JSON-RPC error codes. The -32000 range is the server-defined range.
 PARSE_ERROR = -32700
+INTERNAL_ERROR = -32603
 SIGN_IN_NEEDED = -32001
 REMOTE_UNREACHABLE = -32002
 REMOTE_FAILED = -32003
 
 _SIGN_IN_AGAIN = "In a terminal, run: s3 login, then restart this MCP server."
+
+# What the agent is told when something this module did not foresee goes
+# wrong while it handles a request (build phase 8.10's fix round, F-8.10-J01
+# and A01). A reply nested thousands deep raised `RecursionError`, and a body
+# labelled gzip that was not gzip raised `httpx.DecodingError`; neither was
+# on any list of expected failures, so the request was never answered. The
+# guarantee now rests on catching every exception around each exchange, and
+# this sentence is what the agent reads when that catch is what answered.
+_UNEXPECTED_FAILURE = (
+    "This MCP server hit a problem it could not handle ({kind}) while it was "
+    "handling the request, so no answer was passed on. Try again; if it keeps "
+    "happening, restart this MCP server."
+)
 
 
 class BridgeError(Exception):
@@ -138,12 +152,33 @@ def access_token_expires_at(token: str) -> float | None:
     segment = parts[1] + "=" * (-len(parts[1]) % 4)
     try:
         claims = json.loads(base64.urlsafe_b64decode(segment.encode("ascii")))
-    except (ValueError, UnicodeEncodeError, binascii.Error):
+    except Exception:  # noqa: BLE001 - the token is server-issued text; unreadable means no expiry
         return None
     expiry = claims.get("exp") if isinstance(claims, dict) else None
     if isinstance(expiry, bool) or not isinstance(expiry, int | float):
         return None
     return float(expiry)
+
+
+def _refuse_constant(name: str) -> Any:
+    raise ValueError(f"{name} is not JSON")
+
+
+def _parse_json(text: str) -> Any:
+    """`json.loads`, refusing `NaN` and `Infinity`, which Python accepts and
+    no JSON parser on the agent's side does. Raises on anything it cannot
+    read, including `RecursionError` for deep nesting: every caller catches
+    `Exception`, never a list of types."""
+    return json.loads(text, parse_constant=_refuse_constant)
+
+
+def _encode(message: Any) -> bytes:
+    """One JSON-RPC message as one line, ASCII only.
+
+    `ensure_ascii=True` escapes every non-ASCII character, so a raw line
+    separator such as U+2028 can never split a message for a client that
+    reads lines more broadly than the MCP stdio transport says to."""
+    return json.dumps(message, ensure_ascii=True, separators=(",", ":")).encode("ascii") + b"\n"
 
 
 def _is_request(message: Any) -> bool:
@@ -233,17 +268,24 @@ class McpBridge:
     # ------------------------------------------------------------------
 
     def send(self, message: Any) -> None:
-        """One JSON-RPC message, one line, ASCII only.
+        """One JSON-RPC message, one line, ASCII only (see `_encode`)."""
+        self._write(_encode(message))
 
-        `ensure_ascii=True` escapes every non-ASCII character, so a raw line
-        separator such as U+2028 can never split a message for a client that
-        reads lines more broadly than the MCP stdio transport says to."""
-        line = json.dumps(message, ensure_ascii=True, separators=(",", ":"))
-        self._write_line(line.encode("ascii") + b"\n")
+    def _write(self, line: bytes) -> None:
+        """Write one encoded line. A failed write means the agent's end of
+        stdout is gone, so nothing can be answered any more; it is logged,
+        never raised into the loop that reads the next line."""
+        try:
+            self._write_line(line)
+        except Exception as exc:  # noqa: BLE001 - see the docstring
+            self.log(f"could not write a reply to the agent ({type(exc).__name__})")
 
     def log(self, text: str) -> None:
-        self._stderr.write(f"s3 mcp: {text}\n")
-        self._stderr.flush()
+        """One line on stderr for the host's log. Best effort: a log that
+        cannot be written never stops a reply."""
+        with contextlib.suppress(Exception):
+            self._stderr.write(f"s3 mcp: {text}\n")
+            self._stderr.flush()
 
     # ------------------------------------------------------------------
     # Input
@@ -251,7 +293,25 @@ class McpBridge:
 
     async def handle_line(self, line: bytes | None, *, oversized: bool = False) -> None:
         """Dispatch one line from the agent. Returns as soon as the line is
-        handed off; a request is answered by its own task."""
+        handed off; a request is answered by its own task.
+
+        Never raises, whatever the line holds (F-8.10-J01, A01: a line of
+        100000 nested brackets used to raise `RecursionError` out of here
+        and end `serve`). A line this cannot handle gets an error reply, and
+        the next line is read as usual."""
+        try:
+            self._dispatch_line(line, oversized=oversized)
+        except Exception as exc:  # noqa: BLE001 - see the docstring
+            self.log(f"could not handle a message from the agent ({type(exc).__name__})")
+            self.send(
+                _error_response(
+                    None,
+                    INTERNAL_ERROR,
+                    _UNEXPECTED_FAILURE.format(kind=type(exc).__name__),
+                )
+            )
+
+    def _dispatch_line(self, line: bytes | None, *, oversized: bool) -> None:
         if oversized:
             self.send(
                 _error_response(
@@ -265,8 +325,8 @@ class McpBridge:
         if line is None or not line.strip():
             return
         try:
-            message = json.loads(line.decode("utf-8"))
-        except (UnicodeDecodeError, ValueError):
+            message = _parse_json(line.decode("utf-8"))
+        except Exception:  # noqa: BLE001 - any line that cannot be read is a parse error
             self.send(
                 _error_response(
                     None,
@@ -317,29 +377,54 @@ class McpBridge:
     # ------------------------------------------------------------------
 
     async def _forward(self, message: Any) -> None:
+        """Forward one message and pass back what the server sends.
+
+        A request gets exactly one answer: the server's reply, or an error
+        that says what to do next. Every exception is caught around the
+        exchange, not a list of expected ones, because the failures that
+        left a request unanswered were the ones nobody listed (F-8.10-J01,
+        A01). Every reply is encoded before any is written, so a reply that
+        cannot be encoded becomes that error rather than silence. The one
+        request that gets no answer is one the agent cancelled, as MCP says:
+        cancellation is not an `Exception`, so it is never caught here."""
         is_request = _is_request(message)
-        request_id = message["id"] if is_request else None
-        async with self._slots:
-            try:
-                replies = await self._exchange(message, request_id if is_request else _NO_ID)
-            except BridgeError as exc:
-                if is_request:
-                    self.send(_error_response(request_id, exc.code, exc.message))
-                else:
-                    self.log(exc.message)
-                return
-        for reply in replies:
-            self.send(reply)
-        if is_request and not any(_is_response_to(reply, request_id) for reply in replies):
-            # Never leave the agent waiting on a request nobody will answer.
-            self.send(
-                _error_response(
-                    request_id,
-                    REMOTE_FAILED,
-                    "System 3 closed the connection without answering this request. "
-                    "Try again.",
+        request_id = message["id"] if is_request else _NO_ID
+        try:
+            async with self._slots:
+                replies = await self._exchange(message, request_id)
+            lines = [_encode(reply) for reply in replies]
+            if is_request and not any(_is_response_to(reply, request_id) for reply in replies):
+                # Never leave the agent waiting on a request nobody will answer.
+                lines.append(
+                    _encode(
+                        _error_response(
+                            request_id,
+                            REMOTE_FAILED,
+                            "System 3 closed the connection without answering this "
+                            "request. Try again.",
+                        )
+                    )
                 )
-            )
+        except BridgeError as exc:
+            if not is_request:
+                self.log(exc.message)
+                return
+            lines = [_encode(_error_response(request_id, exc.code, exc.message))]
+        except Exception as exc:  # noqa: BLE001 - see the docstring
+            self.log(f"could not forward a message ({type(exc).__name__})")
+            if not is_request:
+                return
+            lines = [
+                _encode(
+                    _error_response(
+                        request_id,
+                        INTERNAL_ERROR,
+                        _UNEXPECTED_FAILURE.format(kind=type(exc).__name__),
+                    )
+                )
+            ]
+        for line in lines:
+            self._write(line)
 
     async def _exchange(self, message: Any, request_id: Any) -> list[Any]:
         if isinstance(message, dict) and message.get("method") == "initialize":
@@ -463,8 +548,8 @@ class McpBridge:
             if len(raw) > MAX_REMOTE_REPLY_BYTES:
                 raise _too_large()
         try:
-            parsed = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, ValueError) as exc:
+            parsed = _parse_json(raw.decode("utf-8"))
+        except Exception as exc:  # deep nesting raises RecursionError (F-8.10-A01)
             raise BridgeError(
                 REMOTE_FAILED,
                 "System 3 sent a reply that was not valid JSON, so it was not passed "
@@ -487,8 +572,8 @@ class McpBridge:
             text = "\n".join(data_lines)
             data_lines.clear()
             try:
-                message = json.loads(text)
-            except ValueError as exc:
+                message = _parse_json(text)
+            except Exception as exc:  # deep nesting raises RecursionError (F-8.10-A01)
                 raise BridgeError(
                     REMOTE_FAILED,
                     "System 3 sent a reply that was not valid JSON, so it was not "
