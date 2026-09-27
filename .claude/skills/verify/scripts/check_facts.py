@@ -318,6 +318,14 @@ NUMBER_WORDS = {
 }
 MONTHS = [dt.date(2000, m, 1).strftime("%B") for m in range(1, 13)]
 
+# Any number a page may state, as a word in any case or in digits, for a
+# pattern that captures a count. A place is matched by the shape of its
+# claim, "(a number) tools", never by the number it said when the registry
+# was written, so a corrected count reads as PASS or FAIL, not as a pattern
+# that finds nothing (PR118-12). Longest words first, so "seventeen" is not
+# read as "seven".
+NUMBER = "(?i:" + "|".join(sorted(NUMBER_WORDS, key=len, reverse=True)) + r"|\d+)"
+
 
 def to_int(text: str) -> int:
     cleaned = text.strip().lower().replace(",", "")
@@ -471,7 +479,12 @@ COUNT = Cmp(
 )
 
 
-def _every_describe(stated: Any, truth: Any) -> str:
+def _tally(stated: Any) -> tuple[int, int]:
+    """(how many in all, how many qualify). A bare number claims them all."""
+    return (stated, stated) if isinstance(stated, int) else (stated[0], stated[1])
+
+
+def _tally_describe(stated: Any, truth: Any) -> str:
     bad = [item for item, qualifies in truth if not qualifies]
     good = len(truth) - len(bad)
     return f"{len(truth)} in all, {good} qualifying" + (
@@ -479,15 +492,17 @@ def _every_describe(stated: Any, truth: Any) -> str:
     )
 
 
-# The truth is a tuple of (item, qualifies) pairs. A sentence such as "these
-# four are real questions" passes only when it counts every item AND every
-# item qualifies: counting only the ones that qualify would let a fifth,
+# The truth is a tuple of (item, qualifies) pairs, and the place states how
+# many there are and how many qualify: "these four are real questions" is
+# (4, 4), "two of these four come from the set" is (4, 2). Both numbers must
+# match, so a sentence claiming all four passes only when every one of the
+# four qualifies: counting only the ones that qualify would let a fifth,
 # unqualified item ride under "four" (PR118-V03).
-EVERY = Cmp(
-    "every",
-    lambda s, t: s == len(t) and all(qualifies for _, qualifies in t),
-    _every_describe,
-    lambda s: tuple((f"item{i}", True) for i in range(s)),
+TALLY = Cmp(
+    "tally",
+    lambda s, t: _tally(s) == (len(t), sum(1 for _, qualifies in t if qualifies)),
+    _tally_describe,
+    lambda s: tuple((f"item{i}", i < _tally(s)[1]) for i in range(_tally(s)[0])),
     lambda t: tuple(t) + ((MUTANT, False),),
 )
 SET = Cmp("set", lambda s, t: set(s) == set(t), _set_describe, lambda s: frozenset(s))
@@ -1304,7 +1319,10 @@ def check_fact(repo: Repo, fact: Fact) -> list[Result]:
 # ------------------------------------------------------------------ commands
 
 
-def load_registry() -> tuple[Fact, ...]:
+RegistryCase = tuple[str, Callable[[], Any], Any]
+
+
+def load_registry() -> tuple[tuple[Fact, ...], tuple[RegistryCase, ...]]:
     # The registry imports this module by name. When this file runs as a
     # script it is `__main__`, so alias it first: otherwise the registry
     # would import a second copy and its Fact would not be this Fact.
@@ -1312,7 +1330,7 @@ def load_registry() -> tuple[Fact, ...]:
     sys.path.insert(0, str(HERE))
     import facts_registry
 
-    return facts_registry.FACTS
+    return facts_registry.FACTS, tuple(getattr(facts_registry, "PARSER_CASES", ()))
 
 
 def run_checks(repo: Repo, facts: tuple[Fact, ...], show_all: bool) -> int:
@@ -1392,14 +1410,18 @@ def print_map(repo: Repo, facts: Iterable[Fact]) -> int:
 # ------------------------------------------------------------------ self-test
 
 
-def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
+def self_test(
+    repo: Repo, facts: tuple[Fact, ...], registry_cases: tuple[RegistryCase, ...] = ()
+) -> int:
     """Prove every check can pass and can fail.
 
     1. Every comparison, on every place it is used: a truth built to agree
        with what the place says passes, and that truth changed fails.
     2. Every reader that can change its source: the source is changed in an
        overlay, never on disk, and the computed truth must change with it.
-    3. The parsers on fixed inputs.
+    3. The parsers on fixed inputs: the engine's own, and the registry's
+       PARSER_CASES, which read each reworded place on the wording it had
+       and on a correction of it.
     """
     failures: list[str] = []
     compared = proven = 0
@@ -1475,6 +1497,16 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
     for label, got, want in parser_cases:
         if got != want:
             failures.append(f"parser {label}: got {got!r}, want {want!r}")
+    # The registry's own fixed readings: each reworded place read on the
+    # wording it had and on a correction, so a correction stays a claim.
+    for label, reading, want in registry_cases:
+        try:
+            got = reading()
+        except Exception as exc:  # noqa: BLE001 - reported, and the self-test goes on
+            failures.append(f"registry reading {label}: {_reason(exc, repo)}")
+            continue
+        if got != want:
+            failures.append(f"registry reading {label}: got {got!r}, want {want!r}")
 
     # A reader that was not proven is a failure, not a footnote: a self-test
     # that proves fewer than all readers has not shown every check can fail.
@@ -1486,7 +1518,7 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
         f"self-test: {proven} of {compared} comparisons proven to pass and to fail; "
         f"{mutated - sum(1 for f in failures if 'did not change' in f or 'no longer reads' in f)} "
         f"of {len(facts)} readers proven to follow a changed source; "
-        f"{len(parser_cases)} parser cases; {len(failures)} failures"
+        f"{len(parser_cases) + len(registry_cases)} parser cases; {len(failures)} failures"
     )
     return 1 if failures else 0
 
@@ -1527,7 +1559,7 @@ def _run(argv: list[str]) -> int:
         print(f"check_facts: {exc}", file=sys.stderr)
         return 2
     repo = Repo(root, reference)
-    facts = load_registry()
+    facts, registry_cases = load_registry()
     if args.source:
         # A fact is selected when its truth reads the file, not only when the
         # file is its main source: the tool-layer map reads every tool module.
@@ -1544,7 +1576,7 @@ def _run(argv: list[str]) -> int:
             print(f"check_facts: no fact is computed from {wanted}, so nothing restates it")
             return 0
     if args.self_test:
-        return self_test(repo, facts)
+        return self_test(repo, facts, registry_cases)
     if args.map:
         return print_map(repo, facts)
     return run_checks(repo, facts, args.all)
