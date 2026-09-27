@@ -58,19 +58,9 @@ Last updated: 2026-09-27.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-09-27 that begins "The overnight build plan of 2026-09-25 and its settings log are deleted", the last row at the 2026-09-27 checkpoint. Of the rows read since the previous watermark, three changed a registered document's job or a process this skill runs, each now cited in its row:
+Guarded through the DECISIONS.md row dated 2026-09-27 that begins "The eight parked worktree folders under", the last row at the second 2026-09-27 checkpoint. The three rows read since the previous watermark, the `graphql-core` pin, the "repository" wording and the removed worktree folders, change a dependency, wording and local folders, not a registered document's shape, job or owner.
 
-- the test queries document becomes the gate that decides whether work is done (2026-09-26);
-- a `/verify` pass starts a wording or layout card's seven-day close (2026-09-26);
-- every owner decision is asked at once, never held for a list (2026-09-27).
-
-The others change code, rules, permissions, merges, spend or branch protection, not a registered document's shape:
-
-- phase 8.6's re-land and follow-up, phase 8.10, and cards 58 and 63;
-- the guard gaps and the graph server's password login;
-- the models, the writer bench and the MCP and command-line surfaces;
-- the rulesets, the release job and data engineering's v1.0.0;
-- the overnight run's answers, the spend cap, the parking after the machine restarted, and the deleted overnight files.
+The checkpoint earlier that day guarded the rows before them. Three of those changed a registered document's job or a process this skill runs, each cited in its row above: the test queries document as the gate, a `/verify` pass starting the seven-day close, and owner decisions asked at once.
 
 ## Why the registry lives here
 

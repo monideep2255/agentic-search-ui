@@ -2052,6 +2052,9 @@ The owner's overnight run, then a machine restart at 06:45 UTC that stopped ever
 | Cards 63, 53 and 62 | Built; card 63's judge part-way | Parked, `HANDOFF.md` |
 | Cards 64 and 65 | Added: a card 58 test that may flake, and the release findings | To do |
 | The overnight plan of 2026-09-25 and its settings log | Deleted, no longer needed | Done |
+| The GraphQL engine pinned | `graphql-core` 3.3.0, published that afternoon, turned 21 unit tests red; 3.2.11 pinned (#127) | Done; moving to 3.3.0 is card 66 |
+| "Repository", never "repo" | Prose, comments and the session-start hook's two lines, in both repositories (#126, data engineering #10) | Done |
+| The parked worktree folders | Removed, with every branch kept | Done; `HANDOFF.md` says how to recreate one |
 
 ### The overnight build of 2026-09-25, in one table
 

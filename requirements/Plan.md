@@ -1062,6 +1062,10 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 - Data engineering v1.0.0: tagged by hand, `production` cut from the tag, the first release run releasing nothing as designed, and the notes published.
 - A second window on the same conversation resumed the lead's agents while the lead still ran. The owner chose that window, and the first lead was stopped (`LEARNINGS.md`).
 - The machine restarted at 06:45 UTC with seven agents running. The owner parked phase 8.7, cards 53, 62 and 63, and card 58's product review.
+- Later the same day:
+  - `graphql-core` 3.3.0, published at 14:50 UTC, turned 21 unit tests red on develop, and the owner pinned 3.2.11 (#127).
+  - Prose says "repository", never "repo", in both repositories (#126, data engineering #10).
+  - The parked worktree folders were removed, and every branch kept.
 - Decisions, each in `DECISIONS.md`:
   - develop's daily spend cap raised to $25;
   - Stop keeps the records already on screen in phase 8.7;
