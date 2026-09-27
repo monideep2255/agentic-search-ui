@@ -1,0 +1,146 @@
+# Build phase 8.7: answers that answer, sooner
+
+A person asks a question and waits about 17 seconds in silence, and the first sentence they finally read counts records instead of answering. This phase makes the first sentence answer the question, puts the records on screen at about 8 seconds, and moves the writing to the model the owner chose. Opened 2026-09-27 at 04:29 UTC on the owner's overnight decision (`DECISIONS.md`, 2026-09-27, "The overnight run"): build, review, and merge if the golden run holds.
+
+Cards: 2 (the first sentence), 50 (nobody waits in silence), 5 (models by tier, the Opus writer). Sources:
+
+- `testing/Developer/reports/2026-09-26_phase_8.7/design.md`: the first sentence, design C.
+- `testing/Developer/reports/2026-09-26_answer_speed/report.md`: where the seconds go, options B, C, E and H, tickets S1 to S3.
+- `testing/Developer/reports/2026-09-26_writer_bench_3/results.md`: Opus 5.5 at minimal effort confirmed over three runs.
+
+## Table of contents
+
+- [Goal contract](#goal-contract)
+- [Budget](#budget)
+- [Tickets](#tickets)
+- [Builder split](#builder-split)
+- [Dispatch plan](#dispatch-plan)
+- [Review focus](#review-focus)
+- [Out of scope, and why](#out-of-scope-and-why)
+- [History](#history)
+- [Findings](#findings)
+
+## Goal contract
+
+### Done when
+
+- The first sentence answers the question when a cited record carries the answer, and says plainly which fact the records lack when none does (card 2).
+- The records the answer is built from, with their citations, are on screen within about 8 seconds at the median, and the written summary appears above them without the list jumping (card 50, option E).
+- The written summary reaches the screen sooner than today's median of 16.8 seconds to the first word, and the screen no longer holds back what has already arrived (card 50, option B and the pacing lag).
+- No literature search holds an answer more than 6 seconds; a search cut off says so in the existing note (option C).
+- The writer is Opus 5.5 at minimal reasoning effort, with a per-model effort setting and a per-question cap of 25 cents (card 5).
+
+### Verify
+
+- The golden consistency run, three passes over the 50 golden questions: at least 101 of 150 answered, no more than 42 answered summaries withdrawn, must-cite hits recorded, and two columns added from the runs file: the first word's time, and whether the first sentence is the code-built count line or a model-led one.
+- The product reviewer on develop: every changed screen at 1280 and 390 beside `docs/build/design/design-system/screens/streaming.html` and `prototype/app.html`, and the five-line rubric's line 1, "does the first sentence answer the question", which may score "states a gap honestly".
+- Test queries 1, 2, 17, 72 and 98.
+
+### Output
+
+- A pull request from `phase/8.7-answers-sooner` into `develop`.
+- This ledger, with every dispatch, finding and golden number.
+
+### Constraints
+
+- Cite-or-refuse is unchanged. Only sentences the grounding pass already accepted can lead, and a failed, late or unreadable lead decision leaves today's code-built line leading.
+- The trust verdict is unchanged.
+- The lead decision is a classifier's, Jev's with the owner's fallback rule of phase 8.6, never a match on the question's words (`DECISIONS.md`, 2026-09-24, no hardcoded decisions).
+- The stable prompt prefix stays byte-identical (`prompt-cache-discipline`).
+- The event contract change is one additive field, bounded like every other field, which puts this phase at dial position 3.
+- Card 58's Stop rules stay true: Stop works until the first sentence is on screen, and nothing from a stopped answer shows.
+- Model spend stops at the shared account's $8 floor. It held $42.78 at 04:09 UTC, about two golden runs with Opus at roughly $17 each.
+
+### Blocked-stop
+
+- The golden run answers fewer than 101 of 150: stop, and the owner decides.
+- PubMed stays down at NCBI: no golden run, so no merge.
+- A second failing review on anything: stop that piece, untouched.
+- The account reaches its floor: stop spending, whatever is left.
+
+## Budget
+
+- Wall clock: 8 hours from 04:29 UTC on 2026-09-27.
+- Dial: position 3, for the event contract's additive field. A numbered phase keeps its branch and pull request anyway.
+- Dispatches, 8 of 8 planned: builders A and C now, builder B after card 58 merges, the judge, the adversary, one fix agent, a fresh verifier, and the product reviewer.
+
+| Role | Model | Effort | Started | Ended | Tokens |
+|---|---|---|---|---|---|
+
+## Tickets
+
+### T-8.7-01: The first sentence answers the question, and the write step waits less (cards 2 and 50)
+
+- Builder: A. Answer path: yes. Status: todo.
+- Acceptance, in the owner's words:
+  - "The first sentence answers what I asked, or tells me the records do not say."
+  - "The list of records the answer is built from appears within a second of the last search finishing."
+  - "The written summary arrives sooner."
+- Scope:
+  - Design C: after grounding, one classifier decision, Jev with the phase 8.6 fallback, sees the question and the first one or two already-grounded sentences and decides whether one of them answers it. Yes: it leads, and the count line follows. No, or any failure: the code-built line leads, extended to name the field the records lack.
+  - Option E's server half: ground the listing before the writer call, and send the count line and the listing live, numbered by the listing, carrying the new placement field.
+  - Option B, measured under the Opus writer: Opus needed the completeness draft on only 8 of 18 bench questions against glm's 18 of 18, so writing both drafts side by side may cost more than it saves. Measure both orders on the bench questions and keep the faster one within the 25-cent cap, and say which and why.
+- Files: `core/graph.py`, only `_write_answer` and the write helpers; `synthesis/findings.py`; `synthesis/answer_layout.py`; `harness/decide.py` for the new decision; their tests.
+
+### T-8.7-02: Act waits less, and Opus writes (cards 50 and 5)
+
+- Builder: C. Answer path: yes. Status: todo.
+- Acceptance:
+  - "No answer waits more than 6 seconds on a literature search, and when one is cut off, the answer says one of its searches did not finish."
+  - "The answer is written by Opus at minimal effort, and a question never costs more than 25 cents."
+- Scope:
+  - Option C: a 6 second cap on each PubTator call, down from 20.
+  - Option H's Act half: name lookups during Act.
+  - Option K's first step only: a probe proving whether the reader's output reaches any answer. The skip itself waits for a later phase.
+  - The synth tier's default becomes `anthropic/claude-opus-5.5`, with a per-model effort table so Opus runs at `minimal` while every other model keeps `none`; the model is priced before it is called; the per-question cap becomes $0.25.
+  - `docs/architecture/Model_architecture.md` says so, in the same commit.
+- Files: `core/graph.py`, only `_LAYER_TOOL_ACT_TIMEOUT_SECONDS` and `act_node`; `harness/coordinator_worker.py`; `harness/tiers.py`; `harness/harness.py`'s effort table; `harness/cost_control.py`; `docs/architecture/Model_architecture.md`; their tests.
+
+### T-8.7-03: The screen shows what has arrived (card 50)
+
+- Builder: B, after card 58 merges into `develop` and `develop` merges into this branch. Answer path: no, but runnable behaviour. Status: todo.
+- Acceptance:
+  - "Within about 8 seconds at the median I see the records with their citations."
+  - "The summary appears above the list without the list jumping, and nothing shown is taken back."
+  - "Stop still works until the first sentence is on screen."
+- Scope:
+  - `contracts/events.py`: one additive placement field on `TokenPayload`, bounded.
+  - `frontend/src/lib/events.ts`, `hooks/useRunView.ts`, `hooks/usePacedEvents.ts`, `hooks/useAnswerReveal.ts` and the answer screen components: render the listing as it arrives, keep a writing slot above it, insert the summary when it lands, and remove the pacing lag that held arrived text back by up to 13 seconds.
+- Design source: `docs/build/design/design-system/screens/streaming.html` and `prototype/app.html`.
+
+## Builder split
+
+| Builder | Tickets | Fence | Model |
+|---|---|---|---|
+| A | T-8.7-01 | the write step's functions in `core/graph.py`, `synthesis/`, `harness/decide.py` | Opus 5.5 |
+| C | T-8.7-02 | Act's functions in `core/graph.py`, the harness tier, effort and cost files, the model map | Opus 5.5 |
+| B | T-8.7-03 | `contracts/events.py` and `frontend/` | Opus 5.5 |
+
+A and C touch disjoint functions of `core/graph.py`. The lead fixes the placement field's name and bound in T-8.7-03 before A starts, so A and B agree: `placement`, one of `"listing"` or `"summary"`, default `"summary"`.
+
+## Dispatch plan
+
+1. Builders A and C, now, each in a worktree the lead creates from the pushed phase branch.
+2. Builder B, after card 58 lands on `develop`.
+3. The judge and the adversary, on the merged branch.
+4. One fix agent and a fresh verifier.
+5. The golden run, by the lead, once PubMed answers and the balance allows. Then the product reviewer on develop.
+
+## Review focus
+
+- The judge: cite-or-refuse and the trust verdict unchanged; the lead decision failing closed; the prompt prefix byte-identical; the cost cap enforced with Opus's real price; the event field's bound; Stop's rules.
+- The adversary: a first sentence that answers confidently from a record that does not carry it; a listing shown that the written answer then contradicts; a summary that pushes the list; a cost overrun.
+
+## Out of scope, and why
+
+- The graph indexes for G-016 and G-021: they belong to the data engineering repository.
+- The Pathogen Detection isolate table: a follow-up ticket.
+- Guardrail and Think overlapping: the locked specification's Section 10.1 says a refused question never reaches Think, so it is the owner's decision.
+- Shorter writer replies: measured after this phase in one golden run.
+- A streaming writer, sentence by sentence as the model writes: revisited after B and E, since it clashes with two drafts.
+
+## History
+
+- 2026-09-27 04:29: phase opened on the owner's overnight decision. Transport preflight READY: the product model, the harness model and the graph each answered. PubMed's search is down at NCBI ("Cannot connect to SOLR" at 04:11 UTC), so the golden run waits for it.
+
+## Findings
