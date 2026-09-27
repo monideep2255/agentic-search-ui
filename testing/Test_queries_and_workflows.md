@@ -1137,8 +1137,8 @@ What you should see:
 - About opens with "What happens to your question": seven numbered stops following one BRCA1 question through the system, and its closing line has an "open Search" link that returns to the home page.
 - About ends with "Where the data comes from": the knowledge graph is a snapshot finished on 22 April 2026, built from Gene, PubMed, ClinVar, Taxonomy and MedGen, holding 115,406,761 nodes and 693,295,991 edges, with layers 2 and 3 called live. "Explore the architecture" goes to the Architecture page without reloading, so you stay logged in.
 - Architecture opens with the title "Architecture" and four numbered stops: Layer 1 the data pipelines and the knowledge graph, Layer 2 live NCBI APIs, Layer 3 enrichment, then how all three feed the search agent. The word "system" appears nowhere on the page, and it also opens directly at /architecture.
-- Stop 1 shows the pipeline steps, the snapshot figures, one card per source database with its node count, the graph facts and an example query, and it ends with the blue L1 card for cypher_query naming its 90-second, 500-row limit. Stops 2 and 3 each show their own coloured card: green L2 with ncbi_efetch, ncbi_dbsnp and pathogen_detection, purple L3 with pubtator_annotate, litvar2_lookup and clinicaltrials_search, each tool naming what it calls and its time limit.
-- Stop 4 says the agent reads layer 1 first and reaches layers 2 and 3 live while you wait, and that every fact arrives with a link to the record behind it.
+- Stop 1 shows the pipeline steps, the snapshot figures, one card per source database with its node count, the graph facts and an example query, and it ends with the blue L1 card for cypher_query naming its 30-second, 500-row limit. Stops 2 and 3 each show their own coloured card: green L2 with ncbi_efetch, ncbi_dbsnp and pathogen_detection, purple L3 with pubtator_annotate, litvar2_lookup and clinicaltrials_search, each tool naming what it calls and its time limit.
+- Stop 4 says the agent reads all three layers at once, the graph query and the live layer 2 and 3 calls together, and that every fact arrives with a link to the record behind it.
 - The closing line on Architecture, "open About", goes back to About.
 - The copy button copies the snippet.
 - At phone width nothing scrolls sideways, and the other pages are reachable from "More pages".
@@ -1153,14 +1153,14 @@ What you should see:
 Queries to try:
 
 - No query of its own: open the Integrations page, read the printed MCP configuration, and click its copy button.
-- If you have an MCP client, paste the configuration into it exactly as printed and use it.
+- If you have an MCP client, paste the configuration into it, put a fresh token in place of `<your token>`, and use it.
 
 What you should see:
 
-- The MCP configuration printed on the Integrations page is complete and copies cleanly. This is only what the product owner can judge by eye; whether it actually connects end to end is a developer check, see Workflow for the developer below.
+- The MCP configuration printed on the Integrations page is complete and copies cleanly: `"type": "http"`, an address ending in `/mcp/`, and an Authorization line reading "Bearer <your token>". Whether it connects end to end is a developer check, see Workflow for the developer below; query 93 reaches the same server by hand through `s3 mcp`.
 - The configuration is printed on the page.
 - The copy button copies it.
-- Pasted as printed, it works without editing, and it never sends you to an `http://` address.
+- Pasted as printed with a fresh token in place of `<your token>`, it works, and it never sends you to an `http://` address. A token lasts 15 minutes.
 - The address it prints no longer drops the s from https. Before 23 September a request to it was answered with a redirect to an `http://` address, which a client would follow with its token in the clear.
 - The end-to-end half is already proven live on develop by the developer check below, which is why this is the one item of the 23 September set that did not need a signed-in session to verify.
 - Why it matters: a developer following printed setup instructions should not have to debug the instructions themselves before they can use the integration.
@@ -1427,7 +1427,7 @@ What you should see:
 
 - At Plain language, the answer names several of the features MedGen lists for Marfan syndrome, for example aortic regurgitation, arachnodactyly or ectopia lentis, each cited to MedGen.
 - At Researcher, a section "Clinical features MedGen lists for Marfan syndrome" lists them, each cited to MedGen, with its HPO id. It says how many of how many are shown when the list is cut.
-- Known: at Researcher the written answer above the list may not name the features. Setting aside room for them in every disease answer pushed other answers' definitions out, so it was withdrawn; the follow-up, doing it only when a question asks about features, is a To do card.
+- At Researcher the written answer above the list names the features too: since phase 8.6, room is set aside for them only when a classifier decides the question asks about features (T-8.6-06, card 31).
 - Known: the written answer names the first features MedGen lists, which are not always the most important. Aortic root aneurysm is in the list, not always in the sentences.
 - Why it matters: this question used to answer with variant and gene records, a confident answer of the wrong kind.
 
