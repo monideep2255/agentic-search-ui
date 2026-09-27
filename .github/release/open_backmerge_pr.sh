@@ -37,7 +37,11 @@
 # than something to change while touching this file.
 set -euo pipefail
 
+# shellcheck source=.github/release/commit_lib.sh
+. "$(dirname "$0")/commit_lib.sh"
+
 version="${RELEASE_VERSION:?RELEASE_VERSION is required}"
+previous="${PREVIOUS_TAG:-}"
 branch="chore/back-merge-${version}"
 
 git config user.name "github-actions[bot]"
@@ -60,11 +64,29 @@ fi
 git checkout --quiet -B "$branch"
 git push -u origin "HEAD:refs/heads/${branch}"
 
+# A MISSING PREVIOUS SECTION IS NAMED HERE, from the file being pushed rather
+# than from anything an earlier step said (F-REL-J03). The carry step warns
+# when it cannot bring the previous release's section in; this is the place
+# the owner cannot miss, because they have to open this pull request anyway.
+missing=""
+if [ -n "$previous" ] && [ -z "$(release_changelog_section "$previous" < CHANGELOG.md)" ]; then
+  missing="A CHANGELOG SECTION IS MISSING. CHANGELOG.md on this branch has no ${previous} section,
+so merging it as it stands leaves that release out of the changelog. The
+release job could not carry it forward, and the job's log says why. Before
+merging, add it on this branch, directly below the \`## ${version}\` section.
+Its heading is \`## ${previous} (<date>)\`. Its text is the notes of the
+${previous} GitHub Release, or the section on the
+\`chore/back-merge-${previous}\` branch if that branch still exists.
+
+"
+  echo "::warning title=CHANGELOG.md is missing ${previous}::the back-merge pull request for ${version} says how to add the ${previous} section"
+fi
+
 gh pr create \
   --base develop \
   --head "$branch" \
   --title "chore: back-merge ${version} into develop" \
-  --body "Automated back-merge of release ${version}.
+  --body "${missing}Automated back-merge of release ${version}.
 
 The tag \`${version}\` is on \`production\`. The changelog commit for this
 release is NOT: the release job never pushes to \`production\`. This pull

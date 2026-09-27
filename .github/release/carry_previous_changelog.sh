@@ -36,11 +36,29 @@
 # reach no tag and no notes, since both stop at RELEASE_SHA, and they are on
 # `develop` already, where the back-merge pull request goes.
 #
-# FAIL-SOFT, deliberately. If the commit is not found, or the merge conflicts,
-# this says so in the log and changes nothing, and the release goes out exactly
-# as it would have without this step. The deploy has already happened by the
-# time this runs, so blocking the release on changelog housekeeping would be
-# the worse trade.
+# A CONFLICT IS RESOLVED, NOT DROPPED (F-REL-J03). The merge conflicts when
+# CHANGELOG.md changed near the top after the previous release, for example
+# when the owner corrected an older heading on `develop`. It used to be aborted
+# with one log line, and the previous section was lost in silence. It is
+# resolved instead, because the right answer is known exactly: the commit
+# being carried changes CHANGELOG.md and nothing else (commit_lib.sh's verdict
+# requires it), and all it adds is its own section. So the file becomes this
+# checkout's CHANGELOG.md, every edit in it kept, with the previous section,
+# exactly as that commit wrote it, placed above the newest section here. That
+# is the file a person resolving the conflict by hand would write, and newest
+# first holds, since no release after the previous one has a section yet. The
+# merge commit still records the carried commit as a parent, so merging the
+# older back-merge pull request later changes nothing.
+#
+# FAIL-SOFT, AND LOUD, when nothing can be carried: the commit is on neither
+# ref, the conflict reaches a file other than CHANGELOG.md, or the carried
+# commit has no section to take. Then this changes nothing, prints a
+# `::warning::` that GitHub shows on the run's summary, and the release goes
+# out without the section. open_backmerge_pr.sh then reads the file it pushes
+# and names the missing section, and how to add it, in the pull request the
+# owner has to open anyway. The deploy has already happened by the time this
+# runs, so blocking the release on changelog housekeeping would be the worse
+# trade; losing a section without a word was the defect.
 set -euo pipefail
 
 # shellcheck source=.github/release/commit_lib.sh
@@ -73,31 +91,62 @@ found="$(release_find_changelog_commit "$previous" \
   "refs/remotes/origin/chore/back-merge-${previous}" "refs/remotes/origin/develop")"
 candidate="${found%%$'\t'*}"
 
+# The one voice for "the previous section will be missing". A workflow command
+# on stdout, so GitHub lifts it onto the run's summary page, not only the log.
+not_carried() { # <why>
+  echo "::warning title=CHANGELOG.md is missing ${previous}::$1 This release's" \
+       "section is written without the ${previous} section. The back-merge pull" \
+       "request says how to add it by hand."
+}
+
 if [ -z "$candidate" ]; then
-  echo "warning: CHANGELOG.md has no ${previous} section, and no changelog commit" \
-       "for ${previous} is on its back-merge branch or on develop. This release's" \
-       "section is written without it; add the ${previous} section by hand in a" \
-       "pull request to develop" >&2
+  not_carried "No changelog commit for ${previous} is on its back-merge branch or on develop."
   exit 0
 fi
 
 if git merge-base --is-ancestor "$candidate" HEAD; then
-  echo "this checkout already contains the ${previous} changelog commit" \
-       "${candidate}, though CHANGELOG.md has no ${previous} section; not carrying" >&2
+  not_carried "This checkout already contains the ${previous} changelog commit ${candidate}, though CHANGELOG.md has no ${previous} section, so a later edit removed it."
   exit 0
 fi
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+message="chore: carry the ${previous} changelog into the next release"
 echo "the ${previous} back-merge was not merged before this release;" \
      "carrying its changelog commit ${candidate}" >&2
-if git merge --quiet --no-ff --no-edit \
-     -m "chore: carry the ${previous} changelog into the next release" "$candidate"; then
+if git merge --quiet --no-ff --no-edit -m "$message" "$candidate"; then
   echo "carried the ${previous} changelog" >&2
-else
-  git merge --abort
-  echo "warning: carrying the ${previous} changelog conflicted; not carrying it." \
-       "This release's section is written without it; add the ${previous} section" \
-       "by hand in a pull request to develop" >&2
+  exit 0
 fi
+
+# The merge conflicted. Resolve it as the header says, or leave everything as
+# it was and say so.
+conflicted="$(git diff --name-only --diff-filter=U)"
+section="$(git show "${candidate}:CHANGELOG.md" | release_changelog_section "$previous")"
+if [ "$conflicted" != "CHANGELOG.md" ] || [ -z "$section" ]; then
+  git merge --abort
+  not_carried "Carrying the ${previous} changelog commit ${candidate} conflicted outside CHANGELOG.md's sections."
+  exit 0
+fi
+
+# This checkout's CHANGELOG.md with the section placed above its first `## `
+# heading, one blank line on each side, or at the end when it has no heading.
+# The section travels in the environment, so awk never parses its text as
+# program or as an escape sequence.
+git show HEAD:CHANGELOG.md \
+  | CARRIED_SECTION="$section" awk '
+      function put_section() {
+        if (seen && last ~ /[^[:space:]]/) { print "" }
+        print ENVIRON["CARRIED_SECTION"]
+        print ""
+        done = 1
+      }
+      !done && /^## / { put_section() }
+      { print; seen = 1; last = $0 }
+      END { if (!done) { put_section() } }
+    ' > CHANGELOG.md
+git add CHANGELOG.md
+git commit --quiet -m "$message"
+echo "carried the ${previous} changelog, resolving its conflict in CHANGELOG.md:" \
+     "the ${previous} section now sits above this checkout's newest section" >&2

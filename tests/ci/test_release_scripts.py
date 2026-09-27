@@ -640,6 +640,86 @@ def test_a_squash_merged_back_merge_is_carried_forward(released: Released, tmp_p
     assert _headings(repo.changelog_on("refs/heads/develop")) == ["v0.2.1", "v0.2.0", "v0.1.0"]
 
 
+def _pr_body(run: ReleaseRun) -> str:
+    args = _call(run, "pr", "create").args
+    return args[args.index("--body") + 1]
+
+
+def test_a_carry_that_conflicts_keeps_both_sections(released: Released, tmp_path: Path) -> None:
+    """Finding F-REL-J03: a conflicting carry dropped the previous section in silence.
+
+    The owner corrects the v0.1.0 heading on `develop` while the v0.2.0
+    back-merge is still open, so carrying the v0.2.0 changelog commit
+    conflicts on the lines around that heading. The previous changelog commit
+    changes CHANGELOG.md and nothing else, and all it adds is its own section,
+    so the correct resolution is known: this checkout's file, the owner's
+    correction included, with the v0.2.0 section placed above the newest one.
+    """
+    repo = released.repo.fork(tmp_path / "repo")
+    carried = repo.origin_ref("refs/heads/chore/back-merge-v0.2.0")
+    repo.commit(
+        "docs: correct the v0.1.0 date",
+        changelog=_CHANGELOG_PREAMBLE
+        + "## v0.1.0 (2026-01-02)\n\n### Features\n\n- the first capability\n",
+    )
+    repo.commit("fix: a follow-up question keeps its gene")
+    repo.push("develop")
+    repo.release()
+    tip = repo.origin_ref("refs/heads/production")
+
+    run = repo.run_release_job()
+
+    assert repo.origin_ref("refs/heads/production") == tip
+    assert repo.origin_ref("refs/tags/v0.2.1^{commit}") == tip
+    branch = "refs/heads/chore/back-merge-v0.2.1"
+    changelog = repo.changelog_on(branch)
+    assert _headings(changelog) == ["v0.2.1", "v0.2.0", "v0.1.0"], (
+        "the v0.2.0 section was lost when carrying it conflicted\n" + run.log
+    )
+    assert "## v0.1.0 (2026-01-02)" in changelog, "the owner's correction was lost"
+    assert "\n\n\n" not in changelog and "\n## " not in changelog.replace("\n\n## ", ""), (
+        f"a section seam is not exactly one blank line:\n{changelog}"
+    )
+    assert repo.is_ancestor(carried, repo.origin_ref(branch))
+    assert "has no v0.2.0 section" not in _pr_body(run)
+
+    repo.merge_back_merge("v0.2.1")
+    repo.merge_back_merge("v0.2.0")
+    develop = repo.changelog_on("refs/heads/develop")
+    assert _headings(develop) == ["v0.2.1", "v0.2.0", "v0.1.0"], develop
+    assert "## v0.1.0 (2026-01-02)" in develop
+
+
+def test_a_previous_section_that_cannot_be_carried_is_named_out_loud(
+    released: Released, tmp_path: Path
+) -> None:
+    """Finding F-REL-J03, the other half: when nothing can be carried, say so.
+
+    The owner deleted the v0.2.0 back-merge branch without merging it, so its
+    changelog commit is on no branch the job can read. The release still goes
+    out, and both the job's log and the v0.2.1 back-merge pull request name
+    the missing section and say how to add it.
+    """
+    repo = released.repo.fork(tmp_path / "repo")
+    repo.git("push", "--quiet", "origin", "--delete", "chore/back-merge-v0.2.0")
+    repo.commit("fix: a follow-up question keeps its gene")
+    repo.push("develop")
+    repo.release()
+
+    run = repo.run_release_job()
+
+    assert run.outputs["version"]["version"] == "v0.2.1", run.log
+    branch = "refs/heads/chore/back-merge-v0.2.1"
+    assert _headings(repo.changelog_on(branch)) == ["v0.2.1", "v0.1.0"]
+    assert (
+        "::warning title=CHANGELOG.md is missing v0.2.0::No changelog commit for v0.2.0"
+        in run.log
+    ), run.log
+    body = _pr_body(run)
+    assert "has no v0.2.0 section" in body, body
+    assert "v0.2.0 GitHub Release" in body, body
+
+
 # ---------------------------------------------------------------------------
 # A commit that borrows the robot's subject is still a commit
 # ---------------------------------------------------------------------------
