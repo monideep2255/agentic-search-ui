@@ -1,0 +1,177 @@
+
+=== 1. A first search with citations (Product test 1)
+  PASS answered                    r1 'Which diseases are associated with'   23 citations, outcome ask, guard ok, asked back: False
+  PASS max_seconds                 r1 'Which diseases are associated with'   21.5 s against 90 s
+  PASS no_shape                    r1 'Which diseases are associated with'   none
+  PASS text_lacks                  r1 'Which diseases are associated with'   absent
+  PASS hosts_pinned                r1 'Which diseases are associated with'   23 links on pinned hosts
+
+=== 2. Plain language versus researcher depth (Product test 7)
+  FAIL no_structure                r1 'Which diseases are associated with'   {'heading': 1, 'list_item': 23}
+  PASS has_structure               r1 'Which diseases are associated with'   {'claim': 4, 'paragraph_break': 8, 'heading': 6, 'table_header': 6, 'table_row': 23}
+  PASS same_sources                r1 ''                                     `Which diseases are associated with BRCA1?`: 2 answers, 1 distinct link sets
+  PASS text_lacks                  r1 'Which diseases are associated with'   absent
+  PASS text_lacks                  r1 'Which diseases are associated with'   absent
+
+=== 5. Trust signals and sources across layers (Product test 12)
+  PASS layers_at_least             r1 'Which diseases are associated with'   layers ['layer_2_api', 'layer_3_enrichment']
+  PASS layers_at_least             r1 'What is known about EGFR mutations'   layers ['layer_1_graph', 'layer_2_api', 'layer_3_enrichment']
+  PASS hosts_pinned                r1 'Which diseases are associated with'   23 links on pinned hosts
+  PASS hosts_pinned                r1 'What is known about EGFR mutations'   56 links on pinned hosts
+  PASS trust_line_shape            r1 'Which diseases are associated with'   trust line "Based on 22 sources, not yet confirmed"
+  PASS trust_line_shape            r1 'What is known about EGFR mutations'   trust line "Based on 56 sources, not yet confirmed"
+  PASS layers_at_least             r1 'What is known about EGFR mutations'   layers ['layer_1_graph', 'layer_2_api', 'layer_3_enrichment']
+  PASS max_resource                r1 'What is known about EGFR mutations'   5 against 5
+  PASS hosts_pinned                r1 'Which diseases are associated with'   23 links on pinned hosts
+  PASS hosts_pinned                r1 'What is known about EGFR mutations'   56 links on pinned hosts
+
+=== 10. The hundred-second question, fixed (G-039)
+  PASS max_seconds                 r1 'I am a student. Explain in plain t'   17.2 s against 60 s
+  PASS resource_cited              r1 'I am a student. Explain in plain t'   2 gene records
+  PASS no_sentence_with_words      r1 'I am a student. Explain in plain t'   no such sentence
+
+=== 11. Researcher depth runs to the end of the record (11.33)
+  FAIL runs_past                   r1 'Which diseases are associated with'   the record text is not in the answer
+
+=== 14. NCBI's own gene summary is retrieved and shown as a source (11.31)
+  PASS resource_cited              r1 'Which diseases are associated with'   1 gene_summary records
+
+=== 22. CFTR variants still answer
+  PASS answered                    r1 'Which clinically significant varia'   72 citations, outcome ask, guard ok, asked back: False
+
+=== 23. rs334 without invented conditions
+  PASS text_lacks                  r1 'What is rs334 and what condition i'   absent
+  PASS text_lacks                  r1 'What is rs334 and what condition i'   absent
+
+=== 24. Comparing two genes in a disease context (G-033)
+  PASS no_sentence_with_words      r1 'Compare what is known about MLH1 a'   no such sentence
+
+=== 25. GEO expression datasets for TP53 (G-037)
+  PASS hosts_pinned                r1 'Find GEO expression datasets study'   24 links on pinned hosts
+  PASS hosts_pinned                r2 'Find GEO expression datasets study'   24 links on pinned hosts
+  PASS resource_cited              r1 'Find GEO expression datasets study'   5 geo records
+  PASS resource_cited              r2 'Find GEO expression datasets study'   5 geo records
+  PASS no_sentence_with_words      r1 'Find GEO expression datasets study'   no such sentence
+  PASS no_sentence_with_words      r2 'Find GEO expression datasets study'   no such sentence
+
+=== 27. The same window, with genes and overlapping records asked for by name
+  PASS names_present               r1 'What ACMG-relevant evidence is ava'   all named
+  FAIL hosts_pinned                r1 'What ACMG-relevant evidence is ava'   no dbvar link among 59
+  PASS resource_cited              r1 'What ACMG-relevant evidence is ava'   46 clinvar records
+  FAIL resource_cited              r1 'What ACMG-relevant evidence is ava'   0 dbvar records
+  PASS text_lacks                  r1 'What ACMG-relevant evidence is ava'   absent
+
+=== 30. A BioProject accession with everything it links to (G-007)
+  PASS answered                    r1 'For BioProject PRJNA31257, list th'   4 citations, outcome ask, guard ok, asked back: False
+  PASS resource_cited              r1 'For BioProject PRJNA31257, list th'   1 bioproject records
+  PASS hosts_pinned                r1 'For BioProject PRJNA31257, list th'   4 links on pinned hosts
+  PASS resource_cited              r1 'For BioProject PRJNA31257, list th'   1 sra records
+  PASS resource_cited              r1 'For BioProject PRJNA31257, list th'   1 assembly records
+  PASS id_cited                    r1 'For BioProject PRJNA31257, list th'   SRR9496657 found
+  PASS id_cited                    r1 'For BioProject PRJNA31257, list th'   GRCh38.p14 found
+  PASS text_lacks                  r1 'For BioProject PRJNA31257, list th'   absent
+
+=== 33. The flagship question: E. coli and ESBL genes (G-035, isolate query 1)
+  PASS row_count                   r1 'What Escherichia coli isolates in '   20 table rows against 20
+  PASS rows_have_gene              r1 'What Escherichia coli isolates in '   all 20 rows
+  PASS hosts_pinned                r1 'What Escherichia coli isolates in '   21 links on pinned hosts
+  PASS text_has                    r1 'What Escherichia coli isolates in '   present
+  PASS text_has                    r1 'What Escherichia coli isolates in '   present
+  PASS hosts_pinned                r1 'What Escherichia coli isolates in '   21 links on pinned hosts
+  PASS resource_cited              r1 'What Escherichia coli isolates in '   1 taxonomy records
+  PASS max_seconds                 r1 'What Escherichia coli isolates in '   30.2 s against 60 s
+  PASS esbl_rows_not_only          r1 'What Escherichia coli isolates in '   none
+  N/A  if_truncated_says_at_least  r1 'What Escherichia coli isolates in '   the isolate scan was not cut off
+  PASS hosts_pinned                r1 'What Escherichia coli isolates in '   21 links on pinned hosts
+
+=== 47. Compute requests are turned away (G-046, G-047)
+  PASS refused_by_guard            r1 'BLAST this sequence against nr and'   guard passed=False compute_request
+  PASS refused_by_guard            r1 'Here is my VCF file, tell me which'   guard passed=False compute_request
+  PASS refused_compute             r1 'BLAST this sequence against nr and'   guard passed=False compute_request
+  PASS refused_compute             r1 'Here is my VCF file, tell me which'   guard passed=False compute_request
+
+=== 64. Subject terms are named, not coded (G-019)
+  PASS answered                    r1 'What MeSH terms are assigned to PM'   26 citations, outcome ask, guard ok, asked back: False
+  PASS resource_count              r1 'What MeSH terms are assigned to PM'   26 against 26
+  PASS hosts_pinned                r1 'What MeSH terms are assigned to PM'   26 links on pinned hosts
+  PASS no_shape                    r1 'What MeSH terms are assigned to PM'   none
+
+=== 65. The opening count matches the list beneath it
+  PASS count_matches_list          r1 'Which diseases are associated with'   opens with 4, the list shows 4
+  PASS count_matches_list          r1 'Which diseases are associated with'   opens with 4, the list shows 4
+
+=== 68. A condition, asked by its common name and by its abbreviation (12.1)
+  FAIL answered                    r1 'the picked choice'                    0 citations, outcome refuse, guard None, asked back: True
+  FAIL answered                    r1 'the picked choice'                    0 citations, outcome refuse, guard None, asked back: True
+  PASS answered                    r1 'the picked choice'                    14 citations, outcome answer, guard None, asked back: False
+  PASS text_lacks                  r1 'the picked choice'                    absent
+  PASS text_lacks                  r1 'the picked choice'                    absent
+  PASS text_lacks                  r1 'the picked choice'                    absent
+  SKIP hosts_pinned                r1 'the picked choice'                    no citation links saved
+
+=== 70. The same question in lower case (12.2)
+  SKIP guard_passed                r1 'any trials for gerd?'                 no guard event saved
+  SKIP guard_passed                r1 'recent papers on statins'             no guard event saved
+  SKIP guard_passed                r1 'what does the literature say about'   no guard event saved
+  SKIP guard_passed                r1 'is there a trial recruiting for me'   no guard event saved
+  PASS answered                    r1 'is there a trial recruiting for me'   14 citations, outcome answer, guard None, asked back: False
+  SKIP resource_cited              r1 'is there a trial recruiting for me'   this saved run kept no citation links
+
+=== 72. Plain language and researcher mode read differently on every question (12.9)
+  PASS text_has                    r1 'Any trials for GERD?'                 present
+  PASS same_sources                r1 ''                                     `Any trials for GERD?`: 2 answers, 1 distinct link sets
+  PASS same_sources                r1 ''                                     `recent papers on statins`: 2 answers, 1 distinct link sets
+  PASS same_sources                r1 ''                                     `What phenotypic features are associated with Marfan syndrome?`: 2 answers, 1 distinct link sets
+  PASS depths_differ               r1 ''                                     `Any trials for GERD?`: the two depths differ
+  PASS depths_differ               r1 ''                                     `recent papers on statins`: the two depths differ
+  PASS depths_differ               r1 ''                                     `What phenotypic features are associated with Marfan syndrome?`: the two depths differ
+
+=== 73. A question with no gene or disease is answered, not just listed (12.10)
+  PASS no_sentence_opens           r1 'the picked choice'                    none
+  SKIP count_matches_list          r1 'the picked choice'                    this saved run kept no citation markers
+  SKIP count_matches_list          r1 'the picked choice'                    this saved run kept no citation markers
+  SKIP count_matches_list          r1 'the picked choice'                    this saved run kept no citation markers
+  N/A  count_matches_list          r1 'the picked choice'                    the opening states no count: "What would you like to know about GERD?"
+  PASS asked_back                  r1 'GERD'                                 asked "What would you like to know about GERD?" with 4 choices
+
+=== 74. The sources count agrees with what is shown (12.11, 12.8)
+  PASS trust_count_matches_sources r1 'Which diseases are associated with'   "Based on 22 sources, not yet confirmed" against 22 distinct links
+  PASS trust_count_matches_sources r1 'Which diseases are associated with'   "Based on 22 sources, not yet confirmed" against 22 distinct links
+
+=== 75. A papers list reads as clean prose, with no record repeated (12.12)
+  PASS rows_unique                 r1 'the picked choice'                    5 rows, each once
+  PASS rows_unique                 r1 'the picked choice'                    5 rows, each once
+  PASS rows_unique                 r1 'the picked choice'                    0 rows, each once
+  PASS rows_unique                 r1 'the picked choice'                    0 rows, each once
+  PASS paragraph_starts            r1 'the picked choice'                    7 paragraphs
+  PASS paragraph_starts            r1 'the picked choice'                    7 paragraphs
+  PASS paragraph_starts            r1 'the picked choice'                    1 paragraphs
+  PASS paragraph_starts            r1 'the picked choice'                    1 paragraphs
+  PASS max_mentions                r1 'the picked choice'                    within the limit
+  PASS max_mentions                r1 'the picked choice'                    within the limit
+  PASS max_mentions                r1 'the picked choice'                    within the limit
+  PASS max_mentions                r1 'the picked choice'                    within the limit
+  N/A  researcher_longer           r1 ''                                     `GERD`: an answer asked back, so there is no text to compare
+  PASS asked_back                  r1 'GERD'                                 asked "What would you like to know about GERD?" with 4 choices
+  PASS asked_back                  r1 'GERD'                                 asked "What would you like to know about GERD?" with 4 choices
+
+=== 76. A one-to-three-word question is asked back (12.3)
+  PASS asked_back                  r1 'reflux disease'                       asked "What would you like to know about reflux disease?" with 4 choices
+  PASS asked_back                  r1 'GERD'                                 asked "What would you like to know about GERD?" with 4 choices
+  PASS asked_back                  r1 'BRCA1'                                asked "What would you like to know about BRCA1?" with 4 choices
+  PASS text_has                    r1 'reflux disease'                       present
+  PASS text_has                    r1 'GERD'                                 present
+  PASS text_has                    r1 'BRCA1'                                present
+  PASS asked_back                  r1 'Marfan'                               asked "What would you like to know about Marfan?" with 4 choices
+  PASS not_asked_back              r1 'Any trials for GERD?'                 no question back
+  PASS not_asked_back              r1 'papers on caffeine'                   no question back
+  PASS answered                    r1 'Any trials for GERD?'                 14 citations, outcome answer, guard None, asked back: False
+  PASS answered                    r1 'papers on caffeine'                   10 citations, outcome answer, guard None, asked back: False
+
+=== 81. A question about a disease's features names them (12.14)
+  SKIP resource_cited              r1 'What phenotypic features are assoc'   the saved file holds no events
+  PASS resource_cited              r1 'What phenotypic features are assoc'   2 medgen records
+  PASS text_has                    r1 'What phenotypic features are assoc'   present
+
+=== 84. "Recent papers" asks how far back (12.15)
+  FAIL asked_back                  r1 'recent papers on statins'             no question back

@@ -201,7 +201,7 @@ Auto-read skills (loaded by other skills or before specific tasks): best-practic
 
 Rules live in `.claude/rules/`, and since 2026-09-26 each loads where it is needed (the product owner's item-by-item approval of 2026-09-25, DECISIONS.md). Their content is not duplicated here.
 
-- Always loaded, into every session and every agent: writing-style, production-standards, git-workflow, design-consistency, anti-rationalization, public-repository-privacy, decide-from-the-users-chair, file-protection, communication-style, ai-security-standards, supply-chain-security.
+- Always loaded, into every session and every agent: writing-style, production-standards, git-workflow, design-consistency, anti-rationalization, public-repository-privacy, decide-from-the-users-chair, decision-cadence, file-protection, communication-style, ai-security-standards, supply-chain-security.
 - Loaded when a matching file is read, by the globs in each rule's `paths:` frontmatter:
   - tool-call-budgets: the tool modules, `harness/call_budget.py`, the graph query service, their tests and the integration gate.
   - prompt-cache-discipline: `harness/`, the few-shot pool and every module that builds a model prompt.

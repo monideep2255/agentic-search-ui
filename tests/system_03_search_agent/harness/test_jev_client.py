@@ -295,7 +295,7 @@ def _with_cost(body: dict[str, Any], cost: float) -> dict[str, Any]:
             "malformed_reply",
             0.004,
         ),
-        (httpx.Response(200, content=b"not json at all"), "malformed_reply", 0.0),
+        (httpx.Response(200, content=b"not json at all"), "malformed_reply", MAX_JEV_COST_USD),
         (
             _response({"model": "m", "answers": {}, "usage": {"input_tokens": 1}}),
             "malformed_reply",
@@ -312,8 +312,10 @@ async def test_an_unusable_reply_still_reports_what_it_cost(
     that came back but cannot be used was billed all the same. A reply
     that states no cost at all is billed the ceiling (V03), never $0.0,
     since a call that reached the provider and was billed should not be
-    invisible to the cost caps; "not JSON" and "HTTP 503" never got far
-    enough to state a cost at all, so those stay $0.0."""
+    invisible to the cost caps. A 200 whose body is not JSON came back from
+    the provider too, so it is billed the ceiling as well (re-land
+    follow-up R-07, F-8.6-RJ05); only "HTTP 503", where no reply came back
+    to bill, stays $0.0."""
     monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=reply))
     with pytest.raises(JevCallError) as excinfo:
         await _call_once()

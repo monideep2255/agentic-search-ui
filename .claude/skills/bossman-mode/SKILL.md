@@ -242,6 +242,8 @@ Exit immediately on any of these:
 
 Conditions 3 and 4 exist because build phases 2.1 and 4.2 hit both repeatedly when neither was a stop condition. The two-round cap of 2026-08-18 then held in 4 of the 13 phases reviewed after it, because each extra round could be authorised; 17 extra rounds followed. That is why the cap now has no exception.
 
+Every stop condition above that hands the owner a question follows `decision-cadence`: asked the moment it is hit, with a notification, never held for a later list.
+
 ## Where everything is written
 
 | File | Holds | Written by | When |

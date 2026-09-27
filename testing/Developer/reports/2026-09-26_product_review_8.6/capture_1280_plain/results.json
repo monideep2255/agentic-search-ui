@@ -1,0 +1,448 @@
+{
+  "tool": "verify capture",
+  "format": 1,
+  "date": "2026-09-26",
+  "topic": "pr86_1280_plain",
+  "target": {
+    "name": "develop",
+    "web": "https://search-agent-web-develop-2aeb.up.railway.app",
+    "api": "https://search-agent-api-develop-43b3.up.railway.app",
+    "health": {
+      "status": 200,
+      "app_env": "develop"
+    }
+  },
+  "checkout_head": "a5c89bb",
+  "deployed_commit": "c0bf50b",
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    }
+  ],
+  "widths_complete": false,
+  "seven_day_close": "partial widths: this run does not cover exactly 1280 and 390, so it cannot start the seven-day close",
+  "context": {
+    "reduced_motion": "reduce",
+    "axe_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa"
+    ],
+    "settle_ms": 1500,
+    "browser": "chromium 151.0.7922.34"
+  },
+  "screens": [
+    {
+      "name": "marfan",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/marfan_1280.png",
+          "reached": true,
+          "seconds_to_ready": 24.8,
+          "first_screen": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/marfan_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/marfan_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_marfan_1280.png",
+          "prototype_overflow_px": 0
+        }
+      ]
+    },
+    {
+      "name": "count_breast",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/count_breast_1280.png",
+          "reached": true,
+          "seconds_to_ready": 14.4,
+          "first_screen": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/count_breast_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/count_breast_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_count_breast_1280.png",
+          "prototype_overflow_px": 0
+        }
+      ]
+    },
+    {
+      "name": "forged",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/forged_1280.png",
+          "reached": true,
+          "seconds_to_ready": 3.6,
+          "first_screen": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/forged_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/forged_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_forged_1280.png",
+          "prototype_overflow_px": 0
+        }
+      ]
+    },
+    {
+      "name": "delete_brca1",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/delete_brca1_1280.png",
+          "reached": true,
+          "seconds_to_ready": 4.2,
+          "first_screen": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/delete_brca1_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/delete_brca1_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_delete_brca1_1280.png",
+          "prototype_overflow_px": 0
+        }
+      ]
+    },
+    {
+      "name": "tree_of_life",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/tree_of_life_1280.png",
+          "reached": true,
+          "seconds_to_ready": 34.6,
+          "first_screen": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/tree_of_life_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/tree_of_life_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_tree_of_life_1280.png",
+          "prototype_overflow_px": 0
+        }
+      ]
+    },
+    {
+      "name": "brca1_control",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/brca1_control_1280.png",
+          "reached": true,
+          "seconds_to_ready": 16.4,
+          "first_screen": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/brca1_control_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/brca1_control_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_brca1_control_1280.png",
+          "prototype_overflow_px": 0
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "result": "pass",
+      "screen": "marfan",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "24.8 s",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/marfan_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "marfan",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "marfan",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "marfan",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "count_breast",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "14.4 s",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/count_breast_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "count_breast",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "count_breast",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "count_breast",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "forged",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "3.6 s",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/forged_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "forged",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "forged",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "forged",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "delete_brca1",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "4.2 s",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/delete_brca1_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "delete_brca1",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "delete_brca1",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "delete_brca1",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "tree_of_life",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "34.6 s",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/tree_of_life_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "tree_of_life",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "tree_of_life",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "tree_of_life",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "16.4 s",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/brca1_control_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/results.json"
+    }
+  ],
+  "awaiting_judgement": [
+    {
+      "screen": "marfan",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/marfan_1280.png",
+      "prototype": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_marfan_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "count_breast",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/count_breast_1280.png",
+      "prototype": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_count_breast_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "forged",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/forged_1280.png",
+      "prototype": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_forged_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "delete_brca1",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/delete_brca1_1280.png",
+      "prototype": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_delete_brca1_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "tree_of_life",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/tree_of_life_1280.png",
+      "prototype": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_tree_of_life_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "brca1_control",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/brca1_control_1280.png",
+      "prototype": "testing/Developer/reports/2026-09-26_product_review_8.6/capture_1280_plain/prototype_brca1_control_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    }
+  ],
+  "summary": {
+    "pass": 24,
+    "fail": 0
+  }
+}

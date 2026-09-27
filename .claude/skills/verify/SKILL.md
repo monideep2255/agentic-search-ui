@@ -271,7 +271,7 @@ The report is `report.md` in the same folder. An agent that may not write files 
 3. For an answer-path change, the golden run and rubric results, or that they are still to run.
 4. The facts lines from Step 6, fails first, and the deployed commit or its GAP line.
 5. What was not captured and why, stated rather than implied.
-6. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. The line itself stays FAIL until the owner says otherwise.
+6. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. Raise it per `decision-cadence`, asked at once with a notification, not held for this report. The line itself stays FAIL until the owner says otherwise.
 7. The verdict: PASS at both widths, or FAIL with the lines still failing. How the lines count:
    - A GAP line the model writes does not fail the verdict: a screen with no design (Step 4), or a deploy record that could not be read after the merge (Step 6). It names what was not judged, and the owner reads it.
    - The facts check keeps its own stricter rule (Step 6): it passes only when `check_facts.py` exits 0. Any other exit makes the verdict FAIL, and every line the script printed that is not PASS, its GAP and ERROR lines included, is a line still failing.

@@ -397,7 +397,8 @@ The mechanism:
 How it composes with `call_tier`:
 
 - Each attempt's `enforce_timeout` wraps the whole `call_tier` call, its own single transient retry and its reasoning fallback included. Every request of an attempt shares that attempt's budget.
-- The two attempt budgets together never pass the step's, whatever `call_tier` does inside them. The most requests one question can make is two attempts of two requests each, the same ceiling the unusable-reply path already had.
+- The two attempt budgets together never pass the step's, whatever `call_tier` does inside them.
+- The most requests one question can make is six, not four: two attempts of up to three requests each, since `call_tier` can send the reasoning-block fallback and then its one transient retry. At most two of the six are charged, a reply or a cancellation estimate each. Six was already reachable on the unusable-reply path; R-01 lets failure paths reach it too. (Corrected by the re-land follow-up, R-08, from the judge's F-8.6-RJ06. The code comment always said so; this line said four.)
 
 Cost:
 
@@ -473,7 +474,7 @@ Reading it:
 - S1 and S3, where every request fails, still end in the step error at 15.00 seconds, now after two attempts.
 - S5 is the stated trade-off: 14 seconds on every request now fails.
 - S5b, 9 seconds on every request, is admitted on both, one request each.
-- S2 shows the request ceiling: four requests, two per attempt, all within 0.01 seconds.
+- S2 shows a rate-limited provider sent four requests, two per attempt, all within 0.01 seconds. That is not the ceiling, which is six (see "How it composes with `call_tier`"). The re-land follow-up's R-05 puts a wait between the two attempts.
 - S6, S7 and S8 are unchanged.
 
 Tests, added to `test_reland_guardrail.py` (49 tests in the file now):

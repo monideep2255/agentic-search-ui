@@ -812,7 +812,14 @@ async def test_p12b_goes_red_when_the_graph_timeout_floor_is_destroyed(
     floor moved both sides of the comparison together. The rewritten arm
     reads the timeout `act_node` actually used and compares it against the
     constant's real value in `tools.graph_schema_constants`.
+
+    Routed as `lookup` since phase 8.6's re-land follow-up, R-09: the floor
+    is 30 seconds again, the same as `multi_hop`'s own Act budget, so on the
+    default `multi_hop` route destroying the floor changes nothing Act does
+    and no arm could see it. `lookup`'s budget is 15, under the floor, so
+    the floor is what decides Act's wait there.
     """
+    model.think_class = "lookup"
     model.think_entities = [{"text": "BRCA1", "entity_type": "gene"}]
     await _assert_arm_is_falsifiable(
         gate.test_p12b_act_runs_on_the_timeout_the_routed_class_selects,
