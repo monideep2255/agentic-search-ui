@@ -724,6 +724,41 @@ class TestTheBridgesBounds:
         assert all(by_id[i]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE for i in range(1, later))
         assert by_id[later]["result"]["isError"] is False
 
+    @pytest.mark.asyncio
+    async def test_the_deadline_never_loses_a_renewal_the_server_already_made(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The deadline is a new way to cancel a request, and a request can be
+        # cancelled while its renewal is in flight. The server rotates the
+        # refresh token the moment it answers, so a renewal cut off after that
+        # loses the only live token, and the next one replays a used token,
+        # which signs the person out everywhere. Mutation: drop the
+        # `asyncio.shield` around `refresh_locked` -> the second request fails
+        # with "s3 login".
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 0.2)
+        stand_in = StandIn(valid_tokens=set())
+        signed_in(jwt(10, "expiring"))
+
+        async def slow_after_rotating(request: httpx.Request) -> httpx.Response:
+            response = await stand_in.handler(request)
+            if request.url.path == "/auth/refresh":
+                await asyncio.sleep(0.5)  # rotated on the server, not yet read here
+            return response
+
+        harness = Harness(stand_in, credentials.load())
+        harness.http = httpx.AsyncClient(transport=httpx.MockTransport(slow_after_rotating), base_url=BASE)
+        harness.bridge._http = harness.http
+        first = await harness.send(CALL(1))
+        assert first[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE, "populate check: the deadline hit"
+        await asyncio.sleep(0.8)  # the renewal the server made finishes in the background
+
+        assert credentials.load().refresh_token == "refresh-2"
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 30.0)
+        second = await harness.send(CALL(2))
+        assert second[-1]["id"] == 2
+        assert second[-1]["result"]["isError"] is False
+        assert stand_in.refresh_calls == 1
+
     @pytest.mark.parametrize(
         ("line", "echoed_id"),
         [

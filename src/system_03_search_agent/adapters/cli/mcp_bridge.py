@@ -762,8 +762,23 @@ class McpBridge:
         async with self._renew_lock:
             if self._creds.access_token != stale_token and not self._token_is_expiring():
                 return  # another request renewed it while this one waited
+            # Shielded, so a renewal the server has made always reaches the
+            # credential file, even when this request is cancelled while it
+            # is in flight, by the agent or by `REQUEST_DEADLINE_SECONDS`
+            # (build phase 8.10's fix round). The server rotates the refresh
+            # token as it answers; losing the new one would make the next
+            # renewal replay a used token, which signs the person out
+            # everywhere. The next renewal finds the new token on disk
+            # (`refresh_locked` re-reads it), so nothing is refreshed twice.
+            # `drain` waits for it too, so closing stdin cannot cut it off.
+            refresh = asyncio.ensure_future(
+                credentials_module.refresh_locked(self._http, self._creds)
+            )
+            refresh.add_done_callback(_retrieve_quietly)
+            self._tasks.add(refresh)  # type: ignore[arg-type]
+            refresh.add_done_callback(self._tasks.discard)  # type: ignore[arg-type]
             try:
-                self._creds = await credentials_module.refresh_locked(self._http, self._creds)
+                self._creds = await asyncio.shield(refresh)
             except credentials_module.CredentialsError as exc:
                 # The module's text never holds a token, but it can quote a
                 # response header, so it is sanitized like any server text
@@ -786,6 +801,14 @@ class McpBridge:
 # A sentinel for "this message expects no reply", distinct from a JSON null
 # id, which a request may legally carry.
 _NO_ID = object()
+
+
+def _retrieve_quietly(task: asyncio.Future[Any]) -> None:
+    """Read a finished renewal's exception, so one that fails after its
+    request was cancelled is not logged with a traceback nobody asked for.
+    The request that waited on it has already been answered."""
+    if not task.cancelled():
+        task.exception()
 
 
 def _duration(seconds: float) -> str:
