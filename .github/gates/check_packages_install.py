@@ -23,7 +23,9 @@ For each distribution (the root `pyproject.toml`, and every
        `src/system_03_search_agent/`, Python or data, must be in the wheel.
        A client distribution ships a deliberate subset, so it is not
        compared; step 5 catches a module it needs and lacks.
-    4. Install the wheel, with no dependencies, into a new, empty virtual
+    4. Every wheel's `dist-info/licenses/` holds LICENSE and NOTICE, the
+       attribution Apache 2.0 Section 4(d) has every redistribution carry.
+    5. Install the wheel, with no dependencies, into a new, empty virtual
        environment. Its third-party dependencies are reached through one path
        entry to this interpreter's own site-packages, so no network is used
        and the versions are the ones this environment already vetted. The
@@ -32,8 +34,8 @@ For each distribution (the root `pyproject.toml`, and every
        file inside that site-packages (such as an editable install's) is not
        processed, because Python processes `.pth` files only in a site
        directory, never in a path a `.pth` line adds.
-    5. Import every first-party module the wheel ships.
-    6. Run every console script the wheel declares with `--help`: it must
+    6. Import every first-party module the wheel ships.
+    7. Run every console script the wheel declares with `--help`: it must
        exit 0, print something, and print no traceback.
 
 What this does NOT cover, stated so a gap is arguable rather than discovered
@@ -81,7 +83,12 @@ import zipfile
 from pathlib import Path
 
 _TIMEOUT_S = 600
-_STAGED_TOP_LEVEL = ("pyproject.toml", "src", "clients")
+# LICENSE and NOTICE: every distribution's `license-files` names them (the
+# root's directly, a client's as committed copies), and setuptools silently
+# leaves out a license file it cannot find, so a staged tree without them
+# would build a wheel that passes here and ships without its attribution.
+_STAGED_TOP_LEVEL = ("pyproject.toml", "LICENSE", "NOTICE", "src", "clients")
+_LICENSE_FILES = ("LICENSE", "NOTICE")
 _SKIPPED_PARTS = {"__pycache__", "build", "dist"}
 
 # Run by the fresh environment's own interpreter, with the wheel's module
@@ -218,6 +225,16 @@ def missing_from_wheel(wheel: Path, source_files: list[Path]) -> list[str]:
     return sorted(missing)
 
 
+def missing_license_files(wheel: Path) -> list[str]:
+    """Each of LICENSE and NOTICE that the wheel's `dist-info/licenses/` lacks."""
+    shipped = {
+        name.rsplit("/", 1)[-1]
+        for name in wheel_names(wheel)
+        if ".dist-info/licenses/" in name
+    }
+    return [name for name in _LICENSE_FILES if name not in shipped]
+
+
 def first_party_modules(wheel: Path) -> list[str]:
     modules = []
     for name in wheel_names(wheel):
@@ -275,7 +292,7 @@ def isolated_env(home: Path) -> dict[str, str]:
 
 
 def check_installed_wheel(wheel: Path, work: Path) -> list[str]:
-    """Steps 4 to 6 for one wheel. Returns the problems found."""
+    """Steps 5 to 7 for one wheel. Returns the problems found."""
     problems: list[str] = []
     python, scripts = clean_environment(work / "venv")
     installed = _run(
@@ -347,6 +364,10 @@ def check(repo_root: Path, *, isolation: bool) -> list[tuple[str, list[str]]]:
                     f"left out of the wheel: src/{name}"
                     for name in missing_from_wheel(wheel, source)
                 )
+            problems.extend(
+                f"left out of the wheel's dist-info/licenses/: {name}"
+                for name in missing_license_files(wheel)
+            )
             problems.extend(check_installed_wheel(wheel, work))
             results.append((f"{label} ({wheel.name})", problems))
     return results

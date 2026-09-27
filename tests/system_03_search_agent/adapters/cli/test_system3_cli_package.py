@@ -223,3 +223,22 @@ def test_s3_imports_only_what_the_package_ships_and_declares() -> None:
     assert third_party <= ALLOWED_THIRD_PARTY_IMPORTS, (
         f"undeclared packages imported: {sorted(third_party - ALLOWED_THIRD_PARTY_IMPORTS)}"
     )
+
+
+def test_the_license_and_notice_copies_match_the_repository_root() -> None:
+    """The client's LICENSE and NOTICE are byte-for-byte the root's.
+
+    PEP 639 forbids a `license-files` path that leaves the project directory,
+    so the client carries copies, and a copy is only acceptable while nothing
+    can tell it from the original. Apache 2.0 Section 4(d) has every
+    redistribution carry NOTICE, and the wheel is one.
+    """
+    client_dir = CLIENT_PYPROJECT.parent
+    for name in ("LICENSE", "NOTICE"):
+        assert (client_dir / name).read_bytes() == (REPO_ROOT / name).read_bytes(), (
+            f"clients/system3-cli/{name} differs from the repository root's {name}; "
+            f"copy the root's file over it, the root is the source"
+        )
+    declared = tomllib.loads(CLIENT_PYPROJECT.read_text(encoding="utf-8"))["project"]
+    assert declared["license"] == "Apache-2.0"
+    assert declared["license-files"] == ["LICENSE", "NOTICE"]
