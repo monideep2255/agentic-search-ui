@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-09-25.
+Last updated: 2026-09-27.
 
 Every entry has the same three parts:
 
@@ -122,8 +122,7 @@ Queries to try:
 What you should see:
 
 - The two answer modes change how the answer is written, not what it finds.
-- Plain language is the default, and it has no headings, lists or tables.
-- Researcher mode has short topic headings, then the records found as a bulleted list under a heading, each row with its citation chip, and key names in the opening paragraph in bold.
+- Plain language is the default. How each depth lays out its answer is checked by query 72, since item 12.9 changed both layouts on 2026-09-24.
 - Both modes open with one sentence counting what was found and naming it, such as "Found 4 disease records for BRCA1: Familial cancer of breast [1], …".
 - Since 2026-09-24 the two depths also differ in their opening sentence and their list on every question, item 12.9. Query 72 checks that, and it changes the two lines above.
 - The same sources appear in both modes; compare the source count and the source list.
@@ -269,7 +268,7 @@ Queries to try:
 What you should see:
 
 - A record's text is no longer cut off mid-word.
-- The gene summary in the record tail runs past "and through the C-terminal d" to its actual end, with no cut mid-word and no ellipsis where the text was previously trimmed.
+- No record text in the answer stops mid-word or ends in an ellipsis where it was trimmed; BRCA1's gene summary appears in full.
 - Why it matters: a sentence that stops mid-word reads as broken, and a researcher relying on the full description should get the full description, not a silently shortened one.
 
 ### 12. A lost background search says so (L-01)
@@ -388,7 +387,7 @@ What you should see:
 - Real terms in words, such as Genome Human, Chromosome Mapping and CpG Islands. This paper has 26 of them.
 - Each term links to its own MeSH record on ncbi.nlm.nih.gov.
 - No `[MeSH] D000818` style code anywhere in the answer, and no identifier presented as though it were a term.
-- No slower than any other question of this size. Resolving the terms costs two lookups however many terms there are, so a paper with fifty terms is no slower than one with five.
+- Answers within 20 seconds, the guide for every answer. Resolving the terms costs two lookups however many terms there are, so a paper with fifty terms is no slower than one with five.
 - Why it matters: a reader asking what a paper is about should get the subject terms in words. Twenty-six reference numbers answer the question in form only, and an identifier shown at full confidence as though it were a name is worse than showing nothing at all.
 
 ### 65. The opening count matches the list beneath it
@@ -529,7 +528,7 @@ Queries to try:
 
 What you should see:
 
-- The MODY genes named and cited: 6 MODY genes, the same six the product owner's reference prototype shows.
+- Six MODY genes named and cited, each linking to its NCBI Gene record. Which six is confirmed by the expert check.
 - The same set of sources when asked again. On develop, 5 of 5 repeated runs returned one source set.
 - No grounding refusal. See Known already above for the grounding failure this question once had.
 - Why it matters: MODY is a family of conditions a clinician works through gene by gene, so the answer has to name the genes, and the same genes every time.
@@ -558,7 +557,7 @@ Queries to try:
 What you should see:
 
 - A coordinate-only question about ACMG evidence, tested and approved on the morning of 22 September, before the coordinate range feature shipped that night.
-- The answer asks the person to name a gene, variant, disease or organism.
+- History only, not run by the gate. Today this question answers with the genes and records under the window, which is query 27.
 - If instead it answers with the genes and records under the window, that is query 27 working as intended, not a defect: the coordinate feature shipped later the same day and changed this. Its current behaviour is query 27's.
 - Why it matters: this was the honest fallback for a coordinate question the product could not yet resolve; keeping the record straight about when each behaviour was true stops a fixed feature being reported as broken.
 
@@ -1302,7 +1301,7 @@ Queries to try:
 
 - `reflux disease`, then `GERD`, then `BRCA1`, each as a new search in a fresh conversation. Then `Any trials for GERD?` and `What is GERD?`.
 - `Marfan` and `papers on caffeine`, each as a new search in a fresh conversation.
-- Short follow-ups inside a conversation, for example `and BRCA2?` after a BRCA1 answer.
+- Short follow-ups inside a conversation, for example `and BRCA2?` asked right after query 1's answer (`Which diseases are associated with BRCA1?`).
 
 What you should see:
 
@@ -1357,7 +1356,7 @@ Queries to try:
 What you should see:
 
 - The count of sources can go past 20, up to 30, where before every answer stopped at 20.
-- The note saying the answer was cut short appears on fewer answers than before.
+- The note saying the answer was cut short appears on at most half of the answers; it was 24 of 30 before the limit rose.
 - Why it matters: 24 of 30 live answers used to hit the 20-source ceiling and tell the reader the answer was incomplete. Your decision of 2026-09-25 raised it to 30, and the two limits behind it were raised so the 30 takes effect on paper questions too.
 
 ### 83. A question the word list does not know is judged, not refused (Jev as the classifier)
