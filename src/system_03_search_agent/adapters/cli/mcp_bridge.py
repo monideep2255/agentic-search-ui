@@ -90,10 +90,34 @@ _REQUEST_TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0
 # arguments), so a megabyte is generous and still caps a runaway client.
 MAX_INBOUND_LINE_BYTES = 1024 * 1024
 
-# One reply from the server, whether a JSON body or a whole event stream. A
-# long answer with every citation, carried twice (structured and as text),
-# is a few hundred kilobytes; sixteen megabytes caps a hostile server.
-MAX_REMOTE_REPLY_BYTES = 16 * 1024 * 1024
+# One reply from the server, whether a JSON body or a whole event stream,
+# which the agent reads into its context as one line. Sized from the
+# largest reply the remote server's own output schemas allow, rather than
+# picked (build phase 8.10's fix round, F-8.10-A04, which measured the old
+# sixteen megabytes as about two orders of magnitude too generous):
+#
+#     - `reopen_past_answer` is the largest: an answer of up to 32000
+#       characters and up to 100 citations of about 2800 characters each at
+#       every field's bound (`contracts/events.py`'s `CitationPayload`),
+#       about 330,000 characters.
+#     - The MCP SDK carries a tool's result twice, as structured content and
+#       as the same JSON in a text block, so about 670,000 bytes of ASCII.
+#     - Text that is all non-ASCII costs up to six bytes a character once
+#       escaped, which puts even that pathological answer near 3.3 MB.
+#
+# Four mebibytes is about six times the largest ASCII reply and a quarter
+# of the old bound. `test_mcp_bridge.py` builds the largest reply from the
+# schemas themselves and proves it passes.
+MAX_REMOTE_REPLY_BYTES = 4 * 1024 * 1024
+
+# The longest one request may take, from the moment the agent sends it to
+# the moment it is answered, the wait for a free slot included (F-8.10-A07:
+# a server that dripped one byte every few minutes held a slot for good, and
+# eight of them blocked every later request). The remote server stops a
+# question itself at 240 seconds (`adapters/mcp/server.py`'s
+# `_FOLD_LOOP_TIMEOUT_S`), so five minutes leaves a minute for renewing the
+# sign-in, the network and a short queue.
+REQUEST_DEADLINE_SECONDS = 300.0
 
 # Renew when the access token has less than this left, so a question that is
 # sent just before expiry is not refused mid-flight.
@@ -105,6 +129,7 @@ MAX_IN_FLIGHT = 8
 
 # JSON-RPC error codes. The -32000 range is the server-defined range.
 PARSE_ERROR = -32700
+INVALID_REQUEST = -32600
 INTERNAL_ERROR = -32603
 SIGN_IN_NEEDED = -32001
 REMOTE_UNREACHABLE = -32002
@@ -181,8 +206,33 @@ def _encode(message: Any) -> bytes:
     return json.dumps(message, ensure_ascii=True, separators=(",", ":")).encode("ascii") + b"\n"
 
 
-def _is_request(message: Any) -> bool:
-    return isinstance(message, dict) and "method" in message and "id" in message
+def _is_valid_id(value: Any) -> bool:
+    """A request id MCP allows: a string or an integer, never null."""
+    return isinstance(value, str) or (isinstance(value, int) and not isinstance(value, bool))
+
+
+def _shape_of(message: Any) -> str | None:
+    """`"request"`, `"notification"` or `"response"` for a JSON-RPC 2.0
+    message, and None for anything else.
+
+    Build phase 8.10's fix round (F-8.10-J12): the bridge used to forward
+    any JSON value the agent wrote, a batch, a bare string, an object with
+    no `jsonrpc`, with the bearer token attached. Only a JSON-RPC 2.0 object
+    is forwarded now, and the same test decides which of the server's
+    replies reach the agent."""
+    if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
+        return None
+    if "method" in message:
+        if not isinstance(message["method"], str):
+            return None
+        if "params" in message and not isinstance(message["params"], dict | list):
+            return None
+        if "id" not in message:
+            return "notification"
+        return "request" if _is_valid_id(message["id"]) else None
+    if _is_valid_id(message.get("id")) and (("result" in message) != ("error" in message)):
+        return "response"
+    return None
 
 
 def _is_response_to(message: Any, request_id: Any) -> bool:
@@ -337,25 +387,45 @@ class McpBridge:
             )
             return
 
-        if _is_request(message) and message.get("method") == "ping":
+        shape = _shape_of(message)
+        if shape is None:
+            # Not JSON-RPC, so never sent with the token (F-8.10-J12). The id
+            # is echoed only for something that was trying to be a request,
+            # so the agent's client can match the error to what it is
+            # waiting on; an id on anything else could answer the wrong one.
+            echoed = message.get("id") if isinstance(message, dict) and "method" in message else None
+            self.send(
+                _error_response(
+                    echoed if _is_valid_id(echoed) else None,
+                    INVALID_REQUEST,
+                    "The message was not a JSON-RPC 2.0 request, notification or "
+                    "response, so it was not sent. Send one JSON object per line, "
+                    'with "jsonrpc": "2.0"; batches are not supported.',
+                )
+            )
+            return
+
+        if shape == "request" and message["method"] == "ping":
             # The agent is checking that this process is alive, which it can
             # answer without the network.
             self.send({"jsonrpc": "2.0", "id": message["id"], "result": {}})
             return
 
-        if isinstance(message, dict) and message.get("method") == "notifications/cancelled":
+        if shape == "notification" and message["method"] == "notifications/cancelled":
             # The agent gave up on a request. Stop waiting for it, which
             # closes its connection to the server, and send no reply.
             params = message.get("params")
             request_id = params.get("requestId") if isinstance(params, dict) else None
-            task = self._in_flight.pop(json.dumps(request_id), None)
-            if task is not None:
-                task.cancel()
+            if _is_valid_id(request_id):
+                task = self._in_flight.pop(json.dumps(request_id), None)
+                if task is not None:
+                    task.cancel()
             return
 
-        task = asyncio.create_task(self._forward(message))
+        request_id = message["id"] if shape == "request" else _NO_ID
+        task = asyncio.create_task(self._forward(message, request_id))
         self._tasks.add(task)
-        key = json.dumps(message["id"]) if _is_request(message) else None
+        key = json.dumps(request_id) if shape == "request" else None
         if key is not None:
             self._in_flight[key] = task
 
@@ -367,8 +437,9 @@ class McpBridge:
         task.add_done_callback(_done)
 
     async def drain(self) -> None:
-        """Wait for every forwarded message to finish, each bounded by its
-        own timeout, so a reply already on its way is not cut off."""
+        """Wait for every forwarded message to finish, each bounded by
+        `REQUEST_DEADLINE_SECONDS`, so a reply already on its way is not cut
+        off and none is waited on for good."""
         while self._tasks:
             await asyncio.gather(*list(self._tasks), return_exceptions=True)
 
@@ -376,8 +447,11 @@ class McpBridge:
     # Forwarding
     # ------------------------------------------------------------------
 
-    async def _forward(self, message: Any) -> None:
+    async def _forward(self, message: Any, request_id: Any) -> None:
         """Forward one message and pass back what the server sends.
+
+        `request_id` is the request's id, or `_NO_ID` for a notification or
+        a response, which expect no reply.
 
         A request gets exactly one answer: the server's reply, or an error
         that says what to do next. Every exception is caught around the
@@ -386,12 +460,19 @@ class McpBridge:
         A01). Every reply is encoded before any is written, so a reply that
         cannot be encoded becomes that error rather than silence. The one
         request that gets no answer is one the agent cancelled, as MCP says:
-        cancellation is not an `Exception`, so it is never caught here."""
-        is_request = _is_request(message)
-        request_id = message["id"] if is_request else _NO_ID
+        cancellation is not an `Exception`, so it is never caught here.
+
+        The whole of it runs inside `REQUEST_DEADLINE_SECONDS`, the wait for
+        a free slot included (F-8.10-A07), and only replies that are
+        JSON-RPC and belong to this exchange reach the agent (F-8.10-A06,
+        J12): the server's requests and notifications, and the first
+        response to this request's id."""
+        is_request = request_id is not _NO_ID
+        deadline = asyncio.timeout(REQUEST_DEADLINE_SECONDS)
         try:
-            async with self._slots:
+            async with deadline, self._slots:
                 replies = await self._exchange(message, request_id)
+            replies = self._keep_replies_to(replies, request_id)
             lines = [_encode(reply) for reply in replies]
             if is_request and not any(_is_response_to(reply, request_id) for reply in replies):
                 # Never leave the agent waiting on a request nobody will answer.
@@ -410,21 +491,77 @@ class McpBridge:
                 self.log(exc.message)
                 return
             lines = [_encode(_error_response(request_id, exc.code, exc.message))]
-        except Exception as exc:  # noqa: BLE001 - see the docstring
-            self.log(f"could not forward a message ({type(exc).__name__})")
+        except TimeoutError as exc:
+            if not deadline.expired():
+                # A timeout from somewhere else is as unforeseen as any
+                # other failure, and is answered the same way below.
+                self._answer_unforeseen(exc, request_id)
+                return
+            limit = _duration(REQUEST_DEADLINE_SECONDS)
+            self.log(f"stopped a message that took longer than {limit}")
             if not is_request:
                 return
             lines = [
                 _encode(
                     _error_response(
                         request_id,
-                        INTERNAL_ERROR,
-                        _UNEXPECTED_FAILURE.format(kind=type(exc).__name__),
+                        REMOTE_UNREACHABLE,
+                        f"System 3 did not answer within {limit}, so this request was "
+                        "stopped. Try again; if several questions are running at once, "
+                        "send fewer at a time.",
                     )
                 )
             ]
+        except Exception as exc:  # noqa: BLE001 - see the docstring
+            self._answer_unforeseen(exc, request_id)
+            return
         for line in lines:
             self._write(line)
+
+    def _answer_unforeseen(self, exc: Exception, request_id: Any) -> None:
+        self.log(f"could not forward a message ({type(exc).__name__})")
+        if request_id is _NO_ID:
+            return
+        self.send(
+            _error_response(
+                request_id,
+                INTERNAL_ERROR,
+                _UNEXPECTED_FAILURE.format(kind=type(exc).__name__),
+            )
+        )
+
+    def _keep_replies_to(self, replies: list[Any], request_id: Any) -> list[Any]:
+        """The replies that belong to this exchange, in the order they came.
+
+        Kept: every request and notification the server sent (MCP lets it
+        send those before its response), and the first response to
+        `request_id`. Dropped, with one line on stderr: a response to any
+        other id (F-8.10-A06), a second response to the same id, and
+        anything that is not JSON-RPC at all. So the agent never sees an
+        answer to a question it did not ask, or two answers to one."""
+        kept: list[Any] = []
+        answered = False
+        dropped = 0
+        for reply in replies:
+            shape = _shape_of(reply)
+            if shape in ("request", "notification"):
+                kept.append(reply)
+            elif (
+                shape == "response"
+                and request_id is not _NO_ID
+                and not answered
+                and _is_response_to(reply, request_id)
+            ):
+                kept.append(reply)
+                answered = True
+            else:
+                dropped += 1
+        if dropped:
+            self.log(
+                f"dropped {dropped} message(s) from System 3 that did not answer "
+                "the request they came back on"
+            )
+        return kept
 
     async def _exchange(self, message: Any, request_id: Any) -> list[Any]:
         if isinstance(message, dict) and message.get("method") == "initialize":
@@ -648,6 +785,14 @@ class McpBridge:
 # A sentinel for "this message expects no reply", distinct from a JSON null
 # id, which a request may legally carry.
 _NO_ID = object()
+
+
+def _duration(seconds: float) -> str:
+    """`300.0` as "5 minutes", `0.5` as "0.5 seconds"."""
+    if seconds >= 60 and seconds % 60 == 0:
+        minutes = int(seconds // 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''}"
+    return f"{seconds:g} seconds"
 
 
 def _too_large() -> BridgeError:

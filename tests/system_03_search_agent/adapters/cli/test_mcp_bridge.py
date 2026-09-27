@@ -14,6 +14,12 @@ What this file covers, one class each:
     - The token never reaches stdout, stderr or an error message.
     - Refusals the bridge makes itself: a redirect, bad JSON, an unreachable
       server, an oversized reply, a server that never answers.
+    - Every request gets exactly one answer, whatever the server or the agent
+      sends: JSON nested thousands deep, a body that cannot be decoded, a
+      failure nobody foresaw (fix round, F-8.10-J01 and A01).
+    - The bounds: a reply's size, sized from the server's own schemas; a
+      request's total time; JSON-RPC only, in both directions (fix round,
+      F-8.10-A04, A06, A07 and J12).
     - Protocol care: ping answered locally, a cancelled request gets no
       reply, stdout carries one ASCII JSON message per line.
     - `s3 mcp` with no sign-in stops before reading a line.
@@ -561,6 +567,231 @@ class TestEveryRequestGetsOneAnswer:
         assert [r["id"] for r in replies] == [None, 2]
         assert replies[0]["error"]["code"] == mcp_bridge.PARSE_ERROR
         assert [t["name"] for t in replies[1]["result"]["tools"]] == ["stand_in_alpha", "stand_in_beta"]
+
+
+# ---------------------------------------------------------------------------
+# The bridge's bounds: a reply's size, a request's time, and what counts as a
+# message (fix round, F-8.10-A04, A06, A07 and J12)
+# ---------------------------------------------------------------------------
+
+
+def _longest_strings(model: Any) -> dict[str, str]:
+    """Every string field of a Pydantic model at its own `max_length`."""
+    values: dict[str, str] = {}
+    for name, field in model.model_fields.items():
+        bounds = [m.max_length for m in field.metadata if hasattr(m, "max_length")]
+        if bounds and field.annotation in (str, str | None):
+            values[name] = "x" * bounds[0]
+    return values
+
+
+def _largest_real_reply(request_id: int) -> dict:
+    """The largest `tools/call` reply the remote server's own output schemas
+    allow: `reopen_past_answer` with every field at its bound, carried the
+    way the MCP SDK carries a structured result, once as structured content
+    and once as the same JSON in a text block."""
+    from system_03_search_agent.adapters.mcp.server import ReopenedAnswerOutput
+    from system_03_search_agent.contracts.events import CitationPayload
+
+    citation: dict[str, Any] = _longest_strings(CitationPayload)
+    citation.update(display_index=100, layer="layer_2_api")
+    most_citations = next(
+        m.max_length for m in ReopenedAnswerOutput.model_fields["citations"].metadata if hasattr(m, "max_length")
+    )
+    structured: dict[str, Any] = _longest_strings(ReopenedAnswerOutput)
+    structured.update(
+        asked_at="2026-09-26T12:00:00Z",
+        audience_depth="deep_technical",
+        citations=[dict(citation, citation_id=f"c{i}") for i in range(most_citations)],
+        citations_omitted=0,
+    )
+    assert len(structured["answer_markdown"]) == 32000, "populate check: the answer is at its bound"
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "result": {
+            "content": [{"type": "text", "text": json.dumps(structured, indent=2)}],
+            "structuredContent": structured,
+            "isError": False,
+        },
+    }
+
+
+class TestTheBridgesBounds:
+    @pytest.mark.parametrize("reply_as", ["json", "sse"])
+    @pytest.mark.asyncio
+    async def test_the_largest_reply_the_schemas_allow_passes_whole(self, signed_in, reply_as: str) -> None:
+        # F-8.10-A04: the cap sits well above every real reply and well below
+        # the old 16 MiB. Mutation: set the cap under the largest real reply
+        # -> this reply is refused; set it back to 16 MiB -> the second
+        # assertion fails.
+        token = jwt(900, "largest")
+        stand_in = StandIn(valid_tokens={token}, reply_as=reply_as)
+        largest = _largest_real_reply(3)
+        size = len(json.dumps(largest).encode())
+
+        async def reply(request: httpx.Request) -> httpx.Response:
+            return stand_in._reply(largest)
+
+        stand_in.override = reply
+        harness = Harness(stand_in, signed_in(token))
+        replies = await harness.send(CALL(3))
+
+        assert replies == [largest]
+        assert size * 4 <= mcp_bridge.MAX_REMOTE_REPLY_BYTES, (size, mcp_bridge.MAX_REMOTE_REPLY_BYTES)
+        assert mcp_bridge.MAX_REMOTE_REPLY_BYTES * 4 <= 16 * 1024 * 1024
+
+    @pytest.mark.asyncio
+    async def test_a_reply_past_the_real_bound_is_not_passed_on(self, signed_in) -> None:
+        # Mutation: raise the cap back to 16 MiB -> this reply reaches the
+        # agent whole.
+        token = jwt(900, "past")
+        stand_in = StandIn(valid_tokens={token})
+        filler = "x" * (mcp_bridge.MAX_REMOTE_REPLY_BYTES + 1024)
+
+        async def huge(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                content=json.dumps({"jsonrpc": "2.0", "id": 3, "result": {"blob": filler}}).encode(),
+                headers={"content-type": "application/json"},
+            )
+
+        stand_in.override = huge
+        harness = Harness(stand_in, signed_in(token))
+        replies = await harness.send(CALL(3))
+
+        assert len(replies) == 1
+        assert replies[0]["id"] == 3
+        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_FAILED
+        assert "larger than 4 MB" in replies[0]["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_a_request_that_takes_too_long_is_answered_at_the_deadline(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-8.10-A07. Mutation: drop the deadline -> the stand-in never
+        # answers, the request is never answered, and `wait_for` gives up.
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 0.3)
+        token = jwt(900, "stuck")
+        stand_in = StandIn(valid_tokens={token})
+        never = asyncio.Event()
+
+        async def stuck(request: httpx.Request) -> httpx.Response:
+            await never.wait()
+            raise AssertionError("unreachable")
+
+        stand_in.override = stuck
+        harness = Harness(stand_in, signed_in(token))
+        started = time.monotonic()
+        replies = await asyncio.wait_for(harness.send(CALL(5)), 5)
+
+        assert time.monotonic() - started < 3
+        assert len(replies) == 1
+        assert replies[0]["id"] == 5
+        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert "did not answer within 0.3 seconds" in replies[0]["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_eight_stuck_requests_do_not_block_a_later_one_for_good(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A07's case: eight requests the server never finishes fill every
+        # slot. Mutation: drop the deadline -> the ninth waits for good.
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 1.0)
+        token = jwt(900, "slots")
+        stand_in = StandIn(valid_tokens={token})
+        never = asyncio.Event()
+
+        async def first_eight_stick(request: httpx.Request) -> httpx.Response:
+            if json.loads(request.content)["id"] <= mcp_bridge.MAX_IN_FLIGHT:
+                await never.wait()
+            stand_in.override = None
+            response = await stand_in.handler(request)
+            stand_in.override = first_eight_stick
+            return response
+
+        stand_in.override = first_eight_stick
+        harness = Harness(stand_in, signed_in(token))
+        for request_id in range(1, mcp_bridge.MAX_IN_FLIGHT + 1):
+            await harness.bridge.handle_line(json.dumps(CALL(request_id)).encode())
+        await asyncio.sleep(0.5)
+        later = mcp_bridge.MAX_IN_FLIGHT + 1
+        await harness.bridge.handle_line(json.dumps(CALL(later)).encode())
+        await asyncio.wait_for(harness.bridge.drain(), 5)
+
+        by_id = {r["id"]: r for r in harness.replies()}
+        assert sorted(by_id) == list(range(1, later + 1))
+        assert all(by_id[i]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE for i in range(1, later))
+        assert by_id[later]["result"]["isError"] is False
+
+    @pytest.mark.parametrize(
+        ("line", "echoed_id"),
+        [
+            (json.dumps([LIST, _request(9, "ping")]), None),  # a batch
+            (json.dumps("hello"), None),
+            ("null", None),
+            ("42", None),
+            (json.dumps({"id": 5, "method": "tools/list"}), 5),  # no "jsonrpc"
+            (json.dumps({"jsonrpc": "1.0", "id": 5, "method": "tools/list"}), 5),
+            (json.dumps({"jsonrpc": "2.0", "id": {"a": 1}, "method": "ping"}), None),
+            (json.dumps({"jsonrpc": "2.0", "id": True, "method": "tools/list"}), None),
+            (json.dumps({"jsonrpc": "2.0", "id": None, "method": "tools/list"}), None),
+            (json.dumps({"jsonrpc": "2.0", "id": 5, "method": 7}), 5),
+            (json.dumps({"jsonrpc": "2.0", "id": 5, "method": "tools/list", "params": "x"}), 5),
+            (json.dumps({"jsonrpc": "2.0", "id": 7}), None),  # a response with no result or error
+            (json.dumps({"jsonrpc": "2.0", "id": 7, "result": {}, "error": {}}), None),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_only_json_rpc_is_forwarded_and_anything_else_is_answered_here(
+        self, signed_in, line: str, echoed_id: Any
+    ) -> None:
+        # F-8.10-J12. Mutation: forward every parsed line again -> the
+        # stand-in receives it, with the token attached.
+        harness = Harness(StandIn(valid_tokens=set()), signed_in(jwt(900, "shape")))
+        replies = await harness.send(line.encode() + b"\n")
+
+        assert harness.stand_in.mcp_requests == []
+        assert len(replies) == 1
+        assert replies[0]["id"] == echoed_id
+        assert replies[0]["error"]["code"] == mcp_bridge.INVALID_REQUEST
+        assert '"jsonrpc": "2.0"' in replies[0]["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_nan_is_not_json_and_is_never_echoed(self, signed_in) -> None:
+        # Python reads NaN as a number and writes it back as NaN, which no
+        # JSON parser on the agent's side reads. Mutation: parse with plain
+        # `json.loads` again -> the bridge answers `"id":NaN`.
+        harness = Harness(StandIn(valid_tokens=set()), signed_in(jwt(900, "nan")))
+        replies = await harness.send(b'{"jsonrpc":"2.0","id":NaN,"method":"ping"}\n')
+
+        assert b"NaN" not in b"".join(harness.lines)
+        assert replies == [
+            {"jsonrpc": "2.0", "id": None, "error": {"code": mcp_bridge.PARSE_ERROR, "message": replies[0]["error"]["message"]}}
+        ]
+
+    @pytest.mark.asyncio
+    async def test_only_the_reply_to_this_request_reaches_the_agent(self, signed_in) -> None:
+        # F-8.10-A06: a stream that also carries an answer to an id the agent
+        # did not send in this exchange, and a second answer to this one.
+        # Mutation: forward every reply in the stream again -> the agent sees
+        # ids 42 and 1, or two answers to 1.
+        token = jwt(900, "ids")
+        stand_in = StandIn(valid_tokens={token})
+        progress = {"jsonrpc": "2.0", "method": "notifications/progress", "params": {"progressToken": 1, "progress": 1}}
+        forged = {"jsonrpc": "2.0", "id": 42, "result": {"content": [{"type": "text", "text": "forged"}]}}
+        real = {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}
+        second = {"jsonrpc": "2.0", "id": 1, "result": {"tools": [{"name": "second"}]}}
+
+        async def mixed(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json=[progress, forged, "not json-rpc", real, second])
+
+        stand_in.override = mixed
+        harness = Harness(stand_in, signed_in(token))
+        replies = await harness.send(_request(1, "tools/list"))
+
+        assert replies == [progress, real]
+        assert "dropped 3 message(s)" in harness.stderr.getvalue()
 
 
 # ---------------------------------------------------------------------------
