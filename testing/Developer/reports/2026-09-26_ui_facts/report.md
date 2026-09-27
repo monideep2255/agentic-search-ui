@@ -337,6 +337,7 @@ Each probe ran two checkers on a detached `git archive` export of develop `9560d
 - V07: each tool's layer is read from its code's `layer=` keyword through the AST, and the self-test moves the code keyword of `pathogen_detection` and `pubtator_annotate` while planting a decoy comment with the old value, so a reader of text fails it.
 - V08: the after-merge command runs the checker and registry from the export of the merged commit, and uses the main checkout for its venv alone.
 - The side note on `events.ts`: the client's reading counts its declared omission, `cost`, only while the backend still declares it (`set_allowing_omitted`).
+- Reverted after the fresh check of pull request #122, on the product owner's decision of 2026-09-27: the item below, commit 2deeaf04. Its readers returned "no" whenever an exact phrase was missing, so a reworded or negated false claim read PASS (PR122-01). The six facts builder R reworded read ERROR again, which fails closed, and a follow-up ticket rewrites those checks. The item and its probe output below are kept as the record of what was tried.
 - PR118-12 and builder R's corrected pages, the lead's added item: every count captures any number (`NUMBER`), the four yes-or-no sentences R rewrote are anchored on words a correction keeps and read for which way they point, the seed sentence is read as a tally (`TALLY`, which replaces `EVERY` and keeps "these four" needing every seed), and `PARSER_CASES` reads each reworded place on its old and its corrected wording in the self-test.
 
 ### Probe output, pasted
