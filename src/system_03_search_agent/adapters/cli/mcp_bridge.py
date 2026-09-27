@@ -74,7 +74,7 @@ import httpx
 
 from system_03_search_agent.adapters.cli import credentials as credentials_module
 from system_03_search_agent.adapters.cli.client import _ChunkSafeLineSplitter
-from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
+from system_03_search_agent.adapters.cli.render import _sanitize_untrusted, address_for_display
 
 # The remote endpoint. The trailing slash is the mounted path itself: a bare
 # `/mcp` answers 307, and this client follows no redirect.
@@ -599,7 +599,8 @@ class McpBridge:
         if self._session_id:
             headers["Mcp-Session-Id"] = self._session_id
         body = json.dumps(message, ensure_ascii=True).encode("ascii")
-        base = str(self._http.base_url).rstrip("/")
+        # The host only, never a `user:pass@` in the base URL (F-8.10-A05).
+        base = address_for_display(str(self._http.base_url))
         try:
             async with self._http.stream(
                 "POST",
@@ -849,7 +850,7 @@ async def serve(
 ) -> int:
     """Run the bridge until stdin closes, then finish what is in flight."""
     bridge = McpBridge(http, creds, write_line=write_line, stderr=stderr)
-    base = str(http.base_url).rstrip("/")
+    base = address_for_display(str(http.base_url))
     bridge.log(f"forwarding MCP messages to {base}{MCP_PATH} with your s3 sign-in")
     queue = start_line_reader(read_line, asyncio.get_running_loop())
     while True:

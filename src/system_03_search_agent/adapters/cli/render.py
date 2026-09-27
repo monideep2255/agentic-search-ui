@@ -155,6 +155,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+import urllib.parse
 from typing import TYPE_CHECKING, TextIO
 
 import httpx
@@ -488,6 +489,33 @@ def _sanitize_untrusted(text: str) -> str:
     never introduces a raw control byte).
     """
     return _escape_forgery_markers(_escape_control_bytes(text))
+
+
+def address_for_display(url: str) -> str:
+    """The server a base URL names, as a person should see it: its scheme,
+    host and port, and nothing else.
+
+    Build phase 8.10's fix round, F-8.10-A05: `s3 login` and `s3 mcp` printed
+    the whole base URL, so one written `https://user:pass@host` put the
+    password on stdout, on stderr and in every error the agent read. The
+    userinfo is never shown, and neither is a path, query or fragment, any
+    of which can carry a secret too. Sanitized like any text the person did
+    not write, since the URL can come from `--base-url` or `S3_BASE_URL`.
+    """
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = parts.hostname or ""
+        port = parts.port
+    except ValueError:
+        host, port = "", None
+    if not host:
+        return "the server s3 login used"
+    if ":" in host:
+        host = f"[{host}]"  # an IPv6 address
+    address = f"{parts.scheme}://{host}" if parts.scheme else host
+    if port is not None:
+        address = f"{address}:{port}"
+    return _sanitize_untrusted(address)
 
 
 def _is_ask_back(

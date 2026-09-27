@@ -768,7 +768,7 @@ async def _run_login(
     than truncated.
     """
     from system_03_search_agent.adapters.cli import credentials as credentials_module
-    from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
+    from system_03_search_agent.adapters.cli.render import _sanitize_untrusted, address_for_display
 
     email = args.email if args.email else _read_email(stdin, stderr)
     if not email:
@@ -870,8 +870,10 @@ async def _run_login(
     # Build phase 8.10: name the server, since the default changed from a
     # local address to production and a person should see which one they
     # are now signed in to. The URL can come from `--base-url`, so it is
-    # sanitized like any other text this command did not write itself.
-    stdout.write(f"logged in to {_sanitize_untrusted(creds.base_url)}\n")
+    # sanitized like any other text this command did not write itself, and
+    # only its scheme, host and port are shown, never a `user:pass@` in it
+    # (the phase's fix round, F-8.10-A05).
+    stdout.write(f"logged in to {address_for_display(creds.base_url)}\n")
     return 0
 
 

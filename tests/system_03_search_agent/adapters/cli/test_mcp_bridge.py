@@ -883,6 +883,32 @@ class TestS3McpCommand:
         assert "s3 login" in err.getvalue()
 
     @pytest.mark.asyncio
+    async def test_a_password_in_the_base_url_is_never_printed(self, signed_in) -> None:
+        # Fix round, F-8.10-A05: the start-up line on stderr and every error
+        # the agent reads named the base URL whole. Mutation: use
+        # `str(http.base_url)` for either again -> the userinfo is shown.
+        base_url = "https://alice:hunter2@system3.test"
+        token = jwt(900, "userinfo")
+        signed_in(token)
+        credentials.store(credentials.Credentials(base_url=base_url, access_token=token, refresh_token="refresh-1"))
+
+        async def down(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(500, content=b"x")
+
+        out, err = io.StringIO(), io.StringIO()
+        async with httpx.AsyncClient(transport=httpx.MockTransport(down), base_url=base_url) as http:
+            exit_code = await main_module.async_main(
+                ["mcp"], stdin=io.StringIO(json.dumps(LIST) + "\n"), stdout=out, stderr=err, http_client=http
+            )
+
+        assert exit_code == 0
+        replies = [json.loads(line) for line in out.getvalue().splitlines()]
+        assert replies[0]["error"]["message"].startswith("System 3 at https://system3.test answered HTTP 500")
+        assert "forwarding MCP messages to https://system3.test/mcp/" in err.getvalue()
+        assert "hunter2" not in out.getvalue() + err.getvalue()
+        assert "alice" not in out.getvalue() + err.getvalue()
+
+    @pytest.mark.asyncio
     async def test_it_serves_until_stdin_closes(self, signed_in) -> None:
         token = jwt(900, "cmd")
         stand_in = StandIn(valid_tokens={token})

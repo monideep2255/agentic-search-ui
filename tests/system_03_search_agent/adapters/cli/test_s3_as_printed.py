@@ -241,6 +241,25 @@ class TestLoginAsksForTheEmail:
         assert seen == []
 
     @pytest.mark.asyncio
+    async def test_a_password_in_the_base_url_is_never_printed(self, credential_file) -> None:
+        # Fix round, F-8.10-A05. Mutation: print `creds.base_url` as given
+        # again -> the userinfo is on stdout.
+        base_url = "https://alice:hunter2@example.test"
+        out, err = io.StringIO(), io.StringIO()
+        async with httpx.AsyncClient(transport=_server([]), base_url=base_url) as http_client:
+            exit_code = await main_module.async_main(
+                ["login", "--base-url", base_url, "person@example.org"],
+                stdin=io.StringIO("Str0ng-sign-in\n"),
+                stdout=out,
+                stderr=err,
+                http_client=http_client,
+            )
+        assert exit_code == 0, err.getvalue()
+        assert out.getvalue() == "logged in to https://example.test\n"
+        assert "hunter2" not in out.getvalue() + err.getvalue()
+        assert "alice" not in out.getvalue() + err.getvalue()
+
+    @pytest.mark.asyncio
     async def test_the_email_on_the_command_line_still_works(self, credential_file) -> None:
         exit_code, _out, err, seen = await _s3(
             ["login", "person@example.org"], [], stdin="hunter2\n"

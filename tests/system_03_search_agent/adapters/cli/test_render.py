@@ -25,7 +25,11 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from system_03_search_agent.adapters.cli.render import Renderer, render_client_error
+from system_03_search_agent.adapters.cli.render import (
+    Renderer,
+    address_for_display,
+    render_client_error,
+)
 from system_03_search_agent.contracts.events import (
     CitationPayload,
     CostPayload,
@@ -1511,6 +1515,39 @@ class TestDepthReviewRoundFourFixes:
         assert "\\x1b" in rendered
         assert rendered.count("[answer]") == 0
         assert "[\\answer]" in rendered
+
+
+
+class TestABaseUrlIsShownByItsHostAlone:
+    """Build phase 8.10's fix round, F-8.10-A05: a base URL written with a
+    `user:pass@` put the password on stdout and stderr. Mutation that turns
+    this red: return the URL as given, or drop only the path."""
+
+    @pytest.mark.parametrize(
+        ("url", "shown"),
+        [
+            ("https://alice:hunter2@example.test/api?key=s3cret#frag", "https://example.test"),
+            ("https://alice@example.test", "https://example.test"),
+            ("https://al:ice:hun@ter2@example.test:8443/", "https://example.test:8443"),
+            ("http://127.0.0.1:8000/", "http://127.0.0.1:8000"),
+            ("http://[::1]:8000", "http://[::1]:8000"),
+            (
+                "https://search-agent-api-production.up.railway.app",
+                "https://search-agent-api-production.up.railway.app",
+            ),
+        ],
+    )
+    def test_only_the_scheme_host_and_port_are_shown(self, url: str, shown: str) -> None:
+        assert address_for_display(url) == shown
+
+    @pytest.mark.parametrize("url", ["not a url", "https://alice:hunter2@example.test:99999", ""])
+    def test_an_address_it_cannot_read_is_named_without_its_text(self, url: str) -> None:
+        shown = address_for_display(url)
+        assert "hunter2" not in shown and "alice" not in shown
+        assert shown == "the server s3 login used"
+
+    def test_a_control_byte_in_the_host_is_escaped(self) -> None:
+        assert "\x1b" not in address_for_display("https://ex\x1b[2Jample.test")
 
 
 if __name__ == "__main__":
