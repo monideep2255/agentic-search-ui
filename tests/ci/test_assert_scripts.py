@@ -1,10 +1,13 @@
-"""Tests for the three CI assertion scripts.
+"""Tests for the CI assertion scripts.
 
-Build phase 4.14, finding F-4.14-A-08: these three scripts are the only new
-executable logic the phase produced, they decide whether gates 4, 5 and 9 mean
-anything, and the first version of the phase shipped them with no test at all.
-That absence is the direct cause of F-4.14-A-01, A-02, A-06 and A-11, every one
-of which a single test here would have caught.
+Build phase 4.14, finding F-4.14-A-08: the first three of these scripts were
+the only new executable logic the phase produced, they decide whether gates 4,
+5 and 9 mean anything, and the first version of the phase shipped them with no
+test at all. That absence is the direct cause of F-4.14-A-01, A-02, A-06 and
+A-11, every one of which a single test here would have caught. Card 60 adds a
+fourth, `assert_license_notices.py`, which decides whether gate 8 means
+anything the same way, and this file follows suit rather than shipping it
+untested.
 
 The scripts live under `.github/scripts/` rather than in an importable package,
 so they are loaded by path. That is deliberate on their side: they must run on a
@@ -26,6 +29,7 @@ Depends on:
     - .github/scripts/assert_no_db_skips.py
     - .github/scripts/assert_required_paths_ran.py
     - .github/scripts/assert_gate_ran.py
+    - .github/scripts/assert_license_notices.py
 
 Writes:
     - Nothing outside pytest's own tmp_path.
@@ -58,6 +62,7 @@ def _load(name: str) -> ModuleType:
 no_db_skips = _load("assert_no_db_skips")
 required_paths = _load("assert_required_paths_ran")
 gate_ran = _load("assert_gate_ran")
+license_notices = _load("assert_license_notices")
 
 
 # ---------------------------------------------------------------------------
@@ -246,3 +251,53 @@ class TestGateRan:
 
     def test_a_missing_report_fails(self, tmp_path):
         assert gate_ran.main(["prog", str(tmp_path / "nope.xml")]) == 1
+
+
+# ---------------------------------------------------------------------------
+# assert_license_notices
+# ---------------------------------------------------------------------------
+
+
+class TestLicenseNotices:
+    def _write_js(self, tmp_path: Path, name: str, body: str) -> None:
+        (tmp_path / name).write_text(body, encoding="utf-8")
+
+    def test_a_bundle_carrying_the_react_notice_passes(self, tmp_path):
+        self._write_js(
+            tmp_path,
+            "index-abc123.js",
+            "/**\n* @license React\n* react.production.js\n*/\nconsole.log(1);",
+        )
+        assert license_notices.main(["prog", str(tmp_path)]) == 0
+
+    def test_a_stripped_bundle_fails(self, tmp_path):
+        """The exact regression card 60 exists to catch.
+
+        Oxc's default strips every legal comment during minification, so a
+        build with the setting reverted looks like this: real code, zero
+        `@license` lines anywhere in it.
+        """
+        self._write_js(tmp_path, "index-abc123.js", "console.log(1);var a=1+1;")
+        assert license_notices.main(["prog", str(tmp_path)]) == 1
+
+    def test_the_notice_can_be_in_any_one_of_several_chunks(self, tmp_path):
+        self._write_js(tmp_path, "index-abc123.js", "console.log(1);")
+        self._write_js(
+            tmp_path, "vendor-def456.js", "/**\n* @license React\n* scheduler.production.js\n*/"
+        )
+        assert license_notices.main(["prog", str(tmp_path)]) == 0
+
+    def test_a_missing_directory_fails_rather_than_certifying_nothing(self, tmp_path):
+        assert license_notices.main(["prog", str(tmp_path / "does-not-exist")]) == 1
+
+    def test_a_directory_with_no_js_files_fails(self, tmp_path):
+        """F-4.14-A-11's populate-check, applied here.
+
+        An empty dist means the build did not run or produced nothing, and
+        that fact proves no notice was dropped, only that nothing was checked.
+        """
+        (tmp_path / "index.css").write_text("body{}", encoding="utf-8")
+        assert license_notices.main(["prog", str(tmp_path)]) == 1
+
+    def test_wrong_argument_count_fails(self):
+        assert license_notices.main(["prog"]) == 1

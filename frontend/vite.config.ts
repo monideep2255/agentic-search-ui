@@ -23,6 +23,19 @@ export default defineConfig({
   preview: {
     allowedHosts: ["search-agent-web-production.up.railway.app"],
   },
+  // Card 60. React, React DOM, its scheduler and MUI are MIT licensed, and MIT
+  // requires their copyright and permission notices to travel with every copy.
+  // Vite 8 minifies JavaScript with Oxc through Rolldown, not esbuild: the
+  // `esbuild` block above only reaches the CSS minifier in this version, so
+  // `esbuild.legalComments` is a no-op for the JS bundle. The setting has to
+  // go here instead, on the output rolldown actually builds with.
+  build: {
+    rolldownOptions: {
+      output: {
+        comments: { legal: true },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/setupTests.ts"],
