@@ -772,6 +772,21 @@ class TestTopLevelHelp:
             assert command in out.getvalue()
         assert main_module.PRODUCTION_API_ORIGIN in out.getvalue()
 
+    @pytest.mark.asyncio
+    async def test_s3_mcp_help_says_to_name_s3_by_its_full_path(self) -> None:
+        """Card 62, PR-8.10-09: an agent app opened from the Dock does not
+        read the shell's PATH, so a bare `s3` in its configuration did not
+        start. Mutation that turns this red: put back "Point the agent at
+        the command: s3 mcp"."""
+        out, err = io.StringIO(), io.StringIO()
+        exit_code = await main_module.async_main(
+            ["mcp", "--help"], stdin=io.StringIO(""), stdout=out, stderr=err, http_client=object()
+        )
+        assert exit_code == 0
+        text = " ".join(out.getvalue().split())
+        assert "the full path that command -v s3 prints" in text
+        assert "PATH" in text
+
     def test_help_never_reads_the_credential_file(
         self, credential_file, monkeypatch: pytest.MonkeyPatch
     ) -> None:

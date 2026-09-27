@@ -746,7 +746,8 @@ def _parse_mcp_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argpars
             "starts MCP servers as commands. It offers every tool System 3's "
             "remote MCP server offers, using the sign-in 's3 login' stored, and "
             "renews that sign-in itself. Sign in first with: s3 login. Point the "
-            "agent at the command: s3 mcp"
+            "agent at s3 by the full path that command -v s3 prints, with the "
+            "argument mcp, since an agent app may not read your shell's PATH"
         ),
     )
     return parser.parse_args(list(argv))
