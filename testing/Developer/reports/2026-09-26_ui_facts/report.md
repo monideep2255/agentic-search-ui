@@ -1,6 +1,6 @@
 # UI facts inventory and freshness check
 
-What System 3's web app states about itself, where each fact comes from, and whether it is true on develop `e43c769`. The check ran on a `git archive` export; the worktree base `0b75aa7` differs only in `DECISIONS.md` and the board.
+What System 3's web app states about itself, where each fact comes from, and whether it is true on develop `c4f97e87`. The summary and the checker run below come from the re-split's checker on a fresh `git archive` export of that commit. The inventory table's line numbers were read at develop `e43c769`; `--map` prints the current ones.
 
 The check is `/verify` Step 6: `.claude/skills/verify/scripts/check_facts.py` and `facts_registry.py`. Nothing in the app or in any document was changed.
 
@@ -18,16 +18,17 @@ The building agent returned this report as text, because its harness has sub-age
 - [Noticed in passing](#noticed-in-passing)
 - [What cost time](#what-cost-time)
 - [Fix round](#fix-round)
+- [Re-split](#re-split)
 
 ## Summary
 
 | Item | Value |
 |------|-------|
-| Develop commit | `e43c769` |
+| Develop commit | `c4f97e87` |
 | Facts checked by the script | 64 |
-| Stale facts | 15: 10 on a screen, 5 only in a document or a copy in code |
-| Places | PASS 151, FAIL 28, GAP 0, ERROR 0 |
-| Self-test | 179 comparisons proven to pass and to fail; 64 of 64 readers proven to follow a changed source; 9 parser cases; 0 failures |
+| Stale facts | 15: 11 on a screen, 4 only in a document or a copy in code |
+| Places | PASS 146, FAIL 34, GAP 0, ERROR 0 |
+| Self-test | 180 of 180 comparisons proven to pass and to fail; 64 of 64 readers proven to follow a changed source; 25 parser cases; 0 failures |
 | Read by hand | 37 rows |
 
 Why the registry is Python: a fact's truth is rarely a plain lookup. For example:
@@ -43,7 +44,7 @@ The checker holds the engine: the readers, the comparisons, the call graph, the 
 On a screen:
 
 1. Onboarding tour, app bar step (`OnboardingTour.tsx:211`). Told: Integrations lists "the API, GraphQL, the command line and the export". True: the MCP server is the fourth way in, and it is left out.
-2. Onboarding tour, seed step (`OnboardingTour.tsx:193`). Told: "These four are real questions from the evaluation set." True: only the BRCA1 and rs334 seeds have a golden counterpart. "Variants in GCK causing MODY" and "Trials recruiting for ALS" do not.
+2. Onboarding tour, seed step (`OnboardingTour.tsx:193`). Told: "These four are real questions from the evaluation set." True: none of the four is a golden question, whole. "Diseases linked to BRCA1" and "Clinical significance of rs334" only share an identifier with a golden question, which is a lead for a rewrite, not provenance. "Variants in GCK causing MODY" and "Trials recruiting for ALS" share nothing.
 3. About, stop 2, Plan tier card (`InfoScreens.tsx:838`). Told: the plan-tier model "runs Plan, which picks the tools to call and writes the graph query itself". True: since 2026-09-14 Plan picks tools in code and asks one routing decision (Jev or the guard tier). The graph query is written in Act, from a template, or by the plan tier only when no template fits.
 4. About, stop 2 (`InfoScreens.tsx:1170`). Told: "Four of the five steps ask a language model something." True: all five can. Act reaches the plan tier (Cypher fallback) and the guard tier (reader pass), and Plan asks its decision.
 5. About, stop 5 (`InfoScreens.tsx:1303`). Told: each sentence is "checked in code", and an unsupported one is "dropped rather than reworded". True: since 2026-09-23 a reworded sentence that passes code's exact checks is judged by a model and can be kept.
@@ -52,18 +53,19 @@ On a screen:
 8. Integrations, event stream card (`InfoScreens.tsx:729`). Told: "eleven kinds of event", with a list. True: twelve. `step` is missing.
 9. Integrations, citations card (`InfoScreens.tsx:725`). Told: each claim carries "the tool that fetched it". True: `CitationPayload` has no tool field.
 10. Integrations, command line card (`InfoScreens.tsx:660`). Told: `s3` prints "JSON with --json". True: `s3` has no `--json` option. This overlaps the Integrations audit.
+11. Architecture (`architectureFacts.ts:139`, `ArchitectureScreen.tsx:442`) and About (`InfoScreens.tsx:1208`). Told: a graph query may take 90 seconds. True: 30 seconds, `CYPHER_QUERY_TIMEOUT_SECONDS`, since pull request #119 merged.
 
 Only in a document or a copy in code:
 
-11. `CLAUDE.md:46`, `AGENTS.md:46` and `README.md:57` name LitSense, which no code calls. `CLAUDE.md:45`, `AGENTS.md:45` and `README.md:56` omit Datasets, PubChem and Pathogen Detection from layer 2.
-12. `visualizations/Architecture_diagram.md:70` and `:83` say Act makes no model call.
-13. `Architecture_diagram.md:82` and `:107`, `CLAUDE.md:53` and `AGENTS.md:53` put Plan on the plan tier.
-14. `visualizations/System_3_deep_dive.md:467` says Plan makes no model call. It asks the literature decision.
-15. `tools/catalogue.py:123` and `:138` say 30 s and 60 s. The code enforces 90 s and 120 s. The catalogue copies `.claude/rules/tool-call-budgets.md`, and no user sees it today.
+12. `CLAUDE.md:46`, `AGENTS.md:46` and `README.md:57` name LitSense, which no code calls. `CLAUDE.md:45`, `AGENTS.md:45` and `README.md:56` omit Datasets, PubChem and Pathogen Detection from layer 2.
+13. `visualizations/Architecture_diagram.md:70` and `:83` say Act makes no model call.
+14. `Architecture_diagram.md:82` and `:107`, `CLAUDE.md:53` and `AGENTS.md:53` put Plan on the plan tier.
+15. `visualizations/System_3_deep_dive.md:467` says Plan makes no model call. It asks the literature decision.
+16. `tools/catalogue.py:138` says 60 s for Pathogen Detection, and the code enforces 120 s. The catalogue copies `.claude/rules/tool-call-budgets.md`, and no user sees it today. `Architecture_diagram.md:130` and `:164`, and `System_3_deep_dive.md:358`, say 90 s for a graph query, and the code enforces 30 s.
 
 ## Checker run against develop
 
-`check_facts.py --root <develop export> --reference <repo-root>/reference/agentic-search-data-engineering`, exit code 1, pasted unchanged:
+The re-split's checker, `check_facts.py --root <develop export> --reference <repo-root>/reference/agentic-search-data-engineering`, on a fresh `git archive` export of develop `c4f97e87`, exit code 1, pasted unchanged:
 
 ```text
 FAIL | layers.l2_apis | About | says "E-utilities, Datasets and dbSNP, called at the moment you ask. Narrower and slower, and always current." | true: Datasets, E-utilities, Pathogen Detection, PubChem, dbSNP; not named: Pathogen Detection, PubChem | frontend/src/components/screens/InfoScreens.tsx:1114 | src/system_03_search_agent/tools/ncbi_transport.py:361
@@ -74,27 +76,33 @@ FAIL | layers.l2_apis | document | says "/ Layer 2: on-demand NCBI APIs / 30+ da
 FAIL | layers.l3_apis | document | says "Layer 3: Enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov)" | true: ClinicalTrials.gov, LitVar2, PubTator3; named but not so: LitSense (no code calls it) | CLAUDE.md:46 | src/system_03_search_agent/tools/ncbi_transport.py:361
 FAIL | layers.l3_apis | document | says "Layer 3: Enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov)" | true: ClinicalTrials.gov, LitVar2, PubTator3; named but not so: LitSense (no code calls it) | AGENTS.md:46 | src/system_03_search_agent/tools/ncbi_transport.py:361
 FAIL | layers.l3_apis | document | says "/ Layer 3: enrichment APIs / PubTator3, LitVar2, LitSense, ClinicalTrials.gov /" | true: ClinicalTrials.gov, LitVar2, PubTator3; named but not so: LitSense (no code calls it) | README.md:57 | src/system_03_search_agent/tools/ncbi_transport.py:361
-FAIL | budget.graph_query_s | code copy | says "_CYPHER_QUERY_BUDGET = (30.0" | true: 90 | src/system_03_search_agent/tools/catalogue.py:123 | src/system_03_search_agent/tools/graph_schema_constants.py:196
+FAIL | budget.graph_query_s | Architecture | says "budget: "90 seconds, at most 500 rows"" | true: 30 | frontend/src/lib/architectureFacts.ts:139 | src/system_03_search_agent/tools/graph_schema_constants.py:208
+FAIL | budget.graph_query_s | Architecture | says "gives one graph query 90 seconds" | true: 30 | frontend/src/components/screens/ArchitectureScreen.tsx:442 | src/system_03_search_agent/tools/graph_schema_constants.py:208
+FAIL | budget.graph_query_s | About | says "90 seconds for a graph query" | true: 30 | frontend/src/components/screens/InfoScreens.tsx:1208 | src/system_03_search_agent/tools/graph_schema_constants.py:208
+FAIL | budget.graph_query_s | document | says "CQ["cypher_query, 90 s"]" | true: 30 | visualizations/Architecture_diagram.md:130 | src/system_03_search_agent/tools/graph_schema_constants.py:208
+FAIL | budget.graph_query_s | document | says "/ cypher_query / Layer 1 / 90 seconds" | true: 30 | visualizations/Architecture_diagram.md:164 | src/system_03_search_agent/tools/graph_schema_constants.py:208
+FAIL | budget.graph_query_s | document | says "Cypher writing included / 90 s /" | true: 30 | visualizations/System_3_deep_dive.md:358 | src/system_03_search_agent/tools/graph_schema_constants.py:208
 FAIL | budget.pathogen_s | code copy | says "_PATHOGEN_DETECTION_BUDGET = ( 60.0" | true: 120 | src/system_03_search_agent/tools/catalogue.py:138 | src/system_03_search_agent/tools/pathogen_detection.py:284
-FAIL | events.types | Integrations | says "A run emits eleven kinds of event" | true: 12: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error, done, step | frontend/src/components/screens/InfoScreens.tsx:729 | src/system_03_search_agent/contracts/events.py:672
-FAIL | events.types | Integrations | says "guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error and done" | true: citation, cost, done, error, guard, plan, step, think, token, tool_result, tool_start, trust_signal; not named: step | frontend/src/components/screens/InfoScreens.tsx:729 | src/system_03_search_agent/contracts/events.py:672
-FAIL | citations.fields | Integrations | says "with the layer that produced it, the tool that fetched it, its evidence type, its confidence and its licence" | true: assertion_confidence, citation_id, claim_text, display_index, entity_name, evidence_kind, field, layer, license, population_ancestry_context, snapshot_date, source, source_id, source_url; named but not so: tool | frontend/src/components/screens/InfoScreens.tsx:725 | src/system_03_search_agent/contracts/events.py:383
+FAIL | events.types | Integrations | says "A run emits eleven kinds of event" | true: 12: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error, done, step | frontend/src/components/screens/InfoScreens.tsx:729 | src/system_03_search_agent/contracts/events.py:677
+FAIL | events.types | Integrations | says "guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error and done" | true: citation, cost, done, error, guard, plan, step, think, token, tool_result, tool_start, trust_signal; not named: step | frontend/src/components/screens/InfoScreens.tsx:729 | src/system_03_search_agent/contracts/events.py:677
+FAIL | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done"," | true: citation, cost, done, error, guard, plan, step, think, token, tool_result, tool_start, trust_signal; not named: step | frontend/src/lib/events.ts:321 | src/system_03_search_agent/contracts/events.py:677
+FAIL | citations.fields | Integrations | says "with the layer that produced it, the tool that fetched it, its evidence type, its confidence and its licence" | true: assertion_confidence, citation_id, claim_text, display_index, entity_name, evidence_kind, field, layer, license, population_ancestry_context, snapshot_date, source, source_id, source_url; named but not so: tool | frontend/src/components/screens/InfoScreens.tsx:725 | src/system_03_search_agent/contracts/events.py:388
 FAIL | surfaces.named | Onboarding tour | says "Integrations lists the other ways in: the API, GraphQL, the command line and the export." | true: GraphQL, MCP, REST, command line; not named: MCP | frontend/src/components/tour/OnboardingTour.tsx:211 | src/system_03_search_agent/contracts/query.py:292
 FAIL | surfaces.s3_options | Integrations | says "JSON with --json" | true: exists: --base-url, --depth, --session-id | frontend/src/components/screens/InfoScreens.tsx:660 | src/system_03_search_agent/adapters/cli/main.py:1
-FAIL | loop.steps_asking_a_model | About | says "Four of the five steps ask a language model" | true: 5: guardrail, think, plan, act, write | frontend/src/components/screens/InfoScreens.tsx:1170 | src/system_03_search_agent/core/graph.py:12617
-FAIL | loop.steps_asking_a_model | document | says "Four of them make exactly one model call each" | true: 5: guardrail, think, plan, act, write | visualizations/Architecture_diagram.md:70 | src/system_03_search_agent/core/graph.py:12617
-FAIL | loop.plan_on_plan_tier | About | says "Then runs Plan, which picks the tools to call and writes the graph query itself" | true: no (the plan step reaches: classifier, guard) | frontend/src/components/screens/InfoScreens.tsx:838 | src/system_03_search_agent/core/graph.py:12619
-FAIL | loop.plan_on_plan_tier | document | says "- Plan: Plan tier, one call" | true: no (the plan step reaches: classifier, guard) | visualizations/Architecture_diagram.md:107 | src/system_03_search_agent/core/graph.py:12619
-FAIL | loop.plan_on_plan_tier | document | says "PL["Plan, Plan tier"]" | true: no (the plan step reaches: classifier, guard) | visualizations/Architecture_diagram.md:82 | src/system_03_search_agent/core/graph.py:12619
-FAIL | loop.plan_on_plan_tier | document | says "Plan tier: mid-range model for query decomposition and tool selection" | true: no (the plan step reaches: classifier, guard) | CLAUDE.md:53 | src/system_03_search_agent/core/graph.py:12619
-FAIL | loop.plan_on_plan_tier | document | says "Plan tier: mid-range model for query decomposition and tool selection" | true: no (the plan step reaches: classifier, guard) | AGENTS.md:53 | src/system_03_search_agent/core/graph.py:12619
-FAIL | loop.layer_one_read_first | Architecture | says "The agent reads layer 1 first" | true: no (Act runs every planned call at once with asyncio.gather) | frontend/src/components/screens/ArchitectureScreen.tsx:477 | src/system_03_search_agent/core/graph.py:7547
-FAIL | loop.act_asks_no_model | document | says "Act makes no model call at all" | true: no (the act step reaches: guard, plan) | visualizations/Architecture_diagram.md:70 | src/system_03_search_agent/core/graph.py:12620
-FAIL | loop.act_asks_no_model | document | says "AC["Act, no model call"]" | true: no (the act step reaches: guard, plan) | visualizations/Architecture_diagram.md:83 | src/system_03_search_agent/core/graph.py:12620
-FAIL | loop.plan_asks_no_model | document | says "Note over L: Plan, no model call" | true: no (the plan step reaches: classifier, guard) | visualizations/System_3_deep_dive.md:467 | src/system_03_search_agent/core/graph.py:12619
-FAIL | loop.sentences_checked_by_code_alone | About | says "Each sentence is then checked in code against the record it points at" | true: no (_ground_with_sentence_check reaches: guard) | frontend/src/components/screens/InfoScreens.tsx:1303 | src/system_03_search_agent/core/graph.py:8656
-FAIL | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 2: Diseases linked to BRCA1, Clinical significance of rs334 (4 seeds; no golden question for: Variants in GCK causing MODY, Trials recruiting for ALS) | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
-facts: 64 checked, 15 stale | places: PASS 151, FAIL 28, GAP 0, ERROR 0
+FAIL | loop.steps_asking_a_model | About | says "Four of the five steps ask a language model" | true: 5: guardrail, think, plan, act, write | frontend/src/components/screens/InfoScreens.tsx:1170 | src/system_03_search_agent/core/graph.py:12860
+FAIL | loop.steps_asking_a_model | document | says "Four of them make exactly one model call each" | true: 5: guardrail, think, plan, act, write | visualizations/Architecture_diagram.md:70 | src/system_03_search_agent/core/graph.py:12860
+FAIL | loop.plan_on_plan_tier | About | says "(reads as) yes" | true: no (the plan step reaches: classifier, guard) | frontend/src/components/screens/InfoScreens.tsx:836 | src/system_03_search_agent/core/graph.py:12862
+FAIL | loop.plan_on_plan_tier | document | says "- Plan: Plan tier, one call" | true: no (the plan step reaches: classifier, guard) | visualizations/Architecture_diagram.md:107 | src/system_03_search_agent/core/graph.py:12862
+FAIL | loop.plan_on_plan_tier | document | says "PL["Plan, Plan tier"]" | true: no (the plan step reaches: classifier, guard) | visualizations/Architecture_diagram.md:82 | src/system_03_search_agent/core/graph.py:12862
+FAIL | loop.plan_on_plan_tier | document | says "Plan tier: mid-range model for query decomposition and tool selection" | true: no (the plan step reaches: classifier, guard) | CLAUDE.md:53 | src/system_03_search_agent/core/graph.py:12862
+FAIL | loop.plan_on_plan_tier | document | says "Plan tier: mid-range model for query decomposition and tool selection" | true: no (the plan step reaches: classifier, guard) | AGENTS.md:53 | src/system_03_search_agent/core/graph.py:12862
+FAIL | loop.layer_one_read_first | Architecture | says "(reads as) yes" | true: no (Act runs every planned call at once with asyncio.gather) | frontend/src/components/screens/ArchitectureScreen.tsx:477 | src/system_03_search_agent/core/graph.py:7790
+FAIL | loop.act_asks_no_model | document | says "Act makes no model call at all" | true: no (the act step reaches: guard, plan) | visualizations/Architecture_diagram.md:70 | src/system_03_search_agent/core/graph.py:12863
+FAIL | loop.act_asks_no_model | document | says "AC["Act, no model call"]" | true: no (the act step reaches: guard, plan) | visualizations/Architecture_diagram.md:83 | src/system_03_search_agent/core/graph.py:12863
+FAIL | loop.plan_asks_no_model | document | says "Note over L: Plan, no model call" | true: no (the plan step reaches: classifier, guard) | visualizations/System_3_deep_dive.md:467 | src/system_03_search_agent/core/graph.py:12862
+FAIL | loop.sentences_checked_by_code_alone | About | says "(reads as) yes" | true: no (_ground_with_sentence_check reaches: guard) | frontend/src/components/screens/InfoScreens.tsx:1303 | src/system_03_search_agent/core/graph.py:8899
+FAIL | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4 in all, 0 qualifying; not qualifying: Diseases linked to BRCA1, Clinical significance of rs334, Variants in GCK causing MODY, Trials recruiting for ALS (4 seeds, 0 a golden question whole; 'Diseases linked to BRCA1' -> 'Give me everyth... | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+facts: 64 | stale 15 | not fully checked 0 | places: PASS 146, FAIL 34, GAP 0, ERROR 0 | NOT PASSED
 ```
 
 ## Inventory and downstream map, checked by the script
@@ -254,7 +262,7 @@ Also worth doing:
 - F-8.6-P12 is the tree-of-life layout finding at 390 pixels. The evidence that `/health` carries no commit is `health.json` in the same review folder, `{"status":"ok","app_env":"develop"}`.
 - The worktree's `reference/` symlink is relative and does not resolve in an agent worktree. The checker falls back to the main checkout's copy through the git common directory, or takes `--reference`.
 - Develop moved from `0b75aa7` to `e43c769` during the work, with documentation changes only. The run above is against `e43c769`.
-- The `health.json` in the bullet above exists only on the unmerged `phase/8.6-followup` (`111028e3`); develop has only 8.1's copy (PR118-09). The skill no longer cites it: it cites `HealthResponse` in `adapters/web_sse/app.py`, which carries `status` and `app_env` only.
+- The `health.json` in the bullet above existed only on the unmerged `phase/8.6-followup` (`111028e3`) when this was written, and develop had only 8.1's copy (PR118-09). Pull request #119 has since merged it. The skill no longer cites it: it cites `HealthResponse` in `adapters/web_sse/app.py`, which carries `status` and `app_env` only.
 
 The review of pull request 118 left five notes that stay notes, fixed where the fix was one line:
 
@@ -312,3 +320,202 @@ The checks run before reporting, each line pasted from its output:
 
 Noticed in this round: the shared repository holds a ref named `refs/remotes/origin/develop 2`, a duplicate-copy artifact that makes `git fetch` print "bad object". It is outside this branch's scope and was left alone.
 
+## Re-split
+
+Pull request #118 closed unmerged on the product owner's decision of 2026-09-26 (`DECISIONS.md`), and this branch, `chore/verify-facts-2`, carries its checker with round two's fixes. The first commit brings the four files over from `3c45977` unchanged, so a review sees only what changed after round two, and each later commit is one fix.
+
+Each probe ran two checkers on a detached `git archive` export of develop `9560d705`: "before" is the checker at `3c45977`, and "after" is this branch's. Every file a probe changed was restored and compared byte for byte afterwards. Where a probe was set up differently, its label below says how.
+
+### What changed, one line per finding
+
+- V01: the report's verdict is again "PASS at both widths, or FAIL with the lines still failing", so a GAP line the model writes, for a screen with no design or an unread deploy record, no longer fails `/verify`, while the facts check keeps its own rule that any exit but 0 fails it, in the verdict, Step 6, Step 8, the exit checklist and the checker's docstring.
+- V02: a citation item maps to a field only when it is, whole, one of the phrases in `CITATION_FIELD_PHRASES`, so round two's sentence reads as ERROR, which fails `/verify`, where it read PASS.
+- V03: a seed counts only when its whole text, normalised for case and spacing, equals a golden question or that question without its one closing question mark or full stop, and the tour's number is compared with the number of seeds, every one of which must qualify.
+- V04: reading and judging a place sit in one catch-all, and an unreadable file is named by its repository path and byte, so a non-UTF-8 byte gives one ERROR line per place and the summary, with no traceback and no absolute path.
+- V05: this section, the summary and the checker run above, rerun on a fresh export of develop `c4f97e87`.
+- V06: a `--from` path that does not exist, or an absolute one, is refused with exit 2, and an existing file no fact reads still exits 0.
+- V07: each tool's layer is read from its code's `layer=` keyword through the AST, and the self-test moves the code keyword of `pathogen_detection` and `pubtator_annotate` while planting a decoy comment with the old value, so a reader of text fails it.
+- V08: the after-merge command runs the checker and registry from the export of the merged commit, and uses the main checkout for its venv alone.
+- The side note on `events.ts`: the client's reading counts its declared omission, `cost`, only while the backend still declares it (`set_allowing_omitted`).
+- PR118-12 and builder R's corrected pages, the lead's added item: every count captures any number (`NUMBER`), the four yes-or-no sentences R rewrote are anchored on words a correction keeps and read for which way they point, the seed sentence is read as a tally (`TALLY`, which replaces `EVERY` and keeps "these four" needing every seed), and `PARSER_CASES` reads each reworded place on its old and its corrected wording in the self-test.
+
+### Probe output, pasted
+
+V01, the verdict wording, each line cut at 170 characters:
+
+```text
+before, SKILL.md at 3c45977:
+209:- Only PASS passes. Exit 0 means every place matches its source, and any other exit fails `/verify`:
+258:2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are 
+270:7. The verdict: PASS when every line is PASS, at both widths for a change with screens, or on the facts check alone for a backend-only change. Otherwise FAIL, with th
+after, this branch:
+253:- A facts check that did not exit 0 makes the verdict FAIL (The report, item 7), so it holds the close too. A GAP line for a screen with no design, or for an unread d
+275:7. The verdict: PASS at both widths, or FAIL with the lines still failing. How the lines count:
+276:   - A GAP line the model writes does not fail the verdict: a screen with no design (Step 4), or a deploy record that could not be read after the merge (Step 6). It n
+277:   - The facts check keeps its own stricter rule (Step 6): it passes only when `check_facts.py` exits 0. Any other exit makes the verdict FAIL, and every line the scr
+299:- [ ] The verdict is PASS at both widths, or FAIL with the lines still failing; a GAP line for a screen with no design or an unread deploy record was named and did no
+300:- [ ] The facts check ran with the venv and exited 0, or every FAIL, GAP and ERROR line it printed was copied and the verdict is FAIL, since any exit but 0 fails `/ve
+```
+
+V02, the citation sentence:
+
+```text
+== V02 verifier's sentence: 'with the layer that produced it, its evidence type, the reviewer who approved its confidence, the DOI of its licence and the abstract its evidence type was quoted from.'
+   before: exit 1 | PASS | citations.fields | Integrations | says "(reads as) assertion_confidence, evidence_kind, layer, license" | true: assertion_confidence, citation_id, claim_text, display_index, entity_name, evidence_kind, field, layer, license, population_ancestry_context, snapshot_date, source, source_id, source_url | frontend/src/components/screens/InfoScreens.tsx:725 | src/system_03_search_agent/contracts/events.py:383
+   after: exit 2 | ERROR | citations.fields | Integrations | frontend/src/components/screens/InfoScreens.tsx:725: cannot read 'Every claim is tied to a specific record, with the layer that produced it, it...': ValueError: the item 'the reviewer who approved its confidence' is no phrase CITATION_FIELD_PHRASES names
+== control, develop's sentence: 'with the layer that produced it, the tool that fetched it, its evidence type, its confidence and its licence.'
+   before: exit 1 | FAIL | citations.fields | Integrations | says "with the layer that produced it, the tool that fetched it, its evidence type, its confidence and its licence" | true: assertion_confidence, citation_id, claim_text, display_index, entity_name, evidence_kind, field, layer, license, population_ancestry_context, snapshot_date, source, source_id, source_url; named but not so: tool | frontend/src/components/screens/InfoScreens.tsx:725 | src/system_03_search_agent/contracts/events.py:383
+   after: exit 1 | FAIL | citations.fields | Integrations | says "with the layer that produced it, the tool that fetched it, its evidence type, its confidence and its licence" | true: assertion_confidence, citation_id, claim_text, display_index, entity_name, evidence_kind, field, layer, license, population_ancestry_context, snapshot_date, source, source_id, source_url; named but not so: tool | frontend/src/components/screens/InfoScreens.tsx:725 | src/system_03_search_agent/contracts/events.py:383
+== control, the tool dropped: 'with the layer that produced it, its evidence type, its confidence and its licence.'
+   before: exit 1 | PASS | citations.fields | Integrations | says "with the layer that produced it, its evidence type, its confidence and its licence" | true: assertion_confidence, citation_id, claim_text, display_index, entity_name, evidence_kind, field, layer, license, population_ancestry_context, snapshot_date, source, source_id, source_url | frontend/src/components/screens/InfoScreens.tsx:725 | src/system_03_search_agent/contracts/events.py:383
+   after: exit 1 | PASS | citations.fields | Integrations | says "with the layer that produced it, its evidence type, its confidence and its licence" | true: assertion_confidence, citation_id, claim_text, display_index, entity_name, evidence_kind, field, layer, license, population_ancestry_context, snapshot_date, source, source_id, source_url | frontend/src/components/screens/InfoScreens.tsx:725 | src/system_03_search_agent/contracts/events.py:383
+restored frontend/src/components/screens/InfoScreens.tsx: True
+```
+
+V03, the seeds. The last control's first golden question ends in a full stop, so it proves case and spacing:
+
+```text
+== V03a fragments: seeds ['RCA1', 'ALS', 'ials', 'rs334'], tour says 'These four'
+   before: exit 0 | PASS | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4: RCA1, ALS, ials, rs334 (4 seeds, 4 word for word; ) | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+   after: exit 1 | FAIL | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4 in all, 0 qualifying; not qualifying: RCA1, ALS, ials, rs334 (4 seeds, 0 a golden question whole; 'RCA1' -> no golden question names it; 'ALS' -> no golden question names it; 'ials' -> no golden question names it; 'rs334' -> 'What is r... | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+== V03b five seeds under 'these four': seeds ['What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.', 'Give me everything NCBI knows about BRCA1: the gene record, associated conditions, clinically significant variants, available genetic tests, and key literature.', 'What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?', 'For a Salmonella enterica isolate, what SNP cluster does it belong to, which AMR genes does it carry, and which isolates are within 5 SNPs of it?', 'Songs about BRCA1'], tour says 'These four'
+   before: exit 0 | PASS | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4: What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries., Give me everything NCBI knows about BRCA1: the gene rec... | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+   after: exit 1 | FAIL | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 5 in all, 4 qualifying; not qualifying: Songs about BRCA1 (5 seeds, 4 a golden question whole; 'Songs about BRCA1' -> 'Give me everything NCBI knows about BRCA1: the gene record, associated conditions, clinically significant variants, av... | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+== control, four golden questions whole: seeds ['What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.', 'Give me everything NCBI knows about BRCA1: the gene record, associated conditions, clinically significant variants, available genetic tests, and key literature.', 'What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?', 'For a Salmonella enterica isolate, what SNP cluster does it belong to, which AMR genes does it carry, and which isolates are within 5 SNPs of it?'], tour says 'These four'
+   before: exit 0 | PASS | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4: What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries., Give me everything NCBI knows about BRCA1: the gene rec... | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+   after: exit 0 | PASS | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4 in all, 4 qualifying (4 seeds, 4 a golden question whole; ) | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+== control, case, spacing and no question mark: seeds ['WHAT  ACMG-RELEVANT EVIDENCE IS AVAILABLE FOR A COPY NUMBER VARIANT SPANNING CHR17:43,044,295-43,125,364 ON GRCH38? LIST THE OVERLAPPING GENES, DBVAR RECORDS AND CLINVAR ENTRIES.', 'Give me everything NCBI knows about BRCA1: the gene record, associated conditions, clinically significant variants, available genetic tests, and key literature.', 'What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?', 'For a Salmonella enterica isolate, what SNP cluster does it belong to, which AMR genes does it carry, and which isolates are within 5 SNPs of it?'], tour says 'These four'
+   before: exit 0 | PASS | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4: WHAT  ACMG-RELEVANT EVIDENCE IS AVAILABLE FOR A COPY NUMBER VARIANT SPANNING CHR17:43,044,295-43,125,364 ON GRCH38? LIST THE OVERLAPPING GENES, DBVAR RECORDS AND CLINVAR ENTRIES., Give me everything NCBI knows about BRCA1: the gene re... | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+   after: exit 0 | PASS | seeds.from_golden_set | Onboarding tour | says "These four are real questions from the evaluation set" | true: 4 in all, 4 qualifying (4 seeds, 4 a golden question whole; ) | frontend/src/components/tour/OnboardingTour.tsx:193 | eval/golden/golden_dataset.json:1
+restored frontend/src/components/screens/HomeScreen.tsx: True
+restored frontend/src/components/tour/OnboardingTour.tsx: True
+```
+
+V04, a 0xe9 byte appended to a restating document, then to a source:
+
+```text
+== visualizations/Architecture_diagram.md: a 0xe9 byte appended; places in the registry reading it: 15; facts whose source it is: []
+   before: exit 1 | traceback printed: True | absolute path printed: True | lines: 24
+   before: NO SUMMARY LINE
+   before: ERROR lines naming UTF-8: 0
+   after: exit 2 | traceback printed: False | absolute path printed: False | lines: 40
+   after: facts: 64 | stale 14 | not fully checked 10 | places: PASS 133, FAIL 24, GAP 0, ERROR 15 | NOT PASSED
+   after: ERROR lines naming UTF-8: 15
+      ERROR | tools.count | document | visualizations/Architecture_diagram.md: not valid UTF-8 at byte 17411 (invalid continuation byte), so it cannot be read; save the file as UTF-8
+      ERROR | tools.layers | document | visualizations/Architecture_diagram.md: not valid UTF-8 at byte 17411 (invalid continuation byte), so it cannot be read; save the file as UTF-8
+restored visualizations/Architecture_diagram.md: True
+== src/system_03_search_agent/harness/call_budget.py: a 0xe9 byte appended; places in the registry reading it: 0; facts whose source it is: ['budget.live_calls_per_question']
+   before: exit 2 | traceback printed: False | absolute path printed: False | lines: 37
+   before: facts: 64 | stale 9 | not fully checked 10 | places: PASS 144, FAIL 17, GAP 0, ERROR 19 | NOT PASSED
+   before: ERROR lines naming UTF-8: 0
+   after: exit 2 | traceback printed: False | absolute path printed: False | lines: 37
+   after: facts: 64 | stale 9 | not fully checked 10 | places: PASS 144, FAIL 17, GAP 0, ERROR 19 | NOT PASSED
+   after: ERROR lines naming UTF-8: 19
+      ERROR | budget.live_calls_per_question | About | not judged, the truth could not be computed: src/system_03_search_agent/harness/call_budget.py: not valid UTF-8 at byte 14993 (invalid continuation byte), so it cannot be read; save the file as UTF-8 | frontend/src/components/screens/InfoScreens.tsx
+      ERROR | budget.live_calls_per_question | Integrations | not judged, the truth could not be computed: src/system_03_search_agent/harness/call_budget.py: not valid UTF-8 at byte 14993 (invalid continuation byte), so it cannot be read; save the file as UTF-8 | frontend/src/components/screens/InfoScreens.tsx
+restored src/system_03_search_agent/harness/call_budget.py: True
+```
+
+V06, `--from`:
+
+```text
+before | --from src/system_03_search_agent/harness/call_budgt.py | exit 0 | check_facts: no fact is computed from src/system_03_search_agent/harness/call_budgt.py, so nothing restates it
+after | --from src/system_03_search_agent/harness/call_budgt.py | exit 2 | check_facts: --from names no file in the checkout under test: src/system_03_search_agent/harness/call_budgt.py; nothing was checked
+before | --from LICENSE | exit 0 | check_facts: no fact is computed from LICENSE, so nothing restates it
+after | --from LICENSE | exit 0 | check_facts: no fact is computed from LICENSE, so nothing restates it
+```
+
+V07, the code's layer keyword at line 1504 changed alone, then the self-test with the reader regressed to the old regex in a scratch copy of the scripts:
+
+```text
+docstring mention at line 1479, code keyword at line 1504
+== 1. code keyword at that line changed to layer_3_enrichment
+   before: exit 1 | 0 output lines differ from the unmutated run
+   after: exit 1 | 32 output lines differ from the unmutated run
+      FAIL | tools.layers | About | says "(reads as) 1: cypher_query; 2: ncbi_dbsnp, ncbi_efetch, pathogen_detection; 3: clinicaltrials_search, litvar2_lookup, pubtator_annotate" | true: differs at 2: ncbi_dbsnp, ncbi_efetch; 3: clinica
+      FAIL | tools.layers | Architecture | says "(reads as) 1: cypher_query; 2: ncbi_dbsnp, ncbi_efetch, pathogen_detection; 3: clinicaltrials_search, litvar2_lookup, pubtator_annotate" | true: differs at 2: ncbi_dbsnp, ncbi_efetch; 3: 
+      FAIL | tools.layers | document | says "/ cypher_query / Layer 1 /" | true: differs at 2: ncbi_dbsnp, ncbi_efetch; 3: clinicaltrials_search, litvar2_lookup, pathogen_detection, pubtator_annotate | visualizations/Architecture_diagra
+      PASS | tools.layers | About | says "(reads as) 1: cypher_query; 2: ncbi_dbsnp, ncbi_efetch, pathogen_detection; 3: clinicaltrials_search, litvar2_lookup, pubtator_annotate" | true: 1: cypher_query; 2: ncbi_dbsnp, ncbi_efetch, path
+      PASS | tools.layers | Architecture | says "(reads as) 1: cypher_query; 2: ncbi_dbsnp, ncbi_efetch, pathogen_detection; 3: clinicaltrials_search, litvar2_lookup, pubtator_annotate" | true: 1: cypher_query; 2: ncbi_dbsnp, ncbi_efetc
+      PASS | tools.layers | document | says "/ cypher_query / Layer 1 /" | true: 1: cypher_query; 2: ncbi_dbsnp, ncbi_efetch, pathogen_detection; 3: clinicaltrials_search, litvar2_lookup, pubtator_annotate | visualizations/Architecture_
+restored src/system_03_search_agent/tools/pathogen_detection.py: True
+== 2. self-test with the layer reader regressed to the old first-match regex
+   regressed reader: exit 1
+      SELF-TEST FAIL | tools.layers: a changed source did not change the truth (1: cypher_query; 2: ncbi_dbsnp, ncbi_efetch, pathogen_detection; 3: clinicaltrials_search, litvar2_lookup, pubtator_annotate)
+      SELF-TEST FAIL | layers.l2_tools: a changed source did not change the truth (ncbi_dbsnp, ncbi_efetch, pathogen_detection)
+      SELF-TEST FAIL | layers.l3_tools: a changed source did not change the truth (clinicaltrials_search, litvar2_lookup, pubtator_annotate)
+      SELF-TEST FAIL | layers.l3_apis: a changed source did not change the truth (ClinicalTrials.gov, LitVar2, PubTator3)
+      self-test: 180 of 180 comparisons proven to pass and to fail; 60 of 64 readers proven to follow a changed source; 25 parser cases; 4 failures
+   AST reader: exit 0 | self-test: 180 of 180 comparisons proven to pass and to fail; 64 of 64 readers proven to follow a changed source; 25 parser cases; 0 failures
+```
+
+V08, the after-merge command, run from the main checkout. An export of this branch's head stands in for the merged commit, since the merge does not exist yet:
+
+```text
+main checkout branch: develop; its verify scripts folder: capture.mjs 
+export: git archive of branch head 2deeaf04
+exit 1
+facts: 64 | stale 15 | not fully checked 0 | places: PASS 151, FAIL 29, GAP 0, ERROR 0 | NOT PASSED
+export: git archive of origin/develop c4f97e87, which has no checker
+<python>: can't open file '<scratch>/fx2_final_dev_c4f97e87/.claude/skills/verify/scripts/check_facts.py': [Errno 2] No such file or directory
+exit 2
+```
+
+The `events.ts` side note, the backend's `Event.type` without `cost`:
+
+```text
+== backend drops cost, client lists step and not cost (client right)
+   before: FAIL | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step"," | true: citation, done, error, guard, plan, step, think, token, tool_result, tool_start, trust_signal;
+   after: PASS | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step"," | true: citation, done, error, guard, plan, step, think, token, tool_result, tool_start, trust_signal 
+== control: backend keeps cost, client lists step and not cost
+   before: PASS | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step"," | true: citation, cost, done, error, guard, plan, step, think, token, tool_result, tool_start, trust_s
+   after: PASS | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step"," | true: citation, cost, done, error, guard, plan, step, think, token, tool_result, tool_start, trust_s
+== control: backend keeps cost, client lists step and cost
+   before: PASS | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step", "cost"," | true: citation, cost, done, error, guard, plan, step, think, token, tool_result, tool_start,
+   after: PASS | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step", "cost"," | true: citation, cost, done, error, guard, plan, step, think, token, tool_result, tool_start,
+== control: backend drops cost, client still lists cost (client wrong)
+   before: FAIL | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step", "cost"," | true: citation, done, error, guard, plan, step, think, token, tool_result, tool_start, trust
+   after: FAIL | events.types | code copy | says ""guard", "think", "plan", "tool_start", "tool_result", "token", "citation", "trust_signal", "error", "done", "step", "cost"," | true: citation, done, error, guard, plan, step, think, token, tool_result, tool_start, trust
+restored frontend/src/lib/events.ts: True
+restored src/system_03_search_agent/contracts/events.py: True
+```
+
+PR118-12 and builder R's pages. Here "before" is this branch's checker one commit earlier, at `d42c5f41`. Part 1 reads an export of `feat/8.10-r` at `33681663` without changing it:
+
+```text
+== 1. builder R's corrected pages, feat/8.10-r export
+   before: exit 2 | ERROR lines 8 | facts: 64 | stale 10 | not fully checked 7 | places: PASS 151, FAIL 21, GAP 0, ERROR 8 | NOT PASSED
+   after: exit 1 | ERROR lines 0 | facts: 64 | stale 11 | not fully checked 0 | places: PASS 157, FAIL 23, GAP 0, ERROR 0 | NOT PASSED
+      PASS | surfaces.mcp_tools | Integrations | says "title="MCP server" body="Four tools" | true: 4: ask_biomedical_question, list_past_searches, reopen_past_answ
+      PASS | surfaces.mcp_tools | Integrations | says "(reads as) ask_biomedical_question, list_past_searches, reopen_past_answer, send_ans | true: ask_biomedical_question, list_past_searches, reopen_past_answer,
+      PASS | loop.steps | About | says "of the five steps" | true: 5: guardrail, think, plan, act, write
+      PASS | loop.steps_asking_a_model | About | says "Every one of the five steps can ask a language model" | true: 5: guardrail, think, plan, act, write
+      FAIL | loop.plan_on_plan_tier | About | says "(reads as) yes" | true: no (the plan step reaches: classifier, guard)
+      PASS | loop.layer_one_read_first | Architecture | says "The agent reads all three layers at once" | true: no (Act runs every planned call at once with asyncio.gather)
+      PASS | loop.sentences_checked_by_code_alone | About | says "(reads as) no" | true: no (_ground_with_sentence_check reaches: guard)
+      FAIL | seeds.from_golden_set | Onboarding tour | says "Two of these four come word for word from the evaluation set" | true: 4 in all, 0 qualifying; not qualifying: Diseases linked to BRCA1
+== 2. PR118-12: 'Seven tools cover' changed to 'Eight tools cover'
+   before: exit 2 | ERROR | tools.count | Architecture | frontend/src/components/screens/ArchitectureScreen.tsx: pattern '(Seven) tools cover the three layers' finds nothing, so the place no longer says this where the re
+   after: exit 1 | FAIL | tools.count | Architecture | says "Eight tools cover the three layers" | true: 7: cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_se
+restored frontend/src/components/screens/ArchitectureScreen.tsx: True
+== 3. self-test on the feat/8.10-r export
+   after: exit 0 | self-test: 180 of 180 comparisons proven to pass and to fail; 64 of 64 readers proven to follow a changed source; 25 parser cases; 0 failures
+```
+
+### For the lead
+
+- Two of builder R's corrections still say something the code does not do. The checker now reads each as FAIL, where it read ERROR:
+  - The About screen's Plan tier card says the plan tier "answers only the one routing decision" Plan needs. The plan step reaches Jev and the guard tier, not the plan tier.
+  - The tour says "Two of these four come word for word from the evaluation set". None of the four seeds is a golden question, whole. This report's first version said two had "a golden counterpart", meaning a shared identifier, and item 2 of the plain-words list now says so.
+- Develop carries 15 stale facts, so every `/verify` run fails its facts step, and no card can start the seven-day close through `/verify` until they are fixed.
+- The brief's "stated whole-question form" of a golden question was read as that question without its one closing question mark or full stop, since the Home screen writes its seeds without one. Nothing shorter counts.
+
+### Checks before handing back
+
+- `--self-test` on the fresh export of develop `c4f97e87`, exit 0: "self-test: 180 of 180 comparisons proven to pass and to fail; 64 of 64 readers proven to follow a changed source; 25 parser cases; 0 failures"
+- The full check on that export with `--reference`, exit 1: "facts: 64 | stale 15 | not fully checked 0 | places: PASS 146, FAIL 34, GAP 0, ERROR 0 | NOT PASSED"
+- `ruff check` with no path, from the worktree, exit 0: "All checks passed!"
+- `isort --check-only --diff src tests services tracker alembic .claude .github`, exit 0: "Skipped 2 files"
+- `python3 tracker/check_doc_drift.py --check`, exit 0: "ok: 2 facts computed | 0 could not be computed | 0 stale | 0 structural"
+- `check_style.py` on `SKILL.md`, exit 0: "ok: 0 hard | 0 advisory | wall-length 600 (advisory informational only)"
+- `check_style.py` on this report, exit 0: "ok: 0 hard | 1 advisory | wall-length 600 (advisory informational only)". The one advisory asks for a Mermaid diagram, and the report carried it before the re-split.
