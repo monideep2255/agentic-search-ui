@@ -149,5 +149,8 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
 
 - 2026-09-27 04:29: phase opened on the owner's overnight decision. Transport preflight READY: the product model, the harness model and the graph each answered. PubMed's search is down at NCBI ("Cannot connect to SOLR" at 04:11 UTC), so the golden run waits for it.
 - 2026-09-27 04:33: builders A (T-8.7-01) and C (T-8.7-02) dispatched from 4990d821, dispatches 1 and 2 of 8, each in a worktree the lead created, `.claude/worktrees/p87s1` and `p87s3`, since an isolated worktree cannot run the project's Python here. Each may spend at most $1 on live model calls, so the shared account keeps about $34 for two golden runs. Builder B waits for card 58 to land on develop.
+- 2026-09-27 04:45: builder C found two things the goal contract did not know.
+  - The per-question cap is a deployment variable, `PER_QUERY_COST_CAP_USD`, with deliberately no code default. The owner's decision covers 25 cents on develop, so the lead sets it when this phase merges.
+  - Develop's system daily cap is $10. At Opus's mean cost of about $0.126 a question, that is about 79 questions, and one 150-question golden run costs about $19. Raising a daily cap is the owner's decision. The question is queued for the owner, with a notification sent at 04:45 UTC. Until they answer, this phase builds and is reviewed, but its golden run and merge wait.
 
 ## Findings
