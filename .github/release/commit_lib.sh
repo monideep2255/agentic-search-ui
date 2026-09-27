@@ -186,6 +186,49 @@ release_find_changelog_commit() {
 }
 
 # ---------------------------------------------------------------------------
+# The release robot, and the tags it made
+# ---------------------------------------------------------------------------
+
+# The identity every commit and tag this job makes carries. It is also how a
+# later run recognises a tag this job made (release_job_tag_at below), so it
+# is written once, here.
+RELEASE_BOT_NAME="github-actions[bot]"
+RELEASE_BOT_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
+
+release_as_bot() {
+  git config user.name "$RELEASE_BOT_NAME"
+  git config user.email "$RELEASE_BOT_EMAIL"
+}
+
+# release_job_tag_at <commit>
+# Prints the `vX.Y.Z` tag this job made on <commit>, and nothing when there is
+# none. A tag counts only when it is annotated and its tagger is the release
+# robot, so a tag the owner made by hand is never one: the data engineering
+# repository's first release, v1.0.0, is tagged by hand on purpose so that the
+# robot releases nothing, and that must stay true. Returns non-zero if git
+# fails, or if <commit> carries more than one such tag, which no run of this
+# job makes.
+release_job_tag_at() {
+  local out status tags
+  out="$(git for-each-ref --points-at "$1" \
+    --format='%(refname:strip=2)%09%(objecttype)%09%(taggeremail)' refs/tags 2>&1)"
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    printf 'git for-each-ref failed reading the tags on %s (exit %s): %s\n' \
+      "$1" "$status" "$out" >&2
+    return 1
+  fi
+  tags="$(printf '%s\n' "$out" | awk -F '\t' -v email="<${RELEASE_BOT_EMAIL}>" \
+    '$1 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ && $2 == "tag" && $3 == email { print $1 }')"
+  if [ "$(printf '%s' "$tags" | grep -c .)" -gt 1 ]; then
+    printf '%s carries more than one release tag made by this job: %s\n' \
+      "$1" "$(printf '%s' "$tags" | tr '\n' ' ')" >&2
+    return 1
+  fi
+  printf '%s' "$tags"
+}
+
+# ---------------------------------------------------------------------------
 # One release's section of CHANGELOG.md, read once
 # ---------------------------------------------------------------------------
 

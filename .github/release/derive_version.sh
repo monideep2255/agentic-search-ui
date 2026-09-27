@@ -36,6 +36,36 @@ set -euo pipefail
 # shellcheck source=.github/release/commit_lib.sh
 . "$(dirname "$0")/commit_lib.sh"
 
+# A RELEASE AN EARLIER RUN STARTED IS FINISHED, NOT SKIPPED (F-REL-A04). If
+# this job already tagged HEAD, an earlier run of it got at least that far and
+# then failed: `gh release create` answered 502, say, or the pull request
+# could not be opened. Read as "no commits since the tag", the owner's re-run
+# would report success and release nothing, and the release would stay without
+# its GitHub Release or its back-merge for good. So the release is picked up
+# under its own version instead, with the previous tag it was derived from.
+# Every later step checks what already exists before it acts, so a re-run
+# makes no second tag, no second GitHub Release and no second pull request.
+#
+# Only a tag this job made counts (commit_lib.sh's release_job_tag_at). A tag
+# the owner made by hand on HEAD still means "nothing to release", which is
+# what the data engineering repository's hand-tagged first release relies on.
+resume_version="$(release_job_tag_at HEAD)"
+if [ -n "$resume_version" ]; then
+  previous="$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' \
+    --exclude "$resume_version" HEAD 2>/dev/null || echo "")"
+  release_sha="$(git rev-parse --verify 'HEAD^{commit}')"
+  echo "HEAD ${release_sha} already carries ${resume_version}, tagged by this job:" \
+       "finishing that release rather than starting another" >&2
+  {
+    echo "should_release=true"
+    echo "previous_tag=${previous}"
+    echo "version=${resume_version}"
+    echo "bump=resume"
+    echo "release_sha=${release_sha}"
+  } >> "$GITHUB_OUTPUT"
+  exit 0
+fi
+
 # --match is load-bearing, not a tidiness flag. A bare `git describe --tags`
 # returns the nearest tag of ANY shape, and this repository already carries
 # `baseline/pre-drift-fix`. Without the filter the first run computed

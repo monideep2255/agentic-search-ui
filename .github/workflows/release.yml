@@ -25,6 +25,12 @@
 # the section, the run shows a warning, and the back-merge pull request names
 # the missing section and says how to add it.
 #
+# A FAILED RUN IS FINISHED BY RE-RUNNING IT. The back-merge branch, with the
+# changelog commit, is pushed before the tag, so nothing is lost if a later
+# step fails. A re-run recognises the tag this job made, picks the changelog
+# up from that branch, and creates only what is still missing: the tag, the
+# GitHub Release, the pull request. It never makes a second of any of them.
+#
 # THIS FILE CONTAINS NO SHELL CODE, the same rule ci.yml follows and for the
 # same measured reason. Build phase 4.14 twice tried to verify inline shell by
 # matching strings in a `run:` body and was defeated twice, the second time by
@@ -82,21 +88,29 @@ jobs:
         id: version
         run: .github/release/derive_version.sh
 
-      - name: Carry the previous changelog if its back-merge is still open
+      - name: Pick up the changelog an earlier run of this release wrote
+        id: resume
         if: steps.version.outputs.should_release == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_SHA: ${{ steps.version.outputs.release_sha }}
+        run: .github/release/resume_release.sh
+
+      - name: Carry the previous changelog if its back-merge is still open
+        if: steps.resume.outputs.write_changelog == 'true'
         env:
           PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
         run: .github/release/carry_previous_changelog.sh
 
       - name: Write the changelog section
-        if: steps.version.outputs.should_release == 'true'
+        if: steps.resume.outputs.write_changelog == 'true'
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
           PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
           RELEASE_SHA: ${{ steps.version.outputs.release_sha }}
         run: .github/release/write_changelog.sh
 
-      - name: Tag production, commit the changelog locally, publish the release
+      - name: Push the changelog as the back-merge branch, tag production, publish the release
         if: steps.version.outputs.should_release == 'true'
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}

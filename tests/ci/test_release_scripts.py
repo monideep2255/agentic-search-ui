@@ -13,7 +13,8 @@ a throwaway `origin` with `production` checked out, as `actions/checkout`
 leaves it. So a step added to the workflow, a renamed output, or a variable the
 workflow forgets to pass is exercised here rather than on the production line.
 `gh` is a stub first on PATH that records its arguments and the notes it is
-handed, and reaches nothing.
+handed, keeps the releases and pull requests it was asked to create, can be
+told to fail, and reaches nothing.
 
 WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
 
@@ -27,13 +28,20 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  and a release of nothing but that commit releases nothing.
                  A first release with no tag gives v0.1.0. A release cut
                  before the previous back-merge merged carries the previous
-                 changelog forward, from either place it can be.
+                 changelog forward, from either place it can be, resolves a
+                 conflict in CHANGELOG.md, and names a section it could not
+                 carry. A job that fails at `gh release create`, at the
+                 back-merge push, at the tag push or at `gh pr create` is
+                 finished by a re-run, with one tag, one GitHub Release and
+                 one pull request, and a re-run of a finished release changes
+                 nothing.
 
     NOT covered  GitHub itself: whether the token may push the tag, whether
                  the account permits Actions to open a pull request (the
                  premise gate's P11 arm), what `[skip ci]` does, and whether a
-                 ruleset refuses a push to `production`. The stub accepts
-                 anything, so `gh` failures are not exercised either.
+                 ruleset refuses a push to `production`. The stub's failures
+                 are the ones these scripts can see, a non-zero exit from
+                 `gh`, not GitHub's own error pages.
 
 SPEED. Each release job is about a hundred short processes, so the scenarios
 share work: one module-scoped history is released once, and every scenario
@@ -68,13 +76,56 @@ WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 _TIMEOUT_S = 60
 
 # The stand-in for the GitHub CLI. Each call writes its arguments, NUL
-# separated, to `<n>.args`, and the notes it was piped to `<n>.stdin`.
+# separated, to `<n>.args`, and the notes it was piped to `<n>.stdin`. It
+# keeps the state the scripts ask about: one line per GitHub Release created in
+# `releases`, and one line per pull request opened, its head branch, in `prs`.
+# Like GitHub, it refuses a second release for one tag and a second open pull
+# request from one branch, so a script that makes a second one fails here.
+#
+# `fail-<command>-<subcommand>` makes that call fail with a 502, either
+# `always` or for the number of calls it holds, counting down.
 _STUB_GH = """#!/usr/bin/env bash
 set -eu
-n="$(ls "$GH_STUB_DIR" | grep -c '[.]args$' || true)"
-printf '%s\\0' "$@" > "$GH_STUB_DIR/$n.args"
+d="$GH_STUB_DIR"
+n="$(ls "$d" | grep -c '[.]args$' || true)"
+printf '%s\\0' "$@" > "$d/$n.args"
 case " $* " in
-  *" --notes-file - "*) cat > "$GH_STUB_DIR/$n.stdin" ;;
+  *" --notes-file - "*) cat > "$d/$n.stdin" ;;
+esac
+fail="$d/fail-${1:-}-${2:-}"
+if [ -f "$fail" ]; then
+  left="$(cat "$fail")"
+  if [ "$left" = always ] || [ "$left" -gt 0 ]; then
+    [ "$left" = always ] || echo "$((left - 1))" > "$fail"
+    echo "HTTP 502: Bad Gateway (stub)" >&2
+    exit 1
+  fi
+fi
+head_of() {
+  while [ "$#" -gt 0 ]; do
+    if [ "$1" = --head ]; then echo "$2"; return; fi
+    shift
+  done
+}
+touch "$d/releases" "$d/prs"
+case "${1:-} ${2:-}" in
+  "release view")
+    grep -qxF -- "$3" "$d/releases" || { echo "release not found" >&2; exit 1; } ;;
+  "release create")
+    if grep -qxF -- "$3" "$d/releases"; then
+      echo "a release for $3 already exists" >&2
+      exit 1
+    fi
+    echo "$3" >> "$d/releases" ;;
+  "pr list")
+    grep -cxF -- "$(head_of "$@")" "$d/prs" || true ;;
+  "pr create")
+    head="$(head_of "$@")"
+    if grep -qxF -- "$head" "$d/prs"; then
+      echo "a pull request for $head already exists" >&2
+      exit 1
+    fi
+    echo "$head" >> "$d/prs" ;;
 esac
 exit 0
 """
@@ -94,6 +145,7 @@ class ReleaseRun:
     ran: list[str]
     gh_calls: list[GhCall] = field(default_factory=list)
     log: str = ""
+    failed: str = ""
 
 
 class ReleaseRepo:
@@ -155,6 +207,7 @@ class ReleaseRepo:
                 "GIT_CONFIG_NOSYSTEM": "1",
                 "GIT_TERMINAL_PROMPT": "0",
                 "GH_STUB_DIR": str(self.gh_dir),
+                "RELEASE_RETRY_DELAY_S": "0",
                 "PATH": f"{self.bin}{os.pathsep}{os.environ.get('PATH', '')}",
             }
         )
@@ -252,8 +305,12 @@ class ReleaseRepo:
 
     # -- the release job -----------------------------------------------------
 
-    def run_release_job(self) -> ReleaseRun:
-        """Run release.yml's steps in order, as GitHub would on a push to production."""
+    def run_release_job(self, *, check: bool = True) -> ReleaseRun:
+        """Run release.yml's steps in order, as GitHub would on a push to production.
+
+        With `check=False`, a failing step ends the run the way it ends a job
+        on GitHub, skipping every later step, and the run records its name.
+        """
         self._runs += 1
         checkout = self.tmp / f"runner-{self._runs}"
         before = set(self.gh_dir.glob("*.args"))
@@ -263,6 +320,7 @@ class ReleaseRepo:
         outputs: dict[str, dict[str, str]] = {}
         ran: list[str] = []
         log: list[str] = []
+        failed = ""
 
         for index, step in enumerate(steps):
             if "uses" in step:
@@ -309,6 +367,9 @@ class ReleaseRepo:
                 check=False,
             )
             log.append(f"$ {script}\n{result.stdout}{result.stderr}")
+            if result.returncode != 0 and not check:
+                failed = script
+                break
             assert result.returncode == 0, (
                 f"release step {step.get('name', script)!r} exited {result.returncode}:\n"
                 + "\n".join(log)
@@ -325,7 +386,44 @@ class ReleaseRepo:
             stdin_file = args_file.with_suffix(".stdin")
             stdin = stdin_file.read_text(encoding="utf-8") if stdin_file.exists() else ""
             calls.append(GhCall(args=args, stdin=stdin))
-        return ReleaseRun(outputs=outputs, ran=ran, gh_calls=calls, log="\n".join(log))
+        return ReleaseRun(
+            outputs=outputs, ran=ran, gh_calls=calls, log="\n".join(log), failed=failed
+        )
+
+    # -- faults, and the state GitHub would hold -----------------------------
+
+    def fail_gh(self, command: str, times: str = "always") -> None:
+        """Make `gh <command>` answer 502, `always` or for `times` calls."""
+        (self.gh_dir / f"fail-{command.replace(' ', '-')}").write_text(times, encoding="utf-8")
+
+    def heal_gh(self) -> None:
+        for fault in self.gh_dir.glob("fail-*"):
+            fault.write_text("0", encoding="utf-8")
+
+    def refuse_pushes(self, prefix: str) -> None:
+        """Make `origin` refuse every push to a ref starting with `prefix`."""
+        (self.tmp / "refuse").write_text(prefix, encoding="utf-8")
+        hook = self.origin / "hooks" / "pre-receive"
+        hook.write_text(
+            "#!/usr/bin/env bash\n"
+            f'prefix="$(cat "{self.tmp / "refuse"}" 2>/dev/null || true)"\n'
+            "while read -r old new ref; do\n"
+            '  if [ -n "$prefix" ] && [ "${ref#"$prefix"}" != "$ref" ]; then\n'
+            '    echo "push to $ref refused (test)" >&2\n'
+            "    exit 1\n"
+            "  fi\n"
+            "done\n",
+            encoding="utf-8",
+        )
+        hook.chmod(0o755)
+
+    def accept_pushes(self) -> None:
+        (self.tmp / "refuse").write_text("", encoding="utf-8")
+
+    def gh_state(self, name: str) -> list[str]:
+        """What the stub recorded: `releases` created, or `prs` opened, by head branch."""
+        path = self.gh_dir / name
+        return path.read_text(encoding="utf-8").split() if path.exists() else []
 
 
 def _condition_holds(condition: str, outputs: dict[str, dict[str, str]]) -> bool:
@@ -812,3 +910,197 @@ def test_the_notes_stop_at_the_next_heading_even_one_for_the_same_version(
     assert "a note written by hand" not in notes, (
         f"the notes ran on into a second v0.1.1 section:\n{notes}"
     )
+
+
+# ---------------------------------------------------------------------------
+# A release that fails part way is finished by re-running it
+# ---------------------------------------------------------------------------
+
+
+def _repo_ready_for_v0_2_0(root: Path) -> tuple[ReleaseRepo, str]:
+    """v0.1.0 released; a feat and a fix merged to `production`; the job not yet run."""
+    repo, _ = _repo_at_v0_1_0(root)
+    repo.commit("feat(api): answer a question about two genes")
+    repo.commit("fix: keep the citation beside its sentence")
+    repo.push("develop")
+    repo.release()
+    return repo, repo.origin_ref("refs/heads/production")
+
+
+_TAG_AND_RELEASE = ".github/release/tag_and_release.sh"
+_OPEN_BACKMERGE = ".github/release/open_backmerge_pr.sh"
+
+
+@pytest.mark.parametrize(
+    ("fault", "stops_at", "left_behind"),
+    [
+        # What the failed first run leaves on origin and on GitHub:
+        # (tag, back-merge branch, GitHub Release).
+        ("gh release create answers 502", _TAG_AND_RELEASE, (True, True, False)),
+        ("the back-merge push is refused", _TAG_AND_RELEASE, (False, False, False)),
+        ("the tag push is refused", _TAG_AND_RELEASE, (False, True, False)),
+        ("gh pr create answers 502", _OPEN_BACKMERGE, (True, True, True)),
+    ],
+)
+def test_a_release_that_failed_part_way_is_finished_by_a_re_run(
+    tmp_path: Path, fault: str, stops_at: str, left_behind: tuple[bool, bool, bool]
+) -> None:
+    """Findings F-REL-A04 and F-REL-J01: a failure after the tag lost the changelog.
+
+    The job used to push the tag, then publish the GitHub Release, and push the
+    changelog commit only in the next script. A 502 from `gh release create`
+    left a tag with no release and a changelog commit on the discarded runner,
+    and a re-run saw the tag, released nothing and reported success.
+
+    Now, whatever fails: the changelog commit is on origin whenever the tag is,
+    `production` never moves, and a re-run finishes the release with exactly
+    one tag, one GitHub Release and one pull request, reusing the changelog
+    commit an earlier run pushed rather than writing a second one.
+    """
+    repo, tip = _repo_ready_for_v0_2_0(tmp_path)
+    branch = "refs/heads/chore/back-merge-v0.2.0"
+    if fault.startswith("gh release create"):
+        repo.fail_gh("release create")
+    elif fault.startswith("gh pr create"):
+        repo.fail_gh("pr create")
+    elif "back-merge" in fault:
+        repo.refuse_pushes("refs/heads/chore/")
+    else:
+        repo.refuse_pushes("refs/tags/")
+
+    first = repo.run_release_job(check=False)
+
+    assert first.failed == stops_at, first.log
+    assert repo.origin_ref("refs/heads/production") == tip, first.log
+    tag = repo.origin_ref("refs/tags/v0.2.0")
+    pushed = repo.origin_ref(branch)
+    assert (bool(tag), bool(pushed), repo.gh_state("releases") == ["v0.2.0"]) == left_behind, (
+        first.log
+    )
+    if tag:
+        assert _headings(repo.changelog_on(branch)) == ["v0.2.0", "v0.1.0"], (
+            "the tag reached origin without the changelog beside it\n" + first.log
+        )
+    assert repo.gh_state("prs") == []
+
+    repo.heal_gh()
+    repo.accept_pushes()
+    second = repo.run_release_job()
+
+    assert repo.origin_ref("refs/heads/production") == tip, second.log
+    assert repo.origin_ref("refs/tags/v0.2.0^{commit}") == tip, second.log
+    if tag:
+        assert second.outputs["version"]["bump"] == "resume", second.log
+        assert repo.origin_ref("refs/tags/v0.2.0") == tag, "the re-run made a second tag"
+    if pushed:
+        assert repo.origin_ref(branch) == pushed, (
+            "the re-run wrote a second changelog commit instead of reusing the pushed one"
+        )
+        assert ".github/release/write_changelog.sh" not in second.ran, second.ran
+    assert _headings(repo.changelog_on(branch)) == ["v0.2.0", "v0.1.0"], second.log
+    assert repo.gh_state("releases") == ["v0.2.0"], "not exactly one GitHub Release"
+    assert repo.gh_state("prs") == ["chore/back-merge-v0.2.0"], "not exactly one pull request"
+    creates = [c for c in first.gh_calls + second.gh_calls if c.args[:2] == ["release", "create"]]
+    assert "answer a question about two genes" in creates[-1].stdin, creates[-1].stdin
+    assert "keep the citation beside its sentence" in creates[-1].stdin, creates[-1].stdin
+
+
+def test_the_github_release_waits_out_a_tag_the_api_has_not_seen_yet(tmp_path: Path) -> None:
+    """Finding F-REL-A04: `--verify-tag` can race the tag push, so it retries, boundedly."""
+    repo, tip = _repo_ready_for_v0_2_0(tmp_path)
+    repo.fail_gh("release create", "2")
+
+    run = repo.run_release_job()
+
+    creates = [c for c in run.gh_calls if c.args[:2] == ["release", "create"]]
+    assert len(creates) == 3, [c.args for c in run.gh_calls]
+    assert all("--verify-tag" in c.args for c in creates)
+    assert repo.gh_state("releases") == ["v0.2.0"]
+    assert repo.origin_ref("refs/tags/v0.2.0^{commit}") == tip
+
+
+@pytest.mark.parametrize("back_merge", ["still open", "merged"])
+def test_re_running_a_finished_release_changes_nothing(
+    released: Released, tmp_path: Path, back_merge: str
+) -> None:
+    """A re-run of a release that already finished creates nothing and moves nothing."""
+    repo = released.repo.fork(tmp_path / "repo")
+    if back_merge == "merged":
+        repo.merge_back_merge("v0.2.0")
+    refs = ("refs/tags/v0.2.0", "refs/heads/chore/back-merge-v0.2.0", "refs/heads/production")
+    before = {ref: repo.origin_ref(ref) for ref in refs}
+    releases, prs = repo.gh_state("releases"), repo.gh_state("prs")
+
+    run = repo.run_release_job()
+
+    assert run.outputs["version"]["bump"] == "resume", run.log
+    assert {ref: repo.origin_ref(ref) for ref in refs} == before, run.log
+    made = [c.args for c in run.gh_calls if c.args[1:2] == ["create"]]
+    assert made == [], made
+    assert (repo.gh_state("releases"), repo.gh_state("prs")) == (releases, prs)
+
+
+def test_a_tag_made_by_hand_on_production_is_not_released_again(tmp_path: Path) -> None:
+    """Only a tag this job made is picked up; the owner's hand tag still means nothing to do.
+
+    The data engineering repository's first release, v1.0.0, is tagged by hand
+    on the commit `production` is created from, so that the robot releases
+    nothing on that first push. Picking a release up by its tag must not
+    change that.
+    """
+    repo = ReleaseRepo(tmp_path)
+    repo.commit("Phase 1.0: schema scaffolding")
+    repo.commit("fix: CITATION.cff states no version")
+    repo.git("tag", "-a", "v1.0.0", "-m", "Release v1.0.0")
+    repo.push("refs/tags/v1.0.0")
+    repo.git("branch", "production")
+    repo.push("develop", "production")
+
+    run = repo.run_release_job()
+
+    assert run.outputs["version"]["should_release"] == "false", run.log
+    assert run.ran == [".github/release/derive_version.sh"], run.ran
+    assert run.gh_calls == []
+
+
+def test_a_changelog_left_for_another_production_commit_is_not_reused(tmp_path: Path) -> None:
+    """A run that failed before tagging, then a new push to `production`.
+
+    The first run pushed the v0.2.0 back-merge branch for production commit A,
+    then its tag push failed. Before anyone re-ran it, another release moved
+    `production` to B, whose run also computes v0.2.0. The changelog on the
+    branch lists A's commits only, so reusing it would publish notes that miss
+    B's. The run stops before anything permanent, and says which branch to
+    delete; once it is deleted, the re-run releases v0.2.0 with both.
+    """
+    repo, first_tip = _repo_ready_for_v0_2_0(tmp_path)
+    repo.refuse_pushes("refs/tags/")
+    first = repo.run_release_job(check=False)
+    assert first.failed == _TAG_AND_RELEASE, first.log
+    left = repo.origin_ref("refs/heads/chore/back-merge-v0.2.0")
+    assert left, first.log
+    repo.accept_pushes()
+
+    repo.commit("fix: a follow-up question keeps its gene")
+    repo.push("develop")
+    repo.release()
+    tip = repo.origin_ref("refs/heads/production")
+
+    second = repo.run_release_job(check=False)
+
+    assert second.failed == ".github/release/resume_release.sh", second.log
+    assert "Stale changelog for v0.2.0" in second.log, second.log
+    assert "delete that branch on GitHub" in second.log, second.log
+    assert repo.origin_ref("refs/tags/v0.2.0") == ""
+    assert repo.origin_ref("refs/heads/chore/back-merge-v0.2.0") == left
+    assert repo.gh_state("releases") == []
+
+    repo.git("push", "--quiet", "origin", "--delete", "chore/back-merge-v0.2.0")
+    third = repo.run_release_job()
+
+    assert repo.origin_ref("refs/tags/v0.2.0^{commit}") == tip, third.log
+    assert repo.origin_ref("refs/heads/production") == tip
+    notes = _call(third, "release", "create", "v0.2.0").stdin
+    assert "answer a question about two genes" in notes, notes
+    assert "a follow-up question keeps its gene" in notes, notes
+    assert first_tip != tip

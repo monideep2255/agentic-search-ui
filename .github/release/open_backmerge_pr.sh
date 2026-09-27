@@ -3,11 +3,16 @@
 # `develop`.
 #
 # Build phase 4.15, changed on 2026-09-27. The tag lands on `production`. The
-# changelog commit does NOT: tag_and_release.sh made it in this checkout only,
-# on top of the production commit it tagged, because the release job never
-# pushes to `production`. This pull request is the one route that commit takes
-# out of the job. Once the owner merges it, `develop` has the changelog, and
-# `production` receives it with the next release pull request.
+# changelog commit does NOT: tag_and_release.sh made it on top of the
+# production commit it tagged and pushed it as `chore/back-merge-<version>`,
+# because the release job never pushes to `production`. This pull request is
+# the one route that commit takes into `develop`. Once the owner merges it,
+# `develop` has the changelog, and `production` receives it with the next
+# release pull request.
+#
+# ONE PULL REQUEST PER RELEASE, on a re-run too (F-REL-A04). If a pull request
+# from the branch is already open, an earlier run of this release opened it,
+# and this opens no second one.
 #
 # IF THE OWNER HAS NOT MERGED THE PREVIOUS BACK-MERGE when the next release
 # runs, carry_previous_changelog.sh has already merged the previous changelog
@@ -44,25 +49,17 @@ version="${RELEASE_VERSION:?RELEASE_VERSION is required}"
 previous="${PREVIOUS_TAG:-}"
 branch="chore/back-merge-${version}"
 
-git config user.name "github-actions[bot]"
-git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
 git fetch --quiet origin develop
 
-# HEAD is this job's local work: the tagged production commit, the changelog
-# commit on top of it, and, when one was needed, the carried previous
-# changelog. If `develop` already contains all of it there is nothing to carry
-# back, which happens only when the changelog produced no change and `develop`
-# was already ahead of `production`.
+# HEAD is this job's work: the tagged production commit, the changelog commit
+# on top of it, and, when one was needed, the carried previous changelog.
+# tag_and_release.sh has already pushed it as the back-merge branch. If
+# `develop` already contains all of it there is nothing to carry back, which
+# happens only on a re-run after the back-merge was merged.
 if git merge-base --is-ancestor HEAD origin/develop; then
   echo "develop already contains this release and its changelog; no back-merge needed" >&2
   exit 0
 fi
-
-# The branch is pushed by its full ref name, so this line can create or update
-# `chore/back-merge-<version>` and nothing else.
-git checkout --quiet -B "$branch"
-git push -u origin "HEAD:refs/heads/${branch}"
 
 # A MISSING PREVIOUS SECTION IS NAMED HERE, from the file being pushed rather
 # than from anything an earlier step said (F-REL-J03). The carry step warns
@@ -80,6 +77,12 @@ ${previous} GitHub Release, or the section on the
 
 "
   echo "::warning title=CHANGELOG.md is missing ${previous}::the back-merge pull request for ${version} says how to add the ${previous} section"
+fi
+
+open="$(gh pr list --head "$branch" --base develop --state open --json number --jq length)"
+if [ "$open" != "0" ]; then
+  echo "a back-merge pull request from ${branch} is already open; not opening another" >&2
+  exit 0
 fi
 
 gh pr create \

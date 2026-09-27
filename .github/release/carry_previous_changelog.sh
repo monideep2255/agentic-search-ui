@@ -109,8 +109,7 @@ if git merge-base --is-ancestor "$candidate" HEAD; then
   exit 0
 fi
 
-git config user.name "github-actions[bot]"
-git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+release_as_bot
 
 message="chore: carry the ${previous} changelog into the next release"
 echo "the ${previous} back-merge was not merged before this release;" \
