@@ -250,5 +250,6 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
 - 2026-09-27 00:00: develop merged into the branch (9a0148a), bringing phase 8.6's follow-up and the 30 s graph limit. The lead corrected the debugging guide's `server.py` row to the four tools (b31974b).
   - Gates on b31974b: `ruff check` clean; `isort` clean; `gate_packages_install.sh` 2 passed, 0 failed; `gate04_unit_suite.sh` 6349 passed, 143 skipped, 24 deselected, 1 xfailed.
   - T-8.10-01 to 08 are in review.
+- 2026-09-27 00:12: pull request #120 opened. The judge (Opus 5.5) and the adversary (Fable 5.1) dispatched on 5ba8f4d, dispatches 4 and 5 of 8. Their findings come back in their final messages, and the lead files them here.
 
 ## Findings
