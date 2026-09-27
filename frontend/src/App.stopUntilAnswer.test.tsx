@@ -415,3 +415,96 @@ describe("card 58 fix round: what a Stop before the answer leaves on screen", ()
     expect(answerOnScreen(), "the answer appeared after Stop").toBe(false);
   });
 });
+
+describe("card 58 fix round: Stop on a follow-up in the same thread, F-58-J03", () => {
+  const FOLLOW_UP = "What diseases are associated with it?";
+  const SECOND_ANSWER = "It is linked to hereditary breast and ovarian cancer";
+
+  beforeEach(() => {
+    standardMocks();
+    createRunMock.mockReset();
+    createRunMock
+      .mockResolvedValueOnce({ run_id: "run-58-1", persona_name: "Mendel" })
+      .mockResolvedValue({ run_id: "run-58-2", persona_name: "Mendel" });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * Turn one lands; the follow-up `body` then arrives whole, inline, on the
+   * same screen. Returns once its stream is read to the end and its progress
+   * is on screen, with Stop checked as offered: under the mutation
+   * `stopEnabled={false}` on the inline `RunProgress`, this is where every
+   * arm goes red.
+   */
+  async function landTurnOneThenFollowUpWith(body: string): Promise<ReturnType<typeof userEvent.setup>> {
+    await askAndLetTheWholeRunArrive();
+    expect(
+      await screen.findByTestId("source-1", {}, LAND_CEILING),
+      "populate-check: turn one never landed",
+    ).toBeInTheDocument();
+
+    const second = oneChunkRun(body);
+    openEventStreamMock.mockImplementationOnce(() => second.response);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/ask a follow-up question/i), FOLLOW_UP);
+    await user.click(screen.getByRole("button", { name: /^ask$/i }));
+    await waitFor(() => expect(second.fullyRead(), "turn two's stream was never read to its end").toBe(true));
+    await screen.findByTestId("step-Guard");
+
+    expect(resultPage(), "populate-check: the follow-up left the answer screen").not.toBeNull();
+    expect(screen.queryByTestId("trust-line"), "populate-check: turn two's trust line was already showing").toBeNull();
+    expect(stopButton(), "Stop was grey on a follow-up with no answer on screen").toBeEnabled();
+    return user;
+  }
+
+  /** Press Stop on turn two, then wait ten seconds for anything to appear. */
+  async function stopTurnTwo(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await user.click(stopButton()!);
+    expect(stopRunMock).toHaveBeenCalledWith("run-58-2", "guest-token-58");
+    vi.useFakeTimers();
+    await advance(10_000);
+  }
+
+  it("offers Stop on the follow-up until its answer is on screen, and Stop keeps that answer off it", async () => {
+    const user = await landTurnOneThenFollowUpWith(
+      sse([...threeHelperSearch, ...answerFrames(SECOND_ANSWER)], "t-58-2"),
+    );
+    expect(screen.queryByText(new RegExp(SECOND_ANSWER)), "populate-check: turn two was already on screen").toBeNull();
+
+    await stopTurnTwo(user);
+
+    expect(screen.getByTestId("run-stopped")).toHaveTextContent("Search stopped");
+    expect(screen.queryByText(new RegExp(SECOND_ANSWER)), "turn two's answer appeared after Stop").toBeNull();
+    expect(screen.queryByTestId("trust-line"), "a trust line showed for the stopped follow-up").toBeNull();
+    // The conversation is kept: turn one is still in the thread above.
+    expect(screen.getByTestId("previous-turn-0")).toHaveTextContent(QUESTION);
+  }, 30_000);
+
+  it("F-58-J02 on a follow-up: Stop on the cap result keeps Search stopped inline, never the result", async () => {
+    const user = await landTurnOneThenFollowUpWith(
+      sse(
+        [
+          ...threeHelperSearch,
+          ["token", { text: CAP_NOTE, marker_ids: [] }],
+          ["done", { total_cost_usd: 0.05, total_tool_calls: 3, elapsed_ms: 20000, trust_outcome: "flag" }],
+        ],
+        "t-58-2",
+      ),
+    );
+
+    await stopTurnTwo(user);
+
+    expect(
+      screen.queryByTestId("run-stopped"),
+      "Stop was pressed on the follow-up, but Search stopped is not on screen",
+    ).not.toBeNull();
+    expect(screen.getByTestId("run-stopped")).toHaveTextContent("Search stopped");
+    expect(screen.queryByTestId("trust-line"), "a trust line showed for the stopped follow-up").toBeNull();
+    expect(screen.queryByTestId("answer-cap"), "the stopped follow-up's note showed").toBeNull();
+    expect(pageText()).not.toMatch(/processing budget|resource limit/i);
+    expect(screen.getByTestId("previous-turn-0")).toHaveTextContent(QUESTION);
+  }, 30_000);
+});
