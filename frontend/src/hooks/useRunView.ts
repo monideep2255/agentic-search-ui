@@ -356,9 +356,15 @@ export interface RunView {
   /**
    * Whether Stop should still be offered.
    *
-   * Reuses `StopButton`'s `deriveStopEnabled`, which has 19 tests behind it and
-   * disables on any terminal event. The first version of the new run screen
-   * offered Stop unconditionally, including after the run had finished.
+   * Reuses `StopButton`'s `deriveStopEnabled`, which disables on `done` or a
+   * fatal error. The first version of the new run screen offered Stop
+   * unconditionally, including after the run had finished.
+   *
+   * This hook sees one event list, so it cannot know what the screen has
+   * shown. `App` therefore replaces this value with `deriveStopOffered`,
+   * computed after the reveal (card 58): Stop stays offered until the first
+   * answer sentence is on screen, even when the server has already
+   * finished.
    */
   stopEnabled: boolean;
 }
