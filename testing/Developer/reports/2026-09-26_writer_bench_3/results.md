@@ -233,7 +233,10 @@ By measured quality and speed, the pick is anthropic/claude-opus-5.5 with reason
 - It keeps the most prose among the fast writers.
 - Its write step stays near glm-5.2's.
 
-Cost, beside that: about $0.126 per question against glm-5.2's $0.021, or about $104 more for every thousand questions.
+Cost, beside that:
+
+- about $0.126 per question against glm-5.2's $0.021
+- about $104 more for every thousand questions
 
 Two conditions before it ships:
 
