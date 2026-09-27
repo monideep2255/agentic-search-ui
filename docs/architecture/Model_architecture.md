@@ -1,6 +1,6 @@
 # Model architecture
 
-Written 2026-09-25. This document covers:
+Written 2026-09-25, updated 2026-09-27 for build phase 8.7 (T-8.7-02): the writer became Opus 5.5 at minimal reasoning effort, and the per-question cap check prices each call at the answering model's real price. This document covers:
 
 - Which language models System 3 calls today
 - What each call decides
@@ -26,7 +26,9 @@ It does not cover the wider system diagram (the five surfaces, the request lifec
 - The agent loop is Guardrail, Think, Plan, Act, Write. Three of those steps and part of a fourth call a language model. Act mostly does not.
 - Every model call, in every step, goes through one function, `Harness.call_tier`, and one route: LiteLLM to OpenRouter. Nothing calls a provider SDK directly.
 - There are three tiers, not three fixed models. A tier is a job description (guard tier: the fast, cheap model used for quick yes-or-no decisions). Which real model answers a tier is a config value, read from an environment variable, not a choice made in code.
-- On develop right now, the guard tier and the plan tier are the same model, deepseek/deepseek-v4-flash. That is a deployed override, not the code's own default. The synth tier is z-ai/glm-5.2 on both develop and in code.
+- On develop, the guard tier and the plan tier are the same model, deepseek/deepseek-v4-flash. That is a deployed override, not the code's own default.
+- The synth tier's code default is anthropic/claude-opus-5.5, at `minimal` reasoning effort, since build phase 8.7 (DECISIONS.md 2026-09-27). Develop sets no synth override, so develop writes with Opus once the phase merges; before that, develop and the code both ran z-ai/glm-5.2. Production changes only at a release.
+- A deployment whose writer is Opus needs a per-question cap of at least $0.25. Under the old $0.10, every question stops at Write, and the harness logs that as an error (see "Cost, time and caching").
 - Eight model call sites exist in the loop today. Two of them (the guard tier's reworded sentence check, and a Cypher-generation fallback) exist specifically to check or replace another part of the pipeline, not to talk to the user.
 - The most important safety rule in this whole document: a model never gets to state a fact as true just because it said so. Every model output that reaches a user passes through a deterministic, non-model check first (a schema, an exact-quote match, a validator) before the next step trusts it.
 
@@ -43,21 +45,29 @@ Reasoning is turned fully off for this tier (`effort: none`), because reasoning 
 
 Plan tier: the mid-range model. Used to classify what kind of question was asked and pull out the entities in it, and, on the rare path where no fixed template fits, to write one Cypher query by hand. Reasoning is also off for this tier today, because build phase 2.1 measured that turning reasoning on cost roughly 27 times the latency for identical, correct answers on this tier's current job (writing one line of Cypher against a fixed schema).
 
-Synth tier: the strongest model. It is used once per answer to turn a list of already-verified facts into prose the user reads. It runs a second time only if the first pass leaves out something it was shown. Reasoning is off here too, for the same measured reason: at any reasoning setting above none, this tier sometimes spent its whole output budget on reasoning and returned nothing usable in time.
+Synth tier: the strongest model. It is used once per answer to turn a list of already-verified facts into prose the user reads. It runs a second time only if the first pass leaves out something it was shown.
+
+The synth tier's reasoning, since build phase 8.7:
+
+- The writer is anthropic/claude-opus-5.5, and it runs at `minimal`, not `none`. Opus refuses `none` on any tier ("Reasoning is mandatory for this endpoint and cannot be disabled").
+- The effort is set per model, in `_REASONING_EFFORT_BY_MODEL` (`src/system_03_search_agent/harness/tiers.py:172`), which `_reasoning_for` (`src/system_03_search_agent/harness/harness.py:374`) reads before the tier's own value. Every model that table does not name keeps its tier's effort exactly, and that is `none` on all three tiers.
+- Why not let the refusal decide: writer bench 3 measured it. Phase 8.6's retry drops the reasoning block, Opus then reasons at its own default, 21.4 s per call on the probe and 22.0 s p90 on the bench. At `minimal` it spent a median 170 reasoning tokens and wrote at 10.7 s median and 13.3 s p90 per call, and 10.8 s and 14.8 s over 78 calls in the finalist round (`testing/Developer/reports/2026-09-26_writer_bench_3/results.md`).
+- Why Opus: over three runs of 18 golden questions it withdrew 0 of 54 written summaries, against Gemini 3.8 Flash's 14 of 54, and glm-5.2 withdrew 9 of 18 in one run. It needed the completeness repair on 24 of 54.
+- glm-5.2, the writer before, ran at `none`. At any higher setting it sometimes spent its whole output budget on reasoning and returned nothing usable in time (2026-09-14). `SYNTH_MODEL=z-ai/glm-5.2` is the one-setting rollback, and it would run at `none` again.
 
 | Tier | What it is for | Model on develop | Code default | Where set |
 |------|-----------------|-------------------|---------------|-----------|
-| Guard | Fast, cheap yes/no and short classification calls | deepseek/deepseek-v4-flash | deepseek/deepseek-v4-flash | `GUARD_MODEL` env var, falls back to `_DEFAULT_MODELS["guard"]` in `src/system_03_search_agent/harness/tiers.py:53` |
-| Plan | Query classification, entity extraction, one-off Cypher generation | deepseek/deepseek-v4-flash (develop overrides the code default) | moonshotai/kimi-k2.6 | `PLAN_MODEL` env var, falls back to `_DEFAULT_MODELS["plan"]` in `src/system_03_search_agent/harness/tiers.py:54` |
-| Synth | Final answer writing from verified facts | z-ai/glm-5.2 | z-ai/glm-5.2 | `SYNTH_MODEL` env var, falls back to `_DEFAULT_MODELS["synth"]` in `src/system_03_search_agent/harness/tiers.py:55` |
+| Guard | Fast, cheap yes/no and short classification calls | deepseek/deepseek-v4-flash | deepseek/deepseek-v4-flash | `GUARD_MODEL` env var, falls back to `_DEFAULT_MODELS["guard"]` in `src/system_03_search_agent/harness/tiers.py:69` |
+| Plan | Query classification, entity extraction, one-off Cypher generation | deepseek/deepseek-v4-flash (develop overrides the code default) | moonshotai/kimi-k2.6 | `PLAN_MODEL` env var, falls back to `_DEFAULT_MODELS["plan"]` in `src/system_03_search_agent/harness/tiers.py:70` |
+| Synth | Final answer writing from verified facts | z-ai/glm-5.2 until build phase 8.7 merges, then anthropic/claude-opus-5.5 (develop sets no override) | anthropic/claude-opus-5.5, at `minimal` effort | `SYNTH_MODEL` env var, falls back to `_DEFAULT_MODELS["synth"]` in `src/system_03_search_agent/harness/tiers.py:71` |
 
 Develop's guard and plan tiers are currently the same model. That is a deployed environment-variable override read from Railway on 2026-09-25, not something the code does on purpose. Production's settings were not read for this document (see the last section).
 
-A tier's resolved model is fetched once per question and held for that question's whole duration, through a `TierContext` object (`src/system_03_search_agent/harness/tiers.py:150` onward). A question never observes its own guard tier switch models partway through, even if the environment variable changes while the question is running.
+A tier's resolved model is fetched once per question and held for that question's whole duration, through a `TierContext` object (`src/system_03_search_agent/harness/tiers.py:221` onward). A question never observes its own guard tier switch models partway through, even if the environment variable changes while the question is running.
 
 ## Every model call in one question
 
-Every row below is issued through `Harness.call_tier` (`src/system_03_search_agent/harness/harness.py:513`), the single function every model call in the loop passes through. Most rows are also wrapped by `_dispatch_tier_call` (`src/system_03_search_agent/core/graph.py:765`), the shared sequence that checks the per-query cost cap, then calls the tier, then enforces the step's timeout, in that fixed order.
+Every row below is issued through `Harness.call_tier` (`src/system_03_search_agent/harness/harness.py:587`), the single function every model call in the loop passes through. Most rows are also wrapped by `_dispatch_tier_call` (`src/system_03_search_agent/core/graph.py:785`), the shared sequence that checks the per-query cost cap, then calls the tier, then enforces the step's timeout, in that fixed order.
 
 | Step | What the model decides or writes | Tier | What checks its output | What happens if it fails | File:line |
 |------|-----------------------------------|------|--------------------------|----------------------------|-----------|
@@ -126,13 +136,52 @@ Cost caps (`src/system_03_search_agent/harness/cost_control.py`):
 
 Every model call goes through `_dispatch_tier_call`'s cap check first. A call that would breach the per-query cap is never dispatched at all, and the pending question is declined rather than run over budget.
 
-Per-step timeouts (`Harness.enforce_timeout` at `src/system_03_search_agent/harness/harness.py:672`, and `budget_for_step` at `src/system_03_search_agent/harness/harness.py:432`): each step's timeout is chosen by which tier answers it, not by how hard the question looks. This is because measured latency tracks the tier, not the query. By tier:
+### The per-question cap and the writer's price
+
+Since build phase 8.7 (T-8.7-02), the pre-flight check (`check_per_query_cap`, `src/system_03_search_agent/harness/cost_control.py:473`) prices the next call at the real price of the model the question resolved for that tier:
+
+- The model is priced before it is called, as phase 8.6's T-8.6-08 requires: `Harness.price_per_token` reads litellm's own price map first and the fallback table in `src/system_03_search_agent/harness/tiers.py` second. Opus 5.5 is in that table at $4 and $20 per million tokens, the catalogue price writer bench 3 recorded on 2026-09-26, so it stays priced whatever litellm version a deployment installs.
+- The estimate for one call is the larger of two figures. The first is today's static one: the tier's typical token profile at a flat $5 per million. The second is `_PRICED_TOKEN_PROFILE` (`cost_control.py:373`) at the model's real price. So cheaper models keep exactly the estimate they had, and a costlier model is estimated at its own price.
+- The synth profile is 23,000 prompt and 2,000 output tokens. That sits above every one of the bench's 78 Opus writer calls (largest: 22,839 and 1,869), so it bounds a writer call rather than guessing it: $0.132 at Opus's price, against the static $0.025.
+- Replayed on the bench's 54 Opus questions at a 25-cent cap, this check refused no first writer call, admitted all 24 repairs, and let no question pass 25 cents. Sized at the synth tier's full 4,000-token output ceiling instead, the same replay refused all 24 repairs.
+- A cap below the estimate of one call is logged as an error naming `PER_QUERY_COST_CAP_USD` and the model, because every question then stops at that call.
+
+A deployment whose writer is Opus needs `PER_QUERY_COST_CAP_USD` of at least 0.25, the owner's figure (DECISIONS.md 2026-09-27):
+
+- The cap is an environment setting with no code default. A missing cap raises rather than being invented (F-2.0-09).
+- Under the old $0.10, one Opus writer call's $0.132 estimate exceeds the cap on its own, so Write is refused on every question. The reader then gets only the fixed partial-result note, and the log carries the error above.
+- Develop's cap is set to 0.25 when build phase 8.7 merges. Production keeps its own value until the owner decides at a release, so a release that brings Opus to a production still at $0.10 must raise the cap in the same step.
+
+### The daily caps at Opus's cost
+
+Measured, not estimated. The per-question figures are writer bench 3's 54 Opus runs at minimal effort (`testing/Developer/reports/2026-09-26_writer_bench_3/`: the stage 2 table's "OpenRouter $ per question", and `done.total_cost_usd` over `raw/`). The cap values are develop's as recorded in DECISIONS.md 2026-09-25: $10 a day system-wide and 100 questions per user per day. No daily cap was changed by build phase 8.7; changing one is the owner's decision.
+
+| Figure | Opus 5.5 at minimal | glm-5.2, before |
+|---|---|---|
+| Cost per question, mean | $0.1257 billed, $0.1258 metered | $0.0212 billed |
+| Cost per question, median and p90 | $0.0875 and $0.188 | not re-measured here |
+| Most expensive question | $0.2132, under the $0.25 cap | not re-measured here |
+| Questions per $10 system day, at the mean | about 79 | about 471 |
+| One golden run, 150 questions | about $18.86 | about $3.18 |
+| One signed-in user at the 100-question daily cap | about $12.57 | about $2.12 |
+
+What that means for the person using develop:
+
+- The system-wide daily cap, which counts every question's cost in the `interactions` table, now fills after about 79 answered questions. After that, every question that day gets "The system has paused accepting new queries for today to stay within its operating budget."
+- One golden run costs about $19 by itself, so it cannot finish under a $10 day. The run and the merge wait for the owner's answer on the daily cap.
+- One signed-in user at their daily question cap can spend more than the whole system's day on their own.
+
+Per-step timeouts (`Harness.enforce_timeout` at `src/system_03_search_agent/harness/harness.py:820`, and `budget_for_step` at `src/system_03_search_agent/harness/harness.py:503`): each step's timeout is chosen by which tier answers it, not by how hard the question looks. This is because measured latency tracks the tier, not the query. By tier:
 
 - Guard: 15 seconds
 - Plan: 45 seconds
-- Synth: 45 seconds, shared across the Write step's two calls (the answer and its possible repair) rather than a full budget for each
+- Synth: 45 seconds, shared across the Write step's two calls (the answer and its possible repair) rather than a full budget for each. Opus at minimal wrote at 10.7 s median and 13.3 s p90 per call on the bench, so two calls fit.
 
-Reasoning effort is turned off (`effort: none`) on all three tiers today. This was measured, not assumed: turning reasoning on for the plan tier's Cypher generation cost roughly 27 times the latency for correct output that did not change, and turning it on for the synth tier sometimes burned the entire output budget on reasoning and returned nothing.
+Reasoning effort is set per model since build phase 8.7:
+
+- Opus 5.5 runs at `minimal` on whichever tier resolves to it, since it refuses `none`. Today that is only the synth tier.
+- Every other model runs at its tier's effort, which is `none` on all three tiers.
+- `none` was measured, not assumed. Turning reasoning on for the plan tier's Cypher generation cost roughly 27 times the latency for correct output that did not change. Turning it on for glm-5.2 on the synth tier sometimes burned the entire output budget on reasoning and returned nothing.
 
 Prompt caching (`src/system_03_search_agent/harness/cache.py`, design in `.claude/rules/prompt-cache-discipline.md`): the Think, Plan and Write calls share one stable prefix, assembled in a fixed order every time.
 
@@ -190,6 +239,15 @@ How the two models are compared now, off the live path (build phase 8.6):
 ## Where to change a model
 
 The three tiers each resolve from an environment variable first, and a code default second: `GUARD_MODEL`, `PLAN_MODEL`, `SYNTH_MODEL`, read in `src/system_03_search_agent/harness/tiers.py:resolve_model`. Changing which real model answers a tier on a deployment is an environment variable edit, nothing more. Changing the app's own fallback default is a one-line edit to `_DEFAULT_MODELS` in the same file.
+
+Two per-model tables sit beside `_DEFAULT_MODELS` in `tiers.py`, each keyed by model id:
+
+- `_FALLBACK_PRICES_USD_PER_TOKEN`: the price used when litellm's map has none. A model priced by neither is refused before it is called.
+- `_REASONING_EFFORT_BY_MODEL`: the effort for a model that refuses its tier's effort. Today only Opus 5.5, at `minimal`.
+
+Both may name only models that are `_DEFAULT_MODELS` values, since the repository-wide scan (`tests/system_03_search_agent/harness/test_tiers.py`) allows a model id nowhere else. A model that stops being a default leaves both tables too.
+
+Switching the writer back is one setting: `SYNTH_MODEL=z-ai/glm-5.2` on the deployment. litellm's map prices glm-5.2 ($0.6496 and $2.0416 per million in 1.93.0, held by `tests/system_03_search_agent/harness/test_opus_writer.py`), it runs at the synth tier's `none`, and its estimate falls back to the static figure.
 
 The standing rule from `.claude/rules/system-design-patterns.md` pattern 11 applies here: model identity is a harness decision, never an agent decision. `resolve_model` never hardcodes a model id inline outside that one table.
 

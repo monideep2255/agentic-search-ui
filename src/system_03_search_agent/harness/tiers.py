@@ -14,10 +14,10 @@ Model identity is a config value, never a harness or agent decision
 (system-design-patterns.md pattern 11; Technical_specification.md Section
 3.1, lines 419-427, and Section 3.3, lines 450-465). resolve_model() never
 hardcodes a model id inline: the one exception is the _DEFAULT_MODELS table
-below, the single app-config default table this rule allows. Every id in
-that table is a placeholder pending the Phase 6 model-bench (Section 3.6),
-which benches the candidate list named there and writes the winners back
-into this table.
+below, the single app-config default table this rule allows. The guard and
+plan ids in that table are placeholders pending a model-bench (Section
+3.6); the synth id is writer bench 3's winner (build phase 8.7,
+DECISIONS.md 2026-09-27).
 
 This module resolves a tier to a bare model id only (for example
 "deepseek/deepseek-v4-flash"), the same shape GUARD_MODEL/PLAN_MODEL/
@@ -45,15 +45,30 @@ _ENV_VAR_BY_TIER: dict[Tier, str] = {
 }
 
 # The one app-config default table (system-design-patterns.md pattern 11).
-# Placeholder values only, drawn from the Section 3.6 candidate list, until
-# the Phase 6 model-bench picks a winner per tier. No other module, node, or
-# graph file may contain a literal model id string: this table is the only
-# place one is allowed to appear. Bare model ids only (no "openrouter/"
+# Guard and plan are placeholder values drawn from the Section 3.6 candidate
+# list, until a model-bench picks a winner for them. No other module, node,
+# or graph file may contain a literal model id string: this table is the
+# only place one is allowed to appear. Bare model ids only (no "openrouter/"
 # prefix): see the module docstring for why that prefix is call_tier's job.
+#
+# Synth is a bench winner, not a placeholder (build phase 8.7, T-8.7-02;
+# DECISIONS.md 2026-09-27). Writer bench 3 ran eight writers over 18 golden
+# questions (`testing/Developer/reports/2026-09-26_writer_bench_3/`):
+# Opus 5.5 at minimal reasoning effort withdrew 0 of 54 summaries across
+# three runs, against glm-5.2's 9 of 18 in one, at 10.7 s median and 13.3 s
+# p90 per writer call. The id is the exact one the bench called
+# (`record.model_id` in its raw results). It runs at `minimal` effort, not
+# `none`, which it refuses: see `_REASONING_EFFORT_BY_MODEL` below. The
+# previous default, z-ai/glm-5.2, is the one-setting rollback
+# (`SYNTH_MODEL=z-ai/glm-5.2`), priced by litellm's own map.
+#
+# Develop sets no `SYNTH_MODEL`, so this default reaches develop when the
+# phase merges. Production reaches it only at a release, and only if
+# production sets no `SYNTH_MODEL` of its own.
 _DEFAULT_MODELS: dict[Tier, str] = {
     "guard": "deepseek/deepseek-v4-flash",
     "plan": "moonshotai/kimi-k2.6",
-    "synth": "z-ai/glm-5.2",
+    "synth": "anthropic/claude-opus-5.5",
 }
 
 # Jev, the classifier-seam model (build phase 8.2, DECISIONS.md 2026-09-25,
@@ -113,10 +128,49 @@ def resolve_jev_model() -> str:
 #
 # When a price changes, re-read the catalogue rather than hand-editing, and
 # never invent a price for a model missing from both sources.
+#
+# Build phase 8.7, T-8.7-02: Opus 5.5 at $4 and $20 per million tokens, the
+# synth default. Source: OpenRouter's catalogue read by writer bench 3 on
+# 2026-09-26 (`testing/Developer/reports/2026-09-26_writer_bench_3/results.md`,
+# "Candidates and prices"), the same figures litellm 1.93.0's own map
+# carries. The bench's metering at this price matched OpenRouter's bill to
+# the cent (G-001 run 1: 17,432 prompt and 878 output tokens, $0.087288 both
+# ways). It is here although litellm prices it today because
+# `requirements.txt` asks for `litellm>=1.40`, not an exact version, so the
+# installed map can differ from the tested one, and the writer must stay
+# priced before it is called (T-8.6-08) whatever that map holds.
+#
+# z-ai/glm-5.2 left this table when it stopped being a default:
+# `test_no_model_id_shaped_string_outside_the_default_table` allows a model
+# id in this file only as a `_DEFAULT_MODELS` value. It is still the
+# one-setting rollback, and litellm's map prices it ($0.6496 and $2.0416 per
+# million in 1.93.0); `tests/.../harness/test_opus_writer.py` holds that the
+# installed map still does.
 _FALLBACK_PRICES_USD_PER_TOKEN: dict[str, tuple[float, float]] = {
     "deepseek/deepseek-v4-flash": (0.00000014, 0.00000028),
     "moonshotai/kimi-k2.6": (0.000000646, 0.00000272),
-    "z-ai/glm-5.2": (0.0000007182, 0.0000022572),
+    "anthropic/claude-opus-5.5": (0.000004, 0.00002),
+}
+
+# Per-model reasoning effort, for a model whose tier's effort it refuses
+# (build phase 8.7, T-8.7-02). `harness.harness._reasoning_for` sends the
+# effort named here for a model listed, and the tier's own effort from
+# `harness.harness._TIER_REASONING` for every other model, unchanged.
+#
+# Keyed by model, not by tier, because the refusal belongs to the model:
+# Opus refuses `effort: none` on any tier with "Reasoning is mandatory for
+# this endpoint and cannot be disabled". Writer bench 3's probe measured
+# what happens then: phase 8.6's retry drops the reasoning block, and Opus
+# reasons at its own default, 21.4 s per call on the probe and 22.0 s p90 on
+# the bench. At `minimal` it spent a median 170 reasoning tokens and wrote at
+# 10.7 s median, 13.3 s p90, over 26 writer calls, and 10.8 s and 14.8 s over
+# 78 in the finalist round.
+#
+# It lives here, not in harness.py, for the reason `_FALLBACK_PRICES_USD_
+# PER_TOKEN` does: its keys are model ids, and the repository-wide scan
+# allows a model id only in this file, and only as a `_DEFAULT_MODELS` value.
+_REASONING_EFFORT_BY_MODEL: dict[str, str] = {
+    "anthropic/claude-opus-5.5": "minimal",
 }
 
 

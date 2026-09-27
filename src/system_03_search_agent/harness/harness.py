@@ -77,6 +77,9 @@ from system_03_search_agent.harness.call_log import provider_of
 from system_03_search_agent.harness.tiers import (
     _FALLBACK_PRICES_USD_PER_TOKEN as _TIER_FALLBACK_PRICES,
 )
+from system_03_search_agent.harness.tiers import (
+    _REASONING_EFFORT_BY_MODEL as _MODEL_REASONING_EFFORT,
+)
 from system_03_search_agent.harness.tiers import Tier, TierContext
 
 logger = logging.getLogger(__name__)
@@ -363,8 +366,28 @@ _TIER_REASONING: dict[Tier, dict[str, Any]] = {
     # deterministic grounding gate, and the summary sentence and record
     # lists are built in code, so hidden reasoning bought little the gate
     # keeps. Evidence: testing/Developer/reports/2026-09-14_answer_quality/.
+    #
+    # Build phase 8.7, T-8.7-02: the synth default is now Opus 5.5, which
+    # refuses `none` and so runs at `minimal` through the per-model table
+    # (`_reasoning_for` below). This tier value still applies to every
+    # model that table does not name, glm-5.2 included.
     "synth": {"effort": "none"},
 }
+
+
+def _reasoning_for(tier: Tier, model_id: str) -> dict[str, Any]:
+    """The reasoning block one call sends (build phase 8.7, T-8.7-02).
+
+    The model's own effort when `tiers._REASONING_EFFORT_BY_MODEL` names
+    one, which today is only Opus 5.5 at `minimal`, since it refuses
+    `none`. Every other model gets its tier's entry in `_TIER_REASONING`,
+    the same dict object as before this function existed, so their request
+    is byte for byte unchanged.
+    """
+    effort = _MODEL_REASONING_EFFORT.get(model_id)
+    if effort is None:
+        return _TIER_REASONING[tier]
+    return {"effort": effort}
 
 _TIER_MAX_TOKENS: dict[Tier, int] = {
     # Guard is validation and classification, which Section 3.1 budgets as
@@ -635,7 +658,7 @@ class Harness:
         request: dict[str, Any] = {
             "model": target,
             "messages": final_messages,
-            "reasoning": _TIER_REASONING[tier],
+            "reasoning": _reasoning_for(tier, model_id),
             # Per-call override, defaulting to the tier's own cap.
             # F-4.12-01: a caller that KNOWS it is going to discard the
             # reply should not pay for a tier-sized one. The tier cap
@@ -731,6 +754,24 @@ class Harness:
                     elapsed_s=elapsed_s,
                     provider=provider_of(response),
                 )
+
+    def model_for(self, tier: Tier) -> str:
+        """The model id this question resolved for `tier`, the one
+        `call_tier` would call (build phase 8.7, T-8.7-02). Resolved through
+        this Harness's `TierContext`, so it never differs from the model the
+        call itself uses."""
+        return self._tier_context.resolve(tier)
+
+    def price_per_token(self, tier: Tier) -> tuple[float, float]:
+        """(input, output) USD per token for the model this question
+        resolved for `tier` (build phase 8.7, T-8.7-02).
+
+        Read by `cost_control.check_per_query_cap`, so the pre-flight cap
+        check prices the next call at the real price of the model that will
+        answer it. Raises `HarnessCallError`, as `call_tier` would, when
+        neither litellm's map nor the fallback table prices the model.
+        """
+        return _price_per_token(self.model_for(tier))
 
     def last_call_elapsed_s(self, trace_id: str, tier: Tier) -> float | None:
         """Seconds the latest completed `call_tier` call on `tier` took for
