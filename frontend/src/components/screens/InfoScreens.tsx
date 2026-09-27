@@ -70,8 +70,9 @@
  * bound, the session id, the clarifying question and its options, and the
  * trust line, plus tools to list past searches, reopen an answer and send
  * feedback. The follow-up offers the web shows after an answer are not on
- * MCP yet; card 52's phase adds them to every surface, so the card says they
- * are coming rather than claiming the same parity (F-8.10-J13). The config
+ * MCP, and the card says so plainly rather than claiming the same parity
+ * (F-8.10-J13) or promising them "next", which no plan schedules (card 62,
+ * F-8.10-V06). The config
  * below carries the bearer header a caller needs, and a token lasts 15
  * minutes.
  */
@@ -692,7 +693,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<PlugIcon />}
           title="MCP server"
-          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are coming to MCP next. An account is required, and a bearer token lasts 15 minutes."
+          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are not part of MCP. An account is required, and a bearer token lasts 15 minutes."
           code={MCP_CONFIG}
           codeLabel="MCP server configuration"
           copies={[

@@ -137,14 +137,17 @@ describe("the integrations page, rebuilt from the reference layout", () => {
     expect(card).toHaveTextContent(/pasted into the agent's MCP settings/);
   });
 
-  it("says the MCP follow-up offers are coming rather than claiming the same parity", () => {
-    // F-8.10-J13: the follow-up offers wait for card 52's phase. Mutation
-    // that turns this red: put back "the same parity the web app has".
+  it("promises no schedule for the MCP follow-up offers, and claims no parity", () => {
+    // F-8.10-J13, then card 62 (F-8.10-V06, PR-8.10-15): "coming to MCP
+    // next" was a schedule promise no plan keeps. The card now says only
+    // what is true today. Mutation that turns this red: put back "coming to
+    // MCP next", or "the same parity the web app has".
     render(<IntegrationsScreen />);
 
     const card = cards().getByRole("heading", { name: "MCP server" }).parentElement;
     expect(card).not.toHaveTextContent(/same parity/i);
-    expect(card).toHaveTextContent(/follow-up offers.*are coming/);
+    expect(card).not.toHaveTextContent(/coming/i);
+    expect(card).toHaveTextContent(/follow-up offers the web app shows after an answer are not/);
   });
 
   it("puts the API documentation section on the page, with the real event names", () => {
