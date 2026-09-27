@@ -253,3 +253,5 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
 - 2026-09-27 00:12: pull request #120 opened. The judge (Opus 5.5) and the adversary (Fable 5.1) dispatched on 5ba8f4d, dispatches 4 and 5 of 8. Their findings come back in their final messages, and the lead files them here.
 
 ## Findings
+- F-8.10-L01, should-fix, filed by the lead from the re-split facts checker (#122) run on this branch's page text: the About page's Plan tier card now says the plan tier answers Plan's routing decision. That step reaches only Jev and the guard tier, never the plan tier (`check_facts.py` call-graph reading of `core/graph.py`'s plan node). T-8.10-08.
+- F-8.10-L02, should-fix, filed by the lead from the same run: the tour now says "Two of these four come word for word" from the evaluation set. None of the four seeds is a whole golden question (the checker's `seeds.from_golden_set`, 0 of 4 whole). Round one's plain-words line in the facts report misled builder R, and that line is corrected on #122. T-8.10-08.
