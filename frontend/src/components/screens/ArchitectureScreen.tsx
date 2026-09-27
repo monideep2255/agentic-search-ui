@@ -95,22 +95,26 @@
  *     `_VARIATION_BASE` in `tools/ncbi_dbsnp.py`, and the PubTator3, LitVar2
  *     and ClinicalTrials.gov constants in their own tool modules.
  *
- * ONE DIVERGENCE IS DELIBERATE AND IS STATED HERE rather than quietly
- * resolved. About's walk lists `pathogen_detection` under Layer 3. This page
- * lists it under Layer 2, following `visualizations/Architecture_diagram.md`,
- * which classifies it as Layer 2 "because it is an NCBI-native bulk source,
- * not one of the four enrichment APIs" and is the repository's source of
- * truth for the tool-to-layer mapping. About was left unchanged because this
- * work is scoped not to restructure it; the disagreement is reported rather
- * than papered over.
+ * `pathogen_detection` is listed under Layer 2, following
+ * `visualizations/Architecture_diagram.md`, which classifies it there because
+ * it is an NCBI-native bulk source, not one of the three enrichment APIs.
+ * About's walk has listed it under Layer 2 too since 2026-09-13.
  *
- * THE GRAPH BUDGET IS 90 SECONDS, NOT 30. Technical specification Section 6.1
- * says 30 and the code says 90, deliberately: the plan-tier call that writes
- * the Cypher was measured at a mean of 25 seconds before the graph is touched
- * at all, so 30 could not complete. `tools/graph_schema_constants.py` carries
- * the measurement and files the spec text as a Step 6.2 reconciliation item.
- * The page states what the code enforces, since that is what a reader
- * actually experiences.
+ * THE GRAPH BUDGET IS 30 SECONDS. It was 90 for a while, because the
+ * plan-tier call that writes the Cypher was once measured at a mean of 25
+ * seconds. It went back to 30, Section 6.1's figure, on the product owner's
+ * decision of 2026-09-26 (R-09): across two golden runs, 290 `cypher_query`
+ * calls took a median of 0.71 seconds, and no call that ran past 30 seconds
+ * succeeded. `tools/graph_schema_constants.py` carries the measurement. The
+ * page states what the code enforces, since that is what a reader actually
+ * experiences.
+ *
+ * WHEN LAYER 3 RUNS, read from the code on 2026-09-27 (card 53): `plan_node`
+ * calls `_build_layer_tool_calls` in `core/graph.py`, which plans
+ * `pubtator_annotate` and `clinicaltrials_search` for a question that names
+ * a gene or, with no gene, a disease, and `litvar2_lookup` for each of the
+ * first two rs ids the question names. No decision and no request gates
+ * them.
  */
 
 import { Box, Typography } from "@mui/material";
@@ -462,10 +466,12 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
 
         <JourneyStop index={3} title="Layer 3, enrichment">
           <StopText>
-            Once a fact is established, three further tools add evidence around it: which papers
-            mention the entity, which variants the literature ties to it, and which clinical trials
-            name it. These run when the question asks for that evidence, never by default, and
-            ClinicalTrials.gov is the one source here that is not an NCBI host.
+            Three further tools add evidence around the gene, disease or variant a question names:
+            which papers mention it, the literature LitVar2 links to a named variant, and which
+            clinical trials name it. Plan adds them in code rather than on request: PubTator3 and
+            ClinicalTrials.gov for every question that names a gene or a disease, and LitVar2 for
+            each rs variant id the question names. ClinicalTrials.gov is the one source here that is
+            not an NCBI host.
           </StopText>
           <Box sx={{ mt: 0.75 }}>
             <LayerCard layer={LAYERS[2]} />

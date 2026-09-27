@@ -116,13 +116,17 @@ export const PIPELINE_STEPS = [
  * and the PubTator3, LitVar2 and ClinicalTrials.gov constants in their own
  * modules.
  *
- * ONE DIVERGENCE IS DELIBERATE. The About page's walk lists
- * `pathogen_detection` under layer 3. This list puts it under layer 2,
- * following `Architecture_diagram.md`, which classifies it there "because it
- * is an NCBI-native bulk source, not one of the four enrichment APIs" and is
- * this repository's source of truth for the tool-to-layer mapping. About's
- * own list is left as it stands, since that page was out of scope to
- * restructure; the disagreement is stated rather than papered over.
+ * `pathogen_detection` sits under layer 2, following `Architecture_diagram.md`,
+ * which classifies it there because it is an NCBI-native bulk source, not
+ * one of the three enrichment APIs. The About page's walk has listed it under
+ * layer 2 too since 2026-09-13, so the two pages no longer disagree.
+ *
+ * WHEN LAYER 3 RUNS, read from the code on 2026-09-27 (card 53): `plan_node`
+ * calls `_build_layer_tool_calls` in `core/graph.py`, which plans
+ * `pubtator_annotate` and `clinicaltrials_search` for a question that names
+ * a gene or, with no gene, a disease, and `litvar2_lookup` for each of the
+ * first two rs ids the question names. No decision and no request gates
+ * them, so the summary says "added in code rather than on request".
  */
 export const LAYERS: {
   n: 1 | 2 | 3;
@@ -170,7 +174,7 @@ export const LAYERS: {
     n: 3,
     name: "Enrichment",
     summary:
-      "Literature and trial evidence, layered on a fact the first two layers already established. Called when the question asks for it, never by default.",
+      "Literature and trial evidence about the gene, disease or variant a question names. Added in code rather than on request, and searched at the same time as the other two layers.",
     tools: [
       { name: "pubtator_annotate", calls: "PubTator3", budget: "15 seconds" },
       { name: "litvar2_lookup", calls: "LitVar2", budget: "15 seconds" },

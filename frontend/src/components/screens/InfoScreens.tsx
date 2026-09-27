@@ -885,8 +885,17 @@ export function IntegrationsScreen() {
 //     `synthesis/grounding.py`'s `ground_claim` accepts a claim only on a
 //     substring match against the record's own field value.
 //   - The event stream: `contracts/events.py`'s envelope `type` union carries
-//     guard, think, plan, tool_start, tool_result, token, citation,
+//     guard, think, plan, step, tool_start, tool_result, token, citation,
 //     trust_signal, cost, error and done.
+//   - All three layers go out together (card 53, 2026-09-27): Act's planned
+//     calls run through `core/graph.py`'s `_gather_planned_calls`, which
+//     awaits them with `asyncio.gather`, so no layer is read before another.
+//   - When layer 3 runs (card 53, 2026-09-27): `plan_node` calls
+//     `_build_layer_tool_calls` in `core/graph.py`, which plans
+//     `pubtator_annotate` and `clinicaltrials_search` on the gene's symbol,
+//     or on the disease's MedGen name when no gene resolved, and one
+//     `litvar2_lookup` for each of the first two rs ids in the question. No
+//     decision and no request gates them.
 //   - The scientist is presentation only: `shell/PersonaChip.tsx`'s docstring,
 //     "the persona never changes which tools run, which records are
 //     retrieved, or what the trust signal says".
@@ -921,7 +930,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 1,
     name: "Knowledge graph",
     tools: "cypher_query",
-    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns a stored link, which is why a question like this one starts here.",
+    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns the stored links from BRCA1 to its diseases, while the live layers are searched at the same time.",
   },
   {
     n: 2,
@@ -938,7 +947,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 3,
     name: "Enrichment",
     tools: "pubtator_annotate, litvar2_lookup, clinicaltrials_search",
-    body: "Literature and trial evidence, added when the question asks for it rather than by default.",
+    body: "Literature and trial evidence, added in code rather than on request whenever a question names a gene, a disease or an rs variant, this one included.",
   },
 ];
 
@@ -1189,7 +1198,7 @@ export function AboutScreen({
       n: 3,
       name: "Enrichment",
       colour: designTokens.layer3,
-      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence layered on a fact the first two layers established.",
+      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence about the gene, disease or variant a question names, searched alongside the first two layers.",
     },
   ];
 
