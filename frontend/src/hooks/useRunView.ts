@@ -660,24 +660,55 @@ export function useRunView(events: AgentEvent[]): RunView {
      * render as notes, never first). A token with no `kind` comes from an
      * older producer and is classified exactly as before.
      */
-    let paragraph = 0;
-    let claimsInParagraph = 0;
-    let pendingHeading: string | null = null;
-    let pendingNotes: string[] = [];
-    let pendingTableHeader: string[] | null = null;
     /*
-     * 2026-09-14: true after the findings-tail note, until a heading. Every
-     * claim in that span is a code-built record line ("Disease name: X"), so
-     * the answer screen groups them into a record block instead of prose.
-     * Set for a typed note and a kind-less one alike.
+     * Build phase 8.7, T-8.7-03 (card 50): TWO REGIONS, EACH WITH ITS OWN
+     * STRUCTURE STATE. The server now sends the code-built count line and
+     * record listing (`placement: "listing"`) the moment the searches end,
+     * and the written summary later. The screen shows the summary above the
+     * listing, so each region is classified as if the other were not there:
+     * a listing that ends inside its findings tail or a table must not turn
+     * the summary's first sentence into a record line, and a summary heading
+     * must not attach itself to the listing. A token with no placement is
+     * the summary, so an older producer's answer runs through one region
+     * exactly as before.
+     *
+     * `claims` stays in ARRIVAL order, each listing claim tagged
+     * `placement: "listing"`. That is deliberate: a claim's index is its
+     * identity on screen (its React key, its `claim-text-N` hook, the key of
+     * the records table it opens), so a summary that lands after the listing
+     * is appended rather than inserted, and no record row already on screen
+     * changes identity when it lands. `AnswerBody` does the placing.
      */
-    let inFindingsTail = false;
+    interface Region {
+      paragraph: number;
+      claimsInParagraph: number;
+      pendingHeading: string | null;
+      pendingNotes: string[];
+      pendingTableHeader: string[] | null;
+      /*
+       * 2026-09-14: true after the findings-tail note, until a heading.
+       * Every claim in that span is a code-built record line ("Disease name:
+       * X"), so the answer screen groups them into a record block instead of
+       * prose. Set for a typed note and a kind-less one alike.
+       */
+      inFindingsTail: boolean;
+    }
+    const newRegion = (): Region => ({
+      paragraph: 0,
+      claimsInParagraph: 0,
+      pendingHeading: null,
+      pendingNotes: [],
+      pendingTableHeader: null,
+      inFindingsTail: false,
+    });
+    const summaryRegion = newRegion();
+    const listingRegion = newRegion();
     const isFindingsTailNote = (text: string) =>
       text.trimStart().startsWith(FINDINGS_TAIL_NOTE_PREFIX);
-    const nextParagraph = () => {
-      if (claimsInParagraph > 0) {
-        paragraph += 1;
-        claimsInParagraph = 0;
+    const nextParagraph = (region: Region) => {
+      if (region.claimsInParagraph > 0) {
+        region.paragraph += 1;
+        region.claimsInParagraph = 0;
       }
     };
     for (const event of events) {
@@ -688,29 +719,31 @@ export function useRunView(events: AgentEvent[]): RunView {
       // below, from the trust_signal's own `message` and `fallback_link`
       // fields, never from this token's text.
       if (answerRefusalSignal) continue;
+      const listing = event.payload.placement === "listing";
+      const region = listing ? listingRegion : summaryRegion;
       const kind = event.payload.kind ?? null;
       if (kind === "paragraph_break") {
-        nextParagraph();
+        nextParagraph(region);
         continue;
       }
       if (kind === "heading") {
-        nextParagraph();
-        inFindingsTail = false;
+        nextParagraph(region);
+        region.inFindingsTail = false;
         const heading = event.payload.text.trim();
-        if (heading) pendingHeading = heading;
+        if (heading) region.pendingHeading = heading;
         continue;
       }
       if (kind === "table_header") {
         const cells = event.payload.cells ?? [];
         // 2026-09-14: any column count; the Researcher table carries a third.
-        pendingTableHeader = cells.length > 0 ? cells : null;
+        region.pendingTableHeader = cells.length > 0 ? cells : null;
         continue;
       }
       if (kind === "note") {
-        nextParagraph();
-        inFindingsTail = isFindingsTailNote(event.payload.text);
+        nextParagraph(region);
+        region.inFindingsTail = isFindingsTailNote(event.payload.text);
         const note = event.payload.text.trim();
-        if (note) pendingNotes.push(note);
+        if (note) region.pendingNotes.push(note);
         continue;
       }
       // R-08: a repeated marker_id must not produce a repeated chip.
@@ -779,7 +812,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         kind === null &&
         (isSystemNote(text) || (cited.length === 0 && text.startsWith("Note:")))
       ) {
-        inFindingsTail = isFindingsTailNote(text);
+        region.inFindingsTail = isFindingsTailNote(text);
         systemNotes.push(text);
         continue;
       }
@@ -798,32 +831,34 @@ export function useRunView(events: AgentEvent[]): RunView {
         ),
       };
       if (unresolved > 0) claim.pendingCitations = unresolved;
-      if (inFindingsTail) claim.findingsTail = true;
+      if (region.inFindingsTail) claim.findingsTail = true;
+      if (listing) claim.placement = "listing";
       if (kind !== null) {
         claim.kind = kind === "list_item" || kind === "table_row" ? kind : "claim";
-        claim.paragraph = paragraph;
-        if (pendingHeading !== null) {
-          claim.heading = pendingHeading;
-          pendingHeading = null;
+        claim.paragraph = region.paragraph;
+        if (region.pendingHeading !== null) {
+          claim.heading = region.pendingHeading;
+          region.pendingHeading = null;
         }
-        if (pendingNotes.length > 0) {
-          claim.noteBefore = pendingNotes.join(" ");
-          pendingNotes = [];
+        if (region.pendingNotes.length > 0) {
+          claim.noteBefore = region.pendingNotes.join(" ");
+          region.pendingNotes = [];
         }
         const cells = event.payload.cells;
         if (cells && cells.length > 0) claim.cells = cells;
         const emphasis = event.payload.emphasis;
         if (emphasis && emphasis.length > 0) claim.emphasis = emphasis;
-        if (kind === "table_row" && pendingTableHeader !== null) {
-          claim.tableHeader = pendingTableHeader;
-          pendingTableHeader = null;
+        if (kind === "table_row" && region.pendingTableHeader !== null) {
+          claim.tableHeader = region.pendingTableHeader;
+          region.pendingTableHeader = null;
         }
-        claimsInParagraph += 1;
+        region.claimsInParagraph += 1;
       }
       claims.push(claim);
     }
-    // Notes with no claim after them are disclosures about the whole answer.
-    systemNotes.push(...pendingNotes);
+    // Notes with no claim after them are disclosures about the whole answer,
+    // the summary's first since it reads first.
+    systemNotes.push(...summaryRegion.pendingNotes, ...listingRegion.pendingNotes);
 
     // Trust signals. Worst-wins is the server's job; this only renders what
     // arrived, and never manufactures a positive verdict from nothing.
