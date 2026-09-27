@@ -1,6 +1,12 @@
 # Build phase 8.7: answers that answer, sooner
 
-A person asks a question and waits about 17 seconds in silence, and the first sentence they finally read counts records instead of answering. This phase makes the first sentence answer the question, puts the records on screen at about 8 seconds, and moves the writing to the model the owner chose. Opened 2026-09-27 at 04:29 UTC on the owner's overnight decision (`DECISIONS.md`, 2026-09-27, "The overnight run"): build, review, and merge if the golden run holds.
+A person asks a question and waits about 17 seconds in silence, and the first sentence they finally read counts records instead of answering. This phase:
+
+- makes the first sentence answer the question;
+- puts the records on screen at about 8 seconds;
+- moves the writing to the model the owner chose.
+
+Opened 2026-09-27 at 04:29 UTC on the owner's overnight decision (`DECISIONS.md`, 2026-09-27, "The overnight run"): build, review, and merge if the golden run holds.
 
 Cards: 2 (the first sentence), 50 (nobody waits in silence), 5 (models by tier, the Opus writer). Sources:
 
