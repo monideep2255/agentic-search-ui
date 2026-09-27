@@ -101,7 +101,7 @@ import signal
 import sys
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
-from typing import TYPE_CHECKING, NoReturn, TextIO, TypeVar
+from typing import TYPE_CHECKING, Any, NoReturn, TextIO, TypeVar, cast
 
 import httpx
 
@@ -192,6 +192,35 @@ class _CommandError(Exception):
     def __init__(self, exit_code: int) -> None:
         super().__init__(f"command failed, exit code {exit_code}")
         self.exit_code = exit_code
+
+
+class _KeptText:
+    """A text stream that writes through to `stream` and keeps a copy.
+
+    `s3 ask --json` hands this to the steps that report a failure on
+    stderr, so the JSON error object on stdout carries the same words
+    (build phase 8.10's fix round, F-8.10-J08). Every other attribute is the
+    wrapped stream's own."""
+
+    def __init__(self, stream: TextIO) -> None:
+        self._stream = stream
+        self._kept: list[str] = []
+
+    def write(self, text: str) -> int:
+        self._kept.append(text)
+        return self._stream.write(text)
+
+    def flush(self) -> None:
+        self._stream.flush()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._stream, name)
+
+    def take(self) -> str:
+        """What was written since the last `take`, trimmed, and forget it."""
+        text = "".join(self._kept).strip()
+        self._kept.clear()
+        return text
 
 
 class _CliArgumentParser(argparse.ArgumentParser):
@@ -768,7 +797,7 @@ async def _run_login(
     than truncated.
     """
     from system_03_search_agent.adapters.cli import credentials as credentials_module
-    from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
+    from system_03_search_agent.adapters.cli.render import _sanitize_untrusted, address_for_display
 
     email = args.email if args.email else _read_email(stdin, stderr)
     if not email:
@@ -870,8 +899,10 @@ async def _run_login(
     # Build phase 8.10: name the server, since the default changed from a
     # local address to production and a person should see which one they
     # are now signed in to. The URL can come from `--base-url`, so it is
-    # sanitized like any other text this command did not write itself.
-    stdout.write(f"logged in to {_sanitize_untrusted(creds.base_url)}\n")
+    # sanitized like any other text this command did not write itself, and
+    # only its scheme, host and port are shown, never a `user:pass@` in it
+    # (the phase's fix round, F-8.10-A05).
+    stdout.write(f"logged in to {address_for_display(creds.base_url)}\n")
     return 0
 
 
@@ -981,9 +1012,31 @@ async def _run_ask(
     from system_03_search_agent.adapters.cli.client import CliClient
     from system_03_search_agent.adapters.cli.render import Renderer
 
-    creds = _load_credentials_or_report(stderr)
+    # Build phase 8.10's fix round, F-8.10-J08: with `--json`, a failure
+    # before the stream starts also writes one JSON object to stdout, so a
+    # script always has something to parse. Its message is the same words
+    # this command writes to stderr, kept as they are written.
+    as_json = bool(getattr(args, "as_json", False))
+    kept = _KeptText(stderr)
+    report = cast(TextIO, kept) if as_json else stderr
+
+    def failed_before_the_stream(exit_code: int, error_class: str, fallback: str) -> int:
+        if as_json:
+            from system_03_search_agent.adapters.cli.render import write_json_failure
+
+            write_json_failure(
+                stdout,
+                session_id=args.session_id,
+                run_id=None,
+                persona_name=None,
+                error_class=error_class,
+                message=kept.take() or fallback,
+            )
+        return exit_code
+
+    creds = _load_credentials_or_report(report)
     if creds is None:
-        return 1
+        return failed_before_the_stream(1, "sign_in_needed", "s3: not signed in; run 's3 login' first")
 
     session_id = args.session_id or uuid.uuid4().hex
 
@@ -1002,17 +1055,19 @@ async def _run_ask(
             ),
             http_client=http_client,
             creds=creds,
-            stderr=stderr,
+            stderr=report,
         )
     except _CommandError as exc:
-        return exc.exit_code
+        return failed_before_the_stream(
+            exc.exit_code, "run_not_started", "s3 ask: the server did not start the run"
+        )
     except httpx.TransportError as exc:
-        stderr.write(
+        report.write(
             "s3 ask: could not reach the server to start the run "
             f"({type(exc).__name__}); the request is not retried, since a timed-out "
             "create may already have been processed and spent an allowance slot\n"
         )
-        return 1
+        return failed_before_the_stream(1, "server_unreachable", "s3 ask: could not reach the server")
 
     # Attach to the event stream IMMEDIATELY. The server cancels a run
     # with zero attached subscribers for a cumulative 30 seconds, and
@@ -1033,7 +1088,8 @@ async def _run_ask(
     # names the same scientist the web UI and the GraphQL surface do for the
     # same account.
     client = CliClient(http_client, creds)
-    if getattr(args, "as_json", False):
+    kept.take()  # the stream's own failure is told from here on
+    if as_json:
         # T-8.10-03. Imported only on this path, so the test seam that
         # replaces `render` with a stand-in exposing `Renderer` alone keeps
         # working for every human-mode test.
@@ -1058,9 +1114,18 @@ async def _run_ask(
             client=client,
             run_id=run_id,
             interrupt_signals=interrupt_signals,
-            stderr=stderr,
+            stderr=report,
         )
     if outcome is not None:
+        if outcome != EXIT_INTERRUPTED and as_json:
+            # The stream could not be opened or broke off (F-8.10-J08): the
+            # one JSON object still goes out, carrying whatever arrived and
+            # the reason, which no event will give.
+            renderer.record_failure(  # type: ignore[union-attr]
+                "stream_failed", kept.take() or "s3: the event stream ended unexpectedly"
+            )
+            renderer.finish()
+            return outcome
         if outcome == EXIT_INTERRUPTED:
             # F-4.2-V4-02, MAJOR: an interrupted run reaches a terminal
             # state with no `done`/fatal `error`/guard event ever

@@ -435,6 +435,47 @@ class TestTheSchemaTellsAnAgentHowToContinue:
 
 
 # ---------------------------------------------------------------------------
+# "A reopened answer says how many of its markers point at nothing." Fix
+# round, F-8.10-J02 and A02: capture stores at most 50 citations (card 54's
+# cap), and `citations_omitted` used to count only stored entries that
+# failed validation, so it said 0 for markers [51] to [60].
+# ---------------------------------------------------------------------------
+
+
+class TestAReopenedAnswerCountsWhatItCannotShow:
+    def test_markers_past_the_stored_citations_are_counted(self) -> None:
+        # The judge's shape. Mutation that turns this red: count only stored
+        # entries left out again -> 0.
+        stored = [_citation(index).model_dump() for index in range(1, 51)]
+        markdown = " ".join(f"Record {index} is relevant [{index}]." for index in range(1, 61))
+
+        citations, omitted = server_module._reopened_citations(stored, markdown)
+
+        assert [c.display_index for c in citations] == list(range(1, 51))
+        assert omitted == 10
+
+    def test_a_left_out_entry_is_counted_once_not_twice(self) -> None:
+        # [2] was stored but no longer validates, [3] was never stored: two
+        # omissions. Mutation that turns this red: count a left-out entry's
+        # own marker a second time (3), or stop counting it at all (1).
+        invalid = {**_citation(2).model_dump(), "source_url": "https://elsewhere.example/2"}
+        stored = [_citation(1).model_dump(), invalid]
+
+        citations, omitted = server_module._reopened_citations(stored, "One [1]. Two [2]. Three [3].")
+
+        assert [c.display_index for c in citations] == [1]
+        assert omitted == 2
+
+    def test_an_answer_with_every_citation_stored_omits_nothing(self) -> None:
+        stored = [_citation(index).model_dump() for index in (1, 2)]
+
+        citations, omitted = server_module._reopened_citations(stored, "A [1][2]. B [2].")
+
+        assert len(citations) == 2
+        assert omitted == 0
+
+
+# ---------------------------------------------------------------------------
 # DATABASE-BACKED from here on: the auth path and the three new tools.
 # ---------------------------------------------------------------------------
 
@@ -743,6 +784,48 @@ class TestReopeningIsYoursAlone:
         assert content["citations_omitted"] == 0
 
     @pytest.mark.asyncio
+    async def test_a_sixty_marker_answer_says_ten_of_its_markers_point_at_nothing(self) -> None:
+        # Fix round, F-8.10-J02: the judge's `probe_capture60.py`, end to end.
+        # The answer goes through the real capture and the real writer, which
+        # keep 50 of its 60 citations (card 54's cap), and comes back through
+        # the real tool. Mutation that turns this red: count only stored
+        # entries left out again -> `citations_omitted` is 0.
+        from system_03_search_agent.feedback.capture import assemble_interaction
+        from system_03_search_agent.feedback.writer import write_interaction
+
+        a_id, a_headers = await _new_account()
+        trace = f"paritytest-{uuid.uuid4().hex}"
+        items: list[tuple[str, Any]] = [_GUARD_OK]
+        for index in range(1, 61):
+            items.append(
+                ("token", TokenPayload(text=f"Record {index} is relevant [{index}]. ", marker_ids=[f"c{index}"]))
+            )
+        items.extend(("citation", _citation(index)) for index in range(1, 61))
+        items.append(("trust_signal", _answer_trust("answer")))
+        items.append(("done", _done("answer", trust_line=_TRUST_LINE)))
+        events = [_event(kind, trace, seq, payload) for seq, (kind, payload) in enumerate(items)]
+        row = assemble_interaction(
+            Query(
+                text="Sixty records",
+                session_id="s-sixty",
+                trace_id=trace,
+                user_id=None,
+                owner_id=f"user:{a_id}",
+                audience_depth="researcher",
+            ),
+            events,
+        )
+        assert len(row.citations) == 50, "populate check: capture keeps 50 of the 60"
+        await write_interaction(row)
+
+        result = await _call(a_headers, "reopen_past_answer", {"trace_id": trace})
+
+        assert result.is_error is False
+        content = result.structured_content
+        assert len(content["citations"]) == 50
+        assert content["citations_omitted"] == 10
+
+    @pytest.mark.asyncio
     async def test_another_account_cannot_reopen_it_and_learns_nothing(self) -> None:
         # Mutation that turns this red: fetch the saved answer by trace id
         # alone, or answer "not yours" differently from "no such search",
@@ -772,10 +855,13 @@ class TestFeedbackIsYoursAlone:
     async def test_another_account_cannot_rate_your_run_and_nothing_is_written(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Mutation that turns this red: skip `resolve_owned_run` and call
-        # `record_feedback` with the caller's owner, or with the run's.
-        # Asserted on the STORED value, because a refusal that writes anyway
-        # passes an error assertion.
+        # Mutation that turns this red: skip `resolve_owned_run` AND pass the
+        # run's own owner to `record_feedback` instead of the caller's.
+        # Skipping `resolve_owned_run` alone does NOT, because
+        # `record_feedback`'s own check on the stored row still refuses
+        # (F-8.10-J07); `test_the_registry_check_refuses_on_its_own` below is
+        # the test for that one. Asserted on the STORED value, because a
+        # refusal that writes anyway passes an error assertion.
         _a_id, a_headers = await _new_account()
         _b_id, b_headers = await _new_account()
         asked, _query = await _ask(monkeypatch, a_headers, {"query": "What gene is BRCA1?"})
@@ -817,6 +903,36 @@ class TestFeedbackIsYoursAlone:
         ]
 
     @pytest.mark.asyncio
+    async def test_a_call_with_nothing_to_record_is_refused_and_keeps_earlier_feedback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Fix round, F-8.10-A08: a call with no rating, comment, flag or
+        # citation flag reported `recorded: True` and replaced the earlier
+        # feedback with nothing. Mutation that turns this red: drop the
+        # nothing-to-record check -> the call succeeds and the stored rating
+        # is gone.
+        a_id, a_headers = await _new_account()
+        asked, _query = await _ask(monkeypatch, a_headers, {"query": "What gene is BRCA1?"})
+        run_id = asked.structured_content["run_id"]
+        await _seed_row(owner_id=f"user:{a_id}", trace_id=run_id)
+        first = await _call(
+            a_headers, "send_answer_feedback", {"run_id": run_id, "rating": "down", "comment": "Wrong gene."}
+        )
+        assert first.is_error is False, "populate check: the first feedback is stored"
+
+        for empty in (
+            {"run_id": run_id},
+            {"run_id": run_id, "comment": "   ", "flagged_reason": ""},
+            {"run_id": run_id, "citation_flags": []},
+        ):
+            message = await _call_expecting_error(a_headers, "send_answer_feedback", empty)
+            assert message == server_module._NOTHING_TO_RECORD_MESSAGE, empty
+
+        stored = _stored_feedback(run_id)
+        assert stored["rating"] == "down"
+        assert stored["comment"] == "Wrong gene."
+
+    @pytest.mark.asyncio
     async def test_the_stored_rows_own_owner_is_checked_too(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -832,6 +948,30 @@ class TestFeedbackIsYoursAlone:
 
         message = await _call_expecting_error(
             a_headers, "send_answer_feedback", {"run_id": run_id, "rating": "up"}
+        )
+
+        assert message == server_module._NOT_YOUR_RUN_MESSAGE
+        assert _stored_feedback(run_id) is None
+
+    @pytest.mark.asyncio
+    async def test_the_registry_check_refuses_on_its_own(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Fix round, F-8.10-J07: the first of REST's two checks, with the
+        # second out of the way. A asked the question, so the registry says A
+        # owns the run; the stored row says B does, so `record_feedback`'s
+        # own check would let B write. Only `resolve_owned_run` stands
+        # between B and A's run. Mutation that turns this red: skip
+        # `resolve_owned_run`, for example by looking the run up with
+        # `default_registry.get_run(run_id)` -> B's rating is stored.
+        _a_id, a_headers = await _new_account()
+        b_id, b_headers = await _new_account()
+        asked, _query = await _ask(monkeypatch, a_headers, {"query": "What gene is BRCA1?"})
+        run_id = asked.structured_content["run_id"]
+        await _seed_row(owner_id=f"user:{b_id}", trace_id=run_id)
+
+        message = await _call_expecting_error(
+            b_headers, "send_answer_feedback", {"run_id": run_id, "rating": "down"}
         )
 
         assert message == server_module._NOT_YOUR_RUN_MESSAGE

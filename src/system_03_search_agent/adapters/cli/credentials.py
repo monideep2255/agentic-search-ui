@@ -718,9 +718,13 @@ async def _refresh_and_store(client: httpx.AsyncClient, creds: Credentials) -> C
             f"misconfiguration, not a normal failure.",
             remedy="Retry, or report this to the operator if it recurs.",
         )
+    # Every exception, not `ValueError` alone (build phase 8.10's fix round,
+    # F-8.10-J01): a body nested thousands deep raises `RecursionError`,
+    # which is not a `ValueError`, and escaped this function as the same
+    # uncurated failure F-4.2-D-05 above closed for a bad body.
     try:
         body = response.json()
-    except ValueError as exc:
+    except Exception as exc:
         raise RefreshError(
             f"POST /auth/refresh declared a JSON content type but the body "
             f"did not parse as JSON ({type(exc).__name__}).",

@@ -188,9 +188,11 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "seeds",
-    title: "Seed questions",
+    // F-8.10-J05: named example questions, with no claim about where they
+    // came from. None of the four is one of the 50 golden questions whole.
+    title: "Example questions",
     body: [
-      "Not sure where to start? Two of these four come word for word from the evaluation set; the other two are real questions in the same shape.",
+      "Not sure where to start? Try one of these four example questions.",
       "Click one and it runs as written, at the depth you chose.",
     ],
     targets: ["seeds"],

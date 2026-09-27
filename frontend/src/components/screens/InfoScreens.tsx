@@ -65,12 +65,15 @@
  *   publishes those as `text`, `sessionId` and `audienceDepth`.
  *
  * The MCP server's "Invalid Host header" defect (fix set 5 item 5.3, R17) was
- * fixed on 2026-09-13. Build phase 8.10 (T-8.10-05, T-8.10-07) then gave MCP
- * parity with the web app: every depth, every citation up to the run's own
+ * fixed on 2026-09-13. Build phase 8.10 (T-8.10-05, T-8.10-07) then brought
+ * MCP close to the web app: every depth, every citation up to the run's own
  * bound, the session id, the clarifying question and its options, and the
  * trust line, plus tools to list past searches, reopen an answer and send
- * feedback. The config below carries the bearer header a caller needs, and
- * a token lasts 15 minutes.
+ * feedback. The follow-up offers the web shows after an answer are not on
+ * MCP yet; card 52's phase adds them to every surface, so the card says they
+ * are coming rather than claiming the same parity (F-8.10-J13). The config
+ * below carries the bearer header a caller needs, and a token lasts 15
+ * minutes.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -187,9 +190,26 @@ export const MCP_CONFIG = `{
  *  PyPI, not this repository's. */
 export const INSTALL_EXAMPLE = `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
 
-export const CLI_EXAMPLE = `s3 login you@example.org
-s3 ask "diseases linked to BRCA1"
-s3 mcp`;
+/** Typed into a terminal. `--base-url` names the page's own API origin, so
+ *  every example here points at one server (F-8.10-J06): `s3` defaults to
+ *  production, and without it a tester following develop's page signed in
+ *  to production. `s3 mcp` is not here, since typed at a terminal it only
+ *  waits for input (F-8.10-J10); it is the command in `MCP_STDIO_CONFIG`. */
+export const CLI_EXAMPLE = `s3 login --base-url ${API_ORIGIN} you@example.org
+s3 ask "diseases linked to BRCA1"`;
+
+/** The agent side of `s3 mcp` (F-8.10-J10, A12): what a person pastes into
+ *  an AI agent's MCP configuration so the agent starts `s3 mcp` itself and
+ *  speaks MCP to it over stdio. It carries no token, because `s3 mcp` uses
+ *  the sign-in `s3 login` stored and renews it. */
+export const MCP_STDIO_CONFIG = `{
+  "mcpServers": {
+    "system3": {
+      "command": "s3",
+      "args": ["mcp"]
+    }
+  }
+}`;
 
 export const KGX_EXAMPLE = `s3-kgx-export NCBIGene:672 \\
   --hops 1 --output-dir ./kgx-out`;
@@ -482,11 +502,12 @@ function IntegrationCard({
             mt: 1.5,
             p: 1.25,
             // Scrolled rather than wrapped, which is the opposite of what this
-            // page did when five cards each carried a code box. Only one card
-            // shows code now, and it is a small JSON object whose lines are
-            // short enough to read at 390px; a wrapped brace-per-line config
-            // reads as broken, while a scroll container keeps the shape and
-            // still cannot bleed the page sideways.
+            // page did when five cards each carried a code box. Two cards
+            // show code now, the MCP config and the agent config for `s3 mcp`
+            // (F-8.10-J10), each a small JSON object whose lines are short
+            // enough to read at 390px; a wrapped brace-per-line config reads
+            // as broken, while a scroll container keeps the shape and still
+            // cannot bleed the page sideways.
             overflowX: "auto",
             bgcolor: designTokens.surfaceSunk,
             border: `1px solid ${designTokens.line}`,
@@ -671,7 +692,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<PlugIcon />}
           title="MCP server"
-          body="Four tools, with the same parity the web app has: ask_biomedical_question folds a whole run into a single cited answer at any depth, and list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. An account is required, and a bearer token lasts 15 minutes."
+          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are coming to MCP next. An account is required, and a bearer token lasts 15 minutes."
           code={MCP_CONFIG}
           codeLabel="MCP server configuration"
           copies={[
@@ -686,7 +707,9 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<TerminalIcon />}
           title="Command line tools"
-          body="Two console commands rather than HTTP routes, installed once with pip. s3 asks a question and prints the answer, human-readable by default and JSON with --json; s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the operator grants."
+          body="Two console commands rather than HTTP routes, installed once with pip. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the operator grants."
+          code={MCP_STDIO_CONFIG}
+          codeLabel="Agent configuration for s3 mcp"
           copies={[
             {
               label: "Copy install command",
@@ -699,6 +722,12 @@ export function IntegrationsScreen() {
               text: CLI_EXAMPLE,
               accessibleName: "Copy the command line example",
               testId: "integration-copy-cli",
+            },
+            {
+              label: "Copy agent config",
+              text: MCP_STDIO_CONFIG,
+              accessibleName: "Copy the agent configuration for s3 mcp",
+              testId: "integration-copy-mcp-stdio",
             },
             {
               label: "Copy KGX command",
@@ -820,8 +849,12 @@ export function IntegrationsScreen() {
 //   - Five steps, in order: `core/graph.py`'s `add_node` calls for
 //     guardrail, think, plan, act and write, with `set_entry_point("guardrail")`.
 //   - Which tier runs which step: `core/graph.py`'s `_dispatch_tier_call`
-//     sites pass "guard" for guardrail, "plan" for think AND for plan, and
-//     "synth" for write.
+//     sites pass "guard" for guardrail, "plan" for Think's classification,
+//     and "synth" for write; `tools/cypher_generation.py` calls "plan" in
+//     Act only when no Cypher template fits. The plan step itself makes no
+//     plan-tier call: its decisions, such as `plan.literature`, go through
+//     `harness/decide.py` to the guard tier or Jev
+//     (`docs/architecture/Model_architecture.md`, F-8.10-J04).
 //   - A tier's model is resolved from configuration and held for the query:
 //     `harness/tiers.py`, `TierContext` ("fetched once at query start and
 //     held for the query's duration"), reading GUARD_MODEL, PLAN_MODEL and
@@ -873,7 +906,7 @@ const JOURNEY_TIERS = [
   {
     name: "Plan tier",
     kind: "a mid-range model",
-    body: "Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. Plan then picks the tools to call in code, from those resolved entities, and this tier answers only the one routing decision a question sometimes needs, such as how far back to search the literature. The graph query itself is written in Act, from a template, or by this tier only when no template fits.",
+    body: "Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. In Act it also writes a graph query, but only when no ready-made template fits the question. Plan itself never calls this tier: it picks the tools in code, and passes the odd yes-or-no question, such as whether you want papers, to the guard tier or a dedicated classifier.",
   },
   {
     name: "Synth tier",
@@ -1206,7 +1239,7 @@ export function AboutScreen({
         <JourneyStop index={2} title="The model steps, tier by tier">
           <StopText>
             Every one of the five steps can ask a language model something, and the harness decides
-            which model each one gets. There are three tiers, matched to how hard the question is.
+            which model each one gets. There are three tiers, matched to how hard the step is.
             A tier's model is read from configuration once at the start of your question and held
             there, so it cannot change partway through a run.
           </StopText>

@@ -117,7 +117,7 @@ import re
 import uuid
 from collections.abc import Callable
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
@@ -342,6 +342,13 @@ _FEEDBACK_NOT_YET_CAPTURED_MESSAGE = (
     "request in a few seconds"
 )
 _NO_SAVED_ANSWER_MESSAGE = "no saved answer for this search; ask it again to get a fresh one"
+# Build phase 8.10's fix round, F-8.10-A08: a call carrying none of the four
+# was recorded as feedback and could replace an earlier rating with nothing.
+_NOTHING_TO_RECORD_MESSAGE = (
+    "nothing to record: send at least one of rating ('up' or 'down'), comment, "
+    "flagged_reason or citation_flags. Any feedback already sent for this answer "
+    "is unchanged"
+)
 
 # F-4.1-A-16 (adversary round 1, fix round 2): C0 control bytes and DEL,
 # including the ESC (\x1b) that opens an ANSI escape sequence and the NUL
@@ -483,6 +490,9 @@ class ReopenedAnswerOutput(BaseModel):
       stored entry that no longer validates is left out and counted in
       `citations_omitted`, never published half-formed and never allowed
       to fail the whole answer (REST drops a non-dict entry the same way).
+      A marker in `answer_markdown` that no stored citation answers is
+      counted there too (`_reopened_citations`), so the count says how many
+      of the answer's markers point at nothing here.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -1491,6 +1501,49 @@ _STORED_DEPTHS: frozenset[str] = frozenset(
     {"plain_language", "researcher", "clinical_brief", "deep_technical"}
 )
 
+#: A citation marker in a saved answer's text, in the screen's own numbers:
+#: the `[n]` that `feedback/capture.py`'s `_markers_for` writes and
+#: `synthesis/grounding.py`'s `_MARKER` reads.
+_ANSWER_MARKER = re.compile(r"\[(\d{1,3})\]")
+
+
+def _reopened_citations(
+    stored_citations: list[Any], answer_markdown: str
+) -> tuple[list[CitationPayload], int]:
+    """The saved citations `reopen_past_answer` can publish, and how many of
+    the answer's citations it cannot.
+
+    `citations_omitted` counts two things, each once:
+
+    - a stored entry left out, past this surface's bound or no longer
+      valid as a `CitationPayload`, as before;
+    - a marker in `answer_markdown` with no stored entry at all (build
+      phase 8.10's fix round, F-8.10-J02 and A02). Capture stores at most
+      50 citations (`feedback/capture.py`'s `_MAX_CITATIONS`), so a
+      60-marker answer came back pointing [51] to [60] at nothing while
+      this said 0. That cap is card 54's; this only stops the count from
+      hiding it.
+
+    A marker whose entry was stored but left out is counted by the first
+    rule and not again by the second."""
+    citations: list[CitationPayload] = []
+    left_out = 0
+    left_out_indexes: set[int] = set()
+    for stored in stored_citations:
+        if len(citations) < _MAX_CITATIONS:
+            try:
+                citations.append(CitationPayload.model_validate(stored))
+                continue
+            except ValidationError:
+                pass
+        left_out += 1
+        index = stored.get("display_index") if isinstance(stored, dict) else None
+        if isinstance(index, int) and not isinstance(index, bool):
+            left_out_indexes.add(index)
+    stored_indexes = {citation.display_index for citation in citations} | left_out_indexes
+    markers = {int(number) for number in _ANSWER_MARKER.findall(answer_markdown)}
+    return citations, left_out + len(markers - stored_indexes)
+
 
 @server.tool(
     description=(
@@ -1537,16 +1590,7 @@ async def reopen_past_answer(
     if saved is None:
         raise MCPError(code=INVALID_PARAMS, message=_NO_SAVED_ANSWER_MESSAGE)
 
-    citations: list[CitationPayload] = []
-    citations_omitted = 0
-    for stored in saved.citations:
-        if len(citations) >= _MAX_CITATIONS:
-            citations_omitted += 1
-            continue
-        try:
-            citations.append(CitationPayload.model_validate(stored))
-        except ValidationError:
-            citations_omitted += 1
+    citations, citations_omitted = _reopened_citations(saved.citations, saved.answer_markdown)
     audience_depth: AudienceDepth = (
         saved.depth if saved.depth in _STORED_DEPTHS else _DEFAULT_AUDIENCE_DEPTH  # type: ignore[assignment]
     )
@@ -1567,8 +1611,9 @@ async def reopen_past_answer(
     description=(
         "Tell the team what you thought of one answer: a thumbs up or down, a "
         "comment, a reason it was wrong, or the citations that do not support "
-        "their claim. run_id is the one ask_biomedical_question returned. "
-        "Sending feedback again for the same answer replaces the earlier one."
+        "their claim. Send at least one of them. run_id is the one "
+        "ask_biomedical_question returned. Sending feedback again for the same "
+        "answer replaces the earlier one."
     ),
     annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True),
 )
@@ -1620,6 +1665,17 @@ async def send_answer_feedback(
     user = await _authenticate_mcp_caller(ctx)
     _reject_unknown_arguments(ctx, _SEND_ANSWER_FEEDBACK_ARGUMENT_NAMES)
     owner_id = _owner_id_for(user)
+
+    # Refused before the run is looked up, so a call with nothing in it
+    # writes nothing and learns nothing about the run (fix round,
+    # F-8.10-A08). Blank text is nothing too. The REST route is unchanged.
+    if (
+        rating is None
+        and not (comment and comment.strip())
+        and not (flagged_reason and flagged_reason.strip())
+        and not citation_flags
+    ):
+        raise MCPError(code=INVALID_PARAMS, message=_NOTHING_TO_RECORD_MESSAGE)
 
     try:
         entry = default_registry.resolve_owned_run(run_id, owner_id)
