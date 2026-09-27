@@ -591,3 +591,62 @@ def test_an_unmerged_back_merge_is_carried_forward(
     # And the owner can merge the new back-merge without a conflict.
     repo.merge_back_merge("v0.2.1")
     assert _headings(repo.changelog_on("refs/heads/develop")) == ["v0.2.1", "v0.2.0", "v0.1.0"]
+
+
+# ---------------------------------------------------------------------------
+# A commit that borrows the robot's subject is still a commit
+# ---------------------------------------------------------------------------
+
+
+def _repo_at_v0_1_0(root: Path) -> tuple[ReleaseRepo, str]:
+    """v0.1.0 tagged on `production`, with its changelog section, and nothing since."""
+    repo = ReleaseRepo(root)
+    repo.commit("chore: scaffold the package")
+    changelog = (
+        _CHANGELOG_PREAMBLE + "## v0.1.0 (2026-01-01)\n\n### Features\n\n- the first capability\n"
+    )
+    repo.commit("docs: the first changelog", changelog=changelog)
+    repo.git("branch", "production")
+    repo.git("tag", "-a", "v0.1.0", "-m", "Release v0.1.0")
+    repo.push("develop", "production", "refs/tags/v0.1.0")
+    return repo, changelog
+
+
+def test_a_commit_borrowing_the_robots_subject_is_counted(tmp_path: Path) -> None:
+    """Findings F-REL-A09 and F-REL-J02: the second half of "left out" had no test.
+
+    The release job leaves its own changelog commit out of the next release,
+    recognised by its subject AND by it changing CHANGELOG.md alone. Each
+    commit below fails one of those two conditions, so each must be counted:
+    one takes the exact subject but changes code, and three change only
+    CHANGELOG.md under a subject that merely contains the robot's. Replacing
+    the file check with `true`, or unanchoring either end of either subject
+    pattern in commit_lib.sh, hides one of them and turns this red.
+    """
+    repo, changelog = _repo_at_v0_1_0(tmp_path)
+    repo.commit("docs(changelog): release v0.2.0 [skip ci]")
+    repo.commit(
+        "docs(changelog): release v0.2.0 [skip ci] and the answer cites two genes",
+        changelog=changelog + "\nOne.\n",
+    )
+    repo.commit("fix: docs(changelog): release v0.2.0 [skip ci]", changelog=changelog + "\nTwo.\n")
+    repo.commit(
+        "chore: back-merge v0.2.0 into develop (#7) and a new tool",
+        changelog=changelog + "\nThree.\n",
+    )
+    repo.push("develop")
+    repo.release()
+
+    run = repo.run_release_job()
+
+    version = run.outputs["version"]
+    assert version["should_release"] == "true", run.log
+    assert version["version"] == "v0.1.1", run.log
+    assert "(4 commits)" in run.log, run.log
+    notes = _call(run, "release", "create", "v0.1.1").stdin
+    assert "docs(changelog): release v0.2.0 \\[skip ci\\]" in notes, (
+        f"the `fix:` commit that quotes the robot's subject is missing:\n{notes}"
+    )
+    assert "Plus 3 internal changes" in notes, (
+        f"a commit that borrows the robot's subject was hidden from the notes:\n{notes}"
+    )
