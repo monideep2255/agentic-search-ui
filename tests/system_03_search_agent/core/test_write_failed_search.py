@@ -37,6 +37,8 @@ from system_03_search_agent.synthesis.refuse import (
     FAILED_SEARCH_MESSAGE,
     FAILED_SEARCH_NOTE,
     REFUSE_MESSAGE,
+    SEARCH_DOWN_MESSAGE,
+    SERVICE_DOWN_KIND,
     UNRESOLVED_QUESTION_MESSAGE,
     refusal_message_for,
 )
@@ -260,3 +262,56 @@ def test_a_failed_search_recorded_before_card_63_keeps_the_original_note() -> No
     builds, is read as `other`: the original note, never a false outage."""
     assert graph_module._build_failed_search_note([_TIMED_OUT]) == FAILED_SEARCH_NOTE
     assert graph_module._build_failed_search_note([_NO_ENTITY]) == FAILED_SEARCH_NOTE
+
+
+# ---------------------------------------------------------------------------
+# Card 63, the refusal: when every search failed and one of them is down at
+# NCBI, the refusal says "try again later", never "ask again to retry".
+# ---------------------------------------------------------------------------
+
+
+def test_the_refusal_chooser_says_try_later_when_ncbi_said_a_search_is_down() -> None:
+    assert refusal_message_for([_PUBMED_DOWN]) == SEARCH_DOWN_MESSAGE
+    # One search down is enough, as for the note under an answer: asking
+    # again at once cannot help while it is down.
+    assert refusal_message_for([_TIMED_OUT, _PUBMED_DOWN]) == SEARCH_DOWN_MESSAGE
+    # A question the product could not read still outranks it: naming the
+    # gene is the thing to fix first.
+    assert refusal_message_for([_PUBMED_DOWN, _NO_ENTITY]) == UNRESOLVED_QUESTION_MESSAGE
+    assert "ask again" not in SEARCH_DOWN_MESSAGE.lower()
+    assert "try again later" in SEARCH_DOWN_MESSAGE.lower()
+
+
+@pytest.mark.parametrize("kind", ["timed_out", "rate_limited", "other"])
+def test_the_refusal_chooser_keeps_ask_again_where_asking_again_can_help(kind: str) -> None:
+    """The populate check for the arm above: the SAME mapping, with the same
+    database, under a kind where asking again can help, keeps today's
+    wording, so the outage wording is about the kind and not a chooser
+    that stopped saying "ask again"."""
+    assert refusal_message_for([{**_PUBMED_DOWN, "kind": kind}]) == FAILED_SEARCH_MESSAGE
+
+
+def test_the_refusal_reads_the_kind_the_transport_names() -> None:
+    """`refuse.py` writes the value out rather than importing tool transport
+    code; this pins the two equal, so neither can drift from the other."""
+    from system_03_search_agent.tools import ncbi_transport
+
+    assert SERVICE_DOWN_KIND in ncbi_transport.FAILURE_KINDS
+    assert _PUBMED_DOWN["kind"] == SERVICE_DOWN_KIND
+
+
+@pytest.mark.asyncio
+async def test_a_refusal_during_an_outage_says_try_later_not_ask_again(monkeypatch) -> None:
+    # No finding lines reach the model on a refusal, and the shared structured
+    # reply builder expects some, so the fake model answers plainly here.
+    _install(monkeypatch, lambda _lines: "ok")
+    result = await graph_module.write_node(_refusal_state([_PUBMED_DOWN]))
+    text = "".join(t["text"] for t in _events_of(result, "token"))
+    assert text.startswith(SEARCH_DOWN_MESSAGE), text
+    assert "ask again" not in text.lower(), text
+    # Section 8.4, unchanged: a refusal is never a dead end.
+    assert "https://www.ncbi.nlm.nih.gov/search/all/?term=" in text, text
+    signal = _events_of(result, "trust_signal")[-1]
+    assert signal["outcome"] == "refuse"
+    assert signal["message"] == SEARCH_DOWN_MESSAGE
+    assert signal["fallback_link"].startswith("https://www.ncbi.nlm.nih.gov/search/all/")

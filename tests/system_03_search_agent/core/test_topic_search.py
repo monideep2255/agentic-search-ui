@@ -506,18 +506,33 @@ def _install_model(
     return synth_prompts
 
 
+#: Card 63: the body NCBI served for every ESearch from 02:24 UTC on
+#: 2026-09-27, as the tool's untrusted `error` text. Here to prove it
+#: reaches no event and no refusal.
+_NCBI_OUTAGE_TEXT = (
+    "Search Backend failed: Search is temporarily unavailable. Cannot connect to SOLR"
+)
+
+
 class _TopicToolSpy:
     """Every tool faked. `cypher_query` raises if it is ever called, which
     is how the test proves the graph call is not planned rather than
     planned and ignored."""
 
     def __init__(
-        self, monkeypatch: pytest.MonkeyPatch, *, pubmed_ids: list[str] | None = None
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        pubmed_ids: list[str] | None = None,
+        search_failure_kind: str | None = None,
     ) -> None:
         self.search_terms: list[str] = []
         self.fetched_ids: list[list[str]] = []
         self.graph_calls = 0
         self.pubmed_ids = [_PMID] if pubmed_ids is None else pubmed_ids
+        # Card 63: when set, the PubMed search fails with this kind and
+        # NCBI's own outage text as its untrusted `error`.
+        self.search_failure_kind = search_failure_kind
         spy = self
 
         async def _cypher(harness: Any, cypher_input: Any, **kwargs: Any) -> CypherQueryOutput:
@@ -531,6 +546,12 @@ class _TopicToolSpy:
             root = tool_input.root
             if root.action == "search":
                 spy.search_terms.append(root.term)
+                if spy.search_failure_kind is not None:
+                    return NcbiEfetchOutput(
+                        status="error", action="search", records=[], record_count=0,
+                        total_available=None, truncated=False,
+                        error=_NCBI_OUTAGE_TEXT, failure_kind=spy.search_failure_kind,
+                    )
                 return NcbiEfetchOutput(
                     status="ok" if spy.pubmed_ids else "empty",
                     action="search",
@@ -1084,6 +1105,45 @@ async def test_a_topic_search_that_finds_nothing_says_what_it_searched(
     assert "I searched the published literature for" in text, text
     assert "variants, people, mediterranean, descent" in text, text
     assert "Name one and I will search" not in text, text
+
+
+@pytest.mark.asyncio
+async def test_a_topic_search_down_at_ncbi_refuses_with_try_later(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 63, end to end through the real loop. A topic question searches
+    PubMed and nothing else, so while PubMed's search is down at NCBI the
+    run refuses. The refusal must say so and ask the person to try later,
+    not invite them straight back into the outage, and none of NCBI's own
+    text may reach the stream."""
+    _install_model(monkeypatch)
+    _TopicToolSpy(monkeypatch, search_failure_kind="service_down")
+    events = await _events(Q6, session_id="topic-down")
+    done = next(e for e in events if e.type == "done")
+    assert done.payload["trust_outcome"] == "refuse", done.payload
+    text = _text(events)
+    assert text.startswith(refuse_module.SEARCH_DOWN_MESSAGE), text
+    assert "ask again" not in text.lower(), text
+    signal = [e for e in events if e.type == "trust_signal"][-1]
+    assert signal.payload["message"] == refuse_module.SEARCH_DOWN_MESSAGE, signal.payload
+    stream = json.dumps([e.payload for e in events], default=str)
+    for fragment in ("SOLR", "temporarily unavailable", "Search Backend"):
+        assert fragment not in stream, fragment
+
+
+@pytest.mark.asyncio
+async def test_a_topic_search_that_timed_out_still_invites_a_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The populate check for the arm above: the SAME run with the search
+    failing as a timeout keeps today's wording, where asking again can
+    help, so the arm above is reading the kind and not a constant."""
+    _install_model(monkeypatch)
+    _TopicToolSpy(monkeypatch, search_failure_kind="timed_out")
+    events = await _events(Q6, session_id="topic-timeout")
+    text = _text(events)
+    assert text.startswith(refuse_module.FAILED_SEARCH_MESSAGE), text
+    assert refuse_module.SEARCH_DOWN_MESSAGE not in text, text
 
 
 @pytest.mark.asyncio
