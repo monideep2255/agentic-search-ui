@@ -74,6 +74,9 @@ A builder stops and reports, rather than guessing, when:
 | builder P, T-8.10-01 to 04 | Opus 5.5 | default | 22:10 | 23:42 | 747,091 |
 | builder Q, T-8.10-05 and 06 | Opus 5.5 | default | 22:10 | 23:10 | 598,199 |
 | builder R, T-8.10-07 and 08 | Sonnet 5 | default | 23:33 | 23:56 | 329,279 |
+| judge | Opus 5.5 | default | 00:12 | 00:48 | 426,470 |
+| adversary | Fable 5.1 | default | 00:12 | 00:36 | 430,356 |
+| fix agent | Opus 5.5 | default | 00:50 | 01:36 | 546,213 |
 
 ## Tickets
 
@@ -255,6 +258,18 @@ P and Q share no file. The one contract between them: `s3 mcp` forwards whatever
   - The allowlist keys T-8.10-05 added (J11), from `tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py`:
     - On `ask_biomedical_question`: `session_id`, `trust_line`, `clarifying_question` and `clarifying_options`.
     - `list_past_searches`, `reopen_past_answer` and `send_answer_feedback` each carry their own pinned set, named in that test file beside the tool.
+- 2026-09-27 01:36: the fix agent finished (report `testing/Developer/reports/2026-09-26_phase_8.10/fix_round.md`), merged as 6ee5f7e. All eight finding groups were fixed, each with a test shown to fail on the unfixed file:
+  - J01 and A01: every request gets exactly one answer, and `serve` survives any line.
+  - A04, A07, J12 and A06: replies are capped at 4 MiB, each request has a 5 minute deadline, and only JSON-RPC 2.0 is forwarded.
+  - A05: userinfo is never shown.
+  - J02: the omitted citations are counted.
+  - A08: empty feedback is refused.
+  - J07: the registry check has its own test.
+  - J08: `--json` gives an error object.
+  - The pages: J03, J04 and L01, J05 and L02, J06, J10 and A12, J13.
+  - The fix agent found and fixed a regression inside its own A07 deadline: it could cut a sign-in renewal after the server had rotated the refresh token and sign the person out everywhere. Commit 5273018 shields the renewal.
+  - Gates: gate04 6402 passed; ruff and isort clean; package gate 2 passed; frontend 464 passed and the build succeeded; the facts checker shows no screen FAIL.
+  - The lead corrected the bridge's debugging guide row and the seed comment in `HomeScreen.tsx` (c479bf6).
 
 ## Findings
 - F-8.10-L01, should-fix, filed by the lead from the re-split facts checker (#122) run on this branch's page text: the About page's Plan tier card now says the plan tier answers Plan's routing decision. That step reaches only Jev and the guard tier, never the plan tier (`check_facts.py` call-graph reading of `core/graph.py`'s plan node). T-8.10-08.
