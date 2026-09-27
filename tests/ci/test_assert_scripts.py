@@ -41,6 +41,7 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import ClassVar
 
 import pytest
 
@@ -259,25 +260,69 @@ class TestGateRan:
 
 
 class TestLicenseNotices:
-    def _write_js(self, tmp_path: Path, name: str, body: str) -> None:
-        (tmp_path / name).write_text(body, encoding="utf-8")
+    """Both halves of card 60: the source-comment check, and the notices file.
 
-    def test_a_bundle_carrying_the_react_notice_passes(self, tmp_path):
+    The script now takes a dist DIRECTORY (not the assets directory directly),
+    since it checks `<dist>/assets/*.js` for the react/react-dom source
+    comment AND `<dist>/THIRD_PARTY_NOTICES.txt` for MUI's (and every other
+    dependency's) license text read off disk by the build's
+    thirdPartyNoticesPlugin.
+    """
+
+    _VALID_PACKAGES: ClassVar[dict[str, str]] = {
+        "react": "MIT License\n\nCopyright (c) Meta Platforms, Inc. and affiliates.",
+        "react-dom": "MIT License\n\nCopyright (c) Meta Platforms, Inc. and affiliates.",
+        "@mui/material": "MIT License\n\nCopyright (c) Material-UI SAS and its affiliates.",
+    }
+
+    def _write_js(self, dist_dir: Path, name: str, body: str) -> None:
+        assets_dir = dist_dir / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        (assets_dir / name).write_text(body, encoding="utf-8")
+
+    def _write_valid_js(self, dist_dir: Path) -> None:
         self._write_js(
-            tmp_path,
+            dist_dir,
             "index-abc123.js",
             "/**\n* @license React\n* react.production.js\n*/\nconsole.log(1);",
         )
+
+    def _write_notices(self, dist_dir: Path, packages: dict[str, str | None]) -> None:
+        """`packages`: name -> license text, or None to omit that entry entirely."""
+        delimiter = "=" * 80
+        sections = []
+        for name, license_text in packages.items():
+            if license_text is None:
+                continue
+            sections.append(
+                "\n".join(
+                    [delimiter, f"PACKAGE: {name}", "VERSION: 1.0.0", "LICENSE:", license_text]
+                )
+            )
+        sections.append(delimiter)
+        (dist_dir / "THIRD_PARTY_NOTICES.txt").write_text(
+            "\n\n".join(sections) + "\n", encoding="utf-8"
+        )
+
+    def _write_valid_notices(self, dist_dir: Path) -> None:
+        self._write_notices(dist_dir, dict(self._VALID_PACKAGES))
+
+    # -- the source-comment half (card 60, pass one) -------------------------
+
+    def test_a_bundle_carrying_the_react_notice_passes(self, tmp_path):
+        self._write_valid_js(tmp_path)
+        self._write_valid_notices(tmp_path)
         assert license_notices.main(["prog", str(tmp_path)]) == 0
 
     def test_a_stripped_bundle_fails(self, tmp_path):
-        """The exact regression card 60 exists to catch.
+        """The exact regression card 60's first pass exists to catch.
 
         Oxc's default strips every legal comment during minification, so a
         build with the setting reverted looks like this: real code, zero
         `@license` lines anywhere in it.
         """
         self._write_js(tmp_path, "index-abc123.js", "console.log(1);var a=1+1;")
+        self._write_valid_notices(tmp_path)
         assert license_notices.main(["prog", str(tmp_path)]) == 1
 
     def test_the_notice_can_be_in_any_one_of_several_chunks(self, tmp_path):
@@ -285,6 +330,7 @@ class TestLicenseNotices:
         self._write_js(
             tmp_path, "vendor-def456.js", "/**\n* @license React\n* scheduler.production.js\n*/"
         )
+        self._write_valid_notices(tmp_path)
         assert license_notices.main(["prog", str(tmp_path)]) == 0
 
     def test_a_missing_directory_fails_rather_than_certifying_nothing(self, tmp_path):
@@ -296,8 +342,73 @@ class TestLicenseNotices:
         An empty dist means the build did not run or produced nothing, and
         that fact proves no notice was dropped, only that nothing was checked.
         """
-        (tmp_path / "index.css").write_text("body{}", encoding="utf-8")
+        (tmp_path / "assets").mkdir()
+        (tmp_path / "assets" / "index.css").write_text("body{}", encoding="utf-8")
+        self._write_valid_notices(tmp_path)
         assert license_notices.main(["prog", str(tmp_path)]) == 1
+
+    # -- the third-party notices file half (card 60, pass two) ---------------
+
+    def test_a_complete_notices_file_passes(self, tmp_path):
+        """The exact regression card 60's second pass exists to catch.
+
+        MUI carries no source `@license` comment at all, so pass one's check
+        alone cannot see whether MUI's notice survived. This is the check
+        that can.
+        """
+        self._write_valid_js(tmp_path)
+        self._write_valid_notices(tmp_path)
+        assert license_notices.main(["prog", str(tmp_path)]) == 0
+
+    def test_a_missing_notices_file_fails_even_with_a_healthy_bundle(self, tmp_path):
+        self._write_valid_js(tmp_path)
+        assert license_notices.main(["prog", str(tmp_path)]) == 1
+
+    @pytest.mark.parametrize("missing", ["react", "react-dom", "@mui/material"])
+    def test_a_notices_file_missing_one_required_package_fails(self, tmp_path, missing):
+        self._write_valid_js(tmp_path)
+        packages = dict(self._VALID_PACKAGES)
+        packages[missing] = None
+        self._write_notices(tmp_path, packages)
+        assert license_notices.main(["prog", str(tmp_path)]) == 1
+
+    @pytest.mark.parametrize("empty_for", ["react", "react-dom", "@mui/material"])
+    def test_a_notices_file_with_empty_license_text_for_a_required_package_fails(
+        self, tmp_path, empty_for
+    ):
+        self._write_valid_js(tmp_path)
+        packages = dict(self._VALID_PACKAGES)
+        packages[empty_for] = ""
+        self._write_notices(tmp_path, packages)
+        assert license_notices.main(["prog", str(tmp_path)]) == 1
+
+    @pytest.mark.parametrize("placeholder_for", ["react", "react-dom", "@mui/material"])
+    def test_the_no_license_file_found_placeholder_fails_for_a_required_package(
+        self, tmp_path, placeholder_for
+    ):
+        """The plugin's own placeholder for a package with no LICENSE file.
+
+        React, react-dom, and @mui/material all ship a real license file in
+        practice, so this placeholder appearing for one of them is the exact
+        regression to catch, not a benign "some optional dependency has none".
+        """
+        self._write_valid_js(tmp_path)
+        packages = dict(self._VALID_PACKAGES)
+        packages[placeholder_for] = "no license file found"
+        self._write_notices(tmp_path, packages)
+        assert license_notices.main(["prog", str(tmp_path)]) == 1
+
+    def test_an_unrelated_package_missing_its_notice_does_not_fail_the_gate(self, tmp_path):
+        """Only the three named packages are required.
+
+        The gate is not a complete-coverage check over every dependency in
+        the bundle.
+        """
+        self._write_valid_js(tmp_path)
+        packages = dict(self._VALID_PACKAGES)
+        packages["some-other-dependency"] = None
+        self._write_notices(tmp_path, packages)
+        assert license_notices.main(["prog", str(tmp_path)]) == 0
 
     def test_wrong_argument_count_fails(self):
         assert license_notices.main(["prog"]) == 1

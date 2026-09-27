@@ -1,9 +1,95 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+
+// Card 60, second pass. `comments.legal` below keeps a package's own
+// `@license` source comment, and that is all React, react-dom, and the
+// scheduler need since Meta's build already puts one in every file. MUI
+// carries no such comment in its compiled output at all, and neither do most
+// other MIT dependencies, so `comments.legal` alone still drops MUI's notice.
+// MIT requires the license TEXT to travel with the copy, not a source
+// comment if one happens to exist, so this plugin reads each bundled
+// package's own LICENSE file off disk and writes it into one file the build
+// output carries alongside the bundle.
+function thirdPartyNoticesPlugin(): Plugin {
+  const SECTION_DELIMITER = "=".repeat(80);
+  const LICENSE_FILENAMES = ["LICENSE", "LICENSE.md", "LICENCE"];
+
+  // A module id looks like ".../node_modules/react/cjs/react.production.js"
+  // or, scoped, ".../node_modules/@mui/material/index.js". The package root
+  // is everything up to and including the (possibly scoped) package
+  // directory; matching on the LAST "node_modules" segment handles a nested
+  // copy correctly, since that is the copy actually bundled.
+  function packageRootAndName(moduleId: string): { root: string; name: string } | null {
+    const match = moduleId.match(/^(.*\/node_modules\/((?:@[^/]+\/)?[^/]+))\//);
+    if (!match) return null;
+    return { root: match[1], name: match[2] };
+  }
+
+  function licenseText(root: string): string {
+    for (const filename of LICENSE_FILENAMES) {
+      const licensePath = path.join(root, filename);
+      if (existsSync(licensePath)) {
+        return readFileSync(licensePath, "utf-8").trim();
+      }
+    }
+    return "no license file found";
+  }
+
+  function packageVersion(root: string): string {
+    const packageJsonPath = path.join(root, "package.json");
+    if (!existsSync(packageJsonPath)) return "unknown";
+    try {
+      const parsed = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as { version?: unknown };
+      return typeof parsed.version === "string" ? parsed.version : "unknown";
+    } catch {
+      return "unknown";
+    }
+  }
+
+  return {
+    name: "third-party-notices",
+    generateBundle(_options, bundle) {
+      const packages = new Map<string, string>();
+      for (const file of Object.values(bundle)) {
+        if (file.type !== "chunk") continue;
+        for (const moduleId of file.moduleIds) {
+          const found = packageRootAndName(moduleId);
+          if (found && !packages.has(found.name)) {
+            packages.set(found.name, found.root);
+          }
+        }
+      }
+
+      // Sorted so the file's content, and therefore its hash-free bytes, is
+      // reproducible across builds of the same dependency set.
+      const names = [...packages.keys()].sort((a, b) => a.localeCompare(b));
+      const sections = names.map((name) => {
+        const root = packages.get(name) as string;
+        return [
+          SECTION_DELIMITER,
+          `PACKAGE: ${name}`,
+          `VERSION: ${packageVersion(root)}`,
+          "LICENSE:",
+          licenseText(root),
+        ].join("\n");
+      });
+      sections.push(SECTION_DELIMITER);
+
+      this.emitFile({
+        type: "asset",
+        fileName: "THIRD_PARTY_NOTICES.txt",
+        source: sections.join("\n\n") + "\n",
+      });
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), thirdPartyNoticesPlugin()],
   // Build phase 4.12. `vite preview` refuses any request whose Host header it
   // does not recognise, and returns 403 with "Blocked request. This host ...
   // is not allowed." That is a deliberate anti-DNS-rebinding control, not a
